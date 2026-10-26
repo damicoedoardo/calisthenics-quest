@@ -90,6 +90,26 @@ describe('finishSession', () => {
     expect(res.session.xp).toBe(30);
   });
 
+  it('raises a goal at most twice a week', () => {
+    const day = (d: number) => new Date(2026, 9, 26 + d, 18);
+    let s = initialState();
+    for (const d of [0, 2, 4]) s = finishSession(withSets(s, { 'knee-raise': all(3, s.reps['knee-raise'] ?? 8) }), day(d))!.state;
+    expect(s.reps['knee-raise']).toBe(10);
+    s = finishSession(withSets(s, { 'knee-raise': all(3, 10) }), day(7))!.state;
+    expect(s.reps['knee-raise']).toBe(11);
+  });
+
+  it('raises a hold by a second every other time', () => {
+    const day = (d: number) => new Date(2026, 9, 26 + d, 18);
+    let s: GameState = { ...initialState(), progress: { push: 1, pull: 1, core: 1 } };
+    const held: number[] = [];
+    for (const d of [0, 2, 7, 9]) {
+      s = finishSession(withSets(s, { 'tuck-lsit': all(3, s.reps['tuck-lsit'] ?? 8) }), day(d))!.state;
+      held.push(s.reps['tuck-lsit'] ?? 8);
+    }
+    expect(held).toEqual([9, 9, 10, 10]);
+  });
+
   it('beats the node and forges gear when the unlock target is hit', () => {
     const res = finishSession(withSets(initialState(), { pushup: all(3, 20) }), monday)!;
     expect(res.state.progress.push).toBe(2);

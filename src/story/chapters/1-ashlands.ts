@@ -16,6 +16,7 @@ export const ASHLANDS: Chapter = {
     boss: 'tomorrow',
     hint: 'Tomorrow heals while you keep your distance. Get close.',
     after: "It only grows while you wait. You didn't wait.",
+    firstTry: 'Tomorrow is stronger than it looks. Try anyway: losing here costs nothing.',
     keepsake: { name: 'The Nightcap', text: "Tomorrow's sleepy hat. It never got to wear it again." },
     hp: 1,
     dmg: 1,

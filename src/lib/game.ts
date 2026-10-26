@@ -18,6 +18,8 @@ export const REST_SECONDS = 90;
 export const TEST_COOLDOWN_DAYS = 21;
 /** A gap this long earns the return bonus. */
 export const RETURN_GAP_DAYS = 14;
+/** Strength comes with time, not just sessions: an exercise's goal goes up at most this often a week. */
+export const MAX_RAISES_PER_WEEK = 2;
 
 export type Rir = '4+' | '2-3' | '0-1';
 export type Checkin = 'rough' | 'normal' | 'strong';
@@ -50,6 +52,8 @@ export interface Session {
   entries: SessionEntry[];
   /** Node ids beaten in this session. */
   unlocked: string[];
+  /** Exercise ids whose goal went up after this session. Missing on older saves. */
+  raised?: string[];
 }
 
 export interface MaxTest {
@@ -314,6 +318,10 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
   const progress = { ...state.progress };
   const reps = { ...state.reps };
   const unlocked: string[] = [];
+  const raised: string[] = [];
+  const week = weekKey(now);
+  const raisesThisWeek = (id: string) => state.sessions.filter((s) => weekKey(new Date(s.date)) === week && s.raised?.includes(id)).length;
+  const raisedLastTime = (id: string) => !!state.sessions.findLast((s) => s.entries.some((e) => e.exerciseId === id))?.raised?.includes(id);
 
   for (const q of quest) {
     const entry = entries.find((e) => e.exerciseId === q.id);
@@ -325,11 +333,12 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
       progress[q.path] += 1;
       continue;
     }
-    // Every set done at target with reps to spare: ask for a little more next time.
+    // Every set done at target with reps to spare: ask for a little more next time. At most twice a
+    // week, and a hold only every other time: a second held comes slower than a rep.
     const clean = entry.sets.length >= q.sets && entry.sets.every((s) => s.reps >= q.reps && s.rir !== '0-1');
-    if (clean) {
-      const step = q.unit === 'sec' ? 2 : 1;
-      reps[q.id] = Math.min(q.reps + step, node.unlockReps);
+    if (clean && q.reps < node.unlockReps && raisesThisWeek(q.id) < MAX_RAISES_PER_WEEK && !(q.unit === 'sec' && raisedLastTime(q.id))) {
+      reps[q.id] = Math.min(q.reps + 1, node.unlockReps);
+      raised.push(q.id);
     }
   }
 
@@ -352,7 +361,7 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
 
   const before = levelInfo(totalXp(state)).level;
   const gearBefore = gearOf(state);
-  const session: Session = { id: idGen(), date: now.toISOString(), kind, day: dayType(state), xp, breakdown, entries, unlocked };
+  const session: Session = { id: idGen(), date: now.toISOString(), kind, day: dayType(state), xp, breakdown, entries, unlocked, raised };
   const next: GameState = { ...state, progress, reps, sessions: [...state.sessions, session], draft: null };
   const gearAfter = gearOf(next);
   const newGear = (['weapon', 'armor', 'shield'] as const).filter((s) => gearAfter[s].tier > gearBefore[s].tier).map((s) => gearAfter[s]);

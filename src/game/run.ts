@@ -81,6 +81,8 @@ const MAX_FOES = 120;
 const INVULNERABLE_MS = 600;
 /** How far ranged attacks look for a target: about the width of a phone screen. */
 const RANGE = 240;
+/** A sword swings only at what it can reach, so it never whiffs on a foe still walking in. */
+const SLASH_REACH = 90;
 
 type FoeKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'boss';
 
@@ -116,7 +118,7 @@ const KNIGHT_PLATES = 40;
  * - The Hollow dashes and calls the fog (the Plateau and the Summit fight like it for now).
  */
 const BOSSES: Record<FogBoss, Stats> = {
-  tomorrow: { hp: 520, speed: 46, dmg: 16, xp: 0, scale: 1.5, r: 20, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0], tex: 'slime' },
+  tomorrow: { hp: 2000, speed: 46, dmg: 16, xp: 0, scale: 1.5, r: 20, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0], tex: 'slime' },
   mirror: { hp: 480, speed: 36, dmg: 16, xp: 0, scale: 1.35, r: 16, bits: [0xe2e8f0, 0xcbd5e1, 0xffffff], tex: 'mirror' },
   knight: { hp: KNIGHT_PLATES, speed: 62, dmg: 18, xp: 0, scale: 1.15, r: 14, bits: [0xe2e8f0, 0x94a3b8, 0xdc2626], tex: 'knight' },
   plateau: { hp: 650, speed: 70, dmg: 20, xp: 0, scale: 1.5, r: 13, bits: [0xa78bfa, 0x6b21a8, 0xffffff], tex: 'hollow' },
@@ -141,7 +143,7 @@ const RISE_MS = 280;
 const ATTACK: Record<'slash' | 'arrow' | 'orb' | 'wave', { cd: number; dmg: number }> = {
   slash: { cd: 0.9, dmg: 14 },
   arrow: { cd: 0.6, dmg: 10 },
-  orb: { cd: 0.8, dmg: 12 },
+  orb: { cd: 0.8, dmg: 15 },
   wave: { cd: 1.3, dmg: 11 },
 };
 
@@ -579,10 +581,12 @@ class RunScene extends Phaser.Scene {
 
   /**
    * The bot: steps away from what's close (reflections most of all), picks up light, and circles
-   * the boss at the distance its rule asks for. A steady, careful player, not a great one.
+   * the boss at the distance its rule asks for. A steady, careful player, not a great one. With a
+   * sword it lets the crowd come into reach instead, since a slash only hits what's close.
    */
   private botMove(): [number, number] {
-    const h = this.hero;
+    const h = this.hero,
+      melee = attackOf(this.setup.classId) === 'slash';
     let x = 0,
       y = 0;
     for (const o of this.foes.getChildren()) {
@@ -591,8 +595,8 @@ class RunScene extends Phaser.Scene {
       const dx = h.x - f.x,
         dy = h.y - f.y,
         d = Math.hypot(dx, dy) || 1;
-      if (d > 170) continue;
-      const w = ((f.kind === 'reflection' ? 3 : 1) * (f.dmg / 8) * 2500) / (d * d);
+      if (d > (melee && f.kind !== 'reflection' ? 70 : 170)) continue;
+      const w = ((f.kind === 'reflection' ? 3 : melee ? 0.4 : 1) * (f.dmg / 8) * 2500) / (d * d);
       x += (dx / d) * w;
       y += (dy / d) * w;
     }
@@ -603,7 +607,7 @@ class RunScene extends Phaser.Scene {
         d = Math.hypot(dx, dy) || 1,
         rule = this.setup.zone.boss,
         // Tomorrow heals when you're far, the Knight needs hits: stay close. The rest dash: keep room.
-        want = rule === 'tomorrow' || rule === 'knight' ? 80 : rule === 'mirror' ? 110 : 150,
+        want = melee ? 60 : rule === 'tomorrow' || rule === 'knight' ? 80 : rule === 'mirror' ? 110 : 150,
         pull = Phaser.Math.Clamp((d - want) / 80, -1.5, 1.5);
       x += (dx / d) * pull - (dy / d) * 0.7;
       y += (dy / d) * pull + (dx / d) * 0.7;
@@ -981,7 +985,7 @@ class RunScene extends Phaser.Scene {
     if (this.cd.attack > 0) return;
     const kind = attackOf(this.setup.classId),
       a = ATTACK[kind],
-      reach = kind === 'slash' ? 130 : RANGE,
+      reach = kind === 'slash' ? SLASH_REACH : RANGE,
       // The boss hides in its horde, so attacks go for it whenever it's in reach. Not the Mirror:
       // there you hit whatever is nearest, reflections too, so you have to walk past them.
       boss =
@@ -1040,7 +1044,7 @@ class RunScene extends Phaser.Scene {
       s.hit.add(f);
       if (s.homing) {
         this.damage(f, s.dmg, 60, s.img.x, s.img.y);
-        this.burst(s.img.x, s.img.y, 42, s.dmg * 0.5, 0xa78bfa, f);
+        this.burst(s.img.x, s.img.y, 56, s.dmg * 0.5, 0xa78bfa, f);
         s.img.destroy();
         return false;
       }
@@ -1054,7 +1058,7 @@ class RunScene extends Phaser.Scene {
   }
 
   private slash(angle: number, dmg: number) {
-    const R = 80,
+    const R = SLASH_REACH - 10,
       x = this.hero.x,
       y = this.hero.y;
     for (const o of this.foes.getChildren()) {

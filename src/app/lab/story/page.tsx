@@ -1,8 +1,8 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Play, X } from 'lucide-react';
+import { ArrowLeft, FastForward, Play, Square, X } from 'lucide-react';
 import { Ember } from '@/components/Characters';
 import { PlaceBackdrop } from '@/components/Place';
 import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
@@ -14,7 +14,7 @@ import { ANYTIME } from '@/story/anytime';
 import { chapterStart } from '@/story/engine';
 import { DEFAULT_FLAME_NAME, FLAME_STAGES } from '@/story/flame';
 import { PLACES, type PlaceId } from '@/story/places';
-import type { FlameMood, Scene, When } from '@/story/types';
+import type { AnswerId, FlameMood, Scene, When } from '@/story/types';
 import type { FlameStage } from '@/sprites/characters/ember';
 
 /* Story Lab: play any scene with any flame name and letter, and see every place and every look
@@ -72,7 +72,7 @@ function describe(w: When): string {
 }
 
 /** A player who reached the scene's moment, with the lab's flame name and letter. */
-function stateFor(scene: Scene, chapter: number, flame: string, letter: boolean, answers: boolean, now: Date): GameState {
+function stateFor(scene: Scene, chapter: number, flame: string, letter: boolean, answers: Partial<Record<AnswerId, string>>, now: Date): GameState {
   const base = initialState();
   const reach = scene.when.beaten ? chapterStart(scene.when.beaten + 1) : chapter > 0 ? chapterStart(chapter) : 0;
   const workouts = Math.max(scene.when.workouts ?? 0, reach);
@@ -80,7 +80,7 @@ function stateFor(scene: Scene, chapter: number, flame: string, letter: boolean,
     ...base,
     // The naming scene plays with a flame that has no name yet.
     profile: { ...base.profile, onboarded: true, flame: scene.ask?.kind === 'name' ? undefined : flame, voice: letter ? 'You always quit.' : '', letter: letter ? LETTER : NO_LETTER },
-    answers: answers ? ANSWERS : {},
+    answers,
   };
   return workouts > 0 ? addFakeWorkouts(state, workouts, now, false) : state;
 }
@@ -92,21 +92,81 @@ export default function StoryLab() {
   const [letter, setLetter] = useState(true);
   const [answers, setAnswers] = useState(true);
   const [playing, setPlaying] = useState<{ scene: Scene; state: GameState } | null>(null);
+  // Playing the whole story: where we are in it, and what was answered along the way.
+  const [run, setRun] = useState<{ at: number; between: boolean } | null>(null);
+  const [given, setGiven] = useState<Partial<Record<AnswerId, string>>>({});
   const [result, setResult] = useState<string>('');
   const [place, setPlace] = useState<PlaceId | null>(null);
   const groups = useMemo(() => [...CHAPTERS.map((c) => ({ n: c.n, title: `${c.n} · ${c.name}`, scenes: c.scenes })), { n: 0, title: 'Any time', scenes: ANYTIME }], []);
+  const all = useMemo(() => groups.flatMap((g) => g.scenes.map((scene) => ({ scene, chapter: g.n, group: g.title }))), [groups]);
   const name = flame.trim() || DEFAULT_FLAME_NAME;
+  const said = answers ? { ...ANSWERS, ...given } : given;
 
   const play = (scene: Scene, chapter: number) => {
     setResult('');
-    setPlaying({ scene, state: stateFor(scene, chapter, name, letter, answers, new Date()) });
+    setPlaying({ scene, state: stateFor(scene, chapter, name, letter, said, new Date()) });
   };
 
   const done = (r: SceneResult) => {
     setPlaying(null);
-    const said = [r.flame && `named the flame "${r.flame}"`, r.answer && `${r.answer.id} = "${r.answer.value}"`, r.pickClass && 'opens the class picker'].filter(Boolean);
-    setResult(said.length ? said.join(', ') : 'finished, nothing saved');
+    // Carry what was named and answered into the scenes that follow.
+    if (r.flame) setFlame(r.flame);
+    if (r.answer) setGiven((g) => ({ ...g, [r.answer!.id]: r.answer!.value }));
+    const words = [r.flame && `named the flame "${r.flame}"`, r.answer && `${r.answer.id} = "${r.answer.value}"`, r.pickClass && 'opens the class picker'].filter(Boolean);
+    setResult(words.length ? words.join(', ') : 'finished, nothing saved');
+    if (run) setRun(run.at + 1 < all.length ? { at: run.at + 1, between: true } : null);
   };
+
+  const playFrom = (at: number) => {
+    setGiven({});
+    setRun({ at, between: true });
+  };
+
+  // Between two scenes of the whole story: a moment to see what comes next, then it plays.
+  useEffect(() => {
+    if (!run?.between) return;
+    const t = setTimeout(() => {
+      const next = all[run.at];
+      setRun({ at: run.at, between: false });
+      play(next.scene, next.chapter);
+    }, 1400);
+    return () => clearTimeout(t);
+    // Runs once per step: play() then sees the name and answers the last scene left behind.
+  }, [run]);
+
+  if (run) {
+    const next = all[run.at];
+    return (
+      <>
+        {run.between || !playing ? (
+          <div className="fixed inset-0 z-50 flex animate-fadein flex-col items-center justify-center gap-3 bg-ink-950 px-6 text-center">
+            <p className="font-pixel text-[10px] text-slate-500">{next.group.toUpperCase()}</p>
+            <p className="font-mono text-sm text-gold-300">{next.scene.id}</p>
+            <p className="text-xs text-slate-400">{describe(next.scene.when)}</p>
+          </div>
+        ) : (
+          <ScenePlayer key={playing.scene.id} scene={playing.scene} state={playing.state} onDone={done} />
+        )}
+        <div className="safe-top pointer-events-none fixed inset-x-0 top-0 z-[60] flex justify-center">
+          <button
+            onClick={() => {
+              setRun(null);
+              setPlaying(null);
+            }}
+            className="pointer-events-auto mt-2 flex items-center gap-2 rounded-full bg-ink-900/90 px-3 py-1.5 text-[11px] text-slate-300 ring-1 ring-ink-600"
+          >
+            <span className="font-mono">
+              {run.at + 1}/{all.length}
+            </span>
+            <Square size={10} className="fill-current" /> Stop
+          </button>
+        </div>
+        <div className="fixed inset-x-0 top-0 z-[60] h-0.5 bg-ink-800">
+          <div className="h-full bg-gold-400 transition-all" style={{ width: `${((run.at + 1) / all.length) * 100}%` }} />
+        </div>
+      </>
+    );
+  }
 
   if (playing) return <ScenePlayer key={playing.scene.id} scene={playing.scene} state={playing.state} onDone={done} />;
 
@@ -184,12 +244,21 @@ export default function StoryLab() {
           <Chips label="LETTER" options={['on', 'off']} value={letter ? 'on' : 'off'} onChange={(v) => setLetter(v === 'on')} name={(v) => (v === 'on' ? 'Written' : 'Left empty')} />
           <Chips label="HEART ANSWERS" options={['on', 'off']} value={answers ? 'on' : 'off'} onChange={(v) => setAnswers(v === 'on')} name={(v) => (v === 'on' ? 'Given' : 'Skipped')} />
           {result && <p className="rounded-lg bg-ink-950 px-3 py-2 text-xs text-gold-300">Last scene: {result}</p>}
+          <button onClick={() => playFrom(0)} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gold-400 py-3 font-pixel text-[10px] text-ink-950 active:scale-[.99]">
+            <FastForward size={14} /> Play the whole story
+          </button>
+          <p className="text-[11px] text-slate-500">Every scene in order, one after the other. Skip moves to the next one, Stop comes back here. Names and answers carry forward.</p>
         </div>
 
         <div className="mt-4 space-y-4">
           {groups.map((g) => (
             <div key={g.title}>
-              <p className="mb-1.5 font-pixel text-[9px] text-slate-500">{g.title.toUpperCase()}</p>
+              <div className="mb-1.5 flex items-center justify-between">
+                <p className="font-pixel text-[9px] text-slate-500">{g.title.toUpperCase()}</p>
+                <button onClick={() => playFrom(all.findIndex((x) => x.group === g.title))} className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] text-gold-300">
+                  <FastForward size={11} /> Play from here
+                </button>
+              </div>
               <div className="space-y-1.5">
                 {g.scenes.map((s) => (
                   <button key={s.id} onClick={() => play(s, g.n)} className="flex w-full items-center gap-3 rounded-xl bg-ink-950 px-3 py-2.5 text-left active:scale-[.99]">

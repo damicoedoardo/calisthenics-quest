@@ -70,7 +70,7 @@ function shift(state, now) {
       const row = { label, zone, try: k + 1, workouts: base.sessions.length, levels: `${p.push}/${p.pull}/${p.core}`, cls: base.profile.classId ?? '-', ...r, errors: errors.length };
       rows.push(row);
       const result = row.won ? 'WON' : row.won === false ? 'lost' : 'TIMEOUT';
-      console.log(`${label} #${row.try} w${row.workouts} lv${row.levels} ${row.cls}: ${result} at ${row.seconds}s, boss at ${row.bossAt ?? '-'}, hp ${row.hp}/${row.maxHp}${row.errors ? `, ${row.errors} errors` : ''}`);
+      console.log(`${label} #${row.try} w${row.workouts} lv${row.levels} ${row.cls}: ${result} at ${row.seconds}s, boss at ${row.bossAt ?? '-'}, hp ${row.hp}/${row.maxHp}${row.errors ? `, ${row.errors} errors: ${errors[0].slice(0, 120)}` : ''}`);
       await ctx.close();
     }
   }

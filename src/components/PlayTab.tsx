@@ -119,6 +119,7 @@ export function PlayTab({ state, onPlay }: Props) {
                         : `Best: ${clock(best.seconds)}, level ${best.level}`
                       : `Survive the waves, then face ${z.bossName}.`}
                 </p>
+                {st.state === 'open' && !best && z.firstTry && <p className="mt-0.5 text-[11px] text-gold-300">{z.firstTry}</p>}
                 {st.state === 'open' && !best?.won && <p className="mt-0.5 text-[11px] text-sky-300">{z.hint}</p>}
               </div>
               {open && (
