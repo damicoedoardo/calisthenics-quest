@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Film, Mail, Trophy, Upload } from 'lucide-react';
+import { Download, Film, Mail, Palette, Trophy, Upload } from 'lucide-react';
 import { SoundToggle } from './Sound';
 import { Hero } from './Hero';
+import { useLook } from './Look';
+import { LookEditor } from './LookEditor';
 import { PATHS } from '@/lib/skills';
 import { getClass } from '@/lib/gear';
 import { gearOf, logMaxTest, nextTestDate, nodeName, type GameState } from '@/lib/game';
@@ -27,6 +29,8 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
   const [test, setTest] = useState({ pushups: '', pullups: '', lsitSec: '' });
   const [msg, setMsg] = useState('');
   const [letterOpen, setLetterOpen] = useState(false);
+  const [editingLook, setEditingLook] = useState(false);
+  const look = useLook();
   const first = state.tests[0];
   const best = state.tests.reduce(
     (a, t) => ({ pushups: Math.max(a.pushups, t.pushups), pullups: Math.max(a.pullups, t.pullups), lsitSec: Math.max(a.lsitSec, t.lsitSec) }),
@@ -77,10 +81,37 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
             </div>
           ))}
         </div>
-        <button onClick={onChangeClass} className="mt-3 rounded-lg bg-ink-900/70 px-4 py-2 text-xs font-semibold text-slate-300">
-          {cls ? 'Change class' : 'Choose a class'}
-        </button>
+        <div className="mt-3 flex gap-2">
+          <button onClick={onChangeClass} className="rounded-lg bg-ink-900/70 px-4 py-2 text-xs font-semibold text-slate-300">
+            {cls ? 'Change class' : 'Choose a class'}
+          </button>
+          <button onClick={() => setEditingLook(true)} className="flex items-center gap-1.5 rounded-lg bg-ink-900/70 px-4 py-2 text-xs font-semibold text-slate-300">
+            <Palette size={13} /> Change look
+          </button>
+        </div>
       </section>
+
+      {editingLook && (
+        <div className="safe-top safe-bottom fixed inset-0 z-40 overflow-y-auto bg-ink-950">
+          <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6 pt-4">
+            <h2 className="mb-4 font-pixel text-xs text-gold-300">Your look</h2>
+            <div className="flex-1">
+              <LookEditor
+                look={look}
+                onChange={(l) => update((s) => ({ ...s, profile: { ...s.profile, look: l } }))}
+                gear={gear}
+                classId={state.profile.classId}
+              />
+            </div>
+            <button
+              onClick={() => setEditingLook(false)}
+              className="mt-5 w-full rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
 
       {hasLetter && (
         <section className="rounded-2xl bg-ink-800 p-4">

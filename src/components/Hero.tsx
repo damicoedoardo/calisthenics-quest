@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ClassId, Gear, GearSlot } from '@/lib/gear';
 import type { HeroVariant } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
+import { useLook } from './Look';
 import { Sprite } from './Sprite';
 
 interface HeroProps {
@@ -14,6 +15,7 @@ interface HeroProps {
   bounce?: boolean;
   /** "echo" paints the ghost of who you were; "best" adds the Best Self's cape; "hollow" is your shadow. */
   variant?: HeroVariant;
+  /** Defaults to the player's look (see LookProvider). */
   look?: Look;
   /** Change this number to play the class attack once (swing, shot or cast). */
   action?: number;
@@ -22,11 +24,12 @@ interface HeroProps {
 /** Your hero. The art lives in src/sprites; this only decides when to attack. */
 export function Hero({ gear, classId, size = 160, bounce = true, variant = 'normal', look, action = 0 }: HeroProps) {
   const acting = useAction(action);
+  const yours = useLook();
   return (
     <Sprite
       key={acting.key}
       id="hero"
-      opts={{ gear, classId, variant, look }}
+      opts={{ gear, classId, variant, look: look ?? yours }}
       action={acting.on ? 'attack' : 'idle'}
       size={size}
       playing={acting.on || bounce}

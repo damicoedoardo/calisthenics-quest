@@ -11,6 +11,7 @@ import { Workout } from '@/components/Workout';
 import { AfterSession } from '@/components/AfterSession';
 import { Dialogue } from '@/components/Dialogue';
 import { ClassPicker } from '@/components/ClassPicker';
+import { LookProvider } from '@/components/Look';
 import { finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { pendingScenes, renderLines, storyState, storyWords, type Scene, type StoryState } from '@/lib/story';
 import { useGameState } from '@/lib/store';
@@ -24,7 +25,16 @@ const TABS: { id: Tab; label: string; Icon: typeof Swords }[] = [
 ];
 
 export default function Home() {
-  const { state, ready, update } = useGameState();
+  const game = useGameState();
+  // Every hero sprite below draws with the player's look.
+  return (
+    <LookProvider look={game.state.profile.look}>
+      <Game {...game} />
+    </LookProvider>
+  );
+}
+
+function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const [tab, setTab] = useState<Tab>('today');
   const [training, setTraining] = useState(false);
   const [after, setAfter] = useState<{ result: FinishResult; before: StoryState; after: StoryState } | null>(null);
@@ -77,6 +87,7 @@ export default function Home() {
       <Prologue
         state={state}
         onExit={replaying ? () => setReplaying(false) : undefined}
+        onLook={(look) => update((s) => ({ ...s, profile: { ...s.profile, look } }))}
         onFinish={({ letter, voice, progress }) => {
           update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, letter, voice }, progress: progress ?? s.progress }));
           setReplaying(false);

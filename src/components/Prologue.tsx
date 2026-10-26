@@ -6,6 +6,8 @@ import { Dialogue } from './Dialogue';
 import { Book, Ember, Enemy, Hollow, Wanderer } from './Characters';
 import { Hero } from './Hero';
 import { FirstFight } from './FirstFight';
+import { useLook } from './Look';
+import { LookEditor } from './LookEditor';
 import { RiseUp } from './RiseUp';
 import { SoundToggle, useMusic } from './Sound';
 import { Weather } from './Weather';
@@ -15,12 +17,16 @@ import { getPath } from '@/lib/skills';
 import { music } from '@/lib/music';
 import { COLD_OPEN, FADING, FIRST_QUEST, HOLLOW_MEET, LETTER_PROMPTS, MEET, SEALED, VOICES } from '@/lib/prologue';
 import { renderLines } from '@/lib/story';
+import { STARTER_LOOKS } from '@/sprites/characters/hero';
+import type { Look } from '@/sprites/engine/figure';
 
-type Step = 'title' | 'cold' | 'fading' | 'voice' | 'hollow' | 'fight' | 'fallen' | 'meet' | 'letter' | 'sealed' | 'placement' | 'quest';
+type Step = 'title' | 'cold' | 'fading' | 'voice' | 'hollow' | 'fight' | 'fallen' | 'meet' | 'letter' | 'sealed' | 'placement' | 'quest' | 'look';
 
 interface Props {
   state: GameState;
   onFinish: (patch: { letter: Letter; voice: string; progress?: GameState['progress'] }) => void;
+  /** Saves the player's look right away (the boy/girl pick, then the editor after the story). */
+  onLook: (look: Look) => void;
   /** Shown on the title screen when the opening is replayed. */
   onExit?: () => void;
 }
@@ -64,9 +70,14 @@ function fadingBackdrop(gear: ReturnType<typeof equippedGear>) {
   };
 }
 
-/** First run: the story opens, the player meets the voice in their head, loses, gets up, and writes their letter. */
-export function Prologue({ state, onFinish, onExit }: Props) {
+/**
+ * First run: pick boy or girl, the story opens, the player meets the voice in their head, loses,
+ * gets up, writes their letter, and finally makes the hero look like them.
+ */
+export function Prologue({ state, onFinish, onLook, onExit }: Props) {
   const [step, setStep] = useState<Step>('title');
+  const look = useLook();
+  const firstRun = !state.profile.onboarded;
   const [letter, setLetter] = useState<Letter>(state.profile.letter);
   const [voice, setVoice] = useState(state.profile.voice);
   const [custom, setCustom] = useState(!!state.profile.voice && !VOICES.includes(state.profile.voice));
@@ -81,16 +92,43 @@ export function Prologue({ state, onFinish, onExit }: Props) {
   const go = useCallback((s: Step) => () => setStep(s), []);
 
   const finish = () => onFinish({ letter, voice: voice.trim(), progress: needsPlacement ? placed : undefined });
+  const begin = () => {
+    music.unlock();
+    setStep('cold');
+  };
 
   switch (step) {
     case 'title':
+      if (firstRun && !state.profile.look)
+        return (
+          <div className="fixed inset-0 flex flex-col items-center justify-center bg-ink-950 px-6 text-center">
+            <p className="font-pixel text-3xl tracking-widest text-gold-400">FORMA</p>
+            <p className="mt-3 font-pixel text-[10px] text-slate-400">The Road Back</p>
+            <p className="mt-12 font-pixel text-[10px] text-slate-300">Who walks the road?</p>
+            <div className="mt-5 flex gap-4">
+              {(['m', 'f'] as const).map((sex) => (
+                <button
+                  key={sex}
+                  onClick={() => {
+                    onLook(STARTER_LOOKS[sex]);
+                    begin();
+                  }}
+                  className="flex flex-col items-center rounded-2xl bg-ink-800 px-2 pb-3 pt-1 transition active:scale-95"
+                >
+                  <Hero gear={gear} look={STARTER_LOOKS[sex]} size={120} />
+                  <span className="mt-1 font-pixel text-[10px] text-gold-300">{sex === 'm' ? 'Boy' : 'Girl'}</span>
+                </button>
+              ))}
+            </div>
+            <p className="mt-8 flex items-center gap-2 text-xs text-slate-500">
+              <Headphones size={14} /> Best with sound on
+            </p>
+          </div>
+        );
       return (
         <div
           className="fixed inset-0 flex flex-col items-center justify-center bg-ink-950 px-6 text-center"
-          onClick={() => {
-            music.unlock();
-            setStep('cold');
-          }}
+          onClick={begin}
         >
           <p className="font-pixel text-3xl tracking-widest text-gold-400">FORMA</p>
           <p className="mt-3 font-pixel text-[10px] text-slate-400">The Road Back</p>
@@ -166,10 +204,32 @@ export function Prologue({ state, onFinish, onExit }: Props) {
         />
       );
     case 'quest':
-      return <Dialogue key="quest" lines={FIRST_QUEST} gear={gear} cinematic backdrop={() => <Enemy id="slime" size={110} />} onDone={finish} />;
+      return (
+        <Dialogue key="quest" lines={FIRST_QUEST} gear={gear} cinematic backdrop={() => <Enemy id="slime" size={110} />} onDone={firstRun ? go('look') : finish} />
+      );
     case 'placement':
       return <Placement counts={counts} setCounts={setCounts} placed={placed} onDone={go('quest')} />;
+    case 'look':
+      return <MakeItYours look={look} setLook={onLook} gear={gear} onDone={finish} />;
   }
+}
+
+function MakeItYours({ look, setLook, gear, onDone }: { look: Look; setLook: (l: Look) => void; gear: Record<GearSlot, Gear>; onDone: () => void }) {
+  useMusic('rise');
+  return (
+    <div className="safe-top safe-bottom mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6">
+      <div className="mt-4 flex items-center gap-3">
+        <Ember size={44} />
+        <p className="flex-1 text-sm text-slate-300">&ldquo;One more thing before we walk. Is this really you? Change anything. You can change it again later.&rdquo;</p>
+      </div>
+      <div className="mt-5 flex-1">
+        <LookEditor look={look} onChange={setLook} gear={gear} />
+      </div>
+      <button onClick={onDone} className={`mt-5 ${goldButton}`}>
+        This is me
+      </button>
+    </div>
+  );
 }
 
 function VoicePick({

@@ -46,6 +46,11 @@ export const MANGA_FACE = {
   mouth: '#9a4a3a',
   /** Where the eyes are (left edge x of each, top y), for effects like the Hollow's glow. */
   eyes: { x: [21, 36], y: 15, w: 7, h: 9 },
+  /** Extra lash flicks at the outer eye corners on the female body. */
+  lashes: [
+    [20, 15],
+    [43, 15],
+  ] as Pt[],
 };
 
 /** A shape and its color: a hair tone (0 dark, 1 base, 2 light) or a hex color. */
@@ -66,7 +71,16 @@ const SIDE_LOCKS: Shape[] = [
   [[[17, 12], [20, 12], [19, 25], [17, 21]], 1],
   [[[44, 12], [47, 12], [47, 21], [45, 25]], 1],
 ];
+/** Softer, longer bangs for the long and pony styles. */
+const SOFT_BANGS: Shape[] = [
+  [[[17, 10], [26, 10], [19, 18]], 1],
+  [[[24, 10], [32, 10], [27, 17]], 1],
+  [[[30, 10], [38, 10], [35, 16]], 1],
+  [[[36, 10], [44, 10], [41, 17]], 1],
+  [[[42, 10], [48, 10], [46, 19]], 1],
+];
 const BAND = { base: '#c0392b', light: '#e8604c', dark: '#7a1f18' };
+const RIBBON = { base: '#db2777', light: '#f472b6' };
 
 export const MANGA_HAIR: Partial<Record<HairStyle, MangaHair>> = {
   /** Shonen hero: big spikes up and out, pointed bangs. */
@@ -138,6 +152,40 @@ export const MANGA_HAIR: Partial<Record<HairStyle, MangaHair>> = {
     ],
     shine: [[24, 6, 28, 5]],
   },
+  /** Long and loose: soft bangs, locks framing the face, hair down past the shoulders. */
+  long: {
+    cap: { cx: 32, cy: 13, rx: 16, ry: 10, cutY: 12 },
+    back: [[[[15, 10], [49, 10], [51, 40], [46, 43], [43, 36], [21, 36], [18, 43], [13, 40]], 0]],
+    front: [
+      [[[30, 4], [34, 4], [37, 0]], 1],
+      ...SOFT_BANGS,
+      [[[16, 11], [21, 11], [22, 33], [18, 36], [15, 27]], 1],
+      [[[43, 11], [48, 11], [49, 27], [46, 36], [42, 33]], 1],
+    ],
+    shine: [
+      [22, 6, 27, 5],
+      [36, 5, 41, 6],
+    ],
+  },
+  /** High ponytail swinging out behind, tied with a ribbon. */
+  pony: {
+    cap: { cx: 32, cy: 13, rx: 16, ry: 10, cutY: 12 },
+    back: [
+      [[[41, 5], [47, 3], [54, 9], [57, 21], [55, 31], [51, 25], [49, 14]], 1],
+      [[[47, 6], [51, 9], [53, 20], [51, 22], [49, 13]], 0],
+    ],
+    front: [
+      ...SOFT_BANGS,
+      [[[16, 11], [21, 11], [21, 26], [17, 27]], 1],
+      [[[43, 11], [48, 11], [47, 27], [43, 26]], 1],
+      [[[44, 3], [49, 2], [50, 6], [46, 7]], RIBBON.base],
+      [[[45, 3], [48, 3], [48, 4], [45, 4]], RIBBON.light],
+    ],
+    shine: [
+      [22, 6, 27, 5],
+      [35, 5, 40, 6],
+    ],
+  },
 };
 
 /** Whether a look gets the manga head: hairstyles without a manga version stay classic. */
@@ -166,6 +214,7 @@ export function mangaHead(g: Grid, P: Pose, look: Look, hair?: Grid) {
       r: F.mouth,
     };
   F.art.forEach((row, j) => [...row].forEach((ch, i) => ink[ch] && u.p(F.at[0] + i, F.at[1] + j, ink[ch])));
+  if (look.sex === 'f') F.lashes.forEach(([x, y]) => u.p(x, y, EYES.line));
   if (!hair) return;
   for (let y = 0; y < g.length - 2; y++)
     for (let x = 0; x < g[0].length; x++)

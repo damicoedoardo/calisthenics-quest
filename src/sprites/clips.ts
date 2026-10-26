@@ -52,6 +52,10 @@ export const CLIPS = {
   },
   /** Crouch, punch, impact. */
   punch: { ms: 120, loop: false, frames: [{}, { bob: 1 }, { right: 'fwd', fx: 'impact' }, {}] },
+  /** Creatures: a slow float or breath over eight frames (room for a blink or a flicker). */
+  hover: { ms: 150, loop: true, frames: [{}, {}, { bob: 1 }, { bob: 1 }, { bob: 1 }, { bob: 1 }, {}, {}] },
+  /** Creatures: wind up (right: 'up'), then lunge at the hero with an impact. */
+  lunge: { ms: 110, loop: false, frames: [{}, { right: 'up' }, { fx: 'impact' }, {}] },
   /** A single still frame, for sprites that don't move. */
   still: { ms: 1000, loop: false, frames: [{}] },
 } satisfies Record<string, Clip>;
