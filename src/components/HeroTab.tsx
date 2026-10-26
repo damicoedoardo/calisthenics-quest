@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Mail, Trophy, Upload } from 'lucide-react';
+import { Download, Film, Mail, Trophy, Upload } from 'lucide-react';
+import { SoundToggle } from './Sound';
 import { Hero } from './Hero';
 import { PATHS } from '@/lib/skills';
 import { getClass } from '@/lib/gear';
@@ -14,11 +15,12 @@ interface Props {
   update: (fn: (s: GameState) => GameState) => void;
   onChangeClass: () => void;
   onTestLogged: () => void;
+  onReplayOpening: () => void;
 }
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
-export function HeroTab({ state, update, onChangeClass, onTestLogged }: Props) {
+export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOpening }: Props) {
   const gear = gearOf(state);
   const cls = getClass(state.profile.classId);
   const story = storyState(state);
@@ -33,7 +35,7 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged }: Props) {
   const nextTest = nextTestDate(state);
   const testReady = !nextTest || nextTest <= new Date();
   const letter = state.profile.letter;
-  const hasLetter = !!(letter.why || letter.want || letter.remind);
+  const hasLetter = !!(letter.why || letter.want || letter.forWho || letter.remind);
 
   const submitTest = () => {
     const values = { pushups: Number(test.pushups) || 0, pullups: Number(test.pullups) || 0, lsitSec: Number(test.lsitSec) || 0 };
@@ -89,6 +91,7 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged }: Props) {
             <div className="mt-3 space-y-2 rounded-xl bg-[#f5ecd7] p-4 text-sm text-[#3b2a1a]">
               {letter.why && <p>Dear future me, I&apos;m starting again because {letter.why}</p>}
               {letter.want && <p>One day I want to be able to {letter.want}</p>}
+              {letter.forWho && <p>I&apos;m doing this for {letter.forWho}</p>}
               {letter.remind && <p>When I want to quit, remind me that {letter.remind}</p>}
             </div>
           )}
@@ -184,7 +187,15 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged }: Props) {
       )}
 
       <section className="rounded-2xl bg-ink-800 p-4">
-        <h2 className="font-pixel text-[10px] text-gold-300">Settings</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="font-pixel text-[10px] text-gold-300">Settings</h2>
+          <span className="flex items-center gap-1 text-xs text-slate-400">
+            Music <SoundToggle />
+          </span>
+        </div>
+        <button onClick={onReplayOpening} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold">
+          <Film size={16} /> Replay the opening
+        </button>
         <p className="mt-2 text-xs text-slate-400">Your level on each path. Change it if it feels too easy or too hard.</p>
         <div className="mt-2 space-y-2">
           {PATHS.map((path) => (

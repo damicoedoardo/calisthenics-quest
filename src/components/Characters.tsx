@@ -1,4 +1,6 @@
 import { PixelArt } from './Sprite';
+import { Hero } from './Hero';
+import { equippedGear } from '@/lib/gear';
 
 const WANDERER = [
   '.....CCCCCC.....',
@@ -36,22 +38,6 @@ const EMBER = [
   '....YYYY....',
 ];
 
-const DOUBT = [
-  '....FFFFFFFF....',
-  '..FFFFFFFFFFFF..',
-  '.FFFfFFFFFFfFFF.',
-  'FFFFFFFFFFFFFFFF',
-  'FFFrrFFFFFFrrFFF',
-  'FFFrrFFFFFFrrFFF',
-  'FFFFFFFFFFFFFFFF',
-  'FFFFFmmmmmmFFFFF',
-  '.FFFFFFFFFFFFFF.',
-  '.FFfFFFFFFFfFFF.',
-  '..FFFFFFFFFFFF..',
-  '.FF.FFFFFFFF.FF.',
-  'F....FF..FF....F',
-];
-
 const MIRA = [
   '.....RRRRRR.....',
   '....RRRRRRRR....',
@@ -69,6 +55,20 @@ const MIRA = [
   '....LAAAAAAL....',
   '....PPP..PPP....',
   '...BBBB..BBBB...',
+];
+
+const BOOK = [
+  '.LLLLLLLLLLLLLL.',
+  'LLppppppLppppppL',
+  'LLppppppLppppppL',
+  'LLppppppLppppppL',
+  'LLppppppLppppppL',
+  'LLppppppLppppppL',
+  'LLppppppLppppppL',
+  'LLppppppLppppppL',
+  'LLppppppLppppppL',
+  '.LLLLLLLLLLLLLL.',
+  '.......LL.......',
 ];
 
 const SLIME = [
@@ -146,8 +146,16 @@ export function Ember({ size = 48, dim = false }: { size?: number; dim?: boolean
   );
 }
 
-export function Doubt({ size = 64 }: { size?: number }) {
-  return <PixelArt rows={DOUBT} palette={{ F: '#4b5563', f: '#6b7280', r: '#ef4444', m: '#111827' }} size={size} label="Doubt" />;
+const SHADOW_GEAR = equippedGear(undefined, { push: 0, pull: 0, core: 0 });
+
+/** The Hollow: your own shape, emptied out. The voice that says you're not enough. */
+export function Hollow({ size = 64, bounce = true }: { size?: number; bounce?: boolean }) {
+  return <Hero gear={SHADOW_GEAR} size={size} variant="hollow" bounce={bounce} />;
+}
+
+/** The Book of Days: blank pages the player writes by training. */
+export function Book({ size = 64 }: { size?: number }) {
+  return <PixelArt rows={BOOK} palette={{ L: '#78350f', p: '#f5ecd7' }} size={size} className="animate-float" label="The Book of Days" />;
 }
 
 export function Mira({ size = 64 }: { size?: number }) {
@@ -161,7 +169,7 @@ export function Mira({ size = 64 }: { size?: number }) {
   );
 }
 
-export type EnemyId = 'slime' | 'mirror' | 'golem' | 'doubt' | 'summit';
+export type EnemyId = 'slime' | 'mirror' | 'golem' | 'hollow' | 'summit';
 
 export function Enemy({ id, size = 72 }: { id: EnemyId; size?: number }) {
   switch (id) {
@@ -171,8 +179,8 @@ export function Enemy({ id, size = 72 }: { id: EnemyId; size?: number }) {
       return <PixelArt rows={MIRROR} palette={{ D: '#a16207', g: '#1e293b', G: '#334155', w: '#e2e8f0', r: '#ef4444' }} size={size} label="The Mirror" />;
     case 'golem':
       return <PixelArt rows={GOLEM} palette={{ S: '#78716c', s: '#57534e', r: '#f59e0b' }} size={size} label="The Plateau" />;
-    case 'doubt':
-      return <Doubt size={size} />;
+    case 'hollow':
+      return <Hollow size={size} bounce={false} />;
     case 'summit':
       return <PixelArt rows={SUMMIT} palette={{ F: '#fbbf24', W: '#f8fafc', M: '#475569' }} size={size} label="The Summit" />;
   }

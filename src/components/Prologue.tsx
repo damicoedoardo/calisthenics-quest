@@ -1,55 +1,32 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
-import { Minus, Plus } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { Headphones, Minus, Plus } from 'lucide-react';
 import { Dialogue } from './Dialogue';
-import { Ember, Wanderer } from './Characters';
+import { Book, Ember, Enemy, Hollow, Wanderer } from './Characters';
+import { Hero } from './Hero';
+import { FirstFight } from './FirstFight';
+import { RiseUp } from './RiseUp';
+import { SoundToggle, useMusic } from './Sound';
+import { Weather } from './Weather';
 import { placement, type GameState, type Letter } from '@/lib/game';
-import { equippedGear } from '@/lib/gear';
+import { equippedGear, type Gear, type GearSlot } from '@/lib/gear';
 import { getPath } from '@/lib/skills';
-import type { Line } from '@/lib/story';
+import { music } from '@/lib/music';
+import { COLD_OPEN, FADING, FIRST_QUEST, HOLLOW_MEET, LETTER_PROMPTS, MEET, SEALED, VOICES } from '@/lib/prologue';
+import { renderLines } from '@/lib/story';
 
-type Step = 'intro' | 'meet' | 'letter' | 'sealed' | 'placement' | 'quest';
-
-const INTRO: Line[] = [
-  { who: 'narrator', text: 'There was a time you were strong.' },
-  { who: 'narrator', text: 'Then life happened. Work. Tired evenings. One skipped week became a month. A month became years.' },
-  { who: 'narrator', text: 'Nobody took it from you. You just put it down.' },
-];
-
-const MEET: Line[] = [
-  { who: 'narrator', text: 'You wake up in a gray, quiet land. A cracked sword lies in the ash beside you.' },
-  { who: 'wanderer', text: "You're awake. Good. Most people who come here stay asleep." },
-  { who: 'you', text: 'Where am I?' },
-  { who: 'wanderer', text: "The Ashlands. It's where things go when we stop taking care of them." },
-  { who: 'wanderer', text: 'Your strength is here too. Buried, not gone.' },
-  { who: 'wanderer', text: "Before we walk, I need one thing from you. Write to the person you want to become. Not who you were. Who you're going to be." },
-];
-
-const SEALED: Line[] = [
-  { who: 'narrator', text: 'The Wanderer folds your letter without reading it, and puts it inside his coat.' },
-  { who: 'wanderer', text: "I'll keep this safe. You'll see it again. I promise." },
-  { who: 'narrator', text: 'Something flickers in the ash. A spark, no bigger than a fingernail.' },
-  { who: 'ember', text: "...hi. Sorry. I'm small right now. I used to be bigger." },
-  { who: 'ember', text: 'I think I was waiting for you.' },
-];
-
-const QUEST: Line[] = [
-  { who: 'wanderer', text: 'Your first quest is simple. Show up three times this week.' },
-  { who: 'wanderer', text: 'Not perfect. Present.' },
-  { who: 'ember', text: "Every session you do, I grow. Just so you know. No pressure. (Some pressure.)" },
-];
-
-const PROMPTS: { key: keyof Letter; label: string; placeholder: string }[] = [
-  { key: 'why', label: "Dear future me, I'm starting again because...", placeholder: 'I miss feeling strong in my own body' },
-  { key: 'want', label: 'One day I want to be able to...', placeholder: 'do 15 pull-ups again, and hold an L-sit' },
-  { key: 'remind', label: 'When I want to quit, remind me that...', placeholder: 'every rep counts, even on bad days' },
-];
+type Step = 'title' | 'cold' | 'fading' | 'voice' | 'hollow' | 'fight' | 'fallen' | 'meet' | 'letter' | 'sealed' | 'placement' | 'quest';
 
 interface Props {
   state: GameState;
-  onFinish: (patch: { letter: Letter; progress?: GameState['progress'] }) => void;
+  onFinish: (patch: { letter: Letter; voice: string; progress?: GameState['progress'] }) => void;
+  /** Shown on the title screen when the opening is replayed. */
+  onExit?: () => void;
 }
+
+const goldButton =
+  'w-full rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none disabled:opacity-40';
 
 function Stepper({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
   return (
@@ -68,62 +45,255 @@ function Stepper({ label, value, onChange }: { label: string; value: number; onC
   );
 }
 
-/** First run: the story opens, the player writes their letter and says roughly where they stand. */
-export function Prologue({ state, onFinish }: Props) {
-  const [step, setStep] = useState<Step>('intro');
-  const [letter, setLetter] = useState<Letter>(state.profile.letter);
-  const [counts, setCounts] = useState({ push: 15, pull: 3, core: 10 });
-  const gear = equippedGear(undefined, state.progress);
-  // Existing players keep their progress; only new ones are placed.
-  const needsPlacement = state.sessions.length === 0;
-  const placed = useMemo(() => placement(counts.push, counts.pull, counts.core), [counts]);
-
-  const finish = () => onFinish({ letter, progress: needsPlacement ? placed : undefined });
-
-  if (step === 'intro') return <Rain><Dialogue lines={INTRO} gear={gear} onDone={() => setStep('meet')} /></Rain>;
-  if (step === 'meet') return <Dialogue lines={MEET} gear={gear} onDone={() => setStep('letter')} />;
-  if (step === 'sealed') return <Dialogue lines={SEALED} gear={gear} onDone={() => setStep(needsPlacement ? 'placement' : 'quest')} />;
-  if (step === 'quest') return <Dialogue lines={QUEST} gear={gear} onDone={finish} />;
-
-  if (step === 'letter') {
+/** The fading montage: who you were turns gray, and something stands behind you. */
+function fadingBackdrop(gear: ReturnType<typeof equippedGear>) {
+  return (i: number) => {
+    const t = i / (FADING.length - 1);
     return (
-      <div className="safe-top safe-bottom mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6">
-        <div className="mt-4 flex items-center gap-3">
-          <Wanderer size={56} />
-          <p className="text-sm italic text-slate-300">&ldquo;Write to the person you want to become.&rdquo;</p>
+      <div className="relative">
+        {i === FADING.length - 1 && (
+          <div className="absolute -right-16 bottom-0 animate-fadein opacity-40">
+            <Hollow size={120} bounce={false} />
+          </div>
+        )}
+        <div className="transition-all duration-1000" style={{ filter: `grayscale(${t}) brightness(${1 - 0.4 * t})`, opacity: 1 - 0.4 * t }}>
+          <Hero gear={gear} size={150 - 30 * t} bounce={false} variant={i < 2 ? 'echo' : 'normal'} />
         </div>
-        <div className="mt-5 flex-1 space-y-4 rounded-2xl bg-[#f5ecd7] p-5 text-[#3b2a1a] shadow-xl">
-          <p className="font-pixel text-[11px]">A letter to my future self</p>
-          {PROMPTS.map((p) => (
-            <label key={p.key} className="block">
-              <span className="text-sm font-semibold">{p.label}</span>
-              <textarea
-                value={letter[p.key]}
-                onChange={(e) => setLetter({ ...letter, [p.key]: e.target.value })}
-                placeholder={p.placeholder}
-                rows={2}
-                className="mt-1 w-full resize-none rounded-lg border border-[#d6c7a1] bg-[#fbf6ea] px-3 py-2 text-base outline-none placeholder:text-[#a8977a] focus:border-[#a16207]"
-              />
-            </label>
-          ))}
-          <p className="text-xs text-[#7a6a4f]">Every line is optional. Only you will ever read it.</p>
-        </div>
-        <button
-          onClick={() => setStep('sealed')}
-          className="mt-5 w-full rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
-        >
-          Seal the letter
-        </button>
       </div>
     );
-  }
+  };
+}
 
-  // placement
+/** First run: the story opens, the player meets the voice in their head, loses, gets up, and writes their letter. */
+export function Prologue({ state, onFinish, onExit }: Props) {
+  const [step, setStep] = useState<Step>('title');
+  const [letter, setLetter] = useState<Letter>(state.profile.letter);
+  const [voice, setVoice] = useState(state.profile.voice);
+  const [custom, setCustom] = useState(!!state.profile.voice && !VOICES.includes(state.profile.voice));
+  const [counts, setCounts] = useState({ push: 15, pull: 3, core: 10 });
+  const gear = equippedGear(undefined, state.progress);
+  // A dull, cracked blade for the first fight.
+  const fightGear: Record<GearSlot, Gear> = { ...gear, weapon: { ...gear.weapon, tier: 1, color: '#6b7280', glow: undefined } };
+  // Only brand-new players are placed; anyone replaying keeps their progress.
+  const needsPlacement = !state.profile.onboarded && state.sessions.length === 0;
+  const placed = useMemo(() => placement(counts.push, counts.pull, counts.core), [counts]);
+  const words = { ...letter, voice: voice.trim() || "You're not enough.", sessions: String(state.sessions.length) };
+  const go = useCallback((s: Step) => () => setStep(s), []);
+
+  const finish = () => onFinish({ letter, voice: voice.trim(), progress: needsPlacement ? placed : undefined });
+
+  switch (step) {
+    case 'title':
+      return (
+        <div
+          className="fixed inset-0 flex flex-col items-center justify-center bg-ink-950 px-6 text-center"
+          onClick={() => {
+            music.unlock();
+            setStep('cold');
+          }}
+        >
+          <p className="font-pixel text-3xl tracking-widest text-gold-400">FORMA</p>
+          <p className="mt-3 font-pixel text-[10px] text-slate-400">The Road Back</p>
+          <div className="mt-12 opacity-60 grayscale">
+            <Hero gear={gear} size={96} />
+          </div>
+          <p className="mt-12 animate-blink font-pixel text-[10px] text-slate-300">Tap to begin</p>
+          <p className="mt-6 flex items-center gap-2 text-xs text-slate-500">
+            <Headphones size={14} /> Best with sound on
+          </p>
+          {onExit && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onExit();
+              }}
+              className="mt-8 text-sm text-slate-500"
+            >
+              Not now
+            </button>
+          )}
+        </div>
+      );
+    case 'cold':
+      return (
+        <>
+          <Weather kind="rain" />
+          <Dialogue key="cold" lines={COLD_OPEN} gear={gear} cinematic music="memory" onDone={go('fading')} />
+        </>
+      );
+    case 'fading':
+      return <Dialogue key="fading" lines={FADING} gear={gear} cinematic music="memory" backdrop={fadingBackdrop(gear)} onDone={go('voice')} />;
+    case 'voice':
+      return <VoicePick voice={voice} custom={custom} setVoice={setVoice} setCustom={setCustom} onDone={go('hollow')} />;
+    case 'hollow':
+      return (
+        <>
+          <Weather kind="ash" />
+          <Dialogue
+            key="hollow"
+            lines={renderLines(HOLLOW_MEET, words)}
+            gear={fightGear}
+            music="hollow"
+            backdrop={(i) =>
+              i === 0 ? (
+                <Hero gear={fightGear} size={150} bounce={false} />
+              ) : (
+                <div className="transition-all duration-1000" style={i === 1 ? { opacity: 0.4, filter: 'grayscale(1)' } : undefined}>
+                  <Hollow size={160} />
+                </div>
+              )
+            }
+            onDone={go('fight')}
+          />
+        </>
+      );
+    case 'fight':
+      return <FirstFight voice={words.voice} gear={fightGear} onDone={go('fallen')} />;
+    case 'fallen':
+      return <RiseUp gear={fightGear} onDone={go('meet')} />;
+    case 'meet':
+      return <Dialogue key="meet" lines={MEET} gear={fightGear} backdrop={() => <Wanderer size={140} />} onDone={go('letter')} />;
+    case 'letter':
+      return <LetterForm letter={letter} setLetter={setLetter} onDone={go('sealed')} />;
+    case 'sealed':
+      return (
+        <Dialogue
+          key="sealed"
+          lines={SEALED}
+          gear={gear}
+          backdrop={(i) => (i < 2 ? <Wanderer size={140} /> : i < 5 ? <Book size={120} /> : <Ember size={36} dim />)}
+          onDone={go(needsPlacement ? 'placement' : 'quest')}
+        />
+      );
+    case 'quest':
+      return <Dialogue key="quest" lines={FIRST_QUEST} gear={gear} cinematic backdrop={() => <Enemy id="slime" size={110} />} onDone={finish} />;
+    case 'placement':
+      return <Placement counts={counts} setCounts={setCounts} placed={placed} onDone={go('quest')} />;
+  }
+}
+
+function VoicePick({
+  voice,
+  custom,
+  setVoice,
+  setCustom,
+  onDone,
+}: {
+  voice: string;
+  custom: boolean;
+  setVoice: (v: string) => void;
+  setCustom: (c: boolean) => void;
+  onDone: () => void;
+}) {
+  useMusic('memory');
+  return (
+    <div className="safe-bottom fixed inset-0 overflow-y-auto bg-ink-950">
+      <div className="safe-top flex px-4">
+        <SoundToggle />
+      </div>
+      <div className="mx-auto flex min-h-[90dvh] max-w-md flex-col px-5 pb-6">
+        <div className="flex justify-center opacity-50">
+          <Hollow size={90} />
+        </div>
+        <p className="mt-4 text-center text-lg leading-relaxed text-slate-300">
+          It&apos;s quiet. It&apos;s always there. And it sounds exactly like you.
+        </p>
+        <p className="mt-5 text-center font-pixel text-[11px] text-red-300">What does it tell you?</p>
+        <div className="mt-5 space-y-2">
+          {VOICES.map((v) => (
+            <button
+              key={v}
+              onClick={() => {
+                setVoice(v);
+                setCustom(false);
+              }}
+              className={`w-full rounded-xl px-4 py-3 text-left text-base transition active:scale-[.98] ${
+                !custom && voice === v ? 'bg-[#2a1630] text-red-100 ring-1 ring-red-400/60' : 'bg-ink-800 text-slate-300'
+              }`}
+            >
+              &ldquo;{v}&rdquo;
+            </button>
+          ))}
+          {custom ? (
+            <input
+              autoFocus
+              value={voice}
+              onChange={(e) => setVoice(e.target.value)}
+              placeholder="In its words..."
+              maxLength={80}
+              className="w-full rounded-xl bg-[#2a1630] px-4 py-3 text-base text-red-100 outline-none ring-1 ring-red-400/60 placeholder:text-red-200/40"
+            />
+          ) : (
+            <button
+              onClick={() => {
+                setCustom(true);
+                setVoice('');
+              }}
+              className="w-full rounded-xl bg-ink-800 px-4 py-3 text-left text-base text-slate-500"
+            >
+              Something else...
+            </button>
+          )}
+        </div>
+        <p className="mt-4 text-center text-xs text-slate-500">Be honest. Only you will ever see this.</p>
+        <div className="flex-1" />
+        <button onClick={onDone} disabled={!voice.trim()} className={`mt-6 ${goldButton}`}>
+          That&apos;s the one
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LetterForm({ letter, setLetter, onDone }: { letter: Letter; setLetter: (l: Letter) => void; onDone: () => void }) {
+  useMusic('rise');
+  return (
+    <div className="safe-top safe-bottom mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6">
+      <div className="mt-4 flex items-center gap-3">
+        <Wanderer size={56} />
+        <p className="flex-1 text-sm italic text-slate-300">&ldquo;Write to the person you want to become.&rdquo;</p>
+        <SoundToggle />
+      </div>
+      <div className="mt-5 flex-1 space-y-4 rounded-2xl bg-[#f5ecd7] p-5 text-[#3b2a1a] shadow-xl">
+        <p className="font-pixel text-[11px]">A letter to my future self</p>
+        {LETTER_PROMPTS.map((p) => (
+          <label key={p.key} className="block">
+            <span className="text-sm font-semibold">{p.label}</span>
+            <textarea
+              value={letter[p.key]}
+              onChange={(e) => setLetter({ ...letter, [p.key]: e.target.value })}
+              placeholder={p.placeholder}
+              rows={2}
+              className="mt-1 w-full resize-none rounded-lg border border-[#d6c7a1] bg-[#fbf6ea] px-3 py-2 text-base outline-none placeholder:text-[#a8977a] focus:border-[#a16207]"
+            />
+          </label>
+        ))}
+        <p className="text-xs text-[#7a6a4f]">Every line is optional. Only you will ever read it.</p>
+      </div>
+      <button onClick={onDone} className={`mt-5 ${goldButton}`}>
+        Seal the letter
+      </button>
+    </div>
+  );
+}
+
+function Placement({
+  counts,
+  setCounts,
+  placed,
+  onDone,
+}: {
+  counts: { push: number; pull: number; core: number };
+  setCounts: (c: { push: number; pull: number; core: number }) => void;
+  placed: GameState['progress'];
+  onDone: () => void;
+}) {
+  useMusic('rise');
   return (
     <div className="safe-top safe-bottom mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6">
       <div className="mt-4 flex items-center gap-3">
         <Ember size={44} />
-        <p className="text-sm text-slate-300">&ldquo;Before we walk: roughly how many can you do today? Guess low. I won&apos;t judge.&rdquo;</p>
+        <p className="flex-1 text-sm text-slate-300">&ldquo;Before we walk: roughly how many can you do today? Guess low. I won&apos;t judge.&rdquo;</p>
       </div>
       <div className="mt-6 flex-1 space-y-3">
         <Stepper label="Push-ups" value={counts.push} onChange={(v) => setCounts({ ...counts, push: v })} />
@@ -142,34 +312,9 @@ export function Prologue({ state, onFinish }: Props) {
           <p className="mt-3 text-xs text-slate-500">Starting a step lower on purpose, so day one feels winnable.</p>
         </div>
       </div>
-      <button
-        onClick={() => setStep('quest')}
-        className="mt-5 w-full rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
-      >
+      <button onClick={onDone} className={`mt-5 ${goldButton}`}>
         Begin the road
       </button>
     </div>
-  );
-}
-
-/** Pixel rain behind the opening lines. */
-function Rain({ children }: { children: ReactNode }) {
-  const drops = useMemo(
-    () => Array.from({ length: 40 }).map(() => ({ left: Math.random() * 100, delay: Math.random() * 2, dur: 0.7 + Math.random() * 0.6 })),
-    [],
-  );
-  return (
-    <>
-      <div className="pointer-events-none fixed inset-0 z-[60] overflow-hidden" aria-hidden>
-        {drops.map((d, i) => (
-          <span
-            key={i}
-            className="absolute top-0 h-3 w-px animate-rain bg-sky-300/40"
-            style={{ left: `${d.left}%`, animationDelay: `${d.delay}s`, animationDuration: `${d.dur}s` }}
-          />
-        ))}
-      </div>
-      {children}
-    </>
   );
 }

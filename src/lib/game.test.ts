@@ -16,7 +16,8 @@ import {
   type Session,
 } from './game';
 import { equippedGear, rewardFor } from './gear';
-import { pendingScenes, renderLines, storyState } from './story';
+import { pendingScenes, renderLines, storyState, storyWords } from './story';
+import { noteFreq, parsePattern } from './music';
 
 const monday = new Date(2026, 9, 26, 18);
 
@@ -152,9 +153,45 @@ describe('story', () => {
         { who: 'bestself', text: 'You wrote "{why}."', needs: 'why' },
         { who: 'bestself', text: 'And "{remind}."', needs: 'remind' },
       ],
-      { why: 'I miss being strong.', want: '', remind: '' },
+      { why: 'I miss being strong.', want: '', forWho: '', remind: '', voice: '', sessions: '0' },
     );
     expect(lines).toEqual([{ who: 'bestself', text: 'You wrote "I miss being strong."', needs: 'why' }]);
+  });
+
+  it("lets the Hollow speak the player's own line and real numbers", () => {
+    const state = { ...initialState(), sessions: fakeSessions(27) };
+    state.profile = { ...state.profile, voice: 'You always quit.' };
+    const lines = renderLines(
+      [
+        { who: 'hollow', text: '{voice}', needs: 'voice' },
+        { who: 'hollow', text: '{sessions} sessions. Cute.' },
+      ],
+      storyWords(state),
+    );
+    expect(lines.map((l) => l.text)).toEqual(['You always quit.', '27 sessions. Cute.']);
+  });
+
+  it('makes the Hollow the enemy of chapter 4', () => {
+    const tested = { ...initialState(), sessions: fakeSessions(27), tests: [{ id: 't1', date: monday.toISOString(), pushups: 20, pullups: 3, lsitSec: 5, xp: 200 }] };
+    expect(storyState(tested).chapter?.enemyId).toBe('hollow');
+  });
+});
+
+describe('music', () => {
+  it('tunes notes to A440', () => {
+    expect(noteFreq('A4')).toBe(440);
+    expect(noteFreq('A3')).toBe(220);
+    expect(Math.round(noteFreq('C4'))).toBe(262);
+  });
+
+  it('reads holds and rests in a pattern', () => {
+    expect(parsePattern('C4 - - . E4 -')).toEqual({
+      events: [
+        { step: 0, steps: 3, note: 'C4' },
+        { step: 4, steps: 2, note: 'E4' },
+      ],
+      length: 6,
+    });
   });
 });
 

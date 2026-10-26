@@ -68,12 +68,15 @@ export interface Draft {
 export interface Letter {
   why: string;
   want: string;
+  forWho: string;
   remind: string;
 }
 
 export interface Profile {
   onboarded: boolean;
   letter: Letter;
+  /** What the Hollow says: the player's own inner critic, in their words. */
+  voice: string;
   classId?: ClassId;
 }
 
@@ -94,7 +97,7 @@ export interface GameState {
 export function initialState(): GameState {
   return {
     version: 2,
-    profile: { onboarded: false, letter: { why: '', want: '', remind: '' } },
+    profile: { onboarded: false, letter: { why: '', want: '', forWho: '', remind: '' }, voice: '' },
     progress: { push: 1, pull: 1, core: 0 },
     reps: {},
     sessions: [],

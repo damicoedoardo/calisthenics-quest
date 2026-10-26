@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Heart } from 'lucide-react';
 import { Hero } from './Hero';
 import { Enemy } from './Characters';
+import { music } from '@/lib/music';
 import { gearOf, levelInfo, totalXp, type FinishResult } from '@/lib/game';
 import type { StoryState } from '@/lib/story';
 
@@ -26,7 +27,10 @@ export function AfterSession({ result, before, after, onClose }: Props) {
 
   useEffect(() => {
     if (stage !== 'battle') return;
-    const t = setTimeout(() => setHit(true), 700);
+    const t = setTimeout(() => {
+      setHit(true);
+      music.sting('victory');
+    }, 700);
     return () => clearTimeout(t);
   }, [stage]);
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Heart, Play, X } from 'lucide-react';
-import { Ember, Enemy } from './Characters';
+import { Ember, Enemy, Hollow } from './Characters';
 import {
   WEEKLY_GOAL,
   dayType,
@@ -19,6 +19,7 @@ import { storyState } from '@/lib/story';
 interface Props {
   state: GameState;
   onStart: (checkin: Checkin) => void;
+  onReplayOpening: () => void;
 }
 
 const CHECKINS: { id: Checkin; label: string; note: string }[] = [
@@ -36,7 +37,7 @@ function emberLine(week: number, streak: number): string {
   return 'New week. Three pages to write. Want to start one?';
 }
 
-export function TodayTab({ state, onStart }: Props) {
+export function TodayTab({ state, onStart, onReplayOpening }: Props) {
   const now = new Date();
   const [checkin, setCheckin] = useState<Checkin>(state.draft?.checkin ?? 'normal');
   const quest = todaysQuest(state, checkin);
@@ -49,6 +50,16 @@ export function TodayTab({ state, onStart }: Props) {
   return (
     <div className="space-y-4">
       <InstallHint />
+
+      {!state.profile.voice && (
+        <button onClick={onReplayOpening} className="flex w-full items-center gap-3 rounded-2xl bg-[#140f1f] p-4 text-left ring-1 ring-red-400/30 active:scale-[.98]">
+          <Hollow size={44} bounce={false} />
+          <span className="min-w-0 flex-1">
+            <span className="block font-pixel text-[10px] text-red-300">New: the opening</span>
+            <span className="mt-1 block text-sm text-slate-300">The story now starts with the voice in your head. About 5 minutes, sound on.</span>
+          </span>
+        </button>
+      )}
 
       {story.chapter ? (
         <section className="rounded-2xl bg-ink-800 p-4 pixel-border">

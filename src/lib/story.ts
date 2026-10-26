@@ -1,13 +1,17 @@
 import type { EnemyId } from '@/components/Characters';
 import { daysSinceLastSession, weekKey, WEEKLY_GOAL, type GameState, type Letter } from './game';
+import type { TrackId } from './music';
 
-export type Speaker = 'narrator' | 'wanderer' | 'ember' | 'echo' | 'doubt' | 'mira' | 'bestself' | 'you';
+export type Speaker = 'narrator' | 'wanderer' | 'ember' | 'echo' | 'hollow' | 'mira' | 'bestself' | 'you';
+
+/** The player's own words that the story can quote: the letter, the Hollow's line, and real numbers. */
+export type Words = Letter & { voice: string; sessions: string };
 
 export interface Line {
   who: Speaker;
   text: string;
-  /** Only shown when this part of the letter was written. */
-  needs?: keyof Letter;
+  /** Only shown when this word was given (an empty letter line drops the story line). */
+  needs?: keyof Words;
 }
 
 export interface Chapter {
@@ -25,7 +29,7 @@ export const CHAPTERS: Chapter[] = [
   { n: 1, name: 'The Ashlands', enemy: 'Tomorrow', enemyId: 'slime', sessions: 6, tests: 0 },
   { n: 2, name: 'The Echo', enemy: 'The Mirror', enemyId: 'mirror', sessions: 9, tests: 1 },
   { n: 3, name: 'The Village of Almosts', enemy: 'The Plateau', enemyId: 'golem', sessions: 12, tests: 1 },
-  { n: 4, name: 'The Fog', enemy: 'Doubt', enemyId: 'doubt', sessions: 12, tests: 1 },
+  { n: 4, name: 'The Fog', enemy: 'The Hollow', enemyId: 'hollow', sessions: 12, tests: 1 },
   { n: 5, name: 'Forma', enemy: 'The Summit', enemyId: 'summit', sessions: 9, tests: 2 },
 ];
 
@@ -69,6 +73,7 @@ export interface Scene {
   lines: Line[];
   /** Something the player does when the scene ends. */
   action?: 'choose-class';
+  music?: TrackId;
 }
 
 function hadPerfectWeek(state: GameState): boolean {
@@ -80,13 +85,15 @@ function hadPerfectWeek(state: GameState): boolean {
   return [...counts.values()].some((c) => c >= WEEKLY_GOAL);
 }
 
-const STORY: { id: string; when: (s: GameState, st: StoryState) => boolean; lines: Line[]; action?: Scene['action'] }[] = [
+const STORY: (Omit<Scene, 'lines'> & { when: (s: GameState, st: StoryState) => boolean; lines: Line[] })[] = [
   {
     id: 'first-quest',
     when: (s) => s.sessions.length >= 1,
     lines: [
       { who: 'ember', text: "You did it. One page written." },
       { who: 'ember', text: "I feel... warmer? Is that weird? That's weird." },
+      { who: 'hollow', text: "One session. I've watched you do one session before." },
+      { who: 'ember', text: "Not with me, you haven't. Shush." },
       { who: 'wanderer', text: "Two more this week. Not perfect. Present." },
     ],
   },
@@ -121,8 +128,8 @@ const STORY: { id: string; when: (s: GameState, st: StoryState) => boolean; line
     when: (_, st) => st.index >= 1,
     lines: [
       { who: 'narrator', text: "Chapter 2: The Echo." },
-      { who: 'narrator', text: "A golden figure blocks the road. He has your face, two years younger." },
-      { who: 'echo', text: "Look at you. Out of breath already? I did fifty push-ups before breakfast." },
+      { who: 'narrator', text: "A golden figure blocks the road. Your face, from the days you never missed." },
+      { who: 'echo', text: "Look at you. Out of breath already? I never missed a day." },
       { who: 'wanderer', text: "He's not you. He's a photograph. Photographs don't train." },
     ],
   },
@@ -165,21 +172,27 @@ const STORY: { id: string; when: (s: GameState, st: StoryState) => boolean; line
     when: (_, st) => st.index >= 3,
     lines: [
       { who: 'narrator', text: "Chapter 4: The Fog." },
-      { who: 'narrator', text: "The fog rolls in. A voice speaks. It sounds exactly like yours." },
-      { who: 'doubt', text: "Who are you kidding? You always quit. The gym membership. The running app." },
-      { who: 'doubt', text: "This will be the same. Save yourself the embarrassment." },
-      { who: 'ember', text: "Don't listen to him. He's loud. That doesn't make him right." },
+      { who: 'narrator', text: "The fog rolls in, thick and cold. In the middle of it, a shape you know. Your face, with empty eyes." },
+      { who: 'hollow', text: "{voice}", needs: 'voice' },
+      { who: 'hollow', text: "Remember me? You've been busy. {sessions} sessions. Cute." },
+      { who: 'hollow', text: "You've started before. You always stop around here. It gets boring, you get tired, and you get smart about it." },
+      { who: 'hollow', text: "Save yourself the embarrassment. Come back to the quiet." },
+      { who: 'ember', text: "Don't listen to it. It's loud. That doesn't make it right." },
     ],
+    music: 'hollow',
   },
   {
     id: 'ch4-victory',
     when: (_, st) => st.index > 3,
     lines: [
-      { who: 'narrator', text: "Surrounded by fog, you hear footsteps. Golden ones." },
+      { who: 'narrator', text: "Through the fog, you hear footsteps. Golden ones." },
       { who: 'echo', text: "I said cruel things. I was scared that if you got strong again, you'd forget me." },
       { who: 'echo', text: "I'm not your goal. I'm your proof. You did it once. You can do it again." },
       { who: 'narrator', text: "The Echo turns into light and settles into your armor." },
-      { who: 'doubt', text: "I'll be back." },
+      { who: 'narrator', text: "The fog thins. The Hollow is still there. Smaller now." },
+      { who: 'hollow', text: "You still hear me, don't you?" },
+      { who: 'you', text: "Every day. I just stopped obeying you." },
+      { who: 'hollow', text: "I'll be back." },
       { who: 'you', text: "I know. I'll be here." },
     ],
   },
@@ -201,6 +214,11 @@ const STORY: { id: string; when: (s: GameState, st: StoryState) => boolean; line
     id: 'finale',
     when: (_, st) => st.finished,
     lines: [
+      { who: 'narrator', text: "Near the top, a small shadow sits alone on a rock. The Hollow. It's the size of a child now." },
+      { who: 'hollow', text: "{voice}", needs: 'voice' },
+      { who: 'you', text: "Maybe. I came anyway." },
+      { who: 'narrator', text: "You hold out your hand. After a long moment, the shadow takes it." },
+      { who: 'wanderer', text: "You didn't destroy it. Nobody does. You just stopped letting it walk in front of you." },
       { who: 'narrator', text: "At the top, the Wanderer lowers his hood." },
       { who: 'narrator', text: "He has your face. Older. Stronger. The same scar on the same hand." },
       { who: 'bestself', text: "Hi. I've been waiting a long time to meet you." },
@@ -208,6 +226,7 @@ const STORY: { id: string; when: (s: GameState, st: StoryState) => boolean; line
       { who: 'bestself', text: "Every rep you did, I became a little more real." },
       { who: 'bestself', text: "On the first day you wrote: \"I'm starting again because {why}.\"", needs: 'why' },
       { who: 'bestself', text: "You wanted to be able to {want}. Look at your hands.", needs: 'want' },
+      { who: 'bestself', text: "You said you were doing this for {forWho}. They got the best of you. So did you.", needs: 'forWho' },
       { who: 'bestself', text: "And you asked me: \"When I want to quit, remind me that {remind}.\"", needs: 'remind' },
       { who: 'bestself', text: "You never needed me to remind you. You remembered on your own." },
       { who: 'bestself', text: "This isn't an ending. Your best self isn't a place you arrive. It's a direction you keep facing." },
@@ -225,7 +244,7 @@ const STORY: { id: string; when: (s: GameState, st: StoryState) => boolean; line
 export function pendingScenes(state: GameState, now: Date): Scene[] {
   const st = storyState(state);
   const seen = new Set(state.seenScenes);
-  const out: Scene[] = STORY.filter((s) => !seen.has(s.id) && s.when(state, st)).map(({ id, lines, action }) => ({ id, lines, action }));
+  const out: Scene[] = STORY.filter((s) => !seen.has(s.id) && s.when(state, st)).map(({ id, lines, action, music }) => ({ id, lines, action, music }));
 
   const gap = daysSinceLastSession(state, now);
   const returnId = `return-${state.sessions.length}`;
@@ -233,7 +252,8 @@ export function pendingScenes(state: GameState, now: Date): Scene[] {
     out.unshift({
       id: returnId,
       lines: [
-        { who: 'ember', text: "I waited. I knew you'd come back." },
+        { who: 'hollow', text: "See? I told you. You always..." },
+        { who: 'ember', text: "...come back. You always come back. I waited." },
         { who: 'wanderer', text: "You're here. That's the only part that matters. We start light today." },
         { who: 'wanderer', text: "You told me once: \"{remind}.\" Do you still mean it?", needs: 'remind' },
       ],
@@ -242,11 +262,19 @@ export function pendingScenes(state: GameState, now: Date): Scene[] {
   return out;
 }
 
-/** Fill in the player's own words and drop lines whose part of the letter is empty. */
-export function renderLines(lines: Line[], letter: Letter): Line[] {
+export function storyWords(state: GameState): Words {
+  return { ...state.profile.letter, voice: state.profile.voice, sessions: String(state.sessions.length) };
+}
+
+/** Fill in the player's own words and drop lines whose word is missing. */
+export function renderLines(lines: Line[], words: Words): Line[] {
   return lines
-    .filter((l) => !l.needs || letter[l.needs].trim())
-    .map((l) => ({ ...l, text: l.text.replace(/\{(why|want|remind)\}/g, (_, k: keyof Letter) => letter[k].trim().replace(/[.!]+$/, '')) }));
+    .filter((l) => !l.needs || words[l.needs].trim())
+    .map((l) => ({
+      ...l,
+      // The Hollow's line is said whole; letter parts sit inside sentences, so their end punctuation goes.
+      text: l.text.replace(/\{(\w+)\}/g, (_, k: keyof Words) => (k === 'voice' ? words.voice.trim() : (words[k] ?? '').trim().replace(/[.!]+$/, ''))),
+    }));
 }
 
 export const SPEAKER_NAMES: Record<Speaker, string> = {
@@ -254,7 +282,7 @@ export const SPEAKER_NAMES: Record<Speaker, string> = {
   wanderer: 'The Wanderer',
   ember: 'Ember',
   echo: 'The Echo',
-  doubt: 'Doubt',
+  hollow: 'The Hollow',
   mira: 'Mira',
   bestself: 'Your Best Self',
   you: 'You',

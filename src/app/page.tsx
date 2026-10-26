@@ -12,7 +12,7 @@ import { AfterSession } from '@/components/AfterSession';
 import { Dialogue } from '@/components/Dialogue';
 import { ClassPicker } from '@/components/ClassPicker';
 import { finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
-import { pendingScenes, renderLines, storyState, type Scene, type StoryState } from '@/lib/story';
+import { pendingScenes, renderLines, storyState, storyWords, type Scene, type StoryState } from '@/lib/story';
 import { useGameState } from '@/lib/store';
 
 type Tab = 'today' | 'skills' | 'hero';
@@ -30,6 +30,7 @@ export default function Home() {
   const [after, setAfter] = useState<{ result: FinishResult; before: StoryState; after: StoryState } | null>(null);
   const [scene, setScene] = useState<Scene | null>(null);
   const [picker, setPicker] = useState<'story' | 'manual' | null>(null);
+  const [replaying, setReplaying] = useState(false);
   // Bumped when something may have unlocked a scene outside a session (a max test).
   const [storyTick, setStoryTick] = useState(0);
   const lvl = levelInfo(totalXp(state));
@@ -37,11 +38,11 @@ export default function Home() {
 
   // Play the next story scene whenever the player is back on the main screen.
   useEffect(() => {
-    if (!ready || !state.profile.onboarded || training || after || scene || picker) return;
+    if (!ready || !state.profile.onboarded || replaying || training || after || scene || picker) return;
     const next = pendingScenes(state, new Date())[0];
     if (next) setScene(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, state.profile.onboarded, state.sessions.length, state.tests.length, training, after, scene, picker, storyTick]);
+  }, [ready, state.profile.onboarded, state.sessions.length, state.tests.length, replaying, training, after, scene, picker, storyTick]);
 
   const endScene = useCallback(() => {
     if (!scene) return;
@@ -71,13 +72,15 @@ export default function Home() {
 
   if (!ready) return <div className="min-h-dvh bg-ink-950" />;
 
-  if (!state.profile.onboarded) {
+  if (!state.profile.onboarded || replaying) {
     return (
       <Prologue
         state={state}
-        onFinish={({ letter, progress }) =>
-          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, letter }, progress: progress ?? s.progress }))
-        }
+        onExit={replaying ? () => setReplaying(false) : undefined}
+        onFinish={({ letter, voice, progress }) => {
+          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, letter, voice }, progress: progress ?? s.progress }));
+          setReplaying(false);
+        }}
       />
     );
   }
@@ -108,11 +111,17 @@ export default function Home() {
 
       <main className="flex-1 px-4 pb-28 pt-2">
         {tab === 'today' ? (
-          <TodayTab state={state} onStart={start} />
+          <TodayTab state={state} onStart={start} onReplayOpening={() => setReplaying(true)} />
         ) : tab === 'skills' ? (
           <SkillsTab state={state} />
         ) : (
-          <HeroTab state={state} update={update} onChangeClass={() => setPicker('manual')} onTestLogged={() => setStoryTick((t) => t + 1)} />
+          <HeroTab
+            state={state}
+            update={update}
+            onChangeClass={() => setPicker('manual')}
+            onTestLogged={() => setStoryTick((t) => t + 1)}
+            onReplayOpening={() => setReplaying(true)}
+          />
         )}
       </main>
 
@@ -136,7 +145,16 @@ export default function Home() {
 
       {training && <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />}
       {after && <AfterSession result={after.result} before={after.before} after={after.after} onClose={() => setAfter(null)} />}
-      {scene && <Dialogue key={scene.id} lines={renderLines(scene.lines, state.profile.letter)} gear={gear} classId={state.profile.classId} onDone={endScene} />}
+      {scene && (
+        <Dialogue
+          key={scene.id}
+          lines={renderLines(scene.lines, storyWords(state))}
+          gear={gear}
+          classId={state.profile.classId}
+          music={scene.music ?? 'rise'}
+          onDone={endScene}
+        />
+      )}
       {picker && (
         <ClassPicker
           progress={state.progress}
