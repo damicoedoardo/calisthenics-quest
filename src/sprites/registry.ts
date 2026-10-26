@@ -11,6 +11,7 @@ import { drawPlateau } from './characters/plateau';
 import { drawSummit } from './characters/summit';
 import { drawTomorrow } from './characters/tomorrow';
 import { drawWanderer } from './characters/wanderer';
+import { drawWisp } from './characters/wisp';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
    art for a character is a change here, never in a component. Two kinds:
@@ -92,6 +93,7 @@ export const SPRITES = {
   mirror: creature('The Mirror', drawMirror, 'lunge'),
   golem: creature('The Plateau', drawPlateau, 'lunge'),
   summit: creature('The Summit', drawSummit),
+  wisp: creature('Ash Wisp', drawWisp, 'lunge'),
 };
 
 export type SpriteId = keyof typeof SPRITES;

@@ -14,7 +14,8 @@ engine/figure.ts      the base 64x64 humanoid: body, face, hair, arms, layer ord
 engine/manga.ts       the manga head (the hero's default): face as text art, hair as shapes
 parts/weapons.ts      sword, stick, staff, wand, bow
 characters/*.ts       one file per character: hero, wanderer, mira, ember, book, and the chapter
-                      enemies tomorrow, mirror, plateau, summit (pixel.ts: text-row placeholders)
+                      enemies tomorrow, mirror, plateau, summit, and the Fog's
+                      wisp (pixel.ts: text-row placeholders)
 ```
 
 ## How to change things
