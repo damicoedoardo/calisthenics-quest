@@ -1,6 +1,7 @@
 import type { ArmLeft, ArmRight, ClipFrame, ClipId, Fx } from '../clips';
 import { EYES, HAIR, R, SKIN, type HairColor, type SkinTone } from '../palette';
 import { autoshade, grid, outline, painter, scale2x, stamp, type Grid, type Painter, type Ramp } from './grid';
+import { MANGA_FACE, mangaHair, mangaHead } from './manga';
 
 /* The base 64x64 humanoid every character is built on: body, face, hair, arms, and the layer
    order that dresses it. The body and hair are designed on a 32-px grid ("body pixels") and
@@ -8,13 +9,15 @@ import { autoshade, grid, outline, painter, scale2x, stamp, type Grid, type Pain
 
 export const SIZE = 64;
 
-export type HairStyle = 'spiky' | 'swept' | 'long' | 'pony';
+export type HairStyle = 'spiky' | 'swept' | 'short' | 'long' | 'pony';
 
 export interface Look {
   sex: 'm' | 'f';
   style: HairStyle;
   hair: HairColor;
   skin: SkinTone;
+  /** Head drawing: 'classic' (designed at 32, doubled) or 'manga' (drawn at 64, see manga.ts). */
+  head?: 'classic' | 'manga';
 }
 
 // ---------- the body, in body pixels (32 grid) ----------
@@ -35,9 +38,12 @@ export const BODY = {
   shoulders: { right: [21, 15], left: [9, 15], femInset: 1 },
 } as const;
 
+const SPIKY_ROWS: [number, number, number, number][] = [[1, 11, 11, 2], [1, 15, 15, 2], [1, 19, 19, 1], [2, 10, 12, 2], [2, 14, 16, 2], [2, 18, 20, 1], [3, 9, 22, 1], [3, 9, 13, 2], [4, 8, 23, 1], [4, 9, 12, 2], [5, 8, 23, 1], [6, 8, 23, 1], [7, 8, 23, 1], [5, 23, 23, 0], [6, 23, 23, 0], [7, 23, 23, 0], [8, 8, 11, 0], [8, 13, 14, 0], [8, 17, 18, 0], [8, 21, 23, 0], [9, 8, 8, 0], [10, 8, 8, 0], [11, 8, 8, 0], [9, 23, 23, 0], [10, 23, 23, 0], [11, 23, 23, 0]];
+
 /** Hair shapes: [y, x0, x1, tone] rows, tone = index into the hair ramp (0 dark, 2 light). */
 export const HAIRSTYLES: Record<HairStyle, [number, number, number, number][]> = {
-  spiky: [[1, 11, 11, 2], [1, 15, 15, 2], [1, 19, 19, 1], [2, 10, 12, 2], [2, 14, 16, 2], [2, 18, 20, 1], [3, 9, 22, 1], [3, 9, 13, 2], [4, 8, 23, 1], [4, 9, 12, 2], [5, 8, 23, 1], [6, 8, 23, 1], [7, 8, 23, 1], [5, 23, 23, 0], [6, 23, 23, 0], [7, 23, 23, 0], [8, 8, 11, 0], [8, 13, 14, 0], [8, 17, 18, 0], [8, 21, 23, 0], [9, 8, 8, 0], [10, 8, 8, 0], [11, 8, 8, 0], [9, 23, 23, 0], [10, 23, 23, 0], [11, 23, 23, 0]],
+  spiky: SPIKY_ROWS,
+  short: SPIKY_ROWS,
   swept: [[2, 11, 20, 1], [2, 12, 15, 2], [3, 9, 22, 1], [3, 10, 15, 2], [4, 8, 23, 1], [4, 10, 13, 2], [5, 8, 23, 1], [6, 8, 23, 1], [7, 8, 23, 1], [8, 8, 16, 1], [8, 14, 16, 0], [8, 21, 23, 0], [9, 8, 10, 0], [9, 23, 23, 0], [10, 8, 8, 0], [10, 23, 23, 0], [5, 23, 23, 0], [6, 23, 23, 0], [7, 23, 23, 0]],
   long: [[2, 11, 20, 1], [2, 12, 16, 2], [3, 9, 22, 1], [3, 10, 14, 2], [4, 8, 23, 1], [5, 8, 23, 1], [6, 8, 23, 1], [7, 8, 23, 1], [8, 8, 12, 1], [8, 15, 16, 0], [8, 19, 23, 1], [5, 23, 23, 0], [6, 23, 23, 0], [7, 23, 23, 0]],
   pony: [[2, 11, 20, 1], [2, 12, 16, 2], [3, 9, 22, 1], [3, 10, 14, 2], [4, 8, 23, 1], [5, 8, 23, 1], [6, 8, 23, 1], [7, 8, 23, 1], [8, 8, 12, 1], [8, 15, 16, 0], [8, 19, 23, 1], [9, 8, 9, 1], [10, 8, 9, 1], [11, 8, 9, 0], [9, 22, 23, 1], [10, 22, 23, 1], [11, 22, 23, 0]],
@@ -175,7 +181,7 @@ const torsoRange = (P: Pose, y: number): [number, number] => (P.fem ? (y < 40 ? 
 
 // ---------- drawing ----------
 
-function body32(P: Pose, look: Look, legsRamp?: Ramp): Grid {
+function body32(P: Pose, look: Look, legsRamp: Ramp | undefined, withHead: boolean): Grid {
   const g = grid(32),
     u = painter(g, P.bob / 2),
     l = painter(g, 0),
@@ -197,8 +203,10 @@ function body32(P: Pose, look: Look, legsRamp?: Ramp): Grid {
     const [x, y, w, h] = P.arms[s].rect.map((v) => v / 2);
     l.r(x, y, w, h, Sk[1]);
   });
-  BODY.head.forEach(([y, x0, x1]) => u.row(y, x0, x1, Sk[1]));
-  for (let y = BODY.headShade.y0; y <= BODY.headShade.y1; y++) u.p(BODY.headShade.x, y, Sk[0]);
+  if (withHead) {
+    BODY.head.forEach(([y, x0, x1]) => u.row(y, x0, x1, Sk[1]));
+    for (let y = BODY.headShade.y0; y <= BODY.headShade.y1; y++) u.p(BODY.headShade.x, y, Sk[0]);
+  }
   return g;
 }
 
@@ -257,6 +265,12 @@ function face(g: Grid, P: Pose, look: Look) {
   u.p(FACE.nose[0], FACE.nose[1], Sk[0]);
 }
 
+/** The eyes of a look as boxes [x, y, w, h] at rest (no bob), for effects that sit on them. */
+export function eyeBoxes(look: Look): [number, number, number, number][] {
+  if (look.head === 'manga') return MANGA_FACE.eyes.x.map((x) => [x, MANGA_FACE.eyes.y, MANGA_FACE.eyes.w, MANGA_FACE.eyes.h]);
+  return FACE.eyes.x.map((x) => [x, FACE.eyes.y, EYE_PATTERN[0].length, EYE_PATTERN.length]);
+}
+
 /** Draws one 64x64 frame of a character: its spec, wearing a look, in one clip frame. */
 export function drawFigure(spec: FigureSpec, look: Look, frame: ClipFrame, f: number): Grid {
   const P = poseFor(frame, spec.stance ?? {}, look, f),
@@ -285,13 +299,16 @@ export function drawFigure(spec: FigureSpec, look: Look, frame: ClipFrame, f: nu
     put(g, spec.shadeLayers !== false);
   };
 
-  if (look.sex === 'f' && look.style === 'pony' && !spec.hideHair) put(scale2x(ponytail32(P, look)));
+  const manga = look.head === 'manga' ? mangaHair(P, look) : null;
+  if (look.sex === 'f' && look.style === 'pony' && !spec.hideHair && !manga) put(scale2x(ponytail32(P, look)));
   layer('back');
-  const body = scale2x(body32(P, look, spec.legs));
-  face(body, P, look);
+  if (manga && !spec.hideHair) put(manga.back);
+  const body = scale2x(body32(P, look, spec.legs, look.head !== 'manga'));
+  if (look.head === 'manga') mangaHead(body, P, look);
+  else face(body, P, look);
   put(body);
   layer('outfit');
-  if (!spec.hideHair) put(scale2x(hair32(P, look)));
+  if (!spec.hideHair) put(manga ? manga.front : scale2x(hair32(P, look)));
   layer('head');
   layer('off');
   layer('weapon');

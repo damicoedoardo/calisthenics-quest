@@ -119,6 +119,7 @@ export default function Lab() {
             <input type="range" min={0} max={6} value={tier} onChange={(e) => setTier(Number(e.target.value) as Tier)} className="w-full accent-amber-400" />
           </div>
           <Chips label="VARIANT" options={VARIANTS} value={variant} onChange={setVariant} />
+          <Chips label="HEAD" options={['classic', 'manga'] as NonNullable<Look['head']>[]} value={look.head ?? 'classic'} onChange={(head) => setLook({ ...look, head })} />
           <Chips label="BODY" options={['m', 'f'] as Look['sex'][]} value={look.sex} onChange={(sex) => setLook({ ...look, sex })} name={(s) => (s === 'm' ? 'Male' : 'Female')} />
           <Chips label="HAIR" options={Object.keys(HAIRSTYLES) as Look['style'][]} value={look.style} onChange={(style) => setLook({ ...look, style })} />
           <Chips label="HAIR COLOR" options={Object.keys(HAIR) as HairColor[]} value={look.hair} onChange={(hair) => setLook({ ...look, hair })} />

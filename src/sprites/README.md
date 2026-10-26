@@ -11,6 +11,7 @@ clips.ts              animations as data: frames + timing
 registry.ts           every sprite by id, and how to get its sheet
 engine/grid.ts        pixel grids and drawing tools (painter, outline, shading, aura, tint)
 engine/figure.ts      the base 64x64 humanoid: body, face, hair, arms, layer order
+engine/manga.ts       the manga head (look.head = 'manga'): face as text art, hair as shapes
 parts/weapons.ts      sword, stick, staff, wand, bow
 characters/*.ts       one file per character (hero, wanderer, ember) + small text-row sprites
 ```
@@ -26,6 +27,8 @@ characters/*.ts       one file per character (hero, wanderer, ember) + small tex
 | Reshape the body (legs, torso, head, shoulders) | `BODY` in `engine/figure.ts` |
 | Change the eyes, brows, mouth | `EYE_PATTERN` and `FACE` in `engine/figure.ts` |
 | Add a hairstyle | a new entry in `HAIRSTYLES` (`engine/figure.ts`) |
+| Change the manga face (eyes, chin, mouth) | the `MANGA_FACE.art` text rows in `engine/manga.ts` |
+| Change a manga hairstyle (spikes, bangs, headband) | its entry in `MANGA_HAIR` (`engine/manga.ts`): each lock is a list of points |
 | Redraw a weapon | `parts/weapons.ts` |
 | Change armor tiers, capes, shields | `heroSpec` layers in `characters/hero.ts` |
 | Redraw Mira, the Book or a chapter enemy | the text rows in `characters/pixel.ts` |
@@ -33,7 +36,8 @@ characters/*.ts       one file per character (hero, wanderer, ember) + small tex
 | Use art from Aseprite or PixelLab | see below |
 
 Sprites are drawn on a 64x64 grid. The body and hair are designed at 32x32 ("body pixels") and
-doubled with Scale2x, so one body pixel is two sprite pixels. Each layer gets an outline and
+doubled with Scale2x, so one body pixel is two sprite pixels. The manga head is the exception: it is
+drawn straight at 64 so the eyes and hair locks stay sharp. Each layer gets an outline and
 light/shadow edges automatically.
 
 ## Animations

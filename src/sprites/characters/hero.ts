@@ -1,6 +1,6 @@
 import type { ClassId, Gear, GearSlot } from '@/lib/gear';
 import type { ClipFrame, ClipId } from '../clips';
-import { drawFigure, type FigureSpec, type Look } from '../engine/figure';
+import { drawFigure, eyeBoxes, type FigureSpec, type Look } from '../engine/figure';
 import { NIGHT, aura, mix, painter, rampOf, tint, type Grid } from '../engine/grid';
 import { drawBow, drawStaff, drawStick, drawSword, drawWand } from '../parts/weapons';
 import { CAPE, GOLD_GHOST, HOLLOW_EYES, LINEN, R, SHADOW, TROUSERS } from '../palette';
@@ -172,12 +172,14 @@ export function heroSpec({ gear, classId, variant }: HeroOpts): FigureSpec {
 }
 
 /** The Hollow's red eyes, painted over the tinted face. */
-function hollowEyes(g: Grid, frame: ClipFrame): Grid {
+function hollowEyes(g: Grid, frame: ClipFrame, look: Look): Grid {
   const p = painter(g),
     bob = (frame.bob ?? 0) * 2;
-  [24, 36].forEach((ex) => {
-    p.r(ex, 19 + bob, 4, 3, HOLLOW_EYES.glow);
-    p.r(ex + 1, 20 + bob, 2, 1, HOLLOW_EYES.core);
+  // A glowing slit across the middle of each eye.
+  eyeBoxes(look).forEach(([x, y, w, h]) => {
+    const gy = y + Math.round(h / 2) - 2 + bob;
+    p.r(x, gy, w, 3, HOLLOW_EYES.glow);
+    p.r(x + 1, gy + 1, w - 2, 1, HOLLOW_EYES.core);
   });
   return g;
 }
@@ -187,7 +189,7 @@ export function drawHero(o: HeroOpts, frame: ClipFrame, f: number): Grid {
   const { gear, variant = 'normal', look = DEFAULT_LOOK } = o;
   const gr = drawFigure(heroSpec(o), look, frame, f);
   if (variant === 'echo') return tint(gr, GOLD_GHOST);
-  if (variant === 'hollow') return hollowEyes(tint(gr, SHADOW), frame);
+  if (variant === 'hollow') return hollowEyes(tint(gr, SHADOW), frame, look);
   if (variant === 'best') return aura(gr, CAPE, '#fde68a', 5, f);
   // Top-tier gear glows: the highest slot sets the aura.
   const top = (['weapon', 'armor', 'shield'] as const).reduce((m, s) => (gear[s].tier > gear[m].tier ? s : m), 'weapon' as GearSlot);
