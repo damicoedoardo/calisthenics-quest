@@ -13,6 +13,8 @@ engine/grid.ts        pixel grids and drawing tools (painter, outline, shading, 
 engine/figure.ts      the base 64x64 humanoid: body, face, hair, arms, layer order
 engine/manga.ts       the manga head (the hero's default): face as text art, hair as shapes
 parts/weapons.ts      sword, stick, staff, wand, bow
+characters/takes.ts   new hero directions, hand-drawn as text rows (lean, street, hunter), shown
+                      side by side in /lab to pick one
 characters/*.ts       one file per character: hero, wanderer, mira, ember, book, and the chapter
                       enemies tomorrow, mirror, plateau, summit, and the Fog's
                       wisp (pixel.ts: text-row placeholders)
