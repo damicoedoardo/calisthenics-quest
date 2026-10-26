@@ -13,7 +13,8 @@ engine/grid.ts        pixel grids and drawing tools (painter, outline, shading, 
 engine/figure.ts      the base 64x64 humanoid: body, face, hair, arms, layer order
 engine/manga.ts       the manga head (the hero's default): face as text art, hair as shapes
 parts/weapons.ts      sword, stick, staff, wand, bow
-characters/*.ts       one file per character (hero, wanderer, ember) + small text-row sprites
+characters/*.ts       one file per character: hero, wanderer, mira, ember, book, and the chapter
+                      enemies tomorrow, mirror, plateau, summit (pixel.ts: text-row placeholders)
 ```
 
 ## How to change things
@@ -32,7 +33,8 @@ characters/*.ts       one file per character (hero, wanderer, ember) + small tex
 | Change the classic face | `EYE_PATTERN` and `FACE` in `engine/figure.ts` |
 | Redraw a weapon | `parts/weapons.ts` |
 | Change armor tiers, capes, shields | `heroSpec` layers in `characters/hero.ts` |
-| Redraw Mira, the Book or a chapter enemy | the text rows in `characters/pixel.ts` |
+| Redraw Mira, Ember, the Book or a chapter enemy | its file in `characters/` (`mira.ts`, `ember.ts`, `book.ts`, `tomorrow.ts`, `mirror.ts`, `plateau.ts`, `summit.ts`) |
+| Change the looks a player starts with (boy, girl) | `STARTER_LOOKS` in `characters/hero.ts`; the editor's options are in `src/components/LookEditor.tsx` |
 | Add a character | a file in `characters/`, then an entry in `SPRITES` (`registry.ts`) |
 | Use art from Aseprite or PixelLab | see below |
 
@@ -52,6 +54,13 @@ swing: { ms: 120, loop: false, frames: [{}, { right: 'up' }, { right: 'fwd', fx:
 Any number of frames works: the sheet is as wide as the clip, and the CSS animation's step count
 and duration come from the clip. Looping clips (idle) repeat; the others play once and fire
 `onEnd`.
+
+Creatures (Ember, the Book, the enemies) read the same frames their own way: `hover` is an
+eight-frame float where `bob` is the breath, and `lunge` is their attack, a wind-up
+(`right: 'up'`) and then the hit (`fx: 'impact'`).
+
+The hero is drawn with the player's look (body, hair, hair color, skin), which `<LookProvider>`
+hands to every `<Hero />` on screen, so the Echo, the Best Self and the Hollow match the player.
 
 ## Using a PNG sprite sheet
 

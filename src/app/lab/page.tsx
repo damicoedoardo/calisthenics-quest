@@ -153,7 +153,7 @@ export default function Lab() {
           {(Object.keys(SPRITES) as SpriteId[]).map((id) => (
             <div key={id} className="flex flex-col items-center gap-1.5 rounded-xl bg-ink-950 p-2">
               <div className="flex h-24 items-end">
-                <Sprite id={id} size={id === 'hero' || id === 'wanderer' || id === 'ember' ? 96 : 72} />
+                <Sprite id={id} size={96} />
               </div>
               <p className="text-center text-[10px] leading-tight text-slate-400">{labelFor(id).split(' with ')[0]}</p>
               <p className="font-mono text-[9px] text-slate-600">{id}</p>

@@ -1,9 +1,15 @@
 import { equippedGear } from '@/lib/gear';
 import { CLIPS, type ClipFrame, type ClipId, type SpriteAction } from './clips';
 import { toSheet, type Grid } from './engine/grid';
+import { drawBook } from './characters/book';
 import { drawEmber } from './characters/ember';
 import { drawHero, heroAttack, heroLabel, type HeroOpts } from './characters/hero';
-import { BOOK, GOLEM, MIRA, MIRROR, SLIME, SUMMIT, drawPixelArt, type PixelArt } from './characters/pixel';
+import { drawMira } from './characters/mira';
+import { drawMirror } from './characters/mirror';
+import { drawPixelArt, type PixelArt } from './characters/pixel';
+import { drawPlateau } from './characters/plateau';
+import { drawSummit } from './characters/summit';
+import { drawTomorrow } from './characters/tomorrow';
 import { drawWanderer } from './characters/wanderer';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
@@ -59,6 +65,10 @@ const drawn = <O,>(def: Omit<DrawnSprite<O>, 'kind'>): DrawnSprite<O> => ({ kind
 const pixel = (label: string, art: PixelArt) =>
   drawn<NoOpts>({ label: () => label, defaults: {}, clips: () => ({ idle: 'still' }), draw: () => drawPixelArt(art) });
 
+/** A 64x64 creature that floats or breathes on the hover clip, with an optional attack clip. */
+const creature = (label: string, draw: DrawnSprite<NoOpts>['draw'], attack?: ClipId) =>
+  drawn<NoOpts>({ label: () => label, defaults: {}, clips: () => (attack ? { idle: 'hover', attack } : { idle: 'hover' }), draw });
+
 const STARTER_GEAR = equippedGear(undefined, { push: 0, pull: 0, core: 0 });
 
 export const SPRITES = {
@@ -75,13 +85,13 @@ export const SPRITES = {
           : { shadow: true },
   }),
   wanderer: drawn<NoOpts>({ label: () => 'The Wanderer', defaults: {}, clips: () => ({ idle: 'idle', attack: 'swing' }), draw: drawWanderer }),
-  ember: drawn<NoOpts>({ label: () => 'Ember', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawEmber }),
-  mira: pixel('Mira the Smith', MIRA),
-  book: pixel('The Book of Days', BOOK),
-  slime: pixel('Tomorrow', SLIME),
-  mirror: pixel('The Mirror', MIRROR),
-  golem: pixel('The Plateau', GOLEM),
-  summit: pixel('The Summit', SUMMIT),
+  ember: drawn<NoOpts>({ label: () => 'Ember', defaults: {}, clips: () => ({ idle: 'hover' }), draw: drawEmber }),
+  mira: drawn<NoOpts>({ label: () => 'Mira the Smith', defaults: {}, clips: () => ({ idle: 'idle', attack: 'swing' }), draw: drawMira, look: () => ({ shadow: true }) }),
+  book: creature('The Book of Days', drawBook, 'hover'),
+  slime: creature('Tomorrow', drawTomorrow, 'lunge'),
+  mirror: creature('The Mirror', drawMirror, 'lunge'),
+  golem: creature('The Plateau', drawPlateau, 'lunge'),
+  summit: creature('The Summit', drawSummit),
 };
 
 export type SpriteId = keyof typeof SPRITES;

@@ -1,9 +1,9 @@
 import type { ClassId, Gear, GearSlot } from '@/lib/gear';
 import type { ClipFrame, ClipId } from '../clips';
-import { drawFigure, eyeBoxes, type FigureSpec, type Look } from '../engine/figure';
+import { HAIRSTYLES, drawFigure, eyeBoxes, type FigureSpec, type Look } from '../engine/figure';
 import { NIGHT, aura, mix, painter, rampOf, tint, type Grid } from '../engine/grid';
 import { drawBow, drawStaff, drawStick, drawSword, drawWand } from '../parts/weapons';
-import { CAPE, GOLD_GHOST, HOLLOW_EYES, LINEN, R, SHADOW, TROUSERS } from '../palette';
+import { CAPE, GOLD_GHOST, HAIR, HOLLOW_EYES, LINEN, R, SHADOW, SKIN, TROUSERS } from '../palette';
 
 /* Your hero. One sprite carries the whole story: gear colors and class weapons as you train, and
    the variants the story needs (the gold Echo, the Best Self, the Hollow). */
@@ -18,6 +18,25 @@ export interface HeroOpts {
 }
 
 export const DEFAULT_LOOK: Look = { sex: 'm', style: 'spiky', hair: 'brown', skin: 'light', head: 'manga' };
+
+/** What picking boy or girl before the opening gives you. The rest is changed after it. */
+export const STARTER_LOOKS: Record<Look['sex'], Look> = {
+  m: DEFAULT_LOOK,
+  f: { sex: 'f', style: 'long', hair: 'brown', skin: 'light', head: 'manga' },
+};
+
+/** A saved look made safe to draw: anything missing or unknown falls back to the starter look. */
+export function normalizeLook(look?: Partial<Look> | null): Look {
+  const base = STARTER_LOOKS[look?.sex === 'f' ? 'f' : 'm'];
+  if (!look) return base;
+  return {
+    sex: base.sex,
+    style: look.style && look.style in HAIRSTYLES ? look.style : base.style,
+    hair: look.hair && look.hair in HAIR ? look.hair : base.hair,
+    skin: look.skin && look.skin in SKIN ? look.skin : base.skin,
+    head: look.head === 'classic' ? 'classic' : 'manga',
+  };
+}
 
 /** The clip each class attacks with. Until you hold a real weapon, everyone swings a stick. */
 export function heroAttack(gear: Record<GearSlot, Gear>, classId?: ClassId): ClipId {

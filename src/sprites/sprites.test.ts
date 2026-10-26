@@ -2,8 +2,9 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { equippedGear, type ClassId } from '@/lib/gear';
 import { CLIPS, type SpriteAction } from './clips';
-import { DEFAULT_LOOK } from './characters/hero';
-import { SIZE } from './engine/figure';
+import { DEFAULT_LOOK, STARTER_LOOKS, normalizeLook } from './characters/hero';
+import { HAIRSTYLES, SIZE, type HairStyle } from './engine/figure';
+import { MANGA_HAIR } from './engine/manga';
 import { tint, type Grid } from './engine/grid';
 import { SPRITES, clipFor, framesFor, imageSheet, type SpriteId } from './registry';
 
@@ -48,8 +49,9 @@ describe('sprite registry', () => {
     expect(clipFor('hero', 'attack', { gear: gear('warrior'), classId: 'warrior' })).toBe('swing');
     expect(clipFor('hero', 'attack', { gear: gear('archer'), classId: 'archer' })).toBe('shoot');
     expect(clipFor('hero', 'attack', { gear: gear('mage'), classId: 'mage' })).toBe('cast');
-    // Sprites without an attack fall back to idle.
-    expect(clipFor('ember', 'attack')).toBe('idle');
+    // Chapter enemies lunge; sprites without an attack fall back to their idle clip.
+    for (const id of ['slime', 'mirror', 'golem'] as const) expect(clipFor(id, 'attack')).toBe('lunge');
+    expect(clipFor('ember', 'attack')).toBe(clipFor('ember', 'idle'));
   });
 
   it('the idle loop bobs and the attack moves', () => {
@@ -68,10 +70,20 @@ describe('sprite registry', () => {
     expect(new Set(t.flat().filter(Boolean)).size).toBeLessThanOrEqual(ramp.length);
   });
 
-  it('hairstyles without a manga version fall back to the classic head', () => {
-    const f = { ...DEFAULT_LOOK, sex: 'f' as const, style: 'long' as const };
-    expect(hash(framesFor('hero', 'idle', { look: { ...f, head: 'manga' } }))).toBe(hash(framesFor('hero', 'idle', { look: { ...f, head: 'classic' } })));
-    expect(hash(framesFor('hero', 'idle'))).not.toBe(hash(framesFor('hero', 'idle', { look: { ...DEFAULT_LOOK, head: 'classic' } })));
+  it('every hairstyle has a manga version, so no look falls back to the classic head', () => {
+    for (const style of Object.keys(HAIRSTYLES) as HairStyle[]) {
+      expect(MANGA_HAIR[style], style).toBeDefined();
+      const look = { ...DEFAULT_LOOK, style };
+      expect(hash(framesFor('hero', 'idle', { look })), style).not.toBe(hash(framesFor('hero', 'idle', { look: { ...look, head: 'classic' } })));
+    }
+  });
+
+  it('saved looks are made safe to draw', () => {
+    expect(normalizeLook()).toEqual(DEFAULT_LOOK);
+    expect(normalizeLook({ sex: 'f' })).toEqual(STARTER_LOOKS.f);
+    const broken = { sex: 'f', style: 'mohawk', hair: 'green', skin: 'blue' } as unknown as Parameters<typeof normalizeLook>[0];
+    expect(normalizeLook(broken)).toEqual(STARTER_LOOKS.f);
+    expect(normalizeLook({ ...STARTER_LOOKS.f, hair: 'red', style: 'pony' })).toEqual({ ...STARTER_LOOKS.f, hair: 'red', style: 'pony' });
   });
 
   it('PNG sheets pick their row and fall back to idle', () => {
@@ -98,8 +110,9 @@ describe('sprite registry', () => {
         for (const action of actions)
           prints[`hero ${classId} t${t} ${action}`] = hash(framesFor('hero', action, { gear: equippedGear(classId, { push: t, pull: t, core: t }), classId }));
     for (const variant of ['echo', 'best', 'hollow'] as const) prints[`hero ${variant}`] = hash(framesFor('hero', 'idle', { variant }));
-    for (const style of ['spiky', 'swept', 'short'] as const)
+    for (const style of Object.keys(HAIRSTYLES) as HairStyle[])
       for (const head of ['classic', 'manga'] as const) prints[`hero ${head} ${style}`] = hash(framesFor('hero', 'idle', { look: { ...DEFAULT_LOOK, style, head } }));
+    prints['hero girl'] = hash(framesFor('hero', 'idle', { look: STARTER_LOOKS.f }));
     expect(prints).toMatchSnapshot();
   });
 });

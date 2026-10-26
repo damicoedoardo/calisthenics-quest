@@ -1,5 +1,6 @@
 import { PATHS, getPath, type PathId, type SkillNode } from './skills';
 import { classPath, equippedGear, type ClassId, type Gear } from './gear';
+import type { Look } from '@/sprites/engine/figure';
 
 export const XP_FULL_SESSION = 100;
 export const XP_MINI_SESSION = 30;
@@ -78,6 +79,8 @@ export interface Profile {
   /** What the Hollow says: the player's own inner critic, in their words. */
   voice: string;
   classId?: ClassId;
+  /** How the hero looks. Missing on saves from before the look picker: the default boy. */
+  look?: Look;
 }
 
 export interface GameState {
