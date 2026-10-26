@@ -2,6 +2,7 @@ import type { ClassId, Gear, GearSlot } from '@/lib/gear';
 import type { ClipFrame, ClipId } from '../clips';
 import { HAIRSTYLES, drawFigure, eyeBoxes, type FigureSpec, type Look } from '../engine/figure';
 import { NIGHT, aura, mix, painter, rampOf, tint, type Grid } from '../engine/grid';
+import { NOIR_EYES } from '../engine/noir';
 import { drawBow, drawStaff, drawStick, drawSword, drawWand } from '../parts/weapons';
 import { CAPE, GOLD_GHOST, HAIR, HOLLOW_EYES, LINEN, R, SHADOW, SKIN, TROUSERS } from '../palette';
 
@@ -34,7 +35,7 @@ export function normalizeLook(look?: Partial<Look> | null): Look {
     style: look.style && look.style in HAIRSTYLES ? look.style : base.style,
     hair: look.hair && look.hair in HAIR ? look.hair : base.hair,
     skin: look.skin && look.skin in SKIN ? look.skin : base.skin,
-    head: look.head === 'classic' ? 'classic' : 'manga',
+    head: look.head === 'classic' || (look.head?.startsWith('noir-') && look.head.slice(5) in NOIR_EYES) ? look.head : 'manga',
   };
 }
 

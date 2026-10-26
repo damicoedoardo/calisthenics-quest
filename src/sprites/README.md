@@ -12,6 +12,8 @@ registry.ts           every sprite by id, and how to get its sheet
 engine/grid.ts        pixel grids and drawing tools (painter, outline, shading, aura, tint)
 engine/figure.ts      the base 64x64 humanoid: body, face, hair, arms, layer order
 engine/manga.ts       the manga head (the hero's default): face as text art, hair as shapes
+engine/noir.ts        the noir head (Death Note style): narrower and sharper, a hard cel shadow,
+                      three takes on the eyes (sharp, sleepless, gothic) and its own sleek hair
 parts/weapons.ts      sword, stick, staff, wand, bow
 characters/*.ts       one file per character: hero, wanderer, mira, ember, book, and the chapter
                       enemies tomorrow, mirror, plateau, summit, and the Fog's
@@ -31,6 +33,7 @@ characters/*.ts       one file per character: hero, wanderer, mira, ember, book,
 | Change the hero's hair (spikes, bangs, headband) | its entry in `MANGA_HAIR` (`engine/manga.ts`): each lock is a list of points |
 | Change the hero's default look | `DEFAULT_LOOK` in `characters/hero.ts` |
 | Add a hairstyle | a new entry in `HAIRSTYLES` (`engine/figure.ts`), plus one in `MANGA_HAIR` for the manga head (without it, that style falls back to the classic head) |
+| Change the noir head (Death Note style) | `NOIR_HEAD` for the head and shadow, `NOIR_EYES` for each take's eyes and mouth, `NOIR_HAIR` for its hair (`engine/noir.ts`). Try it in /lab with HEAD `noir-…` |
 | Change the classic face | `EYE_PATTERN` and `FACE` in `engine/figure.ts` |
 | Redraw a weapon | `parts/weapons.ts` |
 | Change armor tiers, capes, shields | `heroSpec` layers in `characters/hero.ts` |
