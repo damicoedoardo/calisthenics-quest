@@ -13,7 +13,7 @@ engine/grid.ts        pixel grids and drawing tools (painter, outline, shading, 
 engine/figure.ts      the base 64x64 humanoid: body, face, hair, arms, layer order
 engine/manga.ts       the manga head (the hero's default): face as text art, hair as shapes
 parts/weapons.ts      sword, stick, staff, wand, bow
-avatar/               the character creator: one hand-drawn body plus mix-and-match parts
+avatar/               the character creator: the manga body plus mix-and-match parts
                       (hair, eyes, brows, mouth, tops, bottoms, shoes, extras) and colors
 characters/*.ts       one file per character: hero, wanderer, mira, ember, book, and the chapter
                       enemies tomorrow, mirror, plateau, summit, and the Fog's
@@ -99,8 +99,8 @@ change any art, a failing fingerprint means something broke.
 ## The character creator (avatar/)
 
 The avatar is a paper doll. `body.ts` is one hand-drawn body; every option is a `Part` that paints
-one or more layers over it (`types.ts` lists the layers, back to front). Art is text rows, 32
-characters wide, one per pixel, starting at row `y` of the 64-pixel frame. Letters are palette
+one or more layers over it (`types.ts` lists the layers, back to front). Art is text rows, 64
+characters wide, one per pixel of the 64x64 frame, starting at row `y`. Letters are palette
 slots, so the same drawing works in any color: `a b c` hair, `d e f` skin, `1 2 3` the slot's
 cloth color, and the rest listed in `types.ts`. Each layer gets its outline automatically, so
 draw fills and inner lines only.

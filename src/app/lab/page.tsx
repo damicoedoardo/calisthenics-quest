@@ -30,7 +30,7 @@ function Creator() {
   const [avatar, setAvatar] = useState<Avatar>(DEFAULT_AVATAR);
   return (
     <Panel title="Character creator">
-      <p className="mb-3 text-xs text-slate-400">Hand-drawn parts on one body. Mix anything; the art lives in src/sprites/avatar.</p>
+      <p className="mb-3 text-xs text-slate-400">Manga hero with mix-and-match parts. The art lives in src/sprites/avatar.</p>
       <AvatarEditor avatar={avatar} onChange={setAvatar} />
       <p className="mb-2 mt-5 font-pixel text-[9px] text-slate-500">ALL PRESETS</p>
       <div className="grid grid-cols-3 gap-2">

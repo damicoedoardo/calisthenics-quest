@@ -68,11 +68,11 @@ export function drawAvatar(av: Avatar, frame: ClipFrame = {}): Grid {
     base: Record<string, string> = {
       a: Hc[0], b: Hc[1], c: Hc[2],
       d: S[0], e: S[1], f: S[2],
-      g: E[0], i: E[1],
-      y: '#f6f2ee', W: '#ffffff', K: INK_LINE,
+      g: E[0], h: E[1], i: E[2], p: '#1a1014',
+      y: '#f4f1f6', W: '#ffffff', K: INK_LINE,
       w: '#eceef4', v: '#b4b8c8',
       o: mix(S[0], '#3a2440', 0.45),
-      u: mix(S[0], '#4a1a24', 0.45),
+      r: '#9a4a3a', n: '#5a1a24', R: '#d0606a', t: '#ffffff',
     };
   const parts: [Part, Record<string, string>][] = [[BODY, base]];
   (Object.keys(SLOTS) as Slot[]).forEach((slot) => {
@@ -96,27 +96,38 @@ export function drawAvatar(av: Avatar, frame: ClipFrame = {}): Grid {
       art.rows.forEach((row, j) =>
         [...row].forEach((ch, i) => {
           const y = art.y + j + dy;
-          if (ink[ch] && y >= 0 && y < 64) g[y][i + 16] = ink[ch];
+          if (ink[ch] && y >= 0 && y < 64) g[y][i] = ink[ch];
         }),
       );
     }
-    if (any) stamp(out, style.noOutline ? g : outline(g));
+    if (!any) continue;
+    if (layer === 'hair') castShadow(out, g, S);
+    stamp(out, style.noOutline ? g : outline(g));
   }
   return out;
 }
 
+/** Bangs cast a soft shadow on the forehead, two pixels below their edge, like the old manga head. */
+function castShadow(out: Grid, hair: Grid, S: readonly string[]) {
+  for (let y = 0; y < 62; y++)
+    for (let x = 0; x < 64; x++)
+      if (hair[y][x] && !hair[y + 1][x] && !hair[y + 2][x] && out[y + 2][x] === S[1]) out[y + 2][x] = S[0];
+}
+
 /** Ready-made looks: the starting points the Lab (and later the creator) offers. */
 export const PRESETS = {
-  lean: { hair: 'neat', eyes: 'sharp', brows: 'angled', mouth: 'smirk', top: 'suit', bottom: 'slacks', shoes: 'dress', extra: 'none', skin: 'light', hairColor: 'chestnut', eyeColor: 'brown', topColor: 'charcoal', bottomColor: 'charcoal', shoesColor: 'black', extraColor: 'red' },
-  street: { hair: 'messy', eyes: 'tired', brows: 'none', mouth: 'flat', top: 'longsleeve', bottom: 'jeans', shoes: 'sneakers', extra: 'none', skin: 'pale', hairColor: 'black', eyeColor: 'dark', topColor: 'white', bottomColor: 'denim', shoesColor: 'white', extraColor: 'red' },
-  hunter: { hair: 'swept', eyes: 'sharp', brows: 'angled', mouth: 'flat', top: 'longcoat', bottom: 'slacks', shoes: 'boots', extra: 'scarf', skin: 'light', hairColor: 'silver', eyeColor: 'red', topColor: 'plum', bottomColor: 'black', shoesColor: 'brown', extraColor: 'red' },
-  athlete: { hair: 'spiky', eyes: 'round', brows: 'straight', mouth: 'grin', top: 'tank', bottom: 'shorts', shoes: 'sneakers', extra: 'headband', skin: 'tan', hairColor: 'brown', eyeColor: 'amber', topColor: 'orange', bottomColor: 'black', shoesColor: 'red', extraColor: 'red' },
-  heroine: { hair: 'long', eyes: 'lashes', brows: 'soft', mouth: 'smile', top: 'hoodie', bottom: 'skirt', shoes: 'boots', extra: 'none', skin: 'light', hairColor: 'black', eyeColor: 'blue', topColor: 'navy', bottomColor: 'black', shoesColor: 'black', extraColor: 'red' },
-  gothic: { hair: 'pony', eyes: 'lashes', brows: 'angled', mouth: 'flat', top: 'longcoat', bottom: 'skirt', shoes: 'boots', extra: 'choker', skin: 'pale', hairColor: 'blonde', eyeColor: 'red', topColor: 'black', bottomColor: 'black', shoesColor: 'black', extraColor: 'black' },
+  hero: { hair: 'spiky', eyes: 'bright', brows: 'bold', mouth: 'flat', top: 'tunic', bottom: 'pants', shoes: 'boots', extra: 'none', skin: 'light', hairColor: 'brown', eyeColor: 'brown', topColor: 'linen', bottomColor: 'charcoal', shoesColor: 'brown', extraColor: 'red' },
+  heroine: { hair: 'long', eyes: 'lashes', brows: 'soft', mouth: 'smile', top: 'tunic', bottom: 'skirt', shoes: 'boots', extra: 'none', skin: 'light', hairColor: 'brown', eyeColor: 'brown', topColor: 'linen', bottomColor: 'brown', shoesColor: 'brown', extraColor: 'red' },
+  fighter: { hair: 'band', eyes: 'fierce', brows: 'thick', mouth: 'grin', top: 'gi', bottom: 'pants', shoes: 'barefoot', extra: 'none', skin: 'tan', hairColor: 'black', eyeColor: 'amber', topColor: 'white', bottomColor: 'white', shoesColor: 'black', extraColor: 'red' },
+  street: { hair: 'messy', eyes: 'tired', brows: 'none', mouth: 'flat', top: 'hoodie', bottom: 'jeans', shoes: 'sneakers', extra: 'none', skin: 'pale', hairColor: 'black', eyeColor: 'dark', topColor: 'white', bottomColor: 'denim', shoesColor: 'red', extraColor: 'red' },
+  scholar: { hair: 'neat', eyes: 'calm', brows: 'soft', mouth: 'smirk', top: 'jacket', bottom: 'pants', shoes: 'sneakers', extra: 'glasses', skin: 'olive', hairColor: 'chestnut', eyeColor: 'green', topColor: 'navy', bottomColor: 'charcoal', shoesColor: 'white', extraColor: 'black' },
+  knight: { hair: 'swept', eyes: 'sparkle', brows: 'raised', mouth: 'smile', top: 'coat', bottom: 'pants', shoes: 'boots', extra: 'cape', skin: 'light', hairColor: 'silver', eyeColor: 'blue', topColor: 'navy', bottomColor: 'black', shoesColor: 'black', extraColor: 'crimson' },
+  idol: { hair: 'twin', eyes: 'sparkle', brows: 'soft', mouth: 'cat', top: 'tee', bottom: 'skirt', shoes: 'sneakers', extra: 'scarf', skin: 'pale', hairColor: 'pink', eyeColor: 'violet', topColor: 'white', bottomColor: 'plum', shoesColor: 'white', extraColor: 'sky' },
+  gothic: { hair: 'pony', eyes: 'lashes', brows: 'worried', mouth: 'flat', top: 'coat', bottom: 'skirt', shoes: 'boots', extra: 'none', skin: 'pale', hairColor: 'blonde', eyeColor: 'red', topColor: 'black', bottomColor: 'black', shoesColor: 'black', extraColor: 'black' },
 } satisfies Record<string, Avatar>;
 
 export type PresetId = keyof typeof PRESETS;
-export const DEFAULT_AVATAR: Avatar = PRESETS.street;
+export const DEFAULT_AVATAR: Avatar = PRESETS.hero;
 
 /** A saved avatar made safe to draw: unknown or missing choices fall back to the default. */
 export function normalizeAvatar(a?: Partial<Record<keyof Avatar, unknown>> | null): Avatar {

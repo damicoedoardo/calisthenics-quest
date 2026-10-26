@@ -24,17 +24,19 @@ export const HAIR_COLORS = {
 } satisfies Record<string, Ramp>;
 
 export const EYE_COLORS = {
-  brown: ['#3a2416', '#8a5430'],
-  dark: ['#0c0a10', '#2a2430'],
-  amber: ['#6a3a0c', '#d08a2a'],
-  blue: ['#14306a', '#3a7ad0'],
-  green: ['#143a24', '#3a9a5a'],
-  grey: ['#3a4250', '#8a96a8'],
-  red: ['#5a0c14', '#d02a3a'],
-} satisfies Record<string, [string, string]>;
+  brown: ['#3a2416', '#7a4a2a', '#c08a52'],
+  dark: ['#0c0a10', '#2a2430', '#4a4252'],
+  amber: ['#5a300a', '#b0701c', '#f0b040'],
+  blue: ['#14306a', '#2a62b8', '#6aa8f0'],
+  green: ['#143a24', '#2a7a46', '#6ac084'],
+  grey: ['#3a4250', '#6a7686', '#a8b4c4'],
+  red: ['#5a0c14', '#b0202e', '#f05a5a'],
+  violet: ['#2a1450', '#5a34a0', '#a07ae0'],
+} satisfies Record<string, Ramp>;
 
 /** Cloth colors as a single base hex; the ramp around it is made by `clothRamp`. */
 export const CLOTH = {
+  linen: '#8c7350',
   black: '#24222e',
   charcoal: '#3a3a4a',
   grey: '#7a8090',

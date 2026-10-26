@@ -12,10 +12,10 @@ const allParts = (): [string, Part][] => [
 ];
 
 describe('avatar parts', () => {
-  it('every layer is 32 wide and fits the 64-pixel frame', () => {
+  it('every layer is 64 wide and fits the 64-pixel frame', () => {
     for (const [name, part] of allParts())
       for (const [layer, art] of Object.entries(part.layers)) {
-        art.rows.forEach((r, j) => expect(r, `${name} ${layer} row ${j}`).toHaveLength(32));
+        art.rows.forEach((r, j) => expect(r, `${name} ${layer} row ${j}`).toHaveLength(64));
         expect(art.y, name).toBeGreaterThanOrEqual(0);
         expect(art.y + art.rows.length, name).toBeLessThanOrEqual(64);
       }
@@ -23,7 +23,7 @@ describe('avatar parts', () => {
 
   it('every option draws and changes the picture', () => {
     // A short-haired base, so nothing hides the brows or eyes.
-    const bare = { ...DEFAULT_AVATAR, hair: 'buzz', extra: 'none' } as const,
+    const bare = { ...DEFAULT_AVATAR, hair: 'bald', extra: 'none', brows: 'none' } as const,
       base = key(drawAvatar(bare));
     for (const slot of Object.keys(SLOTS) as Slot[])
       for (const id of Object.keys(SLOTS[slot].parts)) {
@@ -33,12 +33,13 @@ describe('avatar parts', () => {
       }
   });
 
-  it('colors recolor', () => {
+  it('every color picker recolors some preset', () => {
     for (const c of Object.keys(COLORS) as (keyof typeof COLORS)[]) {
-      const ids = Object.keys(COLORS[c]);
-      const other = ids.find((i) => i !== DEFAULT_AVATAR[c])!;
-      const a = { ...PRESETS.hunter, [c]: other };
-      if (a[c] !== PRESETS.hunter[c]) expect(key(drawAvatar(a)), c).not.toBe(key(drawAvatar(PRESETS.hunter)));
+      const changes = Object.values(PRESETS).some((p) => {
+        const other = Object.keys(COLORS[c]).find((i) => i !== p[c])!;
+        return key(drawAvatar({ ...p, [c]: other })) !== key(drawAvatar(p));
+      });
+      expect(changes, c).toBe(true);
     }
   });
 
@@ -51,7 +52,7 @@ describe('avatar parts', () => {
 
   it('saved avatars are made safe to draw', () => {
     expect(normalizeAvatar()).toEqual(DEFAULT_AVATAR);
-    expect(normalizeAvatar({ ...PRESETS.lean, hair: 'mohawk', topColor: 'rainbow' })).toEqual({ ...PRESETS.lean, hair: DEFAULT_AVATAR.hair, topColor: DEFAULT_AVATAR.topColor });
-    expect(normalizeAvatar(PRESETS.gothic)).toEqual(PRESETS.gothic);
+    expect(normalizeAvatar({ ...PRESETS.scholar, hair: 'mohawk', topColor: 'rainbow' })).toEqual({ ...PRESETS.scholar, hair: DEFAULT_AVATAR.hair, topColor: DEFAULT_AVATAR.topColor });
+    expect(normalizeAvatar(PRESETS.heroine)).toEqual(PRESETS.heroine);
   });
 });

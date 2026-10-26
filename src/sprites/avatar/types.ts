@@ -2,8 +2,8 @@
    pair of eyes, a jacket) is a Part that paints one or more layers on top of it. Parts are drawn
    by hand as text rows, one character per pixel, so adding an option is adding a table. */
 
-/** Pixel art for one layer: rows of 32 characters, starting at row `y` of the 64-pixel frame.
-    The 32 columns are centered in the frame (x 16..47). '.' is empty. */
+/** Pixel art for one layer: rows of 64 characters (one per pixel of the 64x64 frame), starting at
+    row `y`. '.' is empty. */
 export interface Art {
   y: number;
   rows: string[];
@@ -39,8 +39,9 @@ export const LAYER_STYLE: Record<Layer, { planted?: boolean; noOutline?: boolean
  * One option in a slot. Letters every part can use:
  *   a b c  hair dark / base / light          d e f  skin shadow / base / light
  *   1 2 3  this slot's color dark / base / light
- *   g i    iris dark / light (eye color)     y eye white, W shine, K ink line
- *   w v    white / white shadow              o tired ring under the eyes, u mouth line
+ *   g h i  iris dark / mid / light            p pupil, y eye white, W shine, K ink line
+ *   w v    white / white shadow              o tired ring under the eyes
+ *   r      mouth line                        n R t  inside of the mouth, tongue, teeth
  * A part can add its own fixed colors in `inks`.
  */
 export interface Part {
