@@ -1,14 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { initialState, type GameState } from './game';
+import { initialState, migrate, type GameState } from './game';
 
 const KEY = 'forma-state-v1';
 
 function load(): GameState {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return { ...initialState(), ...(JSON.parse(raw) as GameState) };
+    if (raw) return migrate(JSON.parse(raw));
   } catch {
     // Private mode or corrupt data: start fresh rather than crash.
   }
@@ -52,9 +52,9 @@ export function exportState(state: GameState): string {
 
 export function parseImport(raw: string): GameState | null {
   try {
-    const parsed = JSON.parse(raw) as GameState;
-    if (parsed?.version !== 1 || !parsed.progress || !Array.isArray(parsed.sessions)) return null;
-    return { ...initialState(), ...parsed };
+    const parsed = JSON.parse(raw) as { version?: number; progress?: unknown; sessions?: unknown };
+    if ((parsed?.version !== 1 && parsed?.version !== 2) || !parsed.progress || !Array.isArray(parsed.sessions)) return null;
+    return migrate(parsed);
   } catch {
     return null;
   }

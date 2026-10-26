@@ -1,6 +1,7 @@
 import { Check, Lock } from 'lucide-react';
 import { PATHS } from '@/lib/skills';
 import { repsFor, type GameState } from '@/lib/game';
+import { rewardFor } from '@/lib/gear';
 
 export function SkillsTab({ state }: { state: GameState }) {
   return (
@@ -10,7 +11,7 @@ export function SkillsTab({ state }: { state: GameState }) {
         return (
           <section key={path.id}>
             <div className="mb-3 flex items-baseline justify-between">
-              <h2 className="font-pixel text-xs text-gold-300">{path.name}</h2>
+              <h2 className="font-pixel text-xs" style={{ color: path.color }}>{path.name}</h2>
               <p className="text-xs text-slate-400">
                 {path.tagline} · {Math.min(at, path.nodes.length)}/{path.nodes.length}
               </p>
@@ -21,6 +22,7 @@ export function SkillsTab({ state }: { state: GameState }) {
                 const beaten = i < at;
                 const current = i === at;
                 const unit = node.unit === 'sec' ? 's' : '';
+                const reward = rewardFor(state.profile.classId, state.progress, path.id, i);
                 return (
                   <li key={node.id} className="relative">
                     <span
@@ -38,8 +40,8 @@ export function SkillsTab({ state }: { state: GameState }) {
                       <div className="flex items-center justify-between gap-2">
                         <p className="font-semibold">{node.name}</p>
                         <span className="flex items-center gap-1.5 text-xs text-slate-300">
-                          <span className="inline-block h-3 w-3 rounded-sm" style={{ background: node.reward.color }} />
-                          {node.reward.name}
+                          <span className="inline-block h-3 w-3 rounded-sm" style={{ background: reward.color }} />
+                          {reward.name}
                         </span>
                       </div>
                       <p className="mt-1 text-xs text-slate-400">

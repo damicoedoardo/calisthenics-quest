@@ -1,14 +1,4 @@
 export type PathId = 'push' | 'pull' | 'core';
-export type GearSlot = 'weapon' | 'armor' | 'shield';
-
-export interface Gear {
-  slot: GearSlot;
-  name: string;
-  /** Main color used to paint the gear on the hero. */
-  color: string;
-  /** Optional glow for the legendary tiers. */
-  glow?: string;
-}
 
 export interface SkillNode {
   id: string;
@@ -23,15 +13,13 @@ export interface SkillNode {
   /** Per-set target that unlocks the next node. */
   unlockSets: number;
   unlockReps: number;
-  /** Gear earned when this node is unlocked (beaten). */
-  reward: Gear;
 }
 
 export interface SkillPath {
   id: PathId;
   name: string;
   tagline: string;
-  slot: GearSlot;
+  color: string;
   nodes: SkillNode[];
 }
 
@@ -39,8 +27,8 @@ export const PATHS: SkillPath[] = [
   {
     id: 'push',
     name: 'Push',
-    tagline: 'Forge your blade',
-    slot: 'weapon',
+    tagline: 'Strike harder',
+    color: '#fb923c',
     nodes: [
       {
         id: 'incline-pushup',
@@ -51,7 +39,6 @@ export const PATHS: SkillPath[] = [
         startReps: 10,
         unlockSets: 3,
         unlockReps: 15,
-        reward: { slot: 'weapon', name: 'Wooden sword', color: '#a16207' },
       },
       {
         id: 'pushup',
@@ -62,7 +49,6 @@ export const PATHS: SkillPath[] = [
         startReps: 8,
         unlockSets: 3,
         unlockReps: 20,
-        reward: { slot: 'weapon', name: 'Iron sword', color: '#9ca3af' },
       },
       {
         id: 'diamond-pushup',
@@ -73,7 +59,6 @@ export const PATHS: SkillPath[] = [
         startReps: 6,
         unlockSets: 3,
         unlockReps: 12,
-        reward: { slot: 'weapon', name: 'Steel sword', color: '#cbd5e1' },
       },
       {
         id: 'dips',
@@ -84,7 +69,6 @@ export const PATHS: SkillPath[] = [
         startReps: 5,
         unlockSets: 3,
         unlockReps: 10,
-        reward: { slot: 'weapon', name: "Knight's blade", color: '#fbbf24' },
       },
       {
         id: 'archer-pushup',
@@ -95,15 +79,14 @@ export const PATHS: SkillPath[] = [
         startReps: 3,
         unlockSets: 3,
         unlockReps: 8,
-        reward: { slot: 'weapon', name: 'Flame sword', color: '#f97316', glow: '#fb923c' },
       },
     ],
   },
   {
     id: 'pull',
     name: 'Pull',
-    tagline: 'Earn your armor',
-    slot: 'armor',
+    tagline: 'Draw the bow',
+    color: '#60a5fa',
     nodes: [
       {
         id: 'dead-hang',
@@ -114,7 +97,6 @@ export const PATHS: SkillPath[] = [
         startReps: 20,
         unlockSets: 3,
         unlockReps: 45,
-        reward: { slot: 'armor', name: 'Leather tunic', color: '#92400e' },
       },
       {
         id: 'assisted-pullup',
@@ -125,7 +107,6 @@ export const PATHS: SkillPath[] = [
         startReps: 6,
         unlockSets: 3,
         unlockReps: 12,
-        reward: { slot: 'armor', name: 'Leather armor', color: '#b45309' },
       },
       {
         id: 'negatives',
@@ -136,7 +117,6 @@ export const PATHS: SkillPath[] = [
         startReps: 3,
         unlockSets: 3,
         unlockReps: 5,
-        reward: { slot: 'armor', name: 'Chainmail', color: '#6b7280' },
       },
       {
         id: 'strict-pullup',
@@ -147,7 +127,6 @@ export const PATHS: SkillPath[] = [
         startReps: 2,
         unlockSets: 3,
         unlockReps: 8,
-        reward: { slot: 'armor', name: 'Iron armor', color: '#9ca3af' },
       },
       {
         id: 'pullup',
@@ -158,7 +137,6 @@ export const PATHS: SkillPath[] = [
         startReps: 8,
         unlockSets: 3,
         unlockReps: 12,
-        reward: { slot: 'armor', name: 'Steel armor', color: '#cbd5e1' },
       },
       {
         id: 'lsit-pullup',
@@ -169,15 +147,14 @@ export const PATHS: SkillPath[] = [
         startReps: 3,
         unlockSets: 3,
         unlockReps: 8,
-        reward: { slot: 'armor', name: 'Dragon armor', color: '#7c3aed', glow: '#a78bfa' },
       },
     ],
   },
   {
     id: 'core',
     name: 'Core',
-    tagline: 'Raise your shield',
-    slot: 'shield',
+    tagline: 'Find your stillness',
+    color: '#4ade80',
     nodes: [
       {
         id: 'knee-raise',
@@ -188,7 +165,6 @@ export const PATHS: SkillPath[] = [
         startReps: 8,
         unlockSets: 3,
         unlockReps: 15,
-        reward: { slot: 'shield', name: 'Wooden shield', color: '#a16207' },
       },
       {
         id: 'tuck-lsit',
@@ -199,7 +175,6 @@ export const PATHS: SkillPath[] = [
         startReps: 8,
         unlockSets: 3,
         unlockReps: 15,
-        reward: { slot: 'shield', name: 'Iron shield', color: '#9ca3af' },
       },
       {
         id: 'one-leg-lsit',
@@ -210,7 +185,6 @@ export const PATHS: SkillPath[] = [
         startReps: 8,
         unlockSets: 3,
         unlockReps: 15,
-        reward: { slot: 'shield', name: 'Steel shield', color: '#cbd5e1' },
       },
       {
         id: 'lsit',
@@ -221,7 +195,6 @@ export const PATHS: SkillPath[] = [
         startReps: 5,
         unlockSets: 3,
         unlockReps: 15,
-        reward: { slot: 'shield', name: 'Tower shield', color: '#fbbf24' },
       },
       {
         id: 'toes-to-bar',
@@ -232,29 +205,13 @@ export const PATHS: SkillPath[] = [
         startReps: 5,
         unlockSets: 3,
         unlockReps: 10,
-        reward: { slot: 'shield', name: 'Legendary shield', color: '#22d3ee', glow: '#67e8f9' },
       },
     ],
   },
 ];
-
-/** Non-skill exercise that keeps the legs honest. */
-export const BONUS = {
-  id: 'goblet-squat',
-  name: 'Goblet squat',
-  cue: 'Dumbbell at the chest, sit between the heels.',
-  sets: 3,
-  reps: 10,
-};
 
 export function getPath(id: PathId): SkillPath {
   const path = PATHS.find((p) => p.id === id);
   if (!path) throw new Error(`Unknown path ${id}`);
   return path;
 }
-
-export const STARTER_GEAR: Record<GearSlot, Gear> = {
-  weapon: { slot: 'weapon', name: 'Bare fists', color: '#e7c9a9' },
-  armor: { slot: 'armor', name: 'Gym shirt', color: '#475569' },
-  shield: { slot: 'shield', name: 'No shield', color: 'transparent' },
-};
