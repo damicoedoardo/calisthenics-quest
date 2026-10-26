@@ -1,0 +1,77 @@
+# Sprites
+
+All character art lives here. Components never draw art. They render
+`<Sprite id="..." />` (`src/components/Sprite.tsx`) or a thin wrapper like `<Hero />`.
+Open **/lab** in the app to see every sprite and animation, with controls for class, gear tier,
+variant and look.
+
+```
+palette.ts            every color ramp (materials, hair, skin, story looks)
+clips.ts              animations as data: frames + timing
+registry.ts           every sprite by id, and how to get its sheet
+engine/grid.ts        pixel grids and drawing tools (painter, outline, shading, aura, tint)
+engine/figure.ts      the base 64x64 humanoid: body, face, hair, arms, layer order
+parts/weapons.ts      sword, stick, staff, wand, bow
+characters/*.ts       one file per character (hero, wanderer, ember) + small text-row sprites
+```
+
+## How to change things
+
+| I want to... | Edit |
+|---|---|
+| Change a color everywhere | `palette.ts` |
+| Make an animation faster, slower, longer, or move an arm in it | that clip in `clips.ts` (`ms`, `frames`) |
+| Add a new animation | add a clip in `clips.ts`, then point a sprite's `clips` at it in `registry.ts` |
+| Change which animation a class attacks with | `heroAttack` in `characters/hero.ts` |
+| Reshape the body (legs, torso, head, shoulders) | `BODY` in `engine/figure.ts` |
+| Change the eyes, brows, mouth | `EYE_PATTERN` and `FACE` in `engine/figure.ts` |
+| Add a hairstyle | a new entry in `HAIRSTYLES` (`engine/figure.ts`) |
+| Redraw a weapon | `parts/weapons.ts` |
+| Change armor tiers, capes, shields | `heroSpec` layers in `characters/hero.ts` |
+| Redraw Mira, the Book or a chapter enemy | the text rows in `characters/pixel.ts` |
+| Add a character | a file in `characters/`, then an entry in `SPRITES` (`registry.ts`) |
+| Use art from Aseprite or PixelLab | see below |
+
+Sprites are drawn on a 64x64 grid. The body and hair are designed at 32x32 ("body pixels") and
+doubled with Scale2x, so one body pixel is two sprite pixels. Each layer gets an outline and
+light/shadow edges automatically.
+
+## Animations
+
+A clip is `{ frames, ms, loop }`. Each frame says only what differs from rest:
+
+```ts
+swing: { ms: 120, loop: false, frames: [{}, { right: 'up' }, { right: 'fwd', fx: 'slash' }, {}] },
+```
+
+Any number of frames works: the sheet is as wide as the clip, and the CSS animation's step count
+and duration come from the clip. Looping clips (idle) repeat; the others play once and fire
+`onEnd`.
+
+## Using a PNG sprite sheet
+
+Drop the PNG in `public/sprites/`, one row per action, all frames the same size, then register it:
+
+```ts
+hero: {
+  kind: 'image',
+  label: 'Hero',
+  src: '/sprites/hero.png',
+  frame: { w: 64, h: 64 },
+  columns: 6, // frames in the widest row
+  rows: 2,
+  clips: {
+    idle: { row: 0, frames: 4, ms: 200, loop: true },
+    attack: { row: 1, frames: 6, ms: 90, loop: false },
+  },
+},
+```
+
+Nothing else changes: every `<Sprite id="hero" />` picks it up. Keep the code-drawn version around
+if gear needs to recolor it, because a PNG can't follow gear tiers on its own.
+
+## Tests
+
+`sprites.test.ts` draws every sprite and action and keeps a fingerprint of the pixels. After an art
+change you meant to make, run `pnpm test -u` to accept the new fingerprints. If you didn't mean to
+change any art, a failing fingerprint means something broke.
