@@ -905,6 +905,7 @@ class RunScene extends Phaser.Scene {
   }
 
   private win() {
+    if (this.over) return;
     this.over = true;
     this.cameras.main.flash(600, 255, 240, 200);
     for (const o of this.foes.getChildren()) {
@@ -920,6 +921,7 @@ class RunScene extends Phaser.Scene {
   }
 
   private lose() {
+    if (this.over) return;
     this.over = true;
     this.hp = 0;
     this.physics.pause();
