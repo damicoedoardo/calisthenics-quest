@@ -1,42 +1,8 @@
 import { PixelArt } from './Sprite';
 import { Hero } from './Hero';
-import { equippedGear } from '@/lib/gear';
-
-const WANDERER = [
-  '.....CCCCCC.....',
-  '....CCCCCCCC....',
-  '...CCCccccCCC...',
-  '...CCcddddcCC...',
-  '...CCdYddYdCC...',
-  '...CCddddddCC...',
-  '....CcddddcC....',
-  '...CCCCCCCCCC...',
-  '..CCCCCCCCCCCC..',
-  '..CCCCCcCCCCCC..',
-  '.CCCCCCcCCCCCCC.',
-  '.CCCCCCcCCCCCCC.',
-  '.CCCCCCcCCCCCCC.',
-  '.CCCCCCcCCCCCCC.',
-  '..CCCCCcCCCCCC..',
-  '..BBBB....BBBB..',
-];
-
-const EMBER = [
-  '.....Y......',
-  '.....YY.....',
-  '....YOY.....',
-  '....YOOY....',
-  '...YOOOY....',
-  '..YOORROY...',
-  '..YORRRROY..',
-  '.YORRWWRROY.',
-  '.YORWkWkROY.',
-  '.YORWWWWROY.',
-  '.YORRWWRROY.',
-  '..YORRRROY..',
-  '...YOOOOY...',
-  '....YYYY....',
-];
+import { equippedGear, makeGear, type ClassId, type Gear, type GearSlot } from '@/lib/gear';
+import { emberSheet, wandererSheet } from '@/lib/sprite64/cast';
+import { SpriteSheet, useSheet } from './SpriteSheet';
 
 const MIRA = [
   '.....RRRRRR.....',
@@ -130,27 +96,34 @@ const SUMMIT = [
 ];
 
 export function Wanderer({ size = 64 }: { size?: number }) {
-  return <PixelArt rows={WANDERER} palette={{ C: '#3f3a52', c: '#2a2638', d: '#111318', Y: '#fbbf24', B: '#1f2937' }} size={size} label="The Wanderer" />;
+  const src = useSheet(wandererSheet);
+  return <SpriteSheet src={src} size={size} label="The Wanderer" />;
 }
 
 /** Ember grows with the weekly streak: scale 0 (tiny) to 5 (bonfire). */
 export function Ember({ size = 48, dim = false }: { size?: number; dim?: boolean }) {
+  const src = useSheet(emberSheet);
   return (
-    <PixelArt
-      rows={EMBER}
-      palette={{ Y: '#fde047', O: '#fb923c', R: '#ef4444', W: '#fff7ed', k: '#1f2937' }}
-      size={size}
-      className={`animate-flicker ${dim ? 'opacity-50' : ''}`}
-      label="Ember"
-    />
+    <div className={`animate-flicker ${dim ? 'opacity-50' : ''}`}>
+      <SpriteSheet src={src} size={size} label="Ember" />
+    </div>
   );
 }
 
-const SHADOW_GEAR = equippedGear(undefined, { push: 0, pull: 0, core: 0 });
+const SHADOW_GEAR = { ...equippedGear(undefined, { push: 0, pull: 0, core: 0 }), weapon: makeGear('weapon', 1, undefined) };
+
+interface HollowProps {
+  size?: number;
+  bounce?: boolean;
+  /** The Hollow wears your shape: pass your gear and class to mirror them. */
+  gear?: Record<GearSlot, Gear>;
+  classId?: ClassId;
+  action?: number;
+}
 
 /** The Hollow: your own shape, emptied out. The voice that says you're not enough. */
-export function Hollow({ size = 64, bounce = true }: { size?: number; bounce?: boolean }) {
-  return <Hero gear={SHADOW_GEAR} size={size} variant="hollow" bounce={bounce} />;
+export function Hollow({ size = 64, bounce = true, gear = SHADOW_GEAR, classId, action }: HollowProps) {
+  return <Hero gear={gear} classId={classId} size={size} variant="hollow" bounce={bounce} action={action} />;
 }
 
 /** The Book of Days: blank pages the player writes by training. */

@@ -11,13 +11,6 @@ export function Sprite({ rows, palette }: { rows: string[]; palette: Record<stri
   );
 }
 
-export function shade(hex: string, amount: number): string {
-  if (!hex.startsWith('#')) return hex;
-  const n = parseInt(hex.slice(1), 16);
-  const ch = (shift: number) => Math.max(0, Math.min(255, Math.round(((n >> shift) & 255) * (1 + amount))));
-  return `rgb(${ch(16)},${ch(8)},${ch(0)})`;
-}
-
 interface PixelArtProps {
   rows: string[];
   palette: Record<string, string>;

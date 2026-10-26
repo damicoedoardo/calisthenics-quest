@@ -26,6 +26,8 @@ export default {
         lunge: { '0%,100%': { transform: 'translateX(0)' }, '40%': { transform: 'translateX(28px)' } },
         recoil: { '0%,100%': { transform: 'translateX(0)' }, '40%': { transform: 'translateX(-28px)' } },
         flash: { '0%,100%': { opacity: '0' }, '20%': { opacity: '.7' } },
+        // 4-frame sprite sheets; --s is the frame size.
+        sprite: { '0%': { backgroundPosition: '0 0' }, '100%': { backgroundPosition: 'calc(var(--s) * -4) 0' } },
       },
       animation: {
         pop: 'pop .45s ease-out both',
@@ -41,6 +43,8 @@ export default {
         lunge: 'lunge .5s ease-in-out',
         recoil: 'recoil .5s ease-in-out',
         flash: 'flash .9s ease-out both',
+        sprite: 'sprite .8s steps(4) infinite',
+        'sprite-once': 'sprite .48s steps(4)',
       },
     },
   },

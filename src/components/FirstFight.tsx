@@ -80,14 +80,13 @@ export function FirstFight({ voice, gear, onDone }: { voice: string; gear: Recor
 
         <div className="flex flex-1 items-end justify-center gap-6 pb-6">
           <div
-            key={`hero-${turn}-${phase === 'down' ? 'answer' : phase}`}
             className={`transition-all duration-1000 ${phase === 'strike' ? 'animate-lunge' : phase === 'answer' ? 'animate-shake' : ''}`}
             style={phase === 'down' ? { transform: 'rotate(-90deg) translateX(-30px)', filter: 'grayscale(1)', opacity: 0.6 } : undefined}
           >
-            <Hero gear={gear} size={130} bounce={false} />
+            <Hero gear={gear} size={128} bounce={phase !== 'down'} action={phase === 'ready' ? turn : turn + 1} />
           </div>
-          <div key={`hollow-${turn}-${phase}`} className={`relative ${phase === 'answer' ? 'animate-recoil' : ''}`}>
-            <Hollow size={140} bounce={phase !== 'down'} />
+          <div className={`relative ${phase === 'answer' ? 'animate-recoil' : ''}`}>
+            <Hollow size={160} bounce={phase !== 'down'} action={struck} />
             {phase === 'strike' && <span className="absolute -top-2 left-1/2 -translate-x-1/2 animate-hit font-pixel text-sm text-slate-400">-1</span>}
           </div>
         </div>
