@@ -1,7 +1,7 @@
 import type { ArmLeft, ArmRight, ClipFrame, ClipId, Fx } from '../clips';
 import { EYES, HAIR, R, SKIN, type HairColor, type SkinTone } from '../palette';
 import { autoshade, grid, outline, painter, scale2x, stamp, type Grid, type Painter, type Ramp } from './grid';
-import { MANGA_FACE, mangaHair, mangaHead } from './manga';
+import { MANGA_FACE, isManga, mangaHair, mangaHead } from './manga';
 
 /* The base 64x64 humanoid every character is built on: body, face, hair, arms, and the layer
    order that dresses it. The body and hair are designed on a 32-px grid ("body pixels") and
@@ -16,7 +16,8 @@ export interface Look {
   style: HairStyle;
   hair: HairColor;
   skin: SkinTone;
-  /** Head drawing: 'classic' (designed at 32, doubled) or 'manga' (drawn at 64, see manga.ts). */
+  /** Head drawing: 'classic' (designed at 32, doubled) or 'manga' (drawn at 64, see manga.ts).
+      A hairstyle without a manga version falls back to classic. */
   head?: 'classic' | 'manga';
 }
 
@@ -267,7 +268,7 @@ function face(g: Grid, P: Pose, look: Look) {
 
 /** The eyes of a look as boxes [x, y, w, h] at rest (no bob), for effects that sit on them. */
 export function eyeBoxes(look: Look): [number, number, number, number][] {
-  if (look.head === 'manga') return MANGA_FACE.eyes.x.map((x) => [x, MANGA_FACE.eyes.y, MANGA_FACE.eyes.w, MANGA_FACE.eyes.h]);
+  if (isManga(look)) return MANGA_FACE.eyes.x.map((x) => [x, MANGA_FACE.eyes.y, MANGA_FACE.eyes.w, MANGA_FACE.eyes.h]);
   return FACE.eyes.x.map((x) => [x, FACE.eyes.y, EYE_PATTERN[0].length, EYE_PATTERN.length]);
 }
 
@@ -299,12 +300,12 @@ export function drawFigure(spec: FigureSpec, look: Look, frame: ClipFrame, f: nu
     put(g, spec.shadeLayers !== false);
   };
 
-  const manga = look.head === 'manga' ? mangaHair(P, look) : null;
+  const manga = isManga(look) ? mangaHair(P, look) : null;
   if (look.sex === 'f' && look.style === 'pony' && !spec.hideHair && !manga) put(scale2x(ponytail32(P, look)));
   layer('back');
   if (manga && !spec.hideHair) put(manga.back);
-  const body = scale2x(body32(P, look, spec.legs, look.head !== 'manga'));
-  if (look.head === 'manga') mangaHead(body, P, look);
+  const body = scale2x(body32(P, look, spec.legs, !manga));
+  if (manga) mangaHead(body, P, look, spec.hideHair ? undefined : manga.front);
   else face(body, P, look);
   put(body);
   layer('outfit');

@@ -17,7 +17,7 @@ export interface HeroOpts {
   look?: Look;
 }
 
-export const DEFAULT_LOOK: Look = { sex: 'm', style: 'spiky', hair: 'brown', skin: 'light' };
+export const DEFAULT_LOOK: Look = { sex: 'm', style: 'spiky', hair: 'brown', skin: 'light', head: 'manga' };
 
 /** The clip each class attacks with. Until you hold a real weapon, everyone swings a stick. */
 export function heroAttack(gear: Record<GearSlot, Gear>, classId?: ClassId): ClipId {
@@ -93,6 +93,7 @@ export function heroSpec({ gear, classId, variant }: HeroOpts): FigureSpec {
         u.row(47, 21, 42, A[0]);
         [23, 28, 33, 38].forEach((x) => u.p(x, 47, A[0]));
         u.r(30, 30, 4, 4, c.skin[1]);
+        u.row(30, 30, 33, c.skin[0]); // the chin's shadow on the neck
         u.p(29, 30, A[0]);
         u.p(34, 30, A[0]);
         const [b0, b1] = c.torsoRange(42);

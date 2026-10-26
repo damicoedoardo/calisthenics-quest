@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { equippedGear, type ClassId } from '@/lib/gear';
 import { CLIPS, type SpriteAction } from './clips';
+import { DEFAULT_LOOK } from './characters/hero';
 import { SIZE } from './engine/figure';
 import { tint, type Grid } from './engine/grid';
 import { SPRITES, clipFor, framesFor, imageSheet, type SpriteId } from './registry';
@@ -67,6 +68,12 @@ describe('sprite registry', () => {
     expect(new Set(t.flat().filter(Boolean)).size).toBeLessThanOrEqual(ramp.length);
   });
 
+  it('hairstyles without a manga version fall back to the classic head', () => {
+    const f = { ...DEFAULT_LOOK, sex: 'f' as const, style: 'long' as const };
+    expect(hash(framesFor('hero', 'idle', { look: { ...f, head: 'manga' } }))).toBe(hash(framesFor('hero', 'idle', { look: { ...f, head: 'classic' } })));
+    expect(hash(framesFor('hero', 'idle'))).not.toBe(hash(framesFor('hero', 'idle', { look: { ...DEFAULT_LOOK, head: 'classic' } })));
+  });
+
   it('PNG sheets pick their row and fall back to idle', () => {
     const png = {
       kind: 'image' as const,
@@ -82,7 +89,7 @@ describe('sprite registry', () => {
   });
 
   // A fingerprint of every sprite's pixels. If this fails after an art change you meant to make,
-  // update it with `pnpm test -u`; if you didn't mean to change any art, something broke.
+  // update it with `pnpm test -- -u`; if you didn't mean to change any art, something broke.
   it('art fingerprints', () => {
     const prints: Record<string, string> = {};
     for (const id of ids) for (const action of actions) prints[`${id} ${action}`] = hash(framesFor(id, action));
@@ -91,6 +98,8 @@ describe('sprite registry', () => {
         for (const action of actions)
           prints[`hero ${classId} t${t} ${action}`] = hash(framesFor('hero', action, { gear: equippedGear(classId, { push: t, pull: t, core: t }), classId }));
     for (const variant of ['echo', 'best', 'hollow'] as const) prints[`hero ${variant}`] = hash(framesFor('hero', 'idle', { variant }));
+    for (const style of ['spiky', 'swept', 'short'] as const)
+      for (const head of ['classic', 'manga'] as const) prints[`hero ${head} ${style}`] = hash(framesFor('hero', 'idle', { look: { ...DEFAULT_LOOK, style, head } }));
     expect(prints).toMatchSnapshot();
   });
 });

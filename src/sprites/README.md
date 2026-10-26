@@ -11,7 +11,7 @@ clips.ts              animations as data: frames + timing
 registry.ts           every sprite by id, and how to get its sheet
 engine/grid.ts        pixel grids and drawing tools (painter, outline, shading, aura, tint)
 engine/figure.ts      the base 64x64 humanoid: body, face, hair, arms, layer order
-engine/manga.ts       the manga head (look.head = 'manga'): face as text art, hair as shapes
+engine/manga.ts       the manga head (the hero's default): face as text art, hair as shapes
 parts/weapons.ts      sword, stick, staff, wand, bow
 characters/*.ts       one file per character (hero, wanderer, ember) + small text-row sprites
 ```
@@ -25,10 +25,11 @@ characters/*.ts       one file per character (hero, wanderer, ember) + small tex
 | Add a new animation | add a clip in `clips.ts`, then point a sprite's `clips` at it in `registry.ts` |
 | Change which animation a class attacks with | `heroAttack` in `characters/hero.ts` |
 | Reshape the body (legs, torso, head, shoulders) | `BODY` in `engine/figure.ts` |
-| Change the eyes, brows, mouth | `EYE_PATTERN` and `FACE` in `engine/figure.ts` |
-| Add a hairstyle | a new entry in `HAIRSTYLES` (`engine/figure.ts`) |
-| Change the manga face (eyes, chin, mouth) | the `MANGA_FACE.art` text rows in `engine/manga.ts` |
-| Change a manga hairstyle (spikes, bangs, headband) | its entry in `MANGA_HAIR` (`engine/manga.ts`): each lock is a list of points |
+| Change the hero's face (eyes, chin, mouth) | the `MANGA_FACE.art` text rows in `engine/manga.ts` |
+| Change the hero's hair (spikes, bangs, headband) | its entry in `MANGA_HAIR` (`engine/manga.ts`): each lock is a list of points |
+| Change the hero's default look | `DEFAULT_LOOK` in `characters/hero.ts` |
+| Add a hairstyle | a new entry in `HAIRSTYLES` (`engine/figure.ts`), plus one in `MANGA_HAIR` for the manga head (without it, that style falls back to the classic head) |
+| Change the classic face | `EYE_PATTERN` and `FACE` in `engine/figure.ts` |
 | Redraw a weapon | `parts/weapons.ts` |
 | Change armor tiers, capes, shields | `heroSpec` layers in `characters/hero.ts` |
 | Redraw Mira, the Book or a chapter enemy | the text rows in `characters/pixel.ts` |
@@ -77,5 +78,5 @@ if gear needs to recolor it, because a PNG can't follow gear tiers on its own.
 ## Tests
 
 `sprites.test.ts` draws every sprite and action and keeps a fingerprint of the pixels. After an art
-change you meant to make, run `pnpm test -u` to accept the new fingerprints. If you didn't mean to
+change you meant to make, run `pnpm test -- -u` to accept the new fingerprints. If you didn't mean to
 change any art, a failing fingerprint means something broke.
