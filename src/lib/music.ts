@@ -8,10 +8,11 @@
  * "." is silence, "x" is a heartbeat thump.
  */
 
-export type TrackId = 'memory' | 'hollow' | 'heartbeat' | 'rise';
-export type StingId = 'victory';
+export type TrackId = 'memory' | 'hollow' | 'heartbeat' | 'rise' | 'fog' | 'fogBoss';
+export type StingId = 'victory' | 'levelup' | 'defeat';
 
-type Wave = 'square' | 'triangle' | 'sine' | 'sawtooth' | 'thump';
+/** "thump" is a kick drum; "hat" and "snare" are noise drums. Drum tokens are just "x". */
+type Wave = 'square' | 'triangle' | 'sine' | 'sawtooth' | 'thump' | 'hat' | 'snare';
 
 interface Voice {
   wave: Wave;
@@ -27,11 +28,15 @@ interface Track {
   voices: Voice[];
   /** Volume of a soft rain bed under the music. */
   rain?: number;
+  /** Skip the echo: fast music with drums turns to mush in it. */
+  dry?: boolean;
 }
 
 const bars = (...b: string[]) => b.join(' ');
+const rest = (n: number) => Array.from({ length: n }, () => '. . . . . . . .');
+const twice = (...b: string[]) => bars(...b, ...b);
 
-const TRACKS: Record<TrackId | StingId, Track> = {
+export const TRACKS: Record<TrackId | StingId, Track> = {
   // The opening: what you lost. A minor, slow, with rain.
   memory: {
     bpm: 66,
@@ -135,6 +140,126 @@ const TRACKS: Record<TrackId | StingId, Track> = {
       },
     ],
   },
+  // A run in the Fog: A minor, driving, the lead joins on the second time round.
+  fog: {
+    bpm: 132,
+    stepsPerBeat: 2,
+    dry: true,
+    voices: [
+      {
+        wave: 'triangle',
+        gain: 0.15,
+        pattern: twice(
+          'A2 A2 A3 A2 A2 A2 A3 A2',
+          'F2 F2 F3 F2 F2 F2 F3 F2',
+          'C3 C3 C4 C3 C3 C3 C4 C3',
+          'G2 G2 G3 G2 G2 G2 G3 G2',
+          'A2 A2 A3 A2 A2 A2 A3 A2',
+          'F2 F2 F3 F2 F2 F2 F3 F2',
+          'G2 G2 G3 G2 G2 G2 G3 G2',
+          'E2 E2 E3 E2 E2 E2 E3 E2',
+        ),
+      },
+      {
+        wave: 'square',
+        gain: 0.026,
+        cutoff: 2400,
+        pattern: twice(
+          'A4 C5 E5 A5 E5 C5 A4 C5',
+          'F4 A4 C5 F5 C5 A4 F4 A4',
+          'C5 E5 G5 C6 G5 E5 C5 E5',
+          'G4 B4 D5 G5 D5 B4 G4 B4',
+          'A4 C5 E5 A5 E5 C5 A4 C5',
+          'F4 A4 C5 F5 C5 A4 F4 A4',
+          'G4 B4 D5 G5 D5 B4 G4 B4',
+          'E4 G#4 B4 E5 B4 G#4 E4 G#4',
+        ),
+      },
+      {
+        wave: 'triangle',
+        gain: 0.11,
+        pattern: bars(
+          ...rest(8),
+          'A5 - - - E5 - A5 -',
+          'C6 - - B5 A5 - G5 -',
+          'G5 - - - E5 - G5 -',
+          'B5 - - A5 G5 - D5 -',
+          'E5 - A5 - C6 - B5 A5',
+          'F5 - - - A5 - C6 -',
+          'B5 - - - D6 - B5 -',
+          'G#5 - - - - - E5 -',
+        ),
+      },
+      { wave: 'thump', gain: 0.4, pattern: bars(...Array.from({ length: 15 }, () => 'x . . . x . . .'), 'x . . . x . x x') },
+      { wave: 'snare', gain: 0.09, pattern: bars(...Array.from({ length: 15 }, () => '. . x . . . x .'), '. . x . . x x x') },
+      { wave: 'hat', gain: 0.025, pattern: bars(...Array.from({ length: 16 }, () => 'x x x x x x x x')) },
+    ],
+  },
+  // The Hollow walks out: faster, D minor, the heartbeat turned into a kick drum.
+  fogBoss: {
+    bpm: 150,
+    stepsPerBeat: 2,
+    dry: true,
+    voices: [
+      {
+        wave: 'square',
+        gain: 0.06,
+        cutoff: 900,
+        pattern: twice(
+          'D2 D2 D3 D2 D2 D3 D2 D3',
+          'D2 D2 D3 D2 D2 D3 D2 D3',
+          'A#1 A#1 A#2 A#1 A#1 A#2 A#1 A#2',
+          'A1 A1 A2 A1 A1 A2 C#2 E2',
+        ),
+      },
+      {
+        wave: 'square',
+        gain: 0.022,
+        cutoff: 2000,
+        pattern: twice(
+          'D5 F5 A5 F5 D5 F5 A5 F5',
+          'D5 F5 A5 F5 D5 F5 A5 F5',
+          'A#4 D5 F5 D5 A#4 D5 F5 D5',
+          'A4 C#5 E5 C#5 A4 C#5 E5 C#5',
+        ),
+      },
+      {
+        wave: 'triangle',
+        gain: 0.12,
+        pattern: bars(
+          'D5 - - - D#5 - - -',
+          'D5 - - - - - - -',
+          'F5 - - - E5 - - -',
+          'D#5 - - - D5 - C#5 -',
+          'A5 - - - A#5 - - -',
+          'A5 - G5 - F5 - E5 -',
+          'F5 - - - G5 - A#5 -',
+          'A5 - - - C#6 - - -',
+        ),
+      },
+      { wave: 'thump', gain: 0.45, pattern: bars(...Array.from({ length: 8 }, () => 'x . x . x . x .')) },
+      { wave: 'snare', gain: 0.1, pattern: bars(...Array.from({ length: 7 }, () => '. . x . . . x .'), '. . x . x x x x') },
+      { wave: 'hat', gain: 0.028, pattern: bars(...Array.from({ length: 8 }, () => 'x x x x x x x x')) },
+    ],
+  },
+  // A level in a run.
+  levelup: {
+    bpm: 180,
+    stepsPerBeat: 4,
+    voices: [
+      { wave: 'square', gain: 0.05, cutoff: 3200, pattern: 'C5 E5 G5 C6 - - - .' },
+      { wave: 'triangle', gain: 0.1, pattern: 'C4 - G4 - C5 - - .' },
+    ],
+  },
+  // The Fog took you.
+  defeat: {
+    bpm: 84,
+    stepsPerBeat: 2,
+    voices: [
+      { wave: 'triangle', gain: 0.12, pattern: 'E4 - D#4 - D4 - - - C#4 - - - - - . .' },
+      { wave: 'square', gain: 0.03, cutoff: 900, pattern: 'A2 - - - G#2 - - - G2 - - - - - . .' },
+    ],
+  },
   // A short fanfare for a hit that lands.
   victory: {
     bpm: 150,
@@ -178,6 +303,13 @@ export function parsePattern(pattern: string): { events: NoteEvent[]; length: nu
 
 const MUTE_KEY = 'forma-muted';
 
+export type SfxId = 'slash' | 'arrow' | 'orb' | 'wave' | 'hit' | 'bossHit' | 'kill' | 'gem' | 'hurt' | 'spark' | 'nova' | 'flame' | 'roar' | 'dash' | 'stomp';
+
+/** Shortest gap between two of the same sound (s), so a crowd doesn't turn into noise. */
+const SFX_GAP: Partial<Record<SfxId, number>> = { hit: 0.045, bossHit: 0.08, kill: 0.05, gem: 0.03, flame: 0.08, hurt: 0.15 };
+/** Light pickups climb this scale while you collect them in a row. */
+const GEM_STEPS = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
+
 interface Playing {
   id: TrackId;
   out: GainNode;
@@ -189,6 +321,11 @@ class Engine {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private bus: GainNode | null = null;
+  private sfxOut: GainNode | null = null;
+  private noiseBuf: AudioBuffer | null = null;
+  private lastSfx: Partial<Record<SfxId, number>> = {};
+  private voices = 0;
+  private gemRun = { at: -1, step: 0 };
   private playing: Playing | null = null;
   private wanted: TrackId | null = null;
   private releaseTimer: ReturnType<typeof setTimeout> | null = null;
@@ -235,6 +372,17 @@ class Engine {
       feedback.connect(delay);
       delay.connect(wet);
       wet.connect(this.master);
+      // Effects go through a compressor, so a screen full of hits can't clip.
+      const comp = this.ctx.createDynamicsCompressor();
+      comp.threshold.value = -18;
+      comp.ratio.value = 6;
+      comp.connect(this.master);
+      this.sfxOut = this.ctx.createGain();
+      this.sfxOut.gain.value = 0.6;
+      this.sfxOut.connect(comp);
+      this.noiseBuf = this.ctx.createBuffer(1, this.ctx.sampleRate, this.ctx.sampleRate);
+      const data = this.noiseBuf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
     }
     if (this.ctx.state === 'suspended') void this.ctx.resume();
     if (this.wanted && this.playing?.id !== this.wanted) this.start(this.wanted);
@@ -313,7 +461,7 @@ class Engine {
     const out = ctx.createGain();
     out.gain.setValueAtTime(0, ctx.currentTime);
     out.gain.setTargetAtTime(1, ctx.currentTime, 0.3);
-    out.connect(this.bus);
+    out.connect(track.dry && this.master ? this.master : this.bus);
 
     const voices = track.voices.map((v) => ({ v, ...parsePattern(v.pattern) }));
     const length = Math.max(...voices.map((v) => v.length));
@@ -341,6 +489,12 @@ class Engine {
 
   private note(out: GainNode, v: Voice, e: NoteEvent, t: number, dur: number) {
     const ctx = this.ctx!;
+    if (v.wave === 'hat' || v.wave === 'snare') {
+      const snare = v.wave === 'snare';
+      this.hiss(out, snare ? 0.14 : 0.05, v.gain, snare ? 'bandpass' : 'highpass', snare ? 1800 : 7000, snare ? 1400 : 7000, snare ? 0.8 : 1, t);
+      if (snare) this.tone(out, 'triangle', 190, 140, 0.08, v.gain * 0.8, t);
+      return;
+    }
     const g = ctx.createGain();
     g.connect(out);
     const o = ctx.createOscillator();
@@ -372,6 +526,137 @@ class Engine {
     }
     o.start(t);
     o.stop(t + dur + 0.6);
+  }
+
+  // ---------- sound effects ----------
+
+  /** A one-shot game sound. `pitch` scales its frequencies. */
+  sfx(id: SfxId, pitch = 1) {
+    const ctx = this.ctx,
+      out = this.sfxOut;
+    if (!ctx || !out || this.muted || ctx.state !== 'running' || this.voices > 40) return;
+    const t = ctx.currentTime;
+    if (t - (this.lastSfx[id] ?? -1) < (SFX_GAP[id] ?? 0.02)) return;
+    this.lastSfx[id] = t;
+    const p = pitch * (0.94 + Math.random() * 0.12);
+    switch (id) {
+      case 'slash':
+        this.hiss(out, 0.14, 0.32, 'bandpass', 3200 * p, 700 * p, 1.2, t);
+        this.tone(out, 'square', 240 * p, 110 * p, 0.06, 0.04, t, 1600);
+        break;
+      case 'arrow':
+        this.tone(out, 'square', 1300 * p, 480 * p, 0.07, 0.05, t, 3000);
+        this.hiss(out, 0.05, 0.08, 'highpass', 4000, 4000, 1, t);
+        break;
+      case 'orb':
+        this.tone(out, 'sine', 520 * p, 1150 * p, 0.16, 0.14, t);
+        this.tone(out, 'triangle', 1040 * p, 2100 * p, 0.1, 0.04, t + 0.02);
+        break;
+      case 'wave':
+        this.tone(out, 'sine', 170 * p, 55, 0.28, 0.4, t);
+        this.hiss(out, 0.26, 0.16, 'lowpass', 1000, 180, 1, t);
+        break;
+      case 'hit':
+        this.hiss(out, 0.035, 0.16, 'bandpass', 2300 * p, 1600 * p, 1, t);
+        this.tone(out, 'square', 340 * p, 200 * p, 0.035, 0.035, t, 2200);
+        break;
+      case 'bossHit':
+        this.hiss(out, 0.07, 0.22, 'bandpass', 1200 * p, 600 * p, 1, t);
+        this.tone(out, 'square', 160 * p, 70 * p, 0.09, 0.07, t, 1200);
+        break;
+      case 'kill':
+        this.tone(out, 'square', 420 * p, 70 * p, 0.12, 0.06, t, 1800);
+        this.hiss(out, 0.14, 0.18, 'lowpass', 1800, 250, 1, t);
+        break;
+      case 'gem': {
+        this.gemRun.step = t - this.gemRun.at < 0.45 ? Math.min(GEM_STEPS.length - 1, this.gemRun.step + 1) : 0;
+        this.gemRun.at = t;
+        const f = 988 * 2 ** (GEM_STEPS[this.gemRun.step] / 12);
+        this.tone(out, 'triangle', f, f, 0.07, 0.09, t);
+        this.tone(out, 'square', f * 2, f * 2, 0.03, 0.012, t, 5000);
+        break;
+      }
+      case 'hurt':
+        this.tone(out, 'sawtooth', 220, 60, 0.22, 0.14, t, 1300);
+        this.hiss(out, 0.1, 0.14, 'lowpass', 1400, 400, 1, t);
+        break;
+      case 'spark':
+        this.tone(out, 'sawtooth', 2600 * p, 700 * p, 0.1, 0.05, t, 6000);
+        this.tone(out, 'square', 1800 * p, 2400 * p, 0.05, 0.025, t + 0.04, 6000);
+        this.hiss(out, 0.12, 0.09, 'highpass', 3000, 3000, 1, t);
+        break;
+      case 'nova':
+        this.tone(out, 'sine', 130, 40, 0.42, 0.45, t);
+        this.hiss(out, 0.4, 0.22, 'lowpass', 2400, 120, 1, t);
+        break;
+      case 'flame':
+        this.hiss(out, 0.09, 0.1, 'lowpass', 1300 * p, 500, 1, t);
+        break;
+      case 'roar':
+        this.tone(out, 'sawtooth', 95, 52, 1.1, 0.16, t, 700);
+        this.tone(out, 'square', 97, 50, 1.1, 0.05, t, 500);
+        this.hiss(out, 0.9, 0.12, 'lowpass', 600, 200, 1, t);
+        break;
+      case 'dash':
+        this.tone(out, 'square', 180, 820, 0.7, 0.04, t, 2000);
+        break;
+      case 'stomp':
+        this.tone(out, 'sine', 110, 35, 0.3, 0.45, t);
+        this.hiss(out, 0.2, 0.16, 'lowpass', 700, 120, 1, t);
+        break;
+    }
+  }
+
+  private tone(out: AudioNode, type: OscillatorType, f0: number, f1: number, dur: number, gain: number, t: number, cutoff?: number) {
+    const ctx = this.ctx!;
+    const o = ctx.createOscillator(),
+      g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f0, t);
+    if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+    g.gain.setValueAtTime(gain, t);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    if (cutoff) {
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = cutoff;
+      o.connect(f);
+      f.connect(g);
+    } else o.connect(g);
+    g.connect(out);
+    this.track(o);
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  }
+
+  private hiss(out: AudioNode, dur: number, gain: number, type: BiquadFilterType, f0: number, f1: number, q: number, t: number) {
+    const ctx = this.ctx!;
+    if (!this.noiseBuf) return;
+    const src = ctx.createBufferSource(),
+      f = ctx.createBiquadFilter(),
+      g = ctx.createGain();
+    src.buffer = this.noiseBuf;
+    f.type = type;
+    f.Q.value = q;
+    f.frequency.setValueAtTime(f0, t);
+    if (f1 !== f0) f.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
+    g.gain.setValueAtTime(gain, t);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    src.connect(f);
+    f.connect(g);
+    g.connect(out);
+    this.track(src);
+    src.start(t, Math.random() * 0.5);
+    src.stop(t + dur + 0.02);
+  }
+
+  /** Count sounds still playing, to cap how many overlap. */
+  private track(node: AudioScheduledSourceNode) {
+    this.voices++;
+    node.onended = () => {
+      this.voices--;
+      node.disconnect();
+    };
   }
 
   private rain(out: GainNode, volume: number) {

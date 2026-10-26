@@ -1,6 +1,7 @@
 import * as Phaser from 'phaser';
 import type { ClassId } from '@/lib/gear';
 import { RUN_SECONDS, rollUpgrades, xpToNext, type Power, type UpgradeId, type Zone } from '@/lib/fog';
+import { music, type SfxId } from '@/lib/music';
 import type { Sheet } from '@/sprites/registry';
 
 /* One run in the Fog, as a Phaser scene. You move; your hero attacks on its own in the class's
@@ -62,13 +63,18 @@ const RANGE = 240;
 
 type FoeKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'hollow';
 
-const FOES: Record<FoeKind, { hp: number; speed: number; dmg: number; xp: number; scale: number; r: number }> = {
-  slime: { hp: 12, speed: 52, dmg: 7, xp: 1, scale: 0.55, r: 14 },
-  wisp: { hp: 8, speed: 88, dmg: 5, xp: 1, scale: 0.5, r: 13 },
-  mirror: { hp: 34, speed: 66, dmg: 11, xp: 3, scale: 0.65, r: 15 },
-  golem: { hp: 160, speed: 42, dmg: 18, xp: 10, scale: 0.95, r: 18 },
-  hollow: { hp: 650, speed: 70, dmg: 20, xp: 0, scale: 1.5, r: 13 },
+const FOES: Record<FoeKind, { hp: number; speed: number; dmg: number; xp: number; scale: number; r: number; bits: number[] }> = {
+  slime: { hp: 12, speed: 52, dmg: 7, xp: 1, scale: 0.55, r: 14, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0] },
+  wisp: { hp: 8, speed: 88, dmg: 5, xp: 1, scale: 0.5, r: 13, bits: [0xf97316, 0xfde68a, 0x6b7280] },
+  mirror: { hp: 34, speed: 66, dmg: 11, xp: 3, scale: 0.65, r: 15, bits: [0xe2e8f0, 0xcbd5e1, 0xffffff] },
+  golem: { hp: 160, speed: 42, dmg: 18, xp: 10, scale: 0.95, r: 18, bits: [0xa8a29e, 0x78716c, 0x84cc16] },
+  hollow: { hp: 650, speed: 70, dmg: 20, xp: 0, scale: 1.5, r: 13, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
 };
+
+/** The sound each class's attack makes. */
+const ATTACK_SFX: Record<'slash' | 'arrow' | 'orb' | 'wave', SfxId> = { slash: 'slash', arrow: 'arrow', orb: 'orb', wave: 'wave' };
+/** How long a creature takes to rise out of the fog (ms). */
+const RISE_MS = 280;
 
 /** Base attack per class: how often it fires (s) and how hard it hits. */
 const ATTACK: Record<'slash' | 'arrow' | 'orb' | 'wave', { cd: number; dmg: number }> = {
@@ -89,6 +95,10 @@ class Foe extends Phaser.Physics.Arcade.Sprite {
   speed = 50;
   dmg = 5;
   xp = 1;
+  /** Scale when standing still; hits and spawning squash it for a moment. */
+  base = 1;
+  bornAt = 0;
+  squashUntil = 0;
   flashUntil = 0;
   knockUntil = 0;
   flameAt = 0;
@@ -126,6 +136,9 @@ class RunScene extends Phaser.Scene {
   private pad!: Phaser.GameObjects.Graphics;
   private ash!: Phaser.GameObjects.Particles.ParticleEmitter;
   private sparks!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private bits!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private puffs!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private shadows!: Phaser.GameObjects.Graphics;
   private vignette!: Phaser.GameObjects.Image;
   private numbers: Phaser.GameObjects.Text[] = [];
   private keys!: Record<'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd', Phaser.Input.Keyboard.Key>;
@@ -140,7 +153,7 @@ class RunScene extends Phaser.Scene {
   private kills = 0;
   private hurtUntil = 0;
   private facing = new Phaser.Math.Vector2(1, 0);
-  private cd = { attack: 0.5, spawn: 0.5, spark: 2, nova: 3, dust: 0, hud: 0 };
+  private cd = { attack: 0.5, spawn: 0.5, spark: 2, nova: 3, dust: 0, trail: 0, hud: 0 };
   private ups: Partial<Record<UpgradeId, number>> = {};
   private pendingLevels = 0;
   private boss: Foe | null = null;
@@ -203,6 +216,27 @@ class RunScene extends Phaser.Scene {
     this.physics.add.overlap(this.hero, this.foes, (_h, f) => this.hurt(f as Foe));
 
     this.fx = this.add.graphics().setDepth(90000);
+    // Under everything that stands on the ground, above the ground itself and its light.
+    this.shadows = this.add.graphics().setDepth(0.5);
+    this.puffs = this.add.particles(0, 0, 'mist', {
+      emitting: false,
+      speed: { min: 6, max: 26 },
+      gravityY: -18,
+      lifespan: { min: 380, max: 560 },
+      alpha: { start: 0.45, end: 0 },
+      scale: { start: 0.1, end: 0.26 },
+      tint: Phaser.Display.Color.HexStringToColor(zone.fog).lighten(25).color,
+    });
+    this.puffs.setDepth(2);
+    this.bits = this.add.particles(0, 0, 'dot', {
+      emitting: false,
+      speed: { min: 50, max: 170 },
+      gravityY: 220,
+      lifespan: { min: 280, max: 520 },
+      alpha: { start: 1, end: 0 },
+      scale: { start: 1.3, end: 0.4 },
+    });
+    this.bits.setDepth(90001);
     this.ash = this.add.particles(0, 0, 'dot', {
       emitting: false,
       speed: { min: 20, max: 110 },
@@ -358,7 +392,7 @@ class RunScene extends Phaser.Scene {
     if (this.over) return;
     const dt = Math.min(deltaMs, 50) / 1000;
     this.t += dt;
-    this.move();
+    this.move(dt);
     this.spawn(dt);
     this.steer();
     this.attack(dt);
@@ -366,6 +400,7 @@ class RunScene extends Phaser.Scene {
     this.moveShots();
     this.pullGems();
     this.drawFx();
+    this.drawShadows();
     this.hero.setDepth(this.hero.y);
     if (this.time.now < this.hurtUntil) this.hero.setAlpha(Math.floor(this.time.now / 80) % 2 ? 0.35 : 1);
     else this.hero.setAlpha(1);
@@ -389,7 +424,7 @@ class RunScene extends Phaser.Scene {
     };
   }
 
-  private move() {
+  private move(dt: number) {
     let x = 0,
       y = 0;
     if (this.stick) {
@@ -411,11 +446,21 @@ class RunScene extends Phaser.Scene {
     if (len > 0.01) {
       this.facing.set(x, y).normalize();
       if (Math.abs(x) > 0.1) this.hero.setFlipX(x < 0);
-      this.cd.dust -= 1 / 60;
+      // A little run: bob up and down, lean into the move, kick up the fog at your feet.
+      const bob = Math.sin(this.time.now / 65) * 0.05 * len;
+      this.hero.setScale(0.8 * (1 - bob * 0.6), 0.8 * (1 + bob)).setAngle(x * 7);
+      this.cd.dust -= dt;
       if (this.cd.dust <= 0) {
-        this.cd.dust = 0.25;
-        this.ash.explode(1, this.hero.x, this.hero.y + 22);
+        this.cd.dust = 0.11;
+        this.puffs.explode(2, this.hero.x - x * 8, this.hero.y + 22);
       }
+      this.cd.trail -= dt;
+      if (this.cd.trail <= 0) {
+        this.cd.trail = 0.07;
+        this.ghost(this.hero, 0xbfdbfe, 0.2 + 0.08 * (this.ups.swift ?? 0), 200);
+      }
+    } else if (this.hero.angle !== 0) {
+      this.hero.setScale(0.8).setAngle(0);
     }
     this.pad.clear();
     if (this.stick) {
@@ -476,6 +521,10 @@ class RunScene extends Phaser.Scene {
     f.setTexture(kind).setActive(true).setVisible(true).setScale(s.scale).clearTint().setAlpha(1);
     f.play(kind);
     f.kind = kind;
+    f.base = s.scale;
+    f.bornAt = this.time.now;
+    f.squashUntil = 0;
+    if (this.cameras.main.worldView.contains(f.x, f.y)) this.puffs.explode(5, f.x, f.y + 26 * s.scale);
     f.maxHp = f.hp = Math.round(s.hp * zone.hp * grow);
     f.speed = s.speed * (0.9 + Math.random() * 0.2);
     f.dmg = s.dmg * zone.dmg;
@@ -486,6 +535,10 @@ class RunScene extends Phaser.Scene {
     // Circle in texture pixels, centred low on the 64x64 frame where the creature sits.
     body.setCircle(s.r / s.scale > 30 ? 30 : s.r / s.scale, 32 - Math.min(30, s.r / s.scale), 36 - Math.min(30, s.r / s.scale));
     body.setCollideWorldBounds(true);
+    if (kind === 'golem') {
+      this.sfx('stomp');
+      this.cameras.main.shake(180, 0.004);
+    }
     return f;
   }
 
@@ -495,6 +548,11 @@ class RunScene extends Phaser.Scene {
       const f = o as Foe;
       if (!f.active) continue;
       f.setDepth(f.y);
+      // Rise out of the fog when spawned; squash for a moment when hit.
+      const born = (now - f.bornAt) / RISE_MS;
+      if (born < 1) f.setAlpha(born).setScale(f.base * (1.25 - 0.25 * born), f.base * (0.25 + 0.75 * born));
+      else if (now < f.squashUntil) f.setAlpha(1).setScale(f.base * 1.22, f.base * 0.8);
+      else if (f.scaleX !== f.base) f.setAlpha(1).setScale(f.base);
       if (f.flashUntil && now >= f.flashUntil) {
         f.flashUntil = 0;
         f.clearTint();
@@ -521,6 +579,8 @@ class RunScene extends Phaser.Scene {
     this.bossDash = 3;
     this.bossSummon = 6;
     this.cameras.main.flash(400, 60, 20, 90);
+    this.cameras.main.shake(700, 0.008);
+    this.sfx('roar');
     this.bus.boss();
   }
 
@@ -536,6 +596,11 @@ class RunScene extends Phaser.Scene {
     }
     if (b.windUntil && now >= b.windUntil && now < b.dashUntil) {
       b.setVelocity(b.dashDir.x * 380, b.dashDir.y * 380);
+      this.cd.trail -= dt;
+      if (this.cd.trail <= 0) {
+        this.cd.trail = 0.05;
+        this.ghost(b, 0xef4444, 0.35, 260);
+      }
       return;
     }
     if (b.dashUntil && now >= b.dashUntil) {
@@ -551,6 +616,7 @@ class RunScene extends Phaser.Scene {
       b.dashUntil = now + 700 + 550;
       b.dashDir.set(dx / d, dy / d);
       b.setTint(0xff6b6b);
+      this.sfx('dash');
       const from = { x: b.x, y: b.y },
         dir = b.dashDir.clone();
       this.fade(700, (g, p) => {
@@ -593,7 +659,10 @@ class RunScene extends Phaser.Scene {
     f.hp -= dmg;
     f.setTintFill(0xffffff);
     f.flashUntil = this.time.now + 50;
-    this.number(f.x, f.y - 18 * f.scale, dmg);
+    f.squashUntil = this.time.now + 90;
+    this.sparks.explode(2, f.x, f.y - 6);
+    this.sfx(f === this.boss ? 'bossHit' : 'hit');
+    this.number(f.x, f.y - 18 * f.base, dmg);
     if (knock > 0 && f !== this.boss) {
       const dx = f.x - fromX,
         dy = f.y - fromY,
@@ -606,7 +675,22 @@ class RunScene extends Phaser.Scene {
 
   private kill(f: Foe) {
     this.kills++;
-    this.ash.explode(f === this.boss ? 60 : 10, f.x, f.y);
+    const boss = f === this.boss,
+      x = f.x,
+      y = f.y,
+      R = 30 * f.base;
+    this.ash.explode(boss ? 60 : 6, x, y);
+    // Burst into bits of its own colors, with a flash of light where it stood.
+    for (const c of FOES[f.kind].bits) {
+      this.bits.particleTint = c;
+      this.bits.explode(boss ? 24 : f.kind === 'golem' ? 10 : 4, x, y);
+    }
+    this.fade(boss ? 600 : 220, (g, p) => {
+      g.fillStyle(0xffffff, 0.5 * (1 - p)).fillCircle(x, y, R * (0.4 + 0.4 * p));
+      g.lineStyle(3 * (1 - p) + 1, 0xffffff, 0.8 * (1 - p)).strokeCircle(x, y, R * (0.5 + 0.9 * p));
+    });
+    if (f.kind === 'golem') this.cameras.main.shake(150, 0.005);
+    this.sfx('kill', f.kind === 'golem' || boss ? 0.6 : f.kind === 'wisp' ? 1.3 : 1);
     if (f.xp > 0) {
       const big = f.xp >= 3;
       this.gems.push({ img: this.add.image(f.x, f.y, big ? 'gem-big' : 'gem').setDepth(1), value: f.xp, pulled: false });
@@ -618,8 +702,15 @@ class RunScene extends Phaser.Scene {
   private number(x: number, y: number, n: number) {
     const t = this.numbers.find((x) => !x.visible);
     if (!t) return;
-    t.setText(String(n)).setPosition(x + Phaser.Math.Between(-6, 6), y).setVisible(true).setAlpha(1);
-    this.tweens.add({ targets: t, y: y - 18, alpha: 0, duration: 450, onComplete: () => t.setVisible(false) });
+    const big = n >= 30;
+    t.setText(String(n))
+      .setColor(big ? '#fbbf24' : '#ffffff')
+      .setFontSize(big ? 11 : 8)
+      .setPosition(x + Phaser.Math.Between(-6, 6), y)
+      .setVisible(true)
+      .setAlpha(1)
+      .setScale(big ? 1.4 : 1);
+    this.tweens.add({ targets: t, y: y - (big ? 26 : 18), alpha: 0, scale: 1, duration: big ? 600 : 450, onComplete: () => t.setVisible(false) });
   }
 
   private attack(dt: number) {
@@ -634,6 +725,7 @@ class RunScene extends Phaser.Scene {
     if (!target && kind !== 'wave') return;
     this.cd.attack = a.cd / ((1 + this.setup.power.reach) * (1 + 0.18 * (this.ups.haste ?? 0)));
     this.hero.play('heroAttack');
+    if (kind !== 'wave') this.sfx(ATTACK_SFX[kind]);
     const n = 1 + (this.ups.multi ?? 0),
       dmg = this.power(a.dmg);
     if (target) this.hero.setFlipX(target.x < this.hero.x);
@@ -669,6 +761,9 @@ class RunScene extends Phaser.Scene {
         return false;
       }
       if (s.homing) {
+        const tx = s.img.x,
+          ty = s.img.y;
+        this.fade(160, (g, p) => g.fillStyle(0xa78bfa, 0.35 * (1 - p)).fillCircle(tx, ty, 5 * (1 - p)));
         if (!s.target?.active) s.target = this.nearest(s.img.x, s.img.y, undefined, 300);
         if (s.target) {
           const a = Math.atan2(s.target.y - s.img.y, s.target.x - s.img.x);
@@ -715,6 +810,7 @@ class RunScene extends Phaser.Scene {
   private wave(R: number, dmg: number) {
     const x = this.hero.x,
       y = this.hero.y;
+    this.sfx('wave');
     this.burst(x, y, R, dmg, 0xfbbf24);
   }
 
@@ -747,6 +843,7 @@ class RunScene extends Phaser.Scene {
             f.flameAt = now + 500;
             this.damage(f, this.power(7), 60, fl.x, fl.y);
             this.sparks.explode(3, f.x, f.y);
+            this.sfx('flame');
           }
         }
       });
@@ -756,7 +853,7 @@ class RunScene extends Phaser.Scene {
       this.cd.spark -= dt;
       if (this.cd.spark <= 0) {
         this.cd.spark = 2;
-        this.chain(2 + spark, this.power(14 + 6 * (spark - 1)));
+        if (this.chain(2 + spark, this.power(14 + 6 * (spark - 1)))) this.sfx('spark');
       }
     }
     const nova = this.ups.nova ?? 0;
@@ -765,11 +862,14 @@ class RunScene extends Phaser.Scene {
       if (this.cd.nova <= 0) {
         this.cd.nova = 3;
         this.burst(this.hero.x, this.hero.y, 90 + 20 * (nova - 1), this.power(10 + 5 * (nova - 1)), 0xf8fafc);
+        this.sfx('nova');
+        this.cameras.main.shake(100, 0.003);
       }
     }
   }
 
-  private chain(jumps: number, dmg: number) {
+  /** Lightning from the hero through up to `jumps` foes. False when nothing was in reach. */
+  private chain(jumps: number, dmg: number): boolean {
     const hit = new Set<Foe>();
     const points: { x: number; y: number }[] = [{ x: this.hero.x, y: this.hero.y - 10 }];
     let from = { x: this.hero.x, y: this.hero.y };
@@ -780,7 +880,7 @@ class RunScene extends Phaser.Scene {
       points.push({ x: f.x, y: f.y });
       from = { x: f.x, y: f.y };
     }
-    if (points.length < 2) return;
+    if (points.length < 2) return false;
     hit.forEach((f) => this.damage(f, dmg, 30));
     const zig = points.map((p, i) => (i === 0 ? p : { x: p.x + Phaser.Math.Between(-6, 6), y: p.y + Phaser.Math.Between(-6, 6) }));
     this.fade(140, (g, p) => {
@@ -789,6 +889,7 @@ class RunScene extends Phaser.Scene {
       g.lineStyle(1, 0xffffff, 1 - p);
       for (let i = 1; i < zig.length; i++) g.lineBetween(zig[i - 1].x, zig[i - 1].y, zig[i].x, zig[i].y);
     });
+    return true;
   }
 
   private fade(ms: number, draw: (g: Phaser.GameObjects.Graphics, p: number) => void) {
@@ -806,6 +907,34 @@ class RunScene extends Phaser.Scene {
     });
   }
 
+  /** Soft shadows ground everyone, so they stop looking pasted on. */
+  private drawShadows() {
+    const g = this.shadows.clear().fillStyle(0x000000, 0.3);
+    g.fillEllipse(this.hero.x, this.hero.y + 22, 30, 9);
+    for (const o of this.foes.getChildren()) {
+      const f = o as Foe;
+      if (f.active) g.fillEllipse(f.x, f.y + 26 * f.base, 46 * f.base, 13 * f.base);
+    }
+  }
+
+  /** A fading copy of a sprite where it stands: speed lines for the hero, the boss's dash. */
+  private ghost(src: Phaser.GameObjects.Sprite, tint: number, alpha: number, ms: number) {
+    const img = this.add
+      .image(src.x, src.y, src.texture.key, src.frame.name)
+      .setFlipX(src.flipX)
+      .setScale(src.scaleX, src.scaleY)
+      .setAngle(src.angle)
+      .setTintFill(tint)
+      .setAlpha(alpha)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(src.depth - 1);
+    this.tweens.add({ targets: img, alpha: 0, duration: ms, onComplete: () => img.destroy() });
+  }
+
+  private sfx(id: SfxId, pitch?: number) {
+    music.sfx(id, pitch);
+  }
+
   // ---------- light and levels ----------
 
   private pullGems() {
@@ -816,6 +945,7 @@ class RunScene extends Phaser.Scene {
         d = Math.hypot(dx, dy);
       if (d < 16) {
         g.img.destroy();
+        this.sfx('gem');
         this.gain(g.value);
         return false;
       }
@@ -848,6 +978,7 @@ class RunScene extends Phaser.Scene {
     }
     if (!fresh) this.pendingLevels--;
     this.sparks.explode(30, this.hero.x, this.hero.y);
+    music.sting('levelup');
     this.scene.pause();
     this.bus.levelUp(choices, { ...this.ups }, fresh);
   }
@@ -868,6 +999,9 @@ class RunScene extends Phaser.Scene {
   pick(id: UpgradeId) {
     const lv = (this.ups[id] ?? 0) + 1;
     this.ups[id] = lv;
+    // A ring of light as the new skill takes hold, once the game is moving again.
+    const hero = this.hero;
+    this.fade(450, (g, p) => g.lineStyle(4 * (1 - p) + 1, 0xfbbf24, 0.9 * (1 - p)).strokeCircle(hero.x, hero.y, 24 + 80 * p));
     if (id === 'vital') {
       this.maxHp += 25;
       this.hp = this.maxHp;
@@ -891,6 +1025,10 @@ class RunScene extends Phaser.Scene {
     this.hp -= f.dmg * (1 - armor);
     this.hurtUntil = now + INVULNERABLE_MS;
     this.cameras.main.shake(120, 0.006);
+    this.cameras.main.flash(120, 140, 20, 20);
+    this.sfx('hurt');
+    this.bits.particleTint = 0xef4444;
+    this.bits.explode(6, this.hero.x, this.hero.y);
     this.burstPush(90);
     if (this.hp <= 0) this.lose();
   }

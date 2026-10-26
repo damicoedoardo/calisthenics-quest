@@ -4,7 +4,9 @@ import { useEffect, useRef, useState } from 'react';
 import { CircleDot, Copy, Flame, Heart, Magnet, Pause, Shield, Sparkles, Sword, Wind, Zap, type LucideIcon } from 'lucide-react';
 import { gearOf, type GameState } from '@/lib/game';
 import { getUpgrade, nextGrowth, powerOf, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
+import { music } from '@/lib/music';
 import { sheetFor } from '@/sprites/registry';
+import { SoundToggle, useMusic } from './Sound';
 import type { Hud, RunEnd, RunHandle, SheetKey } from '@/game/run';
 import type { Sheet } from '@/sprites/registry';
 
@@ -43,6 +45,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
   const [end, setEnd] = useState<RunEnd | null>(null);
   const [attempt, setAttempt] = useState(0);
 
+  useMusic(end ? null : hud?.boss ? 'fogBoss' : 'fog');
+
   useEffect(() => {
     const el = host.current;
     if (!el) return;
@@ -73,6 +77,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
           setTimeout(() => setBoss(false), 3500);
         },
         end: (r) => {
+          music.sting(r.won ? 'victory' : 'defeat');
           setEnd(r);
           onEnd({ ...r, zone: zone.id });
         },
@@ -185,6 +190,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
       {paused && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-ink-950/85 px-8">
           <p className="font-pixel text-sm text-slate-200">Paused</p>
+          <p className="flex items-center text-xs text-slate-400">
+            Sound <SoundToggle />
+          </p>
           <button
             onClick={() => {
               setPaused(false);
