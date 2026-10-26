@@ -8,7 +8,6 @@ import { equippedGear, type ClassId, type Tier } from '@/lib/gear';
 import { CLIPS, type SpriteAction } from '@/sprites/clips';
 import { DEFAULT_LOOK, type HeroVariant } from '@/sprites/characters/hero';
 import { HAIRSTYLES, type Look } from '@/sprites/engine/figure';
-import { NOIR_EYES, type NoirTake } from '@/sprites/engine/noir';
 import { HAIR, SKIN, type HairColor, type SkinTone } from '@/sprites/palette';
 import { SPRITES, clipFor, labelFor, type SpriteId } from '@/sprites/registry';
 
@@ -24,7 +23,6 @@ const CLASSES: { id: ClassId | undefined; label: string }[] = [
 ];
 const VARIANTS: HeroVariant[] = ['normal', 'echo', 'best', 'hollow'];
 const SIZES = [64, 128, 192, 256];
-const HEADS: NonNullable<Look['head']>[] = ['classic', 'manga', ...(Object.keys(NOIR_EYES) as NoirTake[]).map((t) => `noir-${t}` as const)];
 
 function Chips<T>({ label, options, value, onChange, name = String }: { label: string; options: T[]; value: T; onChange: (v: T) => void; name?: (v: T) => string }) {
   return (
@@ -121,7 +119,7 @@ export default function Lab() {
             <input type="range" min={0} max={6} value={tier} onChange={(e) => setTier(Number(e.target.value) as Tier)} className="w-full accent-amber-400" />
           </div>
           <Chips label="VARIANT" options={VARIANTS} value={variant} onChange={setVariant} />
-          <Chips label="HEAD" options={HEADS} value={look.head ?? 'classic'} onChange={(head) => setLook({ ...look, head })} />
+          <Chips label="HEAD" options={['classic', 'manga'] as NonNullable<Look['head']>[]} value={look.head ?? 'classic'} onChange={(head) => setLook({ ...look, head })} />
           <Chips label="BODY" options={['m', 'f'] as Look['sex'][]} value={look.sex} onChange={(sex) => setLook({ ...look, sex })} name={(s) => (s === 'm' ? 'Male' : 'Female')} />
           <Chips label="HAIR" options={Object.keys(HAIRSTYLES) as Look['style'][]} value={look.style} onChange={(style) => setLook({ ...look, style })} />
           <Chips label="HAIR COLOR" options={Object.keys(HAIR) as HairColor[]} value={look.hair} onChange={(hair) => setLook({ ...look, hair })} />

@@ -54,10 +54,10 @@ export const MANGA_FACE = {
 };
 
 /** A shape and its color: a hair tone (0 dark, 1 base, 2 light) or a hex color. */
-export type Shape = [Pt[], number | string];
+type Shape = [Pt[], number | string];
 
 /** Hair as shapes: a cap (ellipse, cut off above the face) plus locks and extras. */
-export interface MangaHair {
+interface MangaHair {
   cap: { cx: number; cy: number; rx: number; ry: number; cutY: number };
   /** Behind the head. */
   back: Shape[];
@@ -65,8 +65,6 @@ export interface MangaHair {
   front: Shape[];
   /** Light streaks [x0, y0, x1, y1]. */
   shine: [number, number, number, number][];
-  /** Dark strand lines between locks [x0, y0, x1, y1], drawn last. */
-  strands?: [number, number, number, number][];
 }
 
 const SIDE_LOCKS: Shape[] = [
@@ -226,11 +224,7 @@ export function mangaHead(g: Grid, P: Pose, look: Look, hair?: Grid) {
 /** The manga hair, split so the back locks can sit behind the head. */
 export function mangaHair(P: Pose, look: Look): { back: Grid; front: Grid } | null {
   const style = MANGA_HAIR[look.style];
-  return style ? paintHair(style, P, look) : null;
-}
-
-/** Paints a hair table (cap, back and front shapes, shine) in the look's hair color. */
-export function paintHair(style: MangaHair, P: Pose, look: Look): { back: Grid; front: Grid } {
+  if (!style) return null;
   const H = HAIR[look.hair],
     back = grid(64),
     front = grid(64),
@@ -247,6 +241,5 @@ export function paintHair(style: MangaHair, P: Pose, look: Look): { back: Grid; 
     }
   style.front.forEach(([pts, c]) => f.poly(pts, ink(c)));
   style.shine.forEach(([x0, y0, x1, y1]) => f.line(x0, y0, x1, y1, H[2]));
-  style.strands?.forEach(([x0, y0, x1, y1]) => f.line(x0, y0, x1, y1, H[0]));
   return { back, front };
 }
