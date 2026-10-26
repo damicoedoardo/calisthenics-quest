@@ -3,7 +3,7 @@ import { CLIPS, type ClipFrame, type ClipId, type SpriteAction } from './clips';
 import { toSheet, type Grid } from './engine/grid';
 import { drawEmber } from './characters/ember';
 import { drawHero, heroAttack, heroLabel, type HeroOpts } from './characters/hero';
-import { BOOK, GOLEM, MIRA, MIRROR, SLIME, SUMMIT, drawPixelArt, type PixelArt } from './characters/pixel';
+import { BOOK, GOLEM, MIRA, MIRROR, SLIME, SUMMIT, WEIGHT, WISP, drawPixelArt, type PixelArt } from './characters/pixel';
 import { drawWanderer } from './characters/wanderer';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
@@ -82,6 +82,8 @@ export const SPRITES = {
   mirror: pixel('The Mirror', MIRROR),
   golem: pixel('The Plateau', GOLEM),
   summit: pixel('The Summit', SUMMIT),
+  wisp: pixel('Ash Wisp', WISP),
+  weight: pixel('The Weight of Starting', WEIGHT),
 };
 
 export type SpriteId = keyof typeof SPRITES;

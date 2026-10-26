@@ -53,5 +53,9 @@ exports[`sprite registry > art fingerprints 1`] = `
   "summit idle": "910e43bb6ae3",
   "wanderer attack": "4e5bc73edf92",
   "wanderer idle": "6a669f27f52d",
+  "weight attack": "0a5ed8c940aa",
+  "weight idle": "0a5ed8c940aa",
+  "wisp attack": "77c2deb1d1bf",
+  "wisp idle": "77c2deb1d1bf",
 }
 `;

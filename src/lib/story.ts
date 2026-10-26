@@ -44,15 +44,30 @@ export interface StoryState {
   finished: boolean;
 }
 
-/** Chapters open with sessions, not strength: every session takes one heart off the enemy. */
+/** Stops cleared on the road. Saves from before the road count chapters finished under the old rules. */
+export function clearedOf(state: GameState): number {
+  if (state.road !== undefined) return state.road;
+  let start = 0;
+  for (const ch of CHAPTERS) {
+    const end = start + ch.sessions;
+    if (state.sessions.length >= end && state.tests.length >= ch.tests) start = end;
+    else break;
+  }
+  return start;
+}
+
+/**
+ * Chapters end when you beat their boss on the road. Sessions light the road (one stop each),
+ * playing clears it, so a chapter needs both training and a win. "Hearts" are the chapter's stops.
+ */
 export function storyState(state: GameState): StoryState {
-  const sessions = state.sessions.length;
+  const cleared = clearedOf(state);
   const tests = state.tests.length;
   let start = 0;
   for (let i = 0; i < CHAPTERS.length; i++) {
     const ch = CHAPTERS[i];
     const end = start + ch.sessions;
-    if (sessions >= end && tests >= ch.tests) {
+    if (cleared >= end && tests >= ch.tests) {
       start = end;
       continue;
     }
@@ -60,8 +75,8 @@ export function storyState(state: GameState): StoryState {
       index: i,
       chapter: ch,
       hearts: ch.sessions,
-      heartsLeft: Math.max(0, end - sessions),
-      awaitingTest: sessions >= end && tests < ch.tests,
+      heartsLeft: Math.max(0, end - cleared),
+      awaitingTest: cleared >= end - 1 && state.sessions.length >= end && tests < ch.tests,
       finished: false,
     };
   }

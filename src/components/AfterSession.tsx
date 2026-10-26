@@ -1,12 +1,12 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Heart } from 'lucide-react';
 import { Hero } from './Hero';
-import { Enemy } from './Characters';
+import { Ember } from './Characters';
 import { music } from '@/lib/music';
 import { gearOf, levelInfo, totalXp, type FinishResult } from '@/lib/game';
 import type { StoryState } from '@/lib/story';
+import { emberStage, stopAt } from '@/lib/road';
 
 const CONFETTI = ['#fbbf24', '#f97316', '#22d3ee', '#a78bfa', '#34d399'];
 
@@ -17,46 +17,51 @@ interface Props {
   onClose: () => void;
 }
 
-/** After a session: a short battle against the chapter enemy, then the loot. */
-export function AfterSession({ result, before, after, onClose }: Props) {
-  const [stage, setStage] = useState<'battle' | 'loot'>(before.chapter ? 'battle' : 'loot');
-  const [hit, setHit] = useState(false);
-  const reps = result.session.entries.reduce((a, e) => a + e.sets.reduce((b, s) => b + s.reps, 0), 0);
-  const defeated = before.chapter && (after.index > before.index || (after.heartsLeft === 0 && before.heartsLeft > 0));
-  const heartsShown = hit ? Math.max(0, before.heartsLeft - 1) : before.heartsLeft;
+/** After a session: Ember grows and the Fog pulls back from one more stop, then the loot. */
+export function AfterSession({ result, before, onClose }: Props) {
+  const [stage, setStage] = useState<'light' | 'loot'>(before.chapter ? 'light' : 'loot');
+  const [lit, setLit] = useState(false);
+  const sessions = result.state.sessions.length;
+  const emberBefore = emberStage(sessions - 1);
+  const emberNow = emberStage(sessions);
+  const grew = emberNow.index > emberBefore.index;
+  const stop = stopAt(sessions - 1);
 
   useEffect(() => {
-    if (stage !== 'battle') return;
+    if (stage !== 'light') return;
     const t = setTimeout(() => {
-      setHit(true);
+      setLit(true);
       music.sting('victory');
     }, 700);
     return () => clearTimeout(t);
   }, [stage]);
 
-  if (stage === 'battle' && before.chapter) {
+  if (stage === 'light' && before.chapter) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ink-950 px-6 text-center" onClick={() => hit && setStage('loot')}>
-        <p className="font-pixel text-[10px] text-slate-400">Chapter {before.chapter.n}</p>
-        <p className="mt-1 font-pixel text-xs text-gold-300">vs {before.chapter.enemy}</p>
-        <div className="relative mt-8 flex items-end gap-10">
-          <Hero gear={gearOf(result.state)} classId={result.state.profile.classId} size={110} bounce={false} />
-          <div className={`relative ${hit ? 'animate-shake' : ''} ${defeated && hit ? 'opacity-30 grayscale transition-all duration-700' : ''}`}>
-            <Enemy id={before.chapter.enemyId} size={96} />
-            {hit && (
-              <span className="absolute -top-2 left-1/2 -translate-x-1/2 animate-hit font-pixel text-sm text-red-400">-{reps}</span>
-            )}
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ink-950 px-6 text-center" onClick={() => lit && setStage('loot')}>
+        <p className="font-pixel text-[10px] text-slate-400">Chapter {before.chapter.n} · {before.chapter.name}</p>
+        <div className="relative mt-8 grid h-40 place-items-end">
+          <div className={`absolute inset-x-[-40px] bottom-0 h-28 rounded-full bg-orange-500/20 blur-2xl transition-opacity duration-1000 ${lit ? 'opacity-100' : 'opacity-0'}`} />
+          <div className="relative transition-transform duration-700" style={{ transform: `scale(${lit ? 1 : emberBefore.size / emberNow.size})` }}>
+            <Ember size={emberNow.size * 1.6} />
           </div>
         </div>
-        <div className="mt-6 flex flex-wrap justify-center gap-1">
-          {Array.from({ length: before.hearts }).map((_, i) => (
-            <Heart key={i} size={16} className={`transition-all duration-500 ${i < heartsShown ? 'fill-red-500 text-red-500' : 'text-ink-600'}`} />
-          ))}
-        </div>
-        <p className="mt-4 text-sm text-slate-300">
-          {hit ? (defeated ? `${before.chapter.enemy} is defeated!` : `Your training hit for ${reps}. One heart down.`) : 'Your reps strike...'}
-        </p>
-        {hit && <button className="mt-8 rounded-2xl bg-gold-400 px-8 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309]">Claim loot</button>}
+        <p className="mt-4 font-pixel text-xs text-gold-300">{lit ? (grew ? `Ember became a ${emberNow.stage.name}!` : 'Ember grows') : 'Ember drinks it in...'}</p>
+        {lit && (
+          <>
+            <p className="mt-3 text-sm text-slate-300">
+              {stop ? (
+                <>
+                  The Fog pulls back. <span className="text-gold-300">{stop.name}</span> is lit on the map.
+                </>
+              ) : (
+                'The whole road is lit.'
+              )}
+            </p>
+            {grew && <p className="mt-1 text-xs text-orange-300">New: {emberNow.stage.perk}</p>}
+            <button className="mt-8 rounded-2xl bg-gold-400 px-8 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309]">Claim loot</button>
+          </>
+        )}
       </div>
     );
   }
