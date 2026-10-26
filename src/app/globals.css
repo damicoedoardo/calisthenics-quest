@@ -31,3 +31,14 @@ body {
     0 0 0 2px #0b0d14,
     0 0 0 4px #30375a;
 }
+
+/* Sprite sheets (src/components/Sprite.tsx): steps through --n frames of width --fw on the row at
+   --y. Duration, step count and looping come from the clip, set inline. */
+@keyframes sprite {
+  from {
+    background-position: 0 var(--y);
+  }
+  to {
+    background-position: calc(var(--fw) * var(--n) * -1) var(--y);
+  }
+}
