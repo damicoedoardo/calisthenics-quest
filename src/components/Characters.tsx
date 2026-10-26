@@ -1,6 +1,7 @@
 import { Hero } from './Hero';
 import { Sprite } from './Sprite';
 import { equippedGear, makeGear, type ClassId, type Gear, type GearSlot } from '@/lib/gear';
+import type { FlameFace, FlameStage } from '@/sprites/characters/ember';
 
 /* The story's cast as components. The art for each lives in src/sprites. */
 
@@ -8,9 +9,17 @@ export function Wanderer({ size = 64 }: { size?: number }) {
   return <Sprite id="wanderer" size={size} />;
 }
 
-/** Ember grows with the weekly streak: scale 0 (tiny) to 5 (bonfire). */
-export function Ember({ size = 48, dim = false }: { size?: number; dim?: boolean }) {
-  return <Sprite id="ember" size={size} className={`animate-flicker ${dim ? 'opacity-50' : ''}`} />;
+interface EmberProps {
+  size?: number;
+  dim?: boolean;
+  /** How grown the flame is; the candle is the classic look. */
+  stage?: FlameStage;
+  mood?: FlameFace;
+}
+
+/** Your flame: it grows with your workouts and shows how it feels. */
+export function Ember({ size = 48, dim = false, stage = 'candle', mood = 'happy' }: EmberProps) {
+  return <Sprite id="ember" size={size} opts={{ stage, mood }} className={`animate-flicker ${dim ? 'opacity-50' : ''}`} />;
 }
 
 const SHADOW_GEAR = { ...equippedGear(undefined, { push: 0, pull: 0, core: 0 }), weapon: makeGear('weapon', 1, undefined) };
@@ -38,7 +47,7 @@ export function Mira({ size = 64 }: { size?: number }) {
   return <Sprite id="mira" size={size} />;
 }
 
-export type EnemyId = 'slime' | 'mirror' | 'golem' | 'hollow' | 'summit';
+export type EnemyId = 'slime' | 'mirror' | 'golem' | 'hollow' | 'summit' | 'knight';
 
 export function Enemy({ id, size = 72 }: { id: EnemyId; size?: number }) {
   if (id === 'hollow') return <Hollow size={size} bounce={false} />;

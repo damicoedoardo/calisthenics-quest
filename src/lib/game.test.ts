@@ -16,7 +16,7 @@ import {
   type Session,
 } from './game';
 import { equippedGear, rewardFor } from './gear';
-import { pendingScenes, renderLines, storyState, storyWords } from './story';
+import { pendingScenes, renderLines, storyState, storyWords } from '@/story/engine';
 import { noteFreq, parsePattern } from './music';
 
 const monday = new Date(2026, 9, 26, 18);
@@ -132,19 +132,21 @@ describe('gear and classes', () => {
 
 describe('story', () => {
   it('opens chapters with sessions and waits for the max test where needed', () => {
-    expect(storyState({ ...initialState(), sessions: fakeSessions(5) }).index).toBe(0);
-    expect(storyState({ ...initialState(), sessions: fakeSessions(6) }).index).toBe(1);
-    const waiting = storyState({ ...initialState(), sessions: fakeSessions(15) });
+    expect(storyState({ ...initialState(), sessions: fakeSessions(11) }).index).toBe(0);
+    expect(storyState({ ...initialState(), sessions: fakeSessions(12) }).index).toBe(1);
+    expect(storyState({ ...initialState(), sessions: fakeSessions(15) }).awaitingTest).toBe(false);
+    const waiting = storyState({ ...initialState(), sessions: fakeSessions(24) });
     expect(waiting.index).toBe(1);
     expect(waiting.awaitingTest).toBe(true);
-    const tested = logMaxTest({ ...initialState(), sessions: fakeSessions(15) }, { pushups: 20, pullups: 4, lsitSec: 5 }, monday).state;
+    const tested = logMaxTest({ ...initialState(), sessions: fakeSessions(24) }, { pushups: 20, pullups: 4, lsitSec: 5 }, monday).state;
     expect(storyState(tested).index).toBe(2);
   });
 
-  it('queues the class choice after the third session', () => {
+  it('asks for the flame name first, then the class after the third session', () => {
     const state = { ...initialState(), sessions: fakeSessions(3), seenScenes: ['first-quest'] };
-    const ids = pendingScenes(state, new Date(2026, 8, 6)).map((s) => s.id);
-    expect(ids[0]).toBe('class-choice');
+    expect(pendingScenes(state, new Date(2026, 8, 6)).map((s) => s.id).slice(0, 2)).toEqual(['flame-name', 'class-choice']);
+    const named = { ...state, seenScenes: ['first-quest', 'flame-name'] };
+    expect(pendingScenes(named, new Date(2026, 8, 6))[0].id).toBe('class-choice');
   });
 
   it('fills the letter into lines and drops empty parts', () => {
@@ -153,7 +155,7 @@ describe('story', () => {
         { who: 'bestself', text: 'You wrote "{why}."', needs: 'why' },
         { who: 'bestself', text: 'And "{remind}."', needs: 'remind' },
       ],
-      { why: 'I miss being strong.', want: '', forWho: '', remind: '', voice: '', sessions: '0' },
+      { ...storyWords(initialState()), why: 'I miss being strong.' },
     );
     expect(lines).toEqual([{ who: 'bestself', text: 'You wrote "I miss being strong."', needs: 'why' }]);
   });
@@ -171,9 +173,13 @@ describe('story', () => {
     expect(lines.map((l) => l.text)).toEqual(['You always quit.', '27 sessions. Cute.']);
   });
 
-  it('makes the Hollow the enemy of chapter 4', () => {
-    const tested = { ...initialState(), sessions: fakeSessions(27), tests: [{ id: 't1', date: monday.toISOString(), pushups: 20, pullups: 3, lsitSec: 5, xp: 200 }] };
-    expect(storyState(tested).chapter?.enemyId).toBe('hollow');
+  it('makes the Hollow the enemy of chapter 5', () => {
+    const sessions = fakeSessions(50);
+    // Chapter 2's test taken during chapter 2, chapter 4's during chapter 4.
+    const test = { id: 't1', date: sessions[20].date, pushups: 20, pullups: 3, lsitSec: 5, xp: 200 };
+    const tested = { ...initialState(), sessions, tests: [test, { ...test, id: 't2', date: sessions[45].date }] };
+    expect(storyState(tested).index).toBe(4);
+    expect(storyState(tested).chapter?.enemySprite).toBe('hollow');
   });
 });
 

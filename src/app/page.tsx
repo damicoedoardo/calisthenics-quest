@@ -11,12 +11,14 @@ import { Hero } from '@/components/Hero';
 import { Prologue } from '@/components/Prologue';
 import { Workout } from '@/components/Workout';
 import { AfterSession } from '@/components/AfterSession';
-import { Dialogue } from '@/components/Dialogue';
+import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
 import { ClassPicker } from '@/components/ClassPicker';
 import { DevPanel } from '@/components/DevPanel';
 import { LookProvider } from '@/components/Look';
 import { finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
-import { pendingScenes, renderLines, storyState, storyWords, type Scene, type StoryState } from '@/lib/story';
+import { pendingScenes, storyState, type StoryState } from '@/story/engine';
+import { withTodayPage } from '@/story/daily';
+import type { Scene } from '@/story/types';
 import { useGameState } from '@/lib/store';
 import { recordRun, type Zone } from '@/lib/fog';
 import { skipIntro, useDevMode } from '@/lib/dev';
@@ -69,12 +71,27 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, state.profile.onboarded, state.sessions.length, state.tests.length, replaying, training, after, scene, picker, run, storyTick]);
 
-  const endScene = useCallback(() => {
-    if (!scene) return;
-    update((s) => ({ ...s, seenScenes: [...s.seenScenes, scene.id] }));
-    if (scene.action === 'choose-class') setPicker('story');
-    setScene(null);
-  }, [scene, update]);
+  // A page in the Book of Days for every day the app is opened (and today's line follows the day).
+  const today = new Date().toDateString();
+  useEffect(() => {
+    if (!ready || !state.profile.onboarded) return;
+    update((s) => withTodayPage(s, new Date()));
+  }, [ready, state.profile.onboarded, state.sessions.length, today, update]);
+
+  const endScene = useCallback(
+    (r: SceneResult) => {
+      if (!scene) return;
+      update((s) => ({
+        ...s,
+        seenScenes: s.seenScenes.includes(scene.id) ? s.seenScenes : [...s.seenScenes, scene.id],
+        profile: r.flame ? { ...s.profile, flame: r.flame } : s.profile,
+        answers: r.answer ? { ...s.answers, [r.answer.id]: r.answer.value } : s.answers,
+      }));
+      if (r.pickClass) setPicker('story');
+      setScene(null);
+    },
+    [scene, update],
+  );
 
   const start = (checkin: Checkin) => {
     update((s) => {
@@ -140,7 +157,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
       <main className="flex-1 px-4 pb-28 pt-2">
         {tab === 'today' ? (
-          <TodayTab state={state} onStart={start} onReplayOpening={() => setReplaying(true)} />
+          <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} />
         ) : tab === 'skills' ? (
           <SkillsTab state={state} />
         ) : tab === 'play' ? (
@@ -174,20 +191,11 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         </div>
       </nav>
 
-      {dev && !run && !training && !after && !scene && !picker && <DevPanel state={state} update={update} onTurnOff={live ? () => setDev(false) : undefined} />}
+      {dev && !run && !training && !after && !scene && !picker && <DevPanel state={state} update={update} onPlayScene={setScene} onTurnOff={live ? () => setDev(false) : undefined} />}
       {run && <FogRun state={state} zone={run} dev={dev} onEnd={(r) => update((s) => recordRun(s, r))} onLeave={() => setRun(null)} />}
       {training && <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />}
       {after && <AfterSession result={after.result} before={after.before} after={after.after} onClose={() => setAfter(null)} />}
-      {scene && (
-        <Dialogue
-          key={scene.id}
-          lines={renderLines(scene.lines, storyWords(state))}
-          gear={gear}
-          classId={state.profile.classId}
-          music={scene.music ?? 'rise'}
-          onDone={endScene}
-        />
-      )}
+      {scene && <ScenePlayer key={scene.id} scene={scene} state={state} onDone={endScene} />}
       {picker && (
         <ClassPicker
           progress={state.progress}

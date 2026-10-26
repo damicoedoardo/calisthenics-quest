@@ -1,21 +1,30 @@
 import * as Phaser from 'phaser';
 import type { ClassId } from '@/lib/gear';
 import { RUN_SECONDS, rollUpgrades, xpToNext, type Power, type UpgradeId, type Zone } from '@/lib/fog';
+import type { FogBoss } from '@/story/types';
 import { music, type SfxId } from '@/lib/music';
 import type { Sheet } from '@/sprites/registry';
 
 /* One run in the Fog, as a Phaser scene. You move; your hero attacks on its own in the class's
    style; Fog creatures come in waves; each one leaves light that levels you up, and each level
-   lets you pick a skill. At RUN_SECONDS the Hollow walks out, speaking your own inner critic.
+   lets you pick a skill. At RUN_SECONDS the zone's boss walks out, and each boss fights in a way
+   only its chapter's lesson beats (see BOSS below).
    Only this file and the files it imports touch Phaser, and it is loaded only when a run starts. */
 
-export type SheetKey = 'hero' | 'heroAttack' | 'ember' | 'hollow' | 'slime' | 'wisp' | 'mirror' | 'golem';
+export type SheetKey = 'hero' | 'heroAttack' | 'ember' | 'hollow' | 'slime' | 'wisp' | 'mirror' | 'golem' | 'knight' | 'echo';
+
+/** Why a skill is free at the start of a run. */
+export type FreePick = 'fresh' | 'rested';
 
 export interface RunSetup {
   zone: Zone;
   power: Power;
   classId: ClassId | undefined;
   sheets: Record<SheetKey, Sheet>;
+  /** The bot plays: it moves and picks skills on its own (developer mode, balance tests). */
+  autopilot?: boolean;
+  /** Play the whole run as fast as the computer can, without drawing it (balance tests). */
+  fast?: boolean;
 }
 
 export interface Hud {
@@ -34,13 +43,20 @@ export interface RunEnd {
   seconds: number;
   kills: number;
   level: number;
+  /** HP left at the end, for balance tests. */
+  hp: number;
+  maxHp: number;
+  /** When the boss walked out (s), if it did. */
+  bossAt: number | null;
 }
 
 export interface RunEvents {
   hud: (h: Hud) => void;
-  /** A pick is waiting: `fresh` is the free one for having trained recently. */
-  levelUp: (choices: UpgradeId[], levels: Partial<Record<UpgradeId, number>>, fresh: boolean) => void;
+  /** A pick is waiting: `free` says why it's free (trained recently, or rested), null for a level-up. */
+  levelUp: (choices: UpgradeId[], levels: Partial<Record<UpgradeId, number>>, free: FreePick | null) => void;
   boss: () => void;
+  /** Something the run says out loud: the Knight's shout, a hit on a reflection, the fairy's heal. */
+  say: (text: string) => void;
   end: (r: RunEnd) => void;
 }
 
@@ -50,8 +66,13 @@ export interface RunHandle {
   resume: () => void;
   skipToBoss: () => void;
   winNow: () => void;
+  /** Hand the run to the bot, or take it back. */
+  autopilot: (on: boolean) => void;
   destroy: () => void;
 }
+
+/** Skills the bot takes first. */
+const BOT_PICKS: UpgradeId[] = ['multi', 'power', 'haste', 'vital', 'spark', 'flame', 'nova', 'guard', 'swift', 'magnet'];
 
 const WORLD = 2400;
 const HERO_SPEED = 150;
@@ -61,15 +82,55 @@ const INVULNERABLE_MS = 600;
 /** How far ranged attacks look for a target: about the width of a phone screen. */
 const RANGE = 240;
 
-type FoeKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'hollow';
+type FoeKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'boss';
 
-const FOES: Record<FoeKind, { hp: number; speed: number; dmg: number; xp: number; scale: number; r: number; bits: number[] }> = {
-  slime: { hp: 12, speed: 52, dmg: 7, xp: 1, scale: 0.55, r: 14, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0] },
-  wisp: { hp: 8, speed: 88, dmg: 5, xp: 1, scale: 0.5, r: 13, bits: [0xf97316, 0xfde68a, 0x6b7280] },
-  mirror: { hp: 34, speed: 66, dmg: 11, xp: 3, scale: 0.65, r: 15, bits: [0xe2e8f0, 0xcbd5e1, 0xffffff] },
-  golem: { hp: 160, speed: 42, dmg: 18, xp: 10, scale: 0.95, r: 18, bits: [0xa8a29e, 0x78716c, 0x84cc16] },
-  hollow: { hp: 650, speed: 70, dmg: 20, xp: 0, scale: 1.5, r: 13, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
+interface Stats {
+  hp: number;
+  speed: number;
+  dmg: number;
+  xp: number;
+  scale: number;
+  r: number;
+  bits: number[];
+  /** Its sprite sheet. */
+  tex: SheetKey;
+}
+
+const FOES: Record<Exclude<FoeKind, 'boss'>, Stats> = {
+  slime: { hp: 12, speed: 52, dmg: 7, xp: 1, scale: 0.55, r: 14, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0], tex: 'slime' },
+  wisp: { hp: 8, speed: 88, dmg: 5, xp: 1, scale: 0.5, r: 13, bits: [0xf97316, 0xfde68a, 0x6b7280], tex: 'wisp' },
+  mirror: { hp: 34, speed: 66, dmg: 11, xp: 3, scale: 0.65, r: 15, bits: [0xe2e8f0, 0xcbd5e1, 0xffffff], tex: 'mirror' },
+  golem: { hp: 160, speed: 42, dmg: 18, xp: 10, scale: 0.95, r: 18, bits: [0xa8a29e, 0x78716c, 0x84cc16], tex: 'golem' },
+  // A golden copy of you, sent by the Mirror. Hitting it hurts you.
+  reflection: { hp: 30, speed: 78, dmg: 8, xp: 0, scale: 0.75, r: 12, bits: [0xfde68a, 0xfbbf24, 0xffffff], tex: 'echo' },
 };
+
+/** The Perfect Knight's armor: every hit breaks one plate, however weak. */
+const KNIGHT_PLATES = 40;
+
+/**
+ * The bosses. Each one's rule is its chapter's lesson:
+ * - Tomorrow heals while you keep your distance and splits off small Tomorrows: get close.
+ * - The Mirror sends reflections of you, and hitting them hurts you: walk past them.
+ * - The Perfect Knight wears plates that any hit breaks, and shouts to push you away: keep hitting.
+ * - The Hollow dashes and calls the fog (the Plateau and the Summit fight like it for now).
+ */
+const BOSSES: Record<FogBoss, Stats> = {
+  tomorrow: { hp: 520, speed: 46, dmg: 16, xp: 0, scale: 1.5, r: 20, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0], tex: 'slime' },
+  mirror: { hp: 480, speed: 36, dmg: 16, xp: 0, scale: 1.35, r: 16, bits: [0xe2e8f0, 0xcbd5e1, 0xffffff], tex: 'mirror' },
+  knight: { hp: KNIGHT_PLATES, speed: 62, dmg: 18, xp: 0, scale: 1.15, r: 14, bits: [0xe2e8f0, 0x94a3b8, 0xdc2626], tex: 'knight' },
+  plateau: { hp: 650, speed: 70, dmg: 20, xp: 0, scale: 1.5, r: 13, bits: [0xa78bfa, 0x6b21a8, 0xffffff], tex: 'hollow' },
+  hollow: { hp: 650, speed: 70, dmg: 20, xp: 0, scale: 1.5, r: 13, bits: [0xa78bfa, 0x6b21a8, 0xffffff], tex: 'hollow' },
+  summit: { hp: 650, speed: 70, dmg: 20, xp: 0, scale: 1.5, r: 13, bits: [0xa78bfa, 0x6b21a8, 0xffffff], tex: 'hollow' },
+};
+
+const HEAL = '#86efac';
+
+/** A boss you can't bring down in this long (s) means you need more training: the Fog closes in. */
+const BOSS_LIMIT = 180;
+
+/** Tomorrow heals while you're further than this. */
+const TOMORROW_REACH = 200;
 
 /** The sound each class's attack makes. */
 const ATTACK_SFX: Record<'slash' | 'arrow' | 'orb' | 'wave', SfxId> = { slash: 'slash', arrow: 'arrow', orb: 'orb', wave: 'wave' };
@@ -102,6 +163,7 @@ class Foe extends Phaser.Physics.Arcade.Sprite {
   flashUntil = 0;
   knockUntil = 0;
   flameAt = 0;
+  stats: Stats = FOES.slime;
   // The boss's dash: wind-up until windUntil, then a dash until dashUntil.
   windUntil = 0;
   dashUntil = 0;
@@ -153,16 +215,30 @@ class RunScene extends Phaser.Scene {
   private kills = 0;
   private hurtUntil = 0;
   private facing = new Phaser.Math.Vector2(1, 0);
-  private cd = { attack: 0.5, spawn: 0.5, spark: 2, nova: 3, dust: 0, trail: 0, hud: 0 };
+  private cd = { attack: 0.5, spawn: 0.5, spark: 2, nova: 3, fireball: 2.5, dust: 0, trail: 0, hud: 0 };
   private ups: Partial<Record<UpgradeId, number>> = {};
   private pendingLevels = 0;
   private boss: Foe | null = null;
   private bossSummon = 0;
   private bossDash = 0;
+  /** Tomorrow: seconds spent far from it since its last split. The Knight: time to the next shout. */
+  private bossClock = 0;
+  /** The Knight's shout pushes you back until then. */
+  private shoved = { until: 0, x: 0, y: 0 };
+  /** Free skills still to offer at the start: for having trained recently, and for being rested. */
+  private free: FreePick[] = [];
+  /** Reflections hurt you only this often. */
+  private mirrorHurtAt = 0;
+  private fairyAt = 0;
+  private bossLabel: Phaser.GameObjects.Text | null = null;
   private rings = new Set<number>();
   private elites = 0;
   private over = false;
   private orbit = 0;
+  /** Seconds since the last frame. */
+  private dt = 0;
+  private bossAt: number | null = null;
+  bot = false;
 
   constructor(
     private setup: RunSetup,
@@ -293,7 +369,30 @@ class RunScene extends Phaser.Scene {
     this.input.on(Phaser.Input.Events.POINTER_UP_OUTSIDE, release);
 
     this.syncFlames();
-    if (power.fresh) this.time.delayedCall(700, () => this.offer(true));
+    this.free = [...(power.fresh ? (['fresh'] as const) : []), ...(power.rested ? (['rested'] as const) : [])];
+    if (this.free.length) this.time.delayedCall(700, () => this.offer(this.free.shift()!));
+    this.bot = !!this.setup.autopilot;
+    if (this.setup.fast) this.fastForward();
+  }
+
+  /** Runs the game loop by hand, frame after frame without drawing, until the run ends. */
+  private fastForward() {
+    const loop = this.game.loop;
+    loop.sleep();
+    const frame = 1000 / 60;
+    let t = this.time.now;
+    let ended = false;
+    this.events.once('run-ended', () => (ended = true));
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => (ended = true));
+    const chunk = () => {
+      for (let i = 0; i < 600 && !ended; i++) {
+        t += frame;
+        this.game.headlessStep(t, frame);
+      }
+      if (ended) loop.wake();
+      else setTimeout(chunk, 0);
+    };
+    setTimeout(chunk, 0);
   }
 
   // ---------- textures drawn in code ----------
@@ -360,6 +459,11 @@ class RunScene extends Phaser.Scene {
       g.fillStyle(0xf8fafc).fillRect(12, 0, 2, 4).fillRect(14, 1, 2, 2);
       g.fillStyle(0xf97316).fillRect(0, 0, 3, 1).fillRect(0, 3, 3, 1);
     });
+    tex('fireball', 14, 14, () => {
+      g.fillStyle(0xf97316, 0.4).fillCircle(7, 7, 7);
+      g.fillStyle(0xfb923c).fillCircle(7, 7, 5);
+      g.fillStyle(0xfde047).fillCircle(7, 7, 3);
+    });
     tex('orb', 14, 14, () => {
       g.fillStyle(0xa78bfa, 0.35).fillCircle(7, 7, 7);
       g.fillStyle(0xc4b5fd).fillCircle(7, 7, 4);
@@ -391,6 +495,7 @@ class RunScene extends Phaser.Scene {
   update(_time: number, deltaMs: number) {
     if (this.over) return;
     const dt = Math.min(deltaMs, 50) / 1000;
+    this.dt = dt;
     this.t += dt;
     this.move(dt);
     this.spawn(dt);
@@ -427,7 +532,8 @@ class RunScene extends Phaser.Scene {
   private move(dt: number) {
     let x = 0,
       y = 0;
-    if (this.stick) {
+    if (this.bot) [x, y] = this.botMove();
+    else if (this.stick) {
       x = this.stick.dx / 46;
       y = this.stick.dy / 46;
       if (Math.hypot(x, y) < 0.15) x = y = 0;
@@ -442,7 +548,8 @@ class RunScene extends Phaser.Scene {
       y /= len;
     }
     const speed = HERO_SPEED * (1 + 0.12 * (this.ups.swift ?? 0));
-    this.hero.setVelocity(x * speed, y * speed);
+    if (this.time.now < this.shoved.until) this.hero.setVelocity(this.shoved.x, this.shoved.y);
+    else this.hero.setVelocity(x * speed, y * speed);
     if (len > 0.01) {
       this.facing.set(x, y).normalize();
       if (Math.abs(x) > 0.1) this.hero.setFlipX(x < 0);
@@ -470,12 +577,75 @@ class RunScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * The bot: steps away from what's close (reflections most of all), picks up light, and circles
+   * the boss at the distance its rule asks for. A steady, careful player, not a great one.
+   */
+  private botMove(): [number, number] {
+    const h = this.hero;
+    let x = 0,
+      y = 0;
+    for (const o of this.foes.getChildren()) {
+      const f = o as Foe;
+      if (!f.active || f === this.boss) continue;
+      const dx = h.x - f.x,
+        dy = h.y - f.y,
+        d = Math.hypot(dx, dy) || 1;
+      if (d > 170) continue;
+      const w = ((f.kind === 'reflection' ? 3 : 1) * (f.dmg / 8) * 2500) / (d * d);
+      x += (dx / d) * w;
+      y += (dy / d) * w;
+    }
+    const b = this.boss;
+    if (b?.active) {
+      const dx = b.x - h.x,
+        dy = b.y - h.y,
+        d = Math.hypot(dx, dy) || 1,
+        rule = this.setup.zone.boss,
+        // Tomorrow heals when you're far, the Knight needs hits: stay close. The rest dash: keep room.
+        want = rule === 'tomorrow' || rule === 'knight' ? 80 : rule === 'mirror' ? 110 : 150,
+        pull = Phaser.Math.Clamp((d - want) / 80, -1.5, 1.5);
+      x += (dx / d) * pull - (dy / d) * 0.7;
+      y += (dy / d) * pull + (dx / d) * 0.7;
+    } else {
+      let gem: Gem | null = null,
+        best = 260;
+      for (const g of this.gems) {
+        const d = Math.hypot(g.img.x - h.x, g.img.y - h.y);
+        if (d < best) {
+          best = d;
+          gem = g;
+        }
+      }
+      if (gem) {
+        const dx = gem.img.x - h.x,
+          dy = gem.img.y - h.y,
+          d = Math.hypot(dx, dy) || 1;
+        x += (dx / d) * 0.8;
+        y += (dy / d) * 0.8;
+      }
+    }
+    // Keep off the walls, where a crowd can pin you.
+    const m = 200;
+    if (h.x < m) x += (m - h.x) / m;
+    if (h.x > WORLD - m) x -= (h.x - (WORLD - m)) / m;
+    if (h.y < m) y += (m - h.y) / m;
+    if (h.y > WORLD - m) y -= (h.y - (WORLD - m)) / m;
+    const len = Math.hypot(x, y);
+    return len < 0.05 ? [0, 0] : [x / len, y / len];
+  }
+
   // ---------- foes ----------
 
   private spawn(dt: number) {
     const t = this.t;
     if (!this.boss && t >= RUN_SECONDS) {
       this.summonBoss();
+      return;
+    }
+    if (this.bossAt !== null && t - this.bossAt >= BOSS_LIMIT) {
+      this.bus.say('The Fog closes in. Train, and come back.');
+      this.lose();
       return;
     }
     // Ring waves: the fog closes in from every side.
@@ -512,20 +682,22 @@ class RunScene extends Phaser.Scene {
     return [Phaser.Math.Clamp(this.hero.x + Math.cos(a) * d, 10, WORLD - 10), Phaser.Math.Clamp(this.hero.y + Math.sin(a) * d, 10, WORLD - 10)];
   }
 
-  private addFoe(kind: FoeKind, x: number, y: number): Foe | null {
-    if (kind !== 'hollow' && this.foes.countActive() >= MAX_FOES) return null;
-    const s = FOES[kind],
+  private addFoe(kind: FoeKind, x: number, y: number, boss?: FogBoss): Foe | null {
+    if (kind !== 'boss' && this.foes.countActive() >= MAX_FOES) return null;
+    const s = boss ? BOSSES[boss] : FOES[kind as Exclude<FoeKind, 'boss'>],
       { zone } = this.setup,
-      grow = kind === 'hollow' ? 1 : 1 + this.t / 180;
-    const f = this.foes.get(Phaser.Math.Clamp(x, 10, WORLD - 10), Phaser.Math.Clamp(y, 10, WORLD - 10), kind) as Foe;
-    f.setTexture(kind).setActive(true).setVisible(true).setScale(s.scale).clearTint().setAlpha(1);
-    f.play(kind);
+      grow = kind === 'boss' ? 1 : 1 + this.t / 180;
+    const f = this.foes.get(Phaser.Math.Clamp(x, 10, WORLD - 10), Phaser.Math.Clamp(y, 10, WORLD - 10), s.tex) as Foe;
+    f.setTexture(s.tex).setActive(true).setVisible(true).setScale(s.scale).clearTint().setAlpha(1);
+    f.play(s.tex);
     f.kind = kind;
+    f.stats = s;
     f.base = s.scale;
     f.bornAt = this.time.now;
     f.squashUntil = 0;
     if (this.cameras.main.worldView.contains(f.x, f.y)) this.puffs.explode(5, f.x, f.y + 26 * s.scale);
-    f.maxHp = f.hp = Math.round(s.hp * zone.hp * grow);
+    // The Knight's plates don't grow with the zone: it's the number of hits that counts.
+    f.maxHp = f.hp = boss === 'knight' ? KNIGHT_PLATES : Math.round(s.hp * zone.hp * grow);
     f.speed = s.speed * (0.9 + Math.random() * 0.2);
     f.dmg = s.dmg * zone.dmg;
     f.xp = s.xp;
@@ -572,12 +744,18 @@ class RunScene extends Phaser.Scene {
 
   private summonBoss() {
     const [x, y] = this.edgePoint();
-    const b = this.addFoe('hollow', x, y);
+    const kind = this.setup.zone.boss;
+    const b = this.addFoe('boss', x, y, kind);
     if (!b) return;
-    b.setTexture('hollow').play('hollow');
     this.boss = b;
     this.bossDash = 3;
-    this.bossSummon = 6;
+    this.bossSummon = kind === 'mirror' ? 2 : 6;
+    this.bossClock = kind === 'knight' ? 6 : 0;
+    this.bossAt = this.t;
+    this.bossLabel = this.add
+      .text(b.x, b.y, '', { fontFamily: '"Press Start 2P", monospace', fontSize: '8px', color: '#fecaca', stroke: '#0b0d14', strokeThickness: 3, align: 'center' })
+      .setOrigin(0.5, 1)
+      .setDepth(96000);
     this.cameras.main.flash(400, 60, 20, 90);
     this.cameras.main.shake(700, 0.008);
     this.sfx('roar');
@@ -585,11 +763,16 @@ class RunScene extends Phaser.Scene {
   }
 
   private steerBoss(b: Foe, now: number) {
-    const dt = this.game.loop.delta / 1000;
+    const dt = this.dt;
+    this.bossLabel?.setPosition(b.x, b.y - 34 * b.base);
+    const kind = this.setup.zone.boss;
+    if (kind === 'tomorrow') return this.steerTomorrow(b, dt);
+    if (kind === 'mirror') return this.steerMirror(b, dt);
+    if (kind === 'knight') this.knightShout(b, dt, now);
     const dx = this.hero.x - b.x,
       dy = this.hero.y - b.y,
       d = Math.hypot(dx, dy) || 1;
-    b.setFlipX(dx < 0);
+    b.setFlipX(kind === 'knight' ? dx > 0 : dx < 0);
     if (now < b.windUntil) {
       b.setVelocity(0, 0);
       return;
@@ -632,6 +815,81 @@ class RunScene extends Phaser.Scene {
     }
   }
 
+  /** Tomorrow: it creeps after you, and while you keep away it heals and splits off small Tomorrows. */
+  private steerTomorrow(b: Foe, dt: number) {
+    const dx = this.hero.x - b.x,
+      dy = this.hero.y - b.y,
+      d = Math.hypot(dx, dy) || 1,
+      far = d > TOMORROW_REACH;
+    b.setFlipX(dx > 0);
+    b.setVelocity((dx / d) * b.speed, (dy / d) * b.speed);
+    // Its reach, so it's clear where waiting starts.
+    const x = b.x,
+      y = b.y;
+    this.fade(40, (g) => g.lineStyle(2, far ? 0x86efac : 0x94a3b8, far ? 0.5 : 0.18).strokeCircle(x, y, TOMORROW_REACH));
+    this.bossLabel?.setText(far ? 'Zzz... later...' : '');
+    if (!far) return;
+    b.hp = Math.min(b.maxHp, b.hp + b.maxHp * 0.03 * dt);
+    this.cd.trail -= dt;
+    if (this.cd.trail <= 0) {
+      this.cd.trail = 0.25;
+      this.bits.particleTint = 0x86efac;
+      this.bits.explode(3, b.x, b.y - 10);
+    }
+    this.bossClock += dt;
+    if (this.bossClock >= 10) {
+      this.bossClock = 0;
+      this.sfx('stomp');
+      for (let i = 0; i < 3; i++) {
+        const a = Math.random() * Math.PI * 2;
+        this.addFoe('slime', b.x + Math.cos(a) * 50, b.y + Math.sin(a) * 50);
+      }
+      this.bus.say('Tomorrow splits while you wait');
+    }
+  }
+
+  /** The Mirror keeps its distance and sends golden reflections of you to stand in the way. */
+  private steerMirror(b: Foe, dt: number) {
+    const dx = this.hero.x - b.x,
+      dy = this.hero.y - b.y,
+      d = Math.hypot(dx, dy) || 1;
+    b.setFlipX(dx > 0);
+    const v = d > 170 ? b.speed : d < 120 ? -b.speed : 0;
+    b.setVelocity((dx / d) * v, (dy / d) * v);
+    this.bossSummon -= dt;
+    if (this.bossSummon > 0) return;
+    this.bossSummon = 5;
+    const alive = this.foes.getChildren().filter((o) => (o as Foe).active && (o as Foe).kind === 'reflection').length;
+    for (let i = 0; i < Math.min(2, 6 - alive); i++) {
+      // Between you and the Mirror, a little to each side.
+      const side = (i === 0 ? 1 : -1) * 40,
+        px = -dy / d,
+        py = dx / d;
+      const r = this.addFoe('reflection', b.x + dx * 0.45 + px * side, b.y + dy * 0.45 + py * side);
+      r?.setTint(0xfde68a);
+    }
+    this.sfx('nova', 1.4);
+  }
+
+  /** The Knight: every few seconds he raises his shield and shouts, and the shout shoves you away. */
+  private knightShout(b: Foe, dt: number, now: number) {
+    this.bossClock -= dt;
+    if (this.bossClock > 0) return;
+    this.bossClock = 8;
+    this.bossLabel?.setText('NOT GOOD ENOUGH!').setColor('#fecaca');
+    this.time.delayedCall(1800, () => this.bossLabel?.setText(''));
+    this.bus.say('"Not good enough!" Keep hitting.');
+    this.sfx('roar', 1.3);
+    this.cameras.main.shake(300, 0.006);
+    const dx = this.hero.x - b.x,
+      dy = this.hero.y - b.y,
+      d = Math.hypot(dx, dy) || 1;
+    if (d < 260) this.shoved = { until: now + 450, x: (dx / d) * 320, y: (dy / d) * 320 };
+    const x = b.x,
+      y = b.y;
+    this.fade(500, (g, p) => g.lineStyle(6 * (1 - p) + 1, 0xfecaca, 0.8 * (1 - p)).strokeCircle(x, y, 40 + 220 * p));
+  }
+
   // ---------- hitting ----------
 
   private power(base: number) {
@@ -655,7 +913,9 @@ class RunScene extends Phaser.Scene {
 
   private damage(f: Foe, amount: number, knock = 0, fromX = this.hero.x, fromY = this.hero.y) {
     if (!f.active) return;
-    const dmg = Math.max(1, Math.round(amount));
+    // The Knight's plates: any hit breaks exactly one.
+    const dmg = f === this.boss && this.setup.zone.boss === 'knight' ? 1 : Math.max(1, Math.round(amount));
+    if (f.kind === 'reflection') this.hitYourself();
     f.hp -= dmg;
     f.setTintFill(0xffffff);
     f.flashUntil = this.time.now + 50;
@@ -681,7 +941,7 @@ class RunScene extends Phaser.Scene {
       R = 30 * f.base;
     this.ash.explode(boss ? 60 : 6, x, y);
     // Burst into bits of its own colors, with a flash of light where it stood.
-    for (const c of FOES[f.kind].bits) {
+    for (const c of f.stats.bits) {
       this.bits.particleTint = c;
       this.bits.explode(boss ? 24 : f.kind === 'golem' ? 10 : 4, x, y);
     }
@@ -696,15 +956,18 @@ class RunScene extends Phaser.Scene {
       this.gems.push({ img: this.add.image(f.x, f.y, big ? 'gem-big' : 'gem').setDepth(1), value: f.xp, pulled: false });
     }
     f.disableBody(true, true);
-    if (f === this.boss) this.win();
+    if (f === this.boss) {
+      this.bossLabel?.destroy();
+      this.win();
+    }
   }
 
-  private number(x: number, y: number, n: number) {
+  private number(x: number, y: number, n: number, color?: string) {
     const t = this.numbers.find((x) => !x.visible);
     if (!t) return;
     const big = n >= 30;
-    t.setText(String(n))
-      .setColor(big ? '#fbbf24' : '#ffffff')
+    t.setText(color === HEAL ? `+${n}` : String(n))
+      .setColor(color ?? (big ? '#fbbf24' : '#ffffff'))
       .setFontSize(big ? 11 : 8)
       .setPosition(x + Phaser.Math.Between(-6, 6), y)
       .setVisible(true)
@@ -719,8 +982,10 @@ class RunScene extends Phaser.Scene {
     const kind = attackOf(this.setup.classId),
       a = ATTACK[kind],
       reach = kind === 'slash' ? 130 : RANGE,
-      // The boss hides in its horde, so attacks go for it whenever it's in reach.
-      boss = this.boss?.active && Math.hypot(this.boss.x - this.hero.x, this.boss.y - this.hero.y) <= reach ? this.boss : null,
+      // The boss hides in its horde, so attacks go for it whenever it's in reach. Not the Mirror:
+      // there you hit whatever is nearest, reflections too, so you have to walk past them.
+      boss =
+        this.boss?.active && this.setup.zone.boss !== 'mirror' && Math.hypot(this.boss.x - this.hero.x, this.boss.y - this.hero.y) <= reach ? this.boss : null,
       target = boss ?? this.nearest(this.hero.x, this.hero.y, undefined, reach);
     if (!target && kind !== 'wave') return;
     this.cd.attack = a.cd / ((1 + this.setup.power.reach) * (1 + 0.18 * (this.ups.haste ?? 0)));
@@ -827,7 +1092,60 @@ class RunScene extends Phaser.Scene {
     });
   }
 
+  /** The Mirror's rule: a hit on a reflection of you hurts you a little. */
+  private hitYourself() {
+    const now = this.time.now;
+    if (this.over || now < this.mirrorHurtAt) return;
+    if (!this.mirrorHurtAt) this.bus.say('That was you. Walk past your reflections.');
+    this.mirrorHurtAt = now + 300;
+    this.hp -= 2;
+    this.number(this.hero.x, this.hero.y - 26, 2, '#fca5a5');
+    this.hero.setTint(0xfde68a);
+    this.time.delayedCall(120, () => this.hero.clearTint());
+    if (this.hp <= 0) this.lose();
+  }
+
+  /** The bonfire's fireball: it bursts where it lands. */
+  private fireball(t: Foe) {
+    const from = this.flames[0] ?? this.hero,
+      tx = t.x,
+      ty = t.y;
+    const img = this.add.image(from.x, from.y, 'fireball').setDepth(90000);
+    this.sfx('flame', 0.7);
+    this.tweens.add({
+      targets: img,
+      x: tx,
+      y: ty,
+      duration: 320,
+      ease: 'Quad.easeIn',
+      onComplete: () => {
+        img.destroy();
+        this.ash.explode(8, tx, ty);
+        this.burst(tx, ty, 52, this.power(16), 0xf97316);
+      },
+    });
+  }
+
   private skills(dt: number) {
+    const { power } = this.setup;
+    if (power.fireballs) {
+      this.cd.fireball -= dt;
+      if (this.cd.fireball <= 0) {
+        const target = this.nearest(this.hero.x, this.hero.y, undefined, RANGE);
+        this.cd.fireball = target ? 2.5 : 0.3;
+        if (target) this.fireball(target);
+      }
+    }
+    // The fire fairy: when you're low, it heals you (then rests a while).
+    if (power.fairy && this.hp < this.maxHp * 0.35 && this.time.now >= this.fairyAt) {
+      this.fairyAt = this.time.now + 25000;
+      const heal = Math.round(this.maxHp * 0.25);
+      this.hp = Math.min(this.maxHp, this.hp + heal);
+      this.number(this.hero.x, this.hero.y - 30, heal, HEAL);
+      this.bits.particleTint = 0x86efac;
+      this.bits.explode(16, this.hero.x, this.hero.y);
+      this.bus.say(`${power.flameName || 'Your flame'} heals you`);
+    }
     // Ember's flames: from your workouts, plus the ones picked in this run.
     const flames = this.flames.length;
     if (flames > 0) {
@@ -966,21 +1284,23 @@ class RunScene extends Phaser.Scene {
       this.level++;
       this.pendingLevels++;
     }
-    if (this.pendingLevels > 0 && !this.scene.isPaused()) this.offer(false);
+    if (this.pendingLevels > 0 && !this.scene.isPaused()) this.offer(null);
   }
 
-  private offer(fresh: boolean) {
+  private offer(free: FreePick | null) {
     const choices = rollUpgrades(this.ups);
     if (choices.length === 0) {
       this.pendingLevels = 0;
+      this.free = [];
       this.hp = Math.min(this.maxHp, this.hp + 20);
       return;
     }
-    if (!fresh) this.pendingLevels--;
+    if (!free) this.pendingLevels--;
     this.sparks.explode(30, this.hero.x, this.hero.y);
+    if (this.bot) return this.pick(BOT_PICKS.find((id) => choices.includes(id)) ?? choices[0]);
     music.sting('levelup');
     this.scene.pause();
-    this.bus.levelUp(choices, { ...this.ups }, fresh);
+    this.bus.levelUp(choices, { ...this.ups }, free);
   }
 
   /** Developer mode: jump to just before the boss. */
@@ -1007,7 +1327,8 @@ class RunScene extends Phaser.Scene {
       this.hp = this.maxHp;
     }
     if (id === 'flame') this.syncFlames();
-    if (this.pendingLevels > 0) this.offer(false);
+    if (this.free.length) this.offer(this.free.shift()!);
+    else if (this.pendingLevels > 0) this.offer(null);
     else this.scene.resume();
   }
 
@@ -1061,7 +1382,7 @@ class RunScene extends Phaser.Scene {
     }
     this.physics.pause();
     this.bus.hud(this.hud());
-    this.time.delayedCall(1200, () => this.bus.end({ won: true, seconds: Math.floor(this.t), kills: this.kills, level: this.level }));
+    this.time.delayedCall(1200, () => this.ended(true));
   }
 
   private lose() {
@@ -1071,7 +1392,12 @@ class RunScene extends Phaser.Scene {
     this.physics.pause();
     this.hero.setTint(0x6b7280);
     this.bus.hud(this.hud());
-    this.time.delayedCall(900, () => this.bus.end({ won: false, seconds: Math.floor(this.t), kills: this.kills, level: this.level }));
+    this.time.delayedCall(900, () => this.ended(false));
+  }
+
+  private ended(won: boolean) {
+    this.events.emit('run-ended');
+    this.bus.end({ won, seconds: Math.floor(this.t), kills: this.kills, level: this.level, hp: Math.max(0, Math.ceil(this.hp)), maxHp: this.maxHp, bossAt: this.bossAt === null ? null : Math.floor(this.bossAt) });
   }
 }
 
@@ -1095,6 +1421,7 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
     resume: () => scene.scene.resume(),
     skipToBoss: () => scene.skipToBoss(),
     winNow: () => scene.winNow(),
+    autopilot: (on) => (scene.bot = on),
     destroy: () => game.destroy(true),
   };
 }

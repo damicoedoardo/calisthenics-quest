@@ -113,6 +113,8 @@ describe('sprite registry', () => {
     for (const style of Object.keys(HAIRSTYLES) as HairStyle[])
       for (const head of ['classic', 'manga'] as const) prints[`hero ${head} ${style}`] = hash(framesFor('hero', 'idle', { look: { ...DEFAULT_LOOK, style, head } }));
     prints['hero girl'] = hash(framesFor('hero', 'idle', { look: STARTER_LOOKS.f }));
+    for (const stage of ['spark', 'candle', 'torch', 'bonfire', 'fairy'] as const)
+      for (const mood of ['happy', 'bright', 'soft', 'sleepy', 'smoky', 'scared', 'dim'] as const) prints[`flame ${stage} ${mood}`] = hash(framesFor('ember', 'idle', { stage, mood }));
     expect(prints).toMatchSnapshot();
   });
 });

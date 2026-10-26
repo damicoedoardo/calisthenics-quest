@@ -1,0 +1,91 @@
+import type { PlaceSpec } from '@/sprites/places';
+
+/* Where scenes happen. Each place is a pixel-art backdrop painted in code from this description
+   (src/sprites/places.ts draws it). Change a sky, add a campfire, or make a new place here; open
+   the Story Lab (/lab/story) to see it. */
+
+export const PLACES = {
+  ashlands: {
+    name: 'The Ashlands',
+    sky: ['#0f0c18', '#2b2238', '#4a3550'],
+    land: 'dunes',
+    far: '#2a2236',
+    near: '#1a1522',
+    ground: '#211b2b',
+    props: ['dead-trees'],
+    glow: { x: 0.72, y: 0.34, color: '#f97316', r: 6 },
+    weather: 'ash',
+  },
+  'ashlands-camp': {
+    name: 'Night camp',
+    sky: ['#070812', '#141629', '#25233a'],
+    land: 'dunes',
+    far: '#1d1a2c',
+    near: '#120f1b',
+    ground: '#17131f',
+    props: ['stars', 'campfire'],
+    weather: 'none',
+  },
+  'mirror-lake': {
+    name: 'Mirror Lake',
+    sky: ['#0a1222', '#1f3356', '#4d6a94'],
+    land: 'hills',
+    far: '#22314f',
+    near: '#152038',
+    ground: '#121a2c',
+    props: ['moon', 'lake', 'reeds'],
+    weather: 'none',
+  },
+  'cold-forges': {
+    name: 'The Village of Almosts',
+    sky: ['#14141b', '#2c2b36', '#4d4a55'],
+    land: 'village',
+    far: '#2b2a33',
+    near: '#1b1a21',
+    ground: '#1f1d24',
+    props: ['chimneys'],
+    weather: 'ash',
+  },
+  'lit-forges': {
+    name: 'The village, lit',
+    sky: ['#1a1220', '#3d2531', '#7a3f2e'],
+    land: 'village',
+    far: '#30222b',
+    near: '#1e161c',
+    ground: '#241a1e',
+    props: ['chimneys', 'windows', 'campfire'],
+    weather: 'embers',
+  },
+  'flat-road': {
+    name: 'The Plateau',
+    sky: ['#1b1712', '#3b3226', '#6b5a40'],
+    land: 'flat',
+    far: '#3a3123',
+    near: '#2a2319',
+    ground: '#2a2319',
+    props: ['rocks'],
+    weather: 'none',
+  },
+  'hollow-woods': {
+    name: 'The Hollow Woods',
+    sky: ['#06090a', '#0f1a17', '#1f3b33'],
+    land: 'forest',
+    far: '#14241f',
+    near: '#0a1310',
+    ground: '#0d1613',
+    props: [],
+    weather: 'fog',
+  },
+  summit: {
+    name: 'The Summit',
+    sky: ['#0e1426', '#3a4a78', '#c7d2fe'],
+    land: 'peaks',
+    far: '#4b5578',
+    near: '#262d45',
+    ground: '#1f2438',
+    props: ['stars'],
+    weather: 'snow',
+  },
+} satisfies Record<string, PlaceSpec>;
+
+export type PlaceId = keyof typeof PLACES;

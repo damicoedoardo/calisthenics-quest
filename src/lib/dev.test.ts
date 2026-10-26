@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { initialState } from './game';
-import { pendingScenes } from './story';
+import { pendingScenes } from '@/story/engine';
 import { addFakeWorkouts, clearNextZone, resetFog, skipIntro } from './dev';
 
 const now = new Date(2026, 9, 26, 18);
@@ -34,7 +34,7 @@ describe('developer mode', () => {
   it('beats Fog bosses and resets them', () => {
     let s = initialState();
     for (let i = 0; i < 7; i++) s = clearNextZone(s);
-    expect(s.fog?.cleared).toBe(5);
+    expect(s.fog?.cleared).toBe(6);
     expect(resetFog(s).fog).toEqual({ cleared: 0, runs: 0, best: {} });
   });
 });

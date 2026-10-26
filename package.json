@@ -8,7 +8,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "vitest run"
+    "test": "vitest run",
+    "sim": "SIM_OUT=sim-out vitest run src/sim",
+    "fog:balance": "node scripts/fog-balance.cjs"
   },
   "engines": {
     "node": ">=18"

@@ -82,6 +82,9 @@ export default function Lab() {
           <h1 className="font-pixel text-sm text-gold-300">Sprite Lab</h1>
           <p className="text-xs text-slate-500">Every sprite and animation. Art lives in src/sprites.</p>
         </div>
+        <Link href="/lab/story" className="ml-auto rounded-lg bg-ink-800 px-3 py-2 text-xs text-gold-300">
+          Story Lab
+        </Link>
       </header>
 
       <Panel title="Your hero">

@@ -6,7 +6,7 @@ import { Hero } from './Hero';
 import { Enemy } from './Characters';
 import { music } from '@/lib/music';
 import { gearOf, levelInfo, totalXp, type FinishResult } from '@/lib/game';
-import type { StoryState } from '@/lib/story';
+import type { StoryState } from '@/story/engine';
 
 const CONFETTI = ['#fbbf24', '#f97316', '#22d3ee', '#a78bfa', '#34d399'];
 
@@ -42,7 +42,7 @@ export function AfterSession({ result, before, after, onClose }: Props) {
         <div className="relative mt-8 flex items-end gap-10">
           <Hero gear={gearOf(result.state)} classId={result.state.profile.classId} size={110} bounce={false} />
           <div className={`relative ${hit ? 'animate-shake' : ''} ${defeated && hit ? 'opacity-30 grayscale transition-all duration-700' : ''}`}>
-            <Enemy id={before.chapter.enemyId} size={96} />
+            <Enemy id={before.chapter.enemySprite} size={96} />
             {hit && (
               <span className="absolute -top-2 left-1/2 -translate-x-1/2 animate-hit font-pixel text-sm text-red-400">-{reps}</span>
             )}

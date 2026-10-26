@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Film, Mail, Palette, Trophy, Upload } from 'lucide-react';
+import { Download, Film, Gem, Lock, Mail, Palette, Trophy, Upload } from 'lucide-react';
 import { SoundToggle } from './Sound';
 import { Hero } from './Hero';
 import { useLook } from './Look';
@@ -10,7 +10,8 @@ import { PATHS } from '@/lib/skills';
 import { getClass } from '@/lib/gear';
 import { gearOf, logMaxTest, nextTestDate, nodeName, type GameState } from '@/lib/game';
 import { exportState, parseImport } from '@/lib/store';
-import { storyState } from '@/lib/story';
+import { storyState } from '@/story/engine';
+import { ZONES } from '@/lib/fog';
 
 interface Props {
   state: GameState;
@@ -134,6 +135,8 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
         <Stat label="Skills beaten" value={state.sessions.reduce((a, s) => a + s.unlocked.length, 0)} />
         <Stat label="Chapter" value={story.finished ? 'Done' : story.index + 1} />
       </section>
+
+      <Keepsakes cleared={state.fog?.cleared ?? 0} />
 
       <section className="rounded-2xl bg-ink-800 p-4">
         <div className="flex items-center justify-between">
@@ -259,6 +262,38 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
         </div>
       </section>
     </div>
+  );
+}
+
+/** What you won in the Fog: one keepsake per boss. */
+function Keepsakes({ cleared }: { cleared: number }) {
+  return (
+    <section className="rounded-2xl bg-ink-800 p-4">
+      <h2 className="flex items-center gap-2 font-pixel text-[10px] text-gold-300">
+        <Gem size={14} /> Keepsakes
+      </h2>
+      <p className="mt-1 text-xs text-slate-500">One for every boss you beat in the Fog, on the Play tab.</p>
+      <ul className="mt-3 grid grid-cols-2 gap-2">
+        {ZONES.map((z) => {
+          const won = z.id < cleared;
+          return (
+            <li key={z.id} className={`rounded-xl p-3 ${won ? 'bg-ink-900 ring-1 ring-gold-400/25' : 'bg-ink-900/50'}`}>
+              {won ? (
+                <>
+                  <p className="text-sm font-semibold text-slate-100">{z.keepsake.name}</p>
+                  <p className="mt-1 text-[11px] leading-snug text-slate-400">{z.keepsake.text}</p>
+                </>
+              ) : (
+                <p className="flex items-center gap-1.5 text-xs text-slate-600">
+                  {/* Only the next boss has a name; the ones after it are still in the fog. */}
+                  <Lock size={12} /> {z.id === cleared ? z.bossName : '???'}
+                </p>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </section>
   );
 }
 

@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Heart, Play, X } from 'lucide-react';
+import { Bookmark, BookOpen, ChevronRight, Flame, Heart, Play, X } from 'lucide-react';
+import { BookOfDays } from './BookOfDays';
 import { Ember, Enemy, Hollow } from './Characters';
+import { SitByFire } from './SitByFire';
 import {
   WEEKLY_GOAL,
   dayType,
@@ -14,10 +16,14 @@ import {
   type GameState,
 } from '@/lib/game';
 import { getPath } from '@/lib/skills';
-import { storyState } from '@/lib/story';
+import { daysSinceTraining, isRestDay } from '@/lib/days';
+import { storyState, storyWords } from '@/story/engine';
+import { flameStage } from '@/story/flame';
+import { fireLine, flameLine, flameMood, isRested, restTruth, todayPage, updateTodayPage } from '@/story/daily';
 
 interface Props {
   state: GameState;
+  update: (fn: (s: GameState) => GameState) => void;
   onStart: (checkin: Checkin) => void;
   onReplayOpening: () => void;
 }
@@ -30,15 +36,9 @@ const CHECKINS: { id: Checkin; label: string; note: string }[] = [
 
 const ROLE_LABEL = { main: 'Main', core: 'Core', support: 'Support' } as const;
 
-function emberLine(week: number, streak: number): string {
-  if (week >= WEEKLY_GOAL) return streak > 1 ? `Week won. ${streak} in a row. I'm basically a bonfire.` : "Week won! Look at me, I'm a real flame.";
-  if (week === 2) return 'Two pages this week. One more and the week is ours.';
-  if (week === 1) return "One down. I'm warming up.";
-  return 'New week. Three pages to write. Want to start one?';
-}
-
-export function TodayTab({ state, onStart, onReplayOpening }: Props) {
+export function TodayTab({ state, update, onStart, onReplayOpening }: Props) {
   const now = new Date();
+  const [overlay, setOverlay] = useState<'fire' | 'book' | null>(null);
   const [checkin, setCheckin] = useState<Checkin>(state.draft?.checkin ?? 'normal');
   const quest = todaysQuest(state, checkin);
   const story = storyState(state);
@@ -67,7 +67,7 @@ export function TodayTab({ state, onStart, onReplayOpening }: Props) {
           <h2 className="mt-1 font-pixel text-sm leading-relaxed text-gold-300">{story.chapter.name}</h2>
           <div className="mt-3 flex items-center gap-4">
             <div className={story.heartsLeft === 0 ? 'opacity-40 grayscale' : ''}>
-              <Enemy id={story.chapter.enemyId} size={64} />
+              <Enemy id={story.chapter.enemySprite} size={64} />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-sm text-slate-300">
@@ -93,22 +93,11 @@ export function TodayTab({ state, onStart, onReplayOpening }: Props) {
         </section>
       )}
 
-      <section className="flex items-center gap-3 rounded-2xl bg-ink-800 p-4">
-        <div className="grid w-16 shrink-0 place-items-center">
-          <Ember size={30 + Math.min(streak, 5) * 7} />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="text-sm text-slate-200">&ldquo;{emberLine(week, streak)}&rdquo;</p>
-          <div className="mt-2 flex gap-1.5">
-            {Array.from({ length: WEEKLY_GOAL }).map((_, i) => (
-              <div key={i} className={`h-2.5 flex-1 rounded-sm ${i < week ? 'bg-gold-400' : 'bg-ink-600'}`} />
-            ))}
-          </div>
-          <p className="mt-1 text-xs text-slate-500">
-            {Math.min(week, WEEKLY_GOAL)}/{WEEKLY_GOAL} this week{streak > 0 ? ` · ${streak}-week streak` : ''}
-          </p>
-        </div>
-      </section>
+      <FlameCard state={state} now={now} week={week} streak={streak} />
+
+      {isRestDay(state, now) && <RestCard state={state} now={now} onSit={() => setOverlay('fire')} />}
+
+      <QuoteCard state={state} now={now} update={update} onOpenBook={() => setOverlay('book')} />
 
       {!inProgress && (
         <section>
@@ -161,7 +150,110 @@ export function TodayTab({ state, onStart, onReplayOpening }: Props) {
         <Play size={16} className="fill-ink-950" />
         {inProgress ? 'Continue quest' : 'Start quest'}
       </button>
+
+      {overlay === 'fire' && (
+        <SitByFire
+          name={storyWords(state).flame}
+          stage={flameStage(state.sessions.length).id}
+          line={fireLine(state, now)}
+          onDone={(sat) => {
+            if (sat) update((s) => updateTodayPage(s, new Date(), { fire: true }));
+            setOverlay(null);
+          }}
+        />
+      )}
+      {overlay === 'book' && <BookOfDays state={state} onClose={() => setOverlay(null)} />}
     </div>
+  );
+}
+
+/** Your flame: its name, how grown it is, its mood today and what it has to say. */
+function FlameCard({ state, now, week, streak }: { state: GameState; now: Date; week: number; streak: number }) {
+  const stage = flameStage(state.sessions.length);
+  // Until it has a name (after the first workout) it's just a spark.
+  const name = state.profile.flame;
+  return (
+    <section className="rounded-2xl bg-ink-800 p-4">
+      <div className="flex items-center gap-3">
+        <div className="relative h-20 w-20 shrink-0">
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
+            <Ember size={stage.id === 'spark' ? 120 : 76} stage={stage.id} mood={flameMood(state, now)} />
+          </div>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="font-pixel text-[10px] text-orange-300">
+            {name ? (
+              <>
+                {name} <span className="text-slate-500">· {stage.name}</span>
+              </>
+            ) : (
+              'A spark'
+            )}
+          </p>
+          <p className="mt-1.5 text-sm leading-snug text-slate-200">&ldquo;{flameLine(state, now)}&rdquo;</p>
+        </div>
+      </div>
+      <div className="mt-3 flex gap-1.5">
+        {Array.from({ length: WEEKLY_GOAL }).map((_, i) => (
+          <div key={i} className={`h-2.5 flex-1 rounded-sm ${i < week ? 'bg-gold-400' : 'bg-ink-600'}`} />
+        ))}
+      </div>
+      <p className="mt-1 text-xs text-slate-500">
+        {Math.min(week, WEEKLY_GOAL)}/{WEEKLY_GOAL} this week{streak > 0 ? ` · ${streak}-week streak` : ''}
+      </p>
+    </section>
+  );
+}
+
+/** On a rest day Today turns calm: one truth about rest, and a minute by the fire. */
+function RestCard({ state, now, onSit }: { state: GameState; now: Date; onSit: () => void }) {
+  const sat = !!todayPage(state, now)?.fire;
+  const fullDayOff = (daysSinceTraining(state, now) ?? 0) >= 2;
+  return (
+    <section className="rounded-2xl bg-gradient-to-b from-[#1d1527] to-ink-900 p-4 ring-1 ring-orange-300/20">
+      <p className="font-pixel text-[10px] text-orange-300">Rest day</p>
+      <p className="mt-2 text-sm leading-snug text-slate-200">{restTruth(now)}</p>
+      {sat ? (
+        <p className="mt-3 text-xs text-slate-400">You sat by the fire today. Your Fog runs today start Rested.</p>
+      ) : (
+        <>
+          <button onClick={onSit} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-ink-800 py-3 text-sm text-orange-200 ring-1 ring-orange-300/25 active:scale-[.98]">
+            <Flame size={16} /> Sit by the fire · 1 minute
+          </button>
+          <p className="mt-2 text-xs text-slate-500">
+            {fullDayOff ? 'A full day of air: your Fog runs today start Rested.' : 'It counts as rest: your Fog runs today start Rested.'}
+          </p>
+        </>
+      )}
+    </section>
+  );
+}
+
+/** Words for the road: one quote a day, to keep if it lands. */
+function QuoteCard({ state, now, update, onOpenBook }: { state: GameState; now: Date; update: Props['update']; onOpenBook: () => void }) {
+  const page = todayPage(state, now);
+  if (!page) return null;
+  const pages = state.days?.length ?? 0;
+  return (
+    <section className="rounded-2xl bg-ink-900 p-4 ring-1 ring-ink-700">
+      <p className="font-pixel text-[9px] text-slate-500">WORDS FOR THE ROAD</p>
+      <p className="mt-2 text-[15px] leading-snug text-slate-100">&ldquo;{page.quote.text}&rdquo;</p>
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <p className="text-xs text-slate-400">{page.quote.by}</p>
+        <button
+          onClick={() => update((s) => updateTodayPage(s, new Date(), { kept: !page.kept }))}
+          aria-pressed={!!page.kept}
+          className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs ${page.kept ? 'bg-gold-400/15 text-gold-300' : 'bg-ink-800 text-slate-300'}`}
+        >
+          <Bookmark size={13} className={page.kept ? 'fill-gold-400 text-gold-400' : ''} /> {page.kept ? 'Kept' : 'Keep'}
+        </button>
+      </div>
+      <button onClick={onOpenBook} className="mt-3 flex w-full items-center gap-2 border-t border-ink-700 pt-3 text-left text-xs text-slate-400">
+        <BookOpen size={14} />
+        <span className="flex-1">Book of Days · {pages} {pages === 1 ? 'page' : 'pages'}</span>
+        <ChevronRight size={14} />
+      </button>
+    </section>
   );
 }
 

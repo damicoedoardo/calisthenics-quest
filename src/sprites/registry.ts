@@ -2,8 +2,9 @@ import { equippedGear } from '@/lib/gear';
 import { CLIPS, type ClipFrame, type ClipId, type SpriteAction } from './clips';
 import { toSheet, type Grid } from './engine/grid';
 import { drawBook } from './characters/book';
-import { drawEmber } from './characters/ember';
+import { drawEmber, type FlameOpts } from './characters/ember';
 import { drawHero, heroAttack, heroLabel, type HeroOpts } from './characters/hero';
+import { drawKnight } from './characters/knight';
 import { drawMira } from './characters/mira';
 import { drawMirror } from './characters/mirror';
 import { drawPixelArt, type PixelArt } from './characters/pixel';
@@ -11,6 +12,7 @@ import { drawPlateau } from './characters/plateau';
 import { drawSummit } from './characters/summit';
 import { drawTomorrow } from './characters/tomorrow';
 import { drawWanderer } from './characters/wanderer';
+import { drawKid, drawLia, drawSol } from './characters/villagers';
 import { drawWisp } from './characters/wisp';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
@@ -86,8 +88,18 @@ export const SPRITES = {
           : { shadow: true },
   }),
   wanderer: drawn<NoOpts>({ label: () => 'The Wanderer', defaults: {}, clips: () => ({ idle: 'idle', attack: 'swing' }), draw: drawWanderer }),
-  ember: drawn<NoOpts>({ label: () => 'Ember', defaults: {}, clips: () => ({ idle: 'hover' }), draw: drawEmber }),
+  ember: drawn<FlameOpts>({
+    label: ({ stage }) => `Your flame, a ${stage}`,
+    defaults: { stage: 'candle', mood: 'happy' },
+    clips: () => ({ idle: 'hover' }),
+    draw: drawEmber,
+    look: ({ mood }) => (mood === 'dim' ? {} : { filter: `drop-shadow(0 0 ${mood === 'bright' ? 10 : 5}px rgba(251,146,60,.55))` }),
+  }),
   mira: drawn<NoOpts>({ label: () => 'Mira the Smith', defaults: {}, clips: () => ({ idle: 'idle', attack: 'swing' }), draw: drawMira, look: () => ({ shadow: true }) }),
+  knight: drawn<NoOpts>({ label: () => 'The Perfect Knight', defaults: {}, clips: () => ({ idle: 'idle', attack: 'swing' }), draw: drawKnight, look: () => ({ shadow: true }) }),
+  kid: drawn<NoOpts>({ label: () => 'The kid inside the armor', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawKid, look: () => ({ shadow: true }) }),
+  lia: drawn<NoOpts>({ label: () => 'Lia the dancer', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawLia, look: () => ({ shadow: true }) }),
+  sol: drawn<NoOpts>({ label: () => 'Sol the runner', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawSol, look: () => ({ shadow: true }) }),
   book: creature('The Book of Days', drawBook, 'hover'),
   slime: creature('Tomorrow', drawTomorrow, 'lunge'),
   mirror: creature('The Mirror', drawMirror, 'lunge'),
