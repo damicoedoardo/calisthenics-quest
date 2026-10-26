@@ -11,6 +11,8 @@ import type { Sheet } from '@/sprites/registry';
 interface Props {
   state: GameState;
   zone: Zone;
+  /** Developer mode: skip to the boss or win from the pause menu. */
+  dev: boolean;
   onEnd: (r: RunResult) => void;
   onLeave: () => void;
 }
@@ -31,7 +33,7 @@ const ICONS: Record<UpgradeId, LucideIcon> = {
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 /** A run in the Fog: the Phaser canvas, with the HUD, skill picks and results drawn over it. */
-export function FogRun({ state, zone, onEnd, onLeave }: Props) {
+export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const run = useRef<RunHandle | null>(null);
   const [hud, setHud] = useState<Hud | null>(null);
@@ -40,9 +42,6 @@ export function FogRun({ state, zone, onEnd, onLeave }: Props) {
   const [boss, setBoss] = useState(false);
   const [end, setEnd] = useState<RunEnd | null>(null);
   const [attempt, setAttempt] = useState(0);
-  const [preview, setPreview] = useState(false);
-
-  useEffect(() => setPreview(window.location.hostname !== 'forma-nu-red.vercel.app'), []);
 
   useEffect(() => {
     const el = host.current;
@@ -198,17 +197,27 @@ export function FogRun({ state, zone, onEnd, onLeave }: Props) {
           <button onClick={onLeave} className="w-full max-w-xs rounded-xl bg-ink-800 py-3 text-sm text-slate-300">
             Leave the run
           </button>
-          {preview && (
-            <button
-              onClick={() => {
-                run.current?.skipToBoss();
-                setPaused(false);
-                run.current?.resume();
-              }}
-              className="w-full max-w-xs rounded-xl border border-dashed border-slate-600 py-2.5 text-xs text-slate-400"
-            >
-              Skip to the boss (preview only)
-            </button>
+          {dev && (
+            <div className="grid w-full max-w-xs grid-cols-2 gap-2">
+              {(
+                [
+                  ['Skip to the boss', () => run.current?.skipToBoss()],
+                  ['Win this run', () => run.current?.winNow()],
+                ] as const
+              ).map(([label, act]) => (
+                <button
+                  key={label}
+                  onClick={() => {
+                    act();
+                    setPaused(false);
+                    run.current?.resume();
+                  }}
+                  className="rounded-xl border border-dashed border-sky-400/60 py-2.5 text-xs text-sky-300"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           )}
         </div>
       )}

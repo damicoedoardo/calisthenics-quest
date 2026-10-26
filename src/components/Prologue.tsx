@@ -29,6 +29,8 @@ interface Props {
   onLook: (look: Look) => void;
   /** Shown on the title screen when the opening is replayed. */
   onExit?: () => void;
+  /** Developer mode: jump past the whole opening. */
+  onSkip?: () => void;
 }
 
 const goldButton =
@@ -74,7 +76,7 @@ function fadingBackdrop(gear: ReturnType<typeof equippedGear>) {
  * First run: pick boy or girl, the story opens, the player meets the voice in their head, loses,
  * gets up, writes their letter, and finally makes the hero look like them.
  */
-export function Prologue({ state, onFinish, onLook, onExit }: Props) {
+export function Prologue({ state, onFinish, onLook, onExit, onSkip }: Props) {
   const [step, setStep] = useState<Step>('title');
   const look = useLook();
   const firstRun = !state.profile.onboarded;
@@ -96,6 +98,18 @@ export function Prologue({ state, onFinish, onLook, onExit }: Props) {
     music.unlock();
     setStep('cold');
   };
+
+  const skip = onSkip && (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        onSkip();
+      }}
+      className="mt-8 rounded-xl border border-dashed border-sky-400/60 px-4 py-2.5 text-sm text-sky-300"
+    >
+      Skip the intro (developer mode)
+    </button>
+  );
 
   switch (step) {
     case 'title':
@@ -123,6 +137,7 @@ export function Prologue({ state, onFinish, onLook, onExit }: Props) {
             <p className="mt-8 flex items-center gap-2 text-xs text-slate-500">
               <Headphones size={14} /> Best with sound on
             </p>
+            {skip}
           </div>
         );
       return (
@@ -150,6 +165,7 @@ export function Prologue({ state, onFinish, onLook, onExit }: Props) {
               Not now
             </button>
           )}
+          {skip}
         </div>
       );
     case 'cold':

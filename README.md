@@ -24,3 +24,5 @@ pnpm build
 ```
 
 Next.js (App Router) + TypeScript + Tailwind, deployed on Vercel. Game rules live in `src/lib/game.ts`, skill trees in `src/lib/skills.ts`, the Fog in `src/lib/fog.ts` and `src/game/run.ts` (Phaser 3).
+
+**Developer mode** is on in every preview and on localhost (on the live app, tap the FORMA name 7 times). It adds "Skip the intro" on the title screen, a wrench button with fake workouts, class and skill-tree switches, Fog boss clears and a save wipe, and "Skip to the boss" / "Win this run" in a Fog run's pause menu. Helpers live in `src/lib/dev.ts`.

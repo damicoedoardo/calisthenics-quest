@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Gamepad2, Map, Shield, Swords } from 'lucide-react';
 import { TodayTab } from '@/components/TodayTab';
 import { SkillsTab } from '@/components/SkillsTab';
@@ -13,11 +13,13 @@ import { Workout } from '@/components/Workout';
 import { AfterSession } from '@/components/AfterSession';
 import { Dialogue } from '@/components/Dialogue';
 import { ClassPicker } from '@/components/ClassPicker';
+import { DevPanel } from '@/components/DevPanel';
 import { LookProvider } from '@/components/Look';
 import { finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { pendingScenes, renderLines, storyState, storyWords, type Scene, type StoryState } from '@/lib/story';
 import { useGameState } from '@/lib/store';
 import { recordRun, type Zone } from '@/lib/fog';
+import { skipIntro, useDevMode } from '@/lib/dev';
 
 type Tab = 'today' | 'skills' | 'play' | 'hero';
 
@@ -48,6 +50,14 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const [run, setRun] = useState<Zone | null>(null);
   // Bumped when something may have unlocked a scene outside a session (a max test).
   const [storyTick, setStoryTick] = useState(0);
+  const { dev, live, toggle: setDev } = useDevMode();
+  // Seven quick taps on the FORMA name unlock developer mode on the live app.
+  const taps = useRef<number[]>([]);
+  const tapName = () => {
+    const now = Date.now();
+    taps.current = [...taps.current.filter((t) => now - t < 3000), now];
+    if (taps.current.length >= 7 && !dev) setDev(true);
+  };
   const lvl = levelInfo(totalXp(state));
   const gear = gearOf(state);
 
@@ -92,6 +102,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       <Prologue
         state={state}
         onExit={replaying ? () => setReplaying(false) : undefined}
+        onSkip={dev && !replaying ? () => update((s) => skipIntro(s, new Date())) : undefined}
         onLook={(look) => update((s) => ({ ...s, profile: { ...s.profile, look } }))}
         onFinish={({ letter, voice, progress }) => {
           update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, letter, voice }, progress: progress ?? s.progress }));
@@ -110,7 +121,9 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between">
-              <p className="font-pixel text-sm tracking-widest text-gold-400">FORMA</p>
+              <p onClick={tapName} className="font-pixel text-sm tracking-widest text-gold-400">
+                FORMA
+              </p>
               <p className="text-xs text-slate-400">
                 Lv {lvl.level} · <span className="text-slate-200">{lvl.title}</span>
               </p>
@@ -161,7 +174,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         </div>
       </nav>
 
-      {run && <FogRun state={state} zone={run} onEnd={(r) => update((s) => recordRun(s, r))} onLeave={() => setRun(null)} />}
+      {dev && !run && !training && !after && !scene && !picker && <DevPanel state={state} update={update} onTurnOff={live ? () => setDev(false) : undefined} />}
+      {run && <FogRun state={state} zone={run} dev={dev} onEnd={(r) => update((s) => recordRun(s, r))} onLeave={() => setRun(null)} />}
       {training && <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />}
       {after && <AfterSession result={after.result} before={after.before} after={after.after} onClose={() => setAfter(null)} />}
       {scene && (

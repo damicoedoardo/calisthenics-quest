@@ -48,6 +48,7 @@ export interface RunHandle {
   pause: () => void;
   resume: () => void;
   skipToBoss: () => void;
+  winNow: () => void;
   destroy: () => void;
 }
 
@@ -851,12 +852,17 @@ class RunScene extends Phaser.Scene {
     this.bus.levelUp(choices, { ...this.ups }, fresh);
   }
 
-  /** Preview builds only: jump to just before the boss. */
+  /** Developer mode: jump to just before the boss. */
   skipToBoss() {
     this.t = Math.max(this.t, RUN_SECONDS - 3);
     // Count the waves and elites skipped over as done, so they don't all arrive at once.
     this.rings = new Set([60, 150]);
     this.elites = Math.floor((this.t - 90) / 45) + 1;
+  }
+
+  /** Developer mode: end the run as if the boss fell. */
+  winNow() {
+    this.win();
   }
 
   pick(id: UpgradeId) {
@@ -950,6 +956,7 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
     pause: () => scene.scene.pause(),
     resume: () => scene.scene.resume(),
     skipToBoss: () => scene.skipToBoss(),
+    winNow: () => scene.winNow(),
     destroy: () => game.destroy(true),
   };
 }
