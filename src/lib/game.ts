@@ -1,6 +1,7 @@
 import { PATHS, getPath, type PathId, type SkillNode } from './skills';
 import { classPath, equippedGear, type ClassId, type Gear } from './gear';
 import type { Look } from '@/sprites/engine/figure';
+import type { FogProgress } from './fog';
 
 export const XP_FULL_SESSION = 100;
 export const XP_MINI_SESSION = 30;
@@ -95,6 +96,8 @@ export interface GameState {
   draft: Draft | null;
   /** Story scenes already played. */
   seenScenes: string[];
+  /** Runs in the Fog: zones cleared and best results. */
+  fog?: FogProgress;
 }
 
 export function initialState(): GameState {

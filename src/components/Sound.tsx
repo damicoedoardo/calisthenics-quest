@@ -25,7 +25,7 @@ export function SoundToggle({ className = '' }: { className?: string }) {
   const muted = useMuted();
   return (
     <button
-      aria-label={muted ? 'Turn music on' : 'Turn music off'}
+      aria-label={muted ? 'Turn sound on' : 'Turn sound off'}
       onClick={(e) => {
         e.stopPropagation();
         music.unlock();
