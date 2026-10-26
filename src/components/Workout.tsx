@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Minus, Plus, Undo2, X } from 'lucide-react';
-import { REST_SECONDS, todaysQuest, type GameState, type Rir } from '@/lib/game';
+import { todaysQuest, type GameState, type Rir } from '@/lib/game';
+import { nextTarget, restAfter, type Rest as RestPlan } from '@/lib/coach';
 import { rewardFor } from '@/lib/gear';
 import { getPath } from '@/lib/skills';
 
@@ -25,10 +26,11 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   const sets = state.draft?.sets ?? {};
   const firstOpen = quest.findIndex((q) => (sets[q.id]?.length ?? 0) < q.sets);
   const [index, setIndex] = useState(firstOpen === -1 ? 0 : firstOpen);
-  const [restUntil, setRestUntil] = useState<number | null>(null);
+  const [rest, setRest] = useState<(RestPlan & { until: number }) | null>(null);
   const q = quest[Math.min(index, quest.length - 1)];
   const logged = sets[q.id] ?? [];
-  const [reps, setReps] = useState(q.reps);
+  const next = nextTarget(q.reps, logged);
+  const [reps, setReps] = useState(next.reps);
   const totalLogged = quest.reduce((a, e) => a + Math.min(sets[e.id]?.length ?? 0, e.sets), 0);
   const allDone = quest.every((e) => (sets[e.id]?.length ?? 0) >= e.sets);
   const exerciseDone = logged.length >= q.sets;
@@ -37,8 +39,8 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   const reward = q.canUnlock ? rewardFor(state.profile.classId, state.progress, q.path, state.progress[q.path]) : null;
 
   useEffect(() => {
-    setReps(q.reps);
-  }, [q.id, q.reps]);
+    setReps(next.reps);
+  }, [q.id, next.reps, logged.length]);
 
   const log = (rir: Rir) => {
     update((s) => {
@@ -49,7 +51,10 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
     navigator.vibrate?.(30);
     const finishedExercise = logged.length + 1 >= q.sets;
     const lastOfAll = finishedExercise && quest.every((e) => e.id === q.id || (sets[e.id]?.length ?? 0) >= e.sets);
-    if (!lastOfAll) setRestUntil(Date.now() + REST_SECONDS * 1000);
+    if (!lastOfAll) {
+      const plan = restAfter(q.role, { reps, rir }, q.reps);
+      setRest({ ...plan, until: Date.now() + plan.seconds * 1000 });
+    }
     if (finishedExercise && !lastOfAll) {
       const next = quest.findIndex((e, i) => i !== index && (sets[e.id]?.length ?? 0) < e.sets);
       if (next !== -1) setIndex(next);
@@ -141,7 +146,10 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
                 <Plus />
               </button>
             </div>
-            <p className="mt-1 text-center text-xs text-slate-500">Target {q.reps}{unit}. Stop with two in the tank.</p>
+            <p className="mt-1 text-center text-xs text-slate-500">
+              Target {next.reps}
+              {unit}. {next.why ? <span className="text-sky-300">{next.why}.</span> : 'Stop with two in the tank.'}
+            </p>
 
             <p className="mt-6 text-center text-sm font-semibold text-slate-200">Done? How many {unit ? 'seconds' : 'reps'} were left in the tank?</p>
             <div className="mt-3 grid grid-cols-3 gap-2">
@@ -185,14 +193,14 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         )}
       </footer>
 
-      {restUntil && <Rest until={restUntil} next={exerciseDone ? null : `Set ${logged.length + 1} of ${q.name}`} onDone={() => setRestUntil(null)} />}
+      {rest && <Rest plan={rest} next={exerciseDone ? null : `Set ${logged.length + 1} of ${q.name}`} onDone={() => setRest(null)} />}
     </div>
   );
 }
 
-function Rest({ until, next, onDone }: { until: number; next: string | null; onDone: () => void }) {
+function Rest({ plan, next, onDone }: { plan: RestPlan & { until: number }; next: string | null; onDone: () => void }) {
   const [now, setNow] = useState(Date.now());
-  const left = Math.max(0, Math.ceil((until - now) / 1000));
+  const left = Math.max(0, Math.ceil((plan.until - now) / 1000));
 
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 250);
@@ -206,10 +214,11 @@ function Rest({ until, next, onDone }: { until: number; next: string | null; onD
     }
   }, [left, onDone]);
 
-  const pct = 1 - left / REST_SECONDS;
+  const pct = 1 - left / plan.seconds;
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ink-950/95 px-6 text-center" onClick={onDone}>
       <p className="font-pixel text-[10px] text-slate-400">Rest</p>
+      <p className="mt-2 text-xs text-sky-300">{plan.why}</p>
       <p className="mt-3 font-mono text-7xl font-bold text-slate-50">
         {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
       </p>

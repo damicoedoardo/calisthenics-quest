@@ -1,5 +1,6 @@
 import { PATHS, getPath, type PathId, type SkillNode } from './skills';
 import { classPath, equippedGear, type ClassId, type Gear } from './gear';
+import { planMode, progressTarget, shapeBlock, type PlanMode, type TargetChange } from './coach';
 import type { Look } from '@/sprites/engine/figure';
 
 export const XP_FULL_SESSION = 100;
@@ -11,7 +12,6 @@ export const XP_MAX_TEST = 200;
 export const XP_PER_LEVEL = 500;
 export const CLASS_BONUS = 0.1;
 export const WEEKLY_GOAL = 3;
-export const REST_SECONDS = 90;
 /** Days that must pass between two max tests for the test to give XP again. */
 export const TEST_COOLDOWN_DAYS = 21;
 /** A gap this long earns the return bonus. */
@@ -48,6 +48,8 @@ export interface Session {
   entries: SessionEntry[];
   /** Node ids beaten in this session. */
   unlocked: string[];
+  /** What the coach set for next time, by exercise. */
+  coach?: TargetChange[];
 }
 
 export interface MaxTest {
@@ -218,19 +220,42 @@ export interface QuestExercise {
   cue: string;
   unit: 'reps' | 'sec';
   sets: number;
+  /** Today's per-set target, shaped by the plan (easing in, light week). */
   reps: number;
+  /** The stored target that progression moves. */
+  base: number;
   node: SkillNode;
   /** Only the current node of a path can be beaten. */
   canUnlock: boolean;
 }
 
-function block(state: GameState, path: PathId, role: BlockRole): QuestExercise | null {
+export interface Plan {
+  mode: PlanMode;
+  /** Days since the last session before this one, or null on the first. */
+  gapDays: number | null;
+  /** Which week of training this is, counting only weeks with sessions. */
+  week: number;
+}
+
+/** How the coach shapes a session started at `at`. */
+export function planOf(state: GameState, at: Date): Plan {
+  const before = state.sessions.filter((s) => new Date(s.date) < at);
+  const last = before[before.length - 1];
+  const gapDays = last ? (at.getTime() - new Date(last.date).getTime()) / 86_400_000 : null;
+  const thisWeek = weekKey(at);
+  const week = new Set(before.map((s) => weekKey(new Date(s.date))).filter((k) => k !== thisWeek)).size + 1;
+  return { mode: planMode(gapDays, week), gapDays, week };
+}
+
+function block(state: GameState, path: PathId, role: BlockRole, mode: PlanMode): QuestExercise | null {
   const nodes = getPath(path).nodes;
   const at = state.progress[path];
   // Support work is the node below the current one: solid volume, no unlock.
   const index = role === 'support' ? Math.max(0, Math.min(at, nodes.length) - 1) : at;
   const node = nodes[index];
   if (!node) return null;
+  const base = repsFor(state, node);
+  const shaped = shapeBlock(node.sets, base, node.unit, mode);
   return {
     id: node.id,
     role,
@@ -238,21 +263,28 @@ function block(state: GameState, path: PathId, role: BlockRole): QuestExercise |
     name: node.name,
     cue: node.cue,
     unit: node.unit,
-    sets: node.sets,
-    reps: repsFor(state, node),
+    sets: shaped.sets,
+    reps: shaped.reps,
+    base,
     node,
     canUnlock: role !== 'support' && index === at,
   };
 }
 
-export function todaysQuest(state: GameState, checkin: Checkin = state.draft?.checkin ?? 'normal'): QuestExercise[] {
+/** A started session keeps the plan it started with. */
+function planTime(state: GameState, now?: Date): Date {
+  return state.draft ? new Date(state.draft.startedAt) : (now ?? new Date());
+}
+
+export function todaysQuest(state: GameState, checkin: Checkin = state.draft?.checkin ?? 'normal', now?: Date): QuestExercise[] {
+  const { mode } = planOf(state, planTime(state, now));
   const day = dayType(state);
   const main: PathId = day === 'A' ? 'push' : 'pull';
   const other: PathId = day === 'A' ? 'pull' : 'push';
   // A fully beaten path hands the lead to the other one.
-  const lead = block(state, main, 'main') ?? block(state, other, 'main');
+  const lead = block(state, main, 'main', mode) ?? block(state, other, 'main', mode);
   if (checkin === 'rough') return lead ? [{ ...lead, sets: Math.min(lead.sets, 3) }] : [];
-  const list = [lead, block(state, 'core', 'core'), block(state, other, 'support')].filter((b): b is QuestExercise => !!b);
+  const list = [lead, block(state, 'core', 'core', mode), block(state, other, 'support', mode)].filter((b): b is QuestExercise => !!b);
   return list.filter((b, i) => list.findIndex((o) => o.id === b.id) === i);
 }
 
@@ -272,12 +304,13 @@ export interface FinishResult {
 
 /**
  * Close the current draft as a session: award XP, beat nodes whose unlock
- * target was hit, and raise targets for exercises done cleanly.
+ * target was hit, and let the coach set each exercise's target for next time.
  */
 export function finishSession(state: GameState, now: Date, idGen: () => string = defaultId): FinishResult | null {
   const draft = state.draft;
   if (!draft) return null;
   const quest = todaysQuest(state, draft.checkin);
+  const { mode } = planOf(state, new Date(draft.startedAt));
   const entries: SessionEntry[] = quest
     .map((q) => ({ exerciseId: q.id, target: q.reps, sets: (draft.sets[q.id] ?? []).slice(0, q.sets) }))
     .filter((e) => e.sets.length > 0);
@@ -290,6 +323,7 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
   const progress = { ...state.progress };
   const reps = { ...state.reps };
   const unlocked: string[] = [];
+  const coach: TargetChange[] = [];
 
   for (const q of quest) {
     const entry = entries.find((e) => e.exerciseId === q.id);
@@ -301,12 +335,10 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
       progress[q.path] += 1;
       continue;
     }
-    // Every set done at target with reps to spare: ask for a little more next time.
-    const clean = entry.sets.length >= q.sets && entry.sets.every((s) => s.reps >= q.reps && s.rir !== '0-1');
-    if (clean) {
-      const step = q.unit === 'sec' ? 2 : 1;
-      reps[q.id] = Math.min(q.reps + step, node.unlockReps);
-    }
+    const previous = [...state.sessions].reverse().flatMap((s) => s.entries).find((e) => e.exerciseId === q.id);
+    const next = progressTarget(node, q.base, q.sets, entry.sets, previous, mode);
+    if (next.to !== q.base) reps[q.id] = next.to;
+    coach.push({ exerciseId: q.id, from: q.base, to: next.to, why: next.why });
   }
 
   const breakdown: XpLine[] = [];
@@ -328,7 +360,7 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
 
   const before = levelInfo(totalXp(state)).level;
   const gearBefore = gearOf(state);
-  const session: Session = { id: idGen(), date: now.toISOString(), kind, day: dayType(state), xp, breakdown, entries, unlocked };
+  const session: Session = { id: idGen(), date: now.toISOString(), kind, day: dayType(state), xp, breakdown, entries, unlocked, coach };
   const next: GameState = { ...state, progress, reps, sessions: [...state.sessions, session], draft: null };
   const gearAfter = gearOf(next);
   const newGear = (['weapon', 'armor', 'shield'] as const).filter((s) => gearAfter[s].tier > gearBefore[s].tier).map((s) => gearAfter[s]);
