@@ -13,23 +13,29 @@ describe('road', () => {
     expect(stopAt(5)?.blow).toEqual({ n: 2, of: 2 });
   });
 
-  it('lets you play the lit stops and one stop into the dark, never further', () => {
-    expect(roadState(at(0, 0)).next).toBeNull();
-    expect(roadState(at(1, 0)).next?.g).toBe(0);
-    expect(roadState(at(1, 1)).next?.g).toBe(1);
-    expect(roadState(at(1, 1)).nextInDark).toBe(true);
-    expect(roadState(at(1, 2)).next).toBeNull();
-    const r = roadState(at(2, 1));
-    expect(r.next?.g).toBe(1);
-    expect(r.nextInDark).toBe(false);
-    expect(statusOf(stopAt(2)!, r)).toBe('fog');
-    expect(statusOf(stopAt(2)!, roadState(at(2, 2)))).toBe('dark');
+  it('sends each workout to the next stop, and lets you scout it once you have trained', () => {
+    expect(roadState(at(0, 0)).next?.g).toBe(0);
+    expect(roadState(at(0, 0)).canScout).toBe(false);
+    const r = roadState(at(2, 2));
+    expect(r.next?.g).toBe(2);
+    expect(r.canScout).toBe(true);
+    expect(roadState({ ...at(2, 2), scouted: 2 }).canScout).toBe(false);
+    expect(statusOf(stopAt(1)!, r)).toBe('cleared');
+    expect(statusOf(stopAt(2)!, r)).toBe('next');
+    expect(statusOf(stopAt(3)!, r)).toBe('fog');
+  });
+
+  it('counts every past session as a won stop in saves from before the road', () => {
+    expect(roadState({ ...initialState(), sessions: sessions(4) }).cleared).toBe(4);
+    // Chapter 2's final blow (stop 14) needs a max test.
+    expect(roadState({ ...initialState(), sessions: sessions(17) }).cleared).toBe(14);
   });
 
   it('holds a final blow that needs a max test', () => {
     // Chapter 2 ends at road stop 15 and needs one test.
     expect(roadState(at(15, 14)).blockedByTest).toBe(true);
-    expect(roadState(at(15, 14)).next).toBeNull();
+    expect(roadState(at(15, 14)).next?.g).toBe(14);
+    expect(roadState(at(15, 14)).canScout).toBe(false);
   });
 
   it('grows Ember with every session and never shrinks it', () => {

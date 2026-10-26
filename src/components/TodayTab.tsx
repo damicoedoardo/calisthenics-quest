@@ -1,11 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Map as MapIcon, Play, X } from 'lucide-react';
-import { Ember, Enemy, Hollow } from './Characters';
+import { Map as MapIcon, Play, Shield, X } from 'lucide-react';
+import { Ember, Hollow } from './Characters';
+import { Foe } from './Battle';
+import { stopLabel } from './WorkoutFight';
 import {
   WEEKLY_GOAL,
   dayType,
+  gearOf,
   previewXp,
   sessionsThisWeek,
   todaysQuest,
@@ -14,8 +17,9 @@ import {
   type GameState,
 } from '@/lib/game';
 import { getPath } from '@/lib/skills';
-import { CHAPTERS, storyState } from '@/lib/story';
-import { roadState } from '@/lib/road';
+import { storyState } from '@/lib/story';
+import { chapterStops, patrolAt, roadState } from '@/lib/road';
+import { restDays, startFight } from '@/lib/fight';
 
 interface Props {
   state: GameState;
@@ -45,7 +49,6 @@ export function TodayTab({ state, onStart, onReplayOpening, onOpenMap }: Props) 
   const quest = todaysQuest(state, checkin);
   const story = storyState(state);
   const road = roadState(state);
-  const chapterStart = CHAPTERS.slice(0, story.index).reduce((a, c) => a + c.sessions, 0);
   const week = sessionsThisWeek(state, now);
   const streak = weekStreak(state, now);
   const day = dayType(state);
@@ -65,36 +68,8 @@ export function TodayTab({ state, onStart, onReplayOpening, onOpenMap }: Props) 
         </button>
       )}
 
-      {story.chapter ? (
-        <button onClick={onOpenMap} className="block w-full rounded-2xl bg-ink-800 p-4 text-left pixel-border active:scale-[.99]">
-          <p className="font-pixel text-[10px] text-slate-400">Chapter {story.chapter.n}</p>
-          <h2 className="mt-1 font-pixel text-sm leading-relaxed text-gold-300">{story.chapter.name}</h2>
-          <div className="mt-3 flex items-center gap-4">
-            <Enemy id={story.chapter.enemyId} size={64} />
-            <div className="min-w-0 flex-1">
-              <p className="text-sm text-slate-300">
-                <span className="font-semibold text-slate-100">{story.chapter.enemy}</span> waits at the end of the road
-              </p>
-              <div className="mt-1.5 flex gap-1">
-                {Array.from({ length: story.hearts }).map((_, i) => (
-                  <div
-                    key={i}
-                    className={`h-2.5 flex-1 rounded-sm ${i < story.hearts - story.heartsLeft ? 'bg-emerald-400' : i < road.lit - chapterStart ? 'bg-gold-400' : 'bg-ink-600'}`}
-                  />
-                ))}
-              </div>
-              <p className="mt-1.5 text-xs text-slate-400">
-                {story.awaitingTest
-                  ? 'Take your max test on the Hero tab for the final blow.'
-                  : road.next
-                    ? 'A lit stop is waiting. Open the map to fight.'
-                    : 'Train to light the next stop on the road.'}
-              </p>
-            </div>
-            <MapIcon size={18} className="shrink-0 text-slate-500" />
-          </div>
-        </button>
-      ) : (
+      {story.chapter && road.next ? (
+        <NextFight state={state} now={now} onOpenMap={onOpenMap} />      ) : (
         <section className="rounded-2xl bg-ink-800 p-4 text-center pixel-border">
           <p className="font-pixel text-xs text-gold-300">The road is yours</p>
           <p className="mt-2 text-sm text-slate-300">You reached the Summit. Keep training: your gear and skills keep growing.</p>
@@ -170,6 +145,58 @@ export function TodayTab({ state, onStart, onReplayOpening, onOpenMap }: Props) 
         {inProgress ? 'Continue quest' : 'Start quest'}
       </button>
     </div>
+  );
+}
+
+/** The fight your next workout walks into, with the chapter's road and Ember's shields. */
+function NextFight({ state, now, onOpenMap }: { state: GameState; now: Date; onOpenMap: () => void }) {
+  const road = roadState(state);
+  const story = storyState(state);
+  const stop = road.blockedByTest ? patrolAt(road.next!.g) : road.next!;
+  const stops = chapterStops(stop.chapter);
+  const fight = state.draft?.fight ?? startFight(state, now);
+  const shields = fight?.shields ?? 0;
+  const rest = restDays(state, now);
+  const scouted = state.scouted === stop.g && !road.blockedByTest;
+  const gear = gearOf(state);
+  return (
+    <button onClick={onOpenMap} className="block w-full rounded-2xl bg-ink-800 p-4 text-left pixel-border active:scale-[.99]">
+      <div className="flex items-baseline justify-between">
+        <p className="font-pixel text-[10px] text-slate-400">
+          Chapter {story.chapter?.n} · {story.chapter?.name}
+        </p>
+        <MapIcon size={16} className="shrink-0 text-slate-500" />
+      </div>
+      <div className="mt-3 flex items-center gap-4">
+        <Foe sprite={stop.sprite} size={72} gear={gear} classId={state.profile.classId} />
+        <div className="min-w-0 flex-1">
+          <p className="font-pixel text-[9px] text-red-300">{stopLabel(stop, road.blockedByTest)}</p>
+          <p className="mt-1 text-sm font-semibold text-slate-100">{stop.name}</p>
+          <p className="mt-1 text-xs text-slate-400">
+            {road.blockedByTest
+              ? 'The final blow waits for your max test (Hero tab). Until then, your workout fights a patrol.'
+              : 'Your workout is the fight: every set you log is a hit. Finish your sets to win.'}
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 flex gap-1" aria-label="The chapter's road">
+        {stops.map((s) => (
+          <div
+            key={s.g}
+            className={`h-2.5 flex-1 rounded-sm ${s.g < road.cleared ? 'bg-emerald-400' : s.g === stop.g ? 'bg-gold-400' : s.kind === 'boss' ? 'bg-red-900' : 'bg-ink-600'}`}
+          />
+        ))}
+      </div>
+      {shields > 0 && (
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-sky-300">
+          <Shield size={13} />
+          {shields} shield{shields === 1 ? '' : 's'} ready
+          <span className="text-slate-500">
+            ({[rest > 0 && (state.sessions.length ? `${rest} rest day${rest === 1 ? '' : 's'}` : 'fresh start'), scouted && 'scouted', shields > rest + (scouted ? 1 : 0) && 'Bonfire'].filter(Boolean).join(', ')})
+          </span>
+        </p>
+      )}
+    </button>
   );
 }
 

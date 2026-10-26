@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight, Minus, Plus, Undo2, X } from 'lucide-react';
 import { REST_SECONDS, todaysQuest, type GameState, type Rir } from '@/lib/game';
 import { rewardFor } from '@/lib/gear';
 import { getPath } from '@/lib/skills';
+import { answer, strike, undoBlow, type Grade } from '@/lib/fight';
+import { music } from '@/lib/music';
+import { FightStrip, FoeTurn } from './WorkoutFight';
 
 interface Props {
   state: GameState;
@@ -19,13 +22,17 @@ const RIR_BUTTONS: { rir: Rir; label: string; hint: string }[] = [
   { rir: '0-1', label: '0-1', hint: 'Very hard' },
 ];
 
-/** Full-screen set logger: one exercise at a time, one tap per set, rest timer between sets. */
+/**
+ * Full-screen set logger: one exercise at a time, one tap per set, rest timer between sets. The
+ * workout is also a fight (src/lib/fight.ts): each set hits the foe, and each rest opens with its answer.
+ */
 export function Workout({ state, update, onClose, onFinish }: Props) {
   const quest = todaysQuest(state);
   const sets = state.draft?.sets ?? {};
   const firstOpen = quest.findIndex((q) => (sets[q.id]?.length ?? 0) < q.sets);
   const [index, setIndex] = useState(firstOpen === -1 ? 0 : firstOpen);
   const [restUntil, setRestUntil] = useState<number | null>(null);
+  const [turnOver, setTurnOver] = useState(true);
   const q = quest[Math.min(index, quest.length - 1)];
   const logged = sets[q.id] ?? [];
   const [reps, setReps] = useState(q.reps);
@@ -35,6 +42,14 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   const path = getPath(q.path);
   const unit = q.unit === 'sec' ? 's' : '';
   const reward = q.canUnlock ? rewardFor(state.profile.classId, state.progress, q.path, state.progress[q.path]) : null;
+  const fight = state.draft?.fight;
+
+  const onAnswer = useCallback(
+    (grades: Grade[]) => update((s) => (s.draft?.fight ? { ...s, draft: { ...s.draft, fight: answer(s, s.draft.fight, grades) } } : s)),
+    [update],
+  );
+  const onSettled = useCallback(() => setTurnOver(true), []);
+  const endRest = useCallback(() => setRestUntil(null), []);
 
   useEffect(() => {
     setReps(q.reps);
@@ -44,12 +59,17 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
     update((s) => {
       const draft = s.draft ?? { startedAt: new Date().toISOString(), checkin: 'normal' as const, sets: {} };
       const list = [...(draft.sets[q.id] ?? []), { reps, rir }];
-      return { ...s, draft: { ...draft, sets: { ...draft.sets, [q.id]: list } } };
+      const fight = draft.fight && strike(s, draft.fight, q, reps);
+      return { ...s, draft: { ...draft, sets: { ...draft.sets, [q.id]: list }, fight } };
     });
     navigator.vibrate?.(30);
     const finishedExercise = logged.length + 1 >= q.sets;
     const lastOfAll = finishedExercise && quest.every((e) => e.id === q.id || (sets[e.id]?.length ?? 0) >= e.sets);
-    if (!lastOfAll) setRestUntil(Date.now() + REST_SECONDS * 1000);
+    if (lastOfAll && fight) music.sting('victory');
+    if (!lastOfAll) {
+      setTurnOver(!fight);
+      setRestUntil(Date.now() + REST_SECONDS * 1000);
+    }
     if (finishedExercise && !lastOfAll) {
       const next = quest.findIndex((e, i) => i !== index && (sets[e.id]?.length ?? 0) < e.sets);
       if (next !== -1) setIndex(next);
@@ -60,7 +80,8 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
     update((s) => {
       if (!s.draft) return s;
       const list = (s.draft.sets[q.id] ?? []).slice(0, -1);
-      return { ...s, draft: { ...s.draft, sets: { ...s.draft.sets, [q.id]: list } } };
+      const fight = s.draft.fight && undoBlow(s.draft.fight, q.id);
+      return { ...s, draft: { ...s.draft, sets: { ...s.draft.sets, [q.id]: list }, fight } };
     });
 
   return (
@@ -85,6 +106,8 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
       </header>
 
       <main className="mx-auto flex w-full max-w-md flex-1 flex-col overflow-y-auto px-4 pb-4">
+        {fight && <FightStrip state={state} fight={fight} quest={quest} finished={allDone} />}
+
         <div className="mt-2 flex items-center justify-between">
           <button onClick={() => setIndex(Math.max(0, index - 1))} disabled={index === 0} className="p-2 text-slate-400 disabled:opacity-20" aria-label="Previous exercise">
             <ChevronLeft />
@@ -119,7 +142,12 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
           ))}
         </div>
 
-        {exerciseDone ? (
+        {allDone && fight ? (
+          <div className="mt-8 flex flex-1 flex-col items-center justify-center text-center">
+            <p className="font-pixel text-xs text-gold-300">Your last set was the finishing blow</p>
+            <p className="mt-2 text-sm text-slate-400">Complete the quest to claim the stop.</p>
+          </div>
+        ) : exerciseDone ? (
           <div className="mt-8 flex flex-1 flex-col items-center justify-center text-center">
             <p className="font-pixel text-xs text-emerald-400">{q.name} done</p>
             <p className="mt-2 text-sm text-slate-400">{logged.reduce((a, s) => a + s.reps, 0)}{unit ? ' seconds' : ' reps'} total. Clean work.</p>
@@ -185,12 +213,25 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         )}
       </footer>
 
-      {restUntil && <Rest until={restUntil} next={exerciseDone ? null : `Set ${logged.length + 1} of ${q.name}`} onDone={() => setRestUntil(null)} />}
+      {restUntil && (
+        <Rest until={restUntil} next={exerciseDone ? null : `Set ${logged.length + 1} of ${q.name}`} locked={!turnOver} onDone={endRest}>
+          {fight && fight.blows.length > 0 && <FoeTurn state={state} fight={fight} onAnswer={onAnswer} onSettled={onSettled} />}
+        </Rest>
+      )}
     </div>
   );
 }
 
-function Rest({ until, next, onDone }: { until: number; next: string | null; onDone: () => void }) {
+interface RestProps {
+  until: number;
+  next: string | null;
+  /** The foe's turn is still playing: the rest can't end or be skipped yet. */
+  locked: boolean;
+  onDone: () => void;
+  children?: ReactNode;
+}
+
+function Rest({ until, next, locked, onDone, children }: RestProps) {
   const [now, setNow] = useState(Date.now());
   const left = Math.max(0, Math.ceil((until - now) / 1000));
 
@@ -200,25 +241,28 @@ function Rest({ until, next, onDone }: { until: number; next: string | null; onD
   }, []);
 
   useEffect(() => {
-    if (left === 0) {
+    if (left === 0 && !locked) {
       navigator.vibrate?.([80, 60, 80]);
       onDone();
     }
-  }, [left, onDone]);
+  }, [left, locked, onDone]);
 
   const pct = 1 - left / REST_SECONDS;
   return (
-    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ink-950/95 px-6 text-center" onClick={onDone}>
-      <p className="font-pixel text-[10px] text-slate-400">Rest</p>
-      <p className="mt-3 font-mono text-7xl font-bold text-slate-50">
+    <div className={`fixed inset-0 z-50 flex flex-col items-center justify-center px-6 text-center ${children ? 'bg-ink-950' : 'bg-ink-950/95'}`}>
+      {children}
+      <p className={`font-pixel text-[10px] text-slate-400 ${children ? 'mt-4' : ''}`}>Rest</p>
+      <p className={`mt-3 font-mono font-bold text-slate-50 ${children ? 'text-5xl' : 'text-7xl'}`}>
         {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
       </p>
-      <div className="mt-5 h-3 w-56 overflow-hidden rounded-sm bg-ink-700">
+      <div className="mt-4 h-3 w-56 overflow-hidden rounded-sm bg-ink-700">
         <div className="h-full bg-gold-400 transition-all" style={{ width: `${pct * 100}%` }} />
       </div>
-      <p className="mt-5 text-sm text-slate-400">{next ? `Next: ${next}` : 'Next exercise is ready.'}</p>
+      <p className="mt-4 text-sm text-slate-400">{next ? `Next: ${next}` : 'Next exercise is ready.'}</p>
       <p className="mt-1 text-xs text-slate-500">Breathe. Shake out your arms.</p>
-      <button className="mt-8 rounded-xl bg-ink-800 px-6 py-3 text-sm font-semibold text-slate-200">Skip rest</button>
+      <button onClick={onDone} disabled={locked} className="mt-6 rounded-xl bg-ink-800 px-6 py-3 text-sm font-semibold text-slate-200 disabled:opacity-30">
+        Skip rest
+      </button>
     </div>
   );
 }

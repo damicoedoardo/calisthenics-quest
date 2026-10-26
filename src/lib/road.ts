@@ -1,12 +1,12 @@
 import { CHAPTERS, clearedOf } from './story';
 import { gearOf, levelInfo, totalXp, type GameState } from './game';
 
-/* The road through the Fog. Training lights it, playing walks it.
-   - Every real session lights one more stop. You can only play lit stops, plus one stop
-     "in the dark" just past the light, where enemies are much stronger (the skill reward).
-   - Each stop is one fight. Win it to clear it. Losing costs nothing.
+/* The road through the Fog. Every workout is a fight at the next stop (src/lib/fight.ts):
+   - Finishing the workout wins the stop. How well you fight (guards, falls) decides its stars.
    - Every third stop is the chapter boss: one blow per week. The last stop of a chapter is the
-     final blow, and beating it ends the chapter.
+     final blow, and beating it ends the chapter. A final blow can wait for a max test.
+   - Between workouts you can scout the next stop "in the dark", a harder skill fight
+     (src/components/Battle.tsx). Winning it gives you an extra shield when you meet it for real.
    The road is one line across all chapters: chapter i owns CHAPTERS[i].sessions stops. */
 
 export type StopKind = 'guardian' | 'fight' | 'elite' | 'boss';
@@ -47,11 +47,11 @@ export interface EmberStage {
 
 /** Ember grows with every session, forever. */
 export const EMBER_STAGES: EmberStage[] = [
-  { name: 'Spark', at: 0, perk: 'Heals you once per fight.' },
+  { name: 'Spark', at: 0, perk: 'Helps you up when you fall.' },
   { name: 'Candle', at: 6, perk: 'Wider guard timing.' },
-  { name: 'Torch', at: 15, perk: 'Joins the fight: one Ember strike per battle.' },
+  { name: 'Torch', at: 15, perk: 'Joins the fight: Ember strikes with you.' },
   { name: 'Bonfire', at: 30, perk: 'You start every fight with a shield.' },
-  { name: 'Beacon', at: 50, perk: 'The dark past the light is half as dangerous.' },
+  { name: 'Beacon', at: 50, perk: 'The dark is half as dangerous when you scout.' },
 ];
 
 export function emberStage(sessions: number) {
@@ -159,41 +159,53 @@ function build(g: number, chapter: number, i: number, kind: StopKind, name: stri
   return { g, chapter, i, kind, name, sprite, hp, moves, line };
 }
 
+/** What you fight while a final blow waits for its max test: a wisp that doesn't move the road. */
+export function patrolAt(g: number): Stop {
+  const stop = stopAt(g)!;
+  return {
+    ...build(g, stop.chapter, stop.i, 'fight', 'Fog Patrol', 'wisp', '"Not yet. Show me how strong you are first."'),
+    hp: stop.hp,
+  };
+}
+
 export function chapterStops(chapter: number): Stop[] {
   const start = chapterStart(chapter);
   return Array.from({ length: CHAPTERS[chapter].sessions }, (_, i) => stopAt(start + i)!);
 }
 
-export type StopStatus = 'cleared' | 'next' | 'lit' | 'dark' | 'fog';
+export type StopStatus = 'cleared' | 'next' | 'fog';
 
 export interface RoadState {
-  /** Stops lit by real sessions. */
-  lit: number;
-  /** Stops cleared by playing. */
+  /** Stops won so far. */
   cleared: number;
-  /** Next stop to play, or null when the road is done or a max test blocks it. */
+  /** The stop your next workout fights, or null once the whole road is won. */
   next: Stop | null;
-  nextInDark: boolean;
+  /** The next stop is a final blow that waits for the chapter's max test. */
   blockedByTest: boolean;
+  /** You can scout the next stop in the dark (once per stop, and not before your first workout). */
+  canScout: boolean;
 }
 
 export function roadState(state: GameState): RoadState {
-  const lit = state.sessions.length;
   const cleared = clearedOf(state);
-  const candidate = stopAt(cleared);
+  const next = stopAt(cleared);
   // A chapter that needs a max test holds its final blow until the test is logged.
-  const blockedByTest =
-    !!candidate && candidate.i === CHAPTERS[candidate.chapter].sessions - 1 && state.tests.length < CHAPTERS[candidate.chapter].tests;
-  // The very first stop always needs one real session: no sneaking into the dark before you start.
-  const playable = !!candidate && !blockedByTest && cleared <= lit && lit > 0;
-  return { lit, cleared, next: playable ? candidate : null, nextInDark: playable && cleared === lit, blockedByTest };
+  const blockedByTest = !!next && next.i === CHAPTERS[next.chapter].sessions - 1 && state.tests.length < CHAPTERS[next.chapter].tests;
+  const canScout = !!next && !blockedByTest && state.sessions.length > 0 && state.scouted !== next.g;
+  return { cleared, next, blockedByTest, canScout };
 }
 
 export function statusOf(stop: Stop, road: RoadState): StopStatus {
   if (stop.g < road.cleared) return 'cleared';
-  if (road.next && stop.g === road.next.g) return road.nextInDark ? 'dark' : 'next';
-  if (stop.g < road.lit) return 'lit';
+  if (road.next && stop.g === road.next.g) return 'next';
   return 'fog';
+}
+
+/** Best stars won at each stop, from the workouts that fought there. */
+export function starsByStop(state: GameState): Map<number, number> {
+  const best = new Map<number, number>();
+  for (const s of state.sessions) if (s.fight && !s.fight.patrol) best.set(s.fight.g, Math.max(best.get(s.fight.g) ?? 0, s.fight.stars));
+  return best;
 }
 
 // ---------- the fight's numbers ----------
@@ -225,7 +237,7 @@ export function fighterOf(state: GameState): Fighter {
   };
 }
 
-/** A stop as you meet it: in the dark it hits harder and lasts longer. */
+/** A stop as you scout it: in the dark it hits harder and lasts longer. */
 export function foeFor(stop: Stop, dark: boolean, penalty: number) {
   const m = dark ? 1 + penalty : 1;
   return { hp: Math.round(stop.hp * m), moves: stop.moves.map((mv) => ({ ...mv, dmg: Math.round(mv.dmg * m) })) };

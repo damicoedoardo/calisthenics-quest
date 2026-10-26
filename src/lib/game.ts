@@ -1,6 +1,7 @@
 import { PATHS, getPath, type PathId, type SkillNode } from './skills';
 import { classPath, equippedGear, type ClassId, type Gear } from './gear';
 import type { Look } from '@/sprites/engine/figure';
+import type { FightResult, WorkoutFight } from './fight';
 
 export const XP_FULL_SESSION = 100;
 export const XP_MINI_SESSION = 30;
@@ -48,6 +49,8 @@ export interface Session {
   entries: SessionEntry[];
   /** Node ids beaten in this session. */
   unlocked: string[];
+  /** The road stop this workout fought, and the stars it won. Missing in older saves. */
+  fight?: FightResult;
 }
 
 export interface MaxTest {
@@ -64,6 +67,8 @@ export interface Draft {
   checkin: Checkin;
   /** Logged sets by exercise id. */
   sets: Record<string, SetLog[]>;
+  /** The fight this workout is having (src/lib/fight.ts). */
+  fight?: WorkoutFight;
 }
 
 export interface Letter {
@@ -95,8 +100,10 @@ export interface GameState {
   draft: Draft | null;
   /** Story scenes already played. */
   seenScenes: string[];
-  /** Stops cleared on the road through the Fog (src/lib/road.ts). Missing in older saves. */
+  /** Stops won on the road through the Fog (src/lib/road.ts). Missing in older saves. */
   road?: number;
+  /** The road stop you last scouted in the dark: it gives one extra shield when you fight it. */
+  scouted?: number;
 }
 
 export function initialState(): GameState {

@@ -39,26 +39,30 @@ export interface StoryState {
   chapter: Chapter | null;
   hearts: number;
   heartsLeft: number;
-  /** All sessions done, but the chapter's max test is still missing. */
+  /** Only the final blow is left, and it waits for the chapter's max test. */
   awaitingTest: boolean;
   finished: boolean;
 }
 
-/** Stops cleared on the road. Saves from before the road count chapters finished under the old rules. */
+/**
+ * Stops won on the road. Every finished workout wins one, except a chapter's final blow, which
+ * waits for that chapter's max test. Saves from before the road get their past sessions counted.
+ */
 export function clearedOf(state: GameState): number {
   if (state.road !== undefined) return state.road;
   let start = 0;
   for (const ch of CHAPTERS) {
     const end = start + ch.sessions;
-    if (state.sessions.length >= end && state.tests.length >= ch.tests) start = end;
-    else break;
+    if (state.sessions.length < end) return state.sessions.length;
+    if (state.tests.length < ch.tests) return end - 1;
+    start = end;
   }
   return start;
 }
 
 /**
- * Chapters end when you beat their boss on the road. Sessions light the road (one stop each),
- * playing clears it, so a chapter needs both training and a win. "Hearts" are the chapter's stops.
+ * Chapters end when you beat their boss on the road. Each workout is a fight at the next stop
+ * (src/lib/fight.ts), so a chapter takes as many workouts as it has stops. "Hearts" are the stops.
  */
 export function storyState(state: GameState): StoryState {
   const cleared = clearedOf(state);
@@ -76,7 +80,7 @@ export function storyState(state: GameState): StoryState {
       chapter: ch,
       hearts: ch.sessions,
       heartsLeft: Math.max(0, end - cleared),
-      awaitingTest: cleared >= end - 1 && state.sessions.length >= end && tests < ch.tests,
+      awaitingTest: cleared >= end - 1 && tests < ch.tests,
       finished: false,
     };
   }

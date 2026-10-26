@@ -18,7 +18,7 @@ export function Foe({ sprite, size, gear, classId }: { sprite: FoeSprite; size: 
 }
 
 type Grade = 'perfect' | 'good' | 'miss';
-type Ring = { who: 'foe' | 'hero'; ms: number; window: number; key: number };
+export type Ring = { who: 'foe' | 'hero'; ms: number; window: number; key: number };
 type Phase = 'intro' | 'player' | 'ring' | 'won' | 'lost';
 
 const STRIKE_MS = 1100;
@@ -26,7 +26,7 @@ const STRIKE_WINDOW = 160;
 const GUARD_MS = 900;
 const BIG_MS = 720;
 /** The ring keeps closing this long past the target before it counts as a miss. */
-const OVERSHOOT = 0.35;
+export const OVERSHOOT = 0.35;
 
 function intentText(m: Move): string {
   if (m.kind === 'attack') return `Attack ${m.dmg}`;
@@ -44,7 +44,9 @@ interface Props {
 }
 
 /**
- * One fight on the road. Your numbers come from training; winning comes from timing.
+ * Scouting a stop in the dark, between workouts: a full skill fight against the stop your next
+ * workout will meet, made stronger by the dark. Win and Ember learns its moves (one extra shield in
+ * the real fight). Your numbers come from training; winning comes from timing.
  * Your turn: Strike, then tap when the gold ring meets the target (Perfect ×1.5, Good ×1, Miss ×0.5).
  * Their turn: tap when the red ring meets you to guard (Perfect blocks it all, Good halves it).
  */
@@ -201,7 +203,7 @@ export function Battle({ state, stop, dark, onWin, onClose }: Props) {
       <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-6 pt-[max(1rem,env(safe-area-inset-top))]">
         <div className="flex items-center justify-between">
           <p className="font-pixel text-[10px] text-slate-400">
-            {dark ? 'IN THE DARK' : boss ? (finalBlow ? 'FINAL BLOW' : `BOSS · BLOW ${stop.blow?.n}/${stop.blow?.of}`) : stop.kind === 'elite' ? 'ELITE' : 'ROAD FIGHT'}
+            {dark ? 'SCOUTING IN THE DARK' : boss ? (finalBlow ? 'FINAL BLOW' : `BOSS · BLOW ${stop.blow?.n}/${stop.blow?.of}`) : stop.kind === 'elite' ? 'ELITE' : 'ROAD FIGHT'}
           </p>
           {phase !== 'ring' && (
             <button onClick={onClose} className="px-2 py-1 text-xs text-slate-500">
@@ -278,7 +280,7 @@ export function Battle({ state, stop, dark, onWin, onClose }: Props) {
                 <b className="text-red-300">Their turn:</b> tap when the red ring meets you to block.
               </p>
               <p className="mt-1 text-slate-400">
-                Your damage, HP and guard come from your training. {dark ? 'In the dark, enemies are much stronger.' : ''}
+                Your damage, HP and guard come from your training. {dark ? 'In the dark it is much stronger than in your workout. Win and you get an extra shield for the real fight.' : ''}
               </p>
             </div>
             <button onClick={() => setPhase('player')} className="w-full rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309]">
@@ -321,16 +323,16 @@ export function Battle({ state, stop, dark, onWin, onClose }: Props) {
           <div className="mt-2 space-y-3 text-center">
             <p className="flex items-center justify-center gap-2 font-pixel text-xs text-gold-300">
               <Sparkles size={16} />
-              {boss ? (finalBlow ? `${stop.name} falls!` : 'A clean blow!') : 'Stop cleared'}
+              {dark ? 'Scouted!' : boss ? (finalBlow ? `${stop.name} falls!` : 'A clean blow!') : 'Stop cleared'}
             </p>
             <p className="text-sm text-slate-300">
-              {boss
-                ? finalBlow
-                  ? 'The chapter is yours. The Fog pulls back from the whole valley.'
-                  : `${stop.name} staggers and flees up the road. Train to light the way to the next blow.`
-                : dark
-                  ? 'You pushed into the dark and won. That one was all skill.'
-                  : 'The road ahead waits for your next session.'}
+              {dark
+                ? `You beat ${stop.name} in the dark, and Ember learned its moves. You get one extra shield when you fight it in your next workout.`
+                : boss
+                  ? finalBlow
+                    ? 'The chapter is yours. The Fog pulls back from the whole valley.'
+                    : `${stop.name} staggers and flees up the road.`
+                  : 'The road ahead waits for your next workout.'}
             </p>
             <button onClick={onWin} className="w-full rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309]">
               Back to the map
@@ -368,7 +370,7 @@ export function Battle({ state, stop, dark, onWin, onClose }: Props) {
 }
 
 /** A ring closing on its target circle. It meets the circle exactly at ring.ms. */
-function RingView({ ring, color }: { ring: Ring; color: string }) {
+export function RingView({ ring, color }: { ring: Ring; color: string }) {
   return (
     <div className="pointer-events-none absolute inset-0 grid place-items-center" aria-hidden>
       <div className="absolute h-20 w-20 rounded-full border-2 border-white/50" />

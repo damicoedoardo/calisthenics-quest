@@ -13,8 +13,9 @@ engine/grid.ts        pixel grids and drawing tools (painter, outline, shading, 
 engine/figure.ts      the base 64x64 humanoid: body, face, hair, arms, layer order
 engine/manga.ts       the manga head (the hero's default): face as text art, hair as shapes
 parts/weapons.ts      sword, stick, staff, wand, bow
-characters/*.ts       one file per character: hero, wanderer, mira, ember, book, and the chapter
-                      enemies tomorrow, mirror, plateau, summit (pixel.ts: text-row placeholders)
+characters/*.ts       one file per character: hero, wanderer, mira, ember, book, the chapter
+                      enemies tomorrow, mirror, plateau, summit, and the road's wisp and weight
+                      (pixel.ts: text-row placeholders)
 ```
 
 ## How to change things
@@ -33,7 +34,7 @@ characters/*.ts       one file per character: hero, wanderer, mira, ember, book,
 | Change the classic face | `EYE_PATTERN` and `FACE` in `engine/figure.ts` |
 | Redraw a weapon | `parts/weapons.ts` |
 | Change armor tiers, capes, shields | `heroSpec` layers in `characters/hero.ts` |
-| Redraw Mira, Ember, the Book or a chapter enemy | its file in `characters/` (`mira.ts`, `ember.ts`, `book.ts`, `tomorrow.ts`, `mirror.ts`, `plateau.ts`, `summit.ts`) |
+| Redraw Mira, Ember, the Book or an enemy | its file in `characters/` (`mira.ts`, `ember.ts`, `book.ts`, `tomorrow.ts`, `mirror.ts`, `plateau.ts`, `summit.ts`, `wisp.ts`, `weight.ts`) |
 | Change the looks a player starts with (boy, girl) | `STARTER_LOOKS` in `characters/hero.ts`; the editor's options are in `src/components/LookEditor.tsx` |
 | Add a character | a file in `characters/`, then an entry in `SPRITES` (`registry.ts`) |
 | Use art from Aseprite or PixelLab | see below |
