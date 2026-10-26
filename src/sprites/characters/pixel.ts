@@ -109,6 +109,34 @@ const SUMMIT_ROWS = [
   'MMMMMMMMMMMMMMM.',
 ];
 
+const WISP_ROWS = [
+  '.....aa.....',
+  '....aAAa....',
+  '...aAAAAa...',
+  '..aAAAAAAa..',
+  '..AAkAAkAA..',
+  '.aAAkAAkAAa.',
+  '.AAAAAAAAAA.',
+  '.AAAAmmAAAA.',
+  '..AAAAAAAA..',
+  '..aA.AA.Aa..',
+  '...a..a..a..',
+];
+
+const WEIGHT_ROWS = [
+  '....SSSSSS....',
+  '..SSSSSSSSSS..',
+  '.SSsSSSSSSSSS.',
+  '.SSSSSSSSSSsS.',
+  'SSSkkSSSSkkSSS',
+  'SSSSkSSSSkSSSS',
+  'SSSSSSSSSSSSSS',
+  'SSsSSSmmmSSSSS',
+  'SSSSSmSSSmSSsS',
+  '.SSSSSSSSSSSS.',
+  '..ssssssssss..',
+];
+
 export const MIRA: PixelArt = {
   rows: MIRA_ROWS,
   palette: { R: '#b91c1c', S: '#e7c9a9', E: '#111', m: '#9f1239', L: '#78350f', A: '#a16207', P: '#1f2937', B: '#0f172a' },
@@ -118,3 +146,5 @@ export const SLIME: PixelArt = { rows: SLIME_ROWS, palette: { G: '#64748b', g: '
 export const MIRROR: PixelArt = { rows: MIRROR_ROWS, palette: { D: '#a16207', g: '#1e293b', G: '#334155', w: '#e2e8f0', r: '#ef4444' } };
 export const GOLEM: PixelArt = { rows: GOLEM_ROWS, palette: { S: '#78716c', s: '#57534e', r: '#f59e0b' } };
 export const SUMMIT: PixelArt = { rows: SUMMIT_ROWS, palette: { F: '#fbbf24', W: '#f8fafc', M: '#475569' } };
+export const WISP: PixelArt = { rows: WISP_ROWS, palette: { A: '#9ca3af', a: '#6b7280', k: '#f97316', m: '#1f2937' } };
+export const WEIGHT: PixelArt = { rows: WEIGHT_ROWS, palette: { S: '#57534e', s: '#44403c', k: '#e7e5e4', m: '#1c1917' } };
