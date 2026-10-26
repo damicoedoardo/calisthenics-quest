@@ -10,6 +10,8 @@ import { DEFAULT_LOOK, type HeroVariant } from '@/sprites/characters/hero';
 import { HAIRSTYLES, type Look } from '@/sprites/engine/figure';
 import { HAIR, SKIN, type HairColor, type SkinTone } from '@/sprites/palette';
 import { SPRITES, clipFor, labelFor, type SpriteId } from '@/sprites/registry';
+import { AvatarEditor } from '@/components/AvatarEditor';
+import { DEFAULT_AVATAR, PRESETS, type Avatar, type PresetId } from '@/sprites/avatar/avatar';
 
 /* Sprite Lab: every sprite and animation in one place, to check art changes on a phone.
    Not linked from the app; open /lab. */
@@ -23,6 +25,29 @@ const CLASSES: { id: ClassId | undefined; label: string }[] = [
 ];
 const VARIANTS: HeroVariant[] = ['normal', 'echo', 'best', 'hollow'];
 const SIZES = [64, 128, 192, 256];
+/** The character creator, plus every preset side by side. */
+function Creator() {
+  const [avatar, setAvatar] = useState<Avatar>(DEFAULT_AVATAR);
+  return (
+    <Panel title="Character creator">
+      <p className="mb-3 text-xs text-slate-400">Manga hero with mix-and-match parts. The art lives in src/sprites/avatar.</p>
+      <AvatarEditor avatar={avatar} onChange={setAvatar} />
+      <p className="mb-2 mt-5 font-pixel text-[9px] text-slate-500">ALL PRESETS</p>
+      <div className="grid grid-cols-3 gap-2">
+        {(Object.keys(PRESETS) as PresetId[]).map((id) => (
+          <button key={id} onClick={() => setAvatar(PRESETS[id])} className="flex flex-col items-center rounded-xl bg-ink-950 p-1">
+            <Sprite id="avatar" opts={{ avatar: PRESETS[id] }} size={96} />
+            <span className="text-[10px] text-slate-400">{id}</span>
+          </button>
+        ))}
+      </div>
+      <details className="mt-4">
+        <summary className="cursor-pointer text-xs text-slate-500">This look as code</summary>
+        <pre className="mt-2 overflow-x-auto rounded-lg bg-ink-950 p-2 text-[10px] text-slate-400">{JSON.stringify(avatar)}</pre>
+      </details>
+    </Panel>
+  );
+}
 
 function Chips<T>({ label, options, value, onChange, name = String }: { label: string; options: T[]; value: T; onChange: (v: T) => void; name?: (v: T) => string }) {
   return (
@@ -86,6 +111,8 @@ export default function Lab() {
           Story Lab
         </Link>
       </header>
+
+      <Creator />
 
       <Panel title="Your hero">
         <div className={`flex items-end justify-center rounded-xl py-4 ${stage}`} style={{ minHeight: 280 }}>

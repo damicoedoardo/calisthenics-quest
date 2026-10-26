@@ -13,6 +13,8 @@ engine/grid.ts        pixel grids and drawing tools (painter, outline, shading, 
 engine/figure.ts      the base 64x64 humanoid: body, face, hair, arms, layer order
 engine/manga.ts       the manga head (the hero's default): face as text art, hair as shapes
 parts/weapons.ts      sword, stick, staff, wand, bow
+avatar/               the character creator: the manga body plus mix-and-match parts
+                      (hair, eyes, brows, mouth, tops, bottoms, shoes, extras) and colors
 characters/*.ts       one file per character: hero, wanderer, mira, ember, book, and the chapter
                       enemies tomorrow, mirror, plateau, summit, and the Fog's
                       wisp (pixel.ts: text-row placeholders)
@@ -37,6 +39,9 @@ characters/*.ts       one file per character: hero, wanderer, mira, ember, book,
 | Redraw Mira, Ember, the Book or a chapter enemy | its file in `characters/` (`mira.ts`, `ember.ts`, `book.ts`, `tomorrow.ts`, `mirror.ts`, `plateau.ts`, `summit.ts`) |
 | Change the looks a player starts with (boy, girl) | `STARTER_LOOKS` in `characters/hero.ts`; the editor's options are in `src/components/LookEditor.tsx` |
 | Add a character | a file in `characters/`, then an entry in `SPRITES` (`registry.ts`) |
+| Add a hairstyle, eyes, mouth or piece of clothing to the creator | a new entry in its table (`avatar/hair.ts`, `avatar/face.ts`, `avatar/clothes.ts`). It shows up in /lab on its own |
+| Add a color (skin, hair, eyes, cloth) | a line in `avatar/colors.ts` |
+| Add a creator preset | `PRESETS` in `avatar/avatar.ts` |
 | Use art from Aseprite or PixelLab | see below |
 
 Sprites are drawn on a 64x64 grid. The body and hair are designed at 32x32 ("body pixels") and
@@ -90,3 +95,15 @@ if gear needs to recolor it, because a PNG can't follow gear tiers on its own.
 `sprites.test.ts` draws every sprite and action and keeps a fingerprint of the pixels. After an art
 change you meant to make, run `pnpm test -- -u` to accept the new fingerprints. If you didn't mean to
 change any art, a failing fingerprint means something broke.
+
+## The character creator (avatar/)
+
+The avatar is a paper doll. `body.ts` is one hand-drawn body; every option is a `Part` that paints
+one or more layers over it (`types.ts` lists the layers, back to front). Art is text rows, 64
+characters wide, one per pixel of the 64x64 frame, starting at row `y`. Letters are palette
+slots, so the same drawing works in any color: `a b c` hair, `d e f` skin, `1 2 3` the slot's
+cloth color, and the rest listed in `types.ts`. Each layer gets its outline automatically, so
+draw fills and inner lines only.
+
+A slot's options, the color pickers and the presets are all read from tables (`SLOTS`, `COLORS`,
+`PRESETS` in `avatar.ts`), so the Lab's creator needs no change when you add one.

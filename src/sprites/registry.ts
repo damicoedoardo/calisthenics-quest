@@ -10,6 +10,7 @@ import { drawMirror } from './characters/mirror';
 import { drawPixelArt, type PixelArt } from './characters/pixel';
 import { drawPlateau } from './characters/plateau';
 import { drawSummit } from './characters/summit';
+import { DEFAULT_AVATAR, drawAvatar, type Avatar } from './avatar/avatar';
 import { drawTomorrow } from './characters/tomorrow';
 import { drawWanderer } from './characters/wanderer';
 import { drawKid, drawLia, drawSol } from './characters/villagers';
@@ -106,6 +107,13 @@ export const SPRITES = {
   golem: creature('The Plateau', drawPlateau, 'lunge'),
   summit: creature('The Summit', drawSummit),
   wisp: creature('Ash Wisp', drawWisp, 'lunge'),
+  avatar: drawn<{ avatar: Avatar }>({
+    label: () => 'Hero (character creator)',
+    defaults: { avatar: DEFAULT_AVATAR },
+    clips: () => ({ idle: 'idle' }),
+    draw: (o, frame) => drawAvatar(o.avatar, frame),
+    look: () => ({ shadow: true }),
+  }),
 };
 
 export type SpriteId = keyof typeof SPRITES;

@@ -2,6 +2,8 @@
 
 exports[`sprite registry > art fingerprints 1`] = `
 {
+  "avatar attack": "06e55be8b71c",
+  "avatar idle": "06e55be8b71c",
   "book attack": "a9f159d5eab8",
   "book idle": "a9f159d5eab8",
   "ember attack": "d4540b77ed81",
