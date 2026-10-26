@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Dialogue } from './Dialogue';
+import { Ember } from './Characters';
 import { PlaceBackdrop } from './Place';
 import { useMusic } from './Sound';
 import { gearOf, type GameState } from '@/lib/game';
@@ -54,7 +55,7 @@ export function ScenePlayer({ scene, state, onDone }: Props) {
   };
 
   if (phase === 'ask' && scene.ask && scene.ask.kind !== 'class')
-    return <AskCard ask={scene.ask} place={place} music={music} onAnswer={answered} />;
+    return <AskCard ask={scene.ask} place={place} music={music} stage={stage} onAnswer={answered} />;
 
   return (
     <Dialogue
@@ -79,11 +80,13 @@ function AskCard({
   ask,
   place,
   music,
+  stage,
   onAnswer,
 }: {
   ask: Exclude<Ask, { kind: 'class' }>;
   place: ReturnType<typeof scenePlace>;
   music: NonNullable<Scene['music']>;
+  stage: ReturnType<typeof flameStage>['id'];
   onAnswer: (r: SceneResult, after: Line[] | undefined) => void;
 }) {
   const [text, setText] = useState('');
@@ -94,6 +97,12 @@ function AskCard({
       <PlaceBackdrop id={place} className="absolute inset-0 opacity-40" />
       <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/80 to-ink-950/40" />
       <div className="safe-top safe-bottom relative mx-auto flex w-full max-w-md flex-1 flex-col justify-end px-4 pb-8">
+        {/* You name a friend you can see. */}
+        {ask.kind === 'name' && (
+          <div className="mb-6 flex animate-pop justify-center">
+            <Ember size={150} stage={stage} mood="soft" />
+          </div>
+        )}
         <div className="animate-fadein rounded-2xl bg-ink-800/95 p-5 pixel-border">
           <p className="text-center font-pixel text-[11px] leading-relaxed text-gold-300">{ask.kind === 'name' ? ask.prompt : `"${ask.prompt}"`}</p>
 

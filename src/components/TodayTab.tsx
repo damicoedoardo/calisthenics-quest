@@ -170,7 +170,8 @@ export function TodayTab({ state, update, onStart, onReplayOpening }: Props) {
 /** Your flame: its name, how grown it is, its mood today and what it has to say. */
 function FlameCard({ state, now, week, streak }: { state: GameState; now: Date; week: number; streak: number }) {
   const stage = flameStage(state.sessions.length);
-  const name = storyWords(state).flame;
+  // Until it has a name (after the first workout) it's just a spark.
+  const name = state.profile.flame;
   return (
     <section className="rounded-2xl bg-ink-800 p-4">
       <div className="flex items-center gap-3">
@@ -181,7 +182,13 @@ function FlameCard({ state, now, week, streak }: { state: GameState; now: Date; 
         </div>
         <div className="min-w-0 flex-1">
           <p className="font-pixel text-[10px] text-orange-300">
-            {name} <span className="text-slate-500">· {stage.name}</span>
+            {name ? (
+              <>
+                {name} <span className="text-slate-500">· {stage.name}</span>
+              </>
+            ) : (
+              'A spark'
+            )}
           </p>
           <p className="mt-1.5 text-sm leading-snug text-slate-200">&ldquo;{flameLine(state, now)}&rdquo;</p>
         </div>

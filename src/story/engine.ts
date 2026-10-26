@@ -21,20 +21,32 @@ export interface StoryState {
   finished: boolean;
 }
 
+/**
+ * Workouts a chapter waits for its max test before it moves on anyway. The test is worth taking,
+ * but someone who never takes one shouldn't be stuck in the same month forever.
+ */
+export const TEST_GRACE = 3;
+
 /** Workouts done before chapter `n` starts. */
 export function chapterStart(n: number): number {
   return CHAPTERS.slice(0, n - 1).reduce((a, c) => a + c.workouts, 0);
 }
 
-/** Chapters move with workouts, not strength: every workout takes one heart off the enemy. */
+/**
+ * Chapters move with workouts, not strength: every workout takes one heart off the enemy. A chapter
+ * that ends with a max test waits for one taken during the chapter (a first test on day one doesn't
+ * count for month two), for at most TEST_GRACE more workouts.
+ */
 export function storyState(state: GameState): StoryState {
   const done = state.sessions.length;
-  const tests = state.tests.length;
   let start = 0;
   for (let i = 0; i < CHAPTERS.length; i++) {
     const ch = CHAPTERS[i];
     const end = start + ch.workouts;
-    if (done >= end && tests >= ch.tests) {
+    const wantsTest = ch.tests > (CHAPTERS[i - 1]?.tests ?? 0);
+    const began = start > 0 ? state.sessions[start - 1]?.date : undefined;
+    const tested = !wantsTest || state.tests.some((t) => !began || t.date >= began);
+    if (done >= end && (tested || done >= end + TEST_GRACE)) {
       start = end;
       continue;
     }
@@ -43,7 +55,7 @@ export function storyState(state: GameState): StoryState {
       chapter: ch,
       hearts: ch.workouts,
       heartsLeft: Math.max(0, end - done),
-      awaitingTest: done >= end && tests < ch.tests,
+      awaitingTest: done >= end,
       finished: false,
     };
   }

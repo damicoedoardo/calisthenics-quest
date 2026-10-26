@@ -174,8 +174,10 @@ describe('story', () => {
   });
 
   it('makes the Hollow the enemy of chapter 5', () => {
-    const test = { id: 't1', date: monday.toISOString(), pushups: 20, pullups: 3, lsitSec: 5, xp: 200 };
-    const tested = { ...initialState(), sessions: fakeSessions(50), tests: [test, { ...test, id: 't2' }] };
+    const sessions = fakeSessions(50);
+    // Chapter 2's test taken during chapter 2, chapter 4's during chapter 4.
+    const test = { id: 't1', date: sessions[20].date, pushups: 20, pullups: 3, lsitSec: 5, xp: 200 };
+    const tested = { ...initialState(), sessions, tests: [test, { ...test, id: 't2', date: sessions[45].date }] };
     expect(storyState(tested).index).toBe(4);
     expect(storyState(tested).chapter?.enemySprite).toBe('hollow');
   });

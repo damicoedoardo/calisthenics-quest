@@ -92,7 +92,7 @@ export function BookOfDays({ state, onClose }: { state: GameState; onClose: () =
                 <p className="text-xs text-slate-400">{whatHappened(p, state)}</p>
               </div>
               <p className="mt-2 text-sm italic text-slate-300">
-                <span className="not-italic text-orange-300">{words.flame}:</span> &ldquo;{p.line}&rdquo;
+                <span className="not-italic text-orange-300">{state.profile.flame ?? 'A spark'}:</span> &ldquo;{p.line}&rdquo;
               </p>
               <div className="mt-2 flex items-start gap-2 border-t border-ink-700 pt-2">
                 <p className="flex-1 text-sm text-slate-200">

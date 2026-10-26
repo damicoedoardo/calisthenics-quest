@@ -32,7 +32,7 @@ describe('the Fog', () => {
 
   it('turns the skill tree and workouts into power, and only training raises it', () => {
     const fresh = powerOf(initialState(), day(26));
-    expect(fresh).toMatchObject({ strike: 0.12, reach: 0.08, hold: 0, flames: 0, fresh: false, fireballs: false, fairy: false, flameName: 'Ember' });
+    expect(fresh).toMatchObject({ strike: 0.12, reach: 0.08, hold: 0, flames: 0, fresh: false, fireballs: false, fairy: false, flameName: '' });
     const trained = powerOf({ ...initialState(), progress: { push: 3, pull: 2, core: 2 }, sessions: sessions(6) }, day(26));
     expect(trained.strike).toBeCloseTo(0.36);
     expect(trained.hold).toBe(30);

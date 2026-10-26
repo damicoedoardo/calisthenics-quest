@@ -21,6 +21,10 @@ export interface RunSetup {
   power: Power;
   classId: ClassId | undefined;
   sheets: Record<SheetKey, Sheet>;
+  /** The bot plays: it moves and picks skills on its own (developer mode, balance tests). */
+  autopilot?: boolean;
+  /** Play the whole run as fast as the computer can, without drawing it (balance tests). */
+  fast?: boolean;
 }
 
 export interface Hud {
@@ -39,6 +43,11 @@ export interface RunEnd {
   seconds: number;
   kills: number;
   level: number;
+  /** HP left at the end, for balance tests. */
+  hp: number;
+  maxHp: number;
+  /** When the boss walked out (s), if it did. */
+  bossAt: number | null;
 }
 
 export interface RunEvents {
@@ -57,8 +66,13 @@ export interface RunHandle {
   resume: () => void;
   skipToBoss: () => void;
   winNow: () => void;
+  /** Hand the run to the bot, or take it back. */
+  autopilot: (on: boolean) => void;
   destroy: () => void;
 }
+
+/** Skills the bot takes first. */
+const BOT_PICKS: UpgradeId[] = ['multi', 'power', 'haste', 'vital', 'spark', 'flame', 'nova', 'guard', 'swift', 'magnet'];
 
 const WORLD = 2400;
 const HERO_SPEED = 150;
@@ -111,6 +125,9 @@ const BOSSES: Record<FogBoss, Stats> = {
 };
 
 const HEAL = '#86efac';
+
+/** A boss you can't bring down in this long (s) means you need more training: the Fog closes in. */
+const BOSS_LIMIT = 180;
 
 /** Tomorrow heals while you're further than this. */
 const TOMORROW_REACH = 200;
@@ -218,6 +235,10 @@ class RunScene extends Phaser.Scene {
   private elites = 0;
   private over = false;
   private orbit = 0;
+  /** Seconds since the last frame. */
+  private dt = 0;
+  private bossAt: number | null = null;
+  bot = false;
 
   constructor(
     private setup: RunSetup,
@@ -350,6 +371,28 @@ class RunScene extends Phaser.Scene {
     this.syncFlames();
     this.free = [...(power.fresh ? (['fresh'] as const) : []), ...(power.rested ? (['rested'] as const) : [])];
     if (this.free.length) this.time.delayedCall(700, () => this.offer(this.free.shift()!));
+    this.bot = !!this.setup.autopilot;
+    if (this.setup.fast) this.fastForward();
+  }
+
+  /** Runs the game loop by hand, frame after frame without drawing, until the run ends. */
+  private fastForward() {
+    const loop = this.game.loop;
+    loop.sleep();
+    const frame = 1000 / 60;
+    let t = this.time.now;
+    let ended = false;
+    this.events.once('run-ended', () => (ended = true));
+    this.events.once(Phaser.Scenes.Events.DESTROY, () => (ended = true));
+    const chunk = () => {
+      for (let i = 0; i < 600 && !ended; i++) {
+        t += frame;
+        this.game.headlessStep(t, frame);
+      }
+      if (ended) loop.wake();
+      else setTimeout(chunk, 0);
+    };
+    setTimeout(chunk, 0);
   }
 
   // ---------- textures drawn in code ----------
@@ -452,6 +495,7 @@ class RunScene extends Phaser.Scene {
   update(_time: number, deltaMs: number) {
     if (this.over) return;
     const dt = Math.min(deltaMs, 50) / 1000;
+    this.dt = dt;
     this.t += dt;
     this.move(dt);
     this.spawn(dt);
@@ -488,7 +532,8 @@ class RunScene extends Phaser.Scene {
   private move(dt: number) {
     let x = 0,
       y = 0;
-    if (this.stick) {
+    if (this.bot) [x, y] = this.botMove();
+    else if (this.stick) {
       x = this.stick.dx / 46;
       y = this.stick.dy / 46;
       if (Math.hypot(x, y) < 0.15) x = y = 0;
@@ -532,12 +577,75 @@ class RunScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * The bot: steps away from what's close (reflections most of all), picks up light, and circles
+   * the boss at the distance its rule asks for. A steady, careful player, not a great one.
+   */
+  private botMove(): [number, number] {
+    const h = this.hero;
+    let x = 0,
+      y = 0;
+    for (const o of this.foes.getChildren()) {
+      const f = o as Foe;
+      if (!f.active || f === this.boss) continue;
+      const dx = h.x - f.x,
+        dy = h.y - f.y,
+        d = Math.hypot(dx, dy) || 1;
+      if (d > 170) continue;
+      const w = ((f.kind === 'reflection' ? 3 : 1) * (f.dmg / 8) * 2500) / (d * d);
+      x += (dx / d) * w;
+      y += (dy / d) * w;
+    }
+    const b = this.boss;
+    if (b?.active) {
+      const dx = b.x - h.x,
+        dy = b.y - h.y,
+        d = Math.hypot(dx, dy) || 1,
+        rule = this.setup.zone.boss,
+        // Tomorrow heals when you're far, the Knight needs hits: stay close. The rest dash: keep room.
+        want = rule === 'tomorrow' || rule === 'knight' ? 80 : rule === 'mirror' ? 110 : 150,
+        pull = Phaser.Math.Clamp((d - want) / 80, -1.5, 1.5);
+      x += (dx / d) * pull - (dy / d) * 0.7;
+      y += (dy / d) * pull + (dx / d) * 0.7;
+    } else {
+      let gem: Gem | null = null,
+        best = 260;
+      for (const g of this.gems) {
+        const d = Math.hypot(g.img.x - h.x, g.img.y - h.y);
+        if (d < best) {
+          best = d;
+          gem = g;
+        }
+      }
+      if (gem) {
+        const dx = gem.img.x - h.x,
+          dy = gem.img.y - h.y,
+          d = Math.hypot(dx, dy) || 1;
+        x += (dx / d) * 0.8;
+        y += (dy / d) * 0.8;
+      }
+    }
+    // Keep off the walls, where a crowd can pin you.
+    const m = 200;
+    if (h.x < m) x += (m - h.x) / m;
+    if (h.x > WORLD - m) x -= (h.x - (WORLD - m)) / m;
+    if (h.y < m) y += (m - h.y) / m;
+    if (h.y > WORLD - m) y -= (h.y - (WORLD - m)) / m;
+    const len = Math.hypot(x, y);
+    return len < 0.05 ? [0, 0] : [x / len, y / len];
+  }
+
   // ---------- foes ----------
 
   private spawn(dt: number) {
     const t = this.t;
     if (!this.boss && t >= RUN_SECONDS) {
       this.summonBoss();
+      return;
+    }
+    if (this.bossAt !== null && t - this.bossAt >= BOSS_LIMIT) {
+      this.bus.say('The Fog closes in. Train, and come back.');
+      this.lose();
       return;
     }
     // Ring waves: the fog closes in from every side.
@@ -643,6 +751,7 @@ class RunScene extends Phaser.Scene {
     this.bossDash = 3;
     this.bossSummon = kind === 'mirror' ? 2 : 6;
     this.bossClock = kind === 'knight' ? 6 : 0;
+    this.bossAt = this.t;
     this.bossLabel = this.add
       .text(b.x, b.y, '', { fontFamily: '"Press Start 2P", monospace', fontSize: '8px', color: '#fecaca', stroke: '#0b0d14', strokeThickness: 3, align: 'center' })
       .setOrigin(0.5, 1)
@@ -654,7 +763,7 @@ class RunScene extends Phaser.Scene {
   }
 
   private steerBoss(b: Foe, now: number) {
-    const dt = Math.min(this.game.loop.delta, 50) / 1000;
+    const dt = this.dt;
     this.bossLabel?.setPosition(b.x, b.y - 34 * b.base);
     const kind = this.setup.zone.boss;
     if (kind === 'tomorrow') return this.steerTomorrow(b, dt);
@@ -1035,7 +1144,7 @@ class RunScene extends Phaser.Scene {
       this.number(this.hero.x, this.hero.y - 30, heal, HEAL);
       this.bits.particleTint = 0x86efac;
       this.bits.explode(16, this.hero.x, this.hero.y);
-      this.bus.say(`${power.flameName} heals you`);
+      this.bus.say(`${power.flameName || 'Your flame'} heals you`);
     }
     // Ember's flames: from your workouts, plus the ones picked in this run.
     const flames = this.flames.length;
@@ -1188,6 +1297,7 @@ class RunScene extends Phaser.Scene {
     }
     if (!free) this.pendingLevels--;
     this.sparks.explode(30, this.hero.x, this.hero.y);
+    if (this.bot) return this.pick(BOT_PICKS.find((id) => choices.includes(id)) ?? choices[0]);
     music.sting('levelup');
     this.scene.pause();
     this.bus.levelUp(choices, { ...this.ups }, free);
@@ -1272,7 +1382,7 @@ class RunScene extends Phaser.Scene {
     }
     this.physics.pause();
     this.bus.hud(this.hud());
-    this.time.delayedCall(1200, () => this.bus.end({ won: true, seconds: Math.floor(this.t), kills: this.kills, level: this.level }));
+    this.time.delayedCall(1200, () => this.ended(true));
   }
 
   private lose() {
@@ -1282,7 +1392,12 @@ class RunScene extends Phaser.Scene {
     this.physics.pause();
     this.hero.setTint(0x6b7280);
     this.bus.hud(this.hud());
-    this.time.delayedCall(900, () => this.bus.end({ won: false, seconds: Math.floor(this.t), kills: this.kills, level: this.level }));
+    this.time.delayedCall(900, () => this.ended(false));
+  }
+
+  private ended(won: boolean) {
+    this.events.emit('run-ended');
+    this.bus.end({ won, seconds: Math.floor(this.t), kills: this.kills, level: this.level, hp: Math.max(0, Math.ceil(this.hp)), maxHp: this.maxHp, bossAt: this.bossAt === null ? null : Math.floor(this.bossAt) });
   }
 }
 
@@ -1306,6 +1421,7 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
     resume: () => scene.scene.resume(),
     skipToBoss: () => scene.skipToBoss(),
     winNow: () => scene.winNow(),
+    autopilot: (on) => (scene.bot = on),
     destroy: () => game.destroy(true),
   };
 }

@@ -13,6 +13,7 @@ import type { Line, Shot, Words } from '@/story/types';
 import type { FlameStage } from '@/sprites/characters/ember';
 import type { ClassId, Gear, GearSlot } from '@/lib/gear';
 import type { TrackId } from '@/lib/music';
+import { fastStory } from '@/lib/dev';
 
 interface Props {
   lines: Line[];
@@ -48,7 +49,8 @@ interface Camera {
   fade: 'none' | 'black' | 'white';
 }
 
-const secondsOf = (s: Shot | undefined) => s?.seconds ?? ('title' in (s ?? {}) ? 2.2 : 1.2);
+const FAST = fastStory();
+const secondsOf = (s: Shot | undefined) => (FAST ? 0.1 : (s?.seconds ?? ('title' in (s ?? {}) ? 2.2 : 1.2)));
 
 /** Where the camera is at a beat: moves add up over the scene. */
 function cameraAt(beats: Beat[], index: number, place?: PlaceId): Camera {
@@ -98,7 +100,7 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
   const beat = beats[index];
   const line = beat?.line;
   const full = line ? line.text.length : 0;
-  const done = shown >= full;
+  const done = FAST || shown >= full;
   const narrator = line?.who === 'narrator';
   const film = cinematic && narrator;
   const speed = film ? 42 : 28;

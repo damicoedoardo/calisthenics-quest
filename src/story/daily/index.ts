@@ -15,6 +15,8 @@ const NO_REPEAT_DAYS = 21;
 export const SMOKY_AFTER = 4;
 /** Away this long, the flame has dimmed to embers. */
 export const DIM_AFTER = 8;
+/** A gap this long is more than a weekend or a 2-a-week plan leaves: the flame says it missed you. */
+export const MISSED_AFTER = 5;
 
 /** The last workout, if it was today or yesterday. */
 function recent(state: GameState, now: Date) {
@@ -27,16 +29,17 @@ export function todayMoment(state: GameState, now: Date): Moment {
   const since = daysSinceTraining(state, now);
   if (since === null) return 'first';
   if (since >= DIM_AFTER) return 'back';
-  if (since >= 3) return 'missed';
+  if (since >= MISSED_AFTER) return 'missed';
   if (Math.max(daysInRow(state, now), daysInRow(state, now, 'yesterday')) >= SMOKY_AFTER) return 'smoky';
-  const hour = now.getHours();
-  if (hour >= 22 || hour < 4) return 'late';
   const last = recent(state, now);
   if (last?.unlocked.length) return 'best';
   if (last?.kind === 'mini') return 'rough';
   if (since === 0) return 'trained';
   if (since === 1) return 'rest';
   if (since === 2) return 'rested';
+  // Late at night, when there's nothing more particular to say.
+  const hour = now.getHours();
+  if (hour >= 22 || hour < 4) return 'late';
   const day = now.getDay();
   return day === 0 || day === 6 ? 'weekend' : 'training';
 }

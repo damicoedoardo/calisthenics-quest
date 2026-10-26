@@ -46,6 +46,15 @@ export function useDevMode() {
   return { dev, live, toggle };
 }
 
+/**
+ * `?fast` on a preview or localhost: text appears at once and camera moves are quick, so scripts
+ * (and impatient developers) can play through the story in a hurry. Never on the live app.
+ */
+export function fastStory(): boolean {
+  if (typeof window === 'undefined' || window.location.hostname === LIVE_HOST) return false;
+  return new URLSearchParams(window.location.search).has('fast');
+}
+
 /** Story scenes that are due right now, marked as seen so they don't play. */
 function skipDueScenes(state: GameState, now: Date): GameState {
   const due = pendingScenes(state, now).map((s) => s.id);

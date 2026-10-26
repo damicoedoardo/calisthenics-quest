@@ -1,7 +1,7 @@
 import { daysSinceLastSession, type GameState } from './game';
 import { getPath, type PathId } from './skills';
 import { CHAPTERS } from '@/story/chapters';
-import { chapterStart, storyState, storyWords } from '@/story/engine';
+import { chapterStart, storyState } from '@/story/engine';
 import { isRested } from '@/story/daily';
 import { flameStage, stageIndex } from '@/story/flame';
 import type { FogBoss, FogZone } from '@/story/types';
@@ -112,7 +112,7 @@ export function powerOf(state: GameState, now: Date): Power {
     rested: isRested(state, now),
     fireballs: stage >= stageIndex('bonfire'),
     fairy: stage >= stageIndex('fairy'),
-    flameName: storyWords(state).flame,
+    flameName: state.profile.flame ?? '',
   };
 }
 

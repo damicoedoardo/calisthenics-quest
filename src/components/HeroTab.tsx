@@ -285,7 +285,8 @@ function Keepsakes({ cleared }: { cleared: number }) {
                 </>
               ) : (
                 <p className="flex items-center gap-1.5 text-xs text-slate-600">
-                  <Lock size={12} /> {z.bossName}
+                  {/* Only the next boss has a name; the ones after it are still in the fog. */}
+                  <Lock size={12} /> {z.id === cleared ? z.bossName : '???'}
                 </p>
               )}
             </li>

@@ -105,10 +105,15 @@ describe('every day', () => {
     expect(todayMoment(trained(26), tue(27))).toBe('rest');
     expect(todayMoment(trained(25), tue(27))).toBe('rested');
     expect(todayMoment(trained(22), tue(27))).toBe('missed');
+    // A weekend gap is a normal week, not a missed one.
+    expect(todayMoment(trained(24), tue(27))).toBe('training');
     expect(todayMoment(trained(10), tue(27))).toBe('back');
     expect(todayMoment(trained(24, 25, 26, 27), tue(27))).toBe('smoky');
     expect(todayMoment(trained(23, 24, 25, 26), tue(27))).toBe('smoky');
-    expect(todayMoment(trained(26), tue(27, 23))).toBe('late');
+    expect(todayMoment(trained(23), tue(27, 23))).toBe('late');
+    // Late at night, a workout or a rest day still comes first.
+    expect(todayMoment(trained(27), tue(27, 23))).toBe('trained');
+    expect(todayMoment(trained(26), tue(27, 23))).toBe('rest');
     expect(todayMoment({ ...initialState(), sessions: [workout(tue(26), 'mini')] }, tue(27))).toBe('rough');
     expect(todayMoment({ ...initialState(), sessions: [workout(tue(26), 'full', ['push-2'])] }, tue(27))).toBe('best');
     expect(flameMood(trained(10), tue(27))).toBe('dim');
@@ -119,8 +124,8 @@ describe('every day', () => {
     let s = trained(1);
     const lines = new Set<string>(),
       quotes = new Set<string>();
-    for (let d = 3; d < 3 + 4; d++) {
-      // "missed" days: 6 lines, so four days in a row never repeat
+    for (let d = 5; d < 5 + 3; d++) {
+      // "missed" days: 6 lines, so three days in a row never repeat
       const now = tue(d + 1);
       s = withTodayPage(s, now);
       expect(withTodayPage(s, now)).toBe(s);
@@ -128,8 +133,8 @@ describe('every day', () => {
       lines.add(flameLine(s, now));
       quotes.add(dayQuote(s, now).text);
     }
-    expect(lines.size).toBe(4);
-    expect(quotes.size).toBe(4);
+    expect(lines.size).toBe(3);
+    expect(quotes.size).toBe(3);
   });
 
   it('updates the page line after a workout but keeps the quote', () => {

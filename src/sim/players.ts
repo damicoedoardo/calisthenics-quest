@@ -1,0 +1,72 @@
+import type { PlayerKind } from './season';
+
+/* The kinds of player the simulator plays. Day 0 is a Monday. Add one to try a new kind. */
+
+const weekday = (d: number) => d % 7; // 0 Monday ... 6 Sunday
+
+export const PLAYERS: PlayerKind[] = [
+  {
+    id: 'steady',
+    about: 'Trains Monday, Wednesday and Friday, opens the app most days, sits by the fire, takes every test',
+    trains: (d) => [0, 2, 4].includes(weekday(d)),
+    visits: (_, r) => r() < 0.7,
+    sex: 'f',
+    sitsByFire: true,
+    bossOnTry: 2,
+    tests: 'when-asked',
+    flame: 'Pip',
+    answers: 'first',
+    class: 'archer',
+  },
+  {
+    id: 'twice-a-week',
+    about: 'Trains Tuesday and Saturday, opens the app only to train',
+    trains: (d) => [1, 5].includes(weekday(d)),
+    bossOnTry: 3,
+    tests: 'when-asked',
+    flame: 'Lumi',
+    answers: 'write',
+    class: 'mage',
+  },
+  {
+    id: 'eager',
+    about: 'Trains every weekday, takes a max test on day one, writes their own answers',
+    trains: (d) => weekday(d) < 5,
+    visits: () => true,
+    bossOnTry: 1,
+    tests: 'early',
+    flame: 'Blaze',
+    answers: 'write',
+    class: 'warrior',
+  },
+  {
+    id: 'on-and-off',
+    about: 'Trains 3 times a week but vanishes twice (weeks 4-5 and 14-16), has Rough days, left the letter empty, skips questions',
+    trains: (d, r) => [0, 2, 4].includes(weekday(d)) && !(d >= 21 && d < 36) && !(d >= 91 && d < 112) && r() < 0.85,
+    visits: (_, r) => r() < 0.3,
+    rough: (_, r) => r() < 0.3,
+    letter: { why: '', want: '', forWho: '', remind: '' },
+    bossOnTry: 4,
+    tests: 'when-asked',
+    flame: '',
+    answers: 'skip',
+  },
+  {
+    id: 'never-tests',
+    about: 'Trains 3 times a week and never takes a max test',
+    trains: (d) => [0, 2, 4].includes(weekday(d)),
+    visits: (_, r) => r() < 0.5,
+    bossOnTry: 2,
+    tests: 'never',
+    flame: 'Fiamma',
+  },
+  {
+    id: 'night-owl',
+    about: 'Trains late at night, three times a week',
+    trains: (d) => [1, 3, 6].includes(weekday(d)),
+    hour: 22,
+    bossOnTry: 2,
+    tests: 'when-asked',
+    flame: 'Owl',
+  },
+];

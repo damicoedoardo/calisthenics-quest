@@ -16,6 +16,12 @@ interface Props {
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 /** The game between workouts: your power from training, and the zones of the Fog. */
+/** A pale zone color (the Summit's) needs a dark icon on it. */
+function isLight(hex: string): boolean {
+  const n = parseInt(hex.slice(1), 16);
+  return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 160;
+}
+
 export function PlayTab({ state, onPlay }: Props) {
   const now = new Date();
   const power = powerOf(state, now);
@@ -31,7 +37,7 @@ export function PlayTab({ state, onPlay }: Props) {
     { Icon: Heart, name: 'Hold', from: 'Core', value: `+${power.hold} HP`, hint: nextGrowth(state, 'core') },
     {
       Icon: Flame,
-      name: `${power.flameName}'s fire`,
+      name: power.flameName ? `${power.flameName}'s fire` : 'Your flame',
       from: 'Workouts',
       value: `${power.flames} flame${power.flames === 1 ? '' : 's'}`,
       hint: nextFlame ? `${toGo(nextFlame)}: one more flame` : null,
@@ -83,7 +89,7 @@ export function PlayTab({ state, onPlay }: Props) {
         </p>
         <p className={`mt-2 rounded-lg px-3 py-2 text-xs ${power.rested ? 'bg-orange-950/50 text-orange-200' : 'bg-ink-900 text-slate-400'}`}>
           {power.rested
-            ? `Rested: ${power.flameName} has had air, so runs today start with one more free skill.`
+            ? `Rested: ${power.flameName || 'your flame'} has had air, so runs today start with one more free skill.`
             : 'Rest days count too: after a full day off, or a minute by the fire, runs start with one more free skill.'}
         </p>
       </section>
@@ -96,7 +102,10 @@ export function PlayTab({ state, onPlay }: Props) {
           const open = st.state !== 'locked';
           return (
             <div key={z.id} className={`flex items-center gap-3 rounded-2xl p-3 ${open ? 'bg-ink-800' : 'bg-ink-900 opacity-70'}`}>
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl font-pixel text-[10px] text-slate-200" style={{ background: z.fog }}>
+              <span
+                className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl font-pixel text-[10px] ${isLight(z.fog) ? 'text-ink-900' : 'text-slate-200'}`}
+                style={{ background: z.fog }}
+              >
                 {st.state === 'cleared' ? <Check size={18} /> : st.state === 'locked' ? <Lock size={16} /> : z.id + 1}
               </span>
               <div className="min-w-0 flex-1">

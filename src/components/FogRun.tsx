@@ -8,7 +8,6 @@ import { music } from '@/lib/music';
 import { sheetFor } from '@/sprites/registry';
 import { SoundToggle, useMusic } from './Sound';
 import type { FreePick, Hud, RunEnd, RunHandle, SheetKey } from '@/game/run';
-import { storyWords } from '@/story/engine';
 import type { Sheet } from '@/sprites/registry';
 
 interface Props {
@@ -42,11 +41,15 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
   const [hud, setHud] = useState<Hud | null>(null);
   const [offer, setOffer] = useState<{ choices: UpgradeId[]; levels: Partial<Record<UpgradeId, number>>; free: FreePick | null } | null>(null);
   const [said, setSaid] = useState<{ text: string; at: number } | null>(null);
-  const flameName = storyWords(state).flame;
+  // Unnamed until after the first workout.
+  const flameName = state.profile.flame;
   const [paused, setPaused] = useState(false);
   const [boss, setBoss] = useState(false);
   const [end, setEnd] = useState<RunEnd | null>(null);
   const [attempt, setAttempt] = useState(0);
+  // Developer mode: ?bot hands runs to the bot, ?bot=fast also plays them in a blink (balance tests).
+  const [bot] = useState(() => (dev && typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('bot') : null));
+  const [auto, setAuto] = useState(bot !== null);
 
   useMusic(end ? null : hud?.boss ? 'fogBoss' : 'fog');
 
@@ -74,7 +77,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
     setBoss(false);
     import('@/game/run').then(({ startRun }) => {
       if (cancelled) return;
-      run.current = startRun(el, { zone, power: powerOf(state, new Date()), classId, sheets }, {
+      run.current = startRun(el, { zone, power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast' }, {
         hud: setHud,
         levelUp: (choices, levels, free) => setOffer({ choices, levels, free }),
         boss: () => {
@@ -112,7 +115,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
   const left = hud ? Math.max(0, RUN_SECONDS - hud.seconds) : RUN_SECONDS;
 
   return (
-    <div className="fixed inset-0 z-50 touch-none select-none bg-ink-950">
+    <div className="fixed inset-0 z-50 touch-none select-none bg-ink-950" data-run-end={end ? JSON.stringify(end) : undefined}>
       <div ref={host} className="absolute inset-0" />
 
       {hud && !end && (
@@ -191,7 +194,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
             {offer.free === 'fresh'
               ? 'You trained in the last two days: take a free skill.'
               : offer.free === 'rested'
-                ? `You rested, and ${flameName} burns brighter for it: take a free skill.`
+                ? `You rested, and ${flameName ?? 'your flame'} burns brighter for it: take a free skill.`
                 : 'Pick a skill.'}
           </p>
           <div className="mt-4 w-full max-w-sm space-y-2">
@@ -206,7 +209,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
-                      <span className="text-sm font-semibold text-slate-100">{u.name.replace('{flame}', flameName)}</span>
+                      <span className="text-sm font-semibold text-slate-100">{u.name.replace('{flame}', flameName ?? 'Your flame')}</span>
                       <span className="font-pixel text-[8px] text-slate-400">{next === 1 ? 'NEW' : `Lv${next}`}</span>
                     </span>
                     <span className="mt-0.5 block text-xs text-slate-400">{u.text(next)}</span>
@@ -242,6 +245,13 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
                 [
                   ['Skip to the boss', () => run.current?.skipToBoss()],
                   ['Win this run', () => run.current?.winNow()],
+                  [
+                    auto ? 'Take the controls' : 'Let the bot play',
+                    () => {
+                      run.current?.autopilot(!auto);
+                      setAuto(!auto);
+                    },
+                  ],
                 ] as const
               ).map(([label, act]) => (
                 <button
