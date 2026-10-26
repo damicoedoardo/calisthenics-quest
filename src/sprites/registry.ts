@@ -1,6 +1,5 @@
 import { equippedGear } from '@/lib/gear';
 import { CLIPS, type ClipFrame, type ClipId, type SpriteAction } from './clips';
-import type { Look } from './engine/figure';
 import { toSheet, type Grid } from './engine/grid';
 import { drawBook } from './characters/book';
 import { drawEmber } from './characters/ember';
@@ -10,7 +9,7 @@ import { drawMirror } from './characters/mirror';
 import { drawPixelArt, type PixelArt } from './characters/pixel';
 import { drawPlateau } from './characters/plateau';
 import { drawSummit } from './characters/summit';
-import { TAKES, TAKE_LOOKS, drawTake, type TakeId } from './characters/takes';
+import { DEFAULT_AVATAR, drawAvatar, type Avatar } from './avatar/avatar';
 import { drawTomorrow } from './characters/tomorrow';
 import { drawWanderer } from './characters/wanderer';
 import { drawWisp } from './characters/wisp';
@@ -72,16 +71,6 @@ const pixel = (label: string, art: PixelArt) =>
 const creature = (label: string, draw: DrawnSprite<NoOpts>['draw'], attack?: ClipId) =>
   drawn<NoOpts>({ label: () => label, defaults: {}, clips: () => (attack ? { idle: 'hover', attack } : { idle: 'hover' }), draw });
 
-/** A new hero direction (characters/takes.ts), drawn with a look's hair and skin. */
-const take = (id: TakeId) =>
-  drawn<{ look: Look }>({
-    label: () => `New hero: ${TAKES[id].label}`,
-    defaults: { look: TAKE_LOOKS[id] },
-    clips: () => ({ idle: 'idle' }),
-    draw: (o, frame) => drawTake(id, o.look, frame),
-    look: () => ({ shadow: true }),
-  });
-
 const STARTER_GEAR = equippedGear(undefined, { push: 0, pull: 0, core: 0 });
 
 export const SPRITES = {
@@ -106,9 +95,13 @@ export const SPRITES = {
   golem: creature('The Plateau', drawPlateau, 'lunge'),
   summit: creature('The Summit', drawSummit),
   wisp: creature('Ash Wisp', drawWisp, 'lunge'),
-  takeLean: take('lean'),
-  takeStreet: take('street'),
-  takeHunter: take('hunter'),
+  avatar: drawn<{ avatar: Avatar }>({
+    label: () => 'Hero (character creator)',
+    defaults: { avatar: DEFAULT_AVATAR },
+    clips: () => ({ idle: 'idle' }),
+    draw: (o, frame) => drawAvatar(o.avatar, frame),
+    look: () => ({ shadow: true }),
+  }),
 };
 
 export type SpriteId = keyof typeof SPRITES;

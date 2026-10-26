@@ -10,7 +10,8 @@ import { DEFAULT_LOOK, type HeroVariant } from '@/sprites/characters/hero';
 import { HAIRSTYLES, type Look } from '@/sprites/engine/figure';
 import { HAIR, SKIN, type HairColor, type SkinTone } from '@/sprites/palette';
 import { SPRITES, clipFor, labelFor, type SpriteId } from '@/sprites/registry';
-import { TAKES, TAKE_LOOKS, type TakeId } from '@/sprites/characters/takes';
+import { AvatarEditor } from '@/components/AvatarEditor';
+import { DEFAULT_AVATAR, PRESETS, type Avatar, type PresetId } from '@/sprites/avatar/avatar';
 
 /* Sprite Lab: every sprite and animation in one place, to check art changes on a phone.
    Not linked from the app; open /lab. */
@@ -24,37 +25,26 @@ const CLASSES: { id: ClassId | undefined; label: string }[] = [
 ];
 const VARIANTS: HeroVariant[] = ['normal', 'echo', 'best', 'hollow'];
 const SIZES = [64, 128, 192, 256];
-const TAKE_SPRITES: Record<TakeId, SpriteId> = { lean: 'takeLean', street: 'takeStreet', hunter: 'takeHunter' };
-
-/** The new hero directions side by side with today's hero, at the size the app shows them. */
-function NewDirections() {
-  const [hair, setHair] = useState<HairColor | 'own'>('own');
-  const [skin, setSkin] = useState<SkinTone>('light');
-  const [size, setSize] = useState(160);
+/** The character creator, plus every preset side by side. */
+function Creator() {
+  const [avatar, setAvatar] = useState<Avatar>(DEFAULT_AVATAR);
   return (
-    <Panel title="New hero directions">
-      <p className="mb-3 text-xs text-slate-400">Hand-drawn takes, idle only. Pick the one to build out (girl version, gear, attacks).</p>
-      <div className="grid grid-cols-2 gap-3">
-        <div className="flex flex-col items-center gap-1 rounded-xl bg-ink-950 p-2">
-          <div className="flex items-end" style={{ height: size }}>
-            <Sprite id="hero" opts={{ look: { ...DEFAULT_LOOK, skin, ...(hair !== 'own' && { hair }) } }} size={size} />
-          </div>
-          <p className="text-[10px] text-slate-500">Today</p>
-        </div>
-        {(Object.keys(TAKES) as TakeId[]).map((id) => (
-          <div key={id} className="flex flex-col items-center gap-1 rounded-xl bg-ink-950 p-2">
-            <div className="flex items-end" style={{ height: size }}>
-              <Sprite id={TAKE_SPRITES[id]} opts={{ look: { ...TAKE_LOOKS[id], skin, ...(hair !== 'own' && { hair }) } }} size={size} />
-            </div>
-            <p className="text-[10px] text-gold-300">{TAKES[id].label}</p>
-          </div>
+    <Panel title="Character creator">
+      <p className="mb-3 text-xs text-slate-400">Hand-drawn parts on one body. Mix anything; the art lives in src/sprites/avatar.</p>
+      <AvatarEditor avatar={avatar} onChange={setAvatar} />
+      <p className="mb-2 mt-5 font-pixel text-[9px] text-slate-500">ALL PRESETS</p>
+      <div className="grid grid-cols-3 gap-2">
+        {(Object.keys(PRESETS) as PresetId[]).map((id) => (
+          <button key={id} onClick={() => setAvatar(PRESETS[id])} className="flex flex-col items-center rounded-xl bg-ink-950 p-1">
+            <Sprite id="avatar" opts={{ avatar: PRESETS[id] }} size={96} />
+            <span className="text-[10px] text-slate-400">{id}</span>
+          </button>
         ))}
       </div>
-      <div className="mt-4 space-y-3">
-        <Chips label="HAIR COLOR" options={['own', ...(Object.keys(HAIR) as HairColor[])] as (HairColor | 'own')[]} value={hair} onChange={setHair} />
-        <Chips label="SKIN" options={Object.keys(SKIN) as SkinTone[]} value={skin} onChange={setSkin} />
-        <Chips label="SIZE" options={[96, 160, 256]} value={size} onChange={setSize} name={(s) => `${s}px`} />
-      </div>
+      <details className="mt-4">
+        <summary className="cursor-pointer text-xs text-slate-500">This look as code</summary>
+        <pre className="mt-2 overflow-x-auto rounded-lg bg-ink-950 p-2 text-[10px] text-slate-400">{JSON.stringify(avatar)}</pre>
+      </details>
     </Panel>
   );
 }
@@ -119,7 +109,7 @@ export default function Lab() {
         </div>
       </header>
 
-      <NewDirections />
+      <Creator />
 
       <Panel title="Your hero">
         <div className={`flex items-end justify-center rounded-xl py-4 ${stage}`} style={{ minHeight: 280 }}>
