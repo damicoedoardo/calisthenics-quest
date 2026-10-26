@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Hero } from './Hero';
 import { Hollow } from './Characters';
 import { SoundToggle, useMusic } from './Sound';
-import { FIGHT_TURNS } from '@/lib/prologue';
+import { FIGHT_TURNS } from '@/story/opening';
 import type { Gear, GearSlot } from '@/lib/gear';
 
 type Phase = 'ready' | 'strike' | 'answer' | 'down';

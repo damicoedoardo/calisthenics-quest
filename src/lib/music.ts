@@ -8,7 +8,7 @@
  * "." is silence, "x" is a heartbeat thump.
  */
 
-export type TrackId = 'memory' | 'hollow' | 'heartbeat' | 'rise' | 'fog' | 'fogBoss';
+export type TrackId = 'memory' | 'hollow' | 'heartbeat' | 'rise' | 'camp' | 'fog' | 'fogBoss';
 export type StingId = 'victory' | 'levelup' | 'defeat';
 
 /** "thump" is a kick drum; "hat" and "snare" are noise drums. Drum tokens are just "x". */
@@ -137,6 +137,41 @@ export const TRACKS: Record<TrackId | StingId, Track> = {
         wave: 'triangle',
         gain: 0.12,
         pattern: bars('C3 - - - - - - -', 'G2 - - - - - - -', 'A2 - - - - - - -', 'F2 - - - - - - -', 'C3 - - - - - - -', 'G2 - - - - - - -', 'F2 - - - - - - -', 'G2 - - - - - - -'),
+      },
+    ],
+  },
+  // Night camp and rest days: a slow F major lullaby by the fire.
+  camp: {
+    bpm: 58,
+    stepsPerBeat: 2,
+    voices: [
+      {
+        wave: 'triangle',
+        gain: 0.1,
+        pattern: bars(
+          'F3 C4 F4 A4 C5 A4 F4 C4',
+          'D3 A3 D4 F4 A4 F4 D4 A3',
+          'A#2 F3 A#3 D4 F4 D4 A#3 F3',
+          'C3 G3 C4 E4 G4 E4 C4 G3',
+          'F3 C4 F4 A4 C5 A4 F4 C4',
+          'D3 A3 D4 F4 A4 F4 D4 A3',
+          'A#2 F3 A#3 D4 F4 D4 A#3 F3',
+          'C3 G3 C4 E4 F4 - - -',
+        ),
+      },
+      {
+        wave: 'sine',
+        gain: 0.06,
+        pattern: bars(
+          '. . . . . . . .',
+          '. . . . . . . .',
+          '. . . . . . . .',
+          '. . . . . . . .',
+          'A5 - - - G5 - F5 -',
+          'F5 - - - E5 - D5 -',
+          'D5 - - - F5 - - -',
+          'E5 - - - - - - -',
+        ),
       },
     ],
   },

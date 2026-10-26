@@ -17,19 +17,22 @@ const sessions = (n: number, lastDay = 25): Session[] =>
   }));
 
 describe('the Fog', () => {
-  it('opens a zone only after its boss before falls and enough workouts are done', () => {
+  it('has a zone for every chapter, opening with it once the boss before falls', () => {
+    expect(ZONES.map((z) => z.boss)).toEqual(['tomorrow', 'mirror', 'knight', 'hollow', 'hollow', 'hollow']);
     const s = initialState();
     expect(zoneStatus(s, ZONES[0]).state).toBe('open');
     expect(zoneStatus(s, ZONES[1])).toEqual({ state: 'locked', why: 'Beat the boss of The Ashen Edge first' });
     const cleared: GameState = { ...s, fog: { cleared: 1, runs: 3, best: {} } };
     expect(zoneStatus(cleared, ZONES[0]).state).toBe('cleared');
-    expect(zoneStatus(cleared, ZONES[1])).toEqual({ state: 'locked', why: 'Opens after 6 workouts: 6 to go' });
-    expect(zoneStatus({ ...cleared, sessions: sessions(6) }, ZONES[1]).state).toBe('open');
+    expect(zoneStatus(cleared, ZONES[1])).toEqual({ state: 'locked', why: 'Opens with chapter 2: 12 workouts to go' });
+    expect(zoneStatus({ ...cleared, sessions: sessions(12) }, ZONES[1]).state).toBe('open');
+    const two: GameState = { ...s, sessions: sessions(24), fog: { cleared: 2, runs: 5, best: {} } };
+    expect(zoneStatus(two, ZONES[2])).toEqual({ state: 'locked', why: 'Opens with chapter 3: take your max test on the Hero tab' });
   });
 
   it('turns the skill tree and workouts into power, and only training raises it', () => {
     const fresh = powerOf(initialState(), day(26));
-    expect(fresh).toMatchObject({ strike: 0.12, reach: 0.08, hold: 0, flames: 0, fresh: false });
+    expect(fresh).toMatchObject({ strike: 0.12, reach: 0.08, hold: 0, flames: 0, fresh: false, fireballs: false, fairy: false, flameName: 'Ember' });
     const trained = powerOf({ ...initialState(), progress: { push: 3, pull: 2, core: 2 }, sessions: sessions(6) }, day(26));
     expect(trained.strike).toBeCloseTo(0.36);
     expect(trained.hold).toBe(30);
@@ -37,6 +40,16 @@ describe('the Fog', () => {
     expect(trained.flames).toBe(2);
     expect(trained.fresh).toBe(true);
     expect(powerOf({ ...initialState(), sessions: sessions(1, 20) }, day(26)).fresh).toBe(false);
+    expect(powerOf({ ...initialState(), sessions: sessions(50) }, day(26))).toMatchObject({ flames: 4, fireballs: true, fairy: true });
+  });
+
+  it('starts runs Rested after a full day off, or after a minute by the fire', () => {
+    const yesterday = { ...initialState(), sessions: sessions(3, 25) };
+    expect(powerOf(yesterday, day(25)).rested).toBe(false);
+    expect(powerOf(yesterday, day(26)).rested).toBe(false);
+    expect(powerOf(yesterday, day(27)).rested).toBe(true);
+    const fire = { ...yesterday, days: [{ day: '2026-10-26', line: '', quote: { text: '', by: '' }, fire: true }] };
+    expect(powerOf(fire, day(26)).rested).toBe(true);
   });
 
   it('offers three different skills that are not maxed', () => {

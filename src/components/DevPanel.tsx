@@ -1,16 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Minus, Plus, Wrench, X } from 'lucide-react';
 import { initialState, type GameState } from '@/lib/game';
 import { CLASSES } from '@/lib/gear';
 import { PATHS } from '@/lib/skills';
 import { ZONES } from '@/lib/fog';
-import { addFakeWorkouts, clearNextZone, resetFog } from '@/lib/dev';
+import { addFakeWorkouts, clearNextZone, lastWorkoutAgo, newDayPage, resetFog, trainDaysInRow } from '@/lib/dev';
+import { ALL_SCENES } from '@/story/engine';
+import type { Scene } from '@/story/types';
 
 interface Props {
   state: GameState;
   update: (fn: (s: GameState) => GameState) => void;
+  /** Play any story scene now. */
+  onPlayScene: (scene: Scene) => void;
   /** On the live app dev mode can be turned off again; previews always have it. */
   onTurnOff?: () => void;
 }
@@ -18,8 +23,10 @@ interface Props {
 const chip = 'rounded-lg bg-ink-700 px-3 py-2 text-sm text-slate-200 active:scale-95';
 
 /** Developer mode: shortcuts that normal players don't get. */
-export function DevPanel({ state, update, onTurnOff }: Props) {
+export function DevPanel({ state, update, onPlayScene, onTurnOff }: Props) {
   const [open, setOpen] = useState(false);
+  const [sceneId, setSceneId] = useState(ALL_SCENES[0].scene.id);
+  const [flame, setFlame] = useState(state.profile.flame ?? '');
   const [skipStory, setSkipStory] = useState(true);
   const [wipe, setWipe] = useState(false);
   const cleared = state.fog?.cleared ?? 0;
@@ -64,6 +71,66 @@ export function DevPanel({ state, update, onTurnOff }: Props) {
             <input type="checkbox" checked={skipStory} onChange={(e) => setSkipStory(e.target.checked)} />
             Skip the story scenes they unlock
           </label>
+        </section>
+
+        <section className="mt-5 space-y-2">
+          <p className="text-xs text-slate-400">
+            Story and days{' '}
+            <Link href="/lab/story" className="text-sky-300 underline">
+              Story Lab
+            </Link>
+          </p>
+          <div className="flex gap-2">
+            <select value={sceneId} onChange={(e) => setSceneId(e.target.value)} className="min-w-0 flex-1 rounded-lg bg-ink-700 px-2 text-sm text-slate-200">
+              {ALL_SCENES.map(({ scene, chapter }) => (
+                <option key={scene.id} value={scene.id}>
+                  {chapter ? `${chapter} · ` : ''}
+                  {scene.id}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => {
+                const s = ALL_SCENES.find((p) => p.scene.id === sceneId);
+                if (!s) return;
+                setOpen(false);
+                onPlayScene(s.scene);
+              }}
+              className={chip}
+            >
+              Play
+            </button>
+          </div>
+          <form
+            className="flex gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              update((s) => ({ ...s, profile: { ...s.profile, flame: flame.trim() || undefined } }));
+            }}
+          >
+            <input
+              value={flame}
+              maxLength={16}
+              onChange={(e) => setFlame(e.target.value)}
+              placeholder="Flame name"
+              className="min-w-0 flex-1 rounded-lg bg-ink-700 px-3 text-sm text-slate-200 outline-none"
+            />
+            <button className={chip}>Name it</button>
+          </form>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => update((s) => lastWorkoutAgo(s, 1, new Date()))} className={chip}>
+              Rest day today
+            </button>
+            <button onClick={() => update((s) => trainDaysInRow(s, 4, new Date()))} className={chip}>
+              4 days in a row
+            </button>
+            <button onClick={() => update((s) => lastWorkoutAgo(s, 9, new Date()))} className={chip}>
+              Away 9 days
+            </button>
+            <button onClick={() => update((s) => newDayPage(s, new Date()))} className={chip}>
+              New day page
+            </button>
+          </div>
         </section>
 
         <section className="mt-5">

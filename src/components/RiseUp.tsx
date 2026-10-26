@@ -5,7 +5,7 @@ import { Hero } from './Hero';
 import { Hollow } from './Characters';
 import { SoundToggle, useMusic } from './Sound';
 import { Weather } from './Weather';
-import { FALLEN, RISE_WORDS } from '@/lib/prologue';
+import { FALLEN, RISE_WORDS } from '@/story/opening';
 import type { Gear, GearSlot } from '@/lib/gear';
 
 const HOLD_MS = 3200;

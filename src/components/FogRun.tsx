@@ -7,7 +7,8 @@ import { getUpgrade, nextGrowth, powerOf, RUN_SECONDS, type RunResult, type Upgr
 import { music } from '@/lib/music';
 import { sheetFor } from '@/sprites/registry';
 import { SoundToggle, useMusic } from './Sound';
-import type { Hud, RunEnd, RunHandle, SheetKey } from '@/game/run';
+import type { FreePick, Hud, RunEnd, RunHandle, SheetKey } from '@/game/run';
+import { storyWords } from '@/story/engine';
 import type { Sheet } from '@/sprites/registry';
 
 interface Props {
@@ -39,7 +40,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const run = useRef<RunHandle | null>(null);
   const [hud, setHud] = useState<Hud | null>(null);
-  const [offer, setOffer] = useState<{ choices: UpgradeId[]; levels: Partial<Record<UpgradeId, number>>; fresh: boolean } | null>(null);
+  const [offer, setOffer] = useState<{ choices: UpgradeId[]; levels: Partial<Record<UpgradeId, number>>; free: FreePick | null } | null>(null);
+  const [said, setSaid] = useState<{ text: string; at: number } | null>(null);
+  const flameName = storyWords(state).flame;
   const [paused, setPaused] = useState(false);
   const [boss, setBoss] = useState(false);
   const [end, setEnd] = useState<RunEnd | null>(null);
@@ -63,6 +66,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
       wisp: sheetFor('wisp', 'idle'),
       mirror: sheetFor('mirror', 'idle'),
       golem: sheetFor('golem', 'idle'),
+      knight: sheetFor('knight', 'idle'),
+      echo: sheetFor('hero', 'idle', { gear, classId, look, variant: 'echo' }),
     };
     setHud(null);
     setEnd(null);
@@ -71,11 +76,12 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
       if (cancelled) return;
       run.current = startRun(el, { zone, power: powerOf(state, new Date()), classId, sheets }, {
         hud: setHud,
-        levelUp: (choices, levels, fresh) => setOffer({ choices, levels, fresh }),
+        levelUp: (choices, levels, free) => setOffer({ choices, levels, free }),
         boss: () => {
           setBoss(true);
-          setTimeout(() => setBoss(false), 3500);
+          setTimeout(() => setBoss(false), 4500);
         },
+        say: (text) => setSaid({ text, at: Date.now() }),
         end: (r) => {
           music.sting(r.won ? 'victory' : 'defeat');
           setEnd(r);
@@ -96,6 +102,12 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
     setOffer(null);
     run.current?.pick(id);
   };
+
+  useEffect(() => {
+    if (!said) return;
+    const t = setTimeout(() => setSaid(null), 2600);
+    return () => clearTimeout(t);
+  }, [said]);
 
   const left = hud ? Math.max(0, RUN_SECONDS - hud.seconds) : RUN_SECONDS;
 
@@ -137,7 +149,10 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
           </div>
           {hud.boss && (
             <div className="mx-auto mt-2 max-w-xs">
-              <p className="text-center font-pixel text-[9px] text-violet-300">The Hollow</p>
+              <p className="text-center font-pixel text-[9px] text-violet-300">
+                {zone.bossName}
+                {zone.boss === 'knight' ? ` · ${Math.ceil(hud.boss.hp)} plates` : ''}
+              </p>
               <div className="mt-1 h-2.5 overflow-hidden rounded-sm bg-ink-800/90 ring-1 ring-violet-500/40">
                 <div className="h-full bg-violet-500 transition-[width] duration-150" style={{ width: `${(hud.boss.hp / hud.boss.max) * 100}%` }} />
               </div>
@@ -154,15 +169,31 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
 
       {boss && !offer && (
         <div className="pointer-events-none absolute inset-x-6 top-28 rounded-2xl bg-ink-950/85 p-4 text-center ring-1 ring-violet-500/50">
-          <p className="font-pixel text-xs text-violet-300">The Hollow walks out of the Fog</p>
-          {state.profile.voice && <p className="mt-2 text-sm italic text-slate-200">&ldquo;{state.profile.voice}&rdquo;</p>}
+          <p className="font-pixel text-xs leading-relaxed text-violet-300">{zone.bossName} walks out of the Fog</p>
+          {zone.boss === 'hollow' && state.profile.voice ? (
+            <p className="mt-2 text-sm italic text-slate-200">&ldquo;{state.profile.voice}&rdquo;</p>
+          ) : (
+            <p className="mt-2 text-sm text-slate-200">{zone.hint}</p>
+          )}
         </div>
+      )}
+
+      {said && !boss && !offer && !end && (
+        <p key={said.at} className="pointer-events-none absolute inset-x-6 top-32 animate-fadein text-center font-pixel text-[9px] leading-relaxed text-gold-300 drop-shadow-[0_2px_0_#0b0d14]">
+          {said.text}
+        </p>
       )}
 
       {offer && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/80 px-4">
-          <p className="font-pixel text-sm text-gold-300">{offer.fresh ? 'Warmed up!' : 'Level up!'}</p>
-          <p className="mt-2 text-center text-xs text-slate-400">{offer.fresh ? 'You trained in the last two days: take a free skill.' : 'Pick a skill.'}</p>
+          <p className="font-pixel text-sm text-gold-300">{offer.free === 'fresh' ? 'Warmed up!' : offer.free === 'rested' ? 'Rested!' : 'Level up!'}</p>
+          <p className="mt-2 text-center text-xs text-slate-400">
+            {offer.free === 'fresh'
+              ? 'You trained in the last two days: take a free skill.'
+              : offer.free === 'rested'
+                ? `You rested, and ${flameName} burns brighter for it: take a free skill.`
+                : 'Pick a skill.'}
+          </p>
           <div className="mt-4 w-full max-w-sm space-y-2">
             {offer.choices.map((id) => {
               const u = getUpgrade(id),
@@ -175,7 +206,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
-                      <span className="text-sm font-semibold text-slate-100">{u.name}</span>
+                      <span className="text-sm font-semibold text-slate-100">{u.name.replace('{flame}', flameName)}</span>
                       <span className="font-pixel text-[8px] text-slate-400">{next === 1 ? 'NEW' : `Lv${next}`}</span>
                     </span>
                     <span className="mt-0.5 block text-xs text-slate-400">{u.text(next)}</span>
@@ -240,9 +271,13 @@ function Results({ state, zone, end, onAgain, onLeave }: { state: GameState; zon
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/90 px-6 text-center">
       <p className={`font-pixel text-sm ${end.won ? 'text-gold-300' : 'text-slate-300'}`}>{end.won ? `${zone.name} cleared!` : 'The Fog took you'}</p>
-      <p className="mt-3 text-sm text-slate-300">
-        {end.won ? 'The Hollow fades. The road ahead opens when you keep training.' : 'Losing here costs nothing. Come back stronger.'}
-      </p>
+      <p className="mt-3 text-sm text-slate-300">{end.won ? <>The Wanderer: &ldquo;{zone.after}&rdquo;</> : 'Losing here costs nothing. Come back stronger.'}</p>
+      {end.won && (
+        <div className="mt-4 w-full max-w-xs rounded-xl bg-ink-800 p-3 text-left ring-1 ring-gold-400/30">
+          <p className="font-pixel text-[9px] text-gold-300">You keep: {zone.keepsake.name}</p>
+          <p className="mt-1 text-xs text-slate-400">{zone.keepsake.text}</p>
+        </div>
+      )}
       <div className="mt-5 grid w-full max-w-xs grid-cols-3 gap-2">
         {[
           ['Time', clock(end.seconds)],

@@ -1,31 +1,36 @@
 import { daysSinceLastSession, type GameState } from './game';
 import { getPath, type PathId } from './skills';
+import { CHAPTERS } from '@/story/chapters';
+import { chapterStart, storyState, storyWords } from '@/story/engine';
+import { isRested } from '@/story/daily';
+import { flameStage, stageIndex } from '@/story/flame';
+import type { FogBoss, FogZone } from '@/story/types';
 
 /* The Fog: the game you play between workouts. A run is a few minutes of surviving waves of
    Fog creatures, picking new skills as you level, until the zone's boss shows up. Runs are free to
    replay and losing costs nothing. What makes you stronger, and what opens the next zone, is
-   real training: your skill tree is your power, and your workouts call Ember to fight with you. */
+   real training: your skill tree is your power, and your workouts call your flame to fight with you.
+   Each chapter of the story has a zone, written in its chapter file (src/story/chapters). */
 
-export interface Zone {
+export interface Zone extends FogZone {
   id: number;
-  name: string;
-  /** Workouts done before the zone opens (the zone before must be cleared too). */
+  /** The chapter it belongs to: the zone opens when that chapter starts (and the zone before is cleared). */
+  chapter: number;
+  /** Workouts done when that chapter starts. */
   workouts: number;
-  /** Enemy toughness. */
-  hp: number;
-  dmg: number;
-  /** Ground color and the tint over the fog. */
-  ground: string;
-  fog: string;
+  bossName: string;
 }
 
-export const ZONES: Zone[] = [
-  { id: 0, name: 'The Ashen Edge', workouts: 0, hp: 1, dmg: 1, ground: '#231d2e', fog: '#4a3f63' },
-  { id: 1, name: 'The Hollow Woods', workouts: 6, hp: 1.8, dmg: 1.25, ground: '#111a17', fog: '#1f3b33' },
-  { id: 2, name: 'Mirror Lake', workouts: 15, hp: 3, dmg: 1.5, ground: '#101826', fog: '#253a5c' },
-  { id: 3, name: 'The Plateau', workouts: 30, hp: 4.5, dmg: 1.8, ground: '#1c1712', fog: '#4a3a26' },
-  { id: 4, name: 'The Summit', workouts: 50, hp: 6.5, dmg: 2.2, ground: '#1a1a22', fog: '#e2e8f0' },
-];
+export const BOSS_NAME: Record<FogBoss, string> = {
+  tomorrow: 'Tomorrow',
+  mirror: 'The Mirror',
+  knight: 'The Perfect Knight',
+  plateau: 'The Plateau',
+  hollow: 'The Hollow',
+  summit: 'The Summit',
+};
+
+export const ZONES: Zone[] = CHAPTERS.map((c, i) => ({ ...c.fog, id: i, chapter: c.n, workouts: chapterStart(c.n), bossName: BOSS_NAME[c.fog.boss] }));
 
 /** How long you survive before the boss walks out of the fog. */
 export const RUN_SECONDS = 240;
@@ -52,8 +57,14 @@ export function zoneStatus(state: GameState, zone: Zone): ZoneStatus {
   const fog = state.fog ?? NO_FOG;
   if (zone.id < fog.cleared) return { state: 'cleared' };
   if (zone.id > fog.cleared) return { state: 'locked', why: `Beat the boss of ${ZONES[zone.id - 1].name} first` };
-  const left = zone.workouts - state.sessions.length;
-  if (left > 0) return { state: 'locked', why: `Opens after ${zone.workouts} workouts: ${left} to go` };
+  const story = storyState(state);
+  if (!story.finished && story.index + 1 < zone.chapter) {
+    const left = zone.workouts - state.sessions.length;
+    return {
+      state: 'locked',
+      why: left > 0 ? `Opens with chapter ${zone.chapter}: ${left} workout${left === 1 ? '' : 's'} to go` : `Opens with chapter ${zone.chapter}: take your max test on the Hero tab`,
+    };
+  }
   return { state: 'open' };
 }
 
@@ -69,18 +80,27 @@ export interface Power {
   /** Core: extra max HP and less damage taken. */
   hold: number;
   armor: number;
-  /** Ember's flames circling you, one more at each step of your workout count. */
+  /** Your flame's fire circling you, one more at each step of your workout count. */
   flames: number;
   /** Trained in the last two days: the run starts with a free skill. */
   fresh: boolean;
+  /** Rested (a day off, or a minute by the fire): one more free skill. */
+  rested: boolean;
+  /** Your flame is a bonfire: it throws fireballs. */
+  fireballs: boolean;
+  /** Your flame is a fire fairy: it heals you a little when you're low. */
+  fairy: boolean;
+  /** What you named it. */
+  flameName: string;
 }
 
-/** Workouts it takes for each of Ember's flames. */
+/** Workouts it takes for each of your flame's fires to circle you. */
 export const FLAME_AT = [1, 6, 15, 30];
 
 export function powerOf(state: GameState, now: Date): Power {
   const levels = state.progress;
   const gap = daysSinceLastSession(state, now);
+  const stage = stageIndex(flameStage(state.sessions.length).id);
   return {
     levels,
     strike: 0.12 * levels.push,
@@ -89,6 +109,10 @@ export function powerOf(state: GameState, now: Date): Power {
     armor: Math.min(0.4, 0.04 * levels.core),
     flames: FLAME_AT.filter((n) => state.sessions.length >= n).length,
     fresh: gap !== null && gap <= 2,
+    rested: isRested(state, now),
+    fireballs: stage >= stageIndex('bonfire'),
+    fairy: stage >= stageIndex('fairy'),
+    flameName: storyWords(state).flame,
   };
 }
 
@@ -116,7 +140,7 @@ export const UPGRADES: Upgrade[] = [
   { id: 'power', name: 'Heavy hands', text: () => 'Your attack hits 25% harder.', max: 5 },
   { id: 'haste', name: 'Quick hands', text: () => 'You attack 18% faster.', max: 5 },
   { id: 'multi', name: 'One more', text: (n) => (n === 1 ? 'Your attack fires twice.' : `Your attack fires ${n + 1} times.`), max: 3 },
-  { id: 'flame', name: "Ember's flame", text: () => 'One more flame circles you, burning what it touches.', max: 3 },
+  { id: 'flame', name: "{flame}'s fire", text: () => 'One more flame circles you, burning what it touches.', max: 3 },
   { id: 'spark', name: 'Spark', text: (n) => (n === 1 ? 'Every 2 s, lightning jumps between 3 foes.' : `Lightning jumps to ${2 + n} foes and hits harder.`), max: 4 },
   { id: 'nova', name: 'Ash nova', text: (n) => (n === 1 ? 'Every 3 s, a burst of light pushes foes back.' : 'The burst grows wider and hits harder.'), max: 4 },
   { id: 'swift', name: 'Swift feet', text: () => 'You move 12% faster.', max: 3 },

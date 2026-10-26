@@ -15,8 +15,8 @@ import { placement, type GameState, type Letter } from '@/lib/game';
 import { equippedGear, type Gear, type GearSlot } from '@/lib/gear';
 import { getPath } from '@/lib/skills';
 import { music } from '@/lib/music';
-import { COLD_OPEN, FADING, FIRST_QUEST, HOLLOW_MEET, LETTER_PROMPTS, MEET, SEALED, VOICES } from '@/lib/prologue';
-import { renderLines } from '@/lib/story';
+import { COLD_OPEN, FADING, FIRST_QUEST, HOLLOW_MEET, LETTER_PROMPTS, MEET, SEALED, VOICES } from '@/story/opening';
+import { renderLines, storyWords } from '@/story/engine';
 import { STARTER_LOOKS } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
 
@@ -90,7 +90,8 @@ export function Prologue({ state, onFinish, onLook, onExit, onSkip }: Props) {
   // Only brand-new players are placed; anyone replaying keeps their progress.
   const needsPlacement = !state.profile.onboarded && state.sessions.length === 0;
   const placed = useMemo(() => placement(counts.push, counts.pull, counts.core), [counts]);
-  const words = { ...letter, voice: voice.trim() || "You're not enough.", sessions: String(state.sessions.length) };
+  // The flame gets its name after the first workout; until then it's "A spark".
+  const words = { ...storyWords(state), ...letter, voice: voice.trim() || "You're not enough.", flame: state.profile.flame ?? '' };
   const go = useCallback((s: Step) => () => setStep(s), []);
 
   const finish = () => onFinish({ letter, voice: voice.trim(), progress: needsPlacement ? placed : undefined });
@@ -215,13 +216,14 @@ export function Prologue({ state, onFinish, onLook, onExit, onSkip }: Props) {
           key="sealed"
           lines={SEALED}
           gear={gear}
-          backdrop={(i) => (i < 2 ? <Wanderer size={140} /> : i < 5 ? <Book size={120} /> : <Ember size={36} dim />)}
+          backdrop={(i) => (i < 2 ? <Wanderer size={140} /> : i < 5 ? <Book size={120} /> : <Ember size={72} stage="spark" mood="soft" />)}
+          flame="spark"
           onDone={go(needsPlacement ? 'placement' : 'quest')}
         />
       );
     case 'quest':
       return (
-        <Dialogue key="quest" lines={FIRST_QUEST} gear={gear} cinematic backdrop={() => <Enemy id="slime" size={110} />} onDone={firstRun ? go('look') : finish} />
+        <Dialogue key="quest" lines={FIRST_QUEST} gear={gear} flame="spark" cinematic backdrop={() => <Enemy id="slime" size={110} />} onDone={firstRun ? go('look') : finish} />
       );
     case 'placement':
       return <Placement counts={counts} setCounts={setCounts} placed={placed} onDone={go('quest')} />;
@@ -235,7 +237,7 @@ function MakeItYours({ look, setLook, gear, onDone }: { look: Look; setLook: (l:
   return (
     <div className="safe-top safe-bottom mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6">
       <div className="mt-4 flex items-center gap-3">
-        <Ember size={44} />
+        <Ember size={64} stage="spark" />
         <p className="flex-1 text-sm text-slate-300">&ldquo;One more thing before we walk. Is this really you? Change anything. You can change it again later.&rdquo;</p>
       </div>
       <div className="mt-5 flex-1">
@@ -368,7 +370,7 @@ function Placement({
   return (
     <div className="safe-top safe-bottom mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6">
       <div className="mt-4 flex items-center gap-3">
-        <Ember size={44} />
+        <Ember size={64} stage="spark" />
         <p className="flex-1 text-sm text-slate-300">&ldquo;Before we walk: roughly how many can you do today? Guess low. I won&apos;t judge.&rdquo;</p>
       </div>
       <div className="mt-6 flex-1 space-y-3">

@@ -2,6 +2,7 @@ import { PATHS, getPath, type PathId, type SkillNode } from './skills';
 import { classPath, equippedGear, type ClassId, type Gear } from './gear';
 import type { Look } from '@/sprites/engine/figure';
 import type { FogProgress } from './fog';
+import type { AnswerId } from '@/story/types';
 
 export const XP_FULL_SESSION = 100;
 export const XP_MINI_SESSION = 30;
@@ -82,6 +83,22 @@ export interface Profile {
   classId?: ClassId;
   /** How the hero looks. Missing on saves from before the look picker: the default boy. */
   look?: Look;
+  /** The name the player gave the flame. Missing until it asks. */
+  flame?: string;
+}
+
+/** A page of the Book of Days: one for every day the app was opened. */
+export interface DayPage {
+  /** Local date, "2026-10-26". */
+  day: string;
+  /** What the flame said that day. */
+  line: string;
+  /** The day's words for the road. */
+  quote: { text: string; by: string };
+  /** The player kept the quote. */
+  kept?: boolean;
+  /** Sat by the fire on a rest day. */
+  fire?: boolean;
 }
 
 export interface GameState {
@@ -98,6 +115,10 @@ export interface GameState {
   seenScenes: string[];
   /** Runs in the Fog: zones cleared and best results. */
   fog?: FogProgress;
+  /** What the player answered in the story: heart moments, villager stories. */
+  answers?: Partial<Record<AnswerId, string>>;
+  /** The Book of Days, oldest first. */
+  days?: DayPage[];
 }
 
 export function initialState(): GameState {

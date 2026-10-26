@@ -1,5 +1,5 @@
-import type { Letter } from './game';
-import type { Line } from './story';
+import type { Letter } from '@/lib/game';
+import type { Line } from './types';
 
 // The opening, scene by scene. It's written for anyone who once loved training and lost it,
 // so it never names a sport, an age or a number.
@@ -84,18 +84,18 @@ export const LETTER_PROMPTS: { key: keyof Letter; label: string; placeholder: st
 export const SEALED: Line[] = [
   { who: 'narrator', text: 'The Wanderer folds your letter without reading it, and keeps it close.' },
   { who: 'wanderer', text: "I'll carry this. One day I'll read it back to you. I promise." },
-  { who: 'narrator', text: 'Then he hands you a book. Old leather. Every page is blank.' },
+  { who: 'narrator', text: 'Then the Wanderer hands you a book. Old leather. Every page is blank.' },
   { who: 'wanderer', text: 'Your past is already written. Nobody can change it. Not even you.' },
   { who: 'wanderer', text: "But this one is empty. Every time you train, a page gets written. You're the author now." },
   { who: 'narrator', text: 'Something flickers in the ash at your feet. A spark, no bigger than a fingernail.' },
-  { who: 'ember', text: "...hi. Sorry. I'm small right now. I used to be bigger." },
-  { who: 'ember', text: "I think I'm the part of you that never stopped wanting this." },
-  { who: 'ember', text: "I waited a long time. I'm really glad you got up." },
+  { who: 'flame', text: "...hi. Sorry. I'm small right now. I used to be bigger." },
+  { who: 'flame', text: "I think I'm the part of you that never stopped wanting this." },
+  { who: 'flame', text: "I waited a long time. I'm really glad you got up." },
 ];
 
 export const FIRST_QUEST: Line[] = [
   { who: 'wanderer', text: 'Your first quest is simple. Show up three times this week.' },
   { who: 'wanderer', text: 'Not perfect. Present.' },
-  { who: 'ember', text: 'Every session you do, I grow. Just so you know. No pressure. (Some pressure.)' },
+  { who: 'flame', text: 'Every session you do, I grow. Just so you know. No pressure. (Some pressure.)' },
   { who: 'narrator', text: 'Chapter 1: The Ashlands.' },
 ];
