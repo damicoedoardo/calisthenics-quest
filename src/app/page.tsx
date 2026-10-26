@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Map, Shield, Swords } from 'lucide-react';
 import { TodayTab } from '@/components/TodayTab';
-import { SkillsTab } from '@/components/SkillsTab';
+import { MapTab } from '@/components/MapTab';
 import { HeroTab } from '@/components/HeroTab';
 import { Hero } from '@/components/Hero';
 import { Prologue } from '@/components/Prologue';
@@ -15,12 +15,13 @@ import { LookProvider } from '@/components/Look';
 import { finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { pendingScenes, renderLines, storyState, storyWords, type Scene, type StoryState } from '@/lib/story';
 import { useGameState } from '@/lib/store';
+import { settleFight, startFight, type WorkoutFight } from '@/lib/fight';
 
-type Tab = 'today' | 'skills' | 'hero';
+type Tab = 'today' | 'map' | 'hero';
 
 const TABS: { id: Tab; label: string; Icon: typeof Swords }[] = [
   { id: 'today', label: 'Today', Icon: Swords },
-  { id: 'skills', label: 'Skills', Icon: Map },
+  { id: 'map', label: 'Map', Icon: Map },
   { id: 'hero', label: 'Hero', Icon: Shield },
 ];
 
@@ -37,7 +38,7 @@ export default function Home() {
 function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const [tab, setTab] = useState<Tab>('today');
   const [training, setTraining] = useState(false);
-  const [after, setAfter] = useState<{ result: FinishResult; before: StoryState; after: StoryState } | null>(null);
+  const [after, setAfter] = useState<{ result: FinishResult; before: StoryState; after: StoryState; fight?: WorkoutFight } | null>(null);
   const [scene, setScene] = useState<Scene | null>(null);
   const [picker, setPicker] = useState<'story' | 'manual' | null>(null);
   const [replaying, setReplaying] = useState(false);
@@ -52,7 +53,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     const next = pendingScenes(state, new Date())[0];
     if (next) setScene(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, state.profile.onboarded, state.sessions.length, state.tests.length, replaying, training, after, scene, picker, storyTick]);
+  }, [ready, state.profile.onboarded, state.sessions.length, state.tests.length, state.road, replaying, training, after, scene, picker, storyTick]);
 
   const endScene = useCallback(() => {
     if (!scene) return;
@@ -61,21 +62,23 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     setScene(null);
   }, [scene, update]);
 
+  // Starting a workout walks you into the next fight on the road.
   const start = (checkin: Checkin) => {
     update((s) => {
       const hasSets = !!s.draft && Object.values(s.draft.sets).some((l) => l.length > 0);
-      if (hasSets) return s;
-      return { ...s, draft: { startedAt: new Date().toISOString(), checkin, sets: {} } };
+      if (hasSets) return s.draft!.fight ? s : { ...s, draft: { ...s.draft!, fight: startFight(s, new Date()) } };
+      return { ...s, draft: { startedAt: new Date().toISOString(), checkin, sets: {}, fight: startFight(s, new Date()) } };
     });
     setTraining(true);
   };
 
   const finish = () => {
-    const res = finishSession(state, new Date());
-    if (!res) return;
+    const done = finishSession(state, new Date());
+    if (!done) return;
+    const res = settleFight(done, state);
     const before = storyState(state);
     update(() => res.state);
-    setAfter({ result: res, before, after: storyState(res.state) });
+    setAfter({ result: res, before, after: storyState(res.state), fight: state.draft?.fight });
     setTraining(false);
     setTab('today');
   };
@@ -122,9 +125,9 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
       <main className="flex-1 px-4 pb-28 pt-2">
         {tab === 'today' ? (
-          <TodayTab state={state} onStart={start} onReplayOpening={() => setReplaying(true)} />
-        ) : tab === 'skills' ? (
-          <SkillsTab state={state} />
+          <TodayTab state={state} onStart={start} onReplayOpening={() => setReplaying(true)} onOpenMap={() => setTab('map')} />
+        ) : tab === 'map' ? (
+          <MapTab state={state} update={update} onTrain={() => setTab('today')} />
         ) : (
           <HeroTab
             state={state}
@@ -155,7 +158,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       </nav>
 
       {training && <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />}
-      {after && <AfterSession result={after.result} before={after.before} after={after.after} onClose={() => setAfter(null)} />}
+      {after && <AfterSession result={after.result} before={after.before} after={after.after} fight={after.fight} onClose={() => setAfter(null)} />}
       {scene && (
         <Dialogue
           key={scene.id}

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Download, Film, Mail, Palette, Trophy, Upload } from 'lucide-react';
 import { SoundToggle } from './Sound';
+import { SkillsTab } from './SkillsTab';
 import { Hero } from './Hero';
 import { useLook } from './Look';
 import { LookEditor } from './LookEditor';
@@ -133,6 +134,12 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
         <Stat label="Quests" value={state.sessions.length} />
         <Stat label="Skills beaten" value={state.sessions.reduce((a, s) => a + s.unlocked.length, 0)} />
         <Stat label="Chapter" value={story.finished ? 'Done' : story.index + 1} />
+      </section>
+
+      <section>
+        <h2 className="mb-3 font-pixel text-[10px] text-gold-300">Strength paths</h2>
+        <p className="mb-4 text-xs text-slate-400">Your gear comes from these. In fights, the weapon sets your damage, armor your HP, the shield your guard.</p>
+        <SkillsTab state={state} />
       </section>
 
       <section className="rounded-2xl bg-ink-800 p-4">

@@ -42,3 +42,25 @@ body {
     background-position: calc(var(--fw) * var(--n) * -1) var(--y);
   }
 }
+
+/* Timing rings in road fights (src/components/Battle.tsx): the ring reaches the target size
+   (scale 1) at --d, then keeps closing until it is missed. */
+@keyframes ringclose {
+  from {
+    transform: scale(2.6);
+  }
+  to {
+    transform: scale(0.44);
+  }
+}
+
+/* The Fog over unlit stops on the road. */
+@keyframes fogdrift {
+  0%,
+  100% {
+    transform: translateX(-4%);
+  }
+  50% {
+    transform: translateX(4%);
+  }
+}

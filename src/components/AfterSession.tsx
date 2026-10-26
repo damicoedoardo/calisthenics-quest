@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Heart } from 'lucide-react';
+import { Check, Star, X } from 'lucide-react';
 import { Hero } from './Hero';
-import { Enemy } from './Characters';
+import { Ember } from './Characters';
+import { Foe } from './Battle';
+import { stopLabel } from './WorkoutFight';
 import { music } from '@/lib/music';
 import { gearOf, levelInfo, totalXp, type FinishResult } from '@/lib/game';
 import type { StoryState } from '@/lib/story';
+import { emberStage, patrolAt, roadState, stopAt } from '@/lib/road';
+import type { WorkoutFight } from '@/lib/fight';
 
 const CONFETTI = ['#fbbf24', '#f97316', '#22d3ee', '#a78bfa', '#34d399'];
 
@@ -14,49 +18,113 @@ interface Props {
   result: FinishResult;
   before: StoryState;
   after: StoryState;
+  /** The fight the workout had, for the stars' reasons. */
+  fight?: WorkoutFight;
   onClose: () => void;
 }
 
-/** After a session: a short battle against the chapter enemy, then the loot. */
-export function AfterSession({ result, before, after, onClose }: Props) {
-  const [stage, setStage] = useState<'battle' | 'loot'>(before.chapter ? 'battle' : 'loot');
-  const [hit, setHit] = useState(false);
-  const reps = result.session.entries.reduce((a, e) => a + e.sets.reduce((b, s) => b + s.reps, 0), 0);
-  const defeated = before.chapter && (after.index > before.index || (after.heartsLeft === 0 && before.heartsLeft > 0));
-  const heartsShown = hit ? Math.max(0, before.heartsLeft - 1) : before.heartsLeft;
+/** After a session: the fight is won, its stars, Ember grows, then the loot. */
+export function AfterSession({ result, fight, onClose }: Props) {
+  const won = result.session.fight;
+  const [stage, setStage] = useState<'victory' | 'loot'>(won ? 'victory' : 'loot');
+  const [shown, setShown] = useState(false);
+  const sessions = result.state.sessions.length;
+  const emberBefore = emberStage(sessions - 1);
+  const emberNow = emberStage(sessions);
+  const grew = emberNow.index > emberBefore.index;
 
   useEffect(() => {
-    if (stage !== 'battle') return;
+    if (stage !== 'victory') return;
     const t = setTimeout(() => {
-      setHit(true);
+      setShown(true);
       music.sting('victory');
-    }, 700);
+    }, 600);
     return () => clearTimeout(t);
   }, [stage]);
 
-  if (stage === 'battle' && before.chapter) {
+  if (stage === 'victory' && won) {
+    const foe = won.patrol ? patrolAt(won.g) : stopAt(won.g)!;
+    const next = roadState(result.state).next;
+    const grades = fight?.blows.flatMap((b) => b.guards ?? []) ?? [];
+    const perfect = grades.filter((g) => g === 'perfect').length;
+    const falls = fight?.blows.filter((b) => b.down).length ?? 0;
+    const fell = falls > 0;
+    const finalBlow = foe.kind === 'boss' && foe.blow && foe.blow.n === foe.blow.of;
+    const title = won.patrol
+      ? 'Patrol beaten'
+      : foe.kind === 'boss'
+        ? finalBlow
+          ? `${foe.name} falls!`
+          : `A blow lands on ${foe.name}!`
+        : `${foe.name} defeated!`;
+    const line = won.patrol
+      ? 'The final blow still waits for your max test on the Hero tab.'
+      : foe.kind === 'boss'
+        ? finalBlow
+          ? 'The chapter is yours. The Fog pulls back from the whole valley.'
+          : `Blow ${foe.blow?.n} of ${foe.blow?.of}. It flees up the road. Next week, the next blow.`
+        : result.session.kind === 'mini'
+          ? 'Small still counts. Ember finished it with you.'
+          : 'Your sets did that. Every one of them.';
+    const reasons = [
+      { ok: true, text: 'Won the fight' },
+      { ok: !fell, text: fell ? `You fell ${falls === 1 ? 'once' : `${falls} times`}, and got back up` : 'Never fell' },
+      { ok: !fell && perfect * 2 >= grades.length, text: grades.length ? `Perfect guards: ${perfect} of ${grades.length}` : 'Perfect guards' },
+    ];
+
     return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ink-950 px-6 text-center" onClick={() => hit && setStage('loot')}>
-        <p className="font-pixel text-[10px] text-slate-400">Chapter {before.chapter.n}</p>
-        <p className="mt-1 font-pixel text-xs text-gold-300">vs {before.chapter.enemy}</p>
-        <div className="relative mt-8 flex items-end gap-10">
-          <Hero gear={gearOf(result.state)} classId={result.state.profile.classId} size={110} bounce={false} />
-          <div className={`relative ${hit ? 'animate-shake' : ''} ${defeated && hit ? 'opacity-30 grayscale transition-all duration-700' : ''}`}>
-            <Enemy id={before.chapter.enemyId} size={96} />
-            {hit && (
-              <span className="absolute -top-2 left-1/2 -translate-x-1/2 animate-hit font-pixel text-sm text-red-400">-{reps}</span>
-            )}
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-y-auto bg-ink-950 px-6 py-8 text-center" onClick={() => shown && setStage('loot')}>
+        <p className="font-pixel text-[10px] text-slate-400">{stopLabel(foe, won.patrol)}</p>
+        <div className="relative mt-6 flex items-end gap-8">
+          <Hero gear={gearOf(result.state)} classId={result.state.profile.classId} size={112} />
+          <div className={`transition-all duration-700 ${shown ? 'opacity-30 grayscale' : ''}`}>
+            <Foe sprite={foe.sprite} size={foe.kind === 'boss' ? 112 : 96} gear={gearOf(result.state)} classId={result.state.profile.classId} />
           </div>
         </div>
-        <div className="mt-6 flex flex-wrap justify-center gap-1">
-          {Array.from({ length: before.hearts }).map((_, i) => (
-            <Heart key={i} size={16} className={`transition-all duration-500 ${i < heartsShown ? 'fill-red-500 text-red-500' : 'text-ink-600'}`} />
+        <p className="mt-5 font-pixel text-xs leading-relaxed text-gold-300">{title}</p>
+        <p className="mt-2 text-sm text-slate-300">{line}</p>
+
+        <div className="mt-5 flex gap-2" aria-label={`${won.stars} of 3 stars`}>
+          {[1, 2, 3].map((n) => (
+            <span key={n} className={shown ? 'animate-pop' : 'opacity-0'} style={{ animationDelay: `${n * 0.25}s` }}>
+              <Star size={34} className={n <= won.stars ? 'fill-gold-400 text-gold-400' : 'text-ink-600'} />
+            </span>
           ))}
         </div>
-        <p className="mt-4 text-sm text-slate-300">
-          {hit ? (defeated ? `${before.chapter.enemy} is defeated!` : `Your training hit for ${reps}. One heart down.`) : 'Your reps strike...'}
-        </p>
-        {hit && <button className="mt-8 rounded-2xl bg-gold-400 px-8 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309]">Claim loot</button>}
+        <ul className="mt-3 space-y-1 text-left text-xs">
+          {reasons.map((r) => (
+            <li key={r.text} className={`flex items-center gap-2 ${r.ok ? 'text-slate-200' : 'text-slate-500'}`}>
+              {r.ok ? <Check size={13} className="text-emerald-400" /> : <X size={13} />}
+              {r.text}
+            </li>
+          ))}
+        </ul>
+
+        {shown && (
+          <>
+            <div className="mt-6 flex items-center gap-3 rounded-2xl bg-ink-800 px-4 py-3 text-left">
+              <Ember size={grew ? 48 : 36} />
+              <p className="text-xs text-slate-300">
+                {grew ? (
+                  <>
+                    <span className="font-pixel text-[10px] text-gold-300">Ember became a {emberNow.stage.name}!</span>
+                    <br />
+                    New: {emberNow.stage.perk}
+                  </>
+                ) : (
+                  'Ember grows a little with every workout.'
+                )}
+                {next && (
+                  <>
+                    <br />
+                    <span className="text-slate-500">Next on the road: {next.name}</span>
+                  </>
+                )}
+              </p>
+            </div>
+            <button className="mt-6 rounded-2xl bg-gold-400 px-8 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309]">Claim loot</button>
+          </>
+        )}
       </div>
     );
   }
