@@ -1,6 +1,47 @@
 import * as Phaser from 'phaser';
 import type { ClassId } from '@/lib/gear';
 import { RUN_SECONDS, rollUpgrades, xpToNext, type Power, type UpgradeId, type Zone } from '@/lib/fog';
+import {
+  ATTACK,
+  BOSSES,
+  BOSS_LIMIT,
+  BOT_PICKS,
+  DASH,
+  FAIRY,
+  FIREBALL,
+  FLAME,
+  FOES,
+  INVULNERABLE_MS,
+  MAX_FOES,
+  RANGE,
+  RINGS,
+  RING_RADIUS,
+  RING_SIZE,
+  SLASH_REACH,
+  SUMMON,
+  TOMORROW_REACH,
+  WORLD,
+  armorOf,
+  attackCooldown,
+  attackOf,
+  botSteer,
+  elitePack,
+  elitesDue,
+  foeHp,
+  foeKindAt,
+  gemReach,
+  heroDamage,
+  heroMaxHp,
+  heroSpeed,
+  novaHit,
+  packSize,
+  sparkHit,
+  spawnCooldown,
+  type AttackKind,
+  type FoeKind,
+  type SheetKey,
+  type Stats,
+} from './rules';
 import type { FogBoss } from '@/story/types';
 import { music, type SfxId } from '@/lib/music';
 import type { Sheet } from '@/sprites/registry';
@@ -11,7 +52,7 @@ import type { Sheet } from '@/sprites/registry';
    only its chapter's lesson beats (see BOSS below).
    Only this file and the files it imports touch Phaser, and it is loaded only when a run starts. */
 
-export type SheetKey = 'hero' | 'heroAttack' | 'ember' | 'hollow' | 'slime' | 'wisp' | 'mirror' | 'golem' | 'knight' | 'echo';
+export type { SheetKey };
 
 /** Why a skill is free at the start of a run. */
 export type FreePick = 'fresh' | 'rested';
@@ -71,85 +112,12 @@ export interface RunHandle {
   destroy: () => void;
 }
 
-/** Skills the bot takes first. */
-const BOT_PICKS: UpgradeId[] = ['multi', 'power', 'haste', 'vital', 'spark', 'flame', 'nova', 'guard', 'swift', 'magnet'];
-
-const WORLD = 2400;
-const HERO_SPEED = 150;
-const HERO_HP = 100;
-const MAX_FOES = 120;
-const INVULNERABLE_MS = 600;
-/** How far ranged attacks look for a target: about the width of a phone screen. */
-const RANGE = 240;
-/** A sword swings only at what it can reach, so it never whiffs on a foe still walking in. */
-const SLASH_REACH = 90;
-
-type FoeKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'boss';
-
-interface Stats {
-  hp: number;
-  speed: number;
-  dmg: number;
-  xp: number;
-  scale: number;
-  r: number;
-  bits: number[];
-  /** Its sprite sheet. */
-  tex: SheetKey;
-}
-
-const FOES: Record<Exclude<FoeKind, 'boss'>, Stats> = {
-  slime: { hp: 12, speed: 52, dmg: 7, xp: 1, scale: 0.55, r: 14, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0], tex: 'slime' },
-  wisp: { hp: 8, speed: 88, dmg: 5, xp: 1, scale: 0.5, r: 13, bits: [0xf97316, 0xfde68a, 0x6b7280], tex: 'wisp' },
-  mirror: { hp: 34, speed: 66, dmg: 11, xp: 3, scale: 0.65, r: 15, bits: [0xe2e8f0, 0xcbd5e1, 0xffffff], tex: 'mirror' },
-  golem: { hp: 160, speed: 42, dmg: 18, xp: 10, scale: 0.95, r: 18, bits: [0xa8a29e, 0x78716c, 0x84cc16], tex: 'golem' },
-  // A golden copy of you, sent by the Mirror. Hitting it hurts you.
-  reflection: { hp: 30, speed: 78, dmg: 8, xp: 0, scale: 0.75, r: 12, bits: [0xfde68a, 0xfbbf24, 0xffffff], tex: 'echo' },
-};
-
-/** The Perfect Knight's armor: every hit breaks one plate, however weak. */
-const KNIGHT_PLATES = 40;
-
-/**
- * The bosses. Each one's rule is its chapter's lesson:
- * - Tomorrow heals while you keep your distance and splits off small Tomorrows: get close.
- * - The Mirror sends reflections of you, and hitting them hurts you: walk past them.
- * - The Perfect Knight wears plates that any hit breaks, and shouts to push you away: keep hitting.
- * - The Hollow dashes and calls the fog (the Plateau and the Summit fight like it for now).
- */
-const BOSSES: Record<FogBoss, Stats> = {
-  tomorrow: { hp: 2000, speed: 46, dmg: 16, xp: 0, scale: 1.5, r: 20, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0], tex: 'slime' },
-  mirror: { hp: 480, speed: 36, dmg: 16, xp: 0, scale: 1.35, r: 16, bits: [0xe2e8f0, 0xcbd5e1, 0xffffff], tex: 'mirror' },
-  knight: { hp: KNIGHT_PLATES, speed: 62, dmg: 18, xp: 0, scale: 1.15, r: 14, bits: [0xe2e8f0, 0x94a3b8, 0xdc2626], tex: 'knight' },
-  plateau: { hp: 650, speed: 70, dmg: 20, xp: 0, scale: 1.5, r: 13, bits: [0xa78bfa, 0x6b21a8, 0xffffff], tex: 'hollow' },
-  hollow: { hp: 650, speed: 70, dmg: 20, xp: 0, scale: 1.5, r: 13, bits: [0xa78bfa, 0x6b21a8, 0xffffff], tex: 'hollow' },
-  summit: { hp: 650, speed: 70, dmg: 20, xp: 0, scale: 1.5, r: 13, bits: [0xa78bfa, 0x6b21a8, 0xffffff], tex: 'hollow' },
-};
-
 const HEAL = '#86efac';
 
-/** A boss you can't bring down in this long (s) means you need more training: the Fog closes in. */
-const BOSS_LIMIT = 180;
-
-/** Tomorrow heals while you're further than this. */
-const TOMORROW_REACH = 200;
-
 /** The sound each class's attack makes. */
-const ATTACK_SFX: Record<'slash' | 'arrow' | 'orb' | 'wave', SfxId> = { slash: 'slash', arrow: 'arrow', orb: 'orb', wave: 'wave' };
+const ATTACK_SFX: Record<AttackKind, SfxId> = { slash: 'slash', arrow: 'arrow', orb: 'orb', wave: 'wave' };
 /** How long a creature takes to rise out of the fog (ms). */
 const RISE_MS = 280;
-
-/** Base attack per class: how often it fires (s) and how hard it hits. */
-const ATTACK: Record<'slash' | 'arrow' | 'orb' | 'wave', { cd: number; dmg: number }> = {
-  slash: { cd: 0.9, dmg: 14 },
-  arrow: { cd: 0.6, dmg: 10 },
-  orb: { cd: 0.8, dmg: 15 },
-  wave: { cd: 1.3, dmg: 11 },
-};
-
-function attackOf(cls: ClassId | undefined): keyof typeof ATTACK {
-  return cls === 'archer' ? 'arrow' : cls === 'mage' ? 'orb' : cls === 'monk' ? 'wave' : 'slash';
-}
 
 class Foe extends Phaser.Physics.Arcade.Sprite {
   kind: FoeKind = 'slime';
@@ -210,8 +178,8 @@ class RunScene extends Phaser.Scene {
   private fading: { draw: (g: Phaser.GameObjects.Graphics, t: number) => void; start: number; ms: number }[] = [];
 
   private t = 0;
-  private hp = HERO_HP;
-  private maxHp = HERO_HP;
+  private hp = 0;
+  private maxHp = 0;
   private xp = 0;
   private level = 1;
   private kills = 0;
@@ -255,7 +223,7 @@ class RunScene extends Phaser.Scene {
 
   create() {
     const { zone, power } = this.setup;
-    this.maxHp = this.hp = HERO_HP + power.hold;
+    this.maxHp = this.hp = heroMaxHp(power);
     this.makeTextures();
     for (const [key, s] of Object.entries(this.setup.sheets)) {
       this.anims.create({ key, frames: this.anims.generateFrameNumbers(key, { start: 0, end: s.frames - 1 }), frameRate: 1000 / s.ms, repeat: s.loop ? -1 : 0 });
@@ -549,7 +517,7 @@ class RunScene extends Phaser.Scene {
       x /= len;
       y /= len;
     }
-    const speed = HERO_SPEED * (1 + 0.12 * (this.ups.swift ?? 0));
+    const speed = heroSpeed(this.ups);
     if (this.time.now < this.shoved.until) this.hero.setVelocity(this.shoved.x, this.shoved.y);
     else this.hero.setVelocity(x * speed, y * speed);
     if (len > 0.01) {
@@ -579,64 +547,15 @@ class RunScene extends Phaser.Scene {
     }
   }
 
-  /**
-   * The bot: steps away from what's close (reflections most of all), picks up light, and circles
-   * the boss at the distance its rule asks for. A steady, careful player, not a great one. With a
-   * sword it lets the crowd come into reach instead, since a slash only hits what's close.
-   */
+  /** The bot's move this frame (see botSteer in rules.ts). */
   private botMove(): [number, number] {
-    const h = this.hero,
-      melee = attackOf(this.setup.classId) === 'slash';
-    let x = 0,
-      y = 0;
+    const foes: Foe[] = [];
     for (const o of this.foes.getChildren()) {
       const f = o as Foe;
-      if (!f.active || f === this.boss) continue;
-      const dx = h.x - f.x,
-        dy = h.y - f.y,
-        d = Math.hypot(dx, dy) || 1;
-      if (d > (melee && f.kind !== 'reflection' ? 70 : 170)) continue;
-      const w = ((f.kind === 'reflection' ? 3 : melee ? 0.4 : 1) * (f.dmg / 8) * 2500) / (d * d);
-      x += (dx / d) * w;
-      y += (dy / d) * w;
+      if (f.active && f !== this.boss) foes.push(f);
     }
-    const b = this.boss;
-    if (b?.active) {
-      const dx = b.x - h.x,
-        dy = b.y - h.y,
-        d = Math.hypot(dx, dy) || 1,
-        rule = this.setup.zone.boss,
-        // Tomorrow heals when you're far, the Knight needs hits: stay close. The rest dash: keep room.
-        want = melee ? 60 : rule === 'tomorrow' || rule === 'knight' ? 80 : rule === 'mirror' ? 110 : 150,
-        pull = Phaser.Math.Clamp((d - want) / 80, -1.5, 1.5);
-      x += (dx / d) * pull - (dy / d) * 0.7;
-      y += (dy / d) * pull + (dx / d) * 0.7;
-    } else {
-      let gem: Gem | null = null,
-        best = 260;
-      for (const g of this.gems) {
-        const d = Math.hypot(g.img.x - h.x, g.img.y - h.y);
-        if (d < best) {
-          best = d;
-          gem = g;
-        }
-      }
-      if (gem) {
-        const dx = gem.img.x - h.x,
-          dy = gem.img.y - h.y,
-          d = Math.hypot(dx, dy) || 1;
-        x += (dx / d) * 0.8;
-        y += (dy / d) * 0.8;
-      }
-    }
-    // Keep off the walls, where a crowd can pin you.
-    const m = 200;
-    if (h.x < m) x += (m - h.x) / m;
-    if (h.x > WORLD - m) x -= (h.x - (WORLD - m)) / m;
-    if (h.y < m) y += (m - h.y) / m;
-    if (h.y > WORLD - m) y -= (h.y - (WORLD - m)) / m;
-    const len = Math.hypot(x, y);
-    return len < 0.05 ? [0, 0] : [x / len, y / len];
+    const b = this.boss?.active ? this.boss : null;
+    return botSteer(this.hero, foes, b, this.gems.map((g) => g.img), this.setup.zone.boss, attackOf(this.setup.classId) === 'slash');
   }
 
   // ---------- foes ----------
@@ -653,28 +572,27 @@ class RunScene extends Phaser.Scene {
       return;
     }
     // Ring waves: the fog closes in from every side.
-    for (const at of [60, 150]) {
+    for (const at of RINGS) {
       if (t >= at && !this.rings.has(at)) {
         this.rings.add(at);
-        for (let i = 0; i < 24; i++) {
-          const a = (i / 24) * Math.PI * 2;
-          this.addFoe('wisp', this.hero.x + Math.cos(a) * 340, this.hero.y + Math.sin(a) * 340);
+        for (let i = 0; i < RING_SIZE; i++) {
+          const a = (i / RING_SIZE) * Math.PI * 2;
+          this.addFoe('wisp', this.hero.x + Math.cos(a) * RING_RADIUS, this.hero.y + Math.sin(a) * RING_RADIUS);
         }
       }
     }
-    if (t >= 90 && Math.floor((t - 90) / 45) >= this.elites) {
+    if (elitesDue(t) > this.elites) {
       this.elites++;
-      for (let i = 0; i < (t > 180 ? 2 : 1); i++) this.addFoe('golem', ...this.edgePoint());
+      for (let i = 0; i < elitePack(t); i++) this.addFoe('golem', ...this.edgePoint());
     }
     this.cd.spawn -= dt;
     if (this.cd.spawn > 0) return;
-    this.cd.spawn = Math.max(0.3, 0.8 - t / 400) * (this.boss ? 3 : 1);
-    const count = 1 + Math.floor(t / 60);
+    this.cd.spawn = spawnCooldown(t, !!this.boss);
+    const count = packSize(t);
     const [px, py] = this.edgePoint();
     // A pack comes from one side, so they arrive together.
     for (let i = 0; i < count; i++) {
-      const r = Math.random();
-      const kind: FoeKind = t < 45 ? (r < 0.7 ? 'slime' : 'wisp') : t < 120 ? (r < 0.45 ? 'slime' : r < 0.85 ? 'wisp' : 'mirror') : r < 0.3 ? 'slime' : r < 0.7 ? 'wisp' : 'mirror';
+      const kind = foeKindAt(t, Math.random());
       this.addFoe(kind, px + Phaser.Math.Between(-50, 50), py + Phaser.Math.Between(-50, 50));
     }
   }
@@ -689,8 +607,7 @@ class RunScene extends Phaser.Scene {
   private addFoe(kind: FoeKind, x: number, y: number, boss?: FogBoss): Foe | null {
     if (kind !== 'boss' && this.foes.countActive() >= MAX_FOES) return null;
     const s = boss ? BOSSES[boss] : FOES[kind as Exclude<FoeKind, 'boss'>],
-      { zone } = this.setup,
-      grow = kind === 'boss' ? 1 : 1 + this.t / 180;
+      { zone } = this.setup;
     const f = this.foes.get(Phaser.Math.Clamp(x, 10, WORLD - 10), Phaser.Math.Clamp(y, 10, WORLD - 10), s.tex) as Foe;
     f.setTexture(s.tex).setActive(true).setVisible(true).setScale(s.scale).clearTint().setAlpha(1);
     f.play(s.tex);
@@ -700,8 +617,7 @@ class RunScene extends Phaser.Scene {
     f.bornAt = this.time.now;
     f.squashUntil = 0;
     if (this.cameras.main.worldView.contains(f.x, f.y)) this.puffs.explode(5, f.x, f.y + 26 * s.scale);
-    // The Knight's plates don't grow with the zone: it's the number of hits that counts.
-    f.maxHp = f.hp = boss === 'knight' ? KNIGHT_PLATES : Math.round(s.hp * zone.hp * grow);
+    f.maxHp = f.hp = foeHp(s, zone, this.t, boss);
     f.speed = s.speed * (0.9 + Math.random() * 0.2);
     f.dmg = s.dmg * zone.dmg;
     f.xp = s.xp;
@@ -752,7 +668,7 @@ class RunScene extends Phaser.Scene {
     const b = this.addFoe('boss', x, y, kind);
     if (!b) return;
     this.boss = b;
-    this.bossDash = 3;
+    this.bossDash = DASH.first;
     this.bossSummon = kind === 'mirror' ? 2 : 6;
     this.bossClock = kind === 'knight' ? 6 : 0;
     this.bossAt = this.t;
@@ -782,7 +698,7 @@ class RunScene extends Phaser.Scene {
       return;
     }
     if (b.windUntil && now >= b.windUntil && now < b.dashUntil) {
-      b.setVelocity(b.dashDir.x * 380, b.dashDir.y * 380);
+      b.setVelocity(b.dashDir.x * DASH.speed, b.dashDir.y * DASH.speed);
       this.cd.trail -= dt;
       if (this.cd.trail <= 0) {
         this.cd.trail = 0.05;
@@ -798,22 +714,22 @@ class RunScene extends Phaser.Scene {
     this.bossDash -= dt;
     this.bossSummon -= dt;
     if (this.bossDash <= 0) {
-      this.bossDash = 4.5;
-      b.windUntil = now + 700;
-      b.dashUntil = now + 700 + 550;
+      this.bossDash = DASH.every;
+      b.windUntil = now + DASH.windMs;
+      b.dashUntil = now + DASH.windMs + DASH.dashMs;
       b.dashDir.set(dx / d, dy / d);
       b.setTint(0xff6b6b);
       this.sfx('dash');
       const from = { x: b.x, y: b.y },
         dir = b.dashDir.clone();
-      this.fade(700, (g, p) => {
+      this.fade(DASH.windMs, (g, p) => {
         g.lineStyle(10, 0xef4444, 0.15 + 0.3 * p).lineBetween(from.x, from.y, from.x + dir.x * 210, from.y + dir.y * 210);
       });
     }
     if (this.bossSummon <= 0) {
-      this.bossSummon = 9;
-      for (let i = 0; i < 8; i++) {
-        const a = (i / 8) * Math.PI * 2;
+      this.bossSummon = SUMMON.every;
+      for (let i = 0; i < SUMMON.count; i++) {
+        const a = (i / SUMMON.count) * Math.PI * 2;
         this.addFoe('wisp', b.x + Math.cos(a) * 60, b.y + Math.sin(a) * 60);
       }
     }
@@ -897,7 +813,7 @@ class RunScene extends Phaser.Scene {
   // ---------- hitting ----------
 
   private power(base: number) {
-    return base * (1 + this.setup.power.strike) * (1 + 0.25 * (this.ups.power ?? 0));
+    return heroDamage(base, this.setup.power, this.ups);
   }
 
   private nearest(x: number, y: number, skip?: Set<Foe>, within = Infinity): Foe | null {
@@ -992,7 +908,7 @@ class RunScene extends Phaser.Scene {
         this.boss?.active && this.setup.zone.boss !== 'mirror' && Math.hypot(this.boss.x - this.hero.x, this.boss.y - this.hero.y) <= reach ? this.boss : null,
       target = boss ?? this.nearest(this.hero.x, this.hero.y, undefined, reach);
     if (!target && kind !== 'wave') return;
-    this.cd.attack = a.cd / ((1 + this.setup.power.reach) * (1 + 0.18 * (this.ups.haste ?? 0)));
+    this.cd.attack = attackCooldown(kind, this.setup.power, this.ups);
     this.hero.play('heroAttack');
     if (kind !== 'wave') this.sfx(ATTACK_SFX[kind]);
     const n = 1 + (this.ups.multi ?? 0),
@@ -1120,12 +1036,12 @@ class RunScene extends Phaser.Scene {
       targets: img,
       x: tx,
       y: ty,
-      duration: 320,
+      duration: FIREBALL.flightMs,
       ease: 'Quad.easeIn',
       onComplete: () => {
         img.destroy();
         this.ash.explode(8, tx, ty);
-        this.burst(tx, ty, 52, this.power(16), 0xf97316);
+        this.burst(tx, ty, FIREBALL.r, this.power(FIREBALL.dmg), 0xf97316);
       },
     });
   }
@@ -1136,14 +1052,14 @@ class RunScene extends Phaser.Scene {
       this.cd.fireball -= dt;
       if (this.cd.fireball <= 0) {
         const target = this.nearest(this.hero.x, this.hero.y, undefined, RANGE);
-        this.cd.fireball = target ? 2.5 : 0.3;
+        this.cd.fireball = target ? FIREBALL.every : 0.3;
         if (target) this.fireball(target);
       }
     }
     // The fire fairy: when you're low, it heals you (then rests a while).
-    if (power.fairy && this.hp < this.maxHp * 0.35 && this.time.now >= this.fairyAt) {
-      this.fairyAt = this.time.now + 25000;
-      const heal = Math.round(this.maxHp * 0.25);
+    if (power.fairy && this.hp < this.maxHp * FAIRY.below && this.time.now >= this.fairyAt) {
+      this.fairyAt = this.time.now + FAIRY.restMs;
+      const heal = Math.round(this.maxHp * FAIRY.heal);
       this.hp = Math.min(this.maxHp, this.hp + heal);
       this.number(this.hero.x, this.hero.y - 30, heal, HEAL);
       this.bits.particleTint = 0x86efac;
@@ -1153,17 +1069,17 @@ class RunScene extends Phaser.Scene {
     // Ember's flames: from your workouts, plus the ones picked in this run.
     const flames = this.flames.length;
     if (flames > 0) {
-      this.orbit += dt * 2.6;
+      this.orbit += dt * FLAME.spin;
       const now = this.time.now;
       this.flames.forEach((fl, i) => {
         const a = this.orbit + (i / flames) * Math.PI * 2;
-        fl.setPosition(this.hero.x + Math.cos(a) * 68, this.hero.y + Math.sin(a) * 68).setDepth(fl.y + 1);
+        fl.setPosition(this.hero.x + Math.cos(a) * FLAME.orbit, this.hero.y + Math.sin(a) * FLAME.orbit).setDepth(fl.y + 1);
         for (const o of this.foes.getChildren()) {
           const f = o as Foe;
           if (!f.active || now < f.flameAt) continue;
-          if (Math.hypot(f.x - fl.x, f.y - fl.y) < 22) {
-            f.flameAt = now + 500;
-            this.damage(f, this.power(7), 60, fl.x, fl.y);
+          if (Math.hypot(f.x - fl.x, f.y - fl.y) < FLAME.touch) {
+            f.flameAt = now + FLAME.every;
+            this.damage(f, this.power(FLAME.dmg), 60, fl.x, fl.y);
             this.sparks.explode(3, f.x, f.y);
             this.sfx('flame');
           }
@@ -1175,7 +1091,8 @@ class RunScene extends Phaser.Scene {
       this.cd.spark -= dt;
       if (this.cd.spark <= 0) {
         this.cd.spark = 2;
-        if (this.chain(2 + spark, this.power(14 + 6 * (spark - 1)))) this.sfx('spark');
+        const hit = sparkHit(spark);
+        if (this.chain(hit.jumps, this.power(hit.dmg))) this.sfx('spark');
       }
     }
     const nova = this.ups.nova ?? 0;
@@ -1183,7 +1100,8 @@ class RunScene extends Phaser.Scene {
       this.cd.nova -= dt;
       if (this.cd.nova <= 0) {
         this.cd.nova = 3;
-        this.burst(this.hero.x, this.hero.y, 90 + 20 * (nova - 1), this.power(10 + 5 * (nova - 1)), 0xf8fafc);
+        const hit = novaHit(nova);
+        this.burst(this.hero.x, this.hero.y, hit.r, this.power(hit.dmg), 0xf8fafc);
         this.sfx('nova');
         this.cameras.main.shake(100, 0.003);
       }
@@ -1260,7 +1178,7 @@ class RunScene extends Phaser.Scene {
   // ---------- light and levels ----------
 
   private pullGems() {
-    const reach = 60 * (1 + 0.15 * this.setup.power.levels.pull + 0.5 * (this.ups.magnet ?? 0));
+    const reach = gemReach(this.setup.power, this.ups);
     this.gems = this.gems.filter((g) => {
       const dx = this.hero.x - g.img.x,
         dy = this.hero.y - g.img.y,
@@ -1312,7 +1230,7 @@ class RunScene extends Phaser.Scene {
     this.t = Math.max(this.t, RUN_SECONDS - 3);
     // Count the waves and elites skipped over as done, so they don't all arrive at once.
     this.rings = new Set([60, 150]);
-    this.elites = Math.floor((this.t - 90) / 45) + 1;
+    this.elites = elitesDue(this.t);
   }
 
   /** Developer mode: end the run as if the boss fell. */
@@ -1346,7 +1264,7 @@ class RunScene extends Phaser.Scene {
   private hurt(f: Foe) {
     const now = this.time.now;
     if (this.over || now < this.hurtUntil || !f.active) return;
-    const armor = Math.min(0.6, this.setup.power.armor + 0.1 * (this.ups.guard ?? 0));
+    const armor = armorOf(this.setup.power, this.ups);
     this.hp -= f.dmg * (1 - armor);
     this.hurtUntil = now + INVULNERABLE_MS;
     this.cameras.main.shake(120, 0.006);
