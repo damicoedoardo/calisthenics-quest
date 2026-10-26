@@ -1,42 +1,93 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Map, Shield, Swords } from 'lucide-react';
-import { QuestTab } from '@/components/QuestTab';
+import { TodayTab } from '@/components/TodayTab';
 import { SkillsTab } from '@/components/SkillsTab';
 import { HeroTab } from '@/components/HeroTab';
-import { RewardModal } from '@/components/RewardModal';
 import { Hero } from '@/components/Hero';
-import { equippedGear, finishSession, levelInfo, totalXp, type FinishResult } from '@/lib/game';
+import { Prologue } from '@/components/Prologue';
+import { Workout } from '@/components/Workout';
+import { AfterSession } from '@/components/AfterSession';
+import { Dialogue } from '@/components/Dialogue';
+import { ClassPicker } from '@/components/ClassPicker';
+import { finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
+import { pendingScenes, renderLines, storyState, type Scene, type StoryState } from '@/lib/story';
 import { useGameState } from '@/lib/store';
 
-type Tab = 'quest' | 'skills' | 'hero';
+type Tab = 'today' | 'skills' | 'hero';
 
 const TABS: { id: Tab; label: string; Icon: typeof Swords }[] = [
-  { id: 'quest', label: 'Quest', Icon: Swords },
+  { id: 'today', label: 'Today', Icon: Swords },
   { id: 'skills', label: 'Skills', Icon: Map },
   { id: 'hero', label: 'Hero', Icon: Shield },
 ];
 
 export default function Home() {
   const { state, ready, update } = useGameState();
-  const [tab, setTab] = useState<Tab>('quest');
-  const [reward, setReward] = useState<FinishResult | null>(null);
+  const [tab, setTab] = useState<Tab>('today');
+  const [training, setTraining] = useState(false);
+  const [after, setAfter] = useState<{ result: FinishResult; before: StoryState; after: StoryState } | null>(null);
+  const [scene, setScene] = useState<Scene | null>(null);
+  const [picker, setPicker] = useState<'story' | 'manual' | null>(null);
+  // Bumped when something may have unlocked a scene outside a session (a max test).
+  const [storyTick, setStoryTick] = useState(0);
   const lvl = levelInfo(totalXp(state));
+  const gear = gearOf(state);
+
+  // Play the next story scene whenever the player is back on the main screen.
+  useEffect(() => {
+    if (!ready || !state.profile.onboarded || training || after || scene || picker) return;
+    const next = pendingScenes(state, new Date())[0];
+    if (next) setScene(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, state.profile.onboarded, state.sessions.length, state.tests.length, training, after, scene, picker, storyTick]);
+
+  const endScene = useCallback(() => {
+    if (!scene) return;
+    update((s) => ({ ...s, seenScenes: [...s.seenScenes, scene.id] }));
+    if (scene.action === 'choose-class') setPicker('story');
+    setScene(null);
+  }, [scene, update]);
+
+  const start = (checkin: Checkin) => {
+    update((s) => {
+      const hasSets = !!s.draft && Object.values(s.draft.sets).some((l) => l.length > 0);
+      if (hasSets) return s;
+      return { ...s, draft: { startedAt: new Date().toISOString(), checkin, sets: {} } };
+    });
+    setTraining(true);
+  };
 
   const finish = () => {
     const res = finishSession(state, new Date());
     if (!res) return;
+    const before = storyState(state);
     update(() => res.state);
-    setReward(res);
+    setAfter({ result: res, before, after: storyState(res.state) });
+    setTraining(false);
+    setTab('today');
   };
+
+  if (!ready) return <div className="min-h-dvh bg-ink-950" />;
+
+  if (!state.profile.onboarded) {
+    return (
+      <Prologue
+        state={state}
+        onFinish={({ letter, progress }) =>
+          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, letter }, progress: progress ?? s.progress }))
+        }
+      />
+    );
+  }
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-md flex-col">
       <header className="safe-top sticky top-0 z-20 bg-ink-950/90 px-4 pb-3 backdrop-blur">
         <div className="flex items-center gap-3">
           <div className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800">
-            {ready && <Hero gear={equippedGear(state)} size={42} bounce={false} />}
+            <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} />
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between">
@@ -48,7 +99,7 @@ export default function Home() {
             <div className="mt-1.5 h-2.5 overflow-hidden rounded-sm bg-ink-700">
               <div className="h-full bg-gradient-to-r from-gold-500 to-gold-300 transition-all duration-700" style={{ width: `${lvl.pct * 100}%` }} />
             </div>
-            <p className="mt-1 text-right text-[11px] text-slate-500">
+            <p className="mt-1 text-right font-mono text-[11px] text-slate-500">
               {lvl.into} / {lvl.needed} XP
             </p>
           </div>
@@ -56,12 +107,12 @@ export default function Home() {
       </header>
 
       <main className="flex-1 px-4 pb-28 pt-2">
-        {!ready ? null : tab === 'quest' ? (
-          <QuestTab state={state} update={update} onFinish={finish} />
+        {tab === 'today' ? (
+          <TodayTab state={state} onStart={start} />
         ) : tab === 'skills' ? (
           <SkillsTab state={state} />
         ) : (
-          <HeroTab state={state} update={update} />
+          <HeroTab state={state} update={update} onChangeClass={() => setPicker('manual')} onTestLogged={() => setStoryTick((t) => t + 1)} />
         )}
       </main>
 
@@ -83,7 +134,20 @@ export default function Home() {
         </div>
       </nav>
 
-      {reward && <RewardModal result={reward} onClose={() => setReward(null)} />}
+      {training && <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />}
+      {after && <AfterSession result={after.result} before={after.before} after={after.after} onClose={() => setAfter(null)} />}
+      {scene && <Dialogue key={scene.id} lines={renderLines(scene.lines, state.profile.letter)} gear={gear} classId={state.profile.classId} onDone={endScene} />}
+      {picker && (
+        <ClassPicker
+          progress={state.progress}
+          current={state.profile.classId}
+          onPick={(id) => {
+            update((s) => ({ ...s, profile: { ...s.profile, classId: id } }));
+            setPicker(null);
+          }}
+          onCancel={() => setPicker(null)}
+        />
+      )}
     </div>
   );
 }

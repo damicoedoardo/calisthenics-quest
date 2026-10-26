@@ -1,6 +1,6 @@
 // FORMA service worker: the app keeps working in a gym with no signal.
 // Pages are network-first (fresh deploys win), static assets cache-first.
-const CACHE = 'forma-v1';
+const CACHE = 'forma-v2';
 const SHELL = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (event) => {

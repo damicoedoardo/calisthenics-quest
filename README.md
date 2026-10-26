@@ -6,11 +6,12 @@ Installable as an app: open the site on your phone, then **Share → Add to Home
 
 ## How the game works
 
-- **Today's quest**: the current skill on each path plus a leg exercise. Tap a set when it's done. Stop every set with 2-3 reps left.
-- **Full vs mini quest**: half the sets or more is a full quest (100 XP), anything less is a mini quest (30 XP). Bad days still count.
-- **Weekly quest**: 3 sessions a week. Each week in a row adds +10% XP (max +50%).
-- **Progression**: when every set of an exercise is done, it asks for one more rep (or 2 more seconds) next week. Hit the unlock target to beat the skill, earn +150 XP and new gear.
-- **Max test**: every 3 weeks, go all out on push-ups, pull-ups and L-sit for +200 XP.
+- **The story**: you wake in the Ashlands next to the sword you put down. A hooded Wanderer walks with you; on day one you write a letter to your future self. Five chapters open as you keep showing up (sessions, not strength), and the ending reads your letter back to you. Rules and scenes live in `src/lib/story.ts`.
+- **Today's quest**: a check-in (Rough, Normal, Strong), then Day A (Push + Core) or Day B (Pull + Core), plus one support exercise from the other path. Rough means a 15-minute minimum quest that still counts.
+- **Logging a set**: one tap on how many reps were left in the tank (4+, 2-3, 0-1), then a 90-second rest timer. Every set done at target with reps to spare raises the target by one rep (or 2 seconds) next time.
+- **Classes**: Warrior (Push), Archer (Pull), Monk (Core), Mage (whichever path is behind). The class path forges your weapon and gives +10% XP.
+- **XP**: full quest 100, minimum 30, streak +10% per perfect week in a row (max +50%), class +10%, perfect week +100, skill beaten +250, welcome back after 2+ weeks +50, max test +200 every 3 weeks.
+- **Chapters**: every session takes one heart off the chapter enemy. Chapters 2 and 5 also need a max test.
 
 ## Development
 

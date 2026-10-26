@@ -1,23 +1,30 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Trophy, Upload } from 'lucide-react';
+import { Download, Mail, Trophy, Upload } from 'lucide-react';
 import { Hero } from './Hero';
 import { PATHS } from '@/lib/skills';
-import { equippedGear, logMaxTest, nextTestDate, type GameState } from '@/lib/game';
+import { getClass } from '@/lib/gear';
+import { gearOf, logMaxTest, nextTestDate, nodeName, type GameState } from '@/lib/game';
 import { exportState, parseImport } from '@/lib/store';
+import { storyState } from '@/lib/story';
 
 interface Props {
   state: GameState;
   update: (fn: (s: GameState) => GameState) => void;
+  onChangeClass: () => void;
+  onTestLogged: () => void;
 }
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
-export function HeroTab({ state, update }: Props) {
-  const gear = equippedGear(state);
+export function HeroTab({ state, update, onChangeClass, onTestLogged }: Props) {
+  const gear = gearOf(state);
+  const cls = getClass(state.profile.classId);
+  const story = storyState(state);
   const [test, setTest] = useState({ pushups: '', pullups: '', lsitSec: '' });
-  const [testMsg, setTestMsg] = useState('');
+  const [msg, setMsg] = useState('');
+  const [letterOpen, setLetterOpen] = useState(false);
   const first = state.tests[0];
   const best = state.tests.reduce(
     (a, t) => ({ pushups: Math.max(a.pushups, t.pushups), pullups: Math.max(a.pullups, t.pullups), lsitSec: Math.max(a.lsitSec, t.lsitSec) }),
@@ -25,13 +32,16 @@ export function HeroTab({ state, update }: Props) {
   );
   const nextTest = nextTestDate(state);
   const testReady = !nextTest || nextTest <= new Date();
+  const letter = state.profile.letter;
+  const hasLetter = !!(letter.why || letter.want || letter.remind);
 
   const submitTest = () => {
     const values = { pushups: Number(test.pushups) || 0, pullups: Number(test.pullups) || 0, lsitSec: Number(test.lsitSec) || 0 };
     const res = logMaxTest(state, values, new Date());
     update(() => res.state);
     setTest({ pushups: '', pullups: '', lsitSec: '' });
-    setTestMsg(res.test.xp ? `+${res.test.xp} XP. Records saved!` : 'Saved. Test XP returns after the 3-week cooldown.');
+    setMsg(res.test.xp ? `+${res.test.xp} XP. Saved.` : 'Saved. Test XP comes back after the 3-week cooldown.');
+    onTestLogged();
   };
 
   const download = () => {
@@ -47,48 +57,60 @@ export function HeroTab({ state, update }: Props) {
     if (!file) return;
     const parsed = parseImport(await file.text());
     if (parsed) update(() => parsed);
-    setTestMsg(parsed ? 'Backup restored.' : 'That file is not a FORMA backup.');
+    setMsg(parsed ? 'Backup restored.' : "That file isn't a FORMA backup.");
   };
 
   return (
     <div className="space-y-5">
-      <section className="flex flex-col items-center rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 pb-4 pt-6">
-        <Hero gear={gear} size={180} />
+      <section className="flex flex-col items-center rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 pb-4 pt-5">
+        <p className="font-pixel text-[10px] text-slate-400">{cls ? cls.name : 'Adventurer'}</p>
+        <Hero gear={gear} classId={state.profile.classId} size={180} />
         <div className="mt-3 grid w-full grid-cols-3 gap-2 px-3 text-center text-xs">
           {(['weapon', 'armor', 'shield'] as const).map((slot) => (
             <div key={slot} className="rounded-lg bg-ink-900/70 px-2 py-2">
               <p className="uppercase tracking-wider text-slate-500">{slot}</p>
-              <p className="mt-0.5 font-semibold" style={{ color: gear[slot].color === 'transparent' ? '#64748b' : gear[slot].color }}>
+              <p className="mt-0.5 font-semibold" style={{ color: gear[slot].tier === 0 ? '#64748b' : gear[slot].color }}>
                 {gear[slot].name}
               </p>
             </div>
           ))}
         </div>
+        <button onClick={onChangeClass} className="mt-3 rounded-lg bg-ink-900/70 px-4 py-2 text-xs font-semibold text-slate-300">
+          {cls ? 'Change class' : 'Choose a class'}
+        </button>
       </section>
 
-      <section className="grid grid-cols-2 gap-3">
-        <div className="rounded-2xl bg-ink-800 p-4">
-          <p className="text-xs uppercase tracking-wider text-slate-400">Quests done</p>
-          <p className="mt-1 text-2xl font-semibold">{state.sessions.length}</p>
-        </div>
-        <div className="rounded-2xl bg-ink-800 p-4">
-          <p className="text-xs uppercase tracking-wider text-slate-400">Skills beaten</p>
-          <p className="mt-1 text-2xl font-semibold">
-            {state.sessions.reduce((a, s) => a + s.unlocked.length, 0)}
-          </p>
-        </div>
+      {hasLetter && (
+        <section className="rounded-2xl bg-ink-800 p-4">
+          <button onClick={() => setLetterOpen(!letterOpen)} className="flex w-full items-center gap-2 font-pixel text-[10px] text-gold-300">
+            <Mail size={14} /> Your letter {letterOpen ? '' : '(tap to read)'}
+          </button>
+          {letterOpen && (
+            <div className="mt-3 space-y-2 rounded-xl bg-[#f5ecd7] p-4 text-sm text-[#3b2a1a]">
+              {letter.why && <p>Dear future me, I&apos;m starting again because {letter.why}</p>}
+              {letter.want && <p>One day I want to be able to {letter.want}</p>}
+              {letter.remind && <p>When I want to quit, remind me that {letter.remind}</p>}
+            </div>
+          )}
+        </section>
+      )}
+
+      <section className="grid grid-cols-3 gap-2">
+        <Stat label="Quests" value={state.sessions.length} />
+        <Stat label="Skills beaten" value={state.sessions.reduce((a, s) => a + s.unlocked.length, 0)} />
+        <Stat label="Chapter" value={story.finished ? 'Done' : story.index + 1} />
       </section>
 
       <section className="rounded-2xl bg-ink-800 p-4">
         <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-2 font-pixel text-xs text-gold-300">
+          <h2 className="flex items-center gap-2 font-pixel text-[10px] text-gold-300">
             <Trophy size={14} /> Max test
           </h2>
           <p className="text-xs text-slate-400">
             {testReady ? 'Ready: +200 XP' : `Next XP on ${nextTest!.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`}
           </p>
         </div>
-        <p className="mt-1 text-xs text-slate-400">The only day you go all out. Once every 3 weeks, fresh, after a warm-up.</p>
+        <p className="mt-1 text-xs text-slate-400">The only day you go all out. Every 3 to 4 weeks, fresh, after a warm-up.</p>
 
         {first && (
           <div className="mt-3 grid grid-cols-3 gap-2 text-center">
@@ -101,13 +123,11 @@ export function HeroTab({ state, update }: Props) {
             ).map(([label, key, unit]) => (
               <div key={key} className="rounded-lg bg-ink-900 p-2">
                 <p className="text-[11px] text-slate-400">{label}</p>
-                <p className="text-lg font-bold">
+                <p className="font-mono text-lg font-bold">
                   {best[key]}
                   {unit}
                 </p>
-                <p className="text-[11px] text-emerald-400">
-                  {best[key] > first[key] ? `+${best[key] - first[key]} since ${fmtDate(first.date)}` : 'baseline'}
-                </p>
+                <p className="text-[11px] text-emerald-400">{best[key] > first[key] ? `+${best[key] - first[key]} since ${fmtDate(first.date)}` : 'your start'}</p>
               </div>
             ))}
           </div>
@@ -138,23 +158,25 @@ export function HeroTab({ state, update }: Props) {
         >
           Log test
         </button>
-        {testMsg && <p className="mt-2 text-center text-xs text-gold-300">{testMsg}</p>}
+        {msg && <p className="mt-2 text-center text-xs text-gold-300">{msg}</p>}
       </section>
 
       {state.sessions.length > 0 && (
         <section className="rounded-2xl bg-ink-800 p-4">
-          <h2 className="font-pixel text-xs text-gold-300">Quest log</h2>
+          <h2 className="font-pixel text-[10px] text-gold-300">Quest log</h2>
           <ul className="mt-3 divide-y divide-ink-700 text-sm">
             {[...state.sessions]
               .reverse()
               .slice(0, 12)
               .map((s) => (
-                <li key={s.id} className="flex items-center justify-between py-2">
-                  <span className="text-slate-300">
-                    {fmtDate(s.date)} · {s.kind === 'full' ? 'Quest' : 'Mini quest'}
-                    {s.unlocked.length > 0 && ' · 🔓'}
-                  </span>
-                  <span className="font-semibold text-gold-300">+{s.xp} XP</span>
+                <li key={s.id} className="py-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-300">
+                      {fmtDate(s.date)} · {s.kind === 'full' ? `Day ${s.day}` : 'Minimum'}
+                    </span>
+                    <span className="font-mono font-semibold text-gold-300">+{s.xp}</span>
+                  </div>
+                  {s.unlocked.length > 0 && <p className="text-xs text-emerald-400">Beat {s.unlocked.map(nodeName).join(', ')}</p>}
                 </li>
               ))}
           </ul>
@@ -162,8 +184,8 @@ export function HeroTab({ state, update }: Props) {
       )}
 
       <section className="rounded-2xl bg-ink-800 p-4">
-        <h2 className="font-pixel text-xs text-gold-300">Settings</h2>
-        <p className="mt-2 text-xs text-slate-400">Starting point on each path. Change it if a level is too easy or too hard.</p>
+        <h2 className="font-pixel text-[10px] text-gold-300">Settings</h2>
+        <p className="mt-2 text-xs text-slate-400">Your level on each path. Change it if it feels too easy or too hard.</p>
         <div className="mt-2 space-y-2">
           {PATHS.map((path) => (
             <label key={path.id} className="flex items-center justify-between gap-3 text-sm">
@@ -183,7 +205,7 @@ export function HeroTab({ state, update }: Props) {
             </label>
           ))}
         </div>
-        <p className="mt-4 text-xs text-slate-400">Progress lives on this phone. Back it up now and then.</p>
+        <p className="mt-4 text-xs text-slate-400">Your progress lives on this phone. Back it up now and then.</p>
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button onClick={download} className="flex items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold">
             <Download size={16} /> Backup
@@ -194,6 +216,15 @@ export function HeroTab({ state, update }: Props) {
           </label>
         </div>
       </section>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number | string }) {
+  return (
+    <div className="rounded-2xl bg-ink-800 p-3">
+      <p className="text-[11px] uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="mt-1 font-mono text-2xl font-semibold">{value}</p>
     </div>
   );
 }
