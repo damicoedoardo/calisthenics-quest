@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Map, Shield, Swords } from 'lucide-react';
 import { TodayTab } from '@/components/TodayTab';
-import { SkillsTab } from '@/components/SkillsTab';
+import { MapTab } from '@/components/MapTab';
 import { HeroTab } from '@/components/HeroTab';
 import { Hero } from '@/components/Hero';
 import { Prologue } from '@/components/Prologue';
@@ -16,11 +16,11 @@ import { finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishRes
 import { pendingScenes, renderLines, storyState, storyWords, type Scene, type StoryState } from '@/lib/story';
 import { useGameState } from '@/lib/store';
 
-type Tab = 'today' | 'skills' | 'hero';
+type Tab = 'today' | 'map' | 'hero';
 
 const TABS: { id: Tab; label: string; Icon: typeof Swords }[] = [
   { id: 'today', label: 'Today', Icon: Swords },
-  { id: 'skills', label: 'Skills', Icon: Map },
+  { id: 'map', label: 'Map', Icon: Map },
   { id: 'hero', label: 'Hero', Icon: Shield },
 ];
 
@@ -52,7 +52,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     const next = pendingScenes(state, new Date())[0];
     if (next) setScene(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, state.profile.onboarded, state.sessions.length, state.tests.length, replaying, training, after, scene, picker, storyTick]);
+  }, [ready, state.profile.onboarded, state.sessions.length, state.tests.length, state.road, replaying, training, after, scene, picker, storyTick]);
 
   const endScene = useCallback(() => {
     if (!scene) return;
@@ -122,9 +122,9 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
       <main className="flex-1 px-4 pb-28 pt-2">
         {tab === 'today' ? (
-          <TodayTab state={state} onStart={start} onReplayOpening={() => setReplaying(true)} />
-        ) : tab === 'skills' ? (
-          <SkillsTab state={state} />
+          <TodayTab state={state} onStart={start} onReplayOpening={() => setReplaying(true)} onOpenMap={() => setTab('map')} />
+        ) : tab === 'map' ? (
+          <MapTab state={state} update={update} />
         ) : (
           <HeroTab
             state={state}

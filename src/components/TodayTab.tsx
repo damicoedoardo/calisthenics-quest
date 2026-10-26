@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Heart, Play, X } from 'lucide-react';
+import { Map as MapIcon, Play, X } from 'lucide-react';
 import { Ember, Enemy, Hollow } from './Characters';
 import {
   WEEKLY_GOAL,
@@ -14,12 +14,14 @@ import {
   type GameState,
 } from '@/lib/game';
 import { getPath } from '@/lib/skills';
-import { storyState } from '@/lib/story';
+import { CHAPTERS, storyState } from '@/lib/story';
+import { roadState } from '@/lib/road';
 
 interface Props {
   state: GameState;
   onStart: (checkin: Checkin) => void;
   onReplayOpening: () => void;
+  onOpenMap: () => void;
 }
 
 const CHECKINS: { id: Checkin; label: string; note: string }[] = [
@@ -37,11 +39,13 @@ function emberLine(week: number, streak: number): string {
   return 'New week. Three pages to write. Want to start one?';
 }
 
-export function TodayTab({ state, onStart, onReplayOpening }: Props) {
+export function TodayTab({ state, onStart, onReplayOpening, onOpenMap }: Props) {
   const now = new Date();
   const [checkin, setCheckin] = useState<Checkin>(state.draft?.checkin ?? 'normal');
   const quest = todaysQuest(state, checkin);
   const story = storyState(state);
+  const road = roadState(state);
+  const chapterStart = CHAPTERS.slice(0, story.index).reduce((a, c) => a + c.sessions, 0);
   const week = sessionsThisWeek(state, now);
   const streak = weekStreak(state, now);
   const day = dayType(state);
@@ -62,30 +66,34 @@ export function TodayTab({ state, onStart, onReplayOpening }: Props) {
       )}
 
       {story.chapter ? (
-        <section className="rounded-2xl bg-ink-800 p-4 pixel-border">
+        <button onClick={onOpenMap} className="block w-full rounded-2xl bg-ink-800 p-4 text-left pixel-border active:scale-[.99]">
           <p className="font-pixel text-[10px] text-slate-400">Chapter {story.chapter.n}</p>
           <h2 className="mt-1 font-pixel text-sm leading-relaxed text-gold-300">{story.chapter.name}</h2>
           <div className="mt-3 flex items-center gap-4">
-            <div className={story.heartsLeft === 0 ? 'opacity-40 grayscale' : ''}>
-              <Enemy id={story.chapter.enemyId} size={64} />
-            </div>
+            <Enemy id={story.chapter.enemyId} size={64} />
             <div className="min-w-0 flex-1">
               <p className="text-sm text-slate-300">
-                vs <span className="font-semibold text-slate-100">{story.chapter.enemy}</span>
+                <span className="font-semibold text-slate-100">{story.chapter.enemy}</span> waits at the end of the road
               </p>
-              <div className="mt-1.5 flex flex-wrap gap-1">
+              <div className="mt-1.5 flex gap-1">
                 {Array.from({ length: story.hearts }).map((_, i) => (
-                  <Heart key={i} size={14} className={i < story.heartsLeft ? 'fill-red-500 text-red-500' : 'text-ink-600'} />
+                  <div
+                    key={i}
+                    className={`h-2.5 flex-1 rounded-sm ${i < story.hearts - story.heartsLeft ? 'bg-emerald-400' : i < road.lit - chapterStart ? 'bg-gold-400' : 'bg-ink-600'}`}
+                  />
                 ))}
               </div>
               <p className="mt-1.5 text-xs text-slate-400">
                 {story.awaitingTest
-                  ? 'Take your max test on the Hero tab to finish this chapter.'
-                  : `Every session takes a heart. ${story.heartsLeft} to go.`}
+                  ? 'Take your max test on the Hero tab for the final blow.'
+                  : road.next
+                    ? 'A lit stop is waiting. Open the map to fight.'
+                    : 'Train to light the next stop on the road.'}
               </p>
             </div>
+            <MapIcon size={18} className="shrink-0 text-slate-500" />
           </div>
-        </section>
+        </button>
       ) : (
         <section className="rounded-2xl bg-ink-800 p-4 text-center pixel-border">
           <p className="font-pixel text-xs text-gold-300">The road is yours</p>

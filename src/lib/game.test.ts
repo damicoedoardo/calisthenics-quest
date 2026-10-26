@@ -131,14 +131,19 @@ describe('gear and classes', () => {
 });
 
 describe('story', () => {
-  it('opens chapters with sessions and waits for the max test where needed', () => {
-    expect(storyState({ ...initialState(), sessions: fakeSessions(5) }).index).toBe(0);
-    expect(storyState({ ...initialState(), sessions: fakeSessions(6) }).index).toBe(1);
-    const waiting = storyState({ ...initialState(), sessions: fakeSessions(15) });
+  it('ends a chapter only when its boss is beaten on the road, and waits for the max test where needed', () => {
+    expect(storyState({ ...initialState(), sessions: fakeSessions(6), road: 5 }).index).toBe(0);
+    expect(storyState({ ...initialState(), sessions: fakeSessions(6), road: 6 }).index).toBe(1);
+    const waiting = storyState({ ...initialState(), sessions: fakeSessions(15), road: 14 });
     expect(waiting.index).toBe(1);
     expect(waiting.awaitingTest).toBe(true);
-    const tested = logMaxTest({ ...initialState(), sessions: fakeSessions(15) }, { pushups: 20, pullups: 4, lsitSec: 5 }, monday).state;
+    const tested = logMaxTest({ ...initialState(), sessions: fakeSessions(15), road: 15 }, { pushups: 20, pullups: 4, lsitSec: 5 }, monday).state;
     expect(storyState(tested).index).toBe(2);
+  });
+
+  it('counts chapters finished under the old session rules as cleared road', () => {
+    expect(storyState({ ...initialState(), sessions: fakeSessions(6) }).index).toBe(1);
+    expect(storyState({ ...initialState(), sessions: fakeSessions(5) }).index).toBe(0);
   });
 
   it('queues the class choice after the third session', () => {
@@ -172,7 +177,7 @@ describe('story', () => {
   });
 
   it('makes the Hollow the enemy of chapter 4', () => {
-    const tested = { ...initialState(), sessions: fakeSessions(27), tests: [{ id: 't1', date: monday.toISOString(), pushups: 20, pullups: 3, lsitSec: 5, xp: 200 }] };
+    const tested = { ...initialState(), sessions: fakeSessions(27), road: 27, tests: [{ id: 't1', date: monday.toISOString(), pushups: 20, pullups: 3, lsitSec: 5, xp: 200 }] };
     expect(storyState(tested).chapter?.enemyId).toBe('hollow');
   });
 });

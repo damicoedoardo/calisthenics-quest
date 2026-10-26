@@ -95,6 +95,8 @@ export interface GameState {
   draft: Draft | null;
   /** Story scenes already played. */
   seenScenes: string[];
+  /** Stops cleared on the road through the Fog (src/lib/road.ts). Missing in older saves. */
+  road?: number;
 }
 
 export function initialState(): GameState {
