@@ -140,8 +140,14 @@ export const MANGA_HAIR: Partial<Record<HairStyle, MangaHair>> = {
   },
 };
 
-/** Paints the manga head (skin and face) onto `g`, the body grid at 64. */
-export function mangaHead(g: Grid, P: Pose, look: Look) {
+/** Whether a look gets the manga head: hairstyles without a manga version stay classic. */
+export const isManga = (look: Look) => look.head === 'manga' && !!MANGA_HAIR[look.style];
+
+/**
+ * Paints the manga head (skin and face) onto `g`, the body grid at 64. With `hair` (the front hair
+ * grid), the bangs also cast a soft shadow on the forehead, just below their outline.
+ */
+export function mangaHead(g: Grid, P: Pose, look: Look, hair?: Grid) {
   const u = painter(g, P.bob),
     Sk = SKIN[look.skin],
     F = MANGA_FACE,
@@ -160,6 +166,10 @@ export function mangaHead(g: Grid, P: Pose, look: Look) {
       r: F.mouth,
     };
   F.art.forEach((row, j) => [...row].forEach((ch, i) => ink[ch] && u.p(F.at[0] + i, F.at[1] + j, ink[ch])));
+  if (!hair) return;
+  for (let y = 0; y < g.length - 2; y++)
+    for (let x = 0; x < g[0].length; x++)
+      if (hair[y][x] && !hair[y + 1][x] && !hair[y + 2][x] && g[y + 2][x] === Sk[1]) g[y + 2][x] = Sk[0];
 }
 
 /** The manga hair, split so the back locks can sit behind the head. */
