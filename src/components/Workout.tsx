@@ -26,6 +26,9 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   const firstOpen = quest.findIndex((q) => (sets[q.id]?.length ?? 0) < q.sets);
   const [index, setIndex] = useState(firstOpen === -1 ? 0 : firstOpen);
   const [restUntil, setRestUntil] = useState<number | null>(null);
+  // Exercises in the order their sets were logged on this screen, so Undo can reach back after the
+  // logger has moved on to the next exercise.
+  const [history, setHistory] = useState<string[]>([]);
   const q = quest[Math.min(index, quest.length - 1)];
   const logged = sets[q.id] ?? [];
   const [reps, setReps] = useState(q.reps);
@@ -46,6 +49,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
       const list = [...(draft.sets[q.id] ?? []), { reps, rir }];
       return { ...s, draft: { ...draft, sets: { ...draft.sets, [q.id]: list } } };
     });
+    setHistory((h) => [...h, q.id]);
     navigator.vibrate?.(30);
     const finishedExercise = logged.length + 1 >= q.sets;
     const lastOfAll = finishedExercise && quest.every((e) => e.id === q.id || (sets[e.id]?.length ?? 0) >= e.sets);
@@ -56,12 +60,23 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
     }
   };
 
-  const undo = () =>
+  // The last set logged here, else the last one of the exercise on screen.
+  const undoId = [...history].reverse().find((id) => (sets[id]?.length ?? 0) > 0) ?? (logged.length > 0 ? q.id : null);
+  const undoExercise = quest.find((e) => e.id === undoId);
+
+  const undo = () => {
+    if (!undoId) return;
     update((s) => {
       if (!s.draft) return s;
-      const list = (s.draft.sets[q.id] ?? []).slice(0, -1);
-      return { ...s, draft: { ...s.draft, sets: { ...s.draft.sets, [q.id]: list } } };
+      const list = (s.draft.sets[undoId] ?? []).slice(0, -1);
+      return { ...s, draft: { ...s.draft, sets: { ...s.draft.sets, [undoId]: list } } };
     });
+    const at = history.lastIndexOf(undoId);
+    if (at !== -1) setHistory((h) => h.filter((_, i) => i !== at));
+    const i = quest.findIndex((e) => e.id === undoId);
+    if (i !== -1) setIndex(i);
+    setRestUntil(null);
+  };
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-ink-950">
@@ -166,9 +181,9 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
           </p>
         )}
 
-        {logged.length > 0 && (
+        {undoExercise && (
           <button onClick={undo} className="mx-auto mt-4 flex items-center gap-1.5 text-xs text-slate-500">
-            <Undo2 size={14} /> Undo last set
+            <Undo2 size={14} /> Undo last set{undoExercise.id !== q.id ? ` of ${undoExercise.name}` : ''}
           </button>
         )}
       </main>

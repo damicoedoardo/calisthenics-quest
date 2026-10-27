@@ -62,7 +62,7 @@ export interface Season {
   snapshots: { label: string; state: GameState }[];
 }
 
-const FULL_LETTER: Letter = { why: 'I want to feel strong again', want: 'ten pull-ups', forWho: 'my little brother', remind: 'I already did this once.' };
+const FULL_LETTER: Letter = { why: 'I want to feel strong again', want: 'do ten pull-ups', forWho: 'my little brother', remind: 'I already did this once.' };
 
 /** A random number generator that plays the same way every time. */
 export function seeded(seed: number): () => number {
@@ -155,8 +155,10 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
         checkLines(scene, ask.after);
       } else if (ask?.kind === 'choice') {
         const how = kind.answers ?? 'first';
-        const choice = how === 'first' ? ask.choices[0] : undefined;
-        const value = how === 'write' && ask.write ? 'my own words here' : (choice?.value ?? '');
+        // Someone who writes their own answers still has to pick one when there's nothing to write in.
+        const writes = how === 'write' && !!ask.write;
+        const choice = how === 'skip' || writes ? undefined : ask.choices[0];
+        const value = writes ? 'my own words here' : (choice?.value ?? '');
         note('ask', `${ask.id}: ${how === 'skip' ? 'skipped' : `"${value || '(no answer)'}"`}`);
         state = { ...state, seenScenes: seen, answers: how === 'skip' ? state.answers : { ...state.answers, [ask.id]: value } };
         const after = how === 'skip' ? undefined : (choice?.after ?? ask.after);
