@@ -7,8 +7,9 @@ import { pendingScenes } from '@/story/engine';
 import { dayKey } from './days';
 
 /* Developer mode: shortcuts for trying the app without training for real or replaying the
-   opening. It is always on in previews and on localhost. On the live app it stays hidden until
-   unlocked by tapping the FORMA name seven times. */
+   opening. It is always on in previews and on localhost. On the live app it is on too while
+   there are no other players (Edoardo's call); it can be turned off from its panel, and seven taps
+   on the FORMA name turn it back on. */
 
 const LIVE_HOST = 'forma-nu-red.vercel.app';
 const KEY = 'forma-dev';
@@ -20,20 +21,19 @@ export function useDevMode() {
   useEffect(() => {
     const onLive = window.location.hostname === LIVE_HOST;
     setLive(onLive);
-    let unlocked = false;
+    let off = false;
     try {
-      unlocked = localStorage.getItem(KEY) === '1';
+      off = localStorage.getItem(KEY) === '0';
     } catch {
-      // Storage blocked: dev mode just stays off on the live app.
+      // Storage blocked: dev mode just stays on.
     }
-    setDev(!onLive || unlocked);
+    setDev(!onLive || !off);
   }, []);
 
   const toggle = useCallback(
     (on: boolean) => {
       try {
-        if (on) localStorage.setItem(KEY, '1');
-        else localStorage.removeItem(KEY);
+        localStorage.setItem(KEY, on ? '1' : '0');
       } catch {
         // Not saved; it still applies for this visit.
       }
