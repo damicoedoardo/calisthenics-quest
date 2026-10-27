@@ -1,5 +1,6 @@
 import type { ClipFrame } from '../clips';
-import { grid, painter, tint, type Grid } from '../engine/grid';
+import { grid, outline, painter, scale2x, tint, type Grid } from '../engine/grid';
+import { paintRows } from './pixel';
 import { drawHero, type HeroOpts } from './hero';
 
 /* The Mirror as the dungeon's boss: you, in glass. The player's own figure, recolored as cold
@@ -59,36 +60,59 @@ export function drawGlassHero(o: HeroOpts, frame: ClipFrame, f: number): Grid {
   return g;
 }
 
-/** Shattering, played once: a white flash, the shards flying apart, falling, then lying still. */
+/** Hand-drawn shards of glass: k the dark edge, c the glass, l the light, w the glint. */
+const SHARDS = [
+  ['..w..', '.wlc.', 'wlcck', '.cck.', '..k..'],
+  ['w....', 'lw...', '.lc..', '..cc.', '...ck', '....k'],
+  ['wlllw', '.lcc.', '.cck.', '..k..'],
+  ['....w', '...wl', '..wlc', '.wlcc', 'wlcck', '.cck.', '..k..'],
+  ['wl', 'ck'],
+  ['.wl.', 'wlcc', '.cck'],
+];
+const SHARD_PAL = { k: GLASS[1], c: GLASS[2], l: GLASS[3], w: GLASS[4] };
+/** Where each shard is in the burst (frame 2) and on the floor (frame 3): [shard, x, y]. */
+const BURST: number[][] = [
+  [3, 8, 10], [0, 26, 2], [2, 44, 6], [1, 54, 18], [5, 4, 28], [3, 50, 32],
+  [0, 16, 40], [2, 36, 44], [4, 28, 24], [1, 12, 52], [5, 46, 50], [4, 58, 42], [0, 34, 14],
+];
+const FLOOR: number[][] = [
+  [2, 6, 57], [4, 14, 60], [1, 19, 56], [5, 27, 58], [0, 34, 57], [4, 40, 61], [2, 45, 58], [3, 52, 55], [4, 59, 60],
+];
+
+function shardsAt(g: Grid, list: number[][]) {
+  const u = painter(g);
+  list.forEach(([i, x, y]) => paintRows(u, SHARDS[i], SHARD_PAL, x, y));
+}
+
+/** Shattering, played once: a white flash, cracks running through it, the shards bursting out,
+    then lying on the floor with a glint. */
 export function drawGlassShatter(o: HeroOpts, _frame: ClipFrame, f: number): Grid {
   const src = glassHero(o, {}, 0);
   if (f === 0) return tint(src, [GLASS[3], GLASS[4], GLASS[4]]);
-  const out = grid(64),
-    // the shards: a coarse grid of cells, each cut in two on a diagonal, each moving as one piece
-    shard = (x: number, y: number) => {
-      const cx = Math.floor(x / 10),
-        cy = Math.floor(y / 10);
-      return cy * 14 + cx * 2 + ((x % 10) > (y % 10) ? 1 : 0);
-    };
-  for (let y = 0; y < 64; y++)
-    for (let x = 0; x < 64; x++) {
-      const c = src[y][x];
-      if (!c) continue;
-      const k = shard(x, y),
-        cx = Math.floor(x / 10) * 10 + 5,
-        spread = ((k * 37) % 7) - 3 + (cx - 32) / 8,
-        // f 1: flying apart; f 2: falling; f 3: lying on the floor
-        dx = Math.round(spread * f * 1.2),
-        dy = f === 3 ? 0 : Math.round(f * f * 3 - f * 2 + (k % 3) * f);
-      let nx = x + dx,
-        ny = y + dy;
-      if (f === 3) {
-        // scattered flat along the floor, a thin layer of glass
-        nx = Math.round(32 + (x - 32) * 1.3 + spread * 3);
-        ny = 55 + ((y + k * 3) % 8);
-        if ((x + y) % 3) continue;
+  if (f === 1) {
+    // cracks running out from the chest in every direction, the first shards popping loose
+    const u = painter(src),
+      has = (x: number, y: number) => !!src[y]?.[x];
+    for (let a = 0; a < 10; a++) {
+      const t = (a / 10) * Math.PI * 2 + 0.3;
+      for (let r = 2; r < 26; r++) {
+        const x = Math.round(32 + Math.cos(t) * r + Math.sin(r * 0.7 + a) * 1.5),
+          y = Math.round(34 + Math.sin(t) * r);
+        if (has(x, y)) u.p(x, y, r % 4 ? GLASS[4] : GLASS[0]);
       }
-      if (nx >= 0 && nx < 64 && ny >= 0 && ny < 64) out[ny][nx] = c;
     }
+    shardsAt(src, [[4, 10, 18], [0, 50, 22], [4, 46, 44]]);
+    return src;
+  }
+  // the shards are drawn at half size and doubled, so each one reads as a chunk of glass
+  const half = grid(32);
+  shardsAt(half, (f === 2 ? BURST : FLOOR).map(([i, x, y]) => [i, x >> 1, Math.min(y >> 1, 32 - SHARDS[i].length)]));
+  const out = outline(scale2x(half)),
+    u = painter(out);
+  // glints: a sparkle burst in the air, then one or two on the floor
+  (f === 2 ? [[20, 20], [42, 26], [30, 36], [14, 34]] : [[22, 54], [48, 53]]).forEach(([x, y]) => {
+    u.p(x, y, GLASS[4]);
+    [[-1, 0], [1, 0], [0, -1], [0, 1]].forEach(([dx, dy]) => u.p(x + dx, y + dy, GLASS[3]));
+  });
   return out;
 }
