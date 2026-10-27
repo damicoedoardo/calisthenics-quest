@@ -12,6 +12,7 @@ export const REST_TRUTHS: string[] = [
   "Restless? That's energy saving up for tomorrow.",
   "Water, a good meal, bed a little earlier. That's today's quest.",
   'Rest is when the work you did turns into strength.',
+  "Resting isn't earning a break. It's looking after the person doing the work.",
 ];
 
 /** What the flame says after the minute by the fire. */
@@ -21,4 +22,6 @@ export const FIRE_LINES: DailyLine[] = [
   { text: 'Air. That was exactly what I needed.' },
   { text: "Let's do that again sometime. I like breathing with you." },
   { text: "I almost fell asleep. That's a compliment." },
+  { text: 'That was you being kind to you. I saw it.' },
+  { text: 'Quiet, but not the Hollow kind of quiet. The good kind.' },
 ];

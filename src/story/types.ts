@@ -43,6 +43,10 @@ export interface Line {
   text: string;
   /** Only shown when this word was given (an empty letter line drops the story line). */
   needs?: WordKey;
+  /** Only shown when this word was left empty: the line that stands in for a `needs` line. */
+  missing?: WordKey;
+  /** Only shown when the player gave this answer (or any answer when `is` is left out). */
+  answer?: { id: AnswerId; is?: string };
   /** Narration only: who stands on screen while it's read. */
   show?: Speaker;
   /** The flame's face for this line. */
@@ -99,6 +103,8 @@ export interface When {
   answer?: { id: AnswerId; is?: string };
   /** Only when the player gave this word (a part of the letter, a heart answer). */
   needs?: WordKey;
+  /** Helped at least one villager (true), or none of them (false). See VILLAGERS in engine.ts. */
+  helped?: boolean;
   /** Away this many days or more. The scene can play again after every later absence. */
   away?: number;
   /** The whole story is finished. */
@@ -221,6 +227,8 @@ export interface DailyLine {
   text: string;
   /** Only used when the player gave this word. */
   needs?: WordKey;
+  /** Only said while this chapter is the current one (a line about the Fog belongs to the Fog). */
+  inChapter?: number;
 }
 
 /** Words for the road: one a day under the flame's line. */

@@ -5,7 +5,7 @@ import { CAST, type CastId } from './cast';
 import { CHAPTERS } from './chapters';
 import type { PlaceId } from './places';
 import { DEFAULT_FLAME_NAME } from './flame';
-import type { Chapter, Line, Scene, When, WordKey, Words } from './types';
+import type { AnswerId, Chapter, Line, Scene, When, WordKey, Words } from './types';
 
 /* Reads the story files: which chapter you're in, which scenes are due, and how a line reads
    with your own words in it. Nothing here knows the story itself. */
@@ -62,6 +62,16 @@ export function storyState(state: GameState): StoryState {
   return { index: CHAPTERS.length, chapter: null, hearts: 0, heartsLeft: 0, awaitingTest: false, finished: true };
 }
 
+/** The villagers whose stories you can join. Saying yes to one of them is "helping" them. */
+export const VILLAGERS: AnswerId[] = ['lia', 'sol', 'vela'];
+
+/** The villagers the player helped, in the order they met them. */
+export function helpedVillagers(state: GameState): AnswerId[] {
+  return VILLAGERS.filter((id) => state.answers?.[id] === 'yes');
+}
+
+const gave = (state: GameState, a: { id: AnswerId; is?: string }) => (a.is === undefined ? !!state.answers?.[a.id] : state.answers?.[a.id] === a.is);
+
 function hadPerfectWeek(state: GameState): boolean {
   const counts = new Map<string, number>();
   for (const s of state.sessions) {
@@ -88,8 +98,9 @@ export function holds(w: When, state: GameState, st: StoryState, now: Date): boo
     [w.perfectWeek, () => hadPerfectWeek(state) === w.perfectWeek],
     [w.skill, () => state.progress[w.skill!.path] > w.skill!.past],
     [w.noClass, () => !state.profile.classId === w.noClass],
-    [w.answer, () => (w.answer!.is === undefined ? !!state.answers?.[w.answer!.id] : state.answers?.[w.answer!.id] === w.answer!.is)],
+    [w.answer, () => gave(state, w.answer!)],
     [w.needs, () => !!words[w.needs!].trim()],
+    [w.helped, () => (helpedVillagers(state).length > 0) === w.helped],
     [w.away, () => (daysSinceTraining(state, now) ?? 0) >= w.away!],
     [w.finished, () => st.finished === w.finished],
   ];
@@ -110,10 +121,30 @@ export function savedId(scene: Scene, state: GameState): string {
   return scene.when.away ? `${scene.id}-${state.sessions.length}` : scene.id;
 }
 
+/** `when` fields that wait for something to happen (a rest day, a class...), not for a workout count. */
+const WAITS_FOR: (keyof When)[] = ['restDay', 'shortSession', 'daysInRow', 'perfectWeek', 'skill', 'noClass', 'away', 'awaitingTest', 'beaten', 'finished'];
+
+/**
+ * A story beat tied to a workout plays then, or a few workouts later while a chapter catches up.
+ * One whose moment is long gone (a scene added after the player passed it) doesn't play late.
+ * Scenes that also wait for something else (the first rest day, a class pick) never go stale.
+ */
+function longGone(w: When, state: GameState): boolean {
+  if (w.workouts === undefined || WAITS_FOR.some((k) => w[k] !== undefined)) return false;
+  return state.sessions.length - w.workouts > TEST_GRACE;
+}
+
+/** A scene as this player gets it: lines that wait for an answer they didn't give are left out. */
+export function sceneFor(scene: Scene, state: GameState): Scene {
+  const lines = scene.lines.filter((l) => !l.answer || gave(state, l.answer));
+  return lines.length === scene.lines.length ? scene : { ...scene, lines };
+}
+
 /**
  * Scenes whose moment has come and that the player has not seen yet, in story order. Once a
- * chapter is behind you, its leftover scenes are skipped (except the one that ends it), so a
- * returning player isn't buried in old scenes.
+ * chapter is behind you, its leftover scenes are skipped (except the one that ends it, and the
+ * finale), and so are
+ * scenes tied to a workout long past, so nobody is buried in old scenes.
  */
 export function pendingScenes(state: GameState, now: Date): Scene[] {
   const st = storyState(state);
@@ -121,9 +152,10 @@ export function pendingScenes(state: GameState, now: Date): Scene[] {
   const current = st.index + 1;
   const due = ALL_SCENES.filter(({ scene, chapter }) => {
     if (seen.has(savedId(scene, state))) return false;
-    if (chapter > 0 && chapter < current && scene.when.beaten !== chapter) return false;
+    if (chapter > 0 && chapter < current && scene.when.beaten !== chapter && !scene.when.finished) return false;
+    if (longGone(scene.when, state)) return false;
     return holds(scene.when, state, st, now);
-  }).map(({ scene }) => (scene.when.away ? { ...scene, id: savedId(scene, state) } : scene));
+  }).map(({ scene }) => sceneFor(scene.when.away ? { ...scene, id: savedId(scene, state) } : scene, state));
   // Coming back after a long time goes first.
   return [...due.filter((s) => s.when.away), ...due.filter((s) => !s.when.away)];
 }
@@ -164,9 +196,11 @@ export function fill(text: string, words: Words): string {
   return out.charAt(0).toUpperCase() + out.slice(1);
 }
 
-/** Fill in the player's own words and drop lines whose word is missing. */
+/** Fill in the player's own words, and drop lines whose word is missing (or, for `missing`, given). */
 export function renderLines(lines: Line[], words: Words): Line[] {
-  return lines.filter((l) => !l.needs || words[l.needs].trim()).map((l) => ({ ...l, text: fill(l.text, words) }));
+  return lines
+    .filter((l) => (!l.needs || words[l.needs].trim()) && (!l.missing || !words[l.missing].trim()))
+    .map((l) => ({ ...l, text: fill(l.text, words) }));
 }
 
 /** The name over a line. */

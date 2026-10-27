@@ -42,12 +42,29 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
 - **mood**: the flame's face for that line (happy, bright, soft, sleepy, smoky, scared, dim).
 - **{words}**: the player's own words. `{flame}` (its name), `{why}` `{want}` `{forWho}`
   `{remind}` (the letter), `{voice}` (the Hollow's line), `{sessions}`, `{heart1}`…`{heart6}`
-  (answers to the heart moments). **needs** drops the line when that word is empty.
+  (answers to the heart moments). **needs** drops the line when that word is empty; **missing**
+  is the opposite, for the line that stands in when it is (`needs: 'heart1'` and `missing: 'heart1'`
+  side by side).
+- **answer** on a line: only shown when the player gave that answer, e.g. Vela speaks in a scene
+  only if you joined her story (`answer: { id: 'vela', is: 'yes' }`).
 - **shot** on a line, or **shots** before the first line: `{ title }`, `{ place }` (cut to another
   place), `{ pan }`, `{ zoom }`, `{ fade }`, `{ shake }`, `{ enter }` (how the speaker comes in).
   Each takes `seconds`.
 - **ask**: `name` (name the flame), `choice` (saved under its id; `write` adds a free-text box),
   or `class` (opens the class picker).
+
+## When scenes play
+
+- A scene plays once, when its `when` holds; scenes due together play in file order.
+- Give every workout-tied scene of a later month `chapter: N` too, so it waits while the month
+  before is still waiting for its max test.
+- A scene tied only to a workout count stops being due a few workouts (`TEST_GRACE`) after its
+  moment, so a scene added later doesn't ambush players who already passed it. Scenes that also wait
+  for something else (a rest day, a short day, a class pick) never go stale.
+- `helped: true/false`: whether the player joined any villager's story (Lia, Sol, Vela). Month five's
+  gathering has a scene for each, so exactly one plays.
+- Play a whole season in a second with `SIM_OUT=sim-out npx vitest run src/sim`: seven kinds of
+  player, a timeline each in sim-out/, and a list of anything that looks wrong.
 
 ## How to change things
 

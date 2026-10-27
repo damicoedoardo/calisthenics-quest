@@ -69,4 +69,16 @@ export const PLAYERS: PlayerKind[] = [
     tests: 'when-asked',
     flame: 'Owl',
   },
+  {
+    id: 'rough-patch',
+    about: 'Trains 3 times a week the whole way, often on Rough days, opens the app on some rest days',
+    trains: (d) => [0, 2, 4].includes(weekday(d)),
+    visits: (_, r) => r() < 0.4,
+    rough: (_, r) => r() < 0.35,
+    sex: 'f',
+    bossOnTry: 3,
+    tests: 'when-asked',
+    flame: 'Nova',
+    answers: 'first',
+  },
 ];
