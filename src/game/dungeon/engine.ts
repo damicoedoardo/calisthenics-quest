@@ -48,6 +48,47 @@ export const BARREL = { r: 12, blast: 80, dmg: 30, hurt: 10 };
 /** The shrine in the middle room of each floor heals you once (DIALS.shrine of your HP). */
 export const SHRINE = { r: 18 };
 
+// ---------- paths and loot ----------
+
+/** What waits behind a door. After most rooms two doors open and you pick. */
+export type RoomKind = 'fight' | 'elite' | 'treasure' | 'rest';
+export const ROOM_KINDS: Record<RoomKind, { name: string; text: string }> = {
+  fight: { name: 'Fight', text: 'Monsters.' },
+  elite: { name: 'Elite', text: 'Fewer, much tougher monsters, and a chest.' },
+  treasure: { name: 'Treasure', text: 'Monsters, and a chest at the end.' },
+  rest: { name: 'Rest', text: 'No monsters: a shrine that heals you.' },
+};
+/** How often each kind is behind a door. */
+const DOOR_ODDS: [RoomKind, number][] = [
+  ['fight', 3],
+  ['treasure', 2],
+  ['elite', 2],
+  ['rest', 1.3],
+];
+/** Doors on the left and right of the top wall, as a share of the room's width. */
+export const DOOR_AT = [0.27, 0.73];
+/** An elite monster: bigger, tougher, worth more. Elite rooms hold fewer of them. */
+export const ELITE = { hp: 2.4, dmg: 1.25, r: 1.25, xp: 1.5, crowd: 0.5 };
+
+/** Items found in chests: they last for the run. Each can be found again and stacks. */
+export type RelicId = 'whetstone' | 'quick' | 'iron' | 'boots' | 'heart' | 'hourglass' | 'fang' | 'coal' | 'charm';
+export const RELICS: Record<RelicId, { name: string; text: string }> = {
+  whetstone: { name: 'Whetstone', text: '+12% damage.' },
+  quick: { name: 'Quick Hands', text: 'Attack 10% faster.' },
+  iron: { name: 'Iron Skin', text: 'Take about 12% less damage.' },
+  boots: { name: 'Light Boots', text: 'Move 10% faster, and water slows you less.' },
+  heart: { name: 'Heart Stone', text: '+20 max HP, and heal 20.' },
+  hourglass: { name: 'Hourglass', text: 'Your ability recharges 20% faster.' },
+  fang: { name: 'Fang', text: 'Heal 1 HP for every monster you bring down.' },
+  coal: { name: 'Ember Coal', text: 'One more fire circles you.' },
+  charm: { name: 'Ward Charm', text: 'A ward blocks one hit, and comes back after 12 s.' },
+};
+/** The bot's order when it opens a chest. */
+const RELIC_BOT: RelicId[] = ['whetstone', 'heart', 'iron', 'quick', 'charm', 'fang', 'hourglass', 'coal', 'boots'];
+const WARD_EVERY = 12;
+/** How many of a relic you have. */
+export const relic = (run: Pick<Run, 'relics'>, id: RelicId) => run.relics[id] ?? 0;
+
 export interface Rect {
   x: number;
   y: number;
@@ -82,13 +123,19 @@ export const DIALS = {
   /** Monster HP, on top of the zone's. */
   hp: 1.3,
   /** How often monsters shoot (2 = twice as often). */
-  fire: 2.5,
+  fire: 2.7,
   /** How fast their shots fly. */
-  speed: 1.45,
+  speed: 1.5,
   /** How many monsters a room holds. */
   crowd: 1,
   /** Share of HP back on the stairs to each new floor. */
   stairs: 0.1,
+  /** How strong chest items are (1 = as their text says). */
+  relic: 1,
+  /** How much more HP monsters have on the boss's floor than on the first (2 = three times). */
+  deep: 3,
+  /** How much harder they hit there (3 = four times): chest items and levels make you grow fast. */
+  deepDmg: 3,
   /** Share of HP the shrine on each floor gives back. */
   shrine: 0.25,
 };
@@ -302,9 +349,9 @@ export const ABILITIES: Record<AbilityId, { name: string; text: string; cd: numb
 /** Each class in the dungeon, against the others: HP, armor, and damage (orbs and waves hit crowds, so less each). */
 export const CLASS_BODY: Record<'slash' | 'arrow' | 'orb' | 'wave', { hp: number; armor: number; dmg: number }> = {
   slash: { hp: 1.5, armor: 0.35, dmg: 1 },
-  wave: { hp: 1.15, armor: 0.05, dmg: 0.75 },
+  wave: { hp: 1.3, armor: 0.1, dmg: 0.9 },
   arrow: { hp: 1, armor: 0, dmg: 1.1 },
-  orb: { hp: 0.85, armor: 0, dmg: 0.68 },
+  orb: { hp: 0.85, armor: 0, dmg: 0.62 },
 };
 
 export function abilityOf(cls: ClassId | undefined): AbilityId {
@@ -337,6 +384,8 @@ export interface Foe {
   dashY: number;
   /** When its next charge or blink starts (run seconds). */
   act: number;
+  /** Bigger, tougher, worth more (elite rooms). */
+  elite: boolean;
   alive: boolean;
 }
 
@@ -420,6 +469,9 @@ export type GameEvent =
   | { type: 'blink'; x: number; y: number; toX: number; toY: number }
   | { type: 'wind'; id: number }
   | { type: 'shrine'; x: number; y: number }
+  | { type: 'chest'; x: number; y: number }
+  | { type: 'relic'; id: RelicId }
+  | { type: 'ward'; x: number; y: number }
   | { type: 'say'; text: string };
 
 export type FreePick = 'fresh' | 'rested';
@@ -471,6 +523,16 @@ export interface Run {
   /** Waves still to come in this room. */
   waves: MonsterKind[][];
   mines: Mine[];
+  /** This room's kind, the one behind the door you're walking to, and the doors once open. */
+  kind: RoomKind;
+  nextKind: RoomKind;
+  doors: { x: number; kind: RoomKind }[];
+  chest: { x: number; y: number; opened: boolean } | null;
+  relics: Partial<Record<RelicId, number>>;
+  /** Three items to pick from, from an opened chest: the run holds still until one is taken. */
+  relicOffer: RelicId[] | null;
+  /** The Ward Charm's ward is up from then. */
+  wardAt: number;
   /** Monsters already met this run (their first time gets a line). */
   met: Set<MonsterKind>;
   cleared: boolean;
@@ -547,6 +609,13 @@ export function createRun(setup: RunSetup): Run {
     waves: [],
     mines: [],
     met: new Set(['slime', 'wisp', 'golem', 'reflection', 'splitling']),
+    kind: 'fight',
+    nextKind: 'fight',
+    doors: [],
+    chest: null,
+    relics: {},
+    relicOffer: null,
+    wardAt: 0,
     cleared: false,
     doorOpen: false,
     hero: { x: ROOM.w / 2, y: ROOM.h - 70, vx: 0, vy: 0, facing: -Math.PI / 2 },
@@ -603,7 +672,7 @@ function fillRoom(run: Run): MonsterKind[][] {
     deep = depth(run),
     fl = floorOf10(run),
     size = Math.sqrt((run.area.w * run.area.h) / (ROOM.w * ROOM.h));
-  const budget = (6 + 10 * deep + room) * DIALS.crowd * size;
+  const budget = (6 + 10 * deep + room) * DIALS.crowd * size * (run.kind === 'elite' ? ELITE.crowd : 1);
   const mix = UNLOCK.filter(([, from]) => fl >= from).map(([k, from, w]): [MonsterKind, number] => [k, from === fl && fl > 0 ? w * 2.5 : k === 'slime' ? Math.max(1, w - fl * 0.25) : w]);
   const total = mix.reduce((n, [, w]) => n + w, 0);
   const pickKind = (): MonsterKind => {
@@ -643,7 +712,7 @@ function buildTerrain(run: Run): Terrain {
   const rects = () => [...t.water, ...t.spikes];
   const clear = (x: number, y: number, r: number) => {
     if (x < m + r + 24 || x > w - m - r - 24 || y < m + r + 24 || y > h - m - r - 24) return false;
-    if (Math.abs(x - w / 2) < ROOM.door / 2 + 26 + r && y < 170 + r) return false;
+    for (const at of [0.5, ...DOOR_AT]) if (Math.abs(x - w * at) < ROOM.door / 2 + 26 + r && y < 170 + r) return false;
     if (Math.hypot(x - w / 2, y - (h - 70)) < 110 + r) return false;
     for (const p of t.pillars) if (Math.hypot(p.x - x, p.y - y) < p.r + r + 56) return false;
     for (const b of t.barrels) if (Math.hypot(b.x - x, b.y - y) < BARREL.r + r + 30) return false;
@@ -658,6 +727,8 @@ function buildTerrain(run: Run): Terrain {
   const tries = (n: number, place: () => boolean) => {
     for (let i = 0; i < 30 && n > 0; i++) if (place()) n--;
   };
+  // A rest room's shrine, in the middle of the room.
+  if (run.kind === 'rest') t.shrine = { x: w / 2, y: h * 0.5, used: false };
   // Pillars, in pairs mirrored across the room.
   tries(boss ? 2 : 1 + Math.floor(rnd() * 2.5), () => {
     const r = 16 + Math.round(rnd() * 8),
@@ -668,15 +739,6 @@ function buildTerrain(run: Run): Terrain {
     return true;
   });
   if (boss) return t;
-  if (run.room === Math.floor(run.layout.rooms / 2)) {
-    tries(1, () => {
-      const x = m + 60 + rnd() * (w - 2 * m - 120),
-        y = 220 + rnd() * (h - 440);
-      if (!clear(x, y, SHRINE.r + 10)) return false;
-      t.shrine = { x, y, used: false };
-      return true;
-    });
-  }
   const rect = (rw: number, rh: number): Rect => ({ x: m + 20 + rnd() * (w - 2 * m - 40 - rw), y: 160 + rnd() * (h - 330 - rh), w: rw, h: rh });
   tries((rnd() < 0.45 + 0.05 * fl ? 1 : 0) + (fl >= 3 && rnd() < 0.5 ? 1 : 0), () => {
     const q = rect(110 + Math.round(rnd() * 90), 90 + Math.round(rnd() * 80));
@@ -710,6 +772,10 @@ function enterRoom(run: Run) {
   run.mines = [];
   run.cleared = false;
   run.doorOpen = false;
+  run.doors = [];
+  run.chest = null;
+  run.kind = isBossRoom(run) ? 'fight' : run.nextKind;
+  run.nextKind = 'fight';
   run.area = roomSize(run);
   run.terrain = buildTerrain(run);
   run.hero.x = run.area.w / 2;
@@ -721,8 +787,9 @@ function enterRoom(run: Run) {
     later(run, 1.2, () => summonBoss(run));
     return;
   }
-  run.waves = fillRoom(run);
-  later(run, 0.6, () => nextWave(run));
+  if (run.kind !== 'fight') emit(run, { type: 'say', text: `${ROOM_KINDS[run.kind].name} room. ${ROOM_KINDS[run.kind].text}` });
+  run.waves = run.kind === 'rest' ? [] : fillRoom(run);
+  if (run.waves.length) later(run, 0.6, () => nextWave(run));
 }
 
 /** Whether a body of radius r at x, y would sit inside a pillar. */
@@ -750,11 +817,13 @@ function addFoe(run: Run, kind: MonsterKind, x: number, y: number): Foe {
   const def = MONSTERS[kind],
     { zone } = run.setup;
   // Deeper is tougher: three times the HP on the boss's floor.
-  const hp = Math.round(def.hp * zone.hp * DIALS.hp * (1 + 2 * depth(run)));
+  const elite = run.kind === 'elite' && def.xp > 0;
+  const hp = Math.round(def.hp * zone.hp * DIALS.hp * (1 + DIALS.deep * depth(run)) * (elite ? ELITE.hp : 1)),
+    hard = zone.dmg * (1 + DIALS.deepDmg * depth(run));
   const f: Foe = {
     id: ++run.ids,
     kind,
-    def: { ...def, dmg: def.dmg * zone.dmg },
+    def: elite ? { ...def, dmg: def.dmg * hard * ELITE.dmg, r: def.r * ELITE.r, xp: def.xp * ELITE.xp } : { ...def, dmg: def.dmg * hard },
     x: clamp(x, ROOM.wall + def.r, run.area.w - ROOM.wall - def.r),
     y: clamp(y, ROOM.wall + def.r, run.area.h - ROOM.wall - def.r),
     vx: 0,
@@ -772,6 +841,7 @@ function addFoe(run: Run, kind: MonsterKind, x: number, y: number): Foe {
     dashX: 0,
     dashY: 0,
     act: run.t + 1.2 + run.rnd() * 1.5,
+    elite,
     alive: true,
   };
   run.foes.push(f);
@@ -810,6 +880,7 @@ function summonBoss(run: Run) {
     dashX: 0,
     dashY: 0,
     act: 0,
+    elite: false,
     alive: true,
   };
   run.foes.push(b);
@@ -822,7 +893,8 @@ function summonBoss(run: Run) {
 }
 
 /** Walk through the open door: the next room, the next floor, or (past the last) nothing. */
-function throughDoor(run: Run) {
+function throughDoor(run: Run, kind: RoomKind) {
+  run.nextKind = kind;
   run.room++;
   if (run.room >= run.layout.rooms) {
     run.room = 0;
@@ -839,7 +911,7 @@ function throughDoor(run: Run) {
 // ---------- the step ----------
 
 export function stepRun(run: Run, input: Input) {
-  if (run.over || run.paused || run.offer) return;
+  if (run.over || run.paused || run.offer || run.relicOffer) return;
   run.t += STEP;
   const now = run.t;
   for (let i = 0; i < run.timers.length; i++) {
@@ -847,7 +919,7 @@ export function stepRun(run: Run, input: Input) {
       const fn = run.timers[i].run;
       run.timers.splice(i--, 1);
       fn();
-      if (run.over || run.offer) return;
+      if (run.over || run.offer || run.relicOffer) return;
     }
   }
   if (run.bossAt !== null && now - run.bossAt >= BOSS_LIMIT) {
@@ -880,7 +952,7 @@ function moveHero(run: Run, input: Input) {
     y /= len;
   }
   if (len > 0.05) h.facing = Math.atan2(y, x);
-  const speed = heroSpeed(run.ups);
+  const speed = heroSpeed(run.ups) * (1 + 0.1 * relic(run, 'boots'));
   if (run.charge && now < run.charge.until) {
     h.vx = run.charge.x;
     h.vy = run.charge.y;
@@ -889,7 +961,7 @@ function moveHero(run: Run, input: Input) {
     h.vy = run.shove.y;
   } else {
     run.charge = null;
-    const wade = run.terrain.water.some((q) => inRect(q, h.x, h.y)) ? WATER.hero : 1;
+    const wade = run.terrain.water.some((q) => inRect(q, h.x, h.y)) ? Math.min(1, WATER.hero + 0.15 * relic(run, 'boots')) : 1;
     h.vx = x * speed * wade;
     h.vy = y * speed * wade;
   }
@@ -898,10 +970,14 @@ function moveHero(run: Run, input: Input) {
   outOfPillars(run, h, HERO_R);
   // The open door is a gap in the top wall.
   const { w, h: H } = run.area,
-    inDoor = run.doorOpen && Math.abs(h.x - w / 2) < ROOM.door / 2 - HERO_R;
+    door = run.doorOpen ? run.doors.find((d) => Math.abs(h.x - d.x) < ROOM.door / 2 - HERO_R) : undefined,
+    inDoor = !!door;
   h.x = clamp(h.x, ROOM.wall + HERO_R, w - ROOM.wall - HERO_R);
   h.y = clamp(h.y, inDoor ? -40 : ROOM.wall + HERO_R, H - ROOM.wall - HERO_R);
-  if (inDoor && h.y < 4) return throughDoor(run);
+  if (door && h.y < 4) return throughDoor(run, door.kind);
+  // A chest: open it and pick what's inside.
+  const c = run.chest;
+  if (c && !c.opened && Math.hypot(c.x - h.x, c.y - h.y) < 22 + HERO_R) openChest(run);
   // The ground under you.
   for (const q of run.terrain.spikes) if (inRect(q, h.x, h.y, HERO_R - 4) && spikeState(q, now) === 'up') hurt(run, SPIKES.dmg * run.setup.zone.dmg, 'touch');
   const sh = run.terrain.shrine;
@@ -926,7 +1002,7 @@ function useAbility(run: Run, input: Input) {
     h = run.hero;
   if (now < run.abilityAt) return;
   const a = run.ability;
-  run.abilityAt = now + ABILITIES[a].cd;
+  run.abilityAt = now + ABILITIES[a].cd / (1 + 0.25 * relic(run, 'hourglass'));
   let dx = input.x,
     dy = input.y;
   if (Math.hypot(dx, dy) < 0.1) {
@@ -1136,7 +1212,7 @@ function shoot(run: Run, f: Foe, p: Pattern) {
     at = Math.atan2(h.y - f.y, h.x - f.x),
     boss = f === run.boss,
     r = p.r ?? (boss ? 7 : 5),
-    dmg = p.dmg * run.setup.zone.dmg,
+    dmg = p.dmg * run.setup.zone.dmg * (boss ? 1 : (1 + DIALS.deepDmg * depth(run)) * (f.elite ? ELITE.dmg : 1)),
     speed = p.speed * DIALS.speed,
     style = p.style ?? 'plain';
   if (p.kind === 'mine') {
@@ -1239,7 +1315,7 @@ function moveBullets(run: Run) {
 function blowUp(run: Run, br: Terrain['barrels'][number]) {
   if (!br.alive) return;
   br.alive = false;
-  const dmg = BARREL.dmg * run.setup.zone.hp * DIALS.hp * (1 + 2 * depth(run));
+  const dmg = BARREL.dmg * run.setup.zone.hp * DIALS.hp * (1 + DIALS.deep * depth(run));
   if (Math.hypot(run.hero.x - br.x, run.hero.y - br.y) < BARREL.blast * 0.8) hurt(run, BARREL.hurt * run.setup.zone.dmg, 'touch');
   emit(run, { type: 'boom', x: br.x, y: br.y, r: BARREL.blast });
   for (const f of run.foes) if (f.alive && f !== run.boss && Math.hypot(f.x - br.x, f.y - br.y) <= BARREL.blast + f.def.r) damage(run, f, dmg, 260, br.x, br.y);
@@ -1330,7 +1406,7 @@ function steerBoss(run: Run, b: Foe) {
 
 // ---------- hitting ----------
 
-const pow = (run: Run, base: number) => heroDamage(base, run.setup.power, run.ups);
+const pow = (run: Run, base: number) => heroDamage(base, run.setup.power, run.ups) * (1 + DIALS.relic * 0.12 * relic(run, 'whetstone'));
 
 function nearest(run: Run, x: number, y: number, skip?: Set<Foe>, within = Infinity): Foe | null {
   let best: Foe | null = null,
@@ -1369,6 +1445,8 @@ function kill(run: Run, f: Foe) {
   run.kills++;
   emit(run, { type: 'kill', x: f.x, y: f.y, kind: f.kind });
   if (f.def.xp > 0) run.gems.push({ id: ++run.ids, x: f.x, y: f.y, value: f.def.xp, pulled: false });
+  const fang = relic(run, 'fang');
+  if (fang && f !== run.boss) run.hp = Math.min(run.maxHp, run.hp + fang);
   if (f.kind === 'splitter')
     for (let i = 0; i < 3; i++) {
       const a = (i / 3) * Math.PI * 2 + run.rnd();
@@ -1406,7 +1484,7 @@ function attack(run: Run) {
     target = b ?? nearest(run, h.x, h.y, undefined, reach);
   if (!target && kind !== 'wave') return;
   if (kind === 'wave' && !nearest(run, h.x, h.y, undefined, 150)) return;
-  run.cd.attack = attackCooldown(kind, run.setup.power, run.ups);
+  run.cd.attack = attackCooldown(kind, run.setup.power, run.ups) / (1 + DIALS.relic * 0.1 * relic(run, 'quick'));
   const n = 1 + (run.ups.multi ?? 0),
     dmg = pow(run, ATTACK[kind].dmg),
     angle = target ? Math.atan2(target.y - h.y, target.x - h.x) : h.facing;
@@ -1595,8 +1673,70 @@ function checkRoom(run: Run) {
     run.doorOpen = true;
     run.bullets = [];
     run.mines = [];
+    openDoors(run);
+    // Treasure and elite rooms leave a chest.
+    if (run.kind === 'treasure' || run.kind === 'elite') {
+      let x = run.area.w / 2,
+        y = run.area.h * 0.45;
+      for (let i = 0; i < 8 && inPillar(run, x, y, 30); i++) y += 40;
+      run.chest = { x, y, opened: false };
+      x = 0;
+    }
     emit(run, { type: 'clear' });
   }
+}
+
+/** The way on: one door to the stairs or the boss, otherwise two doors that each say what's behind. */
+function openDoors(run: Run) {
+  const { w } = run.area,
+    { floors, rooms } = run.layout;
+  const single = run.room === rooms - 1 || (run.floor === floors - 1 && run.room === rooms - 2) || rooms < 3;
+  if (single) {
+    run.doors = [{ x: w / 2, kind: 'fight' }];
+    return;
+  }
+  // Two different kinds; never two rests in a row, and no elites on the first floor.
+  const odds = DOOR_ODDS.filter(([k]) => !(k === 'rest' && run.kind === 'rest') && !(k === 'elite' && run.floor === 0));
+  const draw = (skip?: RoomKind): RoomKind => {
+    const opts = odds.filter(([k]) => k !== skip),
+      total = opts.reduce((n, [, o]) => n + o, 0);
+    let r = run.rnd() * total;
+    for (const [k, o] of opts) if ((r -= o) < 0) return k;
+    return opts[0][0];
+  };
+  const a = draw(),
+    b = draw(a);
+  run.doors = [
+    { x: Math.round(w * DOOR_AT[0]), kind: a },
+    { x: Math.round(w * DOOR_AT[1]), kind: b },
+  ];
+}
+
+function openChest(run: Run) {
+  const c = run.chest;
+  if (!c || c.opened) return;
+  c.opened = true;
+  const ids = Object.keys(RELICS) as RelicId[];
+  const choices: RelicId[] = [];
+  while (choices.length < 3) {
+    const id = ids[Math.floor(run.rnd() * ids.length)];
+    if (!choices.includes(id)) choices.push(id);
+  }
+  emit(run, { type: 'chest', x: c.x, y: c.y });
+  run.relicOffer = choices;
+  if (run.setup.autoPick) pickRelic(run, RELIC_BOT.find((id) => choices.includes(id)) ?? choices[0]);
+}
+
+export function pickRelic(run: Run, id: RelicId) {
+  if (!run.relicOffer) return;
+  run.relicOffer = null;
+  run.relics[id] = relic(run, id) + 1;
+  if (id === 'heart') {
+    run.maxHp += 20;
+    run.hp = Math.min(run.maxHp, run.hp + 20);
+  }
+  if (id === 'coal') run.flames++;
+  emit(run, { type: 'relic', id });
 }
 
 function gain(run: Run, n: number) {
@@ -1630,7 +1770,7 @@ export function pick(run: Run, id: UpgradeId) {
     run.maxHp += 25;
     run.hp = run.maxHp;
   }
-  if (id === 'flame') run.flames = run.setup.power.flames + (run.ups.flame ?? 0);
+  if (id === 'flame') run.flames = run.setup.power.flames + (run.ups.flame ?? 0) + relic(run, 'coal');
   if (run.free.length) offer(run, run.free.shift()!);
   else if (run.pendingLevels > 0) offer(run, null);
 }
@@ -1640,7 +1780,14 @@ export function pick(run: Run, id: UpgradeId) {
 function hurt(run: Run, dmg: number, by: 'shot' | 'touch') {
   const now = run.t;
   if (run.over || now < run.hurtUntil || now < run.ghostUntil) return;
-  const taken = dmg * (1 - armorOf(run.setup.power, run.ups));
+  if (relic(run, 'charm') && now >= run.wardAt) {
+    // The ward takes it.
+    run.wardAt = now + WARD_EVERY;
+    run.hurtUntil = now + INVULNERABLE;
+    emit(run, { type: 'ward', x: run.hero.x, y: run.hero.y });
+    return;
+  }
+  const taken = dmg * (1 - armorOf(run.setup.power, run.ups)) / (1 + DIALS.relic * 0.14 * relic(run, 'iron'));
   run.hp -= taken;
   run.hurtUntil = now + INVULNERABLE;
   emit(run, { type: 'hurt', x: run.hero.x, y: run.hero.y, dmg: Math.round(taken), by });

@@ -1,5 +1,5 @@
 import { attackOf, clamp, RANGE } from '../rules';
-import { BARREL, CHARGE, createRun, inRect, spikeState, stepRun, TOMORROW_REACH, type Input, type Rect, type Run, type RunEnd, type RunSetup } from './engine';
+import { BARREL, CHARGE, createRun, inRect, spikeState, stepRun, TOMORROW_REACH, type Input, type Rect, type RoomKind, type Run, type RunEnd, type RunSetup } from './engine';
 
 /* The bot: a steady, careful player, not a great one. It sidesteps shots on course to hit it,
    keeps its class's distance from monsters (a sword goes close, the rest stay back), plays each
@@ -26,6 +26,15 @@ export const ATTENTION = { share: 0.75 };
 
 /** Whether this shot is one the bot watches: fixed per shot, so it doesn't flicker. */
 const noticed = (id: number) => ((Math.imul(id, 2654435761) >>> 0) % 1000) / 1000 < ATTENTION.share;
+
+/** Which door the bot takes: rest when hurt, an elite room when healthy, a chest over a plain fight. */
+function pickDoor(run: Run): number {
+  const hp = run.hp / run.maxHp,
+    rank = (k: RoomKind) => (k === 'rest' ? (hp < 0.5 ? 4 : 0) : k === 'elite' ? (hp > 0.75 ? 3 : 0.5) : k === 'treasure' ? 2 : 1);
+  let best = run.doors[0];
+  for (const d of run.doors) if (rank(d.kind) > rank(best.kind)) best = d;
+  return best?.x ?? run.area.w / 2;
+}
 
 export function botInput(run: Run): Input {
   const h = run.hero,
@@ -185,9 +194,11 @@ export function botInput(run: Run): Input {
     x += (dx / d) * pull - (dy / d) * 0.35;
     y += (dy / d) * pull + (dx / d) * 0.35;
   } else if (run.cleared) {
-    // Gems come on their own: walk to the door.
-    const dx = run.area.w / 2 - h.x,
-      dy = -20 - h.y,
+    // Gems come on their own: open the chest, then walk to the door it picks.
+    const c = run.chest && !run.chest.opened ? run.chest : null,
+      door = pickDoor(run),
+      dx = (c ? c.x : door) - h.x,
+      dy = (c ? c.y : -20) - h.y,
       d = Math.hypot(dx, dy) || 1;
     x += (dx / d) * 1.5;
     y += (dy / d) * 1.5;

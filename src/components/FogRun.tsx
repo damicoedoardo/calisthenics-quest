@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ChevronsRight, CircleDot, Copy, Crosshair, Flame, Heart, HeartPulse, Magnet, Pause, Shield, Skull, Sparkles, Sword, Wind, Zap, type LucideIcon } from 'lucide-react';
+import { ChevronsRight, CircleDot, Copy, Crosshair, Droplet, Flame, Footprints, Gauge, Heart, HeartPlus, HeartPulse, Hourglass, Magnet, Pause, Shield, ShieldCheck, ShieldHalf, Skull, Sparkles, Sword, Swords, Wind, Zap, type LucideIcon } from 'lucide-react';
 import { gearOf, type GameState } from '@/lib/game';
 import { getUpgrade, nextGrowth, powerOf, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
@@ -9,7 +9,7 @@ import { sheetFor } from '@/sprites/registry';
 import { SoundToggle, useMusic } from './Sound';
 import type { FreePick, Hud as SurviveHud, RunEnd as SurviveEnd, RunHandle as SurviveHandle, SheetKey } from '@/game/run';
 import type { Hud as DungeonHud, RunEnd as DungeonEnd } from '@/game/dungeon/scene';
-import { ABILITIES, type AbilityId } from '@/game/dungeon/engine';
+import { ABILITIES, RELICS, type AbilityId, type RelicId } from '@/game/dungeon/engine';
 import type { Sheet } from '@/sprites/registry';
 
 interface Props {
@@ -38,7 +38,19 @@ const ICONS: Record<UpgradeId, LucideIcon> = {
    (src/game/run.ts) until their dungeons are built. Both report through the same HUD. */
 type Hud = SurviveHud & Partial<DungeonHud>;
 type RunEnd = SurviveEnd & Partial<DungeonEnd>;
-type RunHandle = SurviveHandle & { ability?: () => void; skipFloor?: () => void };
+type RunHandle = SurviveHandle & { ability?: () => void; skipFloor?: () => void; pickRelic?: (id: RelicId) => void };
+
+const RELIC_ICONS: Record<RelicId, LucideIcon> = {
+  whetstone: Swords,
+  quick: Gauge,
+  iron: ShieldHalf,
+  boots: Footprints,
+  heart: HeartPlus,
+  hourglass: Hourglass,
+  fang: Droplet,
+  coal: Flame,
+  charm: ShieldCheck,
+};
 
 const ABILITY_ICONS: Record<AbilityId, LucideIcon> = { charge: ChevronsRight, volley: Crosshair, blink: Sparkles, still: HeartPulse, dash: Wind };
 
@@ -64,6 +76,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
   const [auto, setAuto] = useState(bot !== null);
   const dungeon = isDungeon(zone);
   const [floorShown, setFloorShown] = useState<number | null>(null);
+  const [chest, setChest] = useState<{ choices: RelicId[]; have: Partial<Record<RelicId, number>> } | null>(null);
 
   useMusic(end ? null : hud?.boss ? 'fogBoss' : 'fog');
 
@@ -100,6 +113,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
           setTimeout(() => setFloorShown(null), 2200);
         },
         levelUp: (choices, levels, free) => setOffer({ choices, levels, free }),
+        relic: (choices: RelicId[], have: Partial<Record<RelicId, number>>) => setChest({ choices, have }),
         boss: () => {
           setBoss(true);
           setTimeout(() => setBoss(false), 4500);
@@ -154,6 +168,19 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
                   <div className="h-full bg-sky-400 transition-[width] duration-150" style={{ width: `${(hud.xp / hud.xpNext) * 100}%` }} />
                 </div>
               </div>
+              {hud.relics && Object.keys(hud.relics).length > 0 && (
+                <div className="mt-1 flex flex-wrap items-center gap-1">
+                  {(Object.entries(hud.relics) as [RelicId, number][]).map(([id, n]) => {
+                    const Icon = RELIC_ICONS[id];
+                    return (
+                      <span key={id} className="flex items-center gap-0.5 rounded bg-ink-800/90 px-1 py-0.5 text-gold-300" title={RELICS[id].name}>
+                        <Icon size={10} />
+                        {n > 1 && <span className="font-mono text-[8px]">{n}</span>}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
             </div>
             <div className="w-16 text-right">
               <p className={`font-pixel text-[11px] ${hud.boss ? 'text-red-400' : 'text-slate-100'}`}>
@@ -227,7 +254,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
       )}
 
       {said && !boss && !offer && !end && (
-        <p key={said.at} className="pointer-events-none absolute inset-x-6 top-32 animate-fadein text-center font-pixel text-[9px] leading-relaxed text-gold-300 drop-shadow-[0_2px_0_#0b0d14]">
+        <p key={said.at} className="pointer-events-none absolute inset-x-10 top-44 animate-fadein text-center font-pixel text-[9px] leading-relaxed text-gold-300 drop-shadow-[0_2px_0_#0b0d14]">
           {said.text}
         </p>
       )}
@@ -258,6 +285,40 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
                       <span className="font-pixel text-[8px] text-slate-400">{next === 1 ? 'NEW' : `Lv${next}`}</span>
                     </span>
                     <span className="mt-0.5 block text-xs text-slate-400">{u.text(next)}</span>
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {chest && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/80 px-4">
+          <p className="font-pixel text-sm text-gold-300">A chest!</p>
+          <p className="mt-2 text-center text-xs text-slate-400">Take one. It lasts until the end of this run.</p>
+          <div className="mt-4 w-full max-w-sm space-y-2">
+            {chest.choices.map((id) => {
+              const Icon = RELIC_ICONS[id],
+                n = chest.have[id] ?? 0;
+              return (
+                <button
+                  key={id}
+                  onClick={() => {
+                    setChest(null);
+                    run.current?.pickRelic?.(id);
+                  }}
+                  className="flex w-full items-center gap-3 rounded-xl bg-ink-800 p-3 text-left ring-1 ring-gold-400/30 active:scale-[.98]"
+                >
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-ink-900 text-gold-300">
+                    <Icon size={22} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-baseline justify-between gap-2">
+                      <span className="text-sm font-semibold text-slate-100">{RELICS[id].name}</span>
+                      <span className="font-pixel text-[8px] text-slate-400">{n ? `have ${n}` : 'NEW'}</span>
+                    </span>
+                    <span className="mt-0.5 block text-xs text-slate-400">{RELICS[id].text}</span>
                   </span>
                 </button>
               );
