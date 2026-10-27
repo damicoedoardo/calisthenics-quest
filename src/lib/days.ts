@@ -7,6 +7,12 @@ export function dayKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+/** Which day this is in the Book of Days: every day the app was opened, today included. */
+export function dayNumber(state: GameState, now: Date): number {
+  const days = state.days ?? [];
+  return days.length + (days.some((d) => d.day === dayKey(now)) ? 0 : 1);
+}
+
 /** Whole calendar days from a to b (b later is positive), ignoring the time of day. */
 export function daysApart(a: Date, b: Date): number {
   const A = Date.UTC(a.getFullYear(), a.getMonth(), a.getDate()),

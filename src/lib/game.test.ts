@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { dayNumber } from './days';
 import {
   closeStaleDraft,
   gearOf,
@@ -306,5 +307,19 @@ describe('levels, migration', () => {
     const slot = blade.slot === 'charm' ? 'shield' : blade.slot;
     expect(gearOf(s)[slot].tier).toBe(tierOf(blade));
     expect(gearOf(initialState()).weapon.tier).toBe(1);
+  });
+});
+
+describe('dayNumber', () => {
+  const page = (day: string) => ({ day, line: '', quote: { text: '', by: '' } });
+  const now = new Date(2026, 9, 27, 9);
+
+  it('counts today even before its page is written', () => {
+    expect(dayNumber(initialState(), now)).toBe(1);
+    expect(dayNumber({ ...initialState(), days: [page('2026-10-25')] }, now)).toBe(2);
+  });
+
+  it("doesn't count today twice", () => {
+    expect(dayNumber({ ...initialState(), days: [page('2026-10-25'), page('2026-10-27')] }, now)).toBe(2);
   });
 });

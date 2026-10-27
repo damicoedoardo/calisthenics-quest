@@ -17,6 +17,8 @@ interface Props {
   update: (fn: (s: GameState) => GameState) => void;
   /** Play any story scene now. */
   onPlayScene: (scene: Scene) => void;
+  /** Play the app's opening again. */
+  onPlayOpening: () => void;
   /** On the live app dev mode can be turned off again; previews always have it. */
   onTurnOff?: () => void;
   onClose: () => void;
@@ -38,7 +40,7 @@ export function DevButton({ onClick }: { onClick: () => void }) {
 const chip = 'rounded-lg bg-ink-700 px-3 py-2 text-sm text-slate-200 active:scale-95';
 
 /** Developer mode: shortcuts that normal players don't get. */
-export function DevPanel({ state, update, onPlayScene, onTurnOff, onClose }: Props) {
+export function DevPanel({ state, update, onPlayScene, onPlayOpening, onTurnOff, onClose }: Props) {
   const [sceneId, setSceneId] = useState(ALL_SCENES[0].scene.id);
   const [flame, setFlame] = useState(state.profile.flame ?? '');
   const [skipStory, setSkipStory] = useState(true);
@@ -108,6 +110,15 @@ export function DevPanel({ state, update, onPlayScene, onTurnOff, onClose }: Pro
               Play
             </button>
           </div>
+          <button
+            onClick={() => {
+              onClose();
+              onPlayOpening();
+            }}
+            className={chip}
+          >
+            Play the app opening
+          </button>
           <form
             className="flex gap-2"
             onSubmit={(e) => {

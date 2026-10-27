@@ -14,12 +14,12 @@ and works offline.
 
 - **Pattern syntax**: one token per step. `A4` plays a note, `-` holds it, `.` is silence, `x` a
   drum hit or heartbeat thump. Every voice of a track has the same length.
-- **Tracks**: `TRACKS` in `music.ts` (the opening's memory, the Hollow, camp, the Fog and its boss, and the level-up, defeat and victory stings) and `ZONE_TRACKS` in
+- **Tracks**: `TRACKS` in `music.ts` (the opening's memory, the Hollow, camp, the Fog and its boss, and the level-up, defeat, victory and app-opening stings: `opening`, and `openingEnd` for a late tap) and `ZONE_TRACKS` in
   `music-zones.ts` (each Fog zone's run theme and boss theme, the Warden's theme, the zone-end
   stings). `ZONE_MUSIC` / `zoneMusic` pick a zone's tracks.
 - **Sound effects**: `SfxId` and `SFX_IDS` in `music.ts`; the Fog scene turns game events into them.
 - **Playing**: `useMusic(id)` in `src/components/Sound.tsx` plays a track while a screen is on and
-  fades it when it leaves; `SoundToggle` mutes. Story scenes name their song in `music` (see
+  fades it when it leaves; `SoundToggle` mutes. `music.tryStart()` wakes the sound without a tap where the browser allows it and says if it did (the app opening uses it; iPhones always need a tap). Story scenes name their song in `music` (see
   [story.md](story.md)).
 - **Checking a pile-up**: `renderSfxMix(ids)` renders several effects starting together, to
   check they don't clip (browser only, like `renderSfx`).

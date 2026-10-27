@@ -16,7 +16,7 @@ every preview and on localhost. On the live app it is also on while there are no
 name turn it back on.
 
 It adds: "Skip the intro" on the title screen; a wrench in the header with fake workouts, class
-and stat-point buttons (spread them evenly, take all back), any story scene on demand, Fog boss clears, a save wipe; and in a Fog
+and stat-point buttons (spread them evenly, take all back), any story scene on demand, the app opening again, Fog boss clears, a save wipe; and in a Fog
 run's pause menu "Skip to the boss", "Win this run" and a Theme button that cycles zone colors.
 Helpers are pure functions on `GameState` and tested in `src/lib/dev.test.ts`.
 
