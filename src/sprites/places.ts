@@ -10,6 +10,15 @@ export const PLACE_H = 160;
 /** Where the far land meets the sky. */
 const HORIZON = 98;
 
+/** The canvas a backdrop is drawn on: its width (PLACE_W upright; wider held sideways, so the
+    picture fills a short wide screen at a whole-number scale) and `st`, where the props' 90-pixel
+    stage starts (0 upright; sideways, around whoever stands on the left). */
+export interface PlaceCanvas {
+  w: number;
+  st: number;
+}
+const UPRIGHT: PlaceCanvas = { w: PLACE_W, st: 0 };
+
 export type Land = 'dunes' | 'hills' | 'peaks' | 'flat' | 'village' | 'forest';
 export type Prop = 'dead-trees' | 'stars' | 'moon' | 'campfire' | 'lake' | 'reeds' | 'chimneys' | 'windows' | 'rocks' | 'road' | 'lamp-tower' | 'far-tower';
 export type PlaceWeather = 'none' | 'ash' | 'rain' | 'embers' | 'fog' | 'snow';
@@ -53,10 +62,10 @@ function gradient(stops: string[], t: number) {
   return mix(stops[i], stops[i + 1], k - i);
 }
 
-function sky(p: Painter, s: PlaceSpec) {
+function sky(p: Painter, s: PlaceSpec, f: PlaceCanvas) {
   const bands = 9;
   for (let y = 0; y < HORIZON + 6; y++)
-    for (let x = 0; x < PLACE_W; x++) {
+    for (let x = 0; x < f.w; x++) {
       const v = (y / (HORIZON + 6)) * (bands - 1),
         b = Math.floor(v) + (v - Math.floor(v) > threshold(x, y) ? 1 : 0);
       p.p(x, y, gradient(s.sky, b / (bands - 1)));
@@ -64,11 +73,11 @@ function sky(p: Painter, s: PlaceSpec) {
 }
 
 /** Soft dithered light around a point, with a bright core unless it lights something else. */
-function glow(p: Painter, cx: number, cy: number, r: number, color: string, core = true) {
+function glow(p: Painter, f: PlaceCanvas, cx: number, cy: number, r: number, color: string, core = true) {
   for (let y = Math.floor(cy - r * 2); y <= cy + r * 2; y++)
     for (let x = Math.floor(cx - r * 2); x <= cx + r * 2; x++) {
       const d = Math.hypot(x - cx, y - cy) / (r * 2);
-      if (d >= 1 || x < 0 || y < 0 || x >= PLACE_W || y >= PLACE_H) continue;
+      if (d >= 1 || x < 0 || y < 0 || x >= f.w || y >= PLACE_H) continue;
       const under = p.get(x, y);
       if (!under) continue;
       if (core && d < 0.25) p.p(x, y, mix(color, '#ffffff', 0.35));
@@ -103,9 +112,9 @@ function ridge(land: Land, x: number, rnd: () => number, layer: 'far' | 'near'):
   }
 }
 
-function land(p: Painter, s: PlaceSpec, rnd: () => number, lake: boolean) {
+function land(p: Painter, s: PlaceSpec, f: PlaceCanvas, rnd: () => number, lake: boolean) {
   const nearBase = HORIZON + 10;
-  for (let x = 0; x < PLACE_W; x++) {
+  for (let x = 0; x < f.w; x++) {
     const top = Math.round(HORIZON - ridge(s.land, x, rnd, 'far'));
     for (let y = top; y < PLACE_H; y++) p.p(x, y, s.far);
   }
@@ -114,18 +123,18 @@ function land(p: Painter, s: PlaceSpec, rnd: () => number, lake: boolean) {
     for (let y = HORIZON; y < 136; y++) {
       const mirrored = Math.max(0, 2 * HORIZON - y - 20),
         c = mix(gradient(s.sky, mirrored / HORIZON), s.near, 0.45);
-      p.row(y, 0, PLACE_W - 1, c);
+      p.row(y, 0, f.w - 1, c);
       if (y % 2 === 0 && rnd() < 0.8) {
         const len = 2 + Math.floor(rnd() * (2 + (y - HORIZON) / 5)),
-          x = Math.floor(rnd() * (PLACE_W - len));
+          x = Math.floor(rnd() * (f.w - len));
         p.row(y, x, x + len, mix(c, '#ffffff', 0.2));
       }
     }
   }
   const BANK = 26;
-  for (let x = 0; x < PLACE_W; x++) {
+  for (let x = 0; x < f.w; x++) {
     // With a lake, the near land only frames the sides, sloping down into the water.
-    const edge = Math.min(x, PLACE_W - 1 - x);
+    const edge = Math.min(x, f.w - 1 - x);
     if (lake && edge > BANK) continue;
     const slope = lake ? Math.pow(edge / BANK, 1.6) * 36 : 0,
       top = Math.round(nearBase - ridge(s.land, x, rnd, 'near') - (lake ? 6 : 0) + slope);
@@ -133,15 +142,15 @@ function land(p: Painter, s: PlaceSpec, rnd: () => number, lake: boolean) {
   }
   const groundTop = lake ? 136 : nearBase + 12;
   for (let y = groundTop; y < PLACE_H; y++)
-    for (let x = 0; x < PLACE_W; x++) p.p(x, y, rnd() < 0.06 ? mix(s.ground, '#ffffff', 0.08) : rnd() < 0.06 ? mix(s.ground, '#000000', 0.2) : s.ground);
+    for (let x = 0; x < f.w; x++) p.p(x, y, rnd() < 0.06 ? mix(s.ground, '#ffffff', 0.08) : rnd() < 0.06 ? mix(s.ground, '#000000', 0.2) : s.ground);
   // A soft edge where the ground starts.
-  for (let x = 0; x < PLACE_W; x++) if ((x + groundTop) % 2 === 0) p.p(x, groundTop - 1, s.ground);
+  for (let x = 0; x < f.w; x++) if ((x + groundTop) % 2 === 0) p.p(x, groundTop - 1, s.ground);
 }
 
-function village(p: Painter, s: PlaceSpec, rnd: () => number) {
+function village(p: Painter, s: PlaceSpec, f: PlaceCanvas, rnd: () => number) {
   const lit = s.props.includes('windows');
   let x = -4;
-  while (x < PLACE_W) {
+  while (x < f.w) {
     const w = 10 + Math.floor(rnd() * 8),
       h = 10 + Math.floor(rnd() * 10),
       base = HORIZON + 14,
@@ -173,19 +182,20 @@ function deadTree(p: Painter, x: number, base: number, h: number, c: string) {
 }
 
 /** A dirt road running straight to the horizon, narrowing as it goes. */
-function road(p: Painter, s: PlaceSpec) {
-  const top = HORIZON + 10,
+function road(p: Painter, s: PlaceSpec, f: PlaceCanvas) {
+  const mid = f.w / 2,
+    top = HORIZON + 10,
     c = mix(s.ground, '#ffffff', 0.1),
     rut = mix(s.ground, '#000000', 0.18);
   for (let y = top; y < PLACE_H; y++) {
     const k = (y - top) / (PLACE_H - top),
       half = 2 + k * 30,
-      x0 = Math.round(45 - half),
-      x1 = Math.round(45 + half);
+      x0 = Math.round(mid - half),
+      x1 = Math.round(mid + half);
     p.row(y, x0, x1, c);
     // two wheel ruts, and a ragged edge
-    p.p(Math.round(45 - half * 0.45), y, rut);
-    p.p(Math.round(45 + half * 0.45), y, rut);
+    p.p(Math.round(mid - half * 0.45), y, rut);
+    p.p(Math.round(mid + half * 0.45), y, rut);
     if (y % 3 === 0) p.p(x0 - 1, y, c);
     if (y % 4 === 1) p.p(x1 + 1, y, c);
   }
@@ -247,11 +257,11 @@ const TOWER = [
 ];
 
 /** Off to the right, so the person speaking stands clear of it. */
-function lampTower(p: Painter, s: PlaceSpec) {
+function lampTower(p: Painter, s: PlaceSpec, f: PlaceCanvas) {
   const stone = mix(s.far, '#d6c8a8', 0.45),
-    x = 55,
+    x = f.st + 55,
     y = HORIZON + 18 - TOWER.length;
-  glow(p, x + 9, y + 5, 9, '#fbbf24', false);
+  glow(p, f, x + 9, y + 5, 9, '#fbbf24', false);
   paintRows(p, TOWER, {
     L: mix(stone, '#ffffff', 0.25),
     s: stone,
@@ -303,21 +313,24 @@ const FAR_TOWER = [
   'mmmmm',
 ];
 
-function farTower(p: Painter, s: PlaceSpec, lit: boolean) {
+function farTower(p: Painter, s: PlaceSpec, f: PlaceCanvas, lit: boolean) {
   const stone = mix(s.far, '#d6c8a8', 0.45),
     // tall and to the right, so its lamp clears the narration box that sits over the horizon
-    x = 63,
+    x = f.st + 63,
     y = HORIZON - FAR_TOWER.length + 1;
-  if (lit) glow(p, x + 2, y + 4, 6, '#fbbf24', false);
+  if (lit) glow(p, f, x + 2, y + 4, 6, '#fbbf24', false);
   paintRows(p, FAR_TOWER, { k: '#1e1a16', y: lit ? '#fff3c4' : '#6b5326', L: mix(stone, '#ffffff', 0.2), m: mix(stone, '#000000', 0.25), s: stone, d: mix(stone, '#000000', 0.35) }, x, y);
 }
 
-function props(p: Painter, s: PlaceSpec, rnd: () => number, lit: boolean) {
-  const has = (q: Prop) => s.props.includes(q);
-  if (has('road')) road(p, s);
+function props(p: Painter, s: PlaceSpec, f: PlaceCanvas, rnd: () => number, lit: boolean) {
+  const has = (q: Prop) => s.props.includes(q),
+    st = f.st,
+    // as many stars and rocks per column as upright
+    many = (n: number) => Math.round((n * f.w) / PLACE_W);
+  if (has('road')) road(p, s, f);
   if (has('stars'))
-    for (let i = 0; i < 46; i++) {
-      const x = Math.floor(rnd() * PLACE_W),
+    for (let i = 0; i < many(46); i++) {
+      const x = Math.floor(rnd() * f.w),
         y = Math.floor(rnd() * HORIZON * 0.6),
         c = rnd() < 0.3 ? '#fde68a' : '#e2e8f0';
       p.p(x, y, mix(c, s.sky[0], rnd() * 0.5));
@@ -327,36 +340,38 @@ function props(p: Painter, s: PlaceSpec, rnd: () => number, lit: boolean) {
       }
     }
   if (has('moon')) {
-    glow(p, 66, 26, 7, '#e0e7ff');
-    p.ellipse(66, 26, 5, 5, '#f1f5f9');
-    p.p(64, 25, '#cbd5e1');
-    p.p(67, 28, '#cbd5e1');
+    glow(p, f, st + 66, 26, 7, '#e0e7ff');
+    p.ellipse(st + 66, 26, 5, 5, '#f1f5f9');
+    p.p(st + 64, 25, '#cbd5e1');
+    p.p(st + 67, 28, '#cbd5e1');
   }
-  if (s.glow) glow(p, s.glow.x * PLACE_W, s.glow.y * PLACE_H, s.glow.r, s.glow.color);
+  if (s.glow) glow(p, f, st + s.glow.x * PLACE_W, s.glow.y * PLACE_H, s.glow.r, s.glow.color);
   if (has('dead-trees')) {
-    deadTree(p, 14, HORIZON + 8, 16, s.near);
-    deadTree(p, 71, HORIZON + 6, 12, s.near);
+    deadTree(p, st + 14, HORIZON + 8, 16, s.near);
+    deadTree(p, st + 71, HORIZON + 6, 12, s.near);
   }
   if (has('rocks'))
-    for (let i = 0; i < 9; i++) {
-      const x = Math.floor(rnd() * PLACE_W),
+    for (let i = 0; i < many(9); i++) {
+      const x = Math.floor(rnd() * f.w),
         y = 124 + Math.floor(rnd() * 30);
       p.r(x, y, 3 + Math.floor(rnd() * 3), 2, mix(s.ground, '#ffffff', 0.12));
       p.row(y + 2, x, x + 3, mix(s.ground, '#000000', 0.3));
     }
   if (has('reeds'))
-    for (const x of [3, 5, 8, 10, 79, 82, 84, 87]) {
-      const h = 8 + (x % 5);
+    // at the water's two edges, wherever they are
+    for (const at of [3, 5, 8, 10, 79, 82, 84, 87]) {
+      const x = at < PLACE_W / 2 ? at : at + f.w - PLACE_W,
+        h = 8 + (at % 5);
       p.col(x, 136 - h, 137, mix(s.near, '#000000', 0.2));
       p.p(x, 136 - h - 1, '#5b4a3a');
     }
-  if (has('lamp-tower')) lampTower(p, s);
-  if (has('far-tower')) farTower(p, s, lit);
+  if (has('lamp-tower')) lampTower(p, s, f);
+  if (has('far-tower')) farTower(p, s, f, lit);
   if (has('campfire')) {
     // Off to the left, where the text box doesn't cover it and nobody stands in front of it.
-    const cx = 22,
+    const cx = st + 22,
       cy = 120;
-    glow(p, cx, cy - 4, 12, '#f97316', false);
+    glow(p, f, cx, cy - 4, 12, '#f97316', false);
     p.thick(cx - 7, cy + 2, cx + 6, cy - 1, 2, '#5b3a24');
     p.thick(cx - 6, cy - 1, cx + 7, cy + 2, 2, '#4a2f1d');
     p.poly([[cx - 4, cy], [cx + 4, cy], [cx + 1, cy - 9], [cx - 1, cy - 5]], '#f97316');
@@ -367,26 +382,29 @@ function props(p: Painter, s: PlaceSpec, rnd: () => number, lit: boolean) {
 /** Whether the backdrop has a light that flashes (drawn twice: unlit, and lit on top). */
 export const placeBlinks = (s: PlaceSpec) => s.props.includes('far-tower');
 
-/** Draws a backdrop; `lit` turns on the lights that flash. */
-export function drawPlace(s: PlaceSpec, lit = false): Grid {
-  const g = grid(PLACE_W, PLACE_H),
+/** Draws a backdrop; `lit` turns on the lights that flash. Upright it is PLACE_W wide; `canvas`
+    draws it wider for a screen held sideways. */
+export function drawPlace(s: PlaceSpec, lit = false, canvas: PlaceCanvas = UPRIGHT): Grid {
+  const w = Math.max(PLACE_W, Math.round(canvas.w)),
+    f = { w, st: Math.max(0, Math.min(w - PLACE_W, Math.round(canvas.st))) },
+    g = grid(w, PLACE_H),
     p = painter(g),
     rnd = seeded(s.name);
-  sky(p, s);
-  land(p, s, rnd, s.props.includes('lake'));
-  if (s.land === 'village') village(p, s, rnd);
-  props(p, s, rnd, lit);
+  sky(p, s, f);
+  land(p, s, f, rnd, s.props.includes('lake'));
+  if (s.land === 'village') village(p, s, f, rnd);
+  props(p, s, f, rnd, lit);
   return g;
 }
 
 const cache = new Map<string, string>();
 
 /** The backdrop as an image URL, drawn once (browser only). */
-export function placeImage(s: PlaceSpec, lit = false): string {
-  const key = `${s.name}|${lit}`,
+export function placeImage(s: PlaceSpec, lit = false, canvas: PlaceCanvas = UPRIGHT): string {
+  const key = `${s.name}|${lit}|${canvas.w}|${canvas.st}`,
     hit = cache.get(key);
   if (hit) return hit;
-  const url = toSheet([drawPlace(s, lit)]);
+  const url = toSheet([drawPlace(s, lit, canvas)]);
   cache.set(key, url);
   return url;
 }

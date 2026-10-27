@@ -1,6 +1,6 @@
 import { PLAN, cueOf, type DayType, type Kit, type Slot, type SlotRole } from './program';
 import { makeGear, tiersAt, type ClassId, type Gear, type GearSlot, type Tier } from './gear';
-import { tierOf } from '@/game/dungeon/items';
+import { looksOf, nameOf, tierOf } from '@/game/dungeon/items';
 import type { Build } from './stats';
 import type { Look } from '@/sprites/engine/figure';
 import type { FogProgress } from './fog';
@@ -219,7 +219,8 @@ export function repsFor(state: GameState, slot: Slot): number {
 
 /** What the hero looks like they wear: the starter kit's look (`fogGear.kit`, the gear Mira's old
     forge had made by the time it closed), or what you wear into the Fog when that looks finer. The
-    charm shows as the shield slot's piece. */
+    charm shows as the shield slot's piece. A worn item also hands the hero its look (`looksOf`): the
+    sprite draws that item's kind, rarity and colors. */
 export function gearOf(state: GameState): Record<GearSlot, Gear> {
   const kit = state.fogGear?.kit ?? KIT_LOOK,
     worn = state.fogGear?.worn ?? {},
@@ -227,7 +228,12 @@ export function gearOf(state: GameState): Record<GearSlot, Gear> {
       const it = worn[slot === 'shield' ? 'charm' : slot];
       return Math.max(kit[slot], it ? tierOf(it) : 0) as Tier;
     };
-  return { weapon: makeGear('weapon', tier('weapon'), state.profile.classId), armor: makeGear('armor', tier('armor'), state.profile.classId), shield: makeGear('shield', tier('shield'), state.profile.classId) };
+  const gear = (slot: GearSlot): Gear => {
+    const g = makeGear(slot, tier(slot), state.profile.classId),
+      it = worn[slot === 'shield' ? 'charm' : slot];
+    return it ? { ...g, name: nameOf(it), item: looksOf(it) } : g;
+  };
+  return { weapon: gear('weapon'), armor: gear('armor'), shield: gear('shield') };
 }
 
 /** A new hero's look: a plain weapon and armor, no shield. */

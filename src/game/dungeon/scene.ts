@@ -1,12 +1,12 @@
 import * as Phaser from 'phaser';
 import type { ClassId } from '@/lib/gear';
-import { xpToNext, type Power, type UpgradeId, type Zone } from '@/lib/fog';
+import { xpToNext, type Edge, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import { music, type SfxId } from '@/lib/music';
 import { BOT_PICKS, type BossSheetKey, type SheetKey, type Sheets } from '../rules';
 import type { FogBoss, FogLines } from '@/story/types';
 import { R } from '@/sprites/palette';
 import { botInput } from './bot';
-import { ITEM_ICONS } from '@/sprites/characters/icons';
+import { drawItem } from '@/sprites/characters/items';
 import type { Build } from '@/lib/stats';
 import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STAIRS, type Prop } from './props';
 import { THEMES, themeFor, type Theme } from './themes';
@@ -31,7 +31,7 @@ import {
   zoneDungeon,
   createRun,
   dropFromBag,
-  iconOf,
+  looksOf,
   nameOf,
   RARITY,
   takeOff,
@@ -133,6 +133,8 @@ export interface RunSetup {
   /** What you wear into the Fog (from the save), and your points, which items ask for. */
   worn?: Partial<Record<ItemSlot, Item>>;
   build?: Build;
+  /** The chapter's hearts are gone: a weaker boss and free skills at the start. */
+  edge?: Edge;
 }
 
 /** A room on the minimap: where it is on the floor (east is +x, south is +y), what it holds,
@@ -368,7 +370,7 @@ class DungeonScene extends Phaser.Scene {
   private taunt = 0;
   /** The boss's stage of its art, for its stage lines. */
   private stage = 0;
-  private keys: Record<'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'space' | 'shift', Phaser.Input.Keyboard.Key> | null = null;
+  private keys: Record<'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd', Phaser.Input.Keyboard.Key> | null = null;
   private stick: { id: number; x: number; y: number; dx: number; dy: number } | null = null;
   private fading: { draw: (g: Phaser.GameObjects.Graphics, p: number) => void; start: number; ms: number; up: boolean }[] = [];
   private acc = 0;
@@ -403,7 +405,7 @@ class DungeonScene extends Phaser.Scene {
   ) {
     super('dungeon');
     this.theme = themeFor(setup.zone.id);
-    this.run = createRun({ zone: setup.zone, power: setup.power, classId: setup.classId, seed: Math.floor(Math.random() * 2 ** 31), autoPick: setup.fast, worn: setup.worn, build: setup.build });
+    this.run = createRun({ zone: setup.zone, power: setup.power, classId: setup.classId, seed: Math.floor(Math.random() * 2 ** 31), autoPick: setup.fast, worn: setup.worn, build: setup.build, edge: setup.edge });
   }
 
   /** An engine point on the screen: the room on its side, its door on the right. */
@@ -531,9 +533,14 @@ class DungeonScene extends Phaser.Scene {
     const kb = this.input.keyboard;
     if (kb) {
       const k = Phaser.Input.Keyboard.KeyCodes;
-      this.keys = kb.addKeys({ up: k.UP, down: k.DOWN, left: k.LEFT, right: k.RIGHT, w: k.W, a: k.A, s: k.S, d: k.D, space: k.SPACE, shift: k.SHIFT }) as DungeonScene['keys'];
-      this.keys?.space.on('down', () => (this.wantAbility = true));
-      this.keys?.shift.on('down', () => (this.wantDodge = true));
+      // On a computer: WASD or the arrows move, Q is the class ability, Space (or E, or Shift) dodges.
+      this.keys = kb.addKeys({ up: k.UP, down: k.DOWN, left: k.LEFT, right: k.RIGHT, w: k.W, a: k.A, s: k.S, d: k.D }) as DungeonScene['keys'];
+      // Ignored while the run holds still (a card or the bag is open), so nothing fires on the way back.
+      const on = (codes: number[], act: () => void) => {
+        for (const c of codes) kb.addKey(c).on('down', () => !this.paused && !this.run.hero.offer && !this.run.hero.relicOffer && !this.run.stairsAsk && act());
+      };
+      on([k.Q], () => (this.wantAbility = true));
+      on([k.SPACE, k.E, k.SHIFT], () => (this.wantDodge = true));
     }
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
       // A tap on a monster aims at it (again lets go); anywhere else, the move stick.
@@ -796,7 +803,6 @@ class DungeonScene extends Phaser.Scene {
     prop('sconce', SCONCE);
     prop('stairs', STAIRS);
     prop('hitspark', HIT_SPARK);
-    for (const [k, art] of Object.entries(ITEM_ICONS)) prop(`item-${k}`, art);
     g.destroy();
     this.themeTextures();
   }
@@ -995,6 +1001,26 @@ class DungeonScene extends Phaser.Scene {
 
   /** Items on the floor: each one's icon with its name in its rarity's color over it, and a
       beam of light over rare and legendary ones, so they're seen from across the room. */
+  /** The texture of an item on the floor: its own art (src/sprites/characters/items.ts), drawn once. */
+  private itemTexture(item: Item): string {
+    const look = looksOf(item),
+      key = `item-${look.art}-${look.rarity}-${look.seed}`;
+    if (this.textures.exists(key)) return key;
+    const g = drawItem(look),
+      cv = this.textures.createCanvas(key, g[0].length, g.length);
+    const ctx = cv?.getContext();
+    if (!cv || !ctx) return key;
+    g.forEach((row, y) =>
+      row.forEach((c, x) => {
+        if (!c) return;
+        ctx.fillStyle = c;
+        ctx.fillRect(x, y, 1, 1);
+      }),
+    );
+    cv.refresh();
+    return key;
+  }
+
   private syncLoot() {
     const r = this.run,
       now = this.time.now,
@@ -1014,7 +1040,7 @@ class DungeonScene extends Phaser.Scene {
         const big = l.item.rarity === 'rare' || l.item.rarity === 'legendary';
         v = {
           beam: big ? this.add.rectangle(X, Y - 60, 10, 120, c, 0.18).setDepth(-1.1) : null,
-          icon: this.add.image(X, Y, `item-${iconOf(l.item)}`).setDepth(-1),
+          icon: this.add.image(X, Y, this.itemTexture(l.item)).setDepth(-1).setScale(0.9),
           name: this.add
             .text(X, Y - 18, nameOf(l.item), { fontFamily: '"Press Start 2P", monospace', fontSize: '7px', color, stroke: '#0b0d14', strokeThickness: 3 })
             .setOrigin(0.5, 1)
@@ -1328,13 +1354,16 @@ class DungeonScene extends Phaser.Scene {
       if (Math.abs(across) > 5) h.setFlipX(across < 0);
       h.setAngle(Math.sign(across) * 3);
       if (playing === 'hero' && this.anims.exists('heroWalk')) h.play('heroWalk');
+      // Running through a cleared room: quicker steps and a thicker trail of dust.
+      h.anims.timeScale = r.cleared ? 1.8 : 1;
       if (now >= this.trailAt) {
-        this.trailAt = now + 240;
+        this.trailAt = now + (r.cleared ? 90 : 240);
         this.puffs.explode(1, hx, hy + 24);
       }
     } else {
       h.setAngle(0);
       if (playing === 'heroWalk') h.play('hero');
+      h.anims.timeScale = 1;
     }
     const blink = r.t < r.hero.hurtUntil || r.t < r.hero.ghostUntil;
     h.setAlpha(blink ? (Math.floor(now / 80) % 2 ? 0.35 : 1) : 1);
@@ -2409,6 +2438,8 @@ class DungeonScene extends Phaser.Scene {
   setPaused(on: boolean) {
     this.paused = on;
     this.run.paused = on;
+    // A key held down when the run stopped doesn't keep walking you once it goes on.
+    this.input?.keyboard?.resetKeys();
   }
 
   skipToBoss() {

@@ -33,13 +33,36 @@ pieces of screen state, and decides what is on screen:
 The tabs work both ways up. Upright, everything is one `max-w-md` column with the bottom tab bar.
 On a phone held sideways (the `land:` variant in `tailwind.config.ts`: landscape and at most
 600px tall; tablets and desktops keep the upright layout) `page.tsx` turns the tab bar into a rail
-down the left with the hero at its top, shrinks the header to one line (FORMA, level, XP bar),
-and lets the column take the full width, clear of the notch (`env(safe-area-inset-left/right)`).
-Each tab then splits into two columns of independent cards: Today (story and flame | check-in,
-quest, Start), Train (library, kit, embers | the plan, placed by grid so the upright order stays),
-Play (the Fog and the worlds | gear and power), Hero (hero and stat points | the rest); the look
-editor puts its preview beside the choices. Upright must look exactly as before: add sideways
-changes only as `land:` classes.
+down the left with the hero at its top (the open tab on a lit tile), shrinks the header to one
+line (FORMA, level, XP bar; the sandbox note becomes a small tag at its end), keeps clear of the
+notch (`env(safe-area-inset-left/right)`), and makes the tab exactly fill the rest of the screen:
+`main` is the one thing that scrolls, and only if a screen can't fit.
+
+Each tab then lays out a screen of its own, built for the width rather than the upright cards split
+in two: the tab asks `useLand()` (`src/components/useLand.ts`, the same media query) and returns
+its sideways arrangement, reusing the same pieces (most take a `land` prop that only changes
+classes). Panels share the height, and what may be long scrolls inside its own panel.
+
+| Tab | Sideways |
+|---|---|
+| Today | A strip along the top (the chapter's enemy and hearts, the flame and its week, a rest day, the quote with Keep and the Book of Days; it scrolls sideways when it can't fit), and under it the quest board: the exercises side by side as tiles with their still, and at the end of the row the check-in and a big Start, always in sight |
+| Train | A side column (the library button, gym or home, the coming-soon note) beside the plan: Day A and Day B as two equal panels, the embers line under them |
+| Play | A bar with you, your flame, the Fog's line and three views: Worlds (the picker fills the screen, each world a wide card with its picture on the left and its words and Play on the right; Play stays put while the words scroll), Gear (`FogGearCard` as three columns: worn with the fall line, the vault, the tapped item and Mira's forge, or Mira waiting) and Power (the six powers two by three, warmed up and rested under them). A dot on Power when points wait |
+| Hero | You on a stage (class, hero, gear, change class or look) beside one panel with tabs: Champion (`StatPoints`, the four stats two by two; a dot when points wait), Log (the three counts, the letter, the quest log), Keepsakes, Settings |
+
+Upright must look exactly as before: the upright branch keeps its markup, and sideways changes are
+`useLand` branches or `land:` classes only. The look editor puts its preview beside the choices.
+Try it at 844×390 and 740×360 with the `/lab/night` jumps (`?sandbox&tab=…`; "Loot: your gear and
+the vault" opens a geared Play tab) and check 390×844 is unchanged.
+
+## On a computer: the tabs
+
+On a laptop or desktop window (the `desk:` variant in `tailwind.config.ts`: a mouse or trackpad,
+at least 1024px wide and over 600px tall, so never together with `land:`) `page.tsx` turns the tab
+bar into a wider rail down the left, with the hero big at its top and each tab's name beside its
+icon, and centers the header and the column (`max-w-2xl`) in the rest. The tabs keep their
+upright layout inside it. Add computer changes only as `desk:` classes. The Fog's keys are in
+[../game/fog.md](../game/fog.md).
 
 ## Components (`src/components/`)
 
@@ -57,8 +80,8 @@ changes only as `land:` classes.
 | `WorldPicker` | The road through the Fog as worlds you swipe: one big card in the middle (the chapter's place from `PlaceBackdrop`, its boss in front), neighbours peeking at the sides, arrows and dots; opens on the newest open world. Each card keeps what the old zone row showed (zone icon, name, best run, first-try tip, hint, Play or Again); a shut world is dark and fogged (`fogBank`), its boss a shadow, a big padlock (`worldLock`) and the reason it is shut; a cleared one has a check. Off-centre cards turn and shrink by scroll position and the picture drifts, all off under reduced motion. Props `{ state, onPlay }`; try it at `/lab/worlds` |
 | `PlayTab` | Power from training, your gear for the Fog (`FogGearCard`: worn gear with the flame's mark, the vault, Mira's forge for the tapped item, see [../game/forge.md](../game/forge.md)), the zones, warms up the Fog's code and sprite sheets while idle |
 | `FogRun` | A run, held sideways: loads the Phaser scene on demand, the HUD in the corners (`Vitals`: HP and level; the floor and its depth row, `DepthMap`; `BagButton` with a red count of what a fall would cost; pause; the floor's minimap, `FloorMap`, tap for it big), the bag (`BagPanel`) and the stairs card (deeper or leave), both showing what is at risk and the flame's kept item (`RiskLine`, `Guarded`), the pickup note, pause menu, skill picks (three cards side by side), the recap with what came home or was lost (`GearRecap`), the "turn your phone" card |
-| `ItemCard` | An item's tile and card (name in its rarity's color, what it gives, what it needs), shared by the run's bag and the Play tab |
-| `HeroTab` | Gear, class, look editor, the champion's stat points (`StatPoints`: spend, take back), keepsakes, quest log, Settings (sound, music in the menus), Backup and Restore, cloud backup sign-in (`CloudSave`), the Friends card (`FriendsCard`, [../backend/friends.md](../backend/friends.md)) |
+| `ItemCard` | An item's tile and card, shared by the run's bag and the Play tab. `ItemTile`: the item's own art (sprite `item`, drawn a little bigger than the tile, in multiples of 16 px) on a backdrop and edge in its rarity's color (rare gold with a soft glow, legendary orange with a pulsing glow). `ItemCard`: a stage on top with the art big (rays turning behind a legendary), a rarity badge and the upgrade, then the name in its rarity's color, what it gives, what it needs. Rares shine and legendaries sparkle; with reduced motion they hold still (`useReducedMotion`) |
+| `HeroTab` | Gear, class, look editor, the champion's stat points (`StatPoints`: spend, take back), keepsakes, quest log, Settings (sound, music in the menus), Backup and Restore, cloud backup sign-in (`CloudSave`), the Friends card (`FriendsCard`, [../backend/friends.md](../backend/friends.md); sideways it sits in the Log tab) |
 | `ScenePlayer`, `Dialogue` | Play a story scene: lines, camera shots, the question, the answer lines |
 | `ClassPicker` | Four weapons in the ash: pick the class |
 | `BookOfDays` | Every day the app was opened, newest first |
@@ -69,6 +92,8 @@ changes only as `land:` classes.
 | `DevPanel` | Developer mode's wrench and panel, see [dev-mode-and-labs.md](dev-mode-and-labs.md) |
 | `ServiceWorker` | Registers the offline worker, see [pwa.md](pwa.md) |
 | `useModal` | Focus trap and inert background for overlays inside a tab |
+| `useDesk` | `useKeyboardPlay`: true on a computer (mouse or trackpad), so the Fog shows its keys |
+| `useLand` | True while the phone is held sideways (the `land:` query); the tabs use it to pick their sideways screen |
 
 ## Held sideways: the overlays
 
@@ -84,15 +109,23 @@ edges clear of the notch, which is on the left or the right then.
 |---|---|
 | `Workout` | The exercise (name, cue, demo) on the left, its sets, reps and the reps-in-reserve buttons on the right; the big demo stands beside its name and cue; the rest timer has the flame beside the clock |
 | `AfterSession` | The battle as in portrait, a bit tighter; the loot card is wide, what you earned on the left, the level, gear, the flame's word and Continue on the right |
-| `Dialogue` | Whoever is on screen on the left, the words beside them; narration with nothing to show stays centered |
+| `Dialogue` | Whoever is on screen on the left, the words beside them; narration with nothing to show stays centered. The backdrop is drawn wide for the screen at a whole-number scale (sky, horizon and ground all show) and the shade at the bottom is shorter |
 | `ScenePlayer` | The question card puts the question beside its answers; naming the flame puts the flame beside the name box |
 | `Prologue` | Title and boy or girl side by side; the voice pick with the Hollow on the left and the answers in two columns; the letter (two columns of prompts), the gym or home pick and the look editor with who speaks and the button on the left |
-| `FirstFight`, `RiseUp`, `SitByFire` | The figures on the left, the words and the button on the right |
+| `FirstFight`, `RiseUp`, `SitByFire` | The figures on the left, the words and the button on the right; `SitByFire`'s camp is drawn wide like `Dialogue`'s |
 | `ClassPicker` | The hero you'd be on the left, the four classes and the button on the right |
 | `BookOfDays`, `ExerciseLibrary` | Wider, the pages and the list in two columns; the library's search and filters on one line, an exercise's demos and facts beside its how-to |
 | `DevPanel` | A wider sheet with its sections in two columns |
 | `InstallGate` | The flame and the why on the left, the steps on the right |
 | `Opening` | Fits as it is; the sound toggle keeps clear of the notch |
+
+Pixel art stays crisp sideways: the story's overlays (`Dialogue`, the question card, `SitByFire`,
+the whole `Prologue` with `FirstFight` and `RiseUp`) sit inside `<PixelSnap>`
+(`src/components/sideways.ts`), so every `<Sprite>` in them is drawn at a whole multiple of its
+64-pixel frame (140 becomes 128, 170 becomes 192), and a `PlaceBackdrop` given a `stage` is
+redrawn wider for the box instead of cropped from the tall upright picture (see
+[../game/story.md](../game/story.md)). Upright nothing changes: sizes stay as given and the
+backdrop is the same picture as before. `useSideways()` in the same file is the query as a hook.
 
 To change one, look for the variant in that component; try it at 844×390 (the `/lab/night` jumps
 and `/lab/story?play=<scene id>&back` reach most of them) and check portrait at 390×844 is unchanged.

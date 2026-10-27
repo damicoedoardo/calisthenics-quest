@@ -82,7 +82,10 @@ the Fog: its attack style there, and a small lean to one stat (`CLASS_LEAN` in `
 it had `CLASS_LEAN_POINTS` more there, set in `src/balance/stats.ts`). Gear has a weapon, armor and shield slot. Mira's forge used to raise one slot a tier
 every `GEAR_EVERY` workouts (`tiersAt`, `nextForge`); it doesn't any more. `migrate()` froze what
 it had made as the hero's look (`fogGear.kit`), and `gearOf` shows the finer of that and the
-item you wear from the Fog. Workouts now earn embers for Mira's forge on the Play tab
+item you wear from the Fog. A worn item's slot also carries that item's name and look (`Gear.item`:
+kind, rarity, seed, from `looksOf` in `src/game/dungeon/items.ts`), so the hero wears the very
+item everywhere the hero is drawn (Hero tab, Play tab, the header, the Fog run's sheets); without
+one, the slot shows the tier look. Workouts now earn embers for Mira's forge on the Play tab
 ([forge.md](forge.md)). The art for each tier is in [sprites.md](sprites.md).
 
 ## How to change things

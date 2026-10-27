@@ -20,7 +20,7 @@ import { equippedGear, nextForge, tiersAt } from './gear';
 import { pendingScenes, renderLines, storyState, storyWords } from '@/story/engine';
 import { noteFreq, parsePattern } from './music';
 import { seeded } from './random';
-import { rollItem, tierOf } from '@/game/dungeon/items';
+import { looksOf, nameOf, rollItem, tierOf } from '@/game/dungeon/items';
 
 const monday = new Date(2026, 9, 26, 18);
 
@@ -307,6 +307,16 @@ describe('levels, migration', () => {
     const slot = blade.slot === 'charm' ? 'shield' : blade.slot;
     expect(gearOf(s)[slot].tier).toBe(tierOf(blade));
     expect(gearOf(initialState()).weapon.tier).toBe(1);
+  });
+
+  it('the hero wears the very item: its look and name, not just its tier', () => {
+    const blade = rollItem(seeded(3), { zone: 3, workouts: 30, floor: 8, cls: 'warrior' }, 'legendary');
+    const s: GameState = { ...initialState(), fogGear: { worn: { [blade.slot]: blade }, vault: [], kit: { weapon: 1, armor: 1, shield: 0 } } };
+    const g = gearOf(s)[blade.slot === 'charm' ? 'shield' : blade.slot];
+    expect(g.item).toEqual(looksOf(blade));
+    expect(g.name).toBe(nameOf(blade));
+    // without a worn item, the old look has no item
+    expect(gearOf(initialState()).armor.item).toBeUndefined();
   });
 });
 

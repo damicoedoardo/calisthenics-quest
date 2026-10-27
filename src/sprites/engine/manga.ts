@@ -65,6 +65,8 @@ interface MangaHair {
   front: Shape[];
   /** Light streaks [x0, y0, x1, y1]. */
   shine: [number, number, number, number][];
+  /** Dark lines that split the hair into locks [x0, y0, x1, y1]. */
+  strands?: [number, number, number, number][];
 }
 
 const SIDE_LOCKS: Shape[] = [
@@ -106,6 +108,13 @@ export const MANGA_HAIR: Partial<Record<HairStyle, MangaHair>> = {
     shine: [
       [21, 8, 25, 6],
       [29, 5, 33, 5],
+    ],
+    strands: [
+      [13, 6, 18, 10],
+      [20, 3, 24, 8],
+      [31, 2, 31, 6],
+      [41, 3, 38, 7],
+      [51, 6, 45, 10],
     ],
   },
   /** Calm and cool: one long sweep of bangs across the forehead. */
@@ -240,6 +249,27 @@ export function mangaHair(P: Pose, look: Look): { back: Grid; front: Grid } | nu
       if (dx * dx + dy * dy <= 1) f.p(x, y, H[1]);
     }
   style.front.forEach(([pts, c]) => f.poly(pts, ink(c)));
+  shadeHair(front, H, cx, cy + P.bob, rx, ry);
+  if (style.strands) {
+    // only over hair already there, so a line never pokes out of a lock
+    const lines = grid(64);
+    style.strands.forEach(([x0, y0, x1, y1]) => painter(lines, P.bob).line(x0, y0, x1, y1, H[0]));
+    lines.forEach((row, y) => row.forEach((c, x) => c && front[y][x] && (front[y][x] = c)));
+  }
   style.shine.forEach(([x0, y0, x1, y1]) => f.line(x0, y0, x1, y1, H[2]));
   return { back, front };
+}
+
+/** Gives the hair volume, lit from the top left: the far side and the lower part fall into the
+    dark tone, and every lock darkens toward its tip, so the locks read one by one. */
+function shadeHair(g: Grid, H: string[], cx: number, cy: number, rx: number, ry: number) {
+  const base = g.map((row) => row.slice()),
+    at = (x: number, y: number) => base[y]?.[x] ?? null;
+  for (let y = 0; y < g.length; y++)
+    for (let x = 0; x < g[0].length; x++) {
+      if (base[y][x] !== H[1]) continue;
+      const side = ((x - cx) / rx) * 0.8 + ((y - cy) / ry) * 0.6,
+        tip = !at(x, y + 1) || !at(x, y + 2);
+      if (side > 0.55 || tip) g[y][x] = H[0];
+    }
 }

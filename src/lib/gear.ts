@@ -1,3 +1,5 @@
+import type { ItemLook } from '@/game/dungeon/items';
+
 export type ClassId = 'warrior' | 'archer' | 'monk' | 'mage';
 export type GearSlot = 'weapon' | 'armor' | 'shield';
 /** 0 = nothing yet, 1..6: one slot goes up a tier every few workouts. */
@@ -29,6 +31,9 @@ export interface Gear {
   name: string;
   color: string;
   glow?: string;
+  /** The Fog item worn in this slot (the shield slot shows the charm): its kind, rarity and seed,
+      so the hero wears that very item, not just its tier. Left out for the forge's old looks. */
+  item?: ItemLook;
 }
 
 export const TIER_COLORS: Record<Tier, string> = {

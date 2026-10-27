@@ -2,6 +2,7 @@ import type { ArmLeft, ArmRight, ClipFrame, ClipId, Fx } from '../clips';
 import { EYES, HAIR, R, SKIN, type HairColor, type SkinTone } from '../palette';
 import { autoshade, grid, outline, painter, scale2x, stamp, type Grid, type Painter, type Ramp } from './grid';
 import { MANGA_FACE, isManga, mangaHair, mangaHead } from './manga';
+import { drawnBody, drawnTorso } from './drawn';
 
 /* The base 64x64 humanoid every character is built on: body, face, hair, arms, and the layer
    order that dresses it. The body and hair are designed on a 32-px grid ("body pixels") and
@@ -178,6 +179,8 @@ export interface FigureSpec {
   shadeLayers?: boolean;
   /** Effect color for slashes and sparks. */
   glow?: string;
+  /** The hand-drawn body (engine/drawn.ts) instead of the block one; needs the manga head. */
+  drawn?: boolean;
   layers: Partial<Record<Layer, (c: Ctx) => void>>;
 }
 
@@ -282,14 +285,15 @@ export function drawFigure(spec: FigureSpec, look: Look, frame: ClipFrame, f: nu
   const P = poseFor(frame, spec.stance ?? {}, look, f),
     out = grid(SIZE),
     fxg = grid(SIZE),
-    L = spec.layers;
+    L = spec.layers,
+    drawn = !!spec.drawn && isManga(look);
   const ctxFor = (g: Grid): Ctx => ({
     P,
     look,
     A: spec.a || R.cloth,
     skin: SKIN[look.skin],
     hair: HAIR[look.hair],
-    torsoRange: (y) => torsoRange(P, y),
+    torsoRange: (y) => (drawn ? drawnTorso(look, y) : torsoRange(P, y)),
     u: painter(g, P.bob),
     l: painter(g, 0),
     w: painter(g, 0),
@@ -309,7 +313,7 @@ export function drawFigure(spec: FigureSpec, look: Look, frame: ClipFrame, f: nu
   if (look.sex === 'f' && look.style === 'pony' && !spec.hideHair && !manga) put(scale2x(ponytail32(P, look)));
   layer('back');
   if (manga && !spec.hideHair) put(manga.back);
-  const body = scale2x(body32(P, look, spec.legs, !manga));
+  const body = drawn ? drawnBody(P, look, spec.legs) : scale2x(body32(P, look, spec.legs, !manga));
   if (manga) mangaHead(body, P, look, spec.hideHair ? undefined : manga.front);
   else face(body, P, look);
   put(body);
@@ -328,6 +332,11 @@ export function drawFigure(spec: FigureSpec, look: Look, frame: ClipFrame, f: nu
       w.row(y, x, x + 2, G[2]);
       w.p(x + 3, y + 3, G[0]);
       w.row(y + 3, x + 1, x + 3, G[0]);
+      // the drawn body's hands are mittens with a thumb toward the body
+      if (drawn) {
+        w.p(s === 'L' ? x + 4 : x - 1, y + 1, G[1]);
+        w.p(s === 'L' ? x + 4 : x - 1, y + 2, G[0]);
+      }
     });
     L.hands?.(ctxFor(g));
     put(g);

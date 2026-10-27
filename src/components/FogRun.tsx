@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Backpack, Pause, Smartphone } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { fill, storyWords } from '@/story/engine';
 import type { FogLines } from '@/story/types';
-import { getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
+import { edgeFor, getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
 import { zoneMusic } from '@/lib/music-zones';
 import { runSheets } from '@/game/sheets';
@@ -15,6 +15,7 @@ import { ITEM_SLOTS, nameOf, RARITY, SLOT_NAME, shortOf, type Item, type ItemSlo
 import { ItemCard, ItemTile } from './ItemCard';
 import { Sprite } from './Sprite';
 import { SoundToggle, useMusic } from './Sound';
+import { useKeyboardPlay } from './useDesk';
 import type { FreePick, Hud, MiniMap, RunEnd, RunHandle } from '@/game/dungeon/scene';
 import { ABILITIES, BAG, DODGE, RELICS, ROOM_KINDS, midBoss, type AbilityId, type CellKind, type RelicId } from '@/game/dungeon/engine';
 
@@ -113,9 +114,11 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
   const [gearOut, setGearOut] = useState<(GearOutcome & { first: boolean }) | null>(null);
   // The game code couldn't be fetched (offline before the Play tab ever loaded it).
   const [failed, setFailed] = useState(false);
+  // On a computer the buttons show their keys, and a tall window plays as it is.
+  const keys = useKeyboardPlay();
   // Held upright, the run waits behind a "turn your phone" card.
   useSideways();
-  const portrait = usePortrait();
+  const portrait = usePortrait() && !keys;
   const upright = useRef(portrait);
   upright.current = portrait;
 
@@ -151,7 +154,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
     let jump = 0;
     Promise.all([game, calm]).then(([{ startRun }]) => {
       if (cancelled) return;
-      run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast', worn: wornFor(state), build: buildOf(state) }, {
+      run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast', worn: wornFor(state), build: buildOf(state), edge: edgeFor(state, zone) }, {
         hud: setHud,
         floor: (n: number) => {
           setFloorShown(n);
@@ -235,6 +238,58 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
     return () => clearTimeout(t);
   }, [said]);
 
+  const resume = () => {
+    setPaused(false);
+    run.current?.resume();
+  };
+
+  // On a computer: Esc pauses (and closes whatever is open), B opens the bag, 1 2 3 pick a card,
+  // Enter runs again once it's over. Moving, the ability and the dodge are the scene's own keys.
+  const onKey = useRef<(e: KeyboardEvent) => void>(() => {});
+  onKey.current = (e: KeyboardEvent) => {
+    if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+    const k = e.key.toLowerCase(),
+      n = Number(e.key) - 1;
+    if (end) {
+      if (k === 'enter') setAttempt((a) => a + 1);
+      else if (k === 'escape') onLeave();
+      else return;
+    } else if (offer) {
+      if (!offer.choices[n]) return;
+      pick(offer.choices[n]);
+    } else if (chest) {
+      const id = chest.choices[n];
+      if (!id) return;
+      setChest(null);
+      run.current?.pickRelic?.(id);
+    } else if (stairs) {
+      const id = (['deeper', 'leave', 'stay'] as const)[k === 'escape' ? 2 : n];
+      if (!id) return;
+      setStairs(false);
+      run.current?.stairs(id);
+    } else if (bag) {
+      if (k !== 'escape' && k !== 'b' && k !== 'i') return;
+      openBag(false);
+    } else if (paused) {
+      if (k !== 'escape' && k !== 'p') return;
+      resume();
+    } else if (hud && !portrait && !e.defaultPrevented) {
+      if (k === 'escape' || k === 'p') {
+        run.current?.pause();
+        setPaused(true);
+      } else if (k === 'b' || k === 'i') openBag(true);
+      else return;
+    } else return;
+    e.preventDefault();
+    // A button clicked earlier keeps the focus: Space or Enter mustn't press it again.
+    (document.activeElement as HTMLElement | null)?.blur?.();
+  };
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => onKey.current(e);
+    window.addEventListener('keydown', on);
+    return () => window.removeEventListener('keydown', on);
+  }, []);
+
   const left = hud ? Math.max(0, RUN_SECONDS - hud.seconds) : RUN_SECONDS;
   // What a fall would cost right now, and what the flame would hold.
   const risk = hud ? atRisk(state, hud.gear, new Date()) : null;
@@ -244,7 +299,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
       <div ref={host} className="absolute inset-0" />
 
       {hud && !end && (
-        <div className="run-t run-x pointer-events-none absolute inset-x-0 flex items-start gap-2">
+        // On a computer's big screen the HUD is drawn larger (zoom), so its bars read from a chair.
+        <div className="run-t run-x pointer-events-none absolute inset-x-0 flex items-start gap-2 desk:[zoom:1.4]">
           <Vitals hud={hud} />
           <div className="flex min-w-0 flex-1 flex-col items-center">
             <div className="flex items-center gap-2 rounded-md bg-ink-950/70 px-2 py-1 ring-1 ring-white/5">
@@ -271,7 +327,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
           </div>
           <div className="flex w-[11.5rem] shrink-0 flex-col items-end gap-1.5">
             <div className="flex items-center gap-1.5">
-              <BagButton bag={hud.gear.bag.length} risk={risk} flame={flameName || 'your flame'} onOpen={() => openBag(true)} />
+              <BagButton bag={hud.gear.bag.length} risk={risk} flame={flameName || 'your flame'} keys={keys} onOpen={() => openBag(true)} />
               <button
                 aria-label="Pause"
                 onPointerDown={(e) => e.stopPropagation()}
@@ -279,12 +335,13 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
                   run.current?.pause();
                   setPaused(true);
                 }}
-                className="pointer-events-auto grid h-9 w-9 place-items-center rounded-md bg-ink-950/70 text-slate-200 ring-1 ring-white/10 active:scale-95"
+                className="pointer-events-auto relative grid h-9 w-9 place-items-center rounded-md bg-ink-950/70 text-slate-200 ring-1 ring-white/10 active:scale-95"
               >
                 <Pause size={16} />
+                {keys && <Key k="Esc" corner />}
               </button>
             </div>
-            {hud.map && hud.climb == null && <FloorMap map={hud.map} floor={hud.floor} midName={midName(zone)} hold={(on) => (on ? run.current?.pause() : run.current?.resume())} />}
+            {hud.map && hud.climb == null && <FloorMap map={hud.map} floor={hud.floor} midName={midName(zone)} keys={keys} hold={(on) => (on ? run.current?.pause() : run.current?.resume())} />}
           </div>
         </div>
       )}
@@ -301,12 +358,14 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
 
       {tip && hud && !end && hud.seconds < 6 && (
         <p className="pointer-events-none absolute inset-x-6 bottom-28 mx-auto max-w-md animate-pulse text-center text-sm text-slate-300">
-          {`Drag to move; you attack on your own. Tap a monster to aim at it. Dodge slips through shots. ${zone.bossName} waits ${hud.floors} floors down.`}
+          {keys
+            ? `WASD or the arrows to move; you attack on your own. Click a monster to aim at it. Space dodges shots, Q is ${ABILITIES[hud.ability?.id ?? 'charge'].name}. ${zone.bossName} waits ${hud.floors} floors down.`
+            : `Drag to move; you attack on your own. Tap a monster to aim at it. Dodge slips through shots. ${zone.bossName} waits ${hud.floors} floors down.`}
         </p>
       )}
 
       {hud?.ability && !end && (
-        <AbilityButton id={hud.ability.id} ready={hud.ability.ready} dodge={hud.dodge ?? 1} onUse={() => run.current?.ability?.()} onDodge={() => run.current?.dodge?.()} />
+        <AbilityButton id={hud.ability.id} ready={hud.ability.ready} dodge={hud.dodge ?? 1} keys={keys} onUse={() => run.current?.ability?.()} onDodge={() => run.current?.dodge?.()} />
       )}
 
       {floorShown && !end && (
@@ -383,7 +442,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
                 ['leave', 'Leave with your loot', `Home with ${hud ? hud.gear.bag.length : 0} item${hud?.gear.bag.length === 1 ? '' : 's'} in the bag. The dungeon starts over next time.`],
                 ['stay', 'Not yet', 'Look round this floor first.'],
               ] as const
-            ).map(([id, label, text]) => (
+            ).map(([id, label, text], i) => (
               <button
                 key={id}
                 onClick={() => {
@@ -392,7 +451,10 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
                 }}
                 className={`w-full rounded-xl p-3 text-left ring-1 active:scale-[.98] ${id === 'deeper' ? 'bg-gold-400 text-ink-950 ring-gold-200' : 'bg-ink-800 text-slate-100 ring-ink-700'}`}
               >
-                <span className="block text-sm font-semibold">{label}</span>
+                <span className="flex items-center gap-2 text-sm font-semibold">
+                  {keys && <Key k={String(i + 1)} />}
+                  {label}
+                </span>
                 <span className={`mt-0.5 block text-xs ${id === 'deeper' ? 'text-ink-900' : 'text-slate-400'}`}>{text}</span>
               </button>
             ))}
@@ -408,20 +470,23 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
 
       {offer && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/80 px-4">
-          <p className="font-pixel text-sm text-gold-300">{offer.free === 'fresh' ? 'Warmed up!' : offer.free === 'rested' ? 'Rested!' : 'Level up!'}</p>
+          <p className="font-pixel text-sm text-gold-300">{offer.free === 'fresh' ? 'Warmed up!' : offer.free === 'rested' ? 'Rested!' : offer.free === 'past' ? 'Kept at it!' : 'Level up!'}</p>
           <p className="mt-2 text-center text-xs text-slate-400">
             {offer.free === 'fresh'
               ? 'You trained in the last two days: take a free skill.'
               : offer.free === 'rested'
                 ? `You rested, and ${flameName ?? 'your flame'} burns brighter for it: take a free skill.`
-                : 'Pick a skill.'}
+                : offer.free === 'past'
+                  ? `You kept training after ${zone.bossName} ran out of hearts: take a free skill.`
+                  : 'Pick a skill.'}
           </p>
           <div className="mt-4 flex w-full max-w-3xl items-stretch justify-center gap-2">
-            {offer.choices.map((id) => {
+            {offer.choices.map((id, i) => {
               const u = getUpgrade(id),
                 next = (offer.levels[id] ?? 0) + 1;
               return (
-                <button key={id} onClick={() => pick(id)} className="flex max-w-[15rem] flex-1 flex-col items-center gap-2 rounded-xl bg-ink-800 p-3 text-center ring-1 ring-gold-400/30 shadow-[0_3px_0_#0b0d14] active:scale-[.98]">
+                <button key={id} onClick={() => pick(id)} className="relative flex max-w-[15rem] flex-1 flex-col items-center gap-2 rounded-xl bg-ink-800 p-3 text-center ring-1 ring-gold-400/30 shadow-[0_3px_0_#0b0d14] active:scale-[.98]">
+                  {keys && <Key k={String(i + 1)} corner />}
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-ink-900 text-gold-300">
                     <Sprite id="skillIcon" opts={{ name: id }} size={28} label="" />
                   </span>
@@ -444,7 +509,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
           <p className="font-pixel text-sm text-gold-300">A chest!</p>
           <p className="mt-2 text-center text-xs text-slate-400">Take one. It lasts until the end of this run.</p>
           <div className="mt-4 flex w-full max-w-3xl items-stretch justify-center gap-2">
-            {chest.choices.map((id) => {
+            {chest.choices.map((id, i) => {
               const n = chest.have[id] ?? 0;
               return (
                 <button
@@ -453,8 +518,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
                     setChest(null);
                     run.current?.pickRelic?.(id);
                   }}
-                  className="flex max-w-[15rem] flex-1 flex-col items-center gap-2 rounded-xl bg-ink-800 p-3 text-center ring-1 ring-gold-400/30 shadow-[0_3px_0_#0b0d14] active:scale-[.98]"
+                  className="relative flex max-w-[15rem] flex-1 flex-col items-center gap-2 rounded-xl bg-ink-800 p-3 text-center ring-1 ring-gold-400/30 shadow-[0_3px_0_#0b0d14] active:scale-[.98]"
                 >
+                  {keys && <Key k={String(i + 1)} corner />}
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-ink-900 text-gold-300">
                     <Sprite id="relicIcon" opts={{ name: id }} size={28} label="" />
                   </span>
@@ -478,18 +544,13 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
           <p className="flex items-center text-xs text-slate-400">
             Sound <SoundToggle />
           </p>
-          <button
-            onClick={() => {
-              setPaused(false);
-              run.current?.resume();
-            }}
-            className="w-full max-w-xs rounded-xl bg-gold-400 py-3 font-pixel text-[10px] text-ink-950"
-          >
+          <button onClick={resume} className="w-full max-w-xs rounded-xl bg-gold-400 py-3 font-pixel text-[10px] text-ink-950">
             Keep going
           </button>
           <button onClick={onLeave} className="w-full max-w-xs rounded-xl bg-ink-800 py-3 text-sm text-slate-300">
             Leave the run
           </button>
+          {keys && <KeyList />}
           {dev && (
             <div className="grid w-full max-w-md grid-cols-3 gap-2">
               {(
@@ -526,7 +587,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
         </div>
       )}
 
-      {end && <Results state={state} zone={zone} end={end} broken={broken} gear={gearOut} onAgain={() => setAttempt((a) => a + 1)} onLeave={onLeave} />}
+      {end && <Results state={state} zone={zone} end={end} broken={broken} gear={gearOut} keys={keys} onAgain={() => setAttempt((a) => a + 1)} onLeave={onLeave} />}
 
       {portrait && !failed && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-5 bg-ink-950 px-8 text-center">
@@ -585,7 +646,7 @@ function Vitals({ hud }: { hud: Hud }) {
 
 /** The bag, top right: how full it is, and in red how many things a fall would cost right now
     (a small flame when the flame would hold one of them). */
-function BagButton({ bag, risk, flame, onOpen }: { bag: number; risk: AtRisk | null; flame: string; onOpen: () => void }) {
+function BagButton({ bag, risk, flame, keys, onOpen }: { bag: number; risk: AtRisk | null; flame: string; keys: boolean; onOpen: () => void }) {
   const lost = risk?.lost.length ?? 0,
     full = bag >= BAG;
   return (
@@ -600,8 +661,48 @@ function BagButton({ bag, risk, flame, onOpen }: { bag: number; risk: AtRisk | n
         {bag}/{BAG}
       </span>
       {risk?.held && <Sprite id="uiIcon" opts={{ name: 'flame' }} size={10} label="" />}
+      {keys && <Key k="B" corner />}
       {lost > 0 && <span className="absolute -right-1.5 -top-1.5 min-w-[16px] rounded-sm bg-red-500 px-1 py-[3px] text-center font-pixel text-[7px] leading-none text-white ring-1 ring-ink-950">{lost}</span>}
     </button>
+  );
+}
+
+/** A key on the keyboard that does what this button does, shown on a computer. `corner` pins it
+    to the bottom right of the button it sits in. */
+function Key({ k, corner = false }: { k: string; corner?: boolean }) {
+  return (
+    <kbd
+      aria-hidden
+      className={`pointer-events-none min-w-[16px] rounded-[3px] bg-ink-950 px-1 py-[3px] text-center font-pixel text-[7px] not-italic leading-none text-slate-200 ring-1 ring-slate-500/70 shadow-[0_2px_0_#0b0d14] ${corner ? 'absolute -bottom-1.5 -right-1.5' : 'inline-block'}`}
+    >
+      {k}
+    </kbd>
+  );
+}
+
+/** Every key of the run, in the pause menu on a computer. */
+function KeyList() {
+  const rows: [string, string][] = [
+    ['WASD', 'Move (or the arrows)'],
+    ['Click', 'Aim at a monster'],
+    ['Q', 'Class ability'],
+    ['Space', 'Dodge (or E, Shift)'],
+    ['B', 'Bag'],
+    ['M', 'Map'],
+    ['1 2 3', 'Pick a card'],
+    ['Esc', 'Pause'],
+  ];
+  return (
+    <div className="grid w-full max-w-xs grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1.5 rounded-xl bg-ink-900/90 p-3 ring-1 ring-ink-700">
+      {rows.map(([k, what]) => (
+        <Fragment key={k}>
+          <span className="justify-self-end">
+            <Key k={k} />
+          </span>
+          <span className="text-xs text-slate-400">{what}</span>
+        </Fragment>
+      ))}
+    </div>
   );
 }
 
@@ -692,12 +793,26 @@ const MAP_LOOK: Record<CellKind, { color: string; name: string }> = {
 /** The floor's map, top right: the rooms you've been in, filled; the ones you've seen through a
     door, as outlines in the color of what waits there; you, the gold one. Tap for it big, with
     names; the run holds still while it's open. */
-function FloorMap({ map, floor, midName, hold }: { map: MiniMap; floor: number; midName: string; hold: (on: boolean) => void }) {
+function FloorMap({ map, floor, midName, keys, hold }: { map: MiniMap; floor: number; midName: string; keys: boolean; hold: (on: boolean) => void }) {
   const [open, setOpen] = useState(false);
   const toggle = (on: boolean) => {
     setOpen(on);
     hold(on);
   };
+  // M opens and closes it; Esc closes it (first, before the run's own keys see it).
+  const onKey = useRef<(e: KeyboardEvent) => void>(() => {});
+  onKey.current = (e: KeyboardEvent) => {
+    if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return;
+    const k = e.key.toLowerCase();
+    if (k !== 'm' && !(open && k === 'escape')) return;
+    e.preventDefault();
+    toggle(k === 'm' ? !open : false);
+  };
+  useEffect(() => {
+    const on = (e: KeyboardEvent) => onKey.current(e);
+    window.addEventListener('keydown', on, true);
+    return () => window.removeEventListener('keydown', on, true);
+  }, []);
   const xs = map.cells.map((c) => c.x),
     ys = map.cells.map((c) => c.y),
     x0 = Math.min(...xs),
@@ -744,18 +859,19 @@ function FloorMap({ map, floor, midName, hold }: { map: MiniMap; floor: number; 
         type="button"
         onPointerDown={(e) => e.stopPropagation()}
         onClick={() => toggle(!open)}
-        className="pointer-events-auto rounded-md bg-ink-950/60 p-1 ring-1 ring-white/5"
+        className="pointer-events-auto relative rounded-md bg-ink-950/60 p-1 ring-1 ring-white/5"
         aria-label={`Map of floor ${floor}: ${map.cells.filter((c) => c.been).length} rooms explored. Tap to open it.`}
         aria-expanded={open}
       >
         {draw(8, 3, false)}
+        {keys && <Key k="M" corner />}
       </button>
       {open && (
         <div onPointerDown={(e) => e.stopPropagation()} onClick={() => toggle(false)} className="pointer-events-auto fixed inset-0 z-10 flex animate-fadein items-center justify-center bg-ink-950/70">
           <div className="max-h-full max-w-full overflow-auto rounded-xl bg-ink-950/95 p-3 ring-1 ring-gold-400/40">
             <p className="font-pixel text-[9px] text-gold-300">Floor {floor}</p>
             <div className="mt-2">{draw(44, 12, true)}</div>
-            <p className="mt-2 max-w-xs text-[11px] leading-snug text-slate-400">Filled: rooms you've been in. Dashed: rooms you've seen through a door. Find the stairs to go down. Tap to close.</p>
+            <p className="mt-2 max-w-xs text-[11px] leading-snug text-slate-400">Filled: rooms you've been in. Dashed: rooms you've seen through a door. Find the stairs to go down. {keys ? 'M or Esc to close.' : 'Tap to close.'}</p>
           </div>
         </div>
       )}
@@ -778,11 +894,11 @@ function BossBar({ name, hp, max, ember }: { name: string; hp: number; max: numb
 
 /** The class ability: a big round button under your right thumb, filling up while it recharges.
     The dodge sits to its left, smaller, on its own short clock. */
-function AbilityButton({ id, ready, dodge, onUse, onDodge }: { id: AbilityId; ready: number; dodge: number; onUse: () => void; onDodge: () => void }) {
+function AbilityButton({ id, ready, dodge, keys, onUse, onDodge }: { id: AbilityId; ready: number; dodge: number; keys: boolean; onUse: () => void; onDodge: () => void }) {
   const up = ready >= 1,
     dodgeUp = dodge >= 1;
   return (
-    <div className="run-b run-r absolute flex items-end gap-3">
+    <div className="run-b run-r absolute flex items-end gap-3 desk:[zoom:1.4]">
       <div className="mb-1 flex flex-col items-center">
         <button
           aria-label={`Dodge, every ${DODGE.cd} s`}
@@ -795,7 +911,10 @@ function AbilityButton({ id, ready, dodge, onUse, onDodge }: { id: AbilityId; re
           {!dodgeUp && <span className="absolute inset-x-0 bottom-0 bg-sky-300/30" style={{ height: `${dodge * 100}%` }} />}
           <Sprite id="abilityIcon" opts={{ name: 'dodge' }} size={28} label="" className={dodgeUp ? '' : 'opacity-50 grayscale'} />
         </button>
-        <span className="mt-1 font-pixel text-[8px] text-slate-300">Dodge</span>
+        <span className="mt-1 flex items-center gap-1 font-pixel text-[8px] text-slate-300">
+          {keys && <Key k="Space" />}
+          Dodge
+        </span>
       </div>
       <div className="flex flex-col items-center">
         <button
@@ -809,7 +928,10 @@ function AbilityButton({ id, ready, dodge, onUse, onDodge }: { id: AbilityId; re
           {!up && <span className="absolute inset-x-0 bottom-0 bg-gold-400/30" style={{ height: `${ready * 100}%` }} />}
           <Sprite id="abilityIcon" opts={{ name: id }} size={42} label="" className={up ? '' : 'opacity-50 grayscale'} />
         </button>
-        <span className="mt-1 font-pixel text-[8px] text-slate-300">{ABILITIES[id].name}</span>
+        <span className="mt-1 flex items-center gap-1 font-pixel text-[8px] text-slate-300">
+          {keys && <Key k="Q" />}
+          {ABILITIES[id].name}
+        </span>
       </div>
     </div>
   );
@@ -861,7 +983,7 @@ function Recap({ end, broken, midName }: { end: RunEnd; broken: ReturnType<typeo
   );
 }
 
-function Results({ state, zone, end, broken, gear, onAgain, onLeave }: { state: GameState; zone: Zone; end: RunEnd; broken: ReturnType<typeof recordsBroken> | null; gear: (GearOutcome & { first: boolean }) | null; onAgain: () => void; onLeave: () => void }) {
+function Results({ state, zone, end, broken, gear, keys, onAgain, onLeave }: { state: GameState; zone: Zone; end: RunEnd; broken: ReturnType<typeof recordsBroken> | null; gear: (GearOutcome & { first: boolean }) | null; keys: boolean; onAgain: () => void; onLeave: () => void }) {
   const hints = [nextGrowth(state)],
     left = end.why === 'left';
   return (
@@ -910,7 +1032,7 @@ function Results({ state, zone, end, broken, gear, onAgain, onLeave }: { state: 
         </div>
       )}
       <button onClick={onAgain} className="mt-6 w-full max-w-xs rounded-xl bg-gold-400 py-3 font-pixel text-[10px] text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
-        Run again
+        Run again{keys && <span className="ml-2 opacity-60">Enter</span>}
       </button>
       <button onClick={onLeave} className="mb-auto mt-2 w-full max-w-xs py-3 text-sm text-slate-400">
         Back
