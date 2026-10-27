@@ -101,15 +101,15 @@ const HEAL = '#86efac';
 const RISE_MS = 280;
 
 type Look = Pick<Stats, 'tex' | 'scale' | 'bits'> & { tint?: number };
-/** The dungeon's own monsters, drawn with the sprites we have, tinted so each reads apart. */
+/** The dungeon's own monsters, each with its own sprite (src/sprites/characters). */
 const DUNGEON_LOOKS: Record<Exclude<MonsterKind, keyof typeof FOE_LOOKS>, Look> = {
-  ram: { tex: 'golem', scale: 0.62, tint: 0xfbbf24, bits: [0xfbbf24, 0xb45309, 0xa8a29e] },
+  ram: { tex: 'ram', scale: 0.62, bits: [0xe89a48, 0xb8651e, 0xe8dcc0] },
   book: { tex: 'book', scale: 0.62, bits: [0xfef3c7, 0xd6d3d1, 0x92400e] },
-  smoke: { tex: 'wisp', scale: 0.52, tint: 0xc4b5fd, bits: [0xa78bfa, 0x6b21a8, 0xe9d5ff] },
-  seeker: { tex: 'mirror', scale: 0.6, tint: 0x67e8f9, bits: [0x67e8f9, 0x0e7490, 0xffffff] },
-  splitter: { tex: 'slime', scale: 0.78, tint: 0x86efac, bits: [0x86efac, 0x15803d, 0xdcfce7] },
-  splitling: { tex: 'slime', scale: 0.38, tint: 0x86efac, bits: [0x86efac, 0x15803d] },
-  shade: { tex: 'hollow', scale: 0.62, bits: [0xa78bfa, 0x6b21a8, 0x1e1b4b] },
+  smoke: { tex: 'smoke', scale: 0.55, bits: [0xa78bfa, 0x6b21a8, 0xe9d5ff] },
+  seeker: { tex: 'seeker', scale: 0.55, bits: [0x67e8f9, 0x0e7490, 0xffffff] },
+  splitter: { tex: 'splitter', scale: 0.78, bits: [0x86efac, 0x15803d, 0xdcfce7] },
+  splitling: { tex: 'splitling', scale: 0.5, bits: [0x86efac, 0x15803d] },
+  shade: { tex: 'shade', scale: 0.65, bits: [0xa78bfa, 0x6b21a8, 0x1e1b4b] },
 };
 const looks = (kind: Foe['kind'], zone: Zone): Look =>
   kind === 'boss' ? BOSS_LOOKS[zone.boss] : kind in DUNGEON_LOOKS ? DUNGEON_LOOKS[kind as keyof typeof DUNGEON_LOOKS] : FOE_LOOKS[kind as keyof typeof FOE_LOOKS];

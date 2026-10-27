@@ -100,6 +100,12 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
       echo: sheetFor('hero', 'idle', { gear, classId, look, variant: 'echo' }),
       book: sheetFor('book', 'idle'),
       summit: sheetFor('summit', 'idle'),
+      ram: sheetFor('ram', 'idle'),
+      smoke: sheetFor('smoke', 'idle'),
+      seeker: sheetFor('seeker', 'idle'),
+      splitter: sheetFor('splitter', 'idle'),
+      splitling: sheetFor('splitling', 'idle'),
+      shade: sheetFor('shade', 'idle'),
     };
     setHud(null);
     setEnd(null);
