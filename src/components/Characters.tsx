@@ -50,10 +50,6 @@ export function Book({ size = 64 }: { size?: number }) {
   return <Sprite id="book" size={size} className="animate-float" />;
 }
 
-export function Mira({ size = 64 }: { size?: number }) {
-  return <Sprite id="mira" size={size} />;
-}
-
 export type EnemyId = 'slime' | 'mirror' | 'golem' | 'hollow' | 'summit' | 'knight';
 
 /** Each chapter's enemy as you meet it as the Fog's boss (the slime, Tomorrow, has no other form). */

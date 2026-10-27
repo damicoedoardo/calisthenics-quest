@@ -157,7 +157,6 @@ export interface Scene {
   ask?: Ask;
 }
 
-/** A Fog zone: the chapter's place in the game between workouts. */
 /**
  * What the zone's boss says during the dungeon fight, shown over gameplay, so every line is short.
  * Lines may hold {words} like scenes (the Hollow uses {voice}): fill them with `fill(text,
@@ -174,6 +173,7 @@ export interface FogLines {
   taunts: string[];
 }
 
+/** A Fog zone: the chapter's place in the game between workouts. */
 export interface FogZone {
   name: string;
   /** Who waits at the end of the run. Each one fights in a way only the chapter's lesson beats. */

@@ -1,0 +1,24 @@
+name: Handbook
+
+# The same guard as the pre-push hook: the handbook is well formed, and a PR that touched code
+# also touched the pages about it (docs/handbook/dev/handbook.md).
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  handbook:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Lint the handbook
+        run: node scripts/handbook.mjs lint
+      - name: Check the handbook was updated
+        run: node scripts/handbook.mjs check origin/${{ github.base_ref }}

@@ -219,10 +219,6 @@ export function levelInfo(xp: number) {
 
 // ---------- skills ----------
 
-export function currentNode(state: GameState, path: PathId): SkillNode | null {
-  return getPath(path).nodes[state.progress[path]] ?? null;
-}
-
 export function repsFor(state: GameState, node: SkillNode): number {
   return state.reps[node.id] ?? node.startReps;
 }

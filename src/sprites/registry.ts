@@ -86,9 +86,9 @@ export interface ImageSprite {
 
 const drawn = <O,>(def: Omit<DrawnSprite<O>, 'kind'>): DrawnSprite<O> => ({ kind: 'drawn', ...def });
 
-/** A one-frame sprite from text rows. */
-const pixel = (label: string, art: PixelArt) =>
-  drawn<NoOpts>({ label: () => label, defaults: {}, clips: () => ({ idle: 'still' }), draw: () => drawPixelArt(art) });
+/** A one-frame icon from text rows, the art picked by the sprite's options. */
+const icon = <O,>(label: (o: O) => string, defaults: O, art: (o: O) => PixelArt) =>
+  drawn<O>({ label, defaults, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(art(o)) });
 
 /** A 64x64 creature that floats or breathes on the hover clip, with an optional attack clip. */
 const creature = (label: string, draw: DrawnSprite<NoOpts>['draw'], attack?: ClipId) =>
@@ -195,19 +195,14 @@ export const SPRITES = {
   galeMid: creature('The Gale', drawGaleMid, 'lunge'),
   // The dungeon bosses. The Mirror is you in glass (pass the player's look and gear, like the hero).
   // app icons, hand-drawn at 16x16 (keepsakes) and 12x12 (Book of Days)
-  keepsake: drawn<KeepsakeOpts>({
-    label: (o) => `Keepsake ${o.zone + 1}`,
-    defaults: { zone: 0 },
-    clips: () => ({ idle: 'still' }),
-    draw: (o) => drawPixelArt(KEEPSAKE_ICONS[o.zone] ?? KEEPSAKE_ICONS[0]),
-  }),
-  dayIcon: drawn<DayIconOpts>({ label: (o) => o.kind, defaults: { kind: 'A visit' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(DAY_ICONS[o.kind]) }),
-  relicIcon: drawn<RelicIconOpts>({ label: (o) => o.name, defaults: { name: 'whetstone' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(RELIC_ICONS[o.name]) }),
-  abilityIcon: drawn<AbilityIconOpts>({ label: (o) => o.name, defaults: { name: 'charge' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(ABILITY_ICONS[o.name]) }),
-  skillIcon: drawn<SkillIconOpts>({ label: (o) => o.name, defaults: { name: 'power' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(SKILL_ICONS[o.name]) }),
-  uiIcon: drawn<UiIconOpts>({ label: (o) => o.name, defaults: { name: 'heart' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(UI_ICONS[o.name]) }),
-  zoneIcon: drawn<ZoneIconOpts>({ label: (o) => `zone ${o.zone}`, defaults: { zone: 0 }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(ZONE_ICONS[Math.max(0, Math.min(ZONE_ICONS.length - 1, o.zone))]) }),
-  markIcon: drawn<MarkIconOpts>({ label: (o) => o.name, defaults: { name: 'boss' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(MARK_ICONS[o.name]) }),
+  keepsake: icon<KeepsakeOpts>((o) => `Keepsake ${o.zone + 1}`, { zone: 0 }, (o) => KEEPSAKE_ICONS[o.zone] ?? KEEPSAKE_ICONS[0]),
+  dayIcon: icon<DayIconOpts>((o) => o.kind, { kind: 'A visit' }, (o) => DAY_ICONS[o.kind]),
+  relicIcon: icon<RelicIconOpts>((o) => o.name, { name: 'whetstone' }, (o) => RELIC_ICONS[o.name]),
+  abilityIcon: icon<AbilityIconOpts>((o) => o.name, { name: 'charge' }, (o) => ABILITY_ICONS[o.name]),
+  skillIcon: icon<SkillIconOpts>((o) => o.name, { name: 'power' }, (o) => SKILL_ICONS[o.name]),
+  uiIcon: icon<UiIconOpts>((o) => o.name, { name: 'heart' }, (o) => UI_ICONS[o.name]),
+  zoneIcon: icon<ZoneIconOpts>((o) => `zone ${o.zone}`, { zone: 0 }, (o) => ZONE_ICONS[Math.max(0, Math.min(ZONE_ICONS.length - 1, o.zone))]),
+  markIcon: icon<MarkIconOpts>((o) => o.name, { name: 'boss' }, (o) => MARK_ICONS[o.name]),
   // you, doing an exercise of the program (the workout screen's demo)
   exercise: drawn<ExerciseOpts>({
     label: (o) => `How to do it: ${o.exercise}`,

@@ -2,8 +2,7 @@ import * as Phaser from 'phaser';
 import type { ClassId } from '@/lib/gear';
 import { xpToNext, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import { music, type SfxId } from '@/lib/music';
-import type { Sheet } from '@/sprites/registry';
-import { BOSSES as BOSS_LOOKS, FOES as FOE_LOOKS, type BossSheetKey, type SheetKey, type Sheets, type Stats } from '../rules';
+import { BOT_PICKS, type BossSheetKey, type SheetKey, type Sheets } from '../rules';
 import type { FogBoss, FogLines } from '@/story/types';
 import { R } from '@/sprites/palette';
 import { botInput } from './bot';
@@ -171,9 +170,26 @@ const RISE_MS = 280;
 /** At most this much hit-stop (ms) in any one second. */
 const STOP_BUDGET = 140;
 
-type Look = Pick<Stats, 'tex' | 'scale' | 'bits'> & { tint?: number };
-/** The dungeon's own monsters, each with its own sprite (src/sprites/characters). */
-const DUNGEON_LOOKS: Record<Exclude<MonsterKind, keyof typeof FOE_LOOKS>, Look> = {
+/** How a monster is drawn: its sprite sheet, its size (1 = a 64px sheet at full size), and the
+    colors of the bits it bursts into. */
+type Look = { tex: SheetKey; scale: number; bits: number[]; tint?: number };
+/** Each boss's stand-in until its zone's own art (BOSS_ART) is loaded, and its size for the label. */
+const BOSS_LOOKS: Record<FogBoss, Look> = {
+  tomorrow: { tex: 'slime', scale: 1.5, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0] },
+  mirror: { tex: 'mirror', scale: 1.35, bits: [0xe2e8f0, 0xcbd5e1, 0xffffff] },
+  knight: { tex: 'knight', scale: 1.15, bits: [0xe2e8f0, 0x94a3b8, 0xdc2626] },
+  plateau: { tex: 'hollow', scale: 1.5, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
+  hollow: { tex: 'hollow', scale: 1.5, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
+  summit: { tex: 'hollow', scale: 1.5, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
+};
+/** Every monster's look, each with its own sprite (src/sprites/characters). */
+const DUNGEON_LOOKS: Record<MonsterKind, Look> = {
+  slime: { tex: 'slime', scale: 0.55, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0] },
+  wisp: { tex: 'wisp', scale: 0.5, bits: [0xf97316, 0xfde68a, 0x6b7280] },
+  mirror: { tex: 'mirror', scale: 0.65, bits: [0xe2e8f0, 0xcbd5e1, 0xffffff] },
+  golem: { tex: 'golem', scale: 0.95, bits: [0xa8a29e, 0x78716c, 0x84cc16] },
+  // A golden copy of you, sent by the Mirror. Hitting it hurts you.
+  reflection: { tex: 'echo', scale: 0.75, bits: [0xfde68a, 0xfbbf24, 0xffffff] },
   ram: { tex: 'ram', scale: 0.62, bits: [0xe89a48, 0xb8651e, 0xe8dcc0] },
   book: { tex: 'book', scale: 0.62, bits: [0xfef3c7, 0xd6d3d1, 0x92400e] },
   smoke: { tex: 'smoke', scale: 0.55, bits: [0xa78bfa, 0x6b21a8, 0xe9d5ff] },
@@ -199,8 +215,7 @@ const MID_KINDS = new Set<Foe['kind']>(MIDS.map((m) => m.kind));
 const sightNow = (r: Run) => zoneDungeon(r.setup.zone).sight ?? r.dim;
 /** The dark's texture is drawn for this sight, and stretched for any other. */
 const DARK_REF = 190;
-const looks = (kind: Foe['kind'], zone: Zone): Look =>
-  kind === 'boss' ? BOSS_LOOKS[zone.boss] : kind in DUNGEON_LOOKS ? DUNGEON_LOOKS[kind as keyof typeof DUNGEON_LOOKS] : FOE_LOOKS[kind as keyof typeof FOE_LOOKS];
+const looks = (kind: Foe['kind'], zone: Zone): Look => (kind === 'boss' ? BOSS_LOOKS[zone.boss] : DUNGEON_LOOKS[kind]);
 /** Each zone boss's own art, in the stages of its fight (the Knight's plates falling, the
     Plateau's cracks), and its height on screen (1 = the hero's). Until a zone's sheets are loaded
     the boss wears its stand-in from BOSS_LOOKS. Swapping a boss's art is a change here. */
@@ -320,7 +335,6 @@ class DungeonScene extends Phaser.Scene {
   }
 
   create() {
-    const { zone } = this.setup;
     this.bot = !!this.setup.autopilot;
     if (this.setup.fast) {
       // Balance tests: the whole run in one go, then only the result.
@@ -884,8 +898,7 @@ class DungeonScene extends Phaser.Scene {
   }
 
   private botPick(choices: UpgradeId[]): UpgradeId {
-    const order: UpgradeId[] = ['multi', 'power', 'haste', 'vital', 'spark', 'flame', 'nova', 'guard', 'swift', 'magnet'];
-    return order.find((id) => choices.includes(id)) ?? choices[0];
+    return BOT_PICKS.find((id) => choices.includes(id)) ?? choices[0];
   }
 
   /** The rooms of this floor so far, for the depth ladder. */
@@ -962,7 +975,6 @@ class DungeonScene extends Phaser.Scene {
     return { tex: key, scale: (art.size * 64 * 0.8) / sheet.h, bits: art.bits };
   }
 
-  /** A boss acts out its attack, now and then, if its art has one. */
   /** The boss (or the mid-boss) plays its attack once, when it has one. */
   private bossAttack(b: Foe | null = this.run.boss) {
     const e = b && this.foes.get(b.id),
@@ -975,7 +987,6 @@ class DungeonScene extends Phaser.Scene {
     e.s.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => e.s.active && e.s.play(e.tex));
   }
 
-  /** A one-shot sprite where a boss ends (the Mirror shattering, the Hollow letting go). */
   /** A camera shake, unless the system asks for less motion. */
   private shake(ms: number, intensity: number) {
     if (!reducedMotion()) this.cameras.main.shake(ms, intensity);
@@ -1004,6 +1015,7 @@ class DungeonScene extends Phaser.Scene {
     this.midWas = { dim, stone };
   }
 
+  /** A one-shot sprite where a boss ends (the Mirror shattering, the Hollow letting go). */
   private bossGone(key: BossSheetKey, x: number, y: number) {
     const art = BOSS_ART[this.setup.zone.boss],
       sheet = this.setup.sheets[key];
