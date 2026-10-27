@@ -59,9 +59,16 @@ export interface Season {
   played: string[];
   /** How many times each kind of day came up on Today. */
   moments: Partial<Record<Moment, number>>;
-  /** The player as each Fog zone opens, and six workouts later: what the Fog balance bot plays with. */
+  /** The player as each Fog zone opens, and some workouts later (see laterBy): what the Fog balance bot plays with. */
   snapshots: { label: string; state: GameState }[];
 }
+
+/**
+ * How many workouts after a zone opens its "later" snapshot is taken. The last two zones open when
+ * stats grow slowly (a path step every dozen workouts or so), so six workouts there changes almost
+ * nothing; about six weeks of steady training does.
+ */
+export const laterBy = (zone: number) => (zone >= 4 ? 18 : 6);
 
 const FULL_LETTER: Letter = { why: 'I want to feel strong again', want: 'do ten pull-ups', forWho: 'my little brother', remind: 'I already did this once.' };
 
@@ -286,7 +293,7 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
       snapshots.push({ label: `zone${id}-open`, state });
     }
     for (const [id, n] of Object.entries(openedAt)) {
-      if (state.sessions.length >= n + 6 && !snapshots.some((x) => x.label === `zone${id}-later`)) snapshots.push({ label: `zone${id}-later`, state });
+      if (state.sessions.length >= n + laterBy(Number(id)) && !snapshots.some((x) => x.label === `zone${id}-later`)) snapshots.push({ label: `zone${id}-later`, state });
     }
   }
   if (waitingSince !== null) note('problem', `still waiting for a max test since day ${waitingSince}`);
