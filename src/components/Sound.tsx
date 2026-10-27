@@ -21,6 +21,23 @@ export function useMuted() {
   );
 }
 
+/** Whether the menus have music (Hero tab, Settings). */
+export function useMenuMusic() {
+  return useSyncExternalStore(
+    (fn) => music.subscribe(fn),
+    () => music.menuMusic,
+    () => true,
+  );
+}
+
+/** Plays the menus' music while `on`; any screen with its own song plays over it and hands back. */
+export function useMenuTrack(on: boolean) {
+  const wanted = useMenuMusic() && on;
+  useEffect(() => {
+    music.setBase(wanted ? 'menu' : null);
+  }, [wanted]);
+}
+
 export function SoundToggle({ className = '' }: { className?: string }) {
   const muted = useMuted();
   return (

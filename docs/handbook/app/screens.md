@@ -19,7 +19,8 @@ pieces of screen state, and decides what is on screen:
    `ScenePlayer` (a due story scene), `ClassPicker`, `FogRun`, and the `DevPanel`.
 3. While a layer is open the tabs underneath are made `inert` (no focus, hidden from screen
    readers). Overlays opened from inside a tab use `useModal` for the same thing.
-4. Back on the tabs, the next due scene from `scenesToPlay` (`src/story/engine.ts`) plays.
+4. On the tabs (nothing over them) the menus' music plays, unless turned off in Settings (see [../game/sound.md](../game/sound.md)).
+5. Back on the tabs, the next due scene from `scenesToPlay` (`src/story/engine.ts`) plays.
 
 ## Held sideways: the tabs
 
@@ -49,7 +50,7 @@ changes only as `land:` classes.
 | `PlayTab` | Power from training, your gear for the Fog (`FogGearCard`: worn gear with the flame's mark, the vault, Mira's forge for the tapped item, see [../game/forge.md](../game/forge.md)), the zones, warms up the Fog's code and sprite sheets while idle |
 | `FogRun` | A run, held sideways: loads the Phaser scene on demand, the HUD in the corners (`Vitals`: HP and level; the floor and its depth row, `DepthMap`; `BagButton` with a red count of what a fall would cost; pause; the floor's minimap, `FloorMap`, tap for it big), the bag (`BagPanel`) and the stairs card (deeper or leave), both showing what is at risk and the flame's kept item (`RiskLine`, `Guarded`), the pickup note, pause menu, skill picks (three cards side by side), the recap with what came home or was lost (`GearRecap`), the "turn your phone" card |
 | `ItemCard` | An item's tile and card (name in its rarity's color, what it gives, what it needs), shared by the run's bag and the Play tab |
-| `HeroTab` | Gear, class, look editor, the champion's stat points (`StatPoints`: spend, take back), keepsakes, quest log, Backup and Restore, cloud backup sign-in (`CloudSave`) |
+| `HeroTab` | Gear, class, look editor, the champion's stat points (`StatPoints`: spend, take back), keepsakes, quest log, Settings (sound, music in the menus), Backup and Restore, cloud backup sign-in (`CloudSave`) |
 | `ScenePlayer`, `Dialogue` | Play a story scene: lines, camera shots, the question, the answer lines |
 | `ClassPicker` | Four weapons in the ash: pick the class |
 | `BookOfDays` | Every day the app was opened, newest first |
