@@ -8,7 +8,8 @@ import type { FogLines } from '@/story/types';
 import { getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
 import { zoneMusic } from '@/lib/music-zones';
-import { runSheets } from '@/game/sheets';
+import { friendSheets, runSheets } from '@/game/sheets';
+import type { FriendCard } from '@/lib/friends';
 import { buildOf } from '@/lib/stats';
 import { atRisk, settleGear, vaultSize, wornFor, type AtRisk, type GearOutcome } from '@/lib/fog-gear';
 import { ITEM_SLOTS, nameOf, RARITY, SLOT_NAME, shortOf, type Item, type ItemSlot } from '@/game/dungeon/items';
@@ -27,6 +28,9 @@ interface Props {
   onLeave: () => void;
   /** Developer mode (/lab/night): start the first attempt at the mid-boss, at the boss, or won (the recap). */
   startAt?: RunStart;
+  /** A party's run: the shared seed, and the friends who come along (played by bots until the
+      game server exists). */
+  party?: { seed: number; friends: FriendCard[] };
 }
 
 export type RunStart = 'mid' | 'boss' | 'win';
@@ -80,7 +84,7 @@ export function useSideways() {
 }
 
 /** A run in the Fog: the Phaser canvas, with the HUD, skill picks and results drawn over it. */
-export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
+export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const run = useRef<RunHandle | null>(null);
   const [hud, setHud] = useState<Hud | null>(null);
@@ -151,7 +155,12 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
     let jump = 0;
     Promise.all([game, calm]).then(([{ startRun }]) => {
       if (cancelled) return;
-      run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast', worn: wornFor(state), build: buildOf(state) }, {
+      run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast', worn: wornFor(state),
+        build: buildOf(state),
+        // Only the first attempt shares the party's seed; "Try again" is a run of your own.
+        seed: party && attempt === 0 ? party.seed : undefined,
+        friends: party?.friends.map((f) => ({ name: f.name, classId: f.class_id ?? undefined, ...friendSheets({ classId: f.class_id ?? undefined, look: f.look, tiers: f.look?.gear }) })),
+      }, {
         hud: setHud,
         floor: (n: number) => {
           setFloorShown(n);

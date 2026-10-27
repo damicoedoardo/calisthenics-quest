@@ -20,6 +20,10 @@ import { LookProvider } from '@/components/Look';
 import { CloudChoice, useCloudSync } from '@/components/Cloud';
 import { useFriendsBeat } from '@/components/Friends';
 import { SignInGate, signInDue } from '@/components/SignInGate';
+import { PartyButton, PartyInviteCard, PartyLobby, usePartyPoll } from '@/components/Party';
+import { others, startToJoin } from '@/lib/party';
+import { partyMe, setLobbyOpen, usePartyView } from '@/lib/party-client';
+import type { FriendCard } from '@/lib/friends';
 import { useCloudStatus } from '@/lib/cloud-client';
 import { BringHero, InstallGate } from '@/components/InstallGate';
 import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
@@ -28,7 +32,7 @@ import { withTodayPage } from '@/story/daily';
 import { heroVariant } from '@/story/flame';
 import type { Scene } from '@/story/types';
 import { inSandbox, useGameState } from '@/lib/store';
-import { recordRun, ZONES, type Zone } from '@/lib/fog';
+import { recordRun, ZONES, zoneStatus, type Zone } from '@/lib/fog';
 import { settleGear } from '@/lib/fog-gear';
 import { skipIntro, useDevMode } from '@/lib/dev';
 import { mustInstall, needsCarry } from '@/lib/install';
@@ -43,6 +47,15 @@ const TABS: { id: Tab; label: string; icon: 'tabToday' | 'tabTrain' | 'tabPlay' 
   { id: 'play', label: 'Play', icon: 'tabPlay' },
   { id: 'hero', label: 'Hero', icon: 'tabHero' },
 ];
+
+/** /lab/night's party run: two friends to fight beside. */
+const LAB_FRIENDS: FriendCard[] = [
+  { id: 'lab-a', name: 'Ana', class_id: 'archer', level: 6, look: { sex: 'f', gear: { weapon: 3, armor: 2, shield: 1 } }, trained_at: null, online: true, playing: null, seen_at: '' },
+  { id: 'lab-b', name: 'Ben', class_id: 'mage', level: 4, look: { sex: 'm', hair: 'black', gear: { weapon: 2, armor: 1, shield: 0 } }, trained_at: null, online: true, playing: null, seen_at: '' },
+];
+
+/** The party start this phone last walked into, so a start is played once. */
+const PLAYED_KEY = 'forma-party-played-v1';
 
 export default function Home() {
   const game = useGameState();
@@ -77,6 +90,10 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   // After the install step, an account once (SignInGate); developer mode may play on without.
   const { signedIn } = useCloudStatus();
   const [skipSignIn, setSkipSignIn] = useState(false);
+  // Parties: kept fresh while signed in; a start the leader made opens the run here too.
+  usePartyPoll(signedIn, !ready || inSandbox());
+  const { party } = usePartyView();
+  const [partyRun, setPartyRun] = useState<{ seed: number; friends: FriendCard[] } | null>(null);
   useEffect(() => {
     if (!ready || jumped.current) return;
     jumped.current = true;
@@ -89,6 +106,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     if (zone) {
       const at = q.get('at');
       setRunStart(at === 'mid' || at === 'boss' || at === 'win' ? at : undefined);
+      // ?party: a practice party run with two made-up friends, to see it without a backend.
+      if (q.has('party')) setPartyRun({ seed: 7, friends: LAB_FRIENDS });
       setRun(zone);
     }
     if (q.has('workout')) {
@@ -114,6 +133,26 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   useEffect(() => {
     if (busy) setDevOpen(false);
   }, [busy]);
+  useEffect(() => {
+    if (busy || !party) return;
+    let played: string | null = null;
+    try {
+      played = localStorage.getItem(PLAYED_KEY);
+    } catch {
+      // Storage blocked: a start may be offered twice, which is harmless.
+    }
+    const go = startToJoin(party, played, new Date());
+    const zone = go && ZONES.find((z) => z.id === go.zone);
+    if (!go || !zone) return;
+    try {
+      localStorage.setItem(PLAYED_KEY, go.at);
+    } catch {
+      // As above.
+    }
+    setLobbyOpen(false);
+    setPartyRun({ seed: go.seed, friends: others(party, partyMe() ?? '') });
+    setRun(zone);
+  }, [party, busy]);
   const { dev, live, toggle: setDev } = useDevMode();
   // While a screen is open over the tabs, the tabs underneath are out of reach: no keyboard focus
   // and nothing for a screen reader to wander into. (React 18 has no inert prop, so it's set here.)
@@ -197,8 +236,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         onExit={replaying ? () => setReplaying(false) : undefined}
         onSkip={dev && !replaying ? () => update((s) => skipIntro(s, new Date())) : undefined}
         onLook={(look) => update((s) => ({ ...s, profile: { ...s.profile, look } }))}
-        onFinish={({ letter, voice, kit }) => {
-          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, letter, voice, kit: kit ?? s.profile.kit } }));
+        onFinish={({ letter, voice, kit, name }) => {
+          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, letter, voice, kit: kit ?? s.profile.kit, name: name ?? s.profile.name } }));
           setReplaying(false);
         }}
         // On iPhones each browser and the installed app keep their own saves: a hero copied in
@@ -317,12 +356,22 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           zone={run}
           dev={dev}
           startAt={runStart}
-          onEnd={(r) => update((s) => settleGear(recordRun(s, r), r).state)}
+          party={partyRun ?? undefined}
+          // A party run in a zone you haven't opened yet keeps its loot but not the clear: the story still opens zones.
+          onEnd={(r) => update((s) => settleGear(partyRun && zoneStatus(s, run).state === 'locked' ? s : recordRun(s, r), r).state)}
           onLeave={() => {
             setRun(null);
             setRunStart(undefined);
+            setPartyRun(null);
           }}
         />
+      )}
+      {!busy && (
+        <>
+          <PartyInviteCard />
+          <PartyButton />
+          <PartyLobby state={state} />
+        </>
       )}
       {training && <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />}
       {after && <AfterSession result={after.result} before={after.before} after={after.after} onClose={() => setAfter(null)} />}

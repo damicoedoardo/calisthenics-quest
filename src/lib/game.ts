@@ -82,6 +82,9 @@ export interface Profile {
   flame?: string;
   /** What the built-in plan trains with. Missing means the gym. */
   kit?: Kit;
+  /** The hero's name, asked once after the look (or on the Friends card for older saves); it's
+      what friends see. */
+  name?: string;
 }
 
 /** A page of the Book of Days: one for every day the app was opened. */

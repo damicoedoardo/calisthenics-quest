@@ -21,6 +21,7 @@ the workout planner (the LLM key must live on a server).
 | `backend/app/saves.py` | Where saves are kept: `PgStore` (Postgres) and `MemoryStore` (tests), same rules |
 | `backend/app/routes/save.py` | `GET`, `PUT`, `DELETE /save` |
 | `backend/app/friends.py`, `routes/friends.py` | Friend cards and friendships: `PUT /me`, `/friends` ([friends.md](friends.md)); creates its tables on start |
+| `backend/app/party.py`, `routes/party.py` | Parties: invite, join, ready, zone, start (`/party...`, [friends.md](friends.md#parties)); creates its tables on start |
 | `backend/db/init.sql` | The schema, run by Postgres on first boot |
 | `backend/tests/` | pytest: the save rules and the token check, no database needed |
 

@@ -56,6 +56,7 @@ export function myCard(state: GameState, playing: string | null): MyCard {
     look: { ...state.profile.look, gear: { weapon: gear.weapon.tier, armor: gear.armor.tier, shield: gear.shield.tier } },
     trained_at: state.sessions.at(-1)?.date ?? null,
     playing,
+    ...(state.profile.name ? { name: state.profile.name } : {}),
   };
 }
 

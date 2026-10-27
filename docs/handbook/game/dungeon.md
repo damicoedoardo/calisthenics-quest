@@ -80,6 +80,12 @@ party order. The rules treat every hero the same:
 - A pick (skill or chest item) by anyone still holds the whole run (`choosing`), and the stairs ask
   once for everyone: changing that is the next co-op step. The Summit's friends walk beside you.
 
+**A practice party run** (until the game server exists): the scene takes `RunSetup.friends`
+(name, class and their own hero sheets from `friendSheets` in `src/game/sheets.ts`) and `seed`,
+gives each friend your strength in their own class, steps them with `botInput`, takes their picks
+for them, and draws them with their name over their head (grey while down). Started from a
+party's lobby, or `/lab/night` "A party run (practice)" (`?run=0&party`).
+
 The plan is in the "FORMA co-op Fog" doc (project thread "Explore multiplayer dungeon runs with
 friends"). `engine.test.ts` ("a party") plays a two-bot run to the end.
 

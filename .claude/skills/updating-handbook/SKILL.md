@@ -51,7 +51,7 @@ no row: give a new folder its row (and a page if no page fits).
 | `README.md` | `product/overview.md` |
 | `backend/**`, `.github/workflows/backend.yml` | `backend/api.md` |
 | `src/lib/cloud*.ts`, `src/components/Cloud.tsx` | `backend/cloud-sync.md` |
-| `src/lib/friends*.ts`, `src/components/Friends.tsx`, `backend/app/*friends*.py`, `backend/app/routes/friends.py` | `backend/friends.md` |
+| `src/lib/friends*.ts`, `src/lib/party*.ts`, `src/components/{Friends,Party}.tsx`, `backend/app/{friends,party}.py`, `backend/app/routes/{friends,party}.py` | `backend/friends.md` |
 | `docker-compose*.yml`, `caddy/**`, `.env.example`, `scripts/deploy/**`, `.github/workflows/deploy-backend.yml` | `backend/server.md` |
 
 Also update `product/overview.md` for any change a player would notice (a new tab, a new feature,
