@@ -547,10 +547,9 @@ function Recap({ end, broken }: { end: RunEnd; broken: ReturnType<typeof records
       <div className="mt-2 flex flex-wrap items-center gap-1 text-left">
         {relics.length ? (
           relics.map(([id, n]) => {
-            const Icon = RELIC_ICONS[id];
             return (
               <span key={id} className="flex items-center gap-1 rounded bg-ink-800 px-1.5 py-1 text-gold-300" title={RELICS[id].name}>
-                <Icon size={12} />
+                <Sprite id="relicIcon" opts={{ name: id }} size={12} label="" />
                 <span className="text-[10px] text-slate-300">{RELICS[id].name}</span>
                 {n > 1 && <span className="font-mono text-[9px] text-slate-400">x{n}</span>}
               </span>
