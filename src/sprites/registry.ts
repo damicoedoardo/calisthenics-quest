@@ -37,6 +37,7 @@ import { drawGaleMid } from './characters/galeMid';
 import { drawExercise, type ExerciseOpts } from './characters/exercise';
 import { ZONE_PLACE, dress, edged } from './characters/zoned';
 import { FOG_BANK, WORLD_LOCK } from './characters/worlds';
+import { installStepArt, type InstallStep } from './characters/install';
 import { ABILITY_ICONS, DAY_ICONS, ITEM_ICONS, KEEPSAKE_ICONS, MARK_ICONS, RELIC_ICONS, SKILL_ICONS, UI_ICONS, ZONE_ICONS, type DayKind } from './characters/icons';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
@@ -130,6 +131,9 @@ export interface SkillIconOpts {
 export interface MarkIconOpts {
   name: 'warden' | 'boss';
 }
+export interface InstallStepOpts {
+  step: InstallStep;
+}
 export interface UiIconOpts {
   name: keyof typeof UI_ICONS;
 }
@@ -212,6 +216,8 @@ export const SPRITES = {
   // the Play tab's world picker: the big padlock on a shut world, and the fog that drifts over it
   worldLock: icon<NoOpts>(() => 'Locked', {}, () => WORLD_LOCK),
   fogBank: icon<NoOpts>(() => 'Fog', {}, () => FOG_BANK),
+  // the install guide: a phone showing where to tap for each step
+  installStep: icon<InstallStepOpts>((o) => `Where to tap: ${o.step}`, { step: 'iosShare' }, (o) => installStepArt(o.step)),
   // you, doing an exercise of the program (the workout screen's demo)
   exercise: drawn<ExerciseOpts>({
     label: (o) => `How to do it: ${o.exercise}`,

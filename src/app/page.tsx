@@ -18,6 +18,7 @@ import { DevButton, DevPanel } from '@/components/DevPanel';
 import { Sprite } from '@/components/Sprite';
 import { LookProvider } from '@/components/Look';
 import { CloudChoice, useCloudSync } from '@/components/Cloud';
+import { BringHero, InstallGate } from '@/components/InstallGate';
 import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { sawScene, scenesToPlay, storyState, type StoryState } from '@/story/engine';
 import { withTodayPage } from '@/story/daily';
@@ -27,6 +28,8 @@ import { inSandbox, useGameState } from '@/lib/store';
 import { recordRun, ZONES, type Zone } from '@/lib/fog';
 import { settleGear } from '@/lib/fog-gear';
 import { skipIntro, useDevMode } from '@/lib/dev';
+import { mustInstall, needsCarry } from '@/lib/install';
+import { useInstall } from '@/lib/install-client';
 
 type Tab = 'today' | 'train' | 'play' | 'hero';
 
@@ -93,8 +96,12 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   }, [ready]);
   // Anything that takes the screen (a scene, a run, a workout) closes the panel for good.
   const busy = !!(run || training || after || scene || picker);
+  // After the prologue, a phone in a browser tab installs FORMA before playing on. Never in the
+  // sandbox (unless ?gate= asks for the screen), never once installed or on a computer.
+  const inst = useInstall();
+  const gated = inst.known && !inst.standalone && !inst.skipped && mustInstall(inst.platform) && (inst.forced || !inSandbox());
   // The menus' music, on the tabs only: the opening, story, workouts and runs have their own.
-  useMenuTrack(ready && state.profile.onboarded && !opening && !replaying && !busy);
+  useMenuTrack(ready && state.profile.onboarded && !opening && !replaying && !busy && !gated);
   useEffect(() => {
     if (busy) setDevOpen(false);
   }, [busy]);
@@ -183,9 +190,24 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, letter, voice, kit: kit ?? s.profile.kit } }));
           setReplaying(false);
         }}
+        // On iPhones each browser and the installed app keep their own saves: a hero copied in
+        // one comes in here.
+        bring={!replaying && needsCarry(inst.platform) ? <BringHero startOpen={inst.standalone} onBring={(s) => update(() => s)} /> : undefined}
       />
     );
   }
+
+  if (gated)
+    return (
+      <InstallGate
+        state={state}
+        platform={inst.platform}
+        canPrompt={inst.canPrompt}
+        installed={inst.installed}
+        onInstall={inst.install}
+        onSkip={dev ? inst.skip : undefined}
+      />
+    );
 
   return (
     // Held sideways (the `land` screen), the tab bar becomes a rail down the left and the column

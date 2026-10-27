@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, Dumbbell, Film, Gem, Music, Play, Sparkles, Swords } from 'lucide-react';
+import { ArrowLeft, BookOpen, Dumbbell, Film, Gem, Music, Play, Smartphone, Sparkles, Swords } from 'lucide-react';
 import { addFakeWorkouts, clearNextZone, skipDueScenes, skipIntro } from '@/lib/dev';
 import { initialState, type GameState } from '@/lib/game';
 import { ZONES } from '@/lib/fog';
@@ -143,6 +143,14 @@ export default function NightLab() {
       <p className="rounded-lg border border-dashed border-sky-400/60 px-3 py-2 text-xs text-sky-300">
         Everything here opens on a sandbox save. Your real progress on this phone is untouched; the app shows a blue bar while you&apos;re in the sandbox.
       </p>
+
+      <Panel title="INSTALL THE APP" note="After the opening, a phone in a browser tab has to put FORMA on its home screen before playing on. Each guide is shown here whatever phone you hold.">
+        <Row icon={<Smartphone size={16} />} label="iPhone, Safari" note="Copy your hero, Share, Add to Home Screen, open it" onClick={() => open(skipIntro(initialState(), new Date()), 'gate=ios-safari')} />
+        <Row icon={<Smartphone size={16} />} label="iPhone, Chrome" note="The same, with Share in the address bar" onClick={() => open(skipIntro(initialState(), new Date()), 'gate=ios-chrome')} />
+        <Row icon={<Smartphone size={16} />} label="iPhone, another browser" note="Firefox or an app's own browser: open it in Safari" onClick={() => open(skipIntro(initialState(), new Date()), 'gate=ios-other')} />
+        <Row icon={<Smartphone size={16} />} label="Android" note="The Install button where Chrome offers it, else the menu steps" onClick={() => open(skipIntro(initialState(), new Date()), 'gate=android')} />
+        <Row icon={<Smartphone size={16} />} label="The installed iPhone app, first time" note="A fresh save: 'Started in another browser? Bring your hero'. Copy a hero on the Safari jump first" onClick={() => open(initialState(), 'gate=ios-safari')} />
+      </Panel>
 
       <Panel title="THE FOG: SIX DUNGEONS" note="Every zone is a dungeon now, with its own monsters, ground, music, a mid-boss on floor 5 and its boss at the bottom. The recap shows records and relics.">
         {ZONES.map((z) => {

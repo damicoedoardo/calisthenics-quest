@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useState, type ReactNode } from 'react';
 import { Headphones } from 'lucide-react';
 import { Dialogue } from './Dialogue';
 import { Book, Ember, Enemy, Hollow, Wanderer } from './Characters';
@@ -30,6 +30,8 @@ interface Props {
   onExit?: () => void;
   /** Developer mode: jump past the whole opening. */
   onSkip?: () => void;
+  /** On the first screen of an installed iPhone app: bring the hero over from Safari. */
+  bring?: ReactNode;
 }
 
 const goldButton =
@@ -64,7 +66,7 @@ function fadingBackdrop(gear: ReturnType<typeof equippedGear>) {
  * First run: pick boy or girl, the story opens, the player meets the voice in their head, loses,
  * gets up, writes their letter, and finally makes the hero look like them.
  */
-export function Prologue({ state, onFinish, onLook, onExit, onSkip }: Props) {
+export function Prologue({ state, onFinish, onLook, onExit, onSkip, bring }: Props) {
   const [step, setStep] = useState<Step>('title');
   const look = useLook();
   const firstRun = !state.profile.onboarded;
@@ -129,6 +131,7 @@ export function Prologue({ state, onFinish, onLook, onExit, onSkip }: Props) {
             <p className="mt-8 flex items-center gap-2 text-xs text-slate-500 [@media(orientation:landscape)_and_(max-height:600px)]:mt-4">
               <Headphones size={14} /> Best with sound on
             </p>
+            {bring}
             {skip}
             </div>
           </div>

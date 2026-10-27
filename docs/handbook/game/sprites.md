@@ -46,6 +46,8 @@ engine/skeleton.ts    the jointed skeleton both use: IK elbows and knees, props 
                       weights, cables and bands, and how the figure is drawn
 characters/worlds.ts  the Play tab's world picker: the big padlock on a shut world (`worldLock`) and the
                       bank of fog that drifts over it (`fogBank`)
+characters/install.ts the install guide's pictures (`installStep`, opts { step }): a small phone with
+                      the button to tap ringed in gold, drawn on a character grid
 characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recolored onto the zone's
                       ramp and dressed (lake glass and drips, forge scrap and glowing cracks,
                       plateau sandstone, fog mist, summit ice)
