@@ -96,6 +96,11 @@ describe('the story files', () => {
     for (const lines of Object.values(FLAME_LINES)) for (const l of lines) quoted(l.text, 'flame line');
   });
 
+  it('types slowly only short lines, so a slow line never drags', () => {
+    const long = ALL_SCENES.flatMap(({ scene }) => linesOf(scene).filter((l) => l.pace === 'slow' && l.text.length > 90).map((l) => `${scene.id}: ${l.text}`));
+    expect(long).toEqual([]);
+  });
+
   it('keeps the script general: no digits in any line', () => {
     for (const { scene } of ALL_SCENES) for (const l of linesOf(scene)) expect(l.text.replace(/\{\w+\}/g, ''), scene.id).not.toMatch(/\d/);
   });

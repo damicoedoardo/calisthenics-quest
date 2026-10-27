@@ -119,14 +119,16 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
   const shot = beat?.shot;
   useMusic(musicAt(beats, index, music));
 
+  // Only a new line restarts the typing (the lines prop is rebuilt on every parent render).
+  const pause = FAST ? 0 : (line?.pause ?? 0);
   useEffect(() => {
     setShown(0);
-    const pause = FAST ? 0 : (beats[index]?.line?.pause ?? 0);
     setWaiting(pause > 0);
     if (!pause) return;
     const t = setTimeout(() => setWaiting(false), pause * 1000);
     return () => clearTimeout(t);
-  }, [index, beats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [index]);
 
   useEffect(() => {
     if (done || waiting) return;
