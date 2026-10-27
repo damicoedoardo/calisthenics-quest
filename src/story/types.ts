@@ -248,6 +248,17 @@ export interface DailyLine {
   fromChapter?: number;
 }
 
+/** A one-off Today line that follows up on a scene: said once, on a day soon after it. */
+export interface Callback {
+  text: string;
+  /** The scene it follows up on. Said on a later day than the workout that scene came after. */
+  after: string;
+  /** Only within this many workouts of that scene's moment, so it never arrives stale. */
+  within: number;
+  /** Only on a day off (the day after a workout, or later). */
+  restDay?: boolean;
+}
+
 /** Words for the road: one a day under the flame's line. */
 export interface Quote {
   text: string;

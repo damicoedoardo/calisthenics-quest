@@ -7,10 +7,11 @@ import { CHAPTERS } from './chapters';
 import { ALL_SCENES, VILLAGERS, chapterStart, fill, pendingScenes, renderLines, storyWords } from './engine';
 import { FLAME_STAGES } from './flame';
 import { PLACES } from './places';
-import { FLAME_LINES } from './daily/flame-lines';
+import { CALLBACKS, FLAME_LINES } from './daily/flame-lines';
+import { AFTER_LINES, MARGIN_NOTES } from './daily/after';
 import { QUOTES } from './daily/quotes';
 import { FIRE_LINES, REST_TRUTHS } from './daily/rest';
-import { dayQuote, flameLine, flameMood, todayMoment, withTodayPage } from './daily';
+import { afterWorkoutLine, dayQuote, flameLine, flameMood, todayMoment, withTodayPage } from './daily';
 import type { Line, WordKey } from './types';
 
 /* Checks every reference in the story files, so a typo in a speaker, a place, a song or a {word}
@@ -215,7 +216,8 @@ describe('the months 4 to 6 rules', () => {
       const due = pendingScenes(inTheFog(63, answers), now).filter((s) => s.id.startsWith('ch5-gathering'));
       expect(due, `helped ${helped.join(', ') || 'nobody'}`).toHaveLength(1);
       const lines = renderLines(due[0].lines, storyWords(inTheFog(63, answers)));
-      const speakers = new Set(lines.flatMap((l) => [l.who, l.show ?? l.who]));
+      // A villager you helped may appear in their after look (`lia-after`).
+      const speakers = new Set(lines.flatMap((l) => [l.who, l.show ?? l.who]).map((id) => id.replace(/-after$/, '')));
       for (const v of VILLAGERS) expect(speakers.has(v as keyof typeof CAST), `${v} when helped ${helped.join(', ') || 'nobody'}`).toBe(helped.includes(v));
       expect(speakers.has('mira')).toBe(helped.length === 0);
       expect(speakers.has('echo')).toBe(helped.length === 0);
@@ -258,3 +260,41 @@ describe('the months 4 to 6 rules', () => {
     expect(flame('feeling free').map((l) => l.text)).toEqual(["I remember now. I'm the part of you that loved feeling free."]);
   });
 });
+
+describe('the daily follow-ups', () => {
+  const day = (i: number) => new Date(2026, 0, 1 + i * 2, 18);
+  const lia = CALLBACKS.find((c) => c.after === 'ch2-lia-dance')!;
+  const helped = (n: number, seen: string[]): GameState => ({
+    ...initialState(),
+    sessions: Array.from({ length: n }, (_, i) => workout(day(i))),
+    seenScenes: seen,
+    answers: { lia: 'yes' },
+  });
+
+  it('follow up on real scenes, with no digits', () => {
+    for (const c of CALLBACKS) {
+      expect(ALL_SCENES.some((p) => p.scene.id === c.after), c.after).toBe(true);
+      expect(c.text).not.toMatch(/\d/);
+    }
+    for (const l of [...Object.values(AFTER_LINES).flat(), ...Object.values(FLAME_LINES).flat()]) expect(l.text.replace(/\{\w+\}/g, '')).not.toMatch(/\d/);
+    for (const n of Object.values(MARGIN_NOTES).flat()) expect(n).not.toMatch(/\d/);
+  });
+
+  it('says the Lia follow-up once, the day after her scene, and only if it played', () => {
+    const next = new Date(day(21).getTime() + 86400000);
+    expect(flameLine(helped(22, ['ch2-lia-dance']), next)).toBe(lia.text);
+    expect(flameLine(helped(22, []), next)).not.toBe(lia.text);
+    // Not on the day of the workout itself.
+    expect(flameLine(helped(22, ['ch2-lia-dance']), new Date(day(21).getTime() + 3600000))).not.toBe(lia.text);
+    // Said once: a later day doesn't repeat it.
+    const said = withTodayPage(helped(22, ['ch2-lia-dance']), next);
+    expect(flameLine(said, new Date(next.getTime() + 86400000))).not.toBe(lia.text);
+  });
+
+  it("doesn't repeat an after-workout line within a few workouts", () => {
+    const n = 40;
+    const picks = Array.from({ length: n }, (_, i) => afterWorkoutLine({ ...initialState(), sessions: Array.from({ length: i + 1 }, (_, k) => workout(day(k))) }));
+    for (let i = 1; i < n; i++) expect(picks.slice(Math.max(1, i - 4), i), `workout ${i + 1}`).not.toContain(picks[i]);
+  });
+});
+

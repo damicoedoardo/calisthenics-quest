@@ -1,4 +1,4 @@
-import type { DailyLine, FlameMood, Moment } from '../types';
+import type { Callback, DailyLine, FlameMood, Moment } from '../types';
 
 /* What your flame says on Today, by kind of day. One line a day, and none repeats within three
    weeks, so each list needs a few. {words} work like in scenes: {want}, {sessions}... A line that
@@ -148,6 +148,16 @@ export const FLAME_LINES: Record<Moment, DailyLine[]> = {
     { text: 'In the fog you held on to this: "{heart5}." Hold on to it again today.', needs: 'heart5' },
   ],
 };
+
+/**
+ * Follow-ups to the villagers' arcs. Each one is said once, on the first fitting day after its
+ * scene, in place of the day's usual line.
+ */
+export const CALLBACKS: Callback[] = [
+  { text: 'Lia made you promise: one kind thing to the one in the mirror, again. Go on. I\'ll pretend not to listen.', after: 'ch2-lia-dance', within: 4 },
+  { text: "Socks on? Sol's orders. Nothing will fall over today. She checked.", after: 'ch4-sol-socks', within: 8, restDay: true },
+  { text: "If the road feels flat today, look back. There's a lamp on behind you. Vela said there would be.", after: 'ch4-vela-down', within: 4 },
+];
 
 /** The flame's face on each kind of day. */
 export const MOMENT_MOOD: Record<Moment, FlameMood> = {
