@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Backpack, Pause, Smartphone } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { fill, storyWords } from '@/story/engine';
@@ -10,7 +10,7 @@ import { music } from '@/lib/music';
 import { zoneMusic } from '@/lib/music-zones';
 import { runSheets } from '@/game/sheets';
 import { buildOf } from '@/lib/stats';
-import { settleGear, vaultSize, wornFor, type GearOutcome } from '@/lib/fog-gear';
+import { atRisk, settleGear, vaultSize, wornFor, type AtRisk, type GearOutcome } from '@/lib/fog-gear';
 import { ITEM_SLOTS, nameOf, RARITY, SLOT_NAME, shortOf, type Item, type ItemSlot } from '@/game/dungeon/items';
 import { ItemCard, ItemTile } from './ItemCard';
 import { Sprite } from './Sprite';
@@ -236,79 +236,58 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
   }, [said]);
 
   const left = hud ? Math.max(0, RUN_SECONDS - hud.seconds) : RUN_SECONDS;
+  // What a fall would cost right now, and what the flame would hold.
+  const risk = hud ? atRisk(state, hud.gear, new Date()) : null;
 
   return (
     <div className="fixed inset-0 z-50 touch-none select-none bg-ink-950" data-run-end={end ? JSON.stringify(end) : undefined}>
       <div ref={host} className="absolute inset-0" />
 
       {hud && !end && (
-        <div className="safe-top pointer-events-none absolute inset-x-0 top-0 px-3 pt-2">
-          <div className="flex items-center gap-2">
-            <div className="min-w-0 max-w-xs flex-1">
-              <div className="relative h-3.5 overflow-hidden rounded-sm bg-ink-800/90 ring-1 ring-black/40">
-                <div className="h-full bg-red-500 transition-[width] duration-150" style={{ width: `${(hud.hp / hud.maxHp) * 100}%` }} />
-                <span className="absolute inset-0 grid place-items-center font-mono text-[9px] font-bold text-white">
-                  {hud.hp}/{hud.maxHp}
-                </span>
-              </div>
-              <div className="mt-1 flex items-center gap-1.5">
-                <span className="font-pixel text-[8px] text-sky-300">Lv{hud.level}</span>
-                <div className="h-2 flex-1 overflow-hidden rounded-sm bg-ink-800/90">
-                  <div className="h-full bg-sky-400 transition-[width] duration-150" style={{ width: `${(hud.xp / hud.xpNext) * 100}%` }} />
-                </div>
-              </div>
-              {hud.relics && Object.keys(hud.relics).length > 0 && (
-                <div className="mt-1 flex flex-wrap items-center gap-1">
-                  {(Object.entries(hud.relics) as [RelicId, number][]).map(([id, n]) => {
-                    return (
-                      <span key={id} className="flex items-center gap-0.5 rounded bg-ink-800/90 px-1 py-0.5 text-gold-300" title={RELICS[id].name}>
-                        <Sprite id="relicIcon" opts={{ name: id }} size={14} label={RELICS[id].name} />
-                        {n > 1 && <span className="font-mono text-[8px]">{n}</span>}
-                      </span>
-                    );
-                  })}
-                </div>
+        <div className="run-t run-x pointer-events-none absolute inset-x-0 flex items-start gap-2">
+          <Vitals hud={hud} />
+          <div className="flex min-w-0 flex-1 flex-col items-center">
+            <div className="flex items-center gap-2 rounded-md bg-ink-950/70 px-2 py-1 ring-1 ring-white/5">
+              {hud.climb != null ? (
+                <p className="font-pixel text-[9px] text-sky-300">CLIMB · LEDGE {hud.climb + 1}</p>
+              ) : hud.floor && hud.floors ? (
+                <>
+                  <p className={`font-pixel text-[9px] ${hud.boss ? 'text-red-400' : 'text-gold-300'}`}>{hud.boss ? 'BOSS' : `FLOOR ${hud.floor}`}</p>
+                  <DepthMap floor={hud.floor} floors={hud.floors} boss={zone.bossName} midName={midName(zone)} mid={hud.wardenFloor ?? null} />
+                </>
+              ) : (
+                <p className="font-pixel text-[9px] text-slate-100">{clock(left)}</p>
               )}
+              <p className="font-mono text-[10px] leading-none text-slate-400">{hud.kills} down</p>
             </div>
-            <div className="ml-auto w-16 text-right">
-              <p className={`font-pixel text-[11px] ${hud.boss ? 'text-red-400' : 'text-slate-100'}`}>
-                {hud.climb != null ? 'CLIMB' : hud.boss ? 'BOSS' : hud.floor ? `${hud.floor}/${hud.floors}` : clock(left)}
-              </p>
-              <p className="mt-1 font-mono text-[10px] text-slate-400">{hud.climb != null ? `ledge ${hud.climb + 1}` : `${hud.kills} down`}</p>
-            </div>
-            <button
-              aria-label={`Bag: ${hud.gear.bag.length} of ${BAG}`}
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={() => openBag(true)}
-              className={`pointer-events-auto relative grid h-9 w-9 place-items-center rounded-lg bg-ink-800/90 ${hud.gear.bag.length >= BAG ? 'text-red-300' : 'text-slate-200'}`}
-            >
-              <Backpack size={16} />
-              {hud.gear.bag.length > 0 && <span className="absolute -bottom-1 -right-1 rounded bg-ink-950 px-1 font-mono text-[8px] text-gold-300">{hud.gear.bag.length}</span>}
-            </button>
-            <button
-              aria-label="Pause"
-              onClick={() => {
-                run.current?.pause();
-                setPaused(true);
-              }}
-              className="pointer-events-auto grid h-9 w-9 place-items-center rounded-lg bg-ink-800/90 text-slate-200"
-            >
-              <Pause size={16} />
-            </button>
+            {hud.boss && (
+              <BossBar
+                name={`${zone.bossName}${zone.boss === 'knight' ? ` · ${Math.ceil(hud.boss.hp)} plates` : hud.boss.label ? ` · ${hud.boss.label}` : ''}`}
+                hp={hud.boss.hp}
+                max={hud.boss.max}
+              />
+            )}
+            {hud.warden && <BossBar name={midName(zone)} hp={hud.warden.hp} max={hud.warden.max} ember={hud.warden.phase === 2 ? 'hot' : 'warm'} />}
           </div>
-          {hud.boss && (
-            <BossBar
-              name={`${zone.bossName}${zone.boss === 'knight' ? ` · ${Math.ceil(hud.boss.hp)} plates` : hud.boss.label ? ` · ${hud.boss.label}` : ''}`}
-              hp={hud.boss.hp}
-              max={hud.boss.max}
-            />
-          )}
-          {hud.warden && <BossBar name={midName(zone)} hp={hud.warden.hp} max={hud.warden.max} ember={hud.warden.phase === 2 ? 'hot' : 'warm'} />}
+          <div className="flex w-[11.5rem] shrink-0 flex-col items-end gap-1.5">
+            <div className="flex items-center gap-1.5">
+              <BagButton bag={hud.gear.bag.length} risk={risk} flame={flameName || 'your flame'} onOpen={() => openBag(true)} />
+              <button
+                aria-label="Pause"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={() => {
+                  run.current?.pause();
+                  setPaused(true);
+                }}
+                className="pointer-events-auto grid h-9 w-9 place-items-center rounded-md bg-ink-950/70 text-slate-200 ring-1 ring-white/10 active:scale-95"
+              >
+                <Pause size={16} />
+              </button>
+            </div>
+            {hud.map && hud.climb == null && <FloorMap map={hud.map} floor={hud.floor} midName={midName(zone)} hold={(on) => (on ? run.current?.pause() : run.current?.resume())} />}
+          </div>
         </div>
       )}
-
-      {hud?.floor && hud.floors && !end && <DepthMap floor={hud.floor} floors={hud.floors} boss={zone.bossName} midName={midName(zone)} mid={hud.wardenFloor ?? null} />}
-      {hud?.map && hud.climb == null && !end && <FloorMap map={hud.map} floor={hud.floor} midName={midName(zone)} hold={(on) => (on ? run.current?.pause() : run.current?.resume())} />}
 
       {!hud && !end && !failed && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
       {failed && (
@@ -367,10 +346,12 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
         </div>
       )}
 
-      {bag && hud && !end && (
+      {bag && hud && risk && !end && (
         <BagPanel
           gear={hud.gear}
           build={buildOf(state)}
+          risk={risk}
+          flame={flameName || 'your flame'}
           onWear={(id) => run.current?.wear(id)}
           onTakeOff={(slot) => run.current?.takeOff(slot)}
           onDrop={(id) => run.current?.dropItem(id)}
@@ -379,15 +360,26 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
       )}
 
       {stairs && !end && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/80 px-4">
-          <p className="font-pixel text-sm text-gold-300">The stairs</p>
-          <p className="mt-2 max-w-sm text-center text-xs text-slate-400">
-            You catch your breath: HP full. Go down and keep what you find if you make it, or walk back up now and keep everything you carry.
-          </p>
-          <div className="mt-4 w-full max-w-sm space-y-2">
+        <div className="run-x absolute inset-0 flex items-center justify-center gap-4 overflow-y-auto bg-ink-950/85 py-3">
+          <div className="w-full max-w-xs">
+            <p className="font-pixel text-sm text-gold-300">The stairs</p>
+            <p className="mt-2 text-xs text-slate-400">
+              You catch your breath: HP full. Go down and keep what you find if you make it, or walk back up now and keep everything you carry.
+            </p>
+            {risk && (
+              <div className="mt-3 rounded-lg bg-ink-900/90 p-2.5 ring-1 ring-ink-700">
+                <RiskLine risk={risk} flame={flameName || 'your flame'} size={24} />
+              </div>
+            )}
+          </div>
+          <div className="w-full max-w-xs space-y-2">
             {(
               [
-                ['deeper', 'Go deeper', `Floor ${(hud?.floor ?? 0) + 1}. If the Fog takes you, it takes what you wear and carry.`],
+                [
+                  'deeper',
+                  'Go deeper',
+                  `Floor ${(hud?.floor ?? 0) + 1}. ${risk?.lost.length ? `Fall, and you lose ${risk.lost.length} item${risk.lost.length === 1 ? '' : 's'}${risk.held ? ` (${flameName || 'your flame'} keeps ${nameOf(risk.held)})` : ''}.` : 'Nothing to lose yet.'}`,
+                ],
                 ['leave', 'Leave with your loot', `Home with ${hud ? hud.gear.bag.length : 0} item${hud?.gear.bag.length === 1 ? '' : 's'} in the bag. The dungeon starts over next time.`],
                 ['stay', 'Not yet', 'Look round this floor first.'],
               ] as const
@@ -424,17 +416,17 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
                 ? `You rested, and ${flameName ?? 'your flame'} burns brighter for it: take a free skill.`
                 : 'Pick a skill.'}
           </p>
-          <div className="mt-4 w-full max-w-sm space-y-2">
+          <div className="mt-4 flex w-full max-w-3xl items-stretch justify-center gap-2">
             {offer.choices.map((id) => {
               const u = getUpgrade(id),
                 next = (offer.levels[id] ?? 0) + 1;
               return (
-                <button key={id} onClick={() => pick(id)} className="flex w-full items-center gap-3 rounded-xl bg-ink-800 p-3 text-left ring-1 ring-gold-400/30 active:scale-[.98]">
+                <button key={id} onClick={() => pick(id)} className="flex max-w-[15rem] flex-1 flex-col items-center gap-2 rounded-xl bg-ink-800 p-3 text-center ring-1 ring-gold-400/30 shadow-[0_3px_0_#0b0d14] active:scale-[.98]">
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-ink-900 text-gold-300">
                     <Sprite id="skillIcon" opts={{ name: id }} size={28} label="" />
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline justify-between gap-2">
+                  <span className="min-w-0">
+                    <span className="flex flex-col items-center gap-1">
                       <span className="text-sm font-semibold text-slate-100">{u.name.replace('{flame}', flameName ?? 'Your flame')}</span>
                       <span className="font-pixel text-[8px] text-slate-400">{next === 1 ? 'NEW' : `Lv${next}`}</span>
                     </span>
@@ -451,7 +443,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/80 px-4">
           <p className="font-pixel text-sm text-gold-300">A chest!</p>
           <p className="mt-2 text-center text-xs text-slate-400">Take one. It lasts until the end of this run.</p>
-          <div className="mt-4 w-full max-w-sm space-y-2">
+          <div className="mt-4 flex w-full max-w-3xl items-stretch justify-center gap-2">
             {chest.choices.map((id) => {
               const n = chest.have[id] ?? 0;
               return (
@@ -461,13 +453,13 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
                     setChest(null);
                     run.current?.pickRelic?.(id);
                   }}
-                  className="flex w-full items-center gap-3 rounded-xl bg-ink-800 p-3 text-left ring-1 ring-gold-400/30 active:scale-[.98]"
+                  className="flex max-w-[15rem] flex-1 flex-col items-center gap-2 rounded-xl bg-ink-800 p-3 text-center ring-1 ring-gold-400/30 shadow-[0_3px_0_#0b0d14] active:scale-[.98]"
                 >
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-ink-900 text-gold-300">
                     <Sprite id="relicIcon" opts={{ name: id }} size={28} label="" />
                   </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="flex items-baseline justify-between gap-2">
+                  <span className="min-w-0">
+                    <span className="flex flex-col items-center gap-1">
                       <span className="text-sm font-semibold text-slate-100">{RELICS[id].name}</span>
                       <span className="font-pixel text-[8px] text-slate-400">{n ? `have ${n}` : 'NEW'}</span>
                     </span>
@@ -481,7 +473,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
       )}
 
       {paused && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-ink-950/85 px-8">
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 overflow-y-auto bg-ink-950/85 px-8 py-3">
           <p className="font-pixel text-sm text-slate-200">Paused</p>
           <p className="flex items-center text-xs text-slate-400">
             Sound <SoundToggle />
@@ -499,11 +491,12 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
             Leave the run
           </button>
           {dev && (
-            <div className="grid w-full max-w-xs grid-cols-2 gap-2">
+            <div className="grid w-full max-w-md grid-cols-3 gap-2">
               {(
                 [
                   ['Skip to the boss', () => run.current?.skipToBoss()],
                   ['Next floor', () => run.current?.skipFloor()],
+                  ['The stairs card', () => run.current?.askStairs()],
                   ['To the mid-boss', () => run.current?.skipToWarden()],
                   [`Theme${theme ? `: ${theme}` : ''}`, () => setTheme(run.current?.cycleTheme() ?? null)],
                   ['Win this run', () => run.current?.winNow()],
@@ -549,26 +542,138 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
   );
 }
 
-/** How deep you are: a ladder of floors down the left edge, filling as you go, the boss at the
-    bottom; an ember marks the Warden's floor. */
+/** HP, level and XP, top left: a short pixel bar each, the numbers on the HP bar, and the chest
+    items you hold under them. */
+function Vitals({ hud }: { hud: Hud }) {
+  const share = hud.hp / hud.maxHp,
+    relics = Object.entries(hud.relics ?? {}) as [RelicId, number][];
+  return (
+    <div className="w-[11.5rem] shrink-0">
+      <div className="flex items-center gap-1.5 rounded-md bg-ink-950/70 px-1.5 py-1 ring-1 ring-white/5">
+        <Sprite id="uiIcon" opts={{ name: 'heart' }} size={12} label="" className={share < 0.3 ? 'motion-safe:animate-pulse' : ''} />
+        <div className="min-w-0 flex-1">
+          <div className="relative h-3 overflow-hidden rounded-[2px] bg-ink-800 ring-1 ring-black/60" role="img" aria-label={`HP ${hud.hp} of ${hud.maxHp}`}>
+            <div
+              className={`h-full shadow-[inset_0_1px_0_rgba(255,255,255,.35),inset_0_-2px_0_rgba(0,0,0,.25)] transition-[width] duration-150 ${share < 0.3 ? 'bg-red-600' : 'bg-red-500'}`}
+              style={{ width: `${share * 100}%` }}
+            />
+            <span className="absolute inset-0 flex items-center justify-end pr-1 font-pixel text-[7px] text-white drop-shadow-[0_1px_0_#0b0d14]">
+              {hud.hp}/{hud.maxHp}
+            </span>
+          </div>
+          <div className="mt-[3px] flex items-center gap-1">
+            <span className="font-pixel text-[7px] leading-none text-sky-300">LV{hud.level}</span>
+            <div className="h-1.5 flex-1 overflow-hidden rounded-[1px] bg-ink-800 ring-1 ring-black/60" role="img" aria-label={`Level ${hud.level}, ${hud.xp} of ${hud.xpNext} XP`}>
+              <div className="h-full bg-sky-400 transition-[width] duration-150" style={{ width: `${(hud.xp / hud.xpNext) * 100}%` }} />
+            </div>
+          </div>
+        </div>
+      </div>
+      {relics.length > 0 && (
+        <div className="mt-1 flex flex-wrap items-center gap-0.5">
+          {relics.map(([id, n]) => (
+            <span key={id} className="flex items-center gap-0.5 rounded-sm bg-ink-950/70 px-0.5 py-0.5 text-gold-300" title={RELICS[id].name}>
+              <Sprite id="relicIcon" opts={{ name: id }} size={12} label={RELICS[id].name} />
+              {n > 1 && <span className="font-pixel text-[6px]">{n}</span>}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** The bag, top right: how full it is, and in red how many things a fall would cost right now
+    (a small flame when the flame would hold one of them). */
+function BagButton({ bag, risk, flame, onOpen }: { bag: number; risk: AtRisk | null; flame: string; onOpen: () => void }) {
+  const lost = risk?.lost.length ?? 0,
+    full = bag >= BAG;
+  return (
+    <button
+      aria-label={`Bag: ${bag} of ${BAG}.${lost ? ` ${lost} item${lost === 1 ? '' : 's'} at risk if you fall.` : ''}${risk?.held ? ` ${flame} keeps ${nameOf(risk.held)}.` : ''}`}
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={onOpen}
+      className={`pointer-events-auto relative flex h-9 items-center gap-1 rounded-md bg-ink-950/70 px-2 ring-1 active:scale-95 ${full ? 'text-red-300 ring-red-400/60' : 'text-slate-200 ring-white/10'}`}
+    >
+      <Backpack size={15} />
+      <span className="font-pixel text-[8px]">
+        {bag}/{BAG}
+      </span>
+      {risk?.held && <Sprite id="uiIcon" opts={{ name: 'flame' }} size={10} label="" />}
+      {lost > 0 && <span className="absolute -right-1.5 -top-1.5 min-w-[16px] rounded-sm bg-red-500 px-1 py-[3px] text-center font-pixel text-[7px] leading-none text-white ring-1 ring-ink-950">{lost}</span>}
+    </button>
+  );
+}
+
+/** An item tile with the flame's mark on it: the one item a fall leaves you (grey while the flame
+    is cold and can't hold it). */
+function Guarded({ children, on, label, cold = false }: { children: ReactNode; on: boolean; label: string; cold?: boolean }) {
+  return (
+    <span className="relative inline-grid">
+      {children}
+      {on && (
+        <span className={`absolute -right-1.5 -top-1.5 grid h-4 w-4 place-items-center rounded-sm bg-ink-950 ring-1 ${cold ? 'ring-slate-500' : 'ring-orange-400'}`}>
+          <Sprite id="uiIcon" opts={{ name: 'flame' }} size={11} label={label} className={cold ? 'opacity-50 grayscale' : ''} />
+        </span>
+      )}
+    </span>
+  );
+}
+
+/** What a fall would cost, in short: the flame's item, and what the Fog would take. The bag panel
+    and the stairs card both show it. */
+function RiskLine({ risk, flame, size = 26 }: { risk: AtRisk; flame: string; size?: number }) {
+  const Flame = flame.charAt(0).toUpperCase() + flame.slice(1);
+  return (
+    <div className="space-y-1.5 text-left">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <p className={`font-pixel text-[8px] leading-relaxed ${risk.lost.length ? 'text-red-300' : 'text-slate-400'}`}>
+          {risk.lost.length ? `At risk if you fall: ${risk.lost.length} item${risk.lost.length === 1 ? '' : 's'}` : risk.held ? 'Nothing else at risk' : 'Nothing at risk yet'}
+        </p>
+        {risk.lost.map((it) => (
+          <ItemTile key={it.id} item={it} size={size} />
+        ))}
+      </div>
+      {risk.held && (
+        <div className="flex items-center gap-2 text-[11px] text-orange-200">
+          <Guarded on label={`Kept by ${flame} if you fall`}>
+            <ItemTile item={risk.held} size={size} />
+          </Guarded>
+          <span>
+            <span style={{ color: RARITY[risk.held.rarity].color }}>{nameOf(risk.held)}</span>: kept by {flame} if you fall.
+          </span>
+        </div>
+      )}
+      {risk.cold && (
+        <div className="flex items-center gap-2 text-[11px] text-slate-300">
+          <Guarded on cold label={`${Flame} can hold it once you train`}>
+            <span className="opacity-60 grayscale">
+              <ItemTile item={risk.cold} size={size} />
+            </span>
+          </Guarded>
+          <span>
+            {Flame} can&apos;t hold your <span style={{ color: RARITY[risk.cold.rarity].color }}>{nameOf(risk.cold)}</span> yet. Train, and {flame} keeps it if you fall.
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** How deep you are: a row of floors, filling as you go, the boss at the end; an ember marks the
+    Warden's floor. */
 function DepthMap({ floor, floors, boss, midName, mid }: { floor: number; floors: number; boss: string; midName: string; mid: number | null }) {
   return (
-    <div
-      className="absolute left-1.5 top-16 flex flex-col items-center gap-[3px] rounded-lg bg-ink-950/50 px-1 py-1.5"
-      role="img"
-      aria-label={`Floor ${floor} of ${floors}, ${mid ? `${midName.replace(/^The/, 'the')} on floor ${mid}, ` : ''}${boss} at the bottom.`}
-    >
+    <div className="flex items-center gap-[3px]" role="img" aria-label={`Floor ${floor} of ${floors}, ${mid ? `${midName.replace(/^The/, 'the')} on floor ${mid}, ` : ''}${boss} at the bottom.`}>
       {Array.from({ length: floors }, (_, i) => {
-        const n = i + 1,
-          warden = n === mid;
-        return (
-          <div key={n} className="relative flex items-center">
-            <span className={`block h-1.5 w-4 rounded-[1px] ${n === floor ? 'animate-pulse bg-white ring-1 ring-gold-300' : n < floor ? 'bg-gold-400/70' : 'bg-ink-700/90'}`} />
-            {warden && <Sprite id="markIcon" opts={{ name: 'warden' }} size={14} label={midName} className={`absolute -right-4 ${n < floor ? 'opacity-40' : ''}`} />}
-          </div>
+        const n = i + 1;
+        return n === mid ? (
+          <Sprite key={n} id="markIcon" opts={{ name: 'warden' }} size={11} label={midName} className={n < floor ? 'opacity-40' : n === floor ? 'motion-safe:animate-pulse' : ''} />
+        ) : (
+          <span key={n} className={`block h-2 w-1.5 rounded-[1px] ${n === floor ? 'bg-white ring-1 ring-gold-300 motion-safe:animate-pulse' : n < floor ? 'bg-gold-400/80' : 'bg-ink-600/90'}`} />
         );
       })}
-      <Sprite id="markIcon" opts={{ name: 'boss' }} size={14} label="The boss" className={floor === floors ? 'animate-pulse' : 'opacity-70'} />
+      <Sprite id="markIcon" opts={{ name: 'boss' }} size={11} label="The boss" className={floor === floors ? 'motion-safe:animate-pulse' : 'opacity-70'} />
     </div>
   );
 }
@@ -639,14 +744,14 @@ function FloorMap({ map, floor, midName, hold }: { map: MiniMap; floor: number; 
         type="button"
         onPointerDown={(e) => e.stopPropagation()}
         onClick={() => toggle(!open)}
-        className="pointer-events-auto absolute right-1.5 top-16 rounded-lg bg-ink-950/60 p-1"
+        className="pointer-events-auto rounded-md bg-ink-950/60 p-1 ring-1 ring-white/5"
         aria-label={`Map of floor ${floor}: ${map.cells.filter((c) => c.been).length} rooms explored. Tap to open it.`}
         aria-expanded={open}
       >
-        {draw(9, 4, false)}
+        {draw(8, 3, false)}
       </button>
       {open && (
-        <div onPointerDown={(e) => e.stopPropagation()} onClick={() => toggle(false)} className="pointer-events-auto absolute inset-0 z-10 flex animate-fadein items-center justify-center bg-ink-950/70">
+        <div onPointerDown={(e) => e.stopPropagation()} onClick={() => toggle(false)} className="pointer-events-auto fixed inset-0 z-10 flex animate-fadein items-center justify-center bg-ink-950/70">
           <div className="max-h-full max-w-full overflow-auto rounded-xl bg-ink-950/95 p-3 ring-1 ring-gold-400/40">
             <p className="font-pixel text-[9px] text-gold-300">Floor {floor}</p>
             <div className="mt-2">{draw(44, 12, true)}</div>
@@ -662,7 +767,7 @@ function FloorMap({ map, floor, midName, hold }: { map: MiniMap; floor: number; 
     red once it's past half). */
 function BossBar({ name, hp, max, ember }: { name: string; hp: number; max: number; ember?: 'warm' | 'hot' }) {
   return (
-    <div className="mx-auto mt-2 max-w-xs">
+    <div className="mx-auto mt-1.5 w-full max-w-xs">
       <p className={`text-center font-pixel text-[9px] ${ember ? 'text-orange-300' : 'text-violet-300'}`}>{name}</p>
       <div className={`mt-1 h-2.5 overflow-hidden rounded-sm bg-ink-800/90 ring-1 ${ember ? 'ring-orange-500/50' : 'ring-violet-500/40'}`}>
         <div className={`h-full transition-[width] duration-150 ${ember === 'hot' ? 'bg-red-500' : ember ? 'bg-orange-500' : 'bg-violet-500'}`} style={{ width: `${(hp / max) * 100}%` }} />
@@ -677,7 +782,7 @@ function AbilityButton({ id, ready, dodge, onUse, onDodge }: { id: AbilityId; re
   const up = ready >= 1,
     dodgeUp = dodge >= 1;
   return (
-    <div className="safe-bottom absolute bottom-6 right-5 flex items-end gap-3">
+    <div className="run-b run-r absolute flex items-end gap-3">
       <div className="mb-1 flex flex-col items-center">
         <button
           aria-label={`Dodge, every ${DODGE.cd} s`}
@@ -814,81 +919,113 @@ function Results({ state, zone, end, broken, gear, onAgain, onLeave }: { state: 
   );
 }
 
-/** The bag over the run: what you wear (three slots) and what you carry. Tap an item to see it,
-    then wear it, take it off or leave it on the floor. */
-function BagPanel({ gear, build, onWear, onTakeOff, onDrop, onClose }: { gear: Hud['gear']; build: ReturnType<typeof buildOf>; onWear: (id: string) => void; onTakeOff: (slot: ItemSlot) => void; onDrop: (id: string) => void; onClose: () => void }) {
+/** The bag over the run: what you wear (three slots) and what you carry, with the flame's mark on
+    the item a fall would leave you and what a fall would cost. Tap an item to see it, then wear it,
+    take it off or leave it on the floor. */
+function BagPanel({ gear, build, risk, flame, onWear, onTakeOff, onDrop, onClose }: { gear: Hud['gear']; build: ReturnType<typeof buildOf>; risk: AtRisk; flame: string; onWear: (id: string) => void; onTakeOff: (slot: ItemSlot) => void; onDrop: (id: string) => void; onClose: () => void }) {
   const [pick, setPick] = useState<{ from: 'worn' | 'bag'; id: string } | null>(null);
   const all = [...Object.values(gear.worn), ...gear.bag].filter((x): x is Item => !!x),
     item = pick && all.find((x) => x.id === pick.id);
   const wornNow = item && gear.worn[item.slot]?.id === item.id;
+  const kept = `Kept by ${flame} if you fall`,
+    fate = (it: Item) =>
+      it.starter
+        ? { text: 'Starter kit: it always comes home.', cls: 'text-slate-400' }
+        : it.id === risk.held?.id
+          ? { text: `${kept}.`, cls: 'text-orange-200' }
+          : it.id === risk.cold?.id
+            ? { text: `At risk if you fall. Train, and ${flame} holds it.`, cls: 'text-red-300' }
+            : { text: 'At risk if you fall. Leave by the stairs to keep it.', cls: 'text-red-300' };
   return (
-    <div onPointerDown={(e) => e.stopPropagation()} className="pointer-events-auto absolute inset-0 z-10 flex animate-fadein items-center justify-center bg-ink-950/85 p-3">
-      <div className="flex max-h-full w-full max-w-2xl gap-3 overflow-auto rounded-xl bg-ink-950/95 p-3 ring-1 ring-gold-400/40">
+    <div onPointerDown={(e) => e.stopPropagation()} className="run-x pointer-events-auto absolute inset-0 z-10 flex animate-fadein items-center justify-center bg-ink-950/85 py-2">
+      <div className="flex max-h-full w-full max-w-3xl gap-3 overflow-auto rounded-xl bg-ink-950/95 p-3 ring-1 ring-gold-400/40">
         <div className="min-w-0 flex-1">
-          <p className="font-pixel text-[9px] text-gold-300">Worn</p>
-          <div className="mt-2 flex gap-2">
-            {ITEM_SLOTS.map((slot) => {
-              const it = gear.worn[slot];
-              return (
-                <button key={slot} onClick={() => it && setPick({ from: 'worn', id: it.id })} className={`flex flex-col items-center gap-1 rounded-lg p-1 ${pick?.id === it?.id && it ? 'bg-ink-800' : ''}`} aria-label={it ? nameOf(it) : `${SLOT_NAME[slot]}: empty`}>
-                  {it ? <ItemTile item={it} size={44} /> : <span className="grid h-11 w-11 place-items-center rounded-lg border border-dashed border-ink-700 text-[9px] text-slate-600">empty</span>}
-                  <span className="text-[9px] text-slate-500">{SLOT_NAME[slot]}</span>
-                </button>
-              );
-            })}
+          <div className="flex items-start gap-4">
+            <div>
+              <p className="font-pixel text-[9px] text-gold-300">Worn</p>
+              <div className="mt-2 flex gap-1.5">
+                {ITEM_SLOTS.map((slot) => {
+                  const it = gear.worn[slot],
+                    held = !!it && it.id === risk.held?.id;
+                  return (
+                    <button key={slot} data-bag-item={it ? '' : undefined} onClick={() => it && setPick({ from: 'worn', id: it.id })} className={`flex flex-col items-center gap-1 rounded-lg p-1 ${pick?.id === it?.id && it ? 'bg-ink-800' : ''}`} aria-label={it ? `${nameOf(it)}${held ? `. ${kept}.` : ''}` : `${SLOT_NAME[slot]}: empty`}>
+                      {it ? (
+                        <Guarded on={held} label={kept}>
+                          <ItemTile item={it} size={40} />
+                        </Guarded>
+                      ) : (
+                        <span className="grid h-10 w-10 place-items-center rounded-lg border border-dashed border-ink-700 text-[9px] text-slate-600">empty</span>
+                      )}
+                      <span className={`text-[9px] ${held ? 'text-orange-300' : 'text-slate-500'}`}>{held ? 'Kept' : SLOT_NAME[slot]}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="font-pixel text-[9px] text-gold-300">
+                Bag {gear.bag.length}/{BAG}
+              </p>
+              <div className="mt-2 grid grid-cols-4 gap-1.5">
+                {Array.from({ length: BAG }, (_, i) => {
+                  const it = gear.bag[i];
+                  return it ? (
+                    <button key={it.id} data-bag-item="" onClick={() => setPick({ from: 'bag', id: it.id })} className={`grid place-items-center rounded-lg p-1 ${pick?.id === it.id ? 'bg-ink-800' : ''}`} aria-label={nameOf(it)}>
+                      <ItemTile item={it} size={36} dim={shortOf(it, build) > 0} />
+                    </button>
+                  ) : (
+                    <span key={i} className="mx-auto my-1 h-9 w-9 rounded-lg border border-dashed border-ink-800" />
+                  );
+                })}
+              </div>
+            </div>
           </div>
-          <p className="mt-3 font-pixel text-[9px] text-gold-300">
-            Bag {gear.bag.length}/{BAG}
-          </p>
-          <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-8">
-            {Array.from({ length: BAG }, (_, i) => {
-              const it = gear.bag[i];
-              return it ? (
-                <button key={it.id} onClick={() => setPick({ from: 'bag', id: it.id })} className={`grid place-items-center rounded-lg p-1 ${pick?.id === it.id ? 'bg-ink-800' : ''}`} aria-label={nameOf(it)}>
-                  <ItemTile item={it} size={40} dim={shortOf(it, build) > 0} />
-                </button>
-              ) : (
-                <span key={i} className="mx-auto h-10 w-10 rounded-lg border border-dashed border-ink-800" />
-              );
-            })}
+          <div className="mt-2 rounded-lg bg-ink-900 p-2 ring-1 ring-ink-700">
+            <RiskLine risk={risk} flame={flame} size={22} />
           </div>
-          <button onClick={onClose} className="mt-3 w-full rounded-xl bg-gold-400 py-2.5 font-pixel text-[10px] text-ink-950">
+          <button onClick={onClose} className="mt-2 w-full rounded-lg bg-gold-400 py-2 font-pixel text-[9px] text-ink-950 shadow-[0_3px_0_#b45309] active:translate-y-0.5 active:shadow-none">
             Back to the run
           </button>
         </div>
-        <div className="w-60 shrink-0">
+        <div className="w-56 shrink-0">
           {item ? (
-            <ItemCard item={item} build={build}>
-              {wornNow ? (
-                !item.starter && (
-                  <button onClick={() => onTakeOff(item.slot)} disabled={gear.bag.length >= BAG} className="flex-1 rounded-lg bg-ink-700 py-2 text-xs text-slate-200 disabled:opacity-40">
-                    Take off
-                  </button>
-                )
-              ) : (
-                <>
-                  <button onClick={() => onWear(item.id)} disabled={shortOf(item, build) > 0} className="flex-1 rounded-lg bg-gold-400 py-2 text-xs font-semibold text-ink-950 disabled:bg-ink-700 disabled:text-slate-500">
-                    Wear
-                  </button>
-                  <button
-                    onClick={() => {
-                      onDrop(item.id);
-                      setPick(null);
-                    }}
-                    className="flex-1 rounded-lg bg-ink-700 py-2 text-xs text-slate-200"
-                  >
-                    Drop
-                  </button>
-                </>
-              )}
-            </ItemCard>
+            <>
+              <ItemCard item={item} build={build}>
+                {wornNow ? (
+                  !item.starter && (
+                    <button onClick={() => onTakeOff(item.slot)} disabled={gear.bag.length >= BAG} className="flex-1 rounded-lg bg-ink-700 py-2 text-xs text-slate-200 disabled:opacity-40">
+                      Take off
+                    </button>
+                  )
+                ) : (
+                  <>
+                    <button onClick={() => onWear(item.id)} disabled={shortOf(item, build) > 0} className="flex-1 rounded-lg bg-gold-400 py-2 text-xs font-semibold text-ink-950 disabled:bg-ink-700 disabled:text-slate-500">
+                      Wear
+                    </button>
+                    <button
+                      onClick={() => {
+                        onDrop(item.id);
+                        setPick(null);
+                      }}
+                      className="flex-1 rounded-lg bg-ink-700 py-2 text-xs text-slate-200"
+                    >
+                      Drop
+                    </button>
+                  </>
+                )}
+              </ItemCard>
+              <div className={`mt-2 flex items-center gap-1.5 text-[11px] ${fate(item).cls}`}>
+                {item.id === risk.held?.id && <Sprite id="uiIcon" opts={{ name: 'flame' }} size={11} label="" />}
+                {fate(item).text}
+              </div>
+            </>
           ) : (
             <p className="rounded-xl bg-ink-800 p-3 text-xs text-slate-400">
-              Tap an item to see it. Items need stat points to wear, and points come from workouts. Die down here and the Fog takes what you wear and carry; leave by the stairs to keep it.
+              Tap an item to see it. Items need stat points to wear, and points come from workouts. Fall down here and the Fog takes what you wear and carry; leave by the stairs to keep it.
             </p>
           )}
           {item && !wornNow && gear.worn[item.slot] && (
-            <p className="mt-2 text-[10px] text-slate-500">
+            <p className="mt-1 text-[10px] text-slate-500">
               Now: <span style={{ color: RARITY[gear.worn[item.slot]!.rarity].color }}>{nameOf(gear.worn[item.slot]!)}</span>
             </p>
           )}

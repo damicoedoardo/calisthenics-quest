@@ -93,6 +93,11 @@ function recap(run: Run): RunEnd {
     sparks 16, puffs 72, effects 3); the caps only stop a freak pile-up from stalling a slow phone. */
 const FX_CAP = { bits: 300, sparks: 200, puffs: 160, fading: 80 };
 
+/** How the camera fills the screen (`fitScreen`): `edge` world points of floor past each wall,
+    `hud` screen pixels kept above the top wall for the HUD's bars, and at least `see` world points
+    of the room's height on screen, so a shot from the far wall is seen coming. */
+const FIT = { edge: 12, hud: 30, see: 300 };
+
 /** The system asks for less motion: no hit-stop and no buzz. */
 function reducedMotion(): boolean {
   try {
@@ -199,6 +204,8 @@ export interface RunHandle {
   resume: () => void;
   skipToBoss: () => void;
   skipFloor: () => void;
+  /** Developer mode: show the stairs card now. */
+  askStairs: () => void;
   skipToWarden: () => void;
   /** Developer mode: show the next zone's dungeon theme; returns its name. */
   cycleTheme: () => string;
@@ -564,28 +571,29 @@ class DungeonScene extends Phaser.Scene {
     else this.waiting.push(f);
   }
 
-  /** The screen filled: the room's whole height on a phone held sideways, the camera following
-      you along it to the door on the right. The HUD floats over the top. */
+  /** The screen filled, edge to edge: the room covers the whole screen both ways (no black bands),
+      and the camera follows you inside it, up and down as well as along to the door on the right.
+      `FIT` keeps it readable: never zoomed in so far that less than `FIT.see` of the room's height
+      shows. The HUD floats over the room. */
   private fitScreen() {
     const { width, height } = this.scale.gameSize,
       cam = this.cameras.main,
       // On screen the room is as wide as the engine's is tall, and as tall as it is wide.
-      { w: rh, h: rw } = this.run.area;
-    // Room above the top wall for the HUD, in screen pixels.
-    const hudPx = 44;
-    const zoom = Math.min((height - hudPx) / (ROOM.w + 60), width / 640);
+      { w: rh, h: rw } = this.run.area,
+      { edge, hud, see } = FIT;
+    // As big as it takes to cover the screen both ways, but always showing `see` of the height.
+    const cover = Math.max(width / (rw + 2 * edge), (height - hud) / (rh + 2 * edge)),
+      zoom = Math.min(cover, height / see);
     cam.setZoom(zoom);
     const vw = width / zoom,
       vh = height / zoom,
-      top = hudPx / zoom,
-      bottom = 8 / zoom;
-    const ch = rh + top + bottom,
-      bh = Math.max(ch, vh),
-      // A little floor past each end, so the walls never sit hard on the screen's edge.
-      bw = Math.max(rw + 24, vw);
-    cam.setBounds(rw / 2 - bw / 2, ch >= vh ? -top : -top - (vh - ch) / 2, bw, bh);
+      // A strip above the top wall for the HUD's bars, in world points.
+      top = edge + hud / zoom,
+      bw = Math.max(rw + 2 * edge, vw),
+      bh = Math.max(rh + top + edge, vh);
+    cam.setBounds(rw / 2 - bw / 2, rh / 2 - bh / 2 - (top - edge) / 2, bw, bh);
     // You sit a little left on the screen: what's coming is ahead, to the right.
-    cam.setFollowOffset(-Math.min(120, vw * 0.12), 0);
+    cam.setFollowOffset(-Math.min(90, vw * 0.1), 0);
   }
 
   /** A new room: its size, its floor, its walls and what stands on it. */
@@ -2434,6 +2442,13 @@ class DungeonScene extends Phaser.Scene {
     for (const e of takeEvents(this.run)) this.react(e);
   }
 
+  /** Developer mode: the stairs card, here and now (to look at it without clearing a floor). */
+  askStairs() {
+    this.whenBuilt(() => {
+      if (!this.run.over && !this.run.boss) this.run.stairsAsk = true;
+    });
+  }
+
   skipFloor() {
     this.whenBuilt(() => {
       skipFloor(this.run);
@@ -2470,6 +2485,7 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
     resume: () => scene.setPaused(false),
     skipToBoss: () => scene.skipToBoss(),
     skipFloor: () => scene.skipFloor(),
+    askStairs: () => scene.askStairs(),
     skipToWarden: () => scene.skipToWarden(),
     cycleTheme: () => scene.cycleTheme(),
     pickRelic: (id) => scene.pickRelic(id),
