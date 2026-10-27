@@ -254,7 +254,7 @@ export const PLATEAU: Chapter = {
       id: 'ch4-victory',
       when: { beaten: 4 },
       lines: [
-        { who: 'plateau', text: '...Same. ...As...' },
+        { who: 'plateau-breaking', text: '...Same. ...As...' },
         { who: 'narrator', text: 'The Plateau shatters, all at once.', shot: { shake: 'big' }, pause: 0.6 },
         { who: 'narrator', text: 'Inside, the stone is full of cracks. Fine ones, packed close, like the rings in a tree.', pause: 1.4, film: true, music: 'none' },
         { who: 'narrator', text: 'Every one of them is a day it looked like nothing happened.', pace: 'slow', pause: 1.2, film: true },

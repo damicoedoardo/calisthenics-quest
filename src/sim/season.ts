@@ -1,7 +1,7 @@
 import { finishSession, initialState, levelInfo, logMaxTest, todaysQuest, totalXp, type Checkin, type GameState, type Letter, type Rir } from '@/lib/game';
 import { recordRun, zoneStatus, ZONES } from '@/lib/fog';
 import { dayKey, daysApart, isRestDay } from '@/lib/days';
-import { pendingScenes, renderLines, speakerName, storyState, storyWords } from '@/story/engine';
+import { MAX_SCENES_AT_ONCE, sawScene, sceneMoment, scenesToPlay, renderLines, speakerName, storyState, storyWords } from '@/story/engine';
 import { CALLBACKS } from '@/story/daily/flame-lines';
 import { afterWorkoutLine, canSitByFire, dayQuote, fireLine, marginNote, restTruth, todayMoment, todayPage, updateTodayPage, withTodayPage } from '@/story/daily';
 import { DEFAULT_FLAME_NAME, flameStage } from '@/story/flame';
@@ -137,22 +137,28 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
     }
   };
 
+  /** Scenes played at each story moment, to check none ever gets more than the cap. */
+  const perMoment = new Map<string, number>();
   /** Plays every scene that's due, like the app does when you're back on the main screen. */
   const playScenes = (when: string) => {
     let count = 0;
     for (let guard = 0; guard < 20; guard++) {
-      const scene = pendingScenes(state, now)[0];
+      const scene = scenesToPlay(state, now)[0];
       if (!scene) break;
       count++;
+      const moment = sceneMoment(state, now);
+      perMoment.set(moment, (perMoment.get(moment) ?? 0) + 1);
+      if (perMoment.get(moment)! > MAX_SCENES_AT_ONCE) note('problem', `more than ${MAX_SCENES_AT_ONCE} scenes at one moment (${scene.id})`);
       played.push(scene.id);
       checkLines(scene, scene.lines);
       note('scene', `${scene.id} (${when})`);
-      const seen = [...state.seenScenes, scene.id];
+      const seen = sawScene(state, scene.id, now).seenScenes;
+      const mark = sawScene(state, scene.id, now).sceneMark;
       const ask = scene.ask;
       if (ask?.kind === 'name') {
         const name = kind.flame || DEFAULT_FLAME_NAME;
         note('ask', `names the flame ${name}`);
-        state = { ...state, seenScenes: seen, profile: { ...state.profile, flame: name } };
+        state = { ...state, sceneMark: mark, seenScenes: seen, profile: { ...state.profile, flame: name } };
         checkLines(scene, ask.after);
       } else if (ask?.kind === 'choice') {
         const how = kind.answers ?? 'first';
@@ -161,16 +167,16 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
         const choice = how === 'skip' || writes ? undefined : ask.choices[0];
         const value = writes ? 'my own words here' : (choice?.value ?? '');
         note('ask', `${ask.id}: ${how === 'skip' ? 'skipped' : `"${value || '(no answer)'}"`}`);
-        state = { ...state, seenScenes: seen, answers: how === 'skip' ? state.answers : { ...state.answers, [ask.id]: value } };
+        state = { ...state, sceneMark: mark, seenScenes: seen, answers: how === 'skip' ? state.answers : { ...state.answers, [ask.id]: value } };
         const after = how === 'skip' ? undefined : (choice?.after ?? ask.after);
         if (after) checkLines(scene, after);
       } else if (ask?.kind === 'class') {
         if (state.profile.classId) note('problem', `${scene.id} asks for a class, but one was already picked`);
         const id = kind.class ?? 'warrior';
         note('ask', `picks the ${id} class`);
-        state = { ...state, seenScenes: seen, profile: { ...state.profile, classId: id } };
+        state = { ...state, sceneMark: mark, seenScenes: seen, profile: { ...state.profile, classId: id } };
       } else {
-        state = { ...state, seenScenes: seen };
+        state = { ...state, sceneMark: mark, seenScenes: seen };
       }
     }
     // A chapter's ending and the next one's start make two; more than three is a pile-up.
