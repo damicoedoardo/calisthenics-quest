@@ -28,6 +28,11 @@ import { drawSeeker } from './characters/seeker';
 import { drawSplitling, drawSplitter, drawSplitterPop } from './characters/splitter';
 import { drawShade } from './characters/shade';
 import { drawWarden } from './characters/warden';
+import { drawLanternMid } from './characters/lanternMid';
+import { drawForemanMid } from './characters/foremanMid';
+import { drawSandGolemMid } from './characters/sandGolemMid';
+import { drawWhisperMid } from './characters/whisperMid';
+import { drawGaleMid } from './characters/galeMid';
 import { drawExercise, type ExerciseOpts } from './characters/exercise';
 import { ZONE_PLACE, dress, edged } from './characters/zoned';
 import { ABILITY_ICONS, DAY_ICONS, KEEPSAKE_ICONS, MARK_ICONS, RELIC_ICONS, SKILL_ICONS, type DayKind } from './characters/icons';
@@ -175,6 +180,12 @@ export const SPRITES = {
   splitterPop: drawn<NoOpts>({ label: () => 'The Splitter splitting', defaults: {}, clips: () => ({ idle: 'pop' }), draw: drawSplitterPop }),
   shade: zoned('Shade', drawShade),
   warden: creature('The Warden of the Ashes', drawWarden, 'lunge'),
+  lanternMid: creature('The Drowned Lantern', drawLanternMid, 'lunge'),
+  foremanMid: creature('The Foreman', drawForemanMid, 'lunge'),
+  sandGolemMid: creature('The Sand Golem', drawSandGolemMid(false), 'lunge'),
+  sandGolemMidStone: creature('The Sand Golem, set to stone', drawSandGolemMid(true), 'lunge'),
+  whisperMid: creature('The Whisper', drawWhisperMid, 'lunge'),
+  galeMid: creature('The Gale', drawGaleMid, 'lunge'),
   // The dungeon bosses. The Mirror is you in glass (pass the player's look and gear, like the hero).
   // app icons, hand-drawn at 16x16 (keepsakes) and 12x12 (Book of Days)
   keepsake: drawn<KeepsakeOpts>({

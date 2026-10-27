@@ -11,6 +11,8 @@ export type SheetKey = 'hero' | 'heroAttack' | 'ember' | 'hollow' | 'slime' | 'w
   | 'ram' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade'
   // the Splitter splitting (played once), and the mid-boss
   | 'splitterPop' | 'warden'
+  // the other zones' mid-bosses (the Sand Golem also set to stone)
+  | 'lanternMid' | 'foremanMid' | 'sandGolemMid' | 'sandGolemMidStone' | 'whisperMid' | 'galeMid'
   | BossSheetKey;
 /** The dungeon bosses: idle, attack (played once), stages for the Knight and the Plateau, and the
     Mirror's and the Hollow's ends (played once). A run only builds its own zone's (FogRun.tsx). */
