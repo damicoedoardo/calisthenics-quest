@@ -311,3 +311,25 @@ describe('scenes at one moment', () => {
   });
 });
 
+describe('the Fog bosses', () => {
+  it('give every zone a voice: an entrance, a line per stage, an end, and three or four short taunts', () => {
+    for (const c of CHAPTERS) {
+      const l = c.fog.lines;
+      const all = [l.enter, ...l.stages, l.end, ...l.taunts];
+      expect(l.stages.length, c.fog.name).toBeGreaterThan(0);
+      expect(l.taunts.length, c.fog.name).toBeGreaterThanOrEqual(3);
+      expect(l.taunts.length, c.fog.name).toBeLessThanOrEqual(4);
+      // Shown over gameplay: short, general, and only words every player has or can skip.
+      for (const t of all) {
+        expect(t.trim(), c.fog.name).not.toBe('');
+        expect(t.length, t).toBeLessThanOrEqual(44);
+        expect(t.replace(/\{\w+\}/g, ''), t).not.toMatch(/\d/);
+        for (const w of tokens(t)) expect(['voice', 'flame'], t).toContain(w);
+      }
+      // A taunt may be the player's own line, but the ones always said must be enough.
+      expect(l.taunts.filter((t) => !tokens(t).length).length, c.fog.name).toBeGreaterThanOrEqual(3);
+      expect(tokens(l.enter).length + tokens(l.end).length, c.fog.name).toBe(0);
+    }
+  });
+});
+

@@ -23,6 +23,13 @@ export const PLATEAU: Chapter = {
     dmg: 1.8,
     ground: '#1c1712',
     fog: '#4a3a26',
+    // stages: [first cracks (art stage 1), breaking (art stage 2)]
+    lines: {
+      enter: '...Same. ...As. ...Yesterday.',
+      stages: ['...Still. ...Same.', '...Same...? ...Same.'],
+      end: '...Not. ...The same.',
+      taunts: ['...Nothing. ...Changes.', '...Why. ...Bother.', '...Flat. ...Forever.', '...You. ...Again?'],
+    },
   },
   scenes: [
     {

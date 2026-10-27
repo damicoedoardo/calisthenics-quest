@@ -23,6 +23,13 @@ export const VILLAGE: Chapter = {
     dmg: 1.5,
     ground: '#1c1916',
     fog: '#4b4038',
+    // stages: [plates falling (art stage 1), helm off (art stage 2)]
+    lines: {
+      enter: "Do it properly, or don't do it.",
+      stages: ['Sloppy. That still counts?', '...Why does it keep working?'],
+      end: '...You kept going. Even badly.',
+      taunts: ["Half a workout? Don't bother.", "If it's not perfect, why try?", 'Everyone saw that.', 'Real warriors never rest.'],
+    },
   },
   scenes: [
     {

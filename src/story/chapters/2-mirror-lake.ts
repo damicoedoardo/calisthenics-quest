@@ -23,6 +23,13 @@ export const MIRROR_LAKE: Chapter = {
     dmg: 1.25,
     ground: '#101826',
     fog: '#253a5c',
+    // stages: [the Mirror splits into images of itself]
+    lines: {
+      enter: 'Look at you. I never got tired.',
+      stages: ['Which one is me? Which one was you?'],
+      end: "...You're further than week one.",
+      taunts: ['You used to be faster.', 'Remember how easy it was?', 'Look how much you lost.', 'I never needed a warm-up.'],
+    },
   },
   scenes: [
     {
