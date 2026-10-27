@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CircleDot, Copy, Flame, FlameKindling, Heart, Magnet, Pause, Shield, Skull, Sparkles, Sword, Wind, Zap, type LucideIcon } from 'lucide-react';
+import { Pause } from 'lucide-react';
 import { gearOf, type GameState } from '@/lib/game';
 import { getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
@@ -24,18 +24,6 @@ interface Props {
   onLeave: () => void;
 }
 
-const ICONS: Record<UpgradeId, LucideIcon> = {
-  power: Sword,
-  haste: Zap,
-  multi: Copy,
-  flame: Flame,
-  spark: Sparkles,
-  nova: CircleDot,
-  swift: Wind,
-  vital: Heart,
-  magnet: Magnet,
-  guard: Shield,
-};
 
 /* Zone 1 is a dungeon (src/game/dungeon); the other zones still play the survive-the-waves run
    (src/game/run.ts) until their dungeons are built. Both report through the same HUD. */
@@ -314,12 +302,11 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
           <div className="mt-4 w-full max-w-sm space-y-2">
             {offer.choices.map((id) => {
               const u = getUpgrade(id),
-                Icon = ICONS[id],
                 next = (offer.levels[id] ?? 0) + 1;
               return (
                 <button key={id} onClick={() => pick(id)} className="flex w-full items-center gap-3 rounded-xl bg-ink-800 p-3 text-left ring-1 ring-gold-400/30 active:scale-[.98]">
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-ink-900 text-gold-300">
-                    <Icon size={22} />
+                    <Sprite id="skillIcon" opts={{ name: id }} size={28} label="" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
@@ -456,11 +443,11 @@ function DepthMap({ floor, floors, room, rooms, boss, mid }: { floor: number; fl
                 <span className={`block h-1.5 w-4 rounded-[1px] ${n < floor ? 'bg-gold-400/70' : 'bg-ink-700/90'}`} />
               )}
             </div>
-            {warden && <FlameKindling size={10} strokeWidth={2.5} className={`absolute -right-3.5 ${n < floor ? 'text-orange-400/40' : 'text-orange-400'}`} />}
+            {warden && <Sprite id="markIcon" opts={{ name: 'warden' }} size={14} label="The Warden" className={`absolute -right-4 ${n < floor ? 'opacity-40' : ''}`} />}
           </div>
         );
       })}
-      <Skull size={14} className={`mt-0.5 ${floor === floors ? 'animate-pulse text-red-400' : 'text-red-400/70'}`} />
+      <Sprite id="markIcon" opts={{ name: 'boss' }} size={14} label="The boss" className={floor === floors ? 'animate-pulse' : 'opacity-70'} />
     </div>
   );
 }
@@ -540,7 +527,7 @@ function Recap({ end, broken }: { end: RunEnd; broken: ReturnType<typeof records
       </div>
       {end.warden !== null && end.warden !== undefined && (
         <p className={`mt-3 flex items-center gap-2 text-left text-xs ${end.warden ? 'text-orange-300' : 'text-slate-500'}`}>
-          <FlameKindling size={14} />
+          <Sprite id="markIcon" opts={{ name: 'warden' }} size={14} label="" className={end.warden ? '' : 'opacity-40 grayscale'} />
           {end.warden ? `${WARDEN_NAME} beaten` : `${WARDEN_NAME}: not yet`}
         </p>
       )}

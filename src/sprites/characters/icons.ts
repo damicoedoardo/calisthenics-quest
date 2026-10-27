@@ -1,4 +1,5 @@
 import type { AbilityId, RelicId } from '@/game/dungeon/engine';
+import type { UpgradeId } from '@/lib/fog';
 import type { PixelArt } from './pixel';
 
 /* Small hand-drawn icons for the app around the game: one keepsake per Fog boss (Hero tab), and
@@ -536,6 +537,179 @@ export const ABILITY_ICONS: Record<AbilityId | 'dodge', PixelArt> = {
       '...kkkkkk...',
       '..kSSSSSSk..',
       '...kkkkkk...',
+    ],
+    palette: KIT,
+  },
+};
+
+/** The run's level-up skills, 12x12; a few share a relic's drawing because they do the same thing. */
+export const SKILL_ICONS: Record<UpgradeId, PixelArt> = {
+  // a heavy hammer
+  power: {
+    rows: [
+      '.kkkkkkkk...',
+      'kWllllllmk..',
+      'kllllllmmdk.',
+      'kmmmmmmmmdk.',
+      '.kkkkbkkkk..',
+      '.....kbk....',
+      '.....kbk....',
+      '.....kbk....',
+      '.....kbk....',
+      '.....kBk....',
+      '.....kBk....',
+      '......k.....',
+    ],
+    palette: KIT,
+  },
+  haste: RELIC_ICONS.quick,
+  // two shots where there was one
+  multi: {
+    rows: [
+      '............',
+      '..kkk.......',
+      '.kSWSk......',
+      'kSWWWsk.....',
+      'kSWWWsk.....',
+      '.ksssk.kkk..',
+      'S.kkk.kSWSk.',
+      '.....kSWWWsk',
+      '..S.SkSWWWsk',
+      '......ksssk.',
+      '.......kkk..',
+      '............',
+    ],
+    palette: KIT,
+  },
+  // a flame
+  flame: {
+    rows: [
+      '.....k......',
+      '....kyk.....',
+      '....kyk..k..',
+      '...kyoyk.kk.',
+      '..kyoWoykyk.',
+      '..koWWWoyk..',
+      '.kroWWWWok..',
+      '.kroWWWWork.',
+      '.kroyWWyork.',
+      '..kroyyork..',
+      '...krrrrk...',
+      '....kkkk....',
+    ],
+    palette: KIT,
+  },
+  // lightning jumping between three
+  spark: {
+    rows: [
+      '.......kkk..',
+      '......kSSk..',
+      '.....kSWk...',
+      '....kSWk.k..',
+      '...kSWWkkSk.',
+      '..kSWWSSWk..',
+      '.kkkkSWkk...',
+      '....kSk.....',
+      '...kSk..k...',
+      '..kSk..kSk..',
+      '..kk..kSWk..',
+      '.......kk...',
+    ],
+    palette: KIT,
+  },
+  // a burst of ash light
+  nova: {
+    rows: [
+      '.....kk.....',
+      '..k..kgk..k.',
+      '.kgk.kgk.kgk',
+      '..kgkkgkkgk.',
+      '...kgGGGgk..',
+      'kkkgGWWWGgkk',
+      'kggGWWWWGggk',
+      '.kkgGWWGgkk.',
+      '...kgGGgk...',
+      '..kgk.kkgk..',
+      '.kgk...kkgk.',
+      '..k......k..',
+    ],
+    palette: KIT,
+  },
+  swift: RELIC_ICONS.boots,
+  // a heart, a white plus
+  vital: {
+    rows: [
+      '............',
+      '..kkk..kkk..',
+      '.kpRRkkRRrk.',
+      'kpRRRWWRRrrk',
+      'kpRRRWWRRrrk',
+      'kRRWWWWWWrrk',
+      '.kRWWWWWWrk.',
+      '..kRRWWrrk..',
+      '...kRWWrk...',
+      '....kRrk....',
+      '.....kk.....',
+      '............',
+    ],
+    palette: KIT,
+  },
+  // a horseshoe magnet
+  magnet: {
+    rows: [
+      '...kkkkkk...',
+      '..kRRRRRRk..',
+      '.kRpRRRRRrk.',
+      'kRpRkkkkRRrk',
+      'kRRk....kRrk',
+      'kRRk....kRrk',
+      'kRRk....kRrk',
+      'kkkk....kkkk',
+      'kWlk....kWlk',
+      'klmk....klmk',
+      'kkkk....kkkk',
+      '............',
+    ],
+    palette: KIT,
+  },
+  guard: RELIC_ICONS.iron,
+};
+
+/** Marks on the run's floor track and recap: the Warden of the Ashes, and the zone's boss. */
+export const MARK_ICONS: Record<'warden' | 'boss', PixelArt> = {
+  // a burning brazier: the Warden's ashes
+  warden: {
+    rows: [
+      '...k..k.....',
+      '..kyk.kk....',
+      '..koykyk.k..',
+      '.kyoWoyokyk.',
+      '.koWWWoyok..',
+      '.kroWWoork..',
+      'kkkkkkkkkkk.',
+      'kmmlmmmlmmk.',
+      '.kmmmmmmmk..',
+      '..kdmmmdk...',
+      '..kkdddkk...',
+      '.kdk...kdk..',
+    ],
+    palette: KIT,
+  },
+  // a skull
+  boss: {
+    rows: [
+      '...kkkkkk...',
+      '..kWWWWWlk..',
+      '.kWWWWWWWlk.',
+      '.kWWWWWWWlk.',
+      '.kWkkWWkklk.',
+      '.kWkrWWkrlk.',
+      '.kWWWkkWWlk.',
+      '..kWWkkWlk..',
+      '...kWlWlk...',
+      '...kWkWkk...',
+      '....kkkk....',
+      '............',
     ],
     palette: KIT,
   },
