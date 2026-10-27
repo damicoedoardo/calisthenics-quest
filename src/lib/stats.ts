@@ -1,7 +1,7 @@
 import type { ClassId } from './gear';
 import type { GameState } from './game';
 import { weekKey, WEEKLY_GOAL } from './game';
-import { ARMOR_PER_POINT, CLASS_LEAN_POINTS, FALLOFF, MAX_ARMOR, POINT_WORTH, POINTS, STARTING_POINTS, STAT_BASE } from '@/balance';
+import { ARMOR_PER_POINT, CLASS_LEAN as BALANCE_LEAN, CLASS_LEAN_POINTS, FALLOFF, MAX_ARMOR, POINT_WORTH, POINTS, STARTING_POINTS, STAT_BASE } from '@/balance';
 
 /* Stat points: training earns them, the champion spends them. Every workout gives points whatever it
    was (gym, a run, a stretch day), so the reward never depends on what the plan asked for. The
@@ -44,7 +44,7 @@ export const getStat = (id: StatId) => STATS.find((s) => s.id === id)!;
 
 // Points, their worth, the falloff and the class lean live in src/balance/stats.ts.
 export { POINTS, STARTING_POINTS, CLASS_LEAN_POINTS };
-export const CLASS_LEAN: Record<ClassId, StatId> = { warrior: 'damage', archer: 'crit', monk: 'health', mage: 'speed' };
+export const CLASS_LEAN: Record<ClassId, StatId> = BALANCE_LEAN;
 
 export type Build = Partial<Record<StatId, number>>;
 
