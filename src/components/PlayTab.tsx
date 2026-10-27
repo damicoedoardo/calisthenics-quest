@@ -26,7 +26,7 @@ function isLight(hex: string): boolean {
 }
 
 /**
- * While the Play tab sits idle, get the newest open zone's run ready: download and load its game
+ * While the Play tab sits idle, get the newest open zone's run ready: download and load the game
  * code and draw its sprite sheets (both are cached), so tapping Play goes straight to the run.
  */
 function useWarmRun(state: GameState) {
@@ -37,7 +37,13 @@ function useWarmRun(state: GameState) {
     // Give the tab a moment to settle first.
     let stop = () => {};
     const t = window.setTimeout(() => {
-      void (isDungeon(zone) ? import('@/game/dungeon/scene') : import('@/game/run')).catch(() => {});
+      // Both kinds of run: they share Phaser, so the second costs little, and either can then
+      // start offline.
+      const loads: (() => Promise<unknown>)[] = [() => import('@/game/dungeon/scene'), () => import('@/game/run')];
+      if (!isDungeon(zone)) loads.reverse();
+      void loads[0]()
+        .then(loads[1])
+        .catch(() => {});
       stop = warmRunSheets(state, zone);
     }, 600);
     return () => {

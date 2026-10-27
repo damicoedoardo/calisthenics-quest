@@ -79,6 +79,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
   const [auto, setAuto] = useState(bot !== null);
   const dungeon = isDungeon(zone);
   const [floorShown, setFloorShown] = useState<number | null>(null);
+  // The game code couldn't be fetched (offline before the Play tab ever loaded it).
+  const [failed, setFailed] = useState(false);
   const [chest, setChest] = useState<{ choices: RelicId[]; have: Partial<Record<RelicId, number>> } | null>(null);
 
   useMusic(end ? null : hud?.boss ? 'fogBoss' : 'fog');
@@ -95,6 +97,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
     setHud(null);
     setEnd(null);
     setBoss(false);
+    setFailed(false);
     game.then(({ startRun }) => {
       if (cancelled) return;
       run.current = startRun(el, { zone, power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast' }, {
@@ -116,6 +119,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
           onEnd({ ...r, zone: zone.id });
         },
       });
+    }, () => {
+      if (!cancelled) setFailed(true);
     });
     return () => {
       cancelled = true;
@@ -197,7 +202,15 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
 
       {hud?.floor && hud.floors && hud.rooms && !end && <DepthMap floor={hud.floor} floors={hud.floors} room={hud.room ?? 1} rooms={hud.rooms} boss={zone.bossName} mid={hud.wardenFloor ?? null} />}
 
-      {!hud && !end && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
+      {!hud && !end && !failed && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
+      {failed && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
+          <p className="text-sm text-slate-300">The Fog has to download once, with a signal. After that it works offline too.</p>
+          <button onClick={onLeave} className="w-full max-w-xs rounded-xl bg-ink-800 py-3 text-sm text-slate-300">
+            Back
+          </button>
+        </div>
+      )}
 
       {hud && !end && hud.seconds < (dungeon ? 7 : 5) && (
         <p className="pointer-events-none absolute inset-x-6 bottom-28 text-center text-sm text-slate-300 animate-pulse">
