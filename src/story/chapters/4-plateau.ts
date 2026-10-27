@@ -39,6 +39,7 @@ export const PLATEAU: Chapter = {
         { who: 'narrator', show: 'plateau', text: 'The road stops climbing. Same rocks, same sky, for days. A stone giant sits across the road, so still it looks like part of the land.' },
         { who: 'hollow', text: "See? Nothing's changing.", shot: { pan: 'center' } },
         { who: 'flame', mood: 'soft', text: "Something is. I can feel it, I just can't see it yet." },
+        { who: 'you', text: "I liked it better when I could see it working." },
         { who: 'wanderer', text: 'Hills are easy. You can see yourself getting higher. This is the hard part of the map.' },
       ],
     },
@@ -49,6 +50,7 @@ export const PLATEAU: Chapter = {
         { who: 'narrator', show: 'plateau', text: 'The Plateau wakes, slowly. It looks at you as if you were weather.', shot: { shake: 'small' } },
         { who: 'plateau', text: '...Same.' },
         { who: 'plateau', text: '...As. ...Yesterday.' },
+        { who: 'you', text: "...Then I will come back tomorrow, and you can say it again." },
         { who: 'flame', mood: 'smoky', text: "Rude. Also, wrong. Probably. I'm pretty sure it's wrong." },
         { who: 'wanderer', text: "Don't look for change every day. Look every month." },
       ],
@@ -152,6 +154,7 @@ export const PLATEAU: Chapter = {
         write: 'Write your own',
         after: [
           { who: 'wanderer', text: 'Nobody can see that from the outside.', pause: 0.6 },
+          { who: 'you', text: "...I didn't know it either. Not until I said it.", pause: 0.8 },
           { who: 'flame', mood: 'soft', text: "I'm keeping that one. I keep all the good ones." },
         ],
       },
@@ -212,6 +215,8 @@ export const PLATEAU: Chapter = {
         { who: 'narrator', show: 'kid', text: 'The kid from the armor is watching, chin in hands.' },
         { who: 'kid', text: "It hasn't cracked. Why don't you stop?" },
         { who: 'mira', text: "Because it has. Inside. You'll see." },
+        { who: 'kid', text: "...How do you know?" },
+        { who: 'mira', text: "I've broken a lot of stones. Every one of them looked like this the day before." },
       ],
     },
     {
