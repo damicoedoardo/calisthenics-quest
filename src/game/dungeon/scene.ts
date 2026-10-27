@@ -1440,6 +1440,8 @@ class DungeonScene extends Phaser.Scene {
         break;
       case 'boss': {
         const b = this.run.boss;
+        // No taunts before its first words.
+        this.tauntAt = this.time.now + 12000;
         // The Summit's climb has no boss to fight: just the call, and your friends beside you.
         if (!b) {
           this.cameras.main.flash(400, 200, 210, 230);
