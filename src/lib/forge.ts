@@ -2,16 +2,17 @@ import type { GameState } from './game';
 import { seeded } from './random';
 import { NO_GEAR, salvageValue, type FogGear } from './fog-gear';
 import { MAX_PLUS, rerollBonus, type Item } from '@/game/dungeon/items';
+import { EMBERS, FORGE } from '@/balance';
 
 /* Mira's forge, on the Play tab's gear card. Workouts earn embers, and the forge spends them: upgrade an item
    (+1 to +5), roll one of its bonuses again, or melt an item down for a few embers. Embers come
    mostly from training; melting down what the dungeon gives adds a little. */
 
-/** Embers a workout earns: a full one, and the minimum quest. */
-export const EMBERS = { full: 10, mini: 4 } as const;
+/** Embers a workout earns (src/balance/economy.ts). */
+export { EMBERS };
 /** What the forge asks. An upgrade costs more each step: 10, 20, 30, 40, 50. */
-export const upgradeCost = (it: Item) => 10 * ((it.plus ?? 0) + 1);
-export const REROLL_COST = 15;
+export const upgradeCost = (it: Item) => FORGE.upgradeStep * ((it.plus ?? 0) + 1);
+export const REROLL_COST = FORGE.reroll;
 
 const gearOf = (s: GameState): FogGear => s.fogGear ?? NO_GEAR;
 

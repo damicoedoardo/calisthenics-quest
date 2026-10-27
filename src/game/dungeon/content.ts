@@ -2,6 +2,7 @@ import type { ClassId } from '@/lib/gear';
 import type { Zone } from '@/lib/fog';
 import type { FogBoss } from '@/story/types';
 import { clamp } from '../rules';
+import { DIALS, ELITE } from '@/balance';
 
 /* What the dungeon is made of, as plain data: the ground, the doors and chest items, every monster
    and how it shoots, each zone's dungeon and mid-boss, the bosses, and the classes' abilities.
@@ -51,8 +52,8 @@ export const ROOM_ODDS: Record<'way' | 'side' | 'end', [RoomKind, number][]> = {
     ['elite', 1],
   ],
 };
-/** An elite monster: bigger, tougher, worth more. Elite rooms hold fewer of them. */
-export const ELITE = { hp: 2.4, dmg: 1.25, r: 1.25, xp: 1.5, crowd: 0.5 };
+/** An elite monster: bigger, tougher, worth more. Elite rooms hold fewer of them (src/balance/dungeon.ts). */
+export { ELITE };
 
 /** Items found in chests: they last for the run. Each can be found again and stacks. */
 export type RelicId = 'whetstone' | 'quick' | 'iron' | 'boots' | 'heart' | 'hourglass' | 'fang' | 'coal' | 'charm';
@@ -83,27 +84,8 @@ export const LAYOUT: Layout = { floors: 10, rooms: 3, side: 2 };
 /** How much faster you move once a room is cleared: nothing left to fight, so cross it quickly. */
 export const CLEAR_RUN = 2.5;
 
-/** The dials balance tests turn (scripts/fog-sim.mjs). */
-export const DIALS = {
-  /** Monster HP, on top of the zone's. */
-  hp: 1.3,
-  /** How often monsters shoot (2 = twice as often). */
-  fire: 3,
-  /** How fast their shots fly. */
-  speed: 1.5,
-  /** How many monsters a room holds. */
-  crowd: 1,
-  /** Share of HP back on the stairs to each new floor. */
-  stairs: 1,
-  /** How strong chest items are (1 = as their text says). */
-  relic: 1,
-  /** How much more HP monsters have on the boss's floor than on the first (2 = three times). */
-  deep: 3,
-  /** How much harder they hit there (3 = four times): chest items, levels and the dodge make you grow fast. */
-  deepDmg: 3.6,
-  /** Share of HP the shrine on each floor gives back. */
-  shrine: 0.25,
-};
+/** The dials balance tests turn (scripts/fog-sim.mjs): numbers in src/balance/dungeon.ts. */
+export { DIALS };
 
 // ---------- monsters ----------
 

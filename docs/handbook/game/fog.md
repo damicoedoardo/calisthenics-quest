@@ -80,8 +80,9 @@ runs again at the end. Each button shows its key (`Key`), the pause menu lists t
 
 ## Balance
 
+The rule for every balance number, and the changelog, are in [balance.md](balance.md).
 `pnpm sim` writes snapshots of simulated players (see [../dev/testing.md](../dev/testing.md)), then
 `pnpm fog:sim` plays hundreds of bot runs on them per zone and class. `DIALS` in
-`src/game/dungeon/content.ts` are the main knobs. The sim starts every run in the starter kit with
+`src/balance/dungeon.ts` are the main knobs. The sim starts every run in the starter kit with
 the snapshot's points (as after a death); the bot wears what drops. Zones are tuned so that run
 is about where the game was before items, so the gear you keep is strength on top.

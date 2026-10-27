@@ -28,6 +28,8 @@ src/
 │                   stats.ts (stat points), gear.ts (classes, gear tiers), fog.ts (Fog rules), days.ts (calendar days),
 │                   music.ts + music-zones.ts (chiptune engine and tracks), random.ts (seeded RNG),
 │                   store.ts (load/save), dev.ts (developer mode)
+├── balance/        Every balance number as plain data (XP, points, embers, forge, vault so far), and the
+│                   balance sheet; see ../game/balance.md
 ├── story/          The six-month story as data, plus its engine (which scene is due, how a line reads)
 ├── sprites/        All pixel art as code: figure engine, palette, clips, registry, one file per character
 ├── game/           The Fog's game: rules.ts (shared numbers, sheet names), sheets.ts, calm.ts,

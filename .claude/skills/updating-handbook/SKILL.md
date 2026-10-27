@@ -35,6 +35,7 @@ no row: give a new folder its row (and a page if no page fits).
 | `src/app/page.tsx`, `src/components/**`, `src/app/globals.css`, `tailwind.config.ts`, `postcss.config.js` | `app/screens.md` |
 | `src/lib/game*.ts`, `src/lib/program.ts`, `src/lib/stats*.ts`, `src/lib/gear.ts`, `src/lib/days.ts` | `game/training.md`, `architecture/game-state.md` |
 | `src/lib/store.ts` | `architecture/game-state.md` |
+| `src/balance/**` | `game/balance.md` |
 | `src/lib/fog*.ts`, `src/game/*.ts`, `src/components/FogRun.tsx`, `src/components/PlayTab.tsx` | `game/fog.md` |
 | `src/game/dungeon/**` | `game/dungeon.md` |
 | `src/lib/forge*.ts`, `src/components/FogGearCard.tsx` | `game/forge.md` |

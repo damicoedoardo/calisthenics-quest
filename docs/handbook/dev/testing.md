@@ -17,6 +17,7 @@ Tests are Vitest, next to the code (`*.test.ts`), with `@/` mapped to `src/` (`v
 | `src/sprites/sprites.test.ts` | Draws every sprite and action and keeps a pixel fingerprint (snapshot). A failing fingerprint after a change you didn't mean to make is a bug |
 | `src/game/dungeon/engine.test.ts` | Replays a whole seeded bot run in every zone (snapshot). A refactor keeps them identical; a balance change moves them on purpose |
 | `src/exercises/library.test.ts` | Every exercise has a real demo and coaching, every demo moves, the search filters right, and `public/data/exercises.json` is current (`pnpm exercises:db`) |
+| `src/balance/sheet.test.ts` | The balance sheet `src/balance/sheet.md` is up to date with `src/balance/` (`pnpm balance` rewrites it; see [../game/balance.md](../game/balance.md)) |
 | `src/sim/season.test.ts` | Plays every kind of player through 200 days with the real rules and fails on anything that looks wrong |
 
 Accept intended snapshot changes with `pnpm test -u`, and say in the PR why they moved.

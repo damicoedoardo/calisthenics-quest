@@ -1,5 +1,6 @@
 import { daysSinceLastSession, type GameState } from './game';
 import { dayKey } from './days';
+import { RUN_LEVELS } from '@/balance';
 import { buildOf, pointsFree, statPower } from './stats';
 import { CHAPTERS } from '@/story/chapters';
 import { chapterStart, storyState } from '@/story/engine';
@@ -224,7 +225,7 @@ export function rollUpgrades(levels: Partial<Record<UpgradeId, number>>, rng: ()
 
 /** Light needed to go from `level` to the next one. */
 export function xpToNext(level: number): number {
-  return 5 + level * 4 + Math.floor((level * level) / 4);
+  return RUN_LEVELS.base + level * RUN_LEVELS.perLevel + Math.floor((level * level) / RUN_LEVELS.squareEvery);
 }
 
 // ---------- after a run ----------

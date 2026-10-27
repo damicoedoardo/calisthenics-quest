@@ -22,6 +22,10 @@ is pushed.** Same idea as Minlit's handbook, with one step more: here it is chec
 | `.githooks/pre-push` | Runs lint and check before every `git push`; a failure stops the push |
 | `.github/workflows/handbook.yml` | Runs the same on every pull request into `main` |
 
+A change to a balance number also adds a row to the changelog in
+[../game/balance.md](../game/balance.md) and commits the regenerated balance sheet
+(`pnpm balance`); `pnpm test` fails while the sheet is stale.
+
 ## Turning the hook on
 
 `pnpm install` runs `prepare`, which sets `git config core.hooksPath .githooks`. Cloud agent

@@ -14,6 +14,8 @@ camp was tried for this and dropped: Edoardo wanted it on the normal screens.)
 
 ## Rules
 
+- **The numbers** (embers, prices, melt values, vault, the guard's days) are in
+  `src/balance/economy.ts` ([balance.md](balance.md)); the rules below read them.
 - **Embers** (`src/lib/forge.ts`): each workout earns `EMBERS` (full or minimum quest), counted
   from the sessions (`embersEarned`), so nothing is stored per workout. What you melt down adds to
   `fogGear.embers.found`, what the forge takes to `embers.spent`; `embersOf` is the total you have.
@@ -43,8 +45,9 @@ Tested in `src/lib/forge.test.ts`, `src/lib/fog-gear.test.ts` and `src/lib/game.
 
 | I want to... | Edit |
 |---|---|
-| Change embers per workout, or forge prices | `EMBERS`, `upgradeCost`, `REROLL_COST` in `src/lib/forge.ts` |
-| Change what melting gives | `salvageValue` in `src/lib/fog-gear.ts` |
+| Change embers per workout, or forge prices | `EMBERS`, `FORGE` in `src/balance/economy.ts`, then `pnpm balance` |
+| Change what melting gives | `MELT` in `src/balance/economy.ts` |
 | Change how strong a plus is, or the top | `PLUS_STEP`, `MAX_PLUS` in `src/game/dungeon/items.ts` |
-| Change how long the flame's guard lasts | `flameGuards` in `src/lib/fog-gear.ts` |
+| Change how long the flame's guard lasts | `FLAME_GUARD_DAYS` in `src/balance/economy.ts` |
+| Change the vault's size | `VAULT` in `src/balance/economy.ts` |
 | Change the gear card, the forge's buttons or words | `src/components/FogGearCard.tsx` |
