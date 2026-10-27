@@ -1,5 +1,5 @@
 import { attackOf, clamp, RANGE } from '../rules';
-import { BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Input, type Rect, type Run, type RunEnd, type RunSetup } from './engine';
+import { BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup } from './engine';
 
 /* The bot: a steady, careful player, not a great one. It sidesteps shots on course to hit it,
    keeps its class's distance from monsters (a sword goes close, the rest stay back), plays each
@@ -85,9 +85,9 @@ function idle(run: Run): number {
   return run.t - p.since;
 }
 
-export function botInput(run: Run): Input {
-  const h = run.hero,
-    melee = attackOf(run.setup.classId) === 'slash',
+/** What the bot pushes this step, playing hero `h` (you, unless told). */
+export function botInput(run: Run, h: Hero = run.hero): Input {
+  const melee = attackOf(h.classId) === 'slash',
     still = idle(run) > STALL,
     stuck = still && !run.cleared,
     // Lingering in a cleared room: stop waiting for spikes to drop and just walk through, as a
@@ -236,9 +236,9 @@ export function botInput(run: Run): Input {
   const foreman = run.warden?.alive && (run.warden.kind === 'foreman' || run.warden.kind === 'whisper') ? run.warden : null;
   const goal = b ?? foreman ?? (near && !run.cleared ? near : null);
   // The Gale's gust: lean into it, and keep off the edge where it bites.
-  if (run.hero.wind.x || run.hero.wind.y) {
-    x -= (run.hero.wind.x / GALE.push) * 1.6;
-    y -= (run.hero.wind.y / GALE.push) * 1.6;
+  if (h.wind.x || h.wind.y) {
+    x -= (h.wind.x / GALE.push) * 1.6;
+    y -= (h.wind.y / GALE.push) * 1.6;
     const e = GALE.edge + ROOM.wall + 30;
     if (h.x < e) x += 2;
     if (h.x > run.area.w - e) x -= 2;
@@ -246,7 +246,7 @@ export function botInput(run: Run): Input {
     if (h.y > run.area.h - e) y -= 2;
     danger += 1;
   }
-  const shrine = T.shrine && !T.shrine.used && run.hero.hp < run.hero.maxHp * 0.6 ? T.shrine : null;
+  const shrine = T.shrine && !T.shrine.used && h.hp < h.maxHp * 0.6 ? T.shrine : null;
   if (shrine) {
     const dx = shrine.x - h.x,
       dy = shrine.y - h.y,
@@ -262,7 +262,7 @@ export function botInput(run: Run): Input {
             lit
             ? LIGHT.r * 0.45
             : 160
-          : melee || attackOf(run.setup.classId) === 'wave'
+          : melee || attackOf(h.classId) === 'wave'
           ? 60
           : rule === 'tomorrow'
             ? TOMORROW_REACH - 60
@@ -276,7 +276,7 @@ export function botInput(run: Run): Input {
           ? 40
           : foreman
             ? 80
-          : attackOf(run.setup.classId) === 'wave'
+          : attackOf(h.classId) === 'wave'
             ? 80
             : RANGE * 0.7,
       dx = goal.x - h.x,
@@ -313,9 +313,9 @@ export function botInput(run: Run): Input {
 
   // The ability, when it helps.
   let ability = false;
-  if (now >= run.hero.abilityAt && !run.cleared) {
-    const low = run.hero.hp < run.hero.maxHp * 0.5;
-    switch (run.hero.ability) {
+  if (now >= h.abilityAt && !run.cleared) {
+    const low = h.hp < h.maxHp * 0.5;
+    switch (h.ability) {
       case 'charge':
         ability = nd < 140 || (!!b && Math.hypot(b.x - h.x, b.y - h.y) < 160);
         break;
@@ -334,7 +334,7 @@ export function botInput(run: Run): Input {
     }
   }
   // The dodge: through a shot that's about to land, along the way it was already stepping.
-  const dodge = imminent && now >= run.hero.dodgeAt && !(run.hero.charge && now < run.hero.charge.until);
+  const dodge = imminent && now >= h.dodgeAt && !(h.charge && now < h.charge.until);
   return { x: mx, y: my, ability, dodge };
 }
 

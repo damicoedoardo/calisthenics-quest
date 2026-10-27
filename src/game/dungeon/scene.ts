@@ -2202,7 +2202,7 @@ class DungeonScene extends Phaser.Scene {
     // The stairs down: a gold ring pulsing round them.
     if (r.stairs) this.fx.lineStyle(2, 0xfbbf24, 0.25 + 0.3 * ((Math.sin(now / 220) + 1) / 2)).strokeCircle(r.stairs.x, r.stairs.y, 32);
     // The ward, while it's up.
-    if (relic(r, 'charm') && r.t >= r.hero.wardAt) this.fx.lineStyle(2, 0x7dd3fc, 0.35 + 0.15 * Math.sin(now / 180)).strokeCircle(r.hero.x, r.hero.y, 24);
+    if (relic(r.hero, 'charm') && r.t >= r.hero.wardAt) this.fx.lineStyle(2, 0x7dd3fc, 0.35 + 0.15 * Math.sin(now / 180)).strokeCircle(r.hero.x, r.hero.y, 24);
     // A ram's line before it charges.
     for (const f of r.foes) {
       if (!f.alive) continue;
