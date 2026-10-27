@@ -193,6 +193,8 @@ export type Portrait =
   | { kind: 'hollow'; size: number }
   /** The flame, at its current stage. */
   | { kind: 'flame'; size: number }
+  /** The flame's true form (the finale), with the player's hair. */
+  | { kind: 'kindled'; size: number }
   | { kind: 'none' };
 
 export interface CastMember {
