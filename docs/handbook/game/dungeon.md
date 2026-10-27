@@ -48,7 +48,7 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change what a door says | `doorLook` in `scene.ts` (unknown rooms show `UNKNOWN`) |
 | Change crits | `CRIT_HIT` in `src/balance/stats.ts`; the roll is in `damage` (`engine.ts`, its own `run.critRnd`), the gold number in `scene.ts` |
 | Change where the bot goes on a floor | `route` in `bot.ts` |
-| Tune items (how strong, how much they ask, how rare) | `src/balance/items.ts`: `ITEM_POWER` (all finds next to the starter kit), `ITEM_BASE`, `BONUS_SIZE`, `RARITY_SIZE`, `RARITY_WEIGHTS`, `RARITY_LEAN`, `NEED`; then `pnpm balance` and `pnpm fog:tune` |
+| Tune items (how strong, how much they ask, how rare) | `src/balance/items.ts`: `ITEM_POWER` (all finds next to the starter kit), `ITEM_BASE`, `BONUS_SIZE`, `RARITY_SIZE`, `RARITY_WEIGHTS`, `RARITY_LEAN`, `WEAR_AFTER` (how many workouts after its zone opens an item can be worn); then `pnpm balance` and `pnpm fog:tune` |
 | Change how often things drop, or the bag's size | `DROPS`, `DROP_LUCK` and `BAG` in `src/balance/items.ts` (read by `kill`, `openChest` in `engine.ts`) |
 | Change how often co-op runs drop forge materials | `MAT_DROPS` in `src/balance/upgrades.ts` (`findMats` in `engine.ts`; see [forge.md](forge.md)) |
 | Add an item kind or a class's weapon | `WEAPONS`, `ARMORS`, `ItemIcon` (and `ItemArt`, `looksOf`) in `items.ts`; its art in `ITEM_ROWS` and `LEGEND_ROWS` (`src/sprites/characters/items.ts`), and how the hero wears it in `heroSpec` (`src/sprites/characters/hero.ts`), see [sprites.md](sprites.md) |
@@ -139,7 +139,9 @@ beam over rare ones (`syncLoot`). Walking over one puts it in the bag (`run.hero
 You wear three things: a weapon and armor made for your class, and a charm. A run starts in what
 the save says you wear (`RunSetup.worn`), the starter kit (`starterKit`) filling an empty weapon or
 armor slot. An item asks for stat points (`need`, checked against `RunSetup.build` by `shortOf`):
-weapons the class's own stat, armor Armor, charms nothing. `wear`, `takeOff` and `dropFromBag`
+weapons the class's own stat, armor Armor, charms nothing. How many: what a player who hits the
+weekly goal and spreads points has in each stat `wearAfter(rarity, floor)` workouts after the
+zone opens (`WEAR_AFTER`, `evenPoints` in `items.ts`). `wear`, `takeOff` and `dropFromBag`
 change gear mid-run (the page pauses while the bag is open); `applyGear` puts what you wear on top
 of your power from training (`run.hero.base`). The run's end (`RunEnd.gear`) lists what you wore and
 carried, never the starter kit; `src/lib/fog-gear.ts` settles it into the save

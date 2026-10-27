@@ -37,12 +37,12 @@ export const BONUS_SIZE = {
   pickup: { base: 0.06, per: 0.003 },
 } as const;
 
-/** Per rarity: how many bonuses (from, to), how much it asks (x the requirement), how strong (x every number). */
+/** Per rarity: how many bonuses (from, to) and how strong (x every number). What it asks is `WEAR_AFTER`. */
 export const RARITY_SIZE = {
-  common: { bonuses: [0, 0], need: 0.9, power: 1 },
-  magic: { bonuses: [1, 1], need: 1, power: 1.1 },
-  rare: { bonuses: [2, 3], need: 1.15, power: 1.25 },
-  legendary: { bonuses: [4, 4], need: 1.35, power: 1.6 },
+  common: { bonuses: [0, 0], power: 1 },
+  magic: { bonuses: [1, 1], power: 1.1 },
+  rare: { bonuses: [2, 3], power: 1.25 },
+  legendary: { bonuses: [4, 4], power: 1.6 },
 } as const;
 
 /** How often each rarity drops on floor 1 from a plain monster (weights). */
@@ -53,10 +53,16 @@ export const RARITY_WEIGHTS = { common: 60, magic: 28, rare: 10, legendary: 2 } 
     1 + luck * rarerPerLuck + floor * rarerPerFloor. */
 export const RARITY_LEAN = { commonPerLuck: 1, commonPerFloor: 0.06, rarerPerLuck: 0.6, rarerPerFloor: 0.05 } as const;
 
-/** Stat points an item asks for. Goal: what you find you can mostly wear soon, the best of it after a
-    few more workouts. It follows an even build when the zone opens: (start + workouts * perWorkout) / stats
-    points a stat, times fromFloor on the first floor rising by `perFloor9` by the tenth, times the rarity's `need`. */
-export const NEED = { start: 6, perWorkout: 3.67, stats: 6, fromFloor: 0.5, perFloor9: 0.6 } as const;
+/** When an item can be worn: this many workouts after its zone opens, by rarity and depth (floors
+    1-3, 4-7, 8-10). It asks for the points a player who hits the weekly goal and spreads them evenly
+    has in each stat by then, so a change to stat points never breaks gear. Goal: what you find is
+    mostly wearable soon, and a zone's best item before the next zone opens (about 12 workouts). */
+export const WEAR_AFTER = {
+  common: [0, 2, 4],
+  magic: [0, 2, 4],
+  rare: [2, 4, 7],
+  legendary: [4, 7, 11],
+} as const;
 
 /** The free starter kit everyone has. */
 export const STARTER = { weaponDamage: 0.05, armorHealth: 6, armorArmor: 0.015 } as const;

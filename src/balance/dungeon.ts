@@ -1,7 +1,12 @@
 /* The Fog's dungeon: the dials the balance tests turn (scripts/fog-sim.mjs), elites, and run levels.
    Monsters and bosses stay as content in src/game/dungeon/content.ts; each zone's monster HP and
    damage are still in each chapter's `fog` block (src/story/chapters/), set by `pnpm fog:tune`.
-   Goal for a zone: the bot wins about 1 in 3 runs when it opens, about 2 in 3 six workouts later. */
+   Goal for a zone: the bot wins about 1 in 3 runs when it opens, about 2 in 3 later on (ZONE_WINS). */
+
+/** What the bot should win in a zone: the day it opens, and later on (6 workouts on; 18 for the last
+    two zones, laterBy in src/sim/season.ts). `pnpm fog:tune` aims at these; `pnpm fog:sheet` flags a
+    zone more than `slack` off. Harder = lower. */
+export const ZONE_WINS = { open: 0.33, later: 0.67, slack: 0.15 } as const;
 
 export const DIALS = {
   /** Monster HP, on top of the zone's. */

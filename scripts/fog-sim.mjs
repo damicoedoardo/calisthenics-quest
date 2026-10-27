@@ -67,7 +67,9 @@ if (!isMainThread) {
   const classes = (process.env.CLASSES || 'archer,mage,warrior,monk').split(',');
   const only = (process.env.ONLY || '').split(',').filter(Boolean);
   const scales = JSON.parse(process.env.SCALE || '{}');
-  const [aimOpen, aimLater] = (process.env.TARGET || '0.33,0.67').split(',').map(Number);
+  const { ZONE_WINS } = await import(`${root}src/balance/dungeon.ts`);
+  const { laterBy } = await import(`${root}src/sim/season.ts`);
+  const [aimOpen, aimLater] = process.env.TARGET ? process.env.TARGET.split(',').map(Number) : [ZONE_WINS.open, ZONE_WINS.later];
   const dir = `${root}sim-out/states`;
   const snaps = readdirSync(dir)
     .filter((f) => f.startsWith(`${player}-zone`))
@@ -158,13 +160,18 @@ if (!isMainThread) {
         '',
         '## Zones',
         '',
-        'Win rate by zone and class. Goal: about 1 in 3 the day a zone opens, about 2 in 3 six workouts later.',
+        `Win rate by zone and class, against \`ZONE_WINS\`: ${pct(ZONE_WINS.open).trim()} the day a zone opens, ${pct(ZONE_WINS.later).trim()} later on (each within ${Math.round(ZONE_WINS.slack * 100)} points).`,
         '',
-        row(['Zone', 'When', ...classes, 'All four']),
-        row(['---', '---', ...classes.map(() => '---'), '---']),
+        row(['Zone', 'When', ...classes, 'All four', '']),
+        row(['---', '---', ...classes.map(() => '---'), '---', '---']),
         ...[...table]
           .sort((x, y) => x.snap.zone - y.snap.zone || (x.snap.label.endsWith('open') ? -1 : 1))
-          .map((t) => row([String(t.snap.zone + 1), t.snap.label.endsWith('open') ? 'opens' : '+6 workouts', ...t.rates.map((r) => pct(r).trim()), pct(t.rates.reduce((a, b) => a + b, 0) / t.rates.length).trim()])),
+          .map((t) => {
+            const opens = t.snap.label.endsWith('open'),
+              all = t.rates.reduce((a, b) => a + b, 0) / t.rates.length,
+              ok = Math.abs(all - (opens ? ZONE_WINS.open : ZONE_WINS.later)) <= ZONE_WINS.slack;
+            return row([String(t.snap.zone + 1), opens ? 'opens' : `+${laterBy(t.snap.zone)} workouts`, ...t.rates.map((r) => pct(r).trim()), pct(all).trim(), ok ? 'on target' : '**off**']);
+          }),
         '',
       ].join('\n');
       writeFileSync(`${root}src/balance/fog-sheet.md`, md);
