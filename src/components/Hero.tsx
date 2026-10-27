@@ -5,7 +5,6 @@ import type { ClassId, Gear, GearSlot } from '@/lib/gear';
 import type { HeroVariant } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
 import { useLook } from './Look';
-import { PlusGlow } from './PlusGlow';
 import { Sprite } from './Sprite';
 
 interface HeroProps {
@@ -26,9 +25,7 @@ interface HeroProps {
 export function Hero({ gear, classId, size = 160, bounce = true, variant = 'normal', look, action = 0 }: HeroProps) {
   const acting = useAction(action);
   const yours = useLook();
-  // The best-forged thing worn lights the hero from +4 (a new look every few pluses).
-  const top = Object.values(gear).reduce<Gear | null>((b, g) => (g.item && (g.plus ?? 0) > (b?.plus ?? 0) ? g : b), null);
-  const sprite = (
+  return (
     <Sprite
       key={acting.key}
       id="hero"
@@ -40,13 +37,6 @@ export function Hero({ gear, classId, size = 160, bounce = true, variant = 'norm
       // The Hollow faces you, so it is drawn mirrored.
       flip={variant === 'hollow'}
     />
-  );
-  if (!top?.item || (top.plus ?? 0) < 4 || variant !== 'normal') return sprite;
-  return (
-    <span className="relative inline-block align-top" style={{ width: size, height: size }}>
-      <PlusGlow item={{ plus: top.plus, rarity: top.item.rarity }} round="rounded-full" behind />
-      <span className="relative">{sprite}</span>
-    </span>
   );
 }
 

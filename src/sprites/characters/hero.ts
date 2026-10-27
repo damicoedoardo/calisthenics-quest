@@ -5,6 +5,8 @@ import { NIGHT, aura, grid, mix, painter, rampOf, tint, type Grid, type Ramp } f
 import { ARM_DOWN, bone, hangs, limbs, paintArm } from '../engine/drawn';
 import { drawBow, drawStaff, drawStick, drawSword, drawWand, type WeaponLook } from '../parts/weapons';
 import { itemColors, pick, type ItemColors } from './items';
+import { BANDS } from '@/balance';
+import { bandOf } from '@/game/dungeon/items';
 import { CAPE, FLAME, GOLD_GHOST, HAIR, HOLLOW_EYES, LINEN, R, SHADOW, SKIN, TROUSERS } from '../palette';
 
 /* Your hero. One sprite carries the whole story: gear colors and class weapons as you train, and
@@ -520,6 +522,10 @@ function hollowEyes(g: Grid, frame: ClipFrame, look: Look): Grid {
   return g;
 }
 
+/** A forged item's light around the hero: warm gold, and nearly white at +15. */
+const WARM: Ramp = ['#a16207', '#facc15', '#fef3c7'];
+const RADIANT: Ramp = ['#d97706', '#fde68a', '#ffffff'];
+
 /** One frame of the hero, variant effects included. */
 export function drawHero(o: HeroOpts, frame: ClipFrame, f: number): Grid {
   const { gear, variant = 'normal', look = DEFAULT_LOOK } = o;
@@ -529,10 +535,16 @@ export function drawHero(o: HeroOpts, frame: ClipFrame, f: number): Grid {
   if (variant === 'best') return aura(gr, CAPE, '#fde68a', 5, f);
   // The flame lives in you now: red fire runs around you, and flickers.
   if (variant === 'kindled') return aura(gr, [FLAME.red[0], FLAME.red[1], FLAME.orange[1]], FLAME.yellow, 10, f);
-  // A legendary item glows in its own light.
-  const legend = (['weapon', 'armor', 'shield'] as const).find((s) => gear[s].item?.rarity === 'legendary'),
-    lit = legend && gear[legend].item ? itemColors(gear[legend].item).glow : null;
-  if (lit) return aura(gr, lit, lit[2], gear[legend!].tier === 6 ? 8 : 5, f);
+  // The best-forged thing you wear shines around you, further with each band of pluses (BANDS:
+  // two rings from +4, three that flicker from +10, four at +15), in its rarity's light from +7.
+  // (A legendary burns instead of shining: that fire is drawn over the sprite, see PlusGlow.)
+  const best = (['weapon', 'armor', 'shield'] as const).reduce<GearSlot | null>((m, s) => (gear[s].item && (gear[s].plus ?? 0) > (m ? (gear[m].plus ?? 0) : 0) ? s : m), null),
+    band = best ? BANDS[bandOf(gear[best].plus ?? 0)] : null;
+  if (best && band && band.aura >= 5) {
+    const own = band.glow === 'rarity' && gear[best].item ? itemColors(gear[best].item).glow : null,
+      light = own ?? (band.aura >= 10 ? RADIANT : WARM);
+    return aura(gr, light, light[2], band.aura, f);
+  }
   // Top-tier gear glows: the highest slot sets the aura.
   const top = (['weapon', 'armor', 'shield'] as const).reduce((m, s) => (gear[s].tier > gear[m].tier ? s : m), 'weapon' as GearSlot);
   const t = gear[top].tier;

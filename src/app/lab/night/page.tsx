@@ -78,6 +78,14 @@ function forged(plus: number): GameState {
   };
 }
 
+/** The forged save with the vault's legendary worn as the sword, at +0 and wearable now: its fire, no shine. */
+function legendWorn(): GameState {
+  const s = forged(0),
+    g = s.fogGear!,
+    legend = g.vault[2];
+  return { ...s, fogGear: { ...g, worn: { ...g.worn, weapon: { ...legend, plus: 0, need: null } }, vault: [g.vault[0], g.vault[1], g.worn.weapon!], guard: 'weapon' } };
+}
+
 /** A player past the finale: the flame lives in them now. */
 function fused(): GameState {
   const s = veteran(80, 6);
@@ -219,6 +227,18 @@ export default function NightLab() {
                 Run
               </button>
             ))}
+          </div>
+        </div>
+        <div className="rounded-xl bg-ink-950 px-3 py-2.5">
+          <p className="text-sm text-slate-200">A legendary worn</p>
+          <p className="text-[11px] text-slate-500">A legendary sword at +0: the ring of fire on its card, red flames around you in a run, no forge shine yet.</p>
+          <div className="mt-2 grid grid-cols-2 gap-1">
+            <button className={chip} onClick={() => open(legendWorn(), 'tab=play')}>
+              Play tab
+            </button>
+            <button className={chip} onClick={() => open(legendWorn(), 'run=1')}>
+              Run
+            </button>
           </div>
         </div>
         <Row icon={<Gem size={16} />} label="Loot in a run" note="Monsters and chests drop gear; the bag button top right; the stairs ask: deeper or leave with it" onClick={() => open(geared(), 'run=1')} />

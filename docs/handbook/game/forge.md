@@ -35,12 +35,14 @@ camp was tried for this and dropped: Edoardo wanted it on the normal screens.)
   - Each plus makes the item's numbers bigger by its step's `boost` (`boostAt`/`boostOf` in
     `src/game/dungeon/items.ts`, used by `itemTotals`, `itemScore`, `itemLines`; `nameOf` adds
     " +N"). The card shows each line before and after the next plus.
-- **A new look every few pluses** (`BANDS`, `bandOf`, `glowOf`): +4 a warm glow, +7 an aura in
-  the item's rarity color, +10 sparks, +13 a ring of fire, +15 "Ember-born", its own red fire.
-  `src/components/PlusGlow.tsx` draws it on item tiles and cards, and behind the hero wherever
-  `Hero` is drawn (from the best-forged thing worn, `Gear.plus` from `gearOf`); `wearLook` in
-  `scene.ts` draws the same in a run (a glow under the hero, sparks, rising flames). Still with
-  reduced motion.
+- **A new look every few pluses** (`BANDS`, `bandOf`, `glowOf`): the shine comes from forging,
+  growing to full at +15 (Edoardo's call): +4 a warm glow, +7 the item's rarity color, +10 sparks,
+  +13 light rays on its card, +15 "Radiant". Each band also sets how far the light runs around the
+  hero wearing it (`aura`, drawn in the hero sprite by `drawHero` from the best-forged thing worn,
+  `Gear.plus` from `gearOf`). A legendary instead burns, whatever its plus: a turning ring of red
+  fire with red sparks (`LegendFire`). `src/components/PlusGlow.tsx` draws both on item tiles and
+  cards; `wearLook` in `scene.ts` draws them in a run (a glow and sparks under the hero for the
+  plus, a red glow, red sparks and rising flames for a worn legendary). Still with reduced motion.
 - **Reroll and melt**: `reroll` rolls one bonus into a different one for `REROLL_COST`, seeded
   from the item's id and its `rerolls`. `salvage` melts an item down for `salvageValue` (rarer
   and upgraded items give more). The starter kit can't be upgraded or melted.

@@ -78,13 +78,17 @@ export const MAT_DROPS = {
     each other up, but nobody's whole forge is fed by one other player. */
 export const GIFTS = { perDay: 10 } as const;
 
-/** How an item looks for its plus: a new look every few steps, like NosTale's SP. `from` is the
-    first plus of the band. `glow` lights the tile and the hero; `sparks` and `blaze` add motion. */
-export const BANDS: { from: number; name: string; glow: string | null; sparks: boolean; blaze: boolean }[] = [
-  { from: 0, name: 'Plain', glow: null, sparks: false, blaze: false },
-  { from: 4, name: 'Warm', glow: '#fde68a', sparks: false, blaze: false },
-  { from: 7, name: 'Lit', glow: 'rarity', sparks: false, blaze: false },
-  { from: 10, name: 'Sparking', glow: 'rarity', sparks: true, blaze: false },
-  { from: 13, name: 'Burning', glow: '#fb923c', sparks: true, blaze: true },
-  { from: 15, name: 'Ember-born', glow: '#ef4444', sparks: true, blaze: true },
+/** How an item looks for its plus, like NosTale's SP: a new look every few steps, growing into
+    the full shine at +15 (Edoardo's call: the shine comes from forging, legendaries burn instead).
+    `from` is the first plus of the band. `glow` lights the tile ('rarity': in its rarity's color),
+    `sparks` rise from it, `rays` turn behind it on its card, and `aura` is how far the light runs
+    around the hero wearing it (the sprite's `aura` level: under 5 none, 5 two rings, 8 three
+    that flicker, 10 four). */
+export const BANDS: { from: number; name: string; glow: string | null; sparks: boolean; rays: boolean; aura: number }[] = [
+  { from: 0, name: 'Plain', glow: null, sparks: false, rays: false, aura: 0 },
+  { from: 4, name: 'Warm', glow: '#fde68a', sparks: false, rays: false, aura: 5 },
+  { from: 7, name: 'Lit', glow: 'rarity', sparks: false, rays: false, aura: 6 },
+  { from: 10, name: 'Sparking', glow: 'rarity', sparks: true, rays: false, aura: 8 },
+  { from: 13, name: 'Shining', glow: '#fde68a', sparks: true, rays: true, aura: 9 },
+  { from: 15, name: 'Radiant', glow: '#fff7d6', sparks: true, rays: true, aura: 10 },
 ];

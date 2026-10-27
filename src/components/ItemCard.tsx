@@ -8,8 +8,8 @@ import { PlusGlow } from './PlusGlow';
 import { Sprite } from './Sprite';
 
 /* An item's art in a frame of its rarity's color, and its card. The art is the item's own
-   (src/sprites/characters/items.ts): rares shine, legendaries glow and sparkle, still if the phone
-   asks for less motion. */
+   (src/sprites/characters/items.ts): rares shine, legendaries burn and a forged item shines more
+   with each plus (PlusGlow), all still if the phone asks for less motion. */
 
 const MOTION = '(prefers-reduced-motion: reduce)';
 function subscribe(fn: () => void) {
@@ -41,7 +41,6 @@ export function ItemTile({ item, size = 40, dim = false }: { item: Item; size?: 
     art = artSize(size);
   return (
     <span className={`relative grid shrink-0 place-items-center rounded-lg ${dim ? 'opacity-50 grayscale' : ''}`} style={{ width: size, height: size, background: f.back, boxShadow: `0 0 0 2px ${f.edge}${f.glow ? `, ${f.glow}` : ''}` }}>
-      {item.rarity === 'legendary' && <span aria-hidden className="absolute inset-0 rounded-lg motion-safe:animate-pulse" style={{ boxShadow: 'inset 0 0 10px rgba(253,186,116,.55)' }} />}
       <PlusGlow item={item} />
       <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
         <Sprite id="item" opts={looksOf(item)} size={art} playing={!still} label="" />
@@ -70,15 +69,8 @@ export function ItemCard({ item, build, children }: { item: Item; build: Build; 
   return (
     <div className="overflow-hidden rounded-xl bg-ink-800 text-left ring-1" style={{ ['--tw-ring-color' as string]: item.rarity === 'common' ? '#334155' : `${color}80` }}>
       <div className="relative grid h-28 place-items-center overflow-hidden" style={{ background: f.back }}>
-        {legend && (
-          // slow light rays behind a legendary
-          <span
-            aria-hidden
-            className="absolute left-1/2 top-1/2 h-56 w-56 -translate-x-1/2 -translate-y-1/2 opacity-40 motion-safe:animate-[spin_18s_linear_infinite]"
-            style={{ background: 'repeating-conic-gradient(rgba(253,186,116,.35) 0deg 10deg, transparent 10deg 30deg)', maskImage: 'radial-gradient(circle, #000 20%, transparent 65%)', WebkitMaskImage: 'radial-gradient(circle, #000 20%, transparent 65%)' }}
-          />
-        )}
-        <PlusGlow item={item} round="rounded-none" />
+        {/* The plus's shine (rays from +13) and a legendary's fire. */}
+        <PlusGlow item={item} round="rounded-none" rays />
         <Sprite id="item" opts={looksOf(item)} size={128} playing={!still} label={`${RARITY[item.rarity].name} ${SLOT_NAME[item.slot].toLowerCase()}`} className="relative" />
         <span className="absolute left-2 top-2 rounded px-1.5 py-0.5 font-pixel text-[7px] uppercase tracking-wide text-ink-950" style={{ background: item.rarity === 'common' ? '#94a3b8' : color }}>
           {RARITY[item.rarity].name}

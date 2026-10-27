@@ -152,7 +152,9 @@ item instead of the slot's tier look. Plate gets a breastplate, pauldrons, tasse
 a jerkin is laced with a strap and buckle; a robe has a cowl, a sash and a skirt to the ankles. Rare
 and legendary add trim; a legendary armor adds a mantle (a plate's pauldrons rise to points, a
 robe has twinkling stars), a legendary weapon burns along the blade (the bow's string, the staff's
-orb, the wand's star) and any legendary gives the hero an aura in its glow. The charm hangs on a cord
+orb, the wand's star). The hero's aura comes from forging, not rarity: the best-forged worn item's
+band (`BANDS[...].aura` in `src/balance/upgrades.ts`) lights it from +4, in a warm gold, the
+item's rarity glow from +7, and a white-gold radiance at +15. The charm hangs on a cord
 at the chest and colors the shield's or orb's gem. Slots without an item draw as before, so the
 tier fingerprints don't move.
 
@@ -160,9 +162,7 @@ The hero is drawn with the player's look (body, hair, hair color, skin), which `
 hands to every `<Hero />` on screen, so the Echo, the Best Self and the Hollow match the player.
 The `kindled` variant is the hero once the flame has fused with them in the finale: a red and
 orange fire aura that flickers (it stands in for the top-tier gear glow).
-A worn item forged to +4 or more also lights the hero from behind (`Hero.tsx` wraps the sprite in
-`PlusGlow`, from `Gear.plus`); that light is drawn in CSS, not in the sprite, so the sprite's
-fingerprints don't change ([forge.md](forge.md)).
+The forge's bands are in [forge.md](forge.md).
 
 Long lists show stills, not sheets: `stillFor(id, action, opts, frame)` (`registry.ts`) draws a
 single frame once and caches it (the exercise library's rows draw one as each row scrolls in).
