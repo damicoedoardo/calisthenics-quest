@@ -20,7 +20,7 @@ export const PLATEAU: Chapter = {
     after: 'It looked like nothing was happening. Everything was happening.',
     keepsake: { name: 'A Cracked Stone', text: 'It broke all at once. It had been breaking for weeks.' },
     hp: 2.1,
-    dmg: 1.85,
+    dmg: 2.0,
     ground: '#1c1712',
     fog: '#4a3a26',
   },
