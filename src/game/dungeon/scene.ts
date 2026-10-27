@@ -115,6 +115,8 @@ export interface RunHandle {
 const SFX: Record<'slash' | 'arrow' | 'orb' | 'wave', SfxId> = { slash: 'slash', arrow: 'arrow', orb: 'orb', wave: 'wave' };
 const HEAL = '#86efac';
 const RISE_MS = 280;
+/** At most this much hit-stop (ms) in any one second. */
+const STOP_BUDGET = 140;
 
 type Look = Pick<Stats, 'tex' | 'scale' | 'bits'> & { tint?: number };
 /** The dungeon's own monsters, each with its own sprite (src/sprites/characters). */
@@ -184,6 +186,9 @@ class DungeonScene extends Phaser.Scene {
   private stopUntil = 0;
   /** Small hit-stops don't come back before then, so a flurry of hits doesn't stutter. */
   private stopCool = 0;
+  /** Hit-stop spent in the current second: capped at STOP_BUDGET, so a burst of hits never stacks
+      into stutter. */
+  private stopSpent = { from: 0, ms: 0 };
   /** A red edge on the screen that beats when you're low. */
   private vignette!: Phaser.GameObjects.Image;
   /** Damage numbers by the monster they belong to, so quick hits add up in one number. */
@@ -1219,7 +1224,12 @@ class DungeonScene extends Phaser.Scene {
   private hitStop(ms: number, minor = false) {
     const now = this.time.now;
     if (minor && now < this.stopCool) return;
-    this.stopUntil = Math.max(this.stopUntil, now + ms);
+    if (now - this.stopSpent.from >= 1000) this.stopSpent = { from: now, ms: 0 };
+    // Only the part that reaches past a stop already running costs anything.
+    const add = Math.min(Math.max(0, now + ms - Math.max(now, this.stopUntil)), STOP_BUDGET - this.stopSpent.ms);
+    if (add < 15) return;
+    this.stopSpent.ms += add;
+    this.stopUntil = Math.max(now, this.stopUntil) + add;
     this.stopCool = now + ms + 200;
   }
 
