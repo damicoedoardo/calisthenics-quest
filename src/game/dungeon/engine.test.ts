@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { powerOf, ZONES } from '@/lib/fog';
 import { initialState } from '@/lib/game';
 import { botInput, playRun } from './bot';
-import { CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LIGHT, MIDS, pickRelic, SAND, skipToBoss, skipToWarden, SPLIT, stepRun, takeEvents, wardenFloor } from './engine';
+import { ACROSS, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, makeFloor, MIDS, pickRelic, SAND, skipToBoss, skipToWarden, SPLIT, stepRun, takeEvents, wardenFloor, type Side } from './engine';
 
 describe('mid-bosses', () => {
   const power = powerOf(initialState(), new Date());
@@ -72,6 +72,30 @@ describe('dungeon', () => {
     expect(run.t).toBe(t);
   });
 
+  it('aims at the monster you tapped while it is in reach, and lets go when asked', () => {
+    const run = createRun({ ...setup, classId: 'archer', autoPick: true });
+    for (let i = 0; i < 60 * 6 && run.foes.filter((f) => f.alive && run.t >= f.bornUntil).length < 2; i++) stepRun(run, { x: 0, y: 0, ability: false });
+    const [near, far] = run.foes.filter((f) => f.alive && run.t >= f.bornUntil);
+    const h = run.hero;
+    Object.assign(near, { x: h.x + 60, y: h.y, vx: 0, vy: 0 });
+    Object.assign(far, { x: h.x, y: h.y - 150, vx: 0, vy: 0 });
+    stepRun(run, { x: 0, y: 0, ability: false, lock: far.id });
+    expect(run.lock).toBe(far.id);
+    takeEvents(run);
+    let angle: number | null = null;
+    for (let i = 0; i < 120 && angle === null; i++) {
+      Object.assign(near, { x: h.x + 60, y: h.y });
+      Object.assign(far, { x: h.x, y: h.y - 150 });
+      stepRun(run, { x: 0, y: 0, ability: false });
+      const at = takeEvents(run).find((e) => e.type === 'attack');
+      if (at && at.type === 'attack') angle = at.angle;
+    }
+    expect(angle).not.toBeNull();
+    expect(Math.abs(angle! - -Math.PI / 2)).toBeLessThan(0.2);
+    stepRun(run, { x: 0, y: 0, ability: false, lock: null });
+    expect(run.lock).toBeNull();
+  });
+
   it('keeps the boss room shut until the boss falls', () => {
     const run = createRun(setup);
     skipToBoss(run);
@@ -86,19 +110,64 @@ describe('dungeon', () => {
     expect(r).toMatchObject({ won: false, floor: 1, why: 'hp' });
   });
 
-  it('opens two different doors after a room, and a chest room leaves a chest that offers items', () => {
+  it('makes each floor a map: a way east to the last room, rooms off to the side, all joined', () => {
+    for (let floor = 0; floor < LAYOUT.floors; floor++)
+      for (const seed of [1, 2, 3, 4, 5]) {
+        const { cells } = makeFloor(LAYOUT, floor, seed * 101 + floor);
+        expect(cells.length).toBeGreaterThanOrEqual(LAYOUT.rooms + 1);
+        const ends = cells.filter((c) => c.kind === 'stairs' || c.kind === 'warden' || c.kind === 'boss');
+        expect(ends).toHaveLength(1);
+        expect(ends[0].kind).toBe(floor === LAYOUT.floors - 1 ? 'boss' : floor === wardenFloor(LAYOUT) ? 'warden' : 'stairs');
+        // The last room has one door, the way in from the west.
+        expect(Object.keys(ends[0].links)).toEqual(['w']);
+        // Every room can be walked to, and each door has one on the other side.
+        expect(cells.every((c) => c.id === 0 || c.dist > 0)).toBe(true);
+        for (const c of cells) for (const [s, to] of Object.entries(c.links)) expect(cells[to!].links[ACROSS[s as Side]]).toBe(c.id);
+        if (floor === 0) expect(cells.some((c) => c.kind === 'elite')).toBe(false);
+        expect(cells.filter((c) => c.kind === 'rest').length).toBeLessThanOrEqual(1);
+      }
+  });
+
+  it('walks back into a cleared room as it was: doors open, nothing to fight', () => {
     const run = createRun({ ...setup, power: { ...power, armor: 0.9 }, autoPick: true, seed: 11 });
-    const doors: string[][] = [];
-    let chests = 0;
+    while (!run.cleared && !run.over) stepRun(run, botInput(run));
+    const first = run.map.at,
+      terrain = run.terrain,
+      door = run.doors[0];
+    expect(door).toBeDefined();
+    run.hero.x = door.x + (door.side === 'n' ? 2 : door.side === 's' ? -2 : 0);
+    run.hero.y = door.y + (door.side === 'e' ? 2 : door.side === 'w' ? -2 : 0);
+    stepRun(run, { x: door.side === 'n' ? -1 : door.side === 's' ? 1 : 0, y: door.side === 'e' ? -1 : door.side === 'w' ? 1 : 0, ability: false });
+    expect(run.map.at).toBe(door.to);
+    expect(run.room).toBe(1);
+    const back = run.map.cells[door.to].links[ACROSS[door.side]];
+    expect(back).toBe(first);
+    run.foes = [];
+    run.waves = [];
+    for (let i = 0; i < 120 && !run.cleared; i++) stepRun(run, { x: 0, y: 0, ability: false });
+    const home = run.doors.find((d) => d.to === first)!;
+    expect(home.been).toBe(true);
+    run.hero.x = home.x;
+    run.hero.y = home.y;
+    stepRun(run, { x: home.side === 'n' ? -1 : home.side === 's' ? 1 : 0, y: home.side === 'e' ? -1 : home.side === 'w' ? 1 : 0, ability: false });
+    expect(run.map.at).toBe(first);
+    expect(run.terrain).toBe(terrain);
+    expect(run.doorOpen).toBe(true);
+    expect(run.foes).toHaveLength(0);
+    expect(run.room).toBe(1);
+  });
+
+  it('the bot explores each floor and takes the stairs, and chests offer items', () => {
+    const run = createRun({ ...setup, power: { ...power, armor: 0.9, health: 400 }, autoPick: true, seed: 11 });
+    let chests = 0,
+      floors = 0;
     while (!run.over && run.floor < 3) {
-      const wasCleared = run.cleared;
       stepRun(run, botInput(run));
-      if (!wasCleared && run.cleared && run.doors.length > 1) doors.push(run.doors.map((d) => d.kind));
       if (run.events.some((e) => e.type === 'chest')) chests++;
+      if (run.events.some((e) => e.type === 'floor')) floors++;
       run.events.length = 0;
     }
-    expect(doors.length).toBeGreaterThan(3);
-    for (const [a, b] of doors) expect(a).not.toBe(b);
+    expect(floors).toBe(3);
     expect(chests).toBeGreaterThan(0);
     expect(Object.values(run.relics).reduce((n, k) => n + (k ?? 0), 0)).toBe(chests);
   });
@@ -123,13 +192,15 @@ describe('dungeon', () => {
     stepRun(run, { x: 0, y: 0, ability: false });
     expect(w.phase).toBe(2);
     expect(takeEvents(run).filter((e) => e.type === 'phase')).toHaveLength(1);
-    // Down: the room opens one door (to the stairs) and leaves a chest that offers items.
+    // Down: the room opens its one door (back the way you came), the stairs down appear, and it
+    // leaves a chest that offers items.
     w.hp = 1;
     run.hero.x = w.x;
     run.hero.y = w.y + 40;
     for (let i = 0; i < 600 && !run.cleared; i++) stepRun(run, { x: 0, y: 0, ability: false });
     expect(run.cleared).toBe(true);
     expect(run.doors).toHaveLength(1);
+    expect(run.stairs).not.toBeNull();
     expect(run.chest).not.toBeNull();
     run.hero.x = run.chest!.x;
     run.hero.y = run.chest!.y;

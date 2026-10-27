@@ -1,9 +1,10 @@
 import { attackOf, clamp, RANGE } from '../rules';
-import { BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, spikeState, stepRun, TOMORROW_REACH, type Input, type Rect, type RoomKind, type Run, type RunEnd, type RunSetup } from './engine';
+import { BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Input, type Rect, type Run, type RunEnd, type RunSetup } from './engine';
 
 /* The bot: a steady, careful player, not a great one. It sidesteps shots on course to hit it,
    keeps its class's distance from monsters (a sword goes close, the rest stay back), plays each
-   boss by its rule, walks out through the door when a room is clear, and uses the ability when it
+   boss by its rule, explores the floor's map room by room once a room is clear (then takes the
+   stairs), and uses the ability when it
    helps. It reads the ground too: around pillars, out of water and rising spikes, away from
    barrels, bombs and a ram's line, to the shrine when hurt. When a shot it sees is about to land
    anyway, it dodges through it. It plays the same engine as a person: the same input, the same
@@ -30,13 +31,40 @@ export const ATTENTION = { share: 0.75 };
 /** Whether this shot is one the bot watches: fixed per shot, so it doesn't flicker. */
 const noticed = (id: number) => ((Math.imul(id, 2654435761) >>> 0) % 1000) / 1000 < ATTENTION.share;
 
-/** Which door the bot takes: rest when hurt, an elite room when healthy, a chest over a plain fight. */
-function pickDoor(run: Run): number {
-  const hp = run.hp / run.maxHp,
-    rank = (k: RoomKind) => (k === 'rest' ? (hp < 0.5 ? 4 : 0) : k === 'elite' ? (hp > 0.75 ? 3 : 0.5) : k === 'treasure' ? 2 : 1);
-  let best = run.doors[0];
-  for (const d of run.doors) if (rank(d.kind) > rank(best.kind)) best = d;
-  return best?.x ?? run.area.w / 2;
+/** Where the bot goes when a room is clear: the nearest room it hasn't been in (a shrine when
+    hurt, an elite room when healthy, a chest before a plain fight), or the stairs once it has seen
+    most of the floor (or is badly hurt). The door on the way there, or null for the stairs in this room. */
+function route(run: Run): Door | null {
+  const { cells, at } = run.map,
+    hp = run.hp / run.maxHp,
+    isEnd = (k: CellKind) => k === 'stairs' || k === 'warden' || k === 'boss',
+    rank = (k: CellKind) => (k === 'rest' ? (hp < 0.5 ? 3 : -1) : k === 'elite' ? (hp > 0.75 ? 1 : -2) : k === 'treasure' ? 1.5 : 0);
+  // Doors from here to every room it knows, walking only through rooms it has been in.
+  const first = new Map<number, Door>(),
+    far = new Map<number, number>([[at, 0]]),
+    todo = [at];
+  while (todo.length) {
+    const id = todo.shift()!;
+    if (id !== at && !cells[id].visited) continue;
+    for (const [side, to] of Object.entries(cells[id].links)) {
+      if (to === undefined || far.has(to)) continue;
+      far.set(to, far.get(id)! + 1);
+      first.set(to, id === at ? run.doors.find((d) => d.side === side)! : first.get(id)!);
+      todo.push(to);
+    }
+  }
+  const end = cells.find((c) => isEnd(c.kind) && c.seen),
+    seen = cells.filter((c) => c.visited).length / cells.length,
+    open = cells.filter((c) => c.seen && !c.visited && !isEnd(c.kind) && far.has(c.id)).sort((a, b) => far.get(a.id)! - rank(a.kind) - (far.get(b.id)! - rank(b.kind))),
+    // Badly hurt, it looks for a shrine first, then makes for the stairs.
+    next = hp < 0.4 ? (open.find((c) => c.kind === 'rest') ?? (end ? undefined : open[0])) : open[0];
+  if (end && (seen >= 0.6 || !next)) return end.id === at ? null : (first.get(end.id) ?? null);
+  return next ? first.get(next.id)! : (run.doors[0] ?? null);
+}
+
+/** Just past a door, so walking there takes you through it. */
+function beyond(run: Run, d: Door): [number, number] {
+  return d.side === 'e' ? [d.x, -20] : d.side === 'w' ? [d.x, run.area.h + 20] : d.side === 'n' ? [-20, d.y] : [run.area.w + 20, d.y];
 }
 
 /** After this long (s) in a room without hurting anything, the bot walks right up to the monsters:
@@ -46,7 +74,7 @@ const progress = new WeakMap<Run, { room: string; hp: number; at: number }>();
 
 /** Seconds in this room since anything got hurt (or since the room cleared). */
 function idle(run: Run): number {
-  const room = `${run.floor}.${run.room}`,
+  const room = `${run.floor}.${run.map.at}.${run.climb}`,
     hp = run.foes.reduce((n, f) => n + (f.alive ? f.hp : 0), 0) + run.kills * 1e4,
     p = progress.get(run);
   if (!p || p.room !== room || p.hp !== hp) {
@@ -257,11 +285,12 @@ export function botInput(run: Run): Input {
     x += (dx / d) * pull - (dy / d) * 0.35;
     y += (dy / d) * pull + (dx / d) * 0.35;
   } else if (run.cleared) {
-    // Gems come on their own: open the chest, then walk to the door it picks.
+    // Gems come on their own: open the chest, then on to where the map says.
     const c = run.chest && !run.chest.opened ? run.chest : null,
-      door = pickDoor(run),
-      dx = (c ? c.x : door) - h.x,
-      dy = (c ? c.y : -20) - h.y,
+      door = c ? null : run.climb !== null ? (run.doors[0] ?? null) : route(run),
+      [gx, gy] = c ? [c.x, c.y] : door ? beyond(run, door) : run.stairs ? [run.stairs.x, run.stairs.y] : [h.x, h.y],
+      dx = gx - h.x,
+      dy = gy - h.y,
       d = Math.hypot(dx, dy) || 1;
     x += (dx / d) * 1.5;
     y += (dy / d) * 1.5;
@@ -269,10 +298,12 @@ export function botInput(run: Run): Input {
 
   // Off the walls, where you get pinned (but not on the way out).
   const m = 60;
-  if (h.x < m) x += (m - h.x) / m;
-  if (h.x > run.area.w - m) x -= (h.x - (run.area.w - m)) / m;
-  if (!run.cleared && h.y < m) y += (m - h.y) / m;
-  if (h.y > run.area.h - m) y -= (h.y - (run.area.h - m)) / m;
+  if (!run.cleared) {
+    if (h.x < m) x += (m - h.x) / m;
+    if (h.x > run.area.w - m) x -= (h.x - (run.area.w - m)) / m;
+    if (h.y < m) y += (m - h.y) / m;
+    if (h.y > run.area.h - m) y -= (h.y - (run.area.h - m)) / m;
+  }
 
   const len = Math.hypot(x, y),
     [mx, my] = len < 0.05 ? [0, 0] : [x / len, y / len];

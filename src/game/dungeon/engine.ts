@@ -25,6 +25,7 @@ import {
   type AbilityId,
   type Ally,
   type AllyKind,
+  type CellKind,
   BARREL,
   BLINK,
   BOSSES,
@@ -37,8 +38,6 @@ import {
   DIALS,
   DIM,
   DODGE,
-  DOOR_AT,
-  DOOR_ODDS,
   ELITE,
   type FoeKind,
   GALE,
@@ -57,6 +56,7 @@ import {
   RELICS,
   RELIC_BOT,
   ROOM_KINDS,
+  ROOM_ODDS,
   type RelicId,
   type RoomKind,
   SAND,
@@ -127,7 +127,9 @@ const RUN_LIMIT = 2400;
 
 /** The floor (from 0) whose last room holds the Warden, or -1 when the dungeon is too short for one. */
 export const wardenFloor = (layout: Layout) => (layout.floors >= 4 ? Math.floor(layout.floors / 2) - 1 : -1);
-export const isWardenRoom = (r: Pick<Run, 'floor' | 'room' | 'layout'>) => r.floor === wardenFloor(r.layout) && r.room === r.layout.rooms - 1;
+/** The room of the map you're in. */
+export const cellOf = (r: Pick<Run, 'map'>) => r.map.cells[r.map.at];
+export const isWardenRoom = (r: Pick<Run, 'map'>) => cellOf(r).kind === 'warden';
 
 /** Floor 1 to 10 of the 10, whatever the layout. */
 const floorOf10 = (run: Run) => Math.round(depth(run) * 9);
@@ -292,6 +294,8 @@ export interface Input {
   ability: boolean;
   /** The dodge button went down this step. */
   dodge?: boolean;
+  /** A monster tapped this step: your attacks go to it while it's in reach (null lets go). */
+  lock?: number | null;
 }
 
 export interface RunEnd {
@@ -318,18 +322,24 @@ export interface Run {
   ids: number;
   /** From 0. The last room of the last floor is the boss's. */
   floor: number;
+  /** Rooms you've walked into on this floor, less one. */
   room: number;
+  /** This floor's rooms and how they join. */
+  map: FloorMap;
   /** This room's size, and what's on its floor. */
   area: { w: number; h: number };
+  /** The monster you tapped, which your attacks go to first while it's in reach. */
+  lock: number | null;
   terrain: Terrain;
   /** Waves still to come in this room. */
   waves: MonsterKind[][];
   mines: Mine[];
-  /** This room's kind, the one behind the door you're walking to, and the doors once open. */
+  /** This room's kind (the floor's last room fights as a plain one), its doors (open once it's
+      clear), and the stairs down, once the floor's last room is clear. */
   kind: RoomKind;
-  nextKind: RoomKind;
-  doors: { x: number; kind: RoomKind }[];
+  doors: Door[];
   chest: { x: number; y: number; opened: boolean } | null;
+  stairs: { x: number; y: number } | null;
   relics: Partial<Record<RelicId, number>>;
   /** Three items to pick from, from an opened chest: the run holds still until one is taken. */
   relicOffer: RelicId[] | null;
@@ -394,7 +404,7 @@ export interface Run {
 
 /** On the Summit, the boss's room is the first ledge of the climb, and every ledge after it. */
 const climbing = (run: Run) => run.setup.zone.boss === 'summit' && isBossRoom(run);
-export const isBossRoom = (r: Pick<Run, 'floor' | 'room' | 'layout'>) => r.floor === r.layout.floors - 1 && r.room === r.layout.rooms - 1;
+export const isBossRoom = (r: Pick<Run, 'map'>) => cellOf(r).kind === 'boss';
 /** How far down this floor is, from 0 (the first) to 1 (the boss's). */
 const depth = (run: Run) => (run.layout.floors > 1 ? run.floor / (run.layout.floors - 1) : 0);
 
@@ -403,23 +413,26 @@ export function createRun(setup: RunSetup): Run {
     hp = Math.round(heroMaxHp(setup.power) * body.hp),
     power = { ...setup.power, armor: setup.power.armor + body.armor, damage: (1 + setup.power.damage) * body.dmg - 1 };
   setup = { ...setup, power };
+  const layout = setup.layout ?? LAYOUT;
   const run: Run = {
     setup,
-    layout: setup.layout ?? LAYOUT,
+    layout,
     rnd: seeded(setup.seed),
     t: 0,
     ids: 0,
     floor: 0,
-    room: 0,
+    room: -1,
+    map: makeFloor(layout, 0, floorSeed(setup.seed, 0)),
     area: { w: ROOM.w, h: ROOM.h },
+    lock: null,
     terrain: { water: [], pillars: [], spikes: [], barrels: [], shrine: null },
     waves: [],
     mines: [],
     met: new Set(['slime', 'wisp', 'golem', 'reflection', 'splitling']),
     kind: 'fight',
-    nextKind: 'fight',
     doors: [],
     chest: null,
+    stairs: null,
     relics: {},
     relicOffer: null,
     wardAt: 0,
@@ -466,7 +479,7 @@ export function createRun(setup: RunSetup): Run {
     over: null,
     paused: false,
   };
-  enterRoom(run);
+  enterRoom(run, null);
   if (run.free.length) later(run, 0.7, () => offer(run, run.free.shift()!));
   return run;
 }
@@ -475,13 +488,138 @@ const later = (run: Run, s: number, fn: () => void) => run.timers.push({ at: run
 const emit = (run: Run, e: GameEvent) => run.events.push(e);
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
 
+// ---------- the floor's map ----------
+
+/** A wall of a room, by the way it faces on the map. The scene draws each room turned a quarter
+    (see scene.ts), so a room's top wall is east, the way on, and its left wall is north. */
+export type Side = 'e' | 'w' | 'n' | 's';
+const STEPS: Record<Side, [number, number]> = { e: [1, 0], w: [-1, 0], n: [0, -1], s: [0, 1] };
+export const ACROSS: Record<Side, Side> = { e: 'w', w: 'e', n: 's', s: 'n' };
+
+/** A room on the floor's map. */
+export interface Cell {
+  id: number;
+  /** Where it is on the map: east is +gx, south is +gy. */
+  gx: number;
+  gy: number;
+  kind: CellKind;
+  /** The room through each of its doors. */
+  links: Partial<Record<Side, number>>;
+  /** Doors from the floor's first room: rooms further in hold more monsters. */
+  dist: number;
+  /** Seen through a door, walked into, cleared. */
+  seen: boolean;
+  visited: boolean;
+  cleared: boolean;
+  /** The room as you left it, so it's the same when you walk back in. */
+  kept: { area: { w: number; h: number }; terrain: Terrain; chest: Run['chest'] } | null;
+}
+export interface FloorMap {
+  cells: Cell[];
+  /** The room you're in. */
+  at: number;
+}
+/** A door of the room you're in: its middle, in the wall, and the room behind it. */
+export interface Door {
+  side: Side;
+  x: number;
+  y: number;
+  to: number;
+  kind: CellKind;
+  /** You've been in the room behind it. */
+  been: boolean;
+}
+
+/** Each floor's map has its own seed, so the fights in it don't change its shape. */
+const floorSeed = (seed: number, floor: number) => (seed * 31 + floor * 7919 + 17) >>> 0;
+
+/** A floor's map: a winding way east from the first room to the last (the stairs, the mid-boss or
+    the boss), and rooms off to the side of it, where a dead end most often holds a chest or a
+    shrine. Now and then two rooms side by side share a door too, so there's more than one way
+    round. The last room has one door, the way in. */
+export function makeFloor(layout: Layout, floor: number, seed: number): FloorMap {
+  const rnd = seeded(seed),
+    cells: Cell[] = [],
+    grid = new Map<string, Cell>(),
+    key = (x: number, y: number) => `${x},${y}`;
+  const add = (gx: number, gy: number, kind: CellKind) => {
+    const c: Cell = { id: cells.length, gx, gy, kind, links: {}, dist: 0, seen: false, visited: false, cleared: false, kept: null };
+    cells.push(c);
+    grid.set(key(gx, gy), c);
+    return c;
+  };
+  const near = (c: Cell, s: Side) => grid.get(key(c.gx + STEPS[s][0], c.gy + STEPS[s][1]));
+  const link = (a: Cell, s: Side, b: Cell) => {
+    a.links[s] = b.id;
+    b.links[ACROSS[s]] = a.id;
+  };
+  const grow = (c: Cell, s: Side, kind: CellKind) => {
+    const n = add(c.gx + STEPS[s][0], c.gy + STEPS[s][1], kind);
+    link(c, s, n);
+    return n;
+  };
+  let rested = false;
+  const draw = (odds: [RoomKind, number][]): RoomKind => {
+    const opts = odds.filter(([k]) => !(k === 'elite' && floor === 0) && !(k === 'rest' && rested)),
+      total = opts.reduce((n, [, o]) => n + o, 0);
+    let r = rnd() * total;
+    for (const [k, o] of opts) if ((r -= o) < 0) return k;
+    return opts[0][0];
+  };
+  // The way: mostly east, sometimes up or down the map, never back on itself. Its last step is
+  // always east, so the last room is entered from the west.
+  const n = Math.max(2, layout.rooms);
+  let c = add(0, 0, 'fight');
+  for (let i = 1; i < n - 1; i++) {
+    const turn: Side = rnd() < 0.5 ? 'n' : 's',
+      s: Side = rnd() < 0.45 && !near(c, turn) ? turn : 'e';
+    c = grow(c, s, 'fight');
+  }
+  const last = grow(c, 'e', floor === layout.floors - 1 ? 'boss' : floor === wardenFloor(layout) ? 'warden' : 'stairs');
+  // Rooms off to the side: off the way, or off another side room.
+  const sides = layout.side ? layout.side - 1 + Math.floor(rnd() * 3) : 0;
+  const way = cells.length;
+  for (let left = sides, tries = 0; left > 0 && tries < 60; tries++) {
+    const from = cells[Math.floor(rnd() * cells.length)],
+      open = (['n', 's', 'e', 'w'] as Side[]).filter((s) => !near(from, s));
+    if (from === last || !open.length) continue;
+    grow(from, open[Math.floor(rnd() * open.length)], 'fight');
+    left--;
+  }
+  // A few shortcuts between rooms side by side (never into the last room).
+  for (const a of cells)
+    for (const s of ['e', 's'] as Side[]) {
+      const b = near(a, s);
+      if (b && a.links[s] === undefined && a !== last && b !== last && rnd() < 0.25) link(a, s, b);
+    }
+  // What each room holds: the way's rooms are mostly fights; a dead end most often a chest.
+  for (const x of cells) {
+    if (x.id === 0 || x === last) continue;
+    x.kind = draw(x.id < way ? ROOM_ODDS.way : Object.keys(x.links).length === 1 ? ROOM_ODDS.end : ROOM_ODDS.side);
+    if (x.kind === 'rest') rested = true;
+  }
+  // How far in each room is.
+  const todo = [cells[0]],
+    done = new Set([0]);
+  while (todo.length) {
+    const a = todo.shift()!;
+    for (const id of Object.values(a.links))
+      if (id !== undefined && !done.has(id)) {
+        done.add(id);
+        cells[id].dist = a.dist + 1;
+        todo.push(cells[id]);
+      }
+  }
+  return { cells, at: 0 };
+}
+
 // ---------- rooms and floors ----------
 
 /** What a room holds: a budget of monsters that grows with depth (and the room's size), in three
     waves; each floor ends with a golem. New kinds join deeper down, and show up more on the floor
     they first appear. */
 function fillRoom(run: Run): MonsterKind[][] {
-  const { room } = run,
+  const room = cellOf(run).dist,
     deep = depth(run),
     fl = floorOf10(run),
     size = Math.sqrt((run.area.w * run.area.h) / (ROOM.w * ROOM.h));
@@ -503,7 +641,7 @@ function fillRoom(run: Run): MonsterKind[][] {
     return out;
   };
   const waves = [wave(budget * 0.4), wave(budget * 0.3), wave(budget * 0.3)];
-  if (run.climb !== null ? run.climb % 2 === 1 : room === run.layout.rooms - 1) waves[2].push('golem');
+  if (run.climb !== null ? run.climb % 2 === 1 : cellOf(run).kind === 'stairs') waves[2].push('golem');
   return waves;
 }
 
@@ -516,7 +654,7 @@ function roomSize(run: Run) {
 }
 
 /** The room's floor: pillars in mirrored pairs, pools of water, spikes and barrels deeper down, and
-    a shrine in the middle room of every floor. Kept off the door's lane and where you walk in. */
+    a shrine in a rest room. Kept off the lanes in from each wall's door, where you walk in. */
 function buildTerrain(run: Run): Terrain {
   const { w, h } = run.area,
     rnd = run.rnd,
@@ -530,8 +668,9 @@ function buildTerrain(run: Run): Terrain {
   const rects = () => [...t.water, ...t.spikes];
   const clear = (x: number, y: number, r: number) => {
     if (x < m + r + 24 || x > w - m - r - 24 || y < m + r + 24 || y > h - m - r - 24) return false;
-    for (const at of [0.5, ...DOOR_AT]) if (Math.abs(x - w * at) < ROOM.door / 2 + 26 + r && y < 170 + r) return false;
-    if (Math.hypot(x - w / 2, y - (h - 70)) < 110 + r) return false;
+    const lane = ROOM.door / 2 + 26 + r;
+    if (Math.abs(x - w / 2) < lane && (y < 170 + r || y > h - 170 - r)) return false;
+    if (Math.abs(y - h / 2) < lane && (x < 120 + r || x > w - 120 - r)) return false;
     for (const p of t.pillars) if (Math.hypot(p.x - x, p.y - y) < p.r + r + 56) return false;
     for (const b of t.barrels) if (Math.hypot(b.x - x, b.y - y) < BARREL.r + r + 30) return false;
     for (const q of rects()) if (inRect(q, x, y, r + 14)) return false;
@@ -582,7 +721,11 @@ function buildTerrain(run: Run): Terrain {
   return t;
 }
 
-function enterRoom(run: Run) {
+/** Into the map's room `map.at`, through its door on side `from` (null: the floor's first room).
+    A room you cleared before is as you left it, its doors open. */
+function enterRoom(run: Run, from: Side | null) {
+  const c = cellOf(run),
+    back = c.kept;
   run.foes = [];
   run.bullets = [];
   run.shots = [];
@@ -591,30 +734,39 @@ function enterRoom(run: Run) {
   run.cleared = false;
   run.doorOpen = false;
   run.doors = [];
-  run.chest = null;
-  run.kind = isBossRoom(run) || isWardenRoom(run) ? 'fight' : run.nextKind;
-  run.nextKind = 'fight';
-  run.area = roomSize(run);
-  run.terrain = buildTerrain(run);
-  run.hero.x = run.area.w / 2;
-  run.hero.y = run.area.h - 70;
+  run.chest = back?.chest ?? null;
+  run.stairs = null;
+  if (!c.visited) run.room++;
+  c.seen = c.visited = true;
+  for (const id of Object.values(c.links)) if (id !== undefined) run.map.cells[id].seen = true;
+  run.kind = c.kind === 'stairs' || c.kind === 'warden' || c.kind === 'boss' ? 'fight' : c.kind;
+  run.area = back?.area ?? roomSize(run);
+  run.lock = null;
+  run.terrain = back?.terrain ?? buildTerrain(run);
+  const { w, h } = run.area;
+  [run.hero.x, run.hero.y] = from === 'e' ? [w / 2, 70] : from === 'n' ? [70, h / 2] : from === 's' ? [w - 70, h / 2] : [w / 2, h - 70];
   run.charge = null;
   run.warden = null;
   run.dim = null;
   run.wind = { x: 0, y: 0 };
+  run.waves = [];
+  if (c.cleared) {
+    run.cleared = run.doorOpen = true;
+    openDoors(run);
+    emit(run, { type: 'room' });
+    return;
+  }
   emit(run, { type: 'room' });
   if (climbing(run)) {
     startLedge(run);
     return;
   }
   if (isBossRoom(run)) {
-    run.waves = [];
     later(run, 1.2, () => summonBoss(run));
     return;
   }
   if (isWardenRoom(run)) {
     // The Warden alone: it rises at the top of the room while you walk in.
-    run.waves = [];
     const mid = midBoss(run.setup.zone),
       f = addFoe(run, mid.kind, run.area.w / 2, 170);
     f.bornUntil = run.t + 1.4;
@@ -634,16 +786,16 @@ function enterRoom(run: Run) {
 /** Whether a body of radius r at x, y would sit inside a pillar. */
 const inPillar = (run: Run, x: number, y: number, r: number) => run.terrain.pillars.some((p) => Math.hypot(p.x - x, p.y - y) < p.r + r);
 
-/** A point in the room for a monster: in the upper part, away from you and out of the pillars. */
+/** A point in the room for a monster: away from you and out of the pillars. */
 function spawnPoint(run: Run): [number, number] {
   const m = ROOM.wall + 30,
     { w, h } = run.area;
   for (let i = 0; i < 20; i++) {
     const x = m + run.rnd() * (w - 2 * m),
-      y = m + run.rnd() * (h * 0.6);
+      y = m + run.rnd() * (h - 2 * m);
     if (Math.hypot(x - run.hero.x, y - run.hero.y) > 220 && !inPillar(run, x, y, 24)) return [x, y];
   }
-  return [w / 2, m + 20];
+  return [w / 2, run.hero.y > h / 2 ? m + 20 : h - m - 20];
 }
 
 function nextWave(run: Run) {
@@ -756,9 +908,8 @@ function startLedge(run: Run) {
   later(run, 0.6, () => nextWave(run));
 }
 
-/** Walk through the open door: the next room, the next floor, or (past the last) nothing. */
-function throughDoor(run: Run, kind: RoomKind) {
-  run.nextKind = kind;
+/** Walk through an open door: into the room behind it, or on the Summit up to the next ledge. */
+function throughDoor(run: Run, d: Door) {
   if (climbing(run)) {
     // Up to the next ledge: the same room of the map, one ledge higher.
     run.climb = (run.climb ?? 0) + 1;
@@ -766,20 +917,30 @@ function throughDoor(run: Run, kind: RoomKind) {
     run.hp = Math.min(run.maxHp, run.hp + heal);
     emit(run, { type: 'ledge', height: run.climb });
     emit(run, { type: 'heal', x: run.hero.x, y: run.hero.y, n: heal });
-    enterRoom(run);
+    enterRoom(run, 'w');
     return;
   }
-  run.room++;
-  if (run.room >= run.layout.rooms) {
-    run.room = 0;
-    run.floor++;
-    // A breath on the stairs.
-    const heal = Math.round(run.maxHp * DIALS.stairs);
-    run.hp = Math.min(run.maxHp, run.hp + heal);
-    emit(run, { type: 'floor', floor: run.floor });
-    emit(run, { type: 'heal', x: run.hero.x, y: run.hero.y, n: heal });
-  }
-  enterRoom(run);
+  cellOf(run).kept = { area: run.area, terrain: run.terrain, chest: run.chest };
+  run.map.at = d.to;
+  enterRoom(run, ACROSS[d.side]);
+}
+
+/** A new floor's map, and you in its first room (or, for developer mode, its last). */
+function newFloor(run: Run, floor: number, toEnd = false) {
+  run.floor = floor;
+  run.room = -1;
+  run.map = makeFloor(run.layout, floor, floorSeed(run.setup.seed, floor));
+  if (toEnd) run.map.at = run.map.cells.findIndex((c) => c.kind === 'stairs' || c.kind === 'warden' || c.kind === 'boss');
+  enterRoom(run, toEnd ? 'w' : null);
+}
+
+/** Down the stairs, with a breath on the way. */
+function downStairs(run: Run) {
+  const heal = Math.round(run.maxHp * DIALS.stairs);
+  run.hp = Math.min(run.maxHp, run.hp + heal);
+  emit(run, { type: 'floor', floor: run.floor + 1 });
+  emit(run, { type: 'heal', x: run.hero.x, y: run.hero.y, n: heal });
+  newFloor(run, run.floor + 1);
 }
 
 // ---------- the step ----------
@@ -801,6 +962,7 @@ export function stepRun(run: Run, input: Input) {
     return end(run, false, 'limit');
   }
   if (now >= RUN_LIMIT) return end(run, false, 'limit');
+  if (input.lock !== undefined) run.lock = input.lock;
   if (input.dodge) dodge(run, input);
   moveHero(run, input);
   if (input.ability) useAbility(run, input);
@@ -845,13 +1007,15 @@ function moveHero(run: Run, input: Input) {
   h.x += h.vx * STEP;
   h.y += h.vy * STEP;
   outOfPillars(run, h, HERO_R);
-  // The open door is a gap in the top wall.
+  // An open door is a gap in its wall: in line with it, you can walk on out.
   const { w, h: H } = run.area,
-    door = run.doorOpen ? run.doors.find((d) => Math.abs(h.x - d.x) < ROOM.door / 2 - HERO_R) : undefined,
-    inDoor = !!door;
-  h.x = clamp(h.x, ROOM.wall + HERO_R, w - ROOM.wall - HERO_R);
-  h.y = clamp(h.y, inDoor ? -40 : ROOM.wall + HERO_R, H - ROOM.wall - HERO_R);
-  if (door && h.y < 4) return throughDoor(run, door.kind);
+    lane = (s: Side) => run.doorOpen && run.doors.some((d) => d.side === s && Math.abs(s === 'e' || s === 'w' ? h.x - d.x : h.y - d.y) < ROOM.door / 2 - HERO_R);
+  h.x = clamp(h.x, lane('n') ? -40 : ROOM.wall + HERO_R, lane('s') ? w + 40 : w - ROOM.wall - HERO_R);
+  h.y = clamp(h.y, lane('e') ? -40 : ROOM.wall + HERO_R, lane('w') ? H + 40 : H - ROOM.wall - HERO_R);
+  const out: Side | null = h.y < 4 ? 'e' : h.y > H - 4 ? 'w' : h.x < 4 ? 'n' : h.x > w - 4 ? 's' : null,
+    door = out && run.doors.find((d) => d.side === out);
+  if (door) return throughDoor(run, door);
+  if (run.stairs && Math.hypot(run.stairs.x - h.x, run.stairs.y - h.y) < 18 + HERO_R) return downStairs(run);
   // A chest: open it and pick what's inside.
   const c = run.chest;
   if (c && !c.opened && Math.hypot(c.x - h.x, c.y - h.y) < 22 + HERO_R) openChest(run);
@@ -1527,6 +1691,13 @@ function midFalls(run: Run) {
   if (f.kind === 'foreman' || f.kind === 'whisper') for (const o of run.foes) if (o.alive && o !== f) fade(run, o);
 }
 
+/** The monster you tapped, while it stands, can be hit and is in reach. */
+function locked(run: Run, reach: number): Foe | null {
+  const f = run.lock === null ? undefined : run.foes.find((o) => o.id === run.lock);
+  if (!f?.alive || run.t < f.bornUntil || untouchable(run, f) || dist(f, run.hero) > reach) return null;
+  return f;
+}
+
 function nearest(run: Run, x: number, y: number, skip?: Set<Foe>, within = Infinity): Foe | null {
   let best: Foe | null = null,
     bd = within * within;
@@ -1647,7 +1818,7 @@ function attack(run: Run) {
   const kind = attackOf(run.setup.classId),
     reach = kind === 'slash' ? SLASH_REACH : RANGE,
     b = run.boss?.alive && run.setup.zone.boss !== 'mirror' && !untouchable(run, run.boss) && run.t >= run.boss.bornUntil && dist(run.boss, h) <= reach ? run.boss : null,
-    target = b ?? nearest(run, h.x, h.y, undefined, reach);
+    target = locked(run, reach) ?? b ?? nearest(run, h.x, h.y, undefined, reach);
   if (!target && kind !== 'wave') return;
   if (kind === 'wave' && !nearest(run, h.x, h.y, undefined, 150)) return;
   run.cd.attack = attackCooldown(kind, run.setup.power, run.ups) / (1 + DIALS.relic * 0.1 * relic(run, 'quick')) / bodyOf(run).haste;
@@ -1873,6 +2044,7 @@ function checkRoom(run: Run) {
   if (run.waves.length && alive <= 2 && !run.timers.length) later(run, 0.8, () => nextWave(run));
   if (!run.waves.length && alive === 0) {
     run.cleared = true;
+    if (!climbing(run)) cellOf(run).cleared = true;
     run.doorOpen = true;
     run.bullets = [];
     run.mines = [];
@@ -1889,30 +2061,18 @@ function checkRoom(run: Run) {
   }
 }
 
-/** The way on: one door to the stairs or the boss, otherwise two doors that each say what's behind. */
+/** The room's doors, each to the room behind it on the map, and in the floor's last room the
+    stairs down. On the Summit, one door: up to the next ledge. */
 function openDoors(run: Run) {
-  const { w } = run.area,
-    { floors, rooms } = run.layout;
-  const single = climbing(run) || run.room === rooms - 1 || ((run.floor === floors - 1 || run.floor === wardenFloor(run.layout)) && run.room === rooms - 2) || rooms < 3;
-  if (single) {
-    run.doors = [{ x: w / 2, kind: 'fight' }];
+  const { w, h } = run.area,
+    c = cellOf(run),
+    spot: Record<Side, [number, number]> = { e: [w / 2, 0], w: [w / 2, h], n: [0, h / 2], s: [w, h / 2] };
+  if (climbing(run)) {
+    run.doors = [{ side: 'e', x: w / 2, y: 0, to: c.id, kind: 'boss', been: false }];
     return;
   }
-  // Two different kinds; never two rests in a row, and no elites on the first floor.
-  const odds = DOOR_ODDS.filter(([k]) => !(k === 'rest' && run.kind === 'rest') && !(k === 'elite' && run.floor === 0));
-  const draw = (skip?: RoomKind): RoomKind => {
-    const opts = odds.filter(([k]) => k !== skip),
-      total = opts.reduce((n, [, o]) => n + o, 0);
-    let r = run.rnd() * total;
-    for (const [k, o] of opts) if ((r -= o) < 0) return k;
-    return opts[0][0];
-  };
-  const a = draw(),
-    b = draw(a);
-  run.doors = [
-    { x: Math.round(w * DOOR_AT[0]), kind: a },
-    { x: Math.round(w * DOOR_AT[1]), kind: b },
-  ];
+  run.doors = (Object.entries(c.links) as [Side, number][]).map(([side, to]) => ({ side, x: spot[side][0], y: spot[side][1], to, kind: run.map.cells[to].kind, been: run.map.cells[to].visited }));
+  if (c.kind === 'stairs' || c.kind === 'warden') run.stairs = { x: w / 2, y: 110 };
 }
 
 function openChest(run: Run) {
@@ -2025,30 +2185,24 @@ export function winNow(run: Run) {
 /** Developer mode: down to the next floor's first room. */
 export function skipFloor(run: Run) {
   if (run.boss || run.floor >= run.layout.floors - 1) return;
-  run.floor++;
-  run.room = 0;
   run.timers = [];
-  emit(run, { type: 'floor', floor: run.floor });
-  enterRoom(run);
+  emit(run, { type: 'floor', floor: run.floor + 1 });
+  newFloor(run, run.floor + 1);
 }
 
 /** Developer mode: straight to the Warden's room on the middle floor. */
 export function skipToWarden(run: Run) {
   const f = wardenFloor(run.layout);
   if (run.boss || f < 0) return;
-  run.floor = f;
-  run.room = run.layout.rooms - 1;
   run.timers = [];
-  enterRoom(run);
+  newFloor(run, f, true);
 }
 
 /** Developer mode: straight to the boss's room. */
 export function skipToBoss(run: Run) {
   if (run.boss) return;
-  run.floor = run.layout.floors - 1;
-  run.room = run.layout.rooms - 1;
   run.timers = [];
-  enterRoom(run);
+  newFloor(run, run.layout.floors - 1, true);
 }
 
 /** Drains what happened since the last call. */

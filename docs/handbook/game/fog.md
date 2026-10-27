@@ -34,14 +34,18 @@ Tested in `src/lib/fog.test.ts`.
 
 ## The run itself
 
-A run is a dungeon of ten floors per zone, played by a pure engine and drawn by Phaser:
+A run is a dungeon of ten floors per zone, each a map of rooms to explore down to the stairs (a
+minimap in the corner fills in as you go), played by a pure engine and drawn by Phaser:
 [dungeon.md](dungeon.md) has the files and the how-to table. `src/game/rules.ts` holds numbers
 shared between the hero and the engine (speed, HP, attacks) and the sprite sheet names;
 `src/game/sheets.ts` builds the sheets a run needs; `src/game/calm.ts` drops shake and flashes for
 `prefers-reduced-motion`.
 
 `src/components/FogRun.tsx` loads `src/game/dungeon/scene.ts` with `import()` only when a run
-starts (Phaser is big); `PlayTab.tsx` warms the code and sheets while the tab sits idle.
+starts (Phaser is big); `PlayTab.tsx` warms the code and sheets while the tab sits idle. A run is
+played with the phone held sideways: held upright, `FogRun` holds the run behind a "turn your
+phone" card (`usePortrait`), and where the browser allows it (Android, installed) it turns the
+screen itself for the run (`useSideways`). The rest of the app stays upright.
 
 ## Balance
 

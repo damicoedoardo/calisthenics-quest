@@ -148,6 +148,7 @@ export default function NightLab() {
           );
         })}
         <Row icon={<Swords size={16} />} label="The Play tab" note="Power from training with pixel icons, all six zones open" onClick={() => open(veteran(78, 6), 'tab=play')} />
+        <Row icon={<Swords size={16} />} label="The Fog, sideways" note="Hold the phone across: rooms run left to right, tap a monster to aim at it" onClick={() => open(veteran(14, 1), 'run=0')} />
         <Row icon={<Swords size={16} />} label="Exercise library" note="Train tab, top button: 870+ exercises, pixel demos for boy and girl" onClick={() => open(veteran(10, 1), 'tab=train')} />
       </Panel>
 

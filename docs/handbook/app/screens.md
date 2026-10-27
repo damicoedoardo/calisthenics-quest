@@ -30,7 +30,7 @@ pieces of screen state, and decides what is on screen:
 | `TrainTab` | The "Exercise library" button, gym or home, the plan's two days with today's targets, when the next gear is forged |
 | `ExerciseLibrary` | The whole exercise library over the Train tab: search, equipment, kind and movement filters, list rows with a demo still; an exercise shows the boy and girl demo, steps, tips and common mistakes. Loaded on demand. See [../game/exercise-library.md](../game/exercise-library.md) |
 | `PlayTab` | Power from training, the zones, warms up the Fog's code and sprite sheets while idle |
-| `FogRun` | A run: loads the Phaser scene on demand, the HUD, pause menu, skill picks, the recap |
+| `FogRun` | A run, held sideways: loads the Phaser scene on demand, the HUD, the depth ladder and the floor's minimap (`FloorMap`, tap for it big), pause menu, skill picks, the recap, the "turn your phone" card |
 | `HeroTab` | Gear, class, look editor, the champion's stat points (`StatPoints`: spend, take back), keepsakes, quest log, Backup and Restore, cloud backup sign-in (`CloudSave`) |
 | `ScenePlayer`, `Dialogue` | Play a story scene: lines, camera shots, the question, the answer lines |
 | `ClassPicker` | Four weapons in the ash: pick the class |
