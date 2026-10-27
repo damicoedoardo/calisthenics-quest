@@ -347,12 +347,12 @@ export interface MidBoss {
 }
 /** The mid-boss guarding the last room of the middle floor (floor 5 of 10), by zone. */
 export const MIDS: MidBoss[] = [
-  { kind: 'warden', name: 'the Warden of the Ashes', enter: 'The Warden of the Ashes guards the stairs. Walk with its turning arms.', hot: 'The Warden burns hotter. It aims at you now: keep moving.', fall: 'The Warden falls. It leaves a chest.' },
-  { kind: 'lantern', name: 'the Drowned Lantern', enter: 'The Drowned Lantern dims the room. Every hit on it brings the light back.', hot: 'The Lantern flickers. What you see is less than what is there.', fall: 'The Lantern goes out, and the room is clear to see. It leaves a chest.' },
-  { kind: 'foreman', name: 'the Foreman', enter: 'The Foreman mends its crew. Keep hitting it, and it has no time to.', hot: 'The Foreman works faster. So can you.', fall: 'The Foreman stops, and its crew falls apart. It leaves a chest.' },
-  { kind: 'sandGolem', name: 'the Sand Golem', enter: 'The Sand Golem turns to stone when it stands still. Hit it while it walks.', hot: 'Cracks run through the sand. Keep going.', fall: 'The Sand Golem pours away. It leaves a chest.' },
-  { kind: 'whisper', name: 'the Whisper', enter: 'The Whisper hides among the wisps. Watch for the one that glows before it moves.', hot: 'The Whisper grows louder. It is still only a whisper.', fall: 'The Whisper goes quiet, and the wisps with it. It leaves a chest.' },
-  { kind: 'gale', name: 'the Gale', enter: 'The Gale blows you toward the edge. Lean into it, and step back in.', hot: 'The Gale blows harder. Stay near the middle.', fall: 'The Gale drops to a breeze. It leaves a chest.' },
+  { kind: 'warden', name: 'the Warden of the Ashes', enter: 'Guarding the stairs. Come back tomorrow.', hot: 'Still here? Tomorrow would be easier.', fall: 'The stairs are open. Today.' },
+  { kind: 'lantern', name: 'the Drowned Lantern', enter: 'Better not to look too closely.', hot: "Back then you didn't need a light.", fall: "The light's back. It's only you. Good." },
+  { kind: 'foreman', name: 'the Foreman', enter: 'Redo it. All of it. Properly this time.', hot: "Faster won't fix sloppy.", fall: 'Sloppy, and it still worked.' },
+  { kind: 'sandGolem', name: 'the Sand Golem', enter: "Stand still. Nothing's moving anyway.", hot: 'Cracks? Probably nothing.', fall: 'Sand, all along. It was moving.' },
+  { kind: 'whisper', name: 'the Whisper', enter: 'Shh. Nobody will notice if you stop.', hot: 'Louder now. Still only a whisper.', fall: 'Quiet. You kept walking anyway.' },
+  { kind: 'gale', name: 'the Gale', enter: 'Turn back. The top is too far.', hot: 'Harder. Everyone else turns back here.', fall: 'Just a breeze now. Keep climbing.' },
 ];
 export const midBoss = (zone: Pick<Zone, 'id'>) => MIDS[clamp(zone.id, 0, MIDS.length - 1)];
 /** The Warden of the Ashes, the first zone's mid-boss. */
