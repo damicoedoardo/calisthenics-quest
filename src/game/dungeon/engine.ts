@@ -33,8 +33,43 @@ import {
 export const STEP = 1 / 60;
 /** How far your flame's fires circle you. */
 export const FLAME_RING = FLAME.orbit;
-/** A room, in world pixels: about a phone screen. Walls are drawn inside it. */
+/** A room, in world pixels: the smallest is about a phone screen, deeper ones run taller and the
+    camera follows you. Walls are drawn inside it. */
 export const ROOM = { w: 420, h: 760, wall: 22, door: 84 };
+
+// ---------- the ground ----------
+
+/** Water slows whoever wades in it. */
+export const WATER = { hero: 0.55, foe: 0.6 };
+/** Spikes rise every `every` s: a warning, then up for a moment. */
+export const SPIKES = { every: 3, warn: 0.7, up: 0.7, dmg: 9 };
+/** A barrel blows up when anything hits it: hard on monsters, and on you if you stand too close. */
+export const BARREL = { r: 12, blast: 80, dmg: 30, hurt: 10 };
+/** The shrine in the middle room of each floor heals you once (DIALS.shrine of your HP). */
+export const SHRINE = { r: 18 };
+
+export interface Rect {
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+}
+export interface Terrain {
+  water: Rect[];
+  /** Stone pillars: block you, monsters, and every shot. Cover. */
+  pillars: { x: number; y: number; r: number }[];
+  spikes: (Rect & { phase: number })[];
+  barrels: { id: number; x: number; y: number; alive: boolean }[];
+  shrine: { x: number; y: number; used: boolean } | null;
+}
+
+export const inRect = (r: Rect, x: number, y: number, pad = 0) => x > r.x - pad && x < r.x + r.w + pad && y > r.y - pad && y < r.y + r.h + pad;
+
+/** Where a patch of spikes is in its cycle at run time t. */
+export function spikeState(s: { phase: number }, t: number): 'down' | 'warn' | 'up' {
+  const c = (t + s.phase) % SPIKES.every;
+  return c >= SPIKES.every - SPIKES.up ? 'up' : c >= SPIKES.every - SPIKES.up - SPIKES.warn ? 'warn' : 'down';
+}
 /** How deep a dungeon goes: sized so a whole run down to the boss takes about 15 minutes. */
 export interface Layout {
   floors: number;
@@ -45,15 +80,17 @@ export const LAYOUT: Layout = { floors: 10, rooms: 5 };
 /** The dials balance tests turn (scripts/fog-sim.mjs). */
 export const DIALS = {
   /** Monster HP, on top of the zone's. */
-  hp: 1.5,
+  hp: 1.3,
   /** How often monsters shoot (2 = twice as often). */
-  fire: 1.7,
+  fire: 2.5,
   /** How fast their shots fly. */
-  speed: 1.4,
+  speed: 1.45,
   /** How many monsters a room holds. */
   crowd: 1,
   /** Share of HP back on the stairs to each new floor. */
-  stairs: 0.15,
+  stairs: 0.1,
+  /** Share of HP the shrine on each floor gives back. */
+  shrine: 0.25,
 };
 const HERO_R = 10;
 /** After a hit you can't be hit again for this long (s). */
@@ -65,28 +102,35 @@ const RUN_LIMIT = 2400;
 
 // ---------- monsters ----------
 
-export type MonsterKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection';
+export type MonsterKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'ram' | 'book' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade';
 export type FoeKind = MonsterKind | 'boss';
 
-/** How a monster moves: walks at you, keeps its distance, or circles you at its range. */
-type Move = 'chase' | 'keep' | 'orbit';
+/** How a monster moves: walks at you, keeps its distance, circles you at its range, stands still,
+    winds up and charges in a line, or vanishes and appears somewhere near you. */
+type Move = 'chase' | 'keep' | 'orbit' | 'still' | 'charge' | 'blink';
+
+/** What a shot does on its way: curve after you, bounce off walls, start slow and speed up, wiggle. */
+export type ShotStyle = 'plain' | 'homing' | 'bounce' | 'ramp' | 'wiggle';
 
 /** One way a monster shoots, every `every` seconds. */
 export interface Pattern {
   every: number;
   /** aimed: n bullets at you; spread: n in a fan of `arc` radians; ring: n all around; spiral: n
-      around, turning a bit each time. */
-  kind: 'aimed' | 'spread' | 'ring' | 'spiral';
+      around, turning a bit each time; mine: lobbed where you stand, it blows up a moment later. */
+  kind: 'aimed' | 'spread' | 'ring' | 'spiral' | 'mine';
   n: number;
   arc?: number;
   speed: number;
   dmg: number;
+  style?: ShotStyle;
   /** Seconds before the first volley. */
   first?: number;
-  /** Bullet radius. */
+  /** Bullet radius (a mine's blast). */
   r?: number;
   /** Only below this share of HP (a boss's second phase). */
   below?: number;
+  /** Fired only when a charge ends or a blink lands, not on a clock. */
+  on?: 'move';
 }
 
 export interface MonsterDef {
@@ -123,25 +167,47 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
   },
   // A golden copy of you, sent by the Mirror. Hitting it hurts you.
   reflection: { hp: 30, speed: 72, dmg: 8, r: 12, xp: 0, move: 'chase', shoots: [], cost: 0 },
+  // Winds up (it glows red), then charges in a straight line and throws a ring where it stops.
+  ram: { hp: 30, speed: 34, dmg: 13, r: 15, xp: 2, move: 'charge', shoots: [{ every: 0, on: 'move', kind: 'ring', n: 6, speed: 95, dmg: 7 }], cost: 2 },
+  // A floating book that never moves and turns a slow spiral of pages.
+  book: { hp: 34, speed: 0, dmg: 8, r: 14, xp: 2, move: 'still', shoots: [{ every: 0.55, kind: 'spiral', n: 3, speed: 80, dmg: 7, style: 'wiggle', first: 1.4 }], cost: 2.5 },
+  // Lobs smoke bombs where you stand: step off the circle before it bursts.
+  smoke: { hp: 18, speed: 70, dmg: 6, r: 12, xp: 2, move: 'orbit', range: 200, shoots: [{ every: 2.8, kind: 'mine', n: 6, speed: 90, dmg: 11, r: 46, first: 1.5 }], cost: 2 },
+  // Keeps away and sends shots that curve after you for a moment.
+  seeker: { hp: 26, speed: 46, dmg: 8, r: 14, xp: 2, move: 'keep', range: 230, shoots: [{ every: 3, kind: 'aimed', n: 2, speed: 115, dmg: 8, style: 'homing', first: 1.6 }], cost: 2.5 },
+  // A big slime that bounces shots off the walls and falls apart into three small ones.
+  splitter: { hp: 48, speed: 36, dmg: 11, r: 18, xp: 3, move: 'chase', shoots: [{ every: 3.2, kind: 'ring', n: 8, speed: 90, dmg: 7, style: 'bounce', first: 1.6 }], cost: 3 },
+  splitling: { hp: 9, speed: 74, dmg: 5, r: 10, xp: 0, move: 'chase', shoots: [], cost: 0 },
+  // A shade of you: vanishes, lands near you (watch for the mark) and fires a ring that starts slow.
+  shade: { hp: 30, speed: 60, dmg: 9, r: 13, xp: 3, move: 'blink', range: 190, shoots: [{ every: 0, on: 'move', kind: 'ring', n: 10, speed: 140, dmg: 8, style: 'ramp' }], cost: 3 },
 };
 
-/** Which monsters a room on this floor draws from, by weight. */
-const MIX: [MonsterKind, number][][] = [
-  [
-    ['slime', 3],
-    ['wisp', 2],
-  ],
-  [
-    ['slime', 2],
-    ['wisp', 3],
-    ['mirror', 1],
-  ],
-  [
-    ['slime', 1],
-    ['wisp', 3],
-    ['mirror', 2],
-  ],
+/** Monsters that join deeper down, by the floor (of 10) they first show on and how common they are. */
+const UNLOCK: [MonsterKind, number, number][] = [
+  ['slime', 0, 3],
+  ['wisp', 0, 2.5],
+  ['ram', 1, 2],
+  ['mirror', 2, 1.5],
+  ['book', 3, 1.5],
+  ['smoke', 4, 1.6],
+  ['seeker', 5, 1.6],
+  ['splitter', 6, 1.6],
+  ['shade', 7, 1.6],
 ];
+
+/** A line about each monster the first time it shows up in a run. */
+export const MEET: Partial<Record<MonsterKind, string>> = {
+  ram: 'Rams glow red, then charge in a line: step aside.',
+  mirror: 'Mirrors keep their distance and fire rings.',
+  book: 'The Book of Days never moves. It turns a spiral of pages.',
+  smoke: 'Smoke wisps lob bombs where you stand. Leave the circle.',
+  seeker: 'Seekers fire shots that curve after you.',
+  splitter: 'Splitters bounce shots off the walls, and fall apart when hit hard enough.',
+  shade: 'Shades vanish and land next to you. Watch for the mark.',
+};
+
+/** Floor 1 to 10 of the 10, whatever the layout. */
+const floorOf10 = (run: Run) => Math.round(depth(run) * 9);
 
 /**
  * The bosses, each fighting by its chapter's lesson:
@@ -209,6 +275,16 @@ export const BOSSES: Record<FogBoss, MonsterDef & { plates?: number }> = {
 /** Tomorrow heals while you're further than this. */
 export const TOMORROW_REACH = 200;
 const DASH = { every: 4.5, wind: 0.7, dash: 0.55, speed: 380, first: 3 };
+/** A ram's charge: how often, how long it glows first, how long and fast it rushes. */
+export const CHARGE = { every: 3.6, wind: 0.75, dash: 0.6, speed: 330 };
+/** A shade's blink: how often, how long its landing spot is marked, how close to you it lands. */
+export const BLINK = { every: 3.8, mark: 0.8, near: 110 };
+/** A smoke bomb's flight and fuse (s). */
+export const MINE = { flight: 0.55, fuse: 1.1 };
+/** Homing shots turn this fast (rad/s), for this long (s). */
+const HOMING = { turn: 1.9, for: 1.3 };
+/** Slow-then-fast shots start at this share of their speed and reach it over `over` s. */
+const RAMP = { from: 0.25, over: 1.1 };
 
 // ---------- class abilities ----------
 
@@ -218,7 +294,7 @@ export const ABILITIES: Record<AbilityId, { name: string; text: string; cd: numb
   charge: { name: 'Charge', text: 'Rush ahead, untouchable, hitting everything you pass.', cd: 6 },
   volley: { name: 'Volley', text: 'Loose arrows all around you that pierce through.', cd: 7 },
   blink: { name: 'Blink', text: 'Vanish and appear ahead, bursting where you land and wiping shots nearby.', cd: 8 },
-  still: { name: 'Stillness', text: 'Breathe: heal a fifth of your HP and push everything away.', cd: 12 },
+  still: { name: 'Stillness', text: 'Breathe: heal some HP and push everything away.', cd: 14 },
   dash: { name: 'Dash', text: 'A quick dodge: untouchable for a moment.', cd: 5 },
 };
 
@@ -228,7 +304,7 @@ export const CLASS_BODY: Record<'slash' | 'arrow' | 'orb' | 'wave', { hp: number
   slash: { hp: 1.5, armor: 0.35, dmg: 1 },
   wave: { hp: 1.15, armor: 0.05, dmg: 0.75 },
   arrow: { hp: 1, armor: 0, dmg: 1.1 },
-  orb: { hp: 0.85, armor: 0, dmg: 0.75 },
+  orb: { hp: 0.85, armor: 0, dmg: 0.68 },
 };
 
 export function abilityOf(cls: ClassId | undefined): AbilityId {
@@ -259,6 +335,8 @@ export interface Foe {
   dashUntil: number;
   dashX: number;
   dashY: number;
+  /** When its next charge or blink starts (run seconds). */
+  act: number;
   alive: boolean;
 }
 
@@ -274,6 +352,27 @@ export interface Bullet {
   born: number;
   /** Fired by a boss (drawn bigger and redder). */
   boss: boolean;
+  style: ShotStyle;
+  /** Heading and full speed, for the shots that turn or speed up. */
+  ang: number;
+  spd: number;
+  /** Bounces off walls left. */
+  bounce: number;
+}
+
+/** A lobbed bomb: lands, then bursts at `at`. */
+export interface Mine {
+  id: number;
+  x: number;
+  y: number;
+  r: number;
+  dmg: number;
+  /** When it lands, and when it bursts (run seconds). */
+  lands: number;
+  at: number;
+  /** Shots it throws when it bursts. */
+  n: number;
+  speed: number;
 }
 
 export interface Shot {
@@ -317,6 +416,10 @@ export type GameEvent =
   | { type: 'boss' }
   | { type: 'dash'; x: number; y: number; toX: number; toY: number }
   | { type: 'shout'; x: number; y: number }
+  | { type: 'boom'; x: number; y: number; r: number }
+  | { type: 'blink'; x: number; y: number; toX: number; toY: number }
+  | { type: 'wind'; id: number }
+  | { type: 'shrine'; x: number; y: number }
   | { type: 'say'; text: string };
 
 export type FreePick = 'fresh' | 'rested';
@@ -362,8 +465,14 @@ export interface Run {
   /** From 0. The last room of the last floor is the boss's. */
   floor: number;
   room: number;
+  /** This room's size, and what's on its floor. */
+  area: { w: number; h: number };
+  terrain: Terrain;
   /** Waves still to come in this room. */
   waves: MonsterKind[][];
+  mines: Mine[];
+  /** Monsters already met this run (their first time gets a line). */
+  met: Set<MonsterKind>;
   cleared: boolean;
   doorOpen: boolean;
   hero: { x: number; y: number; vx: number; vy: number; facing: number };
@@ -433,7 +542,11 @@ export function createRun(setup: RunSetup): Run {
     ids: 0,
     floor: 0,
     room: 0,
+    area: { w: ROOM.w, h: ROOM.h },
+    terrain: { water: [], pillars: [], spikes: [], barrels: [], shrine: null },
     waves: [],
+    mines: [],
+    met: new Set(['slime', 'wisp', 'golem', 'reflection', 'splitling']),
     cleared: false,
     doorOpen: false,
     hero: { x: ROOM.w / 2, y: ROOM.h - 70, vx: 0, vy: 0, facing: -Math.PI / 2 },
@@ -482,12 +595,16 @@ const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.
 
 // ---------- rooms and floors ----------
 
-/** What a room holds: a budget of monsters that grows with depth, in two waves; each floor ends with a golem. */
+/** What a room holds: a budget of monsters that grows with depth (and the room's size), in three
+    waves; each floor ends with a golem. New kinds join deeper down, and show up more on the floor
+    they first appear. */
 function fillRoom(run: Run): MonsterKind[][] {
   const { room } = run,
-    deep = depth(run);
-  const budget = (6 + 10 * deep + room) * DIALS.crowd;
-  const mix = MIX[Math.min(MIX.length - 1, Math.floor(deep * MIX.length))];
+    deep = depth(run),
+    fl = floorOf10(run),
+    size = Math.sqrt((run.area.w * run.area.h) / (ROOM.w * ROOM.h));
+  const budget = (6 + 10 * deep + room) * DIALS.crowd * size;
+  const mix = UNLOCK.filter(([, from]) => fl >= from).map(([k, from, w]): [MonsterKind, number] => [k, from === fl && fl > 0 ? w * 2.5 : k === 'slime' ? Math.max(1, w - fl * 0.25) : w]);
   const total = mix.reduce((n, [, w]) => n + w, 0);
   const pickKind = (): MonsterKind => {
     let r = run.rnd() * total;
@@ -508,15 +625,95 @@ function fillRoom(run: Run): MonsterKind[][] {
   return waves;
 }
 
+/** How big a room is: never smaller than a phone screen, taller deeper down. The boss's is fixed. */
+function roomSize(run: Run) {
+  if (isBossRoom(run)) return { w: 480, h: 900 };
+  return { w: ROOM.w + Math.round(run.rnd() * 5) * 20, h: ROOM.h + Math.round(run.rnd() * (3 + 5 * depth(run))) * 30 };
+}
+
+/** The room's floor: pillars in mirrored pairs, pools of water, spikes and barrels deeper down, and
+    a shrine in the middle room of every floor. Kept off the door's lane and where you walk in. */
+function buildTerrain(run: Run): Terrain {
+  const { w, h } = run.area,
+    rnd = run.rnd,
+    fl = floorOf10(run),
+    boss = isBossRoom(run),
+    m = ROOM.wall;
+  const t: Terrain = { water: [], pillars: [], spikes: [], barrels: [], shrine: null };
+  const rects = () => [...t.water, ...t.spikes];
+  const clear = (x: number, y: number, r: number) => {
+    if (x < m + r + 24 || x > w - m - r - 24 || y < m + r + 24 || y > h - m - r - 24) return false;
+    if (Math.abs(x - w / 2) < ROOM.door / 2 + 26 + r && y < 170 + r) return false;
+    if (Math.hypot(x - w / 2, y - (h - 70)) < 110 + r) return false;
+    for (const p of t.pillars) if (Math.hypot(p.x - x, p.y - y) < p.r + r + 56) return false;
+    for (const b of t.barrels) if (Math.hypot(b.x - x, b.y - y) < BARREL.r + r + 30) return false;
+    for (const q of rects()) if (inRect(q, x, y, r + 14)) return false;
+    if (t.shrine && Math.hypot(t.shrine.x - x, t.shrine.y - y) < SHRINE.r + r + 40) return false;
+    return true;
+  };
+  const rectClear = (q: Rect) => {
+    for (let i = 0; i <= 2; i++) for (let j = 0; j <= 2; j++) if (!clear(q.x + (q.w * i) / 2, q.y + (q.h * j) / 2, 6)) return false;
+    return clear(q.x + q.w / 2, q.y + q.h / 2, Math.min(q.w, q.h) / 2);
+  };
+  const tries = (n: number, place: () => boolean) => {
+    for (let i = 0; i < 30 && n > 0; i++) if (place()) n--;
+  };
+  // Pillars, in pairs mirrored across the room.
+  tries(boss ? 2 : 1 + Math.floor(rnd() * 2.5), () => {
+    const r = 16 + Math.round(rnd() * 8),
+      x = m + 50 + rnd() * (w / 2 - m - 110),
+      y = 190 + rnd() * (h - 420);
+    if (!clear(x, y, r) || !clear(w - x, y, r)) return false;
+    t.pillars.push({ x, y, r }, { x: w - x, y, r });
+    return true;
+  });
+  if (boss) return t;
+  if (run.room === Math.floor(run.layout.rooms / 2)) {
+    tries(1, () => {
+      const x = m + 60 + rnd() * (w - 2 * m - 120),
+        y = 220 + rnd() * (h - 440);
+      if (!clear(x, y, SHRINE.r + 10)) return false;
+      t.shrine = { x, y, used: false };
+      return true;
+    });
+  }
+  const rect = (rw: number, rh: number): Rect => ({ x: m + 20 + rnd() * (w - 2 * m - 40 - rw), y: 160 + rnd() * (h - 330 - rh), w: rw, h: rh });
+  tries((rnd() < 0.45 + 0.05 * fl ? 1 : 0) + (fl >= 3 && rnd() < 0.5 ? 1 : 0), () => {
+    const q = rect(110 + Math.round(rnd() * 90), 90 + Math.round(rnd() * 80));
+    if (!rectClear(q)) return false;
+    t.water.push(q);
+    return true;
+  });
+  if (fl >= 2)
+    tries(1 + (fl >= 6 && rnd() < 0.6 ? 1 : 0), () => {
+      const q = { ...rect(96 + Math.round(rnd() * 4) * 24, 48 + Math.round(rnd()) * 24), phase: rnd() * SPIKES.every };
+      if (!rectClear(q)) return false;
+      t.spikes.push(q);
+      return true;
+    });
+  if (fl >= 1)
+    tries(Math.floor(rnd() * 3) + (fl >= 5 ? 1 : 0), () => {
+      const x = m + 40 + rnd() * (w - 2 * m - 80),
+        y = 180 + rnd() * (h - 380);
+      if (!clear(x, y, BARREL.r + 6)) return false;
+      t.barrels.push({ id: ++run.ids, x, y, alive: true });
+      return true;
+    });
+  return t;
+}
+
 function enterRoom(run: Run) {
   run.foes = [];
   run.bullets = [];
   run.shots = [];
   run.gems = [];
+  run.mines = [];
   run.cleared = false;
   run.doorOpen = false;
-  run.hero.x = ROOM.w / 2;
-  run.hero.y = ROOM.h - 70;
+  run.area = roomSize(run);
+  run.terrain = buildTerrain(run);
+  run.hero.x = run.area.w / 2;
+  run.hero.y = run.area.h - 70;
   run.charge = null;
   emit(run, { type: 'room' });
   if (isBossRoom(run)) {
@@ -528,15 +725,19 @@ function enterRoom(run: Run) {
   later(run, 0.6, () => nextWave(run));
 }
 
-/** A point in the room for a monster: in the upper part, away from you. */
+/** Whether a body of radius r at x, y would sit inside a pillar. */
+const inPillar = (run: Run, x: number, y: number, r: number) => run.terrain.pillars.some((p) => Math.hypot(p.x - x, p.y - y) < p.r + r);
+
+/** A point in the room for a monster: in the upper part, away from you and out of the pillars. */
 function spawnPoint(run: Run): [number, number] {
-  const m = ROOM.wall + 30;
+  const m = ROOM.wall + 30,
+    { w, h } = run.area;
   for (let i = 0; i < 20; i++) {
-    const x = m + run.rnd() * (ROOM.w - 2 * m),
-      y = m + run.rnd() * (ROOM.h * 0.6);
-    if (Math.hypot(x - run.hero.x, y - run.hero.y) > 200) return [x, y];
+    const x = m + run.rnd() * (w - 2 * m),
+      y = m + run.rnd() * (h * 0.6);
+    if (Math.hypot(x - run.hero.x, y - run.hero.y) > 220 && !inPillar(run, x, y, 24)) return [x, y];
   }
-  return [ROOM.w / 2, m + 20];
+  return [w / 2, m + 20];
 }
 
 function nextWave(run: Run) {
@@ -554,8 +755,8 @@ function addFoe(run: Run, kind: MonsterKind, x: number, y: number): Foe {
     id: ++run.ids,
     kind,
     def: { ...def, dmg: def.dmg * zone.dmg },
-    x: clamp(x, ROOM.wall + def.r, ROOM.w - ROOM.wall - def.r),
-    y: clamp(y, ROOM.wall + def.r, ROOM.h - ROOM.wall - def.r),
+    x: clamp(x, ROOM.wall + def.r, run.area.w - ROOM.wall - def.r),
+    y: clamp(y, ROOM.wall + def.r, run.area.h - ROOM.wall - def.r),
     vx: 0,
     vy: 0,
     hp,
@@ -570,10 +771,16 @@ function addFoe(run: Run, kind: MonsterKind, x: number, y: number): Foe {
     dashUntil: 0,
     dashX: 0,
     dashY: 0,
+    act: run.t + 1.2 + run.rnd() * 1.5,
     alive: true,
   };
   run.foes.push(f);
   emit(run, { type: 'spawn', x: f.x, y: f.y, kind });
+  if (!run.met.has(kind)) {
+    run.met.add(kind);
+    const line = MEET[kind];
+    if (line) emit(run, { type: 'say', text: line });
+  }
   return f;
 }
 
@@ -586,7 +793,7 @@ function summonBoss(run: Run) {
     id: ++run.ids,
     kind: 'boss',
     def: { ...def, dmg: def.dmg * zone.dmg },
-    x: ROOM.w / 2,
+    x: run.area.w / 2,
     y: 140,
     vx: 0,
     vy: 0,
@@ -602,6 +809,7 @@ function summonBoss(run: Run) {
     dashUntil: 0,
     dashX: 0,
     dashY: 0,
+    act: 0,
     alive: true,
   };
   run.foes.push(b);
@@ -681,16 +889,29 @@ function moveHero(run: Run, input: Input) {
     h.vy = run.shove.y;
   } else {
     run.charge = null;
-    h.vx = x * speed;
-    h.vy = y * speed;
+    const wade = run.terrain.water.some((q) => inRect(q, h.x, h.y)) ? WATER.hero : 1;
+    h.vx = x * speed * wade;
+    h.vy = y * speed * wade;
   }
   h.x += h.vx * STEP;
   h.y += h.vy * STEP;
+  outOfPillars(run, h, HERO_R);
   // The open door is a gap in the top wall.
-  const inDoor = run.doorOpen && Math.abs(h.x - ROOM.w / 2) < ROOM.door / 2 - HERO_R;
-  h.x = clamp(h.x, ROOM.wall + HERO_R, ROOM.w - ROOM.wall - HERO_R);
-  h.y = clamp(h.y, inDoor ? -40 : ROOM.wall + HERO_R, ROOM.h - ROOM.wall - HERO_R);
-  if (inDoor && h.y < 4) throughDoor(run);
+  const { w, h: H } = run.area,
+    inDoor = run.doorOpen && Math.abs(h.x - w / 2) < ROOM.door / 2 - HERO_R;
+  h.x = clamp(h.x, ROOM.wall + HERO_R, w - ROOM.wall - HERO_R);
+  h.y = clamp(h.y, inDoor ? -40 : ROOM.wall + HERO_R, H - ROOM.wall - HERO_R);
+  if (inDoor && h.y < 4) return throughDoor(run);
+  // The ground under you.
+  for (const q of run.terrain.spikes) if (inRect(q, h.x, h.y, HERO_R - 4) && spikeState(q, now) === 'up') hurt(run, SPIKES.dmg * run.setup.zone.dmg, 'touch');
+  const sh = run.terrain.shrine;
+  if (sh && !sh.used && Math.hypot(sh.x - h.x, sh.y - h.y) < SHRINE.r + HERO_R) {
+    sh.used = true;
+    const heal = Math.round(run.maxHp * DIALS.shrine);
+    run.hp = Math.min(run.maxHp, run.hp + heal);
+    emit(run, { type: 'shrine', x: sh.x, y: sh.y });
+    emit(run, { type: 'heal', x: h.x, y: h.y, n: heal });
+  }
   if (run.charge) {
     for (const f of run.foes) {
       if (!f.alive || run.charge.hit.has(f) || dist(f, h) > f.def.r + HERO_R + 12) continue;
@@ -728,19 +949,33 @@ function useAbility(run: Run, input: Input) {
     for (let i = 0; i < 16; i++) fire(run, 'arrow', Math.atan2(dy, dx) + (i / 16) * Math.PI * 2, 430, dmg, 2, null);
     emit(run, { type: 'ability', id: a, x: h.x, y: h.y, toX: h.x, toY: h.y });
   } else if (a === 'blink') {
-    h.x = clamp(h.x + dx * 150, ROOM.wall + HERO_R, ROOM.w - ROOM.wall - HERO_R);
-    h.y = clamp(h.y + dy * 150, ROOM.wall + HERO_R, ROOM.h - ROOM.wall - HERO_R);
+    h.x = clamp(h.x + dx * 150, ROOM.wall + HERO_R, run.area.w - ROOM.wall - HERO_R);
+    h.y = clamp(h.y + dy * 150, ROOM.wall + HERO_R, run.area.h - ROOM.wall - HERO_R);
+    outOfPillars(run, h, HERO_R);
     run.ghostUntil = now + 0.3;
     clearBullets(run, h.x, h.y, 90);
     burst(run, h.x, h.y, 80, pow(run, ATTACK.orb.dmg * 1.5), 'ability');
     emit(run, { type: 'ability', id: a, x: from.x, y: from.y, toX: h.x, toY: h.y });
   } else {
-    const heal = Math.round(run.maxHp * 0.2);
+    const heal = Math.round(run.maxHp * 0.15);
     run.hp = Math.min(run.maxHp, run.hp + heal);
     clearBullets(run, h.x, h.y, 140);
     burst(run, h.x, h.y, 140, pow(run, ATTACK.wave.dmg), 'ability', undefined, 260);
     emit(run, { type: 'ability', id: a, x: h.x, y: h.y, toX: h.x, toY: h.y });
     emit(run, { type: 'heal', x: h.x, y: h.y, n: heal });
+  }
+}
+
+/** Pushes a body out of any pillar it walked into, so it slides around it. */
+function outOfPillars(run: Run, o: { x: number; y: number }, r: number) {
+  for (const p of run.terrain.pillars) {
+    const dx = o.x - p.x,
+      dy = o.y - p.y,
+      d = Math.hypot(dx, dy) || 1,
+      min = p.r + r;
+    if (d >= min) continue;
+    o.x = p.x + (dx / d) * min;
+    o.y = p.y + (dy / d) * min;
   }
 }
 
@@ -757,35 +992,22 @@ function moveFoes(run: Run) {
     if (!f.alive) continue;
     if (now >= f.knockUntil) {
       if (f === run.boss) steerBoss(run, f);
-      else {
-        const dx = h.x - f.x,
-          dy = h.y - f.y,
-          d = Math.hypot(dx, dy) || 1;
-        let v = f.speed;
-        const range = f.def.range ?? 0;
-        if (f.def.move === 'keep') v = d > range + 30 ? f.speed : d < range - 30 ? -f.speed : 0;
-        if (f.def.move === 'orbit') {
-          const pull = clamp((d - range) / 60, -1, 1);
-          f.vx = ((dx / d) * pull - (dy / d) * 0.8) * f.speed;
-          f.vy = ((dy / d) * pull + (dx / d) * 0.8) * f.speed;
-        } else {
-          f.vx = (dx / d) * v;
-          f.vy = (dy / d) * v;
-        }
-      }
+      else steer(run, f);
     }
-    f.x = clamp(f.x + f.vx * STEP, ROOM.wall + f.def.r, ROOM.w - ROOM.wall - f.def.r);
-    f.y = clamp(f.y + f.vy * STEP, ROOM.wall + f.def.r, ROOM.h - ROOM.wall - f.def.r);
+    const wade = f !== run.boss && run.terrain.water.some((q) => inRect(q, f.x, f.y)) ? WATER.foe : 1;
+    f.x = clamp(f.x + f.vx * STEP * wade, ROOM.wall + f.def.r, run.area.w - ROOM.wall - f.def.r);
+    f.y = clamp(f.y + f.vy * STEP * wade, ROOM.wall + f.def.r, run.area.h - ROOM.wall - f.def.r);
+    outOfPillars(run, f, f.def.r);
     if (now < f.bornUntil) continue;
     // Volleys.
     f.def.shoots.forEach((p, i) => {
-      if (now < f.next[i]) return;
+      if (p.on || now < f.next[i]) return;
       f.next[i] = now + p.every / (f === run.boss ? 1 : DIALS.fire);
       if (p.below && f.hp > f.maxHp * p.below) return;
       shoot(run, f, p);
     });
-    // Touch.
-    if (dist(f, h) < f.def.r + HERO_R) hurt(run, f.def.dmg, 'touch');
+    // Touch (a charging ram hits harder).
+    if (dist(f, h) < f.def.r + HERO_R) hurt(run, f.def.dmg * (now < f.dashUntil ? 1.5 : 1), 'touch');
     if (run.over) return;
   }
   // Monsters push each other apart.
@@ -809,14 +1031,138 @@ function moveFoes(run: Run) {
     }
 }
 
+/** A monster's walk, by how it moves. */
+function steer(run: Run, f: Foe) {
+  const h = run.hero,
+    now = run.t,
+    dx = h.x - f.x,
+    dy = h.y - f.y,
+    d = Math.hypot(dx, dy) || 1,
+    range = f.def.range ?? 0;
+  switch (f.def.move) {
+    case 'still':
+      f.vx = f.vy = 0;
+      return;
+    case 'orbit': {
+      const pull = clamp((d - range) / 60, -1, 1);
+      f.vx = ((dx / d) * pull - (dy / d) * 0.8) * f.speed;
+      f.vy = ((dy / d) * pull + (dx / d) * 0.8) * f.speed;
+      return;
+    }
+    case 'keep': {
+      const v = d > range + 30 ? f.speed : d < range - 30 ? -f.speed : 0;
+      f.vx = (dx / d) * v;
+      f.vy = (dy / d) * v;
+      return;
+    }
+    case 'charge':
+      // Walk in; when close enough, stop and glow (windUntil), then rush along the line it locked.
+      if (now < f.windUntil) {
+        f.vx = f.vy = 0;
+        return;
+      }
+      if (now < f.dashUntil) {
+        f.vx = f.dashX * CHARGE.speed;
+        f.vy = f.dashY * CHARGE.speed;
+        return;
+      }
+      if (f.dashUntil) {
+        f.dashUntil = f.windUntil = 0;
+        f.act = now + CHARGE.every * (0.8 + run.rnd() * 0.4);
+        moved(run, f);
+      }
+      if (now >= f.act && d < 330) {
+        f.windUntil = now + CHARGE.wind;
+        f.dashUntil = f.windUntil + CHARGE.dash;
+        f.dashX = dx / d;
+        f.dashY = dy / d;
+        emit(run, { type: 'wind', id: f.id });
+        f.vx = f.vy = 0;
+        return;
+      }
+      f.vx = (dx / d) * f.speed;
+      f.vy = (dy / d) * f.speed;
+      return;
+    case 'blink':
+      // Drift at its range; every few seconds, mark a spot near you, vanish, land there and fire.
+      if (now < f.windUntil) {
+        f.vx = f.vy = 0;
+        return;
+      }
+      if (f.windUntil) {
+        const from = { x: f.x, y: f.y };
+        f.x = f.dashX;
+        f.y = f.dashY;
+        f.windUntil = 0;
+        f.act = now + BLINK.every * (0.8 + run.rnd() * 0.4);
+        emit(run, { type: 'blink', x: from.x, y: from.y, toX: f.x, toY: f.y });
+        moved(run, f);
+      }
+      if (now >= f.act) {
+        for (let i = 0; i < 12; i++) {
+          const a = run.rnd() * Math.PI * 2,
+            r = BLINK.near + run.rnd() * 50,
+            x = clamp(h.x + Math.cos(a) * r, ROOM.wall + 30, run.area.w - ROOM.wall - 30),
+            y = clamp(h.y + Math.sin(a) * r, ROOM.wall + 30, run.area.h - ROOM.wall - 30);
+          if (Math.hypot(x - h.x, y - h.y) < BLINK.near - 20 || inPillar(run, x, y, f.def.r + 4)) continue;
+          f.dashX = x;
+          f.dashY = y;
+          f.windUntil = now + BLINK.mark;
+          break;
+        }
+        if (!f.windUntil) f.act = now + 1;
+        f.vx = f.vy = 0;
+        return;
+      }
+      {
+        const pull = clamp((d - range) / 60, -1, 1);
+        f.vx = ((dx / d) * pull - (dy / d) * 0.6) * f.speed;
+        f.vy = ((dy / d) * pull + (dx / d) * 0.6) * f.speed;
+      }
+      return;
+    default:
+      f.vx = (dx / d) * f.speed;
+      f.vy = (dy / d) * f.speed;
+  }
+}
+
+/** The volleys a monster fires when its charge ends or its blink lands. */
+function moved(run: Run, f: Foe) {
+  for (const p of f.def.shoots) if (p.on === 'move') shoot(run, f, p);
+}
+
 function shoot(run: Run, f: Foe, p: Pattern) {
   const h = run.hero,
     at = Math.atan2(h.y - f.y, h.x - f.x),
     boss = f === run.boss,
     r = p.r ?? (boss ? 7 : 5),
     dmg = p.dmg * run.setup.zone.dmg,
-    speed = p.speed * DIALS.speed;
-  const add = (a: number) => run.bullets.push({ id: ++run.ids, x: f.x, y: f.y, vx: Math.cos(a) * speed, vy: Math.sin(a) * speed, r, dmg, born: run.t, boss });
+    speed = p.speed * DIALS.speed,
+    style = p.style ?? 'plain';
+  if (p.kind === 'mine') {
+    // Lobbed at where you stand, a little off; it lands, then bursts.
+    const x = clamp(h.x + (run.rnd() - 0.5) * 40, ROOM.wall + 10, run.area.w - ROOM.wall - 10),
+      y = clamp(h.y + (run.rnd() - 0.5) * 40, ROOM.wall + 10, run.area.h - ROOM.wall - 10);
+    run.mines.push({ id: ++run.ids, x, y, r: p.r ?? 46, dmg, lands: run.t + MINE.flight, at: run.t + MINE.flight + MINE.fuse, n: p.n, speed });
+    emit(run, { type: 'shoot', x: f.x, y: f.y, boss });
+    return;
+  }
+  const add = (a: number) =>
+    run.bullets.push({
+      id: ++run.ids,
+      x: f.x,
+      y: f.y,
+      vx: Math.cos(a) * speed * (style === 'ramp' ? RAMP.from : 1),
+      vy: Math.sin(a) * speed * (style === 'ramp' ? RAMP.from : 1),
+      r,
+      dmg,
+      born: run.t,
+      boss,
+      style,
+      ang: a,
+      spd: speed,
+      bounce: style === 'bounce' ? 1 : 0,
+    });
   if (p.kind === 'aimed') for (let i = 0; i < p.n; i++) add(at + (i - (p.n - 1) / 2) * 0.12);
   else if (p.kind === 'spread') for (let i = 0; i < p.n; i++) add(at + (p.n === 1 ? 0 : (i / (p.n - 1) - 0.5) * (p.arc ?? 0.5)));
   else if (p.kind === 'ring') {
@@ -830,11 +1176,45 @@ function shoot(run: Run, f: Foe, p: Pattern) {
 }
 
 function moveBullets(run: Run) {
-  const h = run.hero;
+  const h = run.hero,
+    now = run.t,
+    { w, h: H } = run.area,
+    m = ROOM.wall;
   run.bullets = run.bullets.filter((b) => {
+    const age = now - b.born;
+    if (b.style === 'homing' && age < HOMING.for) {
+      // Turns toward you, but only so fast: a sidestep still beats it.
+      let diff = Math.atan2(h.y - b.y, h.x - b.x) - b.ang;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      b.ang += clamp(diff, -HOMING.turn * STEP, HOMING.turn * STEP);
+      b.vx = Math.cos(b.ang) * b.spd;
+      b.vy = Math.sin(b.ang) * b.spd;
+    } else if (b.style === 'ramp') {
+      const k = Math.min(1, RAMP.from + ((1 - RAMP.from) * age) / RAMP.over);
+      b.vx = Math.cos(b.ang) * b.spd * k;
+      b.vy = Math.sin(b.ang) * b.spd * k;
+    } else if (b.style === 'wiggle') {
+      const a = b.ang + Math.sin(age * 7) * 0.45;
+      b.vx = Math.cos(a) * b.spd;
+      b.vy = Math.sin(a) * b.spd;
+    }
     b.x += b.vx * STEP;
     b.y += b.vy * STEP;
-    if (b.x < ROOM.wall || b.x > ROOM.w - ROOM.wall || b.y < ROOM.wall || b.y > ROOM.h - ROOM.wall) return false;
+    if (b.x < m || b.x > w - m || b.y < m || b.y > H - m) {
+      if (b.bounce <= 0) return false;
+      b.bounce--;
+      if (b.x < m || b.x > w - m) b.vx = -b.vx;
+      else b.vy = -b.vy;
+      b.ang = Math.atan2(b.vy, b.vx);
+      b.x = clamp(b.x, m, w - m);
+      b.y = clamp(b.y, m, H - m);
+    }
+    if (inPillar(run, b.x, b.y, b.r - 2)) return false;
+    for (const br of run.terrain.barrels)
+      if (br.alive && Math.hypot(br.x - b.x, br.y - b.y) < BARREL.r + b.r) {
+        blowUp(run, br);
+        return false;
+      }
     if (Math.hypot(b.x - h.x, b.y - h.y) < b.r + HERO_R - 2) {
       if (run.t < run.ghostUntil) return true;
       hurt(run, b.dmg, 'shot');
@@ -842,6 +1222,29 @@ function moveBullets(run: Run) {
     }
     return true;
   });
+  // Bombs that land and burst.
+  run.mines = run.mines.filter((mn) => {
+    if (now < mn.at) return true;
+    if (Math.hypot(mn.x - h.x, mn.y - h.y) < mn.r + HERO_R - 4) hurt(run, mn.dmg, 'shot');
+    emit(run, { type: 'boom', x: mn.x, y: mn.y, r: mn.r });
+    for (let i = 0; i < mn.n; i++) {
+      const a = (i / mn.n) * Math.PI * 2 + 0.3;
+      run.bullets.push({ id: ++run.ids, x: mn.x, y: mn.y, vx: Math.cos(a) * mn.speed, vy: Math.sin(a) * mn.speed, r: 5, dmg: mn.dmg * 0.6, born: now, boss: false, style: 'plain', ang: a, spd: mn.speed, bounce: 0 });
+    }
+    return false;
+  });
+}
+
+/** A barrel goes up: everything near takes the blast, you too, and nearby barrels follow. */
+function blowUp(run: Run, br: Terrain['barrels'][number]) {
+  if (!br.alive) return;
+  br.alive = false;
+  const dmg = BARREL.dmg * run.setup.zone.hp * DIALS.hp * (1 + 2 * depth(run));
+  if (Math.hypot(run.hero.x - br.x, run.hero.y - br.y) < BARREL.blast * 0.8) hurt(run, BARREL.hurt * run.setup.zone.dmg, 'touch');
+  emit(run, { type: 'boom', x: br.x, y: br.y, r: BARREL.blast });
+  for (const f of run.foes) if (f.alive && f !== run.boss && Math.hypot(f.x - br.x, f.y - br.y) <= BARREL.blast + f.def.r) damage(run, f, dmg, 260, br.x, br.y);
+  if (run.boss?.alive && Math.hypot(run.boss.x - br.x, run.boss.y - br.y) <= BARREL.blast + run.boss.def.r) damage(run, run.boss, dmg * 0.5, 0, br.x, br.y);
+  for (const o of run.terrain.barrels) if (o.alive && Math.hypot(o.x - br.x, o.y - br.y) < BARREL.blast) later(run, 0.12, () => blowUp(run, o));
 }
 
 function steerBoss(run: Run, b: Foe) {
@@ -966,6 +1369,11 @@ function kill(run: Run, f: Foe) {
   run.kills++;
   emit(run, { type: 'kill', x: f.x, y: f.y, kind: f.kind });
   if (f.def.xp > 0) run.gems.push({ id: ++run.ids, x: f.x, y: f.y, value: f.def.xp, pulled: false });
+  if (f.kind === 'splitter')
+    for (let i = 0; i < 3; i++) {
+      const a = (i / 3) * Math.PI * 2 + run.rnd();
+      addFoe(run, 'splitling', f.x + Math.cos(a) * 18, f.y + Math.sin(a) * 18).bornUntil = run.t + 0.25;
+    }
   if (f === run.boss) end(run, true, 'boss');
 }
 
@@ -979,6 +1387,7 @@ function hitYourself(run: Run) {
 
 function burst(run: Run, x: number, y: number, R: number, dmg: number, color: Extract<GameEvent, { type: 'burst' }>['color'], skip?: Foe, knock = 160) {
   for (const f of run.foes) if (f.alive && f !== skip && Math.hypot(f.x - x, f.y - y) <= R) damage(run, f, dmg, knock, x, y);
+  for (const br of run.terrain.barrels) if (br.alive && Math.hypot(br.x - x, br.y - y) <= R) blowUp(run, br);
   emit(run, { type: 'burst', x, y, r: R, color });
 }
 
@@ -1029,6 +1438,11 @@ function slash(run: Run, angle: number, dmg: number) {
     diff = Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff)));
     if (diff < 1.3 || d < 22) damage(run, f, dmg, 140);
   }
+  for (const br of run.terrain.barrels) {
+    if (!br.alive || Math.hypot(br.x - h.x, br.y - h.y) > R + BARREL.r) continue;
+    const diff = Math.atan2(br.y - h.y, br.x - h.x) - angle;
+    if (Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff))) < 1.3) blowUp(run, br);
+  }
   // A sword swing also knocks shots out of the air.
   run.bullets = run.bullets.filter((b) => {
     const d = Math.hypot(b.x - h.x, b.y - h.y);
@@ -1051,7 +1465,12 @@ function moveShots(run: Run) {
     }
     s.x += s.vx * STEP;
     s.y += s.vy * STEP;
-    if (s.x < ROOM.wall || s.x > ROOM.w - ROOM.wall || s.y < ROOM.wall || s.y > ROOM.h - ROOM.wall) return false;
+    if (s.x < ROOM.wall || s.x > run.area.w - ROOM.wall || s.y < ROOM.wall || s.y > run.area.h - ROOM.wall || inPillar(run, s.x, s.y, 2)) return false;
+    for (const br of run.terrain.barrels)
+      if (br.alive && Math.hypot(br.x - s.x, br.y - s.y) < BARREL.r + 4) {
+        blowUp(run, br);
+        return false;
+      }
     let f: Foe | null = null;
     for (const o of run.foes) if (o.alive && !s.hit.has(o) && run.t >= o.bornUntil && Math.hypot(o.x - s.x, o.y - s.y) < o.def.r + 6) f = o;
     if (!f) return true;
@@ -1175,6 +1594,7 @@ function checkRoom(run: Run) {
     run.cleared = true;
     run.doorOpen = true;
     run.bullets = [];
+    run.mines = [];
     emit(run, { type: 'clear' });
   }
 }
@@ -1247,6 +1667,16 @@ function end(run: Run, won: boolean, why: RunEnd['why']) {
 /** Developer mode: end the run as if the boss fell. */
 export function winNow(run: Run) {
   end(run, true, 'boss');
+}
+
+/** Developer mode: down to the next floor's first room. */
+export function skipFloor(run: Run) {
+  if (run.boss || run.floor >= run.layout.floors - 1) return;
+  run.floor++;
+  run.room = 0;
+  run.timers = [];
+  emit(run, { type: 'floor', floor: run.floor });
+  enterRoom(run);
 }
 
 /** Developer mode: straight to the boss's room. */

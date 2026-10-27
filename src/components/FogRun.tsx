@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ChevronsRight, CircleDot, Copy, Crosshair, Flame, Heart, HeartPulse, Magnet, Pause, Shield, Sparkles, Sword, Wind, Zap, type LucideIcon } from 'lucide-react';
+import { ChevronsRight, CircleDot, Copy, Crosshair, Flame, Heart, HeartPulse, Magnet, Pause, Shield, Skull, Sparkles, Sword, Wind, Zap, type LucideIcon } from 'lucide-react';
 import { gearOf, type GameState } from '@/lib/game';
 import { getUpgrade, nextGrowth, powerOf, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
@@ -38,7 +38,7 @@ const ICONS: Record<UpgradeId, LucideIcon> = {
    (src/game/run.ts) until their dungeons are built. Both report through the same HUD. */
 type Hud = SurviveHud & Partial<DungeonHud>;
 type RunEnd = SurviveEnd & Partial<DungeonEnd>;
-type RunHandle = SurviveHandle & { ability?: () => void };
+type RunHandle = SurviveHandle & { ability?: () => void; skipFloor?: () => void };
 
 const ABILITY_ICONS: Record<AbilityId, LucideIcon> = { charge: ChevronsRight, volley: Crosshair, blink: Sparkles, still: HeartPulse, dash: Wind };
 
@@ -85,6 +85,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
       golem: sheetFor('golem', 'idle'),
       knight: sheetFor('knight', 'idle'),
       echo: sheetFor('hero', 'idle', { gear, classId, look, variant: 'echo' }),
+      book: sheetFor('book', 'idle'),
+      summit: sheetFor('summit', 'idle'),
     };
     setHud(null);
     setEnd(null);
@@ -155,9 +157,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
             </div>
             <div className="w-16 text-right">
               <p className={`font-pixel text-[11px] ${hud.boss ? 'text-red-400' : 'text-slate-100'}`}>
-                {hud.boss ? 'BOSS' : hud.floor ? `F${hud.floor}·${hud.room}/${hud.rooms}` : clock(left)}
+                {hud.boss ? 'BOSS' : hud.floor ? `${hud.floor}/${hud.floors}` : clock(left)}
               </p>
-              <p className="mt-1 font-mono text-[10px] text-slate-400">{hud.kills} down</p>
+              <p className="mt-1 font-mono text-[10px] text-slate-400">{hud.floor && !hud.boss ? `room ${hud.room}/${hud.rooms}` : `${hud.kills} down`}</p>
             </div>
             <button
               aria-label="Pause"
@@ -184,6 +186,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
         </div>
       )}
 
+      {hud?.floor && hud.floors && hud.rooms && !end && <DepthMap floor={hud.floor} floors={hud.floors} room={hud.room ?? 1} rooms={hud.rooms} boss={zone.bossName} />}
+
       {!hud && !end && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
 
       {hud && !end && hud.seconds < (dungeon ? 7 : 5) && (
@@ -200,8 +204,14 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
 
       {floorShown && !end && (
         <div className="pointer-events-none absolute inset-x-0 top-1/3 animate-fadein text-center">
-          <p className="font-pixel text-lg text-gold-300 drop-shadow-[0_2px_0_#0b0d14]">Floor {floorShown}</p>
-          <p className="mt-2 text-xs text-slate-300">{floorShown === hud?.floors ? `${zone.bossName} is down here.` : 'A breath on the stairs: a little HP back.'}</p>
+          <p className="font-pixel text-lg text-gold-300 drop-shadow-[0_2px_0_#0b0d14]">
+            Floor {floorShown} of {hud?.floors}
+          </p>
+          <p className="mt-2 text-xs text-slate-300">
+            {floorShown === hud?.floors
+              ? `${zone.bossName} is down here, in the last room.`
+              : `${(hud?.floors ?? floorShown) - floorShown} more below, then ${zone.bossName}. A breath on the stairs: a little HP back.`}
+          </p>
         </div>
       )}
 
@@ -279,6 +289,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
               {(
                 [
                   ['Skip to the boss', () => run.current?.skipToBoss()],
+                  ...(dungeon ? ([['Next floor', () => run.current?.skipFloor?.()]] as const) : []),
                   ['Win this run', () => run.current?.winNow()],
                   [
                     auto ? 'Take the controls' : 'Let the bot play',
@@ -307,6 +318,34 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
       )}
 
       {end && <Results state={state} zone={zone} end={end} onAgain={() => setAttempt((a) => a + 1)} onLeave={onLeave} />}
+    </div>
+  );
+}
+
+/** How deep you are: a ladder of floors down the left edge, filling as you go, the boss at the
+    bottom. The floor you're on shows its rooms. */
+function DepthMap({ floor, floors, room, rooms, boss }: { floor: number; floors: number; room: number; rooms: number; boss: string }) {
+  return (
+    <div className="pointer-events-none absolute left-1.5 top-24 flex flex-col items-center gap-[3px] rounded-lg bg-ink-950/50 px-1 py-1.5" aria-label={`Floor ${floor} of ${floors}, ${boss} at the bottom`}>
+      {Array.from({ length: floors }, (_, i) => {
+        const n = i + 1,
+          here = n === floor;
+        return (
+          <div key={n} className={`flex items-center gap-[2px] ${here ? 'rounded-sm bg-gold-400/20 px-[2px] py-[2px] ring-1 ring-gold-300' : ''}`}>
+            {here ? (
+              Array.from({ length: rooms }, (_, r) => (
+                <span
+                  key={r}
+                  className={`h-1.5 w-1.5 rounded-[1px] ${r + 1 < room ? 'bg-gold-300' : r + 1 === room ? 'animate-pulse bg-white' : n === floors && r + 1 === rooms ? 'bg-red-500' : 'bg-ink-700'}`}
+                />
+              ))
+            ) : (
+              <span className={`block h-1.5 w-4 rounded-[1px] ${n < floor ? 'bg-gold-400/70' : 'bg-ink-700/90'}`} />
+            )}
+          </div>
+        );
+      })}
+      <Skull size={14} className={`mt-0.5 ${floor === floors ? 'animate-pulse text-red-400' : 'text-red-400/70'}`} />
     </div>
   );
 }

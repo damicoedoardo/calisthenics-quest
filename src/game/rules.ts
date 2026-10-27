@@ -5,7 +5,7 @@ import type { FogBoss } from '@/story/types';
 /* The Fog's rules as plain data and math, with no Phaser: the game (run.ts) and the fast
    simulator (sim.ts) both read them, so a number changed here changes both. */
 
-export type SheetKey = 'hero' | 'heroAttack' | 'ember' | 'hollow' | 'slime' | 'wisp' | 'mirror' | 'golem' | 'knight' | 'echo';
+export type SheetKey = 'hero' | 'heroAttack' | 'ember' | 'hollow' | 'slime' | 'wisp' | 'mirror' | 'golem' | 'knight' | 'echo' | 'book' | 'summit';
 
 /** Skills the bot takes first. */
 export const BOT_PICKS: UpgradeId[] = ['multi', 'power', 'haste', 'vital', 'spark', 'flame', 'nova', 'guard', 'swift', 'magnet'];
