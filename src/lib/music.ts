@@ -354,10 +354,41 @@ const MUTE_KEY = 'forma-muted';
 /** Cancels the limiter's built-in make-up gain (measured: see music-zones.ts, "Levels"). */
 const LIMIT_TRIM = 0.78;
 
-export type SfxId = 'slash' | 'arrow' | 'orb' | 'wave' | 'hit' | 'bossHit' | 'kill' | 'gem' | 'hurt' | 'spark' | 'nova' | 'flame' | 'roar' | 'dash' | 'stomp';
+export type SfxId =
+  | 'slash'
+  | 'arrow'
+  | 'orb'
+  | 'wave'
+  | 'hit'
+  | 'bossHit'
+  | 'kill'
+  | 'gem'
+  | 'hurt'
+  | 'spark'
+  | 'nova'
+  | 'flame'
+  | 'roar'
+  | 'dash'
+  | 'stomp'
+  // The bosses' and mid-bosses' own sounds.
+  | 'clink'
+  | 'crash'
+  | 'crack'
+  | 'shatter'
+  | 'glass'
+  | 'hum'
+  | 'chime'
+  | 'dim'
+  | 'brighten'
+  | 'clank'
+  | 'thud'
+  | 'whoosh'
+  | 'gust';
+
+export const SFX_IDS: SfxId[] = ['slash', 'arrow', 'orb', 'wave', 'hit', 'bossHit', 'kill', 'gem', 'hurt', 'spark', 'nova', 'flame', 'roar', 'dash', 'stomp', 'clink', 'crash', 'crack', 'shatter', 'glass', 'hum', 'chime', 'dim', 'brighten', 'clank', 'thud', 'whoosh', 'gust'];
 
 /** Shortest gap between two of the same sound (s), so a crowd doesn't turn into noise. */
-const SFX_GAP: Partial<Record<SfxId, number>> = { hit: 0.045, bossHit: 0.08, kill: 0.05, gem: 0.03, flame: 0.08, hurt: 0.15 };
+const SFX_GAP: Partial<Record<SfxId, number>> = { hit: 0.045, bossHit: 0.08, kill: 0.05, gem: 0.03, flame: 0.08, hurt: 0.15, glass: 0.06, hum: 0.2, brighten: 0.3, dim: 0.5, thud: 0.12, crash: 0.5, shatter: 1 };
 /** Light pickups climb this scale while you collect them in a row. */
 const GEM_STEPS = [0, 2, 4, 7, 9, 12, 14, 16, 19, 21, 24];
 
@@ -383,6 +414,8 @@ class Engine {
   private releaseTimer: ReturnType<typeof setTimeout> | null = null;
   private listeners = new Set<() => void>();
   muted = false;
+  /** Rendering offline to measure a sound: the context isn't running yet, and that's fine. */
+  private offline = false;
 
   constructor(live = true) {
     if (!live || typeof window === 'undefined') return;
@@ -654,7 +687,7 @@ class Engine {
   sfx(id: SfxId, pitch = 1) {
     const ctx = this.ctx,
       out = this.sfxOut;
-    if (!ctx || !out || this.muted || ctx.state !== 'running' || this.voices > 40) return;
+    if (!ctx || !out || this.muted || (ctx.state !== 'running' && !this.offline) || this.voices > 40) return;
     const t = ctx.currentTime;
     if (t - (this.lastSfx[id] ?? -1) < (SFX_GAP[id] ?? 0.02)) return;
     this.lastSfx[id] = t;
@@ -724,7 +757,136 @@ class Engine {
         this.tone(out, 'sine', 110, 35, 0.3, 0.45, t);
         this.hiss(out, 0.2, 0.16, 'lowpass', 700, 120, 1, t);
         break;
+      // A plate of armor falls: a small bright metal tick with a ring after it.
+      case 'clink':
+        this.tone(out, 'square', 1900 * p, 1750 * p, 0.05, 0.05, t, 7000);
+        this.tone(out, 'triangle', 2850 * p, 2800 * p, 0.22, 0.09, t);
+        this.tone(out, 'triangle', 4300 * p, 4250 * p, 0.12, 0.035, t + 0.005);
+        this.hiss(out, 0.04, 0.1, 'highpass', 5000, 5000, 1, t);
+        break;
+      // Half the armor goes at once: a metal crash, and plates still falling after it.
+      case 'crash':
+        this.hiss(out, 0.55, 0.22, 'bandpass', 3200 * p, 700 * p, 0.8, t);
+        this.tone(out, 'square', 210 * p, 80 * p, 0.3, 0.09, t, 1500);
+        this.tone(out, 'sine', 120, 40, 0.35, 0.3, t);
+        [0.06, 0.13, 0.21, 0.32].forEach((d, i) => this.tone(out, 'triangle', 2600 * p * (1 + 0.13 * i), 2550 * p * (1 + 0.13 * i), 0.18, 0.04, t + d));
+        break;
+      // Stone cracks: a dry snap with a dull knock under it.
+      case 'crack':
+        this.hiss(out, 0.09, 0.32, 'bandpass', 1500 * p, 500 * p, 1.4, t);
+        this.tone(out, 'square', 150 * p, 60 * p, 0.1, 0.08, t, 900);
+        this.tone(out, 'sine', 95 * p, 40, 0.22, 0.3, t + 0.01);
+        break;
+      // All of it breaks at once: a deep boom, a long rubble rush, cracks running through it.
+      case 'shatter':
+        this.tone(out, 'sine', 85, 28, 1.1, 0.24, t);
+        this.hiss(out, 1.3, 0.13, 'lowpass', 3200, 90, 0.7, t);
+        [0, 0.09, 0.2, 0.34, 0.5].forEach((d, i) => this.hiss(out, 0.1, 0.16 - i * 0.02, 'bandpass', 1700 - i * 180, 500, 1.4, t + d));
+        break;
+      // A mirror image breaks: little bright shards of glass falling over each other.
+      case 'glass':
+        this.hiss(out, 0.16, 0.14, 'highpass', 4500 * p, 6500, 1, t);
+        [0, 0.03, 0.07, 0.12].forEach((d, i) => {
+          const f = [2400, 3500, 2900, 4300][i] * p;
+          this.tone(out, 'triangle', f, f * 0.98, 0.16, 0.055, t + d);
+        });
+        break;
+      // The Hollow's light around you: a soft held note, played again and again as you stand in it.
+      case 'hum':
+        this.swell(out, 'sine', 196 * p, 0.32, 0.05, t);
+        this.swell(out, 'triangle', 392 * p, 0.32, 0.018, t);
+        this.swell(out, 'sine', 588 * p, 0.32, 0.009, t);
+        break;
+      // A ledge climbed: a rising chime.
+      case 'chime':
+        [784, 988, 1175, 1568].forEach((f, i) => {
+          this.tone(out, 'triangle', f * p, f * p, 0.4, 0.045, t + i * 0.07);
+          this.tone(out, 'sine', f * 2 * p, f * 2 * p, 0.25, 0.012, t + i * 0.07);
+        });
+        break;
+      // The Lantern's light sinks, or a hit brings some back.
+      case 'dim':
+        this.tone(out, 'sine', 620 * p, 180 * p, 0.6, 0.1, t);
+        this.hiss(out, 0.5, 0.07, 'lowpass', 1400, 200, 1, t);
+        break;
+      case 'brighten':
+        this.tone(out, 'sine', 330 * p, 990 * p, 0.22, 0.08, t);
+        this.tone(out, 'triangle', 1320 * p, 1320 * p, 0.16, 0.03, t + 0.12);
+        break;
+      // The Foreman mends its crew: hammer on metal, twice.
+      case 'clank':
+        [0, 0.14].forEach((d, i) => {
+          this.tone(out, 'square', (320 - i * 30) * p, (290 - i * 30) * p, 0.09, 0.04, t + d, 2400);
+          this.tone(out, 'triangle', (1150 + i * 120) * p, (1130 + i * 120) * p, 0.2, 0.035, t + d);
+          this.hiss(out, 0.05, 0.08, 'bandpass', 2200, 1800, 1, t + d);
+        });
+        break;
+      // A blow on stone: a heavy, dead thud.
+      case 'thud':
+        this.tone(out, 'sine', 95 * p, 38, 0.2, 0.42, t);
+        this.hiss(out, 0.1, 0.18, 'lowpass', 600, 150, 1, t);
+        break;
+      // Something swaps places fast: air rushing by.
+      case 'whoosh':
+        this.hiss(out, 0.28, 0.36, 'bandpass', 500 * p, 2600 * p, 2, t);
+        this.hiss(out, 0.2, 0.16, 'bandpass', 2600 * p, 700 * p, 2, t + 0.12);
+        break;
+      // A gust: a long, low rush of wind that swells and falls away.
+      case 'gust':
+        this.swellHiss(out, 0.9, 0.18, 'bandpass', 300 * p, 1100 * p, 0.9, t);
+        this.swellHiss(out, 0.7, 0.07, 'bandpass', 1400 * p, 2600 * p, 1.5, t + 0.1);
+        break;
     }
+  }
+
+  /** A note that fades in, holds, and fades out (unlike `tone`, which starts at full and decays). */
+  private swell(out: AudioNode, type: OscillatorType, f: number, dur: number, gain: number, t: number) {
+    const ctx = this.ctx!;
+    const o = ctx.createOscillator(),
+      g = ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f, t);
+    g.gain.setValueAtTime(0.0008, t);
+    g.gain.linearRampToValueAtTime(gain, t + dur * 0.3);
+    g.gain.linearRampToValueAtTime(gain * 0.7, t + dur * 0.7);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    o.connect(g);
+    g.connect(out);
+    this.track(o);
+    o.start(t);
+    o.stop(t + dur + 0.02);
+  }
+
+  /** Noise that swells in and falls away, its filter sweeping from f0 to f1. */
+  private swellHiss(out: AudioNode, dur: number, gain: number, type: BiquadFilterType, f0: number, f1: number, q: number, t: number) {
+    const ctx = this.ctx!;
+    if (!this.noiseBuf) return;
+    const src = ctx.createBufferSource(),
+      f = ctx.createBiquadFilter(),
+      g = ctx.createGain();
+    src.buffer = this.noiseBuf;
+    src.loop = true;
+    f.type = type;
+    f.Q.value = q;
+    f.frequency.setValueAtTime(f0, t);
+    f.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.4);
+    f.frequency.exponentialRampToValueAtTime(f0, t + dur);
+    g.gain.setValueAtTime(0.0008, t);
+    g.gain.linearRampToValueAtTime(gain, t + dur * 0.4);
+    g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+    src.connect(f);
+    f.connect(g);
+    g.connect(out);
+    this.track(src);
+    src.start(t, Math.random() * 0.5);
+    src.stop(t + dur + 0.02);
+  }
+
+  /** Plays one sound effect into an offline context, through the same mix as the app. */
+  renderSfxInto(ctx: OfflineAudioContext, id: SfxId, pitch = 1) {
+    this.wire(ctx);
+    this.offline = true;
+    this.sfx(id, pitch);
   }
 
   private tone(out: AudioNode, type: OscillatorType, f0: number, f1: number, dur: number, gain: number, t: number, cutoff?: number) {
@@ -805,6 +967,14 @@ class Engine {
 }
 
 export const music = new Engine();
+
+/** Renders one sound effect to samples, mono, exactly as the app mixes it. Browser only: used to
+    keep every effect about as loud as the others. */
+export async function renderSfx(id: SfxId, pitch = 1, seconds = 1.6, sampleRate = 44100): Promise<Float32Array> {
+  const ctx = new OfflineAudioContext(1, Math.round(seconds * sampleRate), sampleRate);
+  new Engine(false).renderSfxInto(ctx, id, pitch);
+  return (await ctx.startRendering()).getChannelData(0);
+}
 
 const STING_IDS: Record<StingId, true> = { victory: true, levelup: true, defeat: true, shatter: true, warmth: true };
 

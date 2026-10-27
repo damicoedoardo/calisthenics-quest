@@ -17,6 +17,7 @@ import {
   SHRINE,
   STEP,
   ELITE,
+  DIM,
   LIGHT,
   MIDS,
   CREW,
@@ -295,6 +296,8 @@ class DungeonScene extends Phaser.Scene {
   private vignette!: Phaser.GameObjects.Image;
   /** When you were last hurt: the red edge pulses for a moment. */
   private hurtAt = -1e9;
+  /** The mid-boss's state last frame, to hear it change: the Lantern's light, the Sand Golem as stone. */
+  private midWas: { dim: number | null; stone: boolean } = { dim: null, stone: false };
   /** Damage numbers by the monster they belong to, so quick hits add up in one number. */
   private numberOf = new Map<Phaser.GameObjects.Text, { key: number; n: number; at: number; y: number }>();
   private offered = false;
@@ -960,6 +963,34 @@ class DungeonScene extends Phaser.Scene {
   }
 
   /** A one-shot sprite where a boss ends (the Mirror shattering, the Hollow letting go). */
+  /** A camera shake, unless the system asks for less motion. */
+  private shake(ms: number, intensity: number) {
+    if (!reducedMotion()) this.cameras.main.shake(ms, intensity);
+  }
+
+  /** The Knight's plates flying off where he's hit. */
+  private plates(x: number, y: number, n: number) {
+    this.bits.particleTint = 0xe2e8f0;
+    this.bits.explode(n, x, y - 6);
+    this.bits.particleTint = 0x94a3b8;
+    this.bits.explode(Math.ceil(n / 2), x, y - 6);
+  }
+
+  /** The mid-boss's sounds that come from its state, not from an event: the Lantern's light
+      sinking a step, the Sand Golem setting to stone. */
+  private hearMid(wd: Foe | null) {
+    const r = this.run,
+      dim = wd?.alive && wd.kind === 'lantern' ? r.dim : null,
+      stone = !!wd?.alive && hardened(r, wd);
+    const was = this.midWas;
+    if (dim !== null && was.dim !== null && Math.floor(dim / 60) < Math.floor(was.dim / 60)) this.sfx('dim', 0.8 + dim / DIM.full);
+    if (wd && stone && !was.stone) {
+      this.sfx('thud', 0.8);
+      this.puffs.explode(6, wd.x, wd.y + wd.def.r);
+    }
+    this.midWas = { dim, stone };
+  }
+
   private bossGone(key: BossSheetKey, x: number, y: number) {
     const art = BOSS_ART[this.setup.zone.boss],
       sheet = this.setup.sheets[key];
@@ -1058,7 +1089,15 @@ class DungeonScene extends Phaser.Scene {
             this.bits.particleTint = c;
             this.bits.explode(14, f.x, f.y);
           }
-          this.cameras.main.shake(200, 0.006);
+          this.shake(200, 0.006);
+          // Half the Knight's armor goes at once; the Plateau splits further.
+          if (this.setup.zone.boss === 'knight') {
+            this.sfx('crash');
+            this.shake(320, 0.01);
+            this.hitStop(60);
+            buzz([20, 30, 20]);
+            this.plates(f.x, f.y, 18);
+          } else if (this.setup.zone.boss === 'plateau') this.sfx('crack', 0.75);
         }
       }
       const { s, base } = e;
@@ -1219,7 +1258,24 @@ class DungeonScene extends Phaser.Scene {
         this.sparks.explode(e.dmg >= 30 ? 6 : 2, e.x, e.y - 6);
         // a pixel star where the blow lands: pops big, shrinks away
         this.hitSpark(e.x, e.y - 6, e.dmg >= 30 ? 1.6 : 1.1);
-        this.sfx(e.boss ? 'bossHit' : 'hit');
+        const knight = e.boss && this.setup.zone.boss === 'knight',
+          mid = this.run.warden?.id === e.id ? this.run.warden : null;
+        if (knight) {
+          // Each hit takes one plate: a clink, higher as fewer are left, and the plate flies off.
+          const b = this.run.boss;
+          this.sfx('clink', b ? 0.9 + 0.35 * (1 - b.hp / b.maxHp) : 1);
+          this.plates(e.x, e.y, 3);
+        } else if (e.dmg === 0 && mid?.kind === 'sandGolem') {
+          this.sfx('thud');
+          this.shake(90, 0.004);
+          this.puffs.explode(3, e.x, e.y + 10);
+        } else this.sfx(e.boss ? 'bossHit' : 'hit');
+        if (mid?.kind === 'lantern') {
+          // Every hit on the Lantern brings some light back.
+          this.sfx('brighten');
+          const { x, y } = e;
+          this.fade(260, (g, p) => g.lineStyle(3 * (1 - p) + 1, 0xe0f2fe, 0.8 * (1 - p)).strokeCircle(x, y, 24 + 40 * p));
+        }
         // The Plateau never shows what a hit did.
         if (e.dmg === 0) {
           // It glanced off (the Sand Golem as stone): a grey ring, no number.
@@ -1264,6 +1320,19 @@ class DungeonScene extends Phaser.Scene {
           this.cameras.main.shake(huge ? 320 : 160, huge ? 0.01 : 0.006);
           this.hitStop(huge ? 70 : 60);
         }
+        if (e.kind === 'image' || e.kind === 'reflection' || (boss && this.setup.zone.boss === 'mirror')) {
+          // A copy (or the Mirror itself) breaks like glass.
+          this.sfx('glass', boss ? 0.7 : e.kind === 'image' ? 1 : 1.2);
+          this.bits.particleTint = 0xe0f2fe;
+          this.bits.explode(boss ? 30 : 12, x, y);
+          this.fade(boss ? 500 : 240, (g, p) => {
+            for (let i = 0; i < 6; i++) {
+              const a = (i / 6) * Math.PI * 2 + 0.4,
+                r0 = R * (0.3 + 1.2 * p);
+              g.lineStyle(2, 0xffffff, 0.9 * (1 - p)).lineBetween(x + Math.cos(a) * r0 * 0.5, y + Math.sin(a) * r0 * 0.5, x + Math.cos(a) * r0, y + Math.sin(a) * r0);
+            }
+          });
+        }
         this.sfx('kill', big ? 0.6 : e.kind === 'wisp' ? 1.3 : 1);
         if (boss) this.bossLabel?.destroy();
         if (boss && this.setup.zone.boss === 'mirror') this.bossGone('mirrorBossShatter', x, y);
@@ -1303,16 +1372,23 @@ class DungeonScene extends Phaser.Scene {
       case 'crack': {
         // The Plateau cracks: stone chips and a dull knock, and nothing else changes.
         const { x, y } = e;
-        this.sfx('stomp', 0.8);
+        this.sfx('crack', 1 + 0.08 * e.n);
+        this.shake(140, 0.005);
+        this.hitStop(40);
         this.bits.particleTint = 0xd9b47a;
         this.bits.explode(10, x, y);
+        this.puffs.explode(3, x, y + 10);
         this.fade(300, (g, p) => g.lineStyle(2, 0xfef3c7, 0.8 * (1 - p)).lineBetween(x - 10 + 4 * e.n, y - 20, x + 6 - 3 * e.n, y + 10));
         break;
       }
       case 'shatter': {
         const { x, y } = e;
-        this.cameras.main.shake(900, 0.02);
-        this.cameras.main.flash(500, 255, 240, 200);
+        this.sfx('shatter');
+        buzz([40, 30, 60, 30, 80]);
+        this.hitStop(90);
+        this.shake(900, 0.02);
+        if (!reducedMotion()) this.cameras.main.flash(500, 255, 240, 200);
+        this.puffs.explode(20, x, y + 10);
         for (const c of [0xd9b47a, 0x8f6b3d, 0xfef3c7]) {
           this.bits.particleTint = c;
           this.bits.explode(60, x, y);
@@ -1345,6 +1421,15 @@ class DungeonScene extends Phaser.Scene {
         this.speak(st[Math.min(e.height - 1, st.length - 1)]);
         this.bus.say(e.height === 1 ? 'Higher. That counts already: any height is a win.' : 'Higher.');
         this.summit?.play(this.anims.exists('summitBossAttack') ? 'summitBossAttack' : 'summitBoss');
+        // A ledge climbed: a rising chime, and light rising off you.
+        this.sfx('chime', 1 + 0.06 * Math.min(4, e.height - 1));
+        buzz(20);
+        const h = this.run.hero;
+        this.sparks.explode(14, h.x, h.y - 10);
+        this.fade(600, (g, p) => {
+          g.lineStyle(3 * (1 - p) + 1, 0xfde68a, 0.9 * (1 - p)).strokeCircle(h.x, h.y - 40 * p, 16 + 30 * p);
+          g.fillStyle(0xfef3c7, 0.5 * (1 - p)).fillRect(h.x - 1, h.y - 20 - 60 * p, 2, 14);
+        });
         break;
       }
       case 'help': {
@@ -1490,19 +1575,21 @@ class DungeonScene extends Phaser.Scene {
         break;
       case 'repair': {
         const { x, y } = e;
-        this.sfx('nova', 1.3);
+        this.sfx('clank');
+        this.shake(100, 0.003);
         this.bossAttack(this.run.warden);
         for (const f of this.run.foes)
           if (f.alive && f !== this.run.warden) {
             this.bits.particleTint = 0x86efac;
             this.bits.explode(6, f.x, f.y);
+            this.sparks.explode(2, f.x, f.y - 6);
           }
         this.fade(400, (g, p) => g.lineStyle(3, 0x86efac, 0.8 * (1 - p)).strokeCircle(x, y, 20 + 60 * p));
         break;
       }
       case 'swap': {
         const { x, y, toX, toY } = e;
-        this.sfx('dash', 1.3);
+        this.sfx('whoosh');
         this.bossAttack(this.run.warden);
         this.puffs.explode(4, x, y);
         this.puffs.explode(4, toX, toY);
@@ -1511,9 +1598,10 @@ class DungeonScene extends Phaser.Scene {
       }
       case 'gust': {
         const { x, y } = e;
-        this.sfx('wave', 0.7);
+        this.sfx('gust');
         this.bossAttack(this.run.warden);
-        this.cameras.main.shake(300, 0.004);
+        this.shake(300, 0.004);
+        this.puffs.explode(10, x, y + 10);
         this.fade(700, (g, p) => g.lineStyle(6 * (1 - p) + 1, 0xe2e8f0, 0.6 * (1 - p)).strokeCircle(x, y, 40 + 420 * p));
         break;
       }
@@ -1774,6 +1862,7 @@ class DungeonScene extends Phaser.Scene {
     }
     // The other mid-bosses' tells.
     if (wd?.alive && wd.kind !== 'warden') this.drawMid(wd, now);
+    this.hearMid(wd);
     // The Hollow's light: faint while it's dark, open and warm when it's lit, with how long you've
     // stood in it running round its edge.
     const hb = r.boss;
@@ -1783,6 +1872,10 @@ class DungeonScene extends Phaser.Scene {
         this.fx.fillStyle(0xfef3c7, 0.16 + 0.08 * p).fillCircle(hb.x, hb.y, LIGHT.r);
         this.fx.lineStyle(3, 0xfde68a, 0.75).strokeCircle(hb.x, hb.y, LIGHT.r);
         if (r.hold > 0) {
+          // The light hums while you stand in it, rising as it fills, and gathers round you.
+          const fill = r.hold / LIGHT.hold;
+          this.sfx('hum', 1 + 0.6 * fill);
+          this.fx.fillStyle(0xfffbeb, 0.1 + 0.25 * fill).fillCircle(r.hero.x, r.hero.y, 14 + 22 * fill);
           this.fx.lineStyle(5, 0xffffff, 0.95).beginPath();
           this.fx.arc(hb.x, hb.y, LIGHT.r + 5, -Math.PI / 2, -Math.PI / 2 + (r.hold / LIGHT.hold) * Math.PI * 2);
           this.fx.strokePath();
