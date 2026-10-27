@@ -10,8 +10,7 @@ import { music } from '@/lib/music';
 import { runSheets } from '@/game/sheets';
 import { Sprite } from './Sprite';
 import { SoundToggle, useMusic } from './Sound';
-import type { FreePick, Hud as SurviveHud, RunEnd as SurviveEnd, RunHandle as SurviveHandle } from '@/game/run';
-import type { Hud as DungeonHud, RunEnd as DungeonEnd } from '@/game/dungeon/scene';
+import type { FreePick, Hud, RunEnd, RunHandle } from '@/game/dungeon/scene';
 import { ABILITIES, DODGE, RELICS, ROOM_KINDS, WARDEN, type AbilityId, type RelicId, type RoomKind } from '@/game/dungeon/engine';
 
 interface Props {
@@ -24,17 +23,11 @@ interface Props {
 }
 
 
-/* Every zone is a dungeon (src/game/dungeon), each with its own boss and ground. The old
-   survive-the-waves run (src/game/run.ts) is kept behind isDungeon; both report through the same HUD. */
-type Hud = SurviveHud & Partial<DungeonHud>;
-type RunEnd = SurviveEnd & Partial<DungeonEnd>;
-type RunHandle = SurviveHandle & { ability?: () => void; dodge?: () => void; skipFloor?: () => void; skipToWarden?: () => void; pickRelic?: (id: RelicId) => void; cycleTheme?: () => string };
+/* Every zone is a dungeon (src/game/dungeon), each with its own boss and ground. */
 
 
 /** The Warden's name at the start of a line. */
 const WARDEN_NAME = WARDEN.name.replace(/^the/, 'The');
-
-export const isDungeon = (zone: Zone) => zone.id < ZONES.length;
 
 /** The boss's lines with the player's own words filled in; a line left empty (no words for it) is dropped. */
 function bossLines(zone: Zone, state: GameState): FogLines {
@@ -65,7 +58,6 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
   // Developer mode: ?bot hands runs to the bot, ?bot=fast also plays them in a blink (balance tests).
   const [bot] = useState(() => (dev && typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('bot') : null));
   const [auto, setAuto] = useState(bot !== null);
-  const dungeon = isDungeon(zone);
   const [floorShown, setFloorShown] = useState<number | null>(null);
   // The first-room tip: gone after the first move or a few seconds, whichever comes first.
   const [tip, setTip] = useState(true);
@@ -83,7 +75,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
     let cancelled = false;
     const classId = state.profile.classId;
     // Ask for the game code first, so it downloads while the sprites are drawn.
-    const game = dungeon ? import('@/game/dungeon/scene') : import('@/game/run');
+    const game = import('@/game/dungeon/scene');
     // No screen shake or flashes for players who asked their system for less motion.
     const calm = import('@/game/calm');
     // Built ahead (and cached) when the Play tab opens, so this is quick.
@@ -117,7 +109,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
         end: (r) => {
           music.sting(r.won ? 'victory' : 'defeat');
           const result: RunResult = { ...r, zone: zone.id };
-          if ('floor' in r && r.floor) setBroken(recordsBroken(state.fog?.records?.[zone.id], result));
+          setBroken(recordsBroken(state.fog?.records?.[zone.id], result));
           setEnd(r);
           onEnd(result);
         },
@@ -223,11 +215,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
         </div>
       )}
 
-      {tip && hud && !end && hud.seconds < (dungeon ? 6 : 5) && (
-        <p className={`pointer-events-none absolute inset-x-6 text-center text-sm text-slate-300 animate-pulse ${dungeon ? 'bottom-44' : 'bottom-28'}`}>
-          {dungeon
-            ? `Drag to move; you attack on your own. Dodge slips through shots. ${zone.bossName} waits ${hud.floors} floors down.`
-            : 'Drag anywhere to move. You attack on your own.'}
+      {tip && hud && !end && hud.seconds < 6 && (
+        <p className={`pointer-events-none absolute inset-x-6 text-center text-sm text-slate-300 animate-pulse bottom-44`}>
+          {`Drag to move; you attack on your own. Dodge slips through shots. ${zone.bossName} waits ${hud.floors} floors down.`}
         </p>
       )}
 
@@ -353,13 +343,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
               {(
                 [
                   ['Skip to the boss', () => run.current?.skipToBoss()],
-                  ...(dungeon
-                    ? ([
-                        ['Next floor', () => run.current?.skipFloor?.()],
-                        ['To the Warden', () => run.current?.skipToWarden?.()],
-                      ] as const)
-                    : []),
-                  ...(dungeon ? ([[`Theme${theme ? `: ${theme}` : ''}`, () => setTheme(run.current?.cycleTheme?.() ?? null)]] as const) : []),
+                  ['Next floor', () => run.current?.skipFloor()],
+                  ['To the Warden', () => run.current?.skipToWarden()],
+                  [`Theme${theme ? `: ${theme}` : ''}`, () => setTheme(run.current?.cycleTheme() ?? null)],
                   ['Win this run', () => run.current?.winNow()],
                   [
                     auto ? 'Take the controls' : 'Let the bot play',

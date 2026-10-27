@@ -5,7 +5,6 @@ import { Check, Lock, Play } from 'lucide-react';
 import { Sprite } from './Sprite';
 import { Ember } from './Characters';
 import { Hero } from './Hero';
-import { isDungeon } from './FogRun';
 import { warmRunSheets } from '@/game/sheets';
 import { gearOf, type GameState } from '@/lib/game';
 import { FLAME_AT, ZONES, nextGrowth, powerOf, zoneStatus, type Zone } from '@/lib/fog';
@@ -38,12 +37,8 @@ function useWarmRun(state: GameState) {
     // Give the tab a moment to settle first.
     let stop = () => {};
     const t = window.setTimeout(() => {
-      // Both kinds of run: they share Phaser, so the second costs little, and either can then
-      // start offline.
-      const loads: (() => Promise<unknown>)[] = [() => import('@/game/dungeon/scene'), () => import('@/game/run')];
-      if (!isDungeon(zone)) loads.reverse();
-      void loads[0]()
-        .then(loads[1])
+      // The run's code, so a run can then start offline.
+      void import('@/game/dungeon/scene')
         .then(() => import('@/game/calm'))
         .catch(() => {});
       stop = warmRunSheets(state, zone);

@@ -8,8 +8,8 @@
 //
 // Options (env): CLASSES=archer,mage (default: all four), ONLY=zone1-open,zone1-later picks
 // snapshots, SCALE='{"2":1.2}' plays zone 2 with its hp and dmg 1.2x, DIALS='{"fire":1.5}' turns the
-// engine's dials, TARGET=0.33,0.67 sets what the tuner aims for (wins when a zone opens, and 6
-// workouts later).
+// engine's dials, TARGET=0.33,0.67 sets what the tuner aims for (wins when a zone opens, and later
+// on).
 import { readdirSync, readFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { register } from 'node:module';
@@ -122,10 +122,10 @@ if (!isMainThread) {
     }
   } else {
     // For each zone, the scale on its enemies' hp and damage that puts the average of
-    // "when it opens" and "6 workouts later" on the middle of the two targets, by bisection.
+    // "when it opens" and "later" (6 workouts on, 18 for the last two zones: laterBy in src/sim/season.ts) on the middle of the two targets, by bisection.
     const ZONES = [...new Set(snaps.map((s) => s.zone))];
     const { ZONES: zones } = await import(`${root}src/lib/fog.ts`);
-    console.log(`Aim: ${pct(aimOpen)} of runs won when a zone opens, ${pct(aimLater)} six workouts later (all classes together).\n`);
+    console.log(`Aim: ${pct(aimOpen)} of runs won when a zone opens, ${pct(aimLater)} later on (all classes together).\n`);
     for (const z of ZONES) {
       const open = snaps.find((s) => s.zone === z && s.label.endsWith('open')),
         later = snaps.find((s) => s.zone === z && s.label.endsWith('later'));

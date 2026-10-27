@@ -1,10 +1,10 @@
 import type { ClassId } from '@/lib/gear';
-import type { Power, UpgradeId, Zone } from '@/lib/fog';
+import type { Power, UpgradeId } from '@/lib/fog';
 import type { FogBoss } from '@/story/types';
 import type { Sheet } from '@/sprites/registry';
 
-/* The Fog's rules as plain data and math, with no Phaser: the game (run.ts) and the fast
-   simulator (sim.ts) both read them, so a number changed here changes both. */
+/* The Fog's shared numbers and looks, as plain data and math with no Phaser: the dungeon engine
+   (dungeon/engine.ts) and its scene read them. */
 
 export type SheetKey = 'hero' | 'heroAttack' | 'ember' | 'hollow' | 'slime' | 'wisp' | 'mirror' | 'golem' | 'knight' | 'echo' | 'book' | 'summit'
   // the dungeon's own monsters
@@ -28,11 +28,8 @@ export type Sheets = Record<Exclude<SheetKey, BossSheetKey>, Sheet> & Partial<Re
 /** Skills the bot takes first. */
 export const BOT_PICKS: UpgradeId[] = ['multi', 'power', 'haste', 'vital', 'spark', 'flame', 'nova', 'guard', 'swift', 'magnet'];
 
-export const WORLD = 2400;
 export const HERO_SPEED = 150;
 export const HERO_HP = 100;
-export const MAX_FOES = 120;
-export const INVULNERABLE_MS = 600;
 /** How far ranged attacks look for a target: about the width of a phone screen. */
 export const RANGE = 240;
 /** A sword swings only at what it can reach, so it never whiffs on a foe still walking in. */
@@ -104,38 +101,6 @@ export const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.ma
 
 type Ups = Partial<Record<UpgradeId, number>>;
 
-// ---------- the waves ----------
-
-/** Seconds when a ring of wisps closes in from every side. */
-export const RINGS = [60, 150];
-export const RING_SIZE = 24;
-export const RING_RADIUS = 340;
-
-/** How many golems should have come by `t`: one every 45 s from 90 s. */
-export const elitesDue = (t: number) => (t >= 90 ? Math.floor((t - 90) / 45) + 1 : 0);
-export const elitePack = (t: number) => (t > 180 ? 2 : 1);
-
-/** Seconds to the next pack; slower while the boss is out. */
-export const spawnCooldown = (t: number, bossOut: boolean) => Math.max(0.3, 0.8 - t / 400) * (bossOut ? 3 : 1);
-export const packSize = (t: number) => 1 + Math.floor(t / 60);
-
-/** What walks out of the fog at `t`, for a roll `r` in [0, 1). */
-export function foeKindAt(t: number, r: number): FoeKind {
-  if (t < 45) return r < 0.7 ? 'slime' : 'wisp';
-  if (t < 120) return r < 0.45 ? 'slime' : r < 0.85 ? 'wisp' : 'mirror';
-  return r < 0.3 ? 'slime' : r < 0.7 ? 'wisp' : 'mirror';
-}
-
-/** A creature's HP: the zone's multiplier, growing over the run. The Knight's plates never grow. */
-export function foeHp(s: Stats, zone: Zone, t: number, boss?: FogBoss): number {
-  if (boss === 'knight') return KNIGHT_PLATES;
-  return Math.round(s.hp * zone.hp * (boss ? 1 : 1 + t / 180));
-}
-
-/** Where the boss dashes and summons: Hollow, Plateau, Summit. */
-export const DASH = { every: 4.5, windMs: 700, dashMs: 550, speed: 380, first: 3 };
-export const SUMMON = { every: 9, count: 8 };
-
 // ---------- the hero ----------
 
 export const heroMaxHp = (power: Power) => HERO_HP + power.hold;
@@ -151,74 +116,3 @@ export const novaHit = (lv: number) => ({ r: 90 + 20 * (lv - 1), dmg: 10 + 5 * (
 export const FLAME = { orbit: 68, spin: 2.6, touch: 22, every: 500, dmg: 7 };
 export const FIREBALL = { every: 2.5, r: 52, dmg: 16, flightMs: 320 };
 export const FAIRY = { below: 0.35, heal: 0.25, restMs: 25000 };
-
-// ---------- the bot ----------
-
-export interface BotFoe {
-  x: number;
-  y: number;
-  kind: FoeKind;
-  dmg: number;
-}
-
-/**
- * The bot: steps away from what's close (reflections most of all), picks up light, and circles
- * the boss at the distance its rule asks for. A steady, careful player, not a great one. With a
- * sword it lets the crowd come into reach instead, since a slash only hits what's close.
- */
-export function botSteer(
-  hero: { x: number; y: number },
-  foes: Iterable<BotFoe>,
-  boss: { x: number; y: number } | null,
-  gems: Iterable<{ x: number; y: number }>,
-  rule: FogBoss,
-  melee: boolean,
-): [number, number] {
-  const h = hero;
-  let x = 0,
-    y = 0;
-  for (const f of foes) {
-    const dx = h.x - f.x,
-      dy = h.y - f.y,
-      d = Math.hypot(dx, dy) || 1;
-    if (d > (melee && f.kind !== 'reflection' ? 70 : 170)) continue;
-    const w = ((f.kind === 'reflection' ? 3 : melee ? 0.4 : 1) * (f.dmg / 8) * 2500) / (d * d);
-    x += (dx / d) * w;
-    y += (dy / d) * w;
-  }
-  if (boss) {
-    const dx = boss.x - h.x,
-      dy = boss.y - h.y,
-      d = Math.hypot(dx, dy) || 1,
-      // Tomorrow heals when you're far, the Knight needs hits: stay close. The rest dash: keep room.
-      want = melee ? 60 : rule === 'tomorrow' || rule === 'knight' ? 80 : rule === 'mirror' ? 110 : 150,
-      pull = clamp((d - want) / 80, -1.5, 1.5);
-    x += (dx / d) * pull - (dy / d) * 0.7;
-    y += (dy / d) * pull + (dx / d) * 0.7;
-  } else {
-    let gem: { x: number; y: number } | null = null,
-      best = 260;
-    for (const g of gems) {
-      const d = Math.hypot(g.x - h.x, g.y - h.y);
-      if (d < best) {
-        best = d;
-        gem = g;
-      }
-    }
-    if (gem) {
-      const dx = gem.x - h.x,
-        dy = gem.y - h.y,
-        d = Math.hypot(dx, dy) || 1;
-      x += (dx / d) * 0.8;
-      y += (dy / d) * 0.8;
-    }
-  }
-  // Keep off the walls, where a crowd can pin you.
-  const m = 200;
-  if (h.x < m) x += (m - h.x) / m;
-  if (h.x > WORLD - m) x -= (h.x - (WORLD - m)) / m;
-  if (h.y < m) y += (m - h.y) / m;
-  if (h.y > WORLD - m) y -= (h.y - (WORLD - m)) / m;
-  const len = Math.hypot(x, y);
-  return len < 0.05 ? [0, 0] : [x / len, y / len];
-}
