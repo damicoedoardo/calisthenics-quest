@@ -49,19 +49,39 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change how often things drop, or the bag's size | `DROPS` and `BAG` in `engine.ts` (`kill`, `openChest`) |
 | Add an item kind or a class's weapon | `WEAPONS`, `ARMORS`, `ItemIcon` (and `ItemArt`, `looksOf`) in `items.ts`; its art in `ITEM_ROWS` and `LEGEND_ROWS` (`src/sprites/characters/items.ts`), and how the hero wears it in `heroSpec` (`src/sprites/characters/hero.ts`), see [sprites.md](sprites.md) |
 | Change how an item looks (its kind, the seed that picks its colors) | `looksOf` and `seedOf` in `items.ts` (the seed comes from the name, so one name always looks the same) |
-| Add something each hero has (a cooldown, a count, a buff for the run) | `Hero` in `engine.ts` and its start in `createRun` (see "The hero") |
+| Add something each hero has (a cooldown, a count, a buff for the run) | `Hero` in `engine.ts` and its start in `newHero` (see "The hero, and the party") |
 | Change the bag panel, the pickup note or the stairs card | `BagPanel` and the `stairs` card in `src/components/FogRun.tsx` |
 
-## The hero
+## The hero, and the party
 
-Everything that belongs to the player lives on `run.hero` (`Hero` in `engine.ts`): where they
-stand, HP, level and XP, cooldowns, skills (`ups`), chest items (`relics`), gear, the tapped
-target (`lock`), the picks waiting for them (`offer`, `relicOffer`, `free`) and what's pushing them
-(`wind`, `shove`). What belongs to the room or the run stays on `Run`: the map, monsters, shots,
-loot on the floor, stairs, the boss, the clock. Solo play is a party of one; keeping the two apart
-is the first step to co-op (the plan: "FORMA co-op Fog" doc, project thread "Explore multiplayer
-dungeon runs with friends"). A new field that is about the player goes on `Hero`; one about the
-place goes on `Run`.
+Everything that belongs to a player lives on a `Hero` (`engine.ts`): where they stand, HP, level
+and XP, cooldowns, skills (`ups`), chest items (`relics`), class, stat points (`build`), power with
+gear on (`power`; `base` is without), gear, the tapped target (`lock`), the picks waiting for them
+(`offer`, `relicOffer`, `free`) and what's pushing them (`wind`, `shove`). What belongs to the room
+or the run stays on `Run`: the map, monsters, shots, loot on the floor, stairs, the boss, the clock.
+A new field about the player goes on `Hero`; one about the place goes on `Run`.
+
+`run.party` holds every hero, you first; `run.hero` is you (`party[0]`), the one this phone plays
+and the camera follows. Solo play is a party of one. Co-op adds `RunSetup.friends` (each a
+`HeroSetup`: power, class, worn gear, stat points), and `stepRun` takes one `Input` per hero, in
+party order. The rules treat every hero the same:
+
+- Functions that act for a hero take it (`moveHero(run, h, input)`, `attack(run, h)`,
+  `hurt(run, h, ...)`); a hit names who struck it (`damage(run, by, f, ...)`, `Shot.by`,
+  `burst(run, by, ...)`), and that hero gets the kill and the fang heal.
+- Monsters, their shots and homing bullets go for the nearest hero still standing (`prey`); shots,
+  touch, bombs, barrels, spikes and the Gale hit whoever they reach (`standing`).
+- Light (gems) flies to the hero nearest it, and its XP goes to every hero still standing.
+- Drops are personal (`dropEach`): each standing hero gets their own item, rolled for their class
+  and tagged with their id (`loot[].for`, set only in a party). Only that hero sees and takes it
+  (`mine`, used by the pick-up, the bot and the scene). The boss's drop goes into every bag.
+- A hero at 0 HP is down (`fall`) and stops acting; the run ends when the whole party is down.
+  `RunEnd` is still yours.
+- A pick (skill or chest item) by anyone still holds the whole run (`choosing`), and the stairs ask
+  once for everyone: changing that is the next co-op step. The Summit's friends walk beside you.
+
+The plan is in the "FORMA co-op Fog" doc (project thread "Explore multiplayer dungeon runs with
+friends"). `engine.test.ts` ("a party") plays a two-bot run to the end.
 
 ## Floors and the map
 

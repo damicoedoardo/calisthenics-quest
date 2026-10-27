@@ -5,12 +5,13 @@ import { NIGHT, aura, grid, mix, painter, rampOf, tint, type Grid, type Ramp } f
 import { ARM_DOWN, bone, hangs, limbs, paintArm } from '../engine/drawn';
 import { drawBow, drawStaff, drawStick, drawSword, drawWand, type WeaponLook } from '../parts/weapons';
 import { itemColors, pick, type ItemColors } from './items';
-import { CAPE, GOLD_GHOST, HAIR, HOLLOW_EYES, LINEN, R, SHADOW, SKIN, TROUSERS } from '../palette';
+import { CAPE, FLAME, GOLD_GHOST, HAIR, HOLLOW_EYES, LINEN, R, SHADOW, SKIN, TROUSERS } from '../palette';
 
 /* Your hero. One sprite carries the whole story: gear colors and class weapons as you train, and
-   the variants the story needs (the gold Echo, the Best Self, the Hollow). */
+   the variants the story needs (the gold Echo, the Best Self, the Hollow, and you with the flame
+   inside, once it has fused with you in the finale). */
 
-export type HeroVariant = 'normal' | 'echo' | 'best' | 'hollow';
+export type HeroVariant = 'normal' | 'echo' | 'best' | 'hollow' | 'kindled';
 
 export interface HeroOpts {
   gear: Record<GearSlot, Gear>;
@@ -526,6 +527,8 @@ export function drawHero(o: HeroOpts, frame: ClipFrame, f: number): Grid {
   if (variant === 'echo') return tint(gr, GOLD_GHOST);
   if (variant === 'hollow') return hollowEyes(tint(gr, SHADOW), frame, look);
   if (variant === 'best') return aura(gr, CAPE, '#fde68a', 5, f);
+  // The flame lives in you now: red fire runs around you, and flickers.
+  if (variant === 'kindled') return aura(gr, [FLAME.red[0], FLAME.red[1], FLAME.orange[1]], FLAME.yellow, 10, f);
   // A legendary item glows in its own light.
   const legend = (['weapon', 'armor', 'shield'] as const).find((s) => gear[s].item?.rarity === 'legendary'),
     lit = legend && gear[legend].item ? itemColors(gear[legend].item).glow : null;
@@ -539,5 +542,6 @@ export function drawHero(o: HeroOpts, frame: ClipFrame, f: number): Grid {
 export function heroLabel({ gear, variant }: HeroOpts): string {
   if (variant === 'echo') return 'The Echo, the ghost of who you were';
   if (variant === 'hollow') return 'The Hollow, your shadow';
+  if (variant === 'kindled') return `Hero burning with your flame, with ${gear.weapon.name}, ${gear.armor.name} and ${gear.shield.name}`;
   return `Hero with ${gear.weapon.name}, ${gear.armor.name} and ${gear.shield.name}`;
 }

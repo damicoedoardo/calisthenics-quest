@@ -177,6 +177,7 @@ exports[`sprite registry > art fingerprints 1`] = `
   "hero girl": "0b93f28a9d56",
   "hero hollow": "cb88811efe0e",
   "hero idle": "b9fc386393a1",
+  "hero kindled": "72560d8feb25",
   "hero mage items common attack": "409cb578b7c7",
   "hero mage items common idle": "4eff670b4fdf",
   "hero mage items legendary attack": "08f92779483c",

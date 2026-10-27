@@ -16,10 +16,14 @@ pieces of screen state, and decides what is on screen:
    `Opening` plays over everything for about three seconds, and story scenes wait for it.
 2. **Onboarded, on a phone, in a browser tab** (not installed): `InstallGate` takes the whole
    screen until FORMA is opened from the home screen, see [pwa.md](pwa.md#install-before-playing).
-3. **Otherwise** the header, the current tab and the bottom tab bar, with full-screen layers on
+3. **Onboarded, not signed in** (and the backend set up, not in the sandbox): `SignInGate` asks
+   once for an account, after the opening. Email, then the code from the email or its link; Google
+   when switched on. Offline it lets you play on; developer mode can skip it for this open. See
+   [../backend/cloud-sync.md](../backend/cloud-sync.md).
+4. **Otherwise** the header, the current tab and the bottom tab bar, with full-screen layers on
    top when one is open: `Workout` (training), `AfterSession` (right after finishing),
    `ScenePlayer` (a due story scene), `ClassPicker`, `FogRun`, and the `DevPanel`.
-4. While a layer is open the tabs underneath are made `inert` (no focus, hidden from screen
+5. While a layer is open the tabs underneath are made `inert` (no focus, hidden from screen
    readers). Overlays opened from inside a tab use `useModal` for the same thing.
 5. On the tabs (nothing over them) the menus' music plays, unless turned off in Settings (see [../game/sound.md](../game/sound.md)).
 6. Back on the tabs, the next due scene from `scenesToPlay` (`src/story/engine.ts`) plays.
@@ -58,6 +62,7 @@ the vault" opens a geared Play tab) and check 390×844 is unchanged.
 | `Opening` | The splash when the app opens: the small flame (always the spark) catches, FORMA lands one letter per note of the `opening` sting, "Day N · the fire's lit" (`dayNumber`). Sound starts by itself where the browser allows it; where it needs a tap first (iPhones, even installed), the flame waits on a blinking "Tap to start" and that tap plays the jingle with the letters. A tap while it plays skips. Muted means no sound at all; reduced motion shows it still |
 | `Prologue` | First run: boy or girl pick (on iPhones with "Bring your hero" under it, `BringHero`), the story opens, the first fight (`FirstFight`) you can't win, `RiseUp` (hold to stand), the letter, gym or home, then the `LookEditor` |
 | `InstallGate`, `BringHero` | After the prologue, the guide to put FORMA on the home screen; and on an installed iPhone app's first screen, pasting in the hero copied in Safari. See [pwa.md](pwa.md#install-before-playing) |
+| `SignInGate` | After the install step, an account once: email, then the code from the email (the way in on an installed iPhone app, where the link opens Safari) |
 | `TodayTab` | The flame card and its line, today's quest list with exercise stills, the rest-day card and `SitByFire`, the quote of the day, the Book of Days, the install nudge |
 | `Workout` | The set logger: one exercise at a time, one tap per set (reps in reserve), rest timer, Undo, the exercise demo; the warm-up and the stretch are one "Done" tap |
 | `AfterSession` | After a workout: a short battle against the chapter enemy, then the loot (XP, stat points, better than last time, level, gear, the flame's word) |
@@ -67,11 +72,11 @@ the vault" opens a geared Play tab) and check 390×844 is unchanged.
 | `PlayTab` | Power from training, your gear for the Fog (`FogGearCard`: worn gear with the flame's mark, the vault, Mira's forge for the tapped item, see [../game/forge.md](../game/forge.md)), the zones, warms up the Fog's code and sprite sheets while idle |
 | `FogRun` | A run, held sideways: loads the Phaser scene on demand, the HUD in the corners (`Vitals`: HP and level; the floor and its depth row, `DepthMap`; `BagButton` with a red count of what a fall would cost; pause; the floor's minimap, `FloorMap`, tap for it big), the bag (`BagPanel`) and the stairs card (deeper or leave), both showing what is at risk and the flame's kept item (`RiskLine`, `Guarded`), the pickup note, pause menu, skill picks (three cards side by side), the recap with what came home or was lost (`GearRecap`), the "turn your phone" card |
 | `ItemCard` | An item's tile and card, shared by the run's bag and the Play tab. `ItemTile`: the item's own art (sprite `item`, drawn a little bigger than the tile, in multiples of 16 px) on a backdrop and edge in its rarity's color (rare gold with a soft glow, legendary orange with a pulsing glow). `ItemCard`: a stage on top with the art big (rays turning behind a legendary), a rarity badge and the upgrade, then the name in its rarity's color, what it gives, what it needs. Rares shine and legendaries sparkle; with reduced motion they hold still (`useReducedMotion`) |
-| `HeroTab` | Gear, class, look editor, the champion's stat points (`StatPoints`: spend, take back), keepsakes, quest log, Settings (sound, music in the menus), Backup and Restore, cloud backup sign-in (`CloudSave`) |
+| `HeroTab` | Gear, class, look editor, the champion's stat points (`StatPoints`: spend, take back), keepsakes, quest log, Settings (sound, music in the menus), Backup and Restore, cloud backup sign-in (`CloudSave`), the Friends card (`FriendsCard`, [../backend/friends.md](../backend/friends.md); sideways it sits in the Log tab) |
 | `ScenePlayer`, `Dialogue` | Play a story scene: lines, camera shots, the question, the answer lines |
 | `ClassPicker` | Four weapons in the ash: pick the class |
 | `BookOfDays` | Every day the app was opened, newest first |
-| `Hero`, `Characters`, `Sprite` | Draw sprites; `Hero` only decides when to attack, `Sprite` renders any sprite id |
+| `Hero`, `Characters`, `Sprite` | Draw sprites; `Hero` only decides when to attack, `Sprite` renders any sprite id. Screens that show your hero (header, Hero tab, Play tab, after a workout) pass `variant={heroVariant(state)}`, so once the flame has fused with you in the finale you are drawn on fire |
 | `Look`, `LookEditor` | The player's look, shared through `LookProvider`, and its editor |
 | `Place`, `Weather` | A story place's backdrop; rain, ash, snow, embers, fog over the screen |
 | `Sound` | `useMusic` (a track while a screen is on), the mute toggle |

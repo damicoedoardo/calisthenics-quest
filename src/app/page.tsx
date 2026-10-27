@@ -18,10 +18,14 @@ import { DevButton, DevPanel } from '@/components/DevPanel';
 import { Sprite } from '@/components/Sprite';
 import { LookProvider } from '@/components/Look';
 import { CloudChoice, useCloudSync } from '@/components/Cloud';
+import { useFriendsBeat } from '@/components/Friends';
+import { SignInGate, signInDue } from '@/components/SignInGate';
+import { useCloudStatus } from '@/lib/cloud-client';
 import { BringHero, InstallGate } from '@/components/InstallGate';
 import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { sawScene, scenesToPlay, storyState, type StoryState } from '@/story/engine';
 import { withTodayPage } from '@/story/daily';
+import { heroVariant } from '@/story/flame';
 import type { Scene } from '@/story/types';
 import { inSandbox, useGameState } from '@/lib/store';
 import { recordRun, ZONES, type Zone } from '@/lib/fog';
@@ -68,6 +72,11 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const jumped = useRef(false);
   // The cloud backup, when signed in. Never before the save has loaded, never in the sandbox.
   const cloud = useCloudSync(state, update, !ready || inSandbox());
+  // Shows you online to your friends while the app is open, and in the Fog during a run.
+  useFriendsBeat(state, run?.name ?? null, !ready || inSandbox());
+  // After the install step, an account once (SignInGate); developer mode may play on without.
+  const { signedIn } = useCloudStatus();
+  const [skipSignIn, setSkipSignIn] = useState(false);
   useEffect(() => {
     if (!ready || jumped.current) return;
     jumped.current = true;
@@ -100,7 +109,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const inst = useInstall();
   const gated = inst.known && !inst.standalone && !inst.skipped && mustInstall(inst.platform) && (inst.forced || !inSandbox());
   // The menus' music, on the tabs only: the opening, story, workouts and runs have their own.
-  useMenuTrack(ready && state.profile.onboarded && !opening && !replaying && !busy && !gated);
+  const askSignIn = !gated && !skipSignIn && !inSandbox() && signInDue(signedIn);
+  useMenuTrack(ready && state.profile.onboarded && !opening && !replaying && !busy && !gated && !askSignIn);
   useEffect(() => {
     if (busy) setDevOpen(false);
   }, [busy]);
@@ -210,6 +220,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       />
     );
 
+  if (askSignIn && !opening) return <SignInGate onSkip={dev ? () => setSkipSignIn(true) : undefined} />;
+
   return (
     // Held sideways (the `land` screen), the tab bar becomes a rail down the left, the header shrinks
     // to one line, and the tab fills exactly the rest of the screen (each tab lays out a screen of
@@ -228,7 +240,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         )}
         <div className="flex items-center gap-3 land:min-w-0 land:flex-1">
           <div className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800 land:hidden">
-            <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} />
+            <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} variant={heroVariant(state)} />
           </div>
           <div className="min-w-0 flex-1 land:flex land:items-center land:gap-4">
             <div className="flex items-baseline justify-between land:shrink-0 land:items-center land:gap-4">
@@ -272,7 +284,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       <nav className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-ink-700 bg-ink-900/95 backdrop-blur land:right-auto land:top-0 land:flex land:w-[calc(4.5rem+env(safe-area-inset-left))] land:flex-col land:items-center land:justify-center land:gap-3 land:border-r land:border-t-0 land:pl-[env(safe-area-inset-left)]">
         {/* Sideways, the hero from the header sits at the top of the rail. */}
         <div aria-hidden className="hidden h-11 w-11 place-items-center rounded-xl bg-ink-800 land:grid">
-          <Hero gear={gear} classId={state.profile.classId} size={38} bounce={false} />
+          <Hero gear={gear} classId={state.profile.classId} size={38} bounce={false} variant={heroVariant(state)} />
         </div>
         <div className="mx-auto grid max-w-md grid-cols-4 land:mx-0 land:w-full land:grid-cols-1 land:gap-1">
           {TABS.map(({ id, label, icon }) => (

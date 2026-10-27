@@ -189,7 +189,7 @@ describe('sprite registry', () => {
       for (const t of [1, 4, 6])
         for (const action of actions)
           prints[`hero ${classId} t${t} ${action}`] = hash(framesFor('hero', action, { gear: uniformGear(classId, t as Tier), classId }));
-    for (const variant of ['echo', 'best', 'hollow'] as const) prints[`hero ${variant}`] = hash(framesFor('hero', 'idle', { variant }));
+    for (const variant of ['echo', 'best', 'hollow', 'kindled'] as const) prints[`hero ${variant}`] = hash(framesFor('hero', 'idle', { variant }));
     for (const style of Object.keys(HAIRSTYLES) as HairStyle[])
       for (const head of ['classic', 'manga'] as const) prints[`hero ${head} ${style}`] = hash(framesFor('hero', 'idle', { look: { ...DEFAULT_LOOK, style, head } }));
     prints['hero girl'] = hash(framesFor('hero', 'idle', { look: STARTER_LOOKS.f }));

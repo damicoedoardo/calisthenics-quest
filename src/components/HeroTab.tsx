@@ -12,11 +12,13 @@ import { useModal } from './useModal';
 import { StatPoints } from './StatPoints';
 import { CloudSave } from './Cloud';
 import { useLand } from './useLand';
+import { FriendsCard } from './Friends';
 import { getClass, tierText } from '@/lib/gear';
 import { gearOf, type GameState } from '@/lib/game';
 import { planExercises } from '@/lib/program';
 import { exportState, inSandbox, parseImport } from '@/lib/store';
 import { storyState } from '@/story/engine';
+import { heroVariant } from '@/story/flame';
 import { ZONES } from '@/lib/fog';
 import { pointsFree } from '@/lib/stats';
 
@@ -189,7 +191,7 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
         <section className="flex w-48 shrink-0 flex-col items-center overflow-y-auto rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 px-2.5 pb-2.5 pt-3 min-[800px]:w-56">
           <p className="font-pixel text-[9px] text-slate-400">{cls ? cls.name : 'Adventurer'}</p>
           <div className="grid min-h-0 flex-1 place-items-center">
-            <Hero gear={gear} classId={state.profile.classId} size={112} />
+            <Hero gear={gear} classId={state.profile.classId} size={112} variant={heroVariant(state)} />
           </div>
           <ul className="w-full space-y-1 text-[11px]">
             {(['weapon', 'armor', 'shield'] as const).map((slot) => (
@@ -233,6 +235,7 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
               <>
                 {stats}
                 {letterCard}
+                <FriendsCard sandbox={inSandbox()} />
                 {questLog || <p className="text-xs text-slate-500">Your quests land here.</p>}
               </>
             ) : part === 'keepsakes' ? (
@@ -251,7 +254,7 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
     <div className="space-y-5">
       <section className="flex flex-col items-center rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 pb-4 pt-5">
         <p className="font-pixel text-[10px] text-slate-400">{cls ? cls.name : 'Adventurer'}</p>
-        <Hero gear={gear} classId={state.profile.classId} size={180} />
+        <Hero gear={gear} classId={state.profile.classId} size={180} variant={heroVariant(state)} />
         <div className="mt-3 grid w-full grid-cols-3 gap-2 px-3 text-center text-xs">
           {(['weapon', 'armor', 'shield'] as const).map((slot) => (
             <div key={slot} className="rounded-lg bg-ink-900/70 px-2 py-2">
@@ -281,6 +284,8 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
       {stats}
 
       <Keepsakes cleared={state.fog?.cleared ?? 0} />
+
+      <FriendsCard sandbox={inSandbox()} />
 
       {questLog}
 

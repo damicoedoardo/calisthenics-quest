@@ -7,10 +7,8 @@ export const CAST = {
   narrator: { name: '', portrait: { kind: 'none' } },
   you: { name: 'You', portrait: { kind: 'hero', variant: 'normal', size: 170 } },
   flame: { name: '{flame}', portrait: { kind: 'flame', size: 110 }, tag: 'amber' },
-  // The flame's true form, from the finale: a kid made of fire, with your hair.
-  kindled: { name: '{flame}', portrait: { kind: 'kindled', size: 150 }, tag: 'amber' },
-  // The same, waving: put on screen with `show` (it never speaks as itself).
-  'kindled-wave': { name: '{flame}', portrait: { kind: 'kindled', size: 150, wave: true }, tag: 'amber' },
+  // You, after the flame fuses with you in the finale: red fire runs around you.
+  'you-kindled': { name: 'You', portrait: { kind: 'hero', variant: 'kindled', size: 170 } },
   wanderer: { name: 'The Wanderer', portrait: { kind: 'sprite', sprite: 'wanderer', size: 140 } },
   hollow: { name: 'The Hollow', portrait: { kind: 'hollow', size: 170 }, tag: 'red', dark: true },
   echo: { name: 'The Echo', portrait: { kind: 'hero', variant: 'echo', size: 170 } },
