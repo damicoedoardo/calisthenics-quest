@@ -45,7 +45,10 @@ if (!isMainThread) {
     const z = ZONES[job.zone];
     const zone = { ...z, hp: z.hp * job.scale, dmg: z.dmg * job.scale };
     const out = [];
-    for (let i = 0; i < job.runs; i++) out.push(playRun({ zone, power, classId: job.cls, seed: job.seed + i * 7919 }));
+    for (let i = 0; i < job.runs; i++) {
+      const seed = job.seed + i * 7919;
+      out.push({ ...playRun({ zone, power, classId: job.cls, seed }), seed });
+    }
     parentPort.postMessage(out);
   });
 } else {
@@ -113,6 +116,9 @@ if (!isMainThread) {
       const lost = all.filter((r) => !r.won).map((r) => r.floor);
       const deep = lost.length ? (lost.reduce((a, b) => a + b, 0) / lost.length).toFixed(1) : '-';
       console.log(`${snap.label.padEnd(12)} ${per.map((p) => `${pct(rate(p.res))} ${mins(p.res).padStart(5)}`.padStart(14)).join('')}   ${pct(reached)}, floor ${deep}`);
+      // A run this long means something held a room shut: worth a look (replay it with its seed).
+      const long = per.flatMap((p) => p.res.filter((r) => r.seconds > 25 * 60).map((r) => `${p.cls} seed ${r.seed} (floor ${r.floor}.${r.room}, ${Math.round(r.seconds / 60)}m)`));
+      if (long.length) console.log(`  ! ${long.length} past 25 min: ${long.slice(0, 6).join(', ')}${long.length > 6 ? ', ...' : ''}`);
     }
   } else {
     // For each zone, the scale on its enemies' hp and damage that puts the average of

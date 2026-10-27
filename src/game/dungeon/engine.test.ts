@@ -122,4 +122,25 @@ describe('dungeon', () => {
     run.bullets = [{ id, x: h.x - 30, y: h.y, vx: 240, vy: 0, r: 5, dmg: 10, born: run.t - 0.5, boss: false, style: 'plain', ang: 0, spd: 240, bounce: 0 }];
     expect(botInput(run).dodge).toBe(true);
   });
+
+  it('the bot walks up to a monster it can\'t hit from afar, so a room never holds it forever', () => {
+    const run = createRun({ ...setup, classId: 'archer', power: { ...power, armor: 0.95 }, seed: 4 });
+    while (!run.foes.some((f) => f.alive && run.t >= f.bornUntil)) stepRun(run, { x: 0, y: 0, ability: false });
+    // One harmless monster that never moves.
+    const f = run.foes.find((o) => o.alive)!;
+    run.foes = [f];
+    run.waves = [];
+    run.timers = [];
+    f.def = { ...f.def, move: 'still', shoots: [], dmg: 0 };
+    f.hp = f.maxHp = 400;
+    // Tucked in a corner, a pillar in front of it.
+    f.x = 50;
+    f.y = 50;
+    run.terrain = { ...run.terrain, pillars: [{ x: 92, y: 92, r: 30 }], water: [], spikes: [], barrels: [] };
+    for (let i = 0; i < 60 * 120 && !run.cleared; i++) {
+      stepRun(run, botInput(run));
+      run.events.length = 0;
+    }
+    expect(run.cleared).toBe(true);
+  });
 });

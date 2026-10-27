@@ -92,6 +92,10 @@ export interface Hud {
   seconds: number;
   kills: number;
   boss: { hp: number; max: number } | null;
+  /** This floor's rooms so far, by what was behind their doors (index = room). */
+  path: RoomKind[];
+  /** What the open doors offer, when there's a choice. */
+  doors: RoomKind[] | null;
   /** The Warden of the Ashes, the mid-boss, while it stands. */
   warden: { hp: number; max: number; phase: number } | null;
   /** The floor (from 1) whose last room holds the Warden, or null. */
@@ -743,6 +747,15 @@ class DungeonScene extends Phaser.Scene {
     return order.find((id) => choices.includes(id)) ?? choices[0];
   }
 
+  /** The rooms of this floor so far, for the depth ladder. */
+  private path: { floor: number; kinds: RoomKind[] } = { floor: -1, kinds: [] };
+  private trackPath(): RoomKind[] {
+    const r = this.run;
+    if (this.path.floor !== r.floor) this.path = { floor: r.floor, kinds: [] };
+    this.path.kinds[r.room] = r.kind;
+    return [...this.path.kinds];
+  }
+
   private stickInput() {
     let x = 0,
       y = 0;
@@ -779,6 +792,8 @@ class DungeonScene extends Phaser.Scene {
       dodge: Math.min(1, 1 - (r.dodgeAt - r.t) / DODGE.cd),
       cleared: r.cleared,
       relics: { ...r.relics },
+      path: this.trackPath(),
+      doors: r.doorOpen && r.doors.length > 1 ? r.doors.map((d) => d.kind) : null,
     };
   }
 

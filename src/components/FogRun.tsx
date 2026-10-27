@@ -9,7 +9,7 @@ import { sheetFor } from '@/sprites/registry';
 import { SoundToggle, useMusic } from './Sound';
 import type { FreePick, Hud as SurviveHud, RunEnd as SurviveEnd, RunHandle as SurviveHandle } from '@/game/run';
 import type { Hud as DungeonHud, RunEnd as DungeonEnd } from '@/game/dungeon/scene';
-import { ABILITIES, DODGE, RELICS, WARDEN, type AbilityId, type RelicId } from '@/game/dungeon/engine';
+import { ABILITIES, DODGE, RELICS, ROOM_KINDS, WARDEN, type AbilityId, type RelicId, type RoomKind } from '@/game/dungeon/engine';
 import type { Sheet } from '@/sprites/registry';
 import type { HeroOpts } from '@/sprites/characters/hero';
 import type { BossSheetKey, Sheets } from '@/game/rules';
@@ -265,7 +265,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
         </div>
       )}
 
-      {hud?.floor && hud.floors && hud.rooms && !end && <DepthMap floor={hud.floor} floors={hud.floors} room={hud.room ?? 1} rooms={hud.rooms} boss={zone.bossName} mid={hud.wardenFloor ?? null} />}
+      {hud?.floor && hud.floors && hud.rooms && !end && <DepthMap floor={hud.floor} floors={hud.floors} room={hud.room ?? 1} rooms={hud.rooms} boss={zone.bossName} mid={hud.wardenFloor ?? null} path={hud.path ?? []} doors={hud.doors ?? null} />}
 
       {!hud && !end && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
 
@@ -445,36 +445,67 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
 
 /** How deep you are: a ladder of floors down the left edge, filling as you go, the boss at the
     bottom. The floor you're on shows its rooms; an ember marks the Warden's floor. */
-function DepthMap({ floor, floors, room, rooms, boss, mid }: { floor: number; floors: number; room: number; rooms: number; boss: string; mid: number | null }) {
+function DepthMap({ floor, floors, room, rooms, boss, mid, path, doors }: { floor: number; floors: number; room: number; rooms: number; boss: string; mid: number | null; path: RoomKind[]; doors: RoomKind[] | null }) {
+  const [open, setOpen] = useState(false);
+  // What each room of this floor held, or what waits: the doors on offer, then the floor's last room.
+  const rows = Array.from({ length: rooms }, (_, r) => {
+    const n = r + 1;
+    if (n < room) return { n, text: ROOM_KINDS[path[r] ?? 'fight'].name, tone: 'text-slate-400' };
+    if (n === room) return { n, text: `${ROOM_KINDS[path[r] ?? 'fight'].name} (here)`, tone: 'text-gold-300' };
+    if (n === rooms) return floor === floors ? { n, text: boss, tone: 'text-red-400' } : floor === mid ? { n, text: WARDEN_NAME, tone: 'text-orange-300' } : { n, text: 'Stairs down', tone: 'text-slate-400' };
+    if (n === room + 1 && doors) return { n, text: doors.map((k) => ROOM_KINDS[k].name).join(' or '), tone: 'text-sky-300' };
+    return { n, text: '?', tone: 'text-slate-600' };
+  });
   return (
-    <div
-      className="pointer-events-none absolute left-1.5 top-24 flex flex-col items-center gap-[3px] rounded-lg bg-ink-950/50 px-1 py-1.5"
-      aria-label={`Floor ${floor} of ${floors}, ${mid ? `the Warden on floor ${mid}, ` : ''}${boss} at the bottom`}
-    >
-      {Array.from({ length: floors }, (_, i) => {
-        const n = i + 1,
-          here = n === floor,
-          warden = n === mid;
-        return (
-          <div key={n} className="relative flex items-center">
-            <div className={`flex items-center gap-[2px] ${here ? 'rounded-sm bg-gold-400/20 px-[2px] py-[2px] ring-1 ring-gold-300' : ''}`}>
-              {here ? (
-                Array.from({ length: rooms }, (_, r) => (
-                  <span
-                    key={r}
-                    className={`h-1.5 w-1.5 rounded-[1px] ${r + 1 < room ? 'bg-gold-300' : r + 1 === room ? 'animate-pulse bg-white' : (n === floors || warden) && r + 1 === rooms ? (warden ? 'bg-orange-500' : 'bg-red-500') : 'bg-ink-700'}`}
-                  />
-                ))
-              ) : (
-                <span className={`block h-1.5 w-4 rounded-[1px] ${n < floor ? 'bg-gold-400/70' : 'bg-ink-700/90'}`} />
-              )}
+    <>
+      <button
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => setOpen((o) => !o)}
+        className="pointer-events-auto absolute left-1.5 top-24 flex flex-col items-center gap-[3px] rounded-lg bg-ink-950/50 px-1 py-1.5"
+        aria-label={`Floor ${floor} of ${floors}, ${mid ? `the Warden on floor ${mid}, ` : ''}${boss} at the bottom. Tap for this floor's rooms.`}
+        aria-expanded={open}
+      >
+        {Array.from({ length: floors }, (_, i) => {
+          const n = i + 1,
+            here = n === floor,
+            warden = n === mid;
+          return (
+            <div key={n} className="relative flex items-center">
+              <div className={`flex items-center gap-[2px] ${here ? 'rounded-sm bg-gold-400/20 px-[2px] py-[2px] ring-1 ring-gold-300' : ''}`}>
+                {here ? (
+                  Array.from({ length: rooms }, (_, r) => (
+                    <span
+                      key={r}
+                      className={`h-1.5 w-1.5 rounded-[1px] ${r + 1 < room ? 'bg-gold-300' : r + 1 === room ? 'animate-pulse bg-white' : (n === floors || warden) && r + 1 === rooms ? (warden ? 'bg-orange-500' : 'bg-red-500') : 'bg-ink-700'}`}
+                    />
+                  ))
+                ) : (
+                  <span className={`block h-1.5 w-4 rounded-[1px] ${n < floor ? 'bg-gold-400/70' : 'bg-ink-700/90'}`} />
+                )}
+              </div>
+              {warden && <FlameKindling size={10} strokeWidth={2.5} className={`absolute -right-3.5 ${n < floor ? 'text-orange-400/40' : 'text-orange-400'}`} />}
             </div>
-            {warden && <FlameKindling size={10} strokeWidth={2.5} className={`absolute -right-3.5 ${n < floor ? 'text-orange-400/40' : 'text-orange-400'}`} />}
-          </div>
-        );
-      })}
-      <Skull size={14} className={`mt-0.5 ${floor === floors ? 'animate-pulse text-red-400' : 'text-red-400/70'}`} />
-    </div>
+          );
+        })}
+        <Skull size={14} className={`mt-0.5 ${floor === floors ? 'animate-pulse text-red-400' : 'text-red-400/70'}`} />
+      </button>
+      {open && (
+        <div onPointerDown={(e) => e.stopPropagation()} onClick={() => setOpen(false)} className="pointer-events-auto absolute left-10 top-24 w-44 animate-fadein rounded-lg bg-ink-950/90 p-2 ring-1 ring-gold-400/40">
+          <p className="font-pixel text-[8px] text-gold-300">
+            Floor {floor} of {floors}
+          </p>
+          <ol className="mt-1.5 space-y-1">
+            {rows.map((r) => (
+              <li key={r.n} className="flex items-baseline gap-1.5 text-[11px] leading-tight">
+                <span className="w-3 shrink-0 font-mono text-[9px] text-slate-500">{r.n}</span>
+                <span className={r.tone}>{r.text}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </>
   );
 }
 

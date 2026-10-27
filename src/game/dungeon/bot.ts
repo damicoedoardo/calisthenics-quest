@@ -39,9 +39,26 @@ function pickDoor(run: Run): number {
   return best?.x ?? run.area.w / 2;
 }
 
+/** After this long (s) in a room without hurting anything, the bot walks right up to the monsters:
+    keeping its distance can leave it shooting into a pillar forever while a monster hides behind. */
+const STALL = 20;
+const progress = new WeakMap<Run, { room: string; hp: number; at: number }>();
+
+function stalled(run: Run): boolean {
+  const room = `${run.floor}.${run.room}`,
+    hp = run.foes.reduce((n, f) => n + (f.alive ? f.hp : 0), 0) + run.kills * 1e4,
+    p = progress.get(run);
+  if (!p || p.room !== room || p.hp !== hp) {
+    progress.set(run, { room, hp, at: run.t });
+    return false;
+  }
+  return !run.cleared && run.t - p.at > STALL;
+}
+
 export function botInput(run: Run): Input {
   const h = run.hero,
     melee = attackOf(run.setup.classId) === 'slash',
+    stuck = stalled(run),
     now = run.t;
   let x = 0,
     y = 0,
@@ -76,7 +93,8 @@ export function botInput(run: Run): Input {
   }
 
   // The ground.
-  const T = run.terrain;
+  const T = run.terrain,
+    target = stuck ? run.foes.reduce<Run['foes'][number] | null>((m, f) => (f.alive && (!m || Math.hypot(f.x - h.x, f.y - h.y) < Math.hypot(m.x - h.x, m.y - h.y)) ? f : m), null) : null;
   for (const p of T.pillars) {
     const dx = h.x - p.x,
       dy = h.y - p.y,
@@ -84,9 +102,12 @@ export function botInput(run: Run): Input {
       reach = p.r + 10 + 26;
     if (d > reach) continue;
     const w = (reach - d) / 26;
-    // Off it, and around it, so it never pins you.
-    x += (dx / d - (dy / d) * 0.6) * w;
-    y += (dy / d + (dx / d) * 0.6) * w;
+    // Off it, and around it, so it never pins you. Once the room has stalled, around it on the side
+    // of the monster it hides, so the pull toward that monster can't cancel out against the push.
+    let round = 0.6;
+    if (stuck && target) round = 1.4 * (-(dy / d) * (target.x - h.x) + (dx / d) * (target.y - h.y) >= 0 ? 1 : -1);
+    x += ((dx / d) * (stuck ? 0.5 : 1) - (dy / d) * round) * w;
+    y += ((dy / d) * (stuck ? 0.5 : 1) + (dx / d) * round) * w;
   }
   for (const q of T.water)
     if (inRect(q, h.x, h.y, 6)) {
@@ -161,7 +182,7 @@ export function botInput(run: Run): Input {
         y += (my / md) * 1.5;
       }
     }
-    const touch = f.def.r + 10 + (melee && f.kind !== 'reflection' ? 6 : 40);
+    const touch = f.def.r + 10 + ((melee || stuck) && f.kind !== 'reflection' ? 6 : 40);
     if (d < touch + 40) {
       const w = ((f.kind === 'reflection' ? 3 : 1.5) * (touch + 40 - d)) / 40;
       x += (dx / d) * w;
@@ -189,7 +210,7 @@ export function botInput(run: Run): Input {
               : rule === 'mirror'
                 ? 120
                 : 170
-        : melee
+        : melee || stuck
           ? 40
           : attackOf(run.setup.classId) === 'wave'
             ? 80
