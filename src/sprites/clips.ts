@@ -66,6 +66,8 @@ export const CLIPS = {
   },
   /** A wave that keeps going while it's on screen: the hand swings out and back (the true form's "see you Monday"). */
   wave: { ms: 160, loop: true, frames: [{ right: 'up' }, { right: 'up', fx: 'charge' }, { right: 'up' }, { right: 'up', fx: 'charge' }, { right: 'up' }, { right: 'up', fx: 'charge' }, { right: 'up' }, { right: 'up', fx: 'charge' }] },
+  /** One exercise rep (or a breathing hold), for the workout demos: 16 even frames. */
+  rep: { ms: 110, loop: true, frames: [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}] },
   /** A single still frame, for sprites that don't move. */
   still: { ms: 1000, loop: false, frames: [{}] },
 } satisfies Record<string, Clip>;
