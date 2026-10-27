@@ -1,11 +1,12 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ChevronsRight, CircleDot, Copy, Crosshair, Droplet, Flame, FlameKindling, Footprints, Gauge, Heart, HeartPlus, HeartPulse, Hourglass, Magnet, Pause, Shield, ShieldCheck, ShieldHalf, Skull, Sparkles, Sword, Swords, Waves, Wind, Zap, type LucideIcon } from 'lucide-react';
+import { CircleDot, Copy, Flame, FlameKindling, Heart, Magnet, Pause, Shield, Skull, Sparkles, Sword, Wind, Zap, type LucideIcon } from 'lucide-react';
 import { gearOf, type GameState } from '@/lib/game';
 import { getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
 import { sheetFor } from '@/sprites/registry';
+import { Sprite } from './Sprite';
 import { SoundToggle, useMusic } from './Sound';
 import type { FreePick, Hud as SurviveHud, RunEnd as SurviveEnd, RunHandle as SurviveHandle } from '@/game/run';
 import type { Hud as DungeonHud, RunEnd as DungeonEnd } from '@/game/dungeon/scene';
@@ -42,19 +43,7 @@ type Hud = SurviveHud & Partial<DungeonHud>;
 type RunEnd = SurviveEnd & Partial<DungeonEnd>;
 type RunHandle = SurviveHandle & { ability?: () => void; dodge?: () => void; skipFloor?: () => void; skipToWarden?: () => void; pickRelic?: (id: RelicId) => void; cycleTheme?: () => string };
 
-const RELIC_ICONS: Record<RelicId, LucideIcon> = {
-  whetstone: Swords,
-  quick: Gauge,
-  iron: ShieldHalf,
-  boots: Footprints,
-  heart: HeartPlus,
-  hourglass: Hourglass,
-  fang: Droplet,
-  coal: Flame,
-  charm: ShieldCheck,
-};
 
-const ABILITY_ICONS: Record<AbilityId, LucideIcon> = { charge: ChevronsRight, volley: Crosshair, blink: Sparkles, still: HeartPulse, shock: Waves };
 /** The Warden's name at the start of a line. */
 const WARDEN_NAME = WARDEN.name.replace(/^the/, 'The');
 
@@ -232,10 +221,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
               {hud.relics && Object.keys(hud.relics).length > 0 && (
                 <div className="mt-1 flex flex-wrap items-center gap-1">
                   {(Object.entries(hud.relics) as [RelicId, number][]).map(([id, n]) => {
-                    const Icon = RELIC_ICONS[id];
                     return (
                       <span key={id} className="flex items-center gap-0.5 rounded bg-ink-800/90 px-1 py-0.5 text-gold-300" title={RELICS[id].name}>
-                        <Icon size={10} />
+                        <Sprite id="relicIcon" opts={{ name: id }} size={14} label={RELICS[id].name} />
                         {n > 1 && <span className="font-mono text-[8px]">{n}</span>}
                       </span>
                     );
@@ -353,8 +341,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
           <p className="mt-2 text-center text-xs text-slate-400">Take one. It lasts until the end of this run.</p>
           <div className="mt-4 w-full max-w-sm space-y-2">
             {chest.choices.map((id) => {
-              const Icon = RELIC_ICONS[id],
-                n = chest.have[id] ?? 0;
+              const n = chest.have[id] ?? 0;
               return (
                 <button
                   key={id}
@@ -365,7 +352,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
                   className="flex w-full items-center gap-3 rounded-xl bg-ink-800 p-3 text-left ring-1 ring-gold-400/30 active:scale-[.98]"
                 >
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-ink-900 text-gold-300">
-                    <Icon size={22} />
+                    <Sprite id="relicIcon" opts={{ name: id }} size={28} label="" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
@@ -494,8 +481,7 @@ function BossBar({ name, hp, max, ember }: { name: string; hp: number; max: numb
 /** The class ability: a big round button under your right thumb, filling up while it recharges.
     The dodge sits to its left, smaller, on its own short clock. */
 function AbilityButton({ id, ready, dodge, onUse, onDodge }: { id: AbilityId; ready: number; dodge: number; onUse: () => void; onDodge: () => void }) {
-  const Icon = ABILITY_ICONS[id],
-    up = ready >= 1,
+  const up = ready >= 1,
     dodgeUp = dodge >= 1;
   return (
     <div className="safe-bottom absolute bottom-6 right-5 flex items-end gap-3">
@@ -509,7 +495,7 @@ function AbilityButton({ id, ready, dodge, onUse, onDodge }: { id: AbilityId; re
           className={`relative grid h-12 w-12 place-items-center overflow-hidden rounded-full ring-2 ${dodgeUp ? 'bg-sky-300 text-ink-950 ring-sky-100 active:scale-95' : 'bg-ink-800/90 text-slate-500 ring-ink-700'}`}
         >
           {!dodgeUp && <span className="absolute inset-x-0 bottom-0 bg-sky-300/30" style={{ height: `${dodge * 100}%` }} />}
-          <Wind size={20} className="relative" />
+          <Sprite id="abilityIcon" opts={{ name: 'dodge' }} size={28} label="" className={dodgeUp ? '' : 'opacity-50 grayscale'} />
         </button>
         <span className="mt-1 font-pixel text-[8px] text-slate-300">Dodge</span>
       </div>
@@ -523,7 +509,7 @@ function AbilityButton({ id, ready, dodge, onUse, onDodge }: { id: AbilityId; re
           className={`relative grid h-16 w-16 place-items-center overflow-hidden rounded-full ring-2 ${up ? 'bg-gold-400 text-ink-950 ring-gold-200 active:scale-95' : 'bg-ink-800/90 text-slate-500 ring-ink-700'}`}
         >
           {!up && <span className="absolute inset-x-0 bottom-0 bg-gold-400/30" style={{ height: `${ready * 100}%` }} />}
-          <Icon size={26} className="relative" />
+          <Sprite id="abilityIcon" opts={{ name: id }} size={42} label="" className={up ? '' : 'opacity-50 grayscale'} />
         </button>
         <span className="mt-1 font-pixel text-[8px] text-slate-300">{ABILITIES[id].name}</span>
       </div>
