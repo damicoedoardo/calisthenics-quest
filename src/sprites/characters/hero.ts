@@ -1,7 +1,8 @@
 import type { ClassId, Gear, GearSlot } from '@/lib/gear';
 import type { ClipFrame, ClipId } from '../clips';
 import { HAIRSTYLES, drawFigure, eyeBoxes, type Ctx, type FigureSpec, type Look } from '../engine/figure';
-import { NIGHT, aura, mix, painter, rampOf, tint, type Grid, type Ramp } from '../engine/grid';
+import { NIGHT, aura, grid, mix, painter, rampOf, tint, type Grid, type Ramp } from '../engine/grid';
+import { ARM_DOWN, bone, hangs, limbs, paintArm } from '../engine/drawn';
 import { drawBow, drawStaff, drawStick, drawSword, drawWand, type WeaponLook } from '../parts/weapons';
 import { itemColors, pick, type ItemColors } from './items';
 import { CAPE, GOLD_GHOST, HAIR, HOLLOW_EYES, LINEN, R, SHADOW, SKIN, TROUSERS } from '../palette';
@@ -16,6 +17,8 @@ export interface HeroOpts {
   classId?: ClassId;
   variant?: HeroVariant;
   look?: Look;
+  /** 'drawn': the hand-drawn body (engine/drawn.ts), an option being tried in the Lab. */
+  body?: 'block' | 'drawn';
 }
 
 export const DEFAULT_LOOK: Look = { sex: 'm', style: 'spiky', hair: 'brown', skin: 'light', head: 'manga' };
@@ -55,7 +58,8 @@ const WRAP: Ramp = ['#8c7a5e', '#cbbb9a', '#ece2cc'];
 const SASH: Ramp = ['#7a1f18', '#c0392b', '#e8604c'];
 const ramp3 = (r: string[]): Ramp => [r[0], r[1], r[2]];
 
-export function heroSpec({ gear, classId, variant }: HeroOpts): FigureSpec {
+export function heroSpec({ gear, classId, variant, body }: HeroOpts): FigureSpec {
+  const drawn = body === 'drawn';
   const cape = variant === 'best';
   const armorTier = gear.armor.tier;
   // A Fog item worn in a slot dresses the hero in that very item (its kind, rarity and colors);
@@ -89,6 +93,7 @@ export function heroSpec({ gear, classId, variant }: HeroOpts): FigureSpec {
     legs,
     glove: off === 'monk' ? Sh : undefined,
     glow,
+    drawn,
     layers: {
       back(c) {
         if (cape) {
@@ -151,8 +156,8 @@ export function heroSpec({ gear, classId, variant }: HeroOpts): FigureSpec {
         }
         u.row(47, 21, 42, A[0]);
         [23, 28, 33, 38].forEach((x) => u.p(x, 47, A[0]));
-        tailor(c, A, dress);
-        if (dress !== 'robe') trousers(c, legs);
+        tailor(c, A, dress, drawn);
+        if (dress !== 'robe' && !drawn) trousers(c, legs);
         u.r(30, 30, 4, 4, c.skin[1]);
         u.row(30, 30, 33, c.skin[0]); // the chin's shadow on the neck
         u.p(29, 30, A[0]);
@@ -194,7 +199,40 @@ export function heroSpec({ gear, classId, variant }: HeroOpts): FigureSpec {
           u.r(23, 30, 3, 3, R.gold[2]);
           u.r(38, 30, 3, 3, R.gold[2]);
         }
-        (['L', 'R'] as const).forEach((s) => {
+        if (drawn)
+          // sleeves follow the bent arms: the upper arm, or the whole arm in a robe
+          (['L', 'R'] as const).forEach((s) => {
+            const edge = mix(A[0], NIGHT, 0.45);
+            if (hangs(P, s)) {
+              // the hand-drawn arm: its sleeve in the armor's colors, wraps at the wrist
+              const robe = dress === 'robe',
+                wrap = dress !== 'heavy' && !robe;
+              const sleeve: Record<string, string> = { U: A[2], S: A[1], s: A[0], o: edge, K: A[1], k: A[0], x: edge };
+              return paintArm(c.u, P, s, (ch, j) => {
+                if ('USso'.includes(ch)) return sleeve[ch];
+                if (robe) return j === ARM_DOWN.length - 2 && trimmed ? T[1] : sleeve[ch];
+                if (wrap && (j === 9 || j === 10) && ch !== 'x') return j === 9 ? WRAP[2] : WRAP[1];
+                return null;
+              });
+            }
+            const { s: a, e, h } = limbs(P)[s],
+              g = c.w;
+            const sleeve = grid(64);
+            // a dark edge first, so the sleeve reads apart from the shirt behind it
+            bone(sleeve, a, e, 6, edge);
+            if (dress === 'robe') bone(sleeve, e, h, 6, edge);
+            bone(sleeve, a, e, 4, A[1]);
+            if (dress === 'robe') bone(sleeve, e, h, 4, A[1]);
+            // a fighter's cloth wraps round the wrists, just above the hand
+            else if (dress !== 'heavy') {
+              const k = (t: number): [number, number] => [Math.round(e[0] + (h[0] - e[0]) * t), Math.round(e[1] + (h[1] - e[1]) * t)];
+              bone(sleeve, k(0.55), k(0.8), 3, WRAP[2]);
+            }
+            sleeve.forEach((row, y) => row.forEach((col, x) => col && g.p(x, y, col)));
+            const [cx, cy] = dress === 'robe' ? h : e;
+            g.p(cx, cy, dress === 'robe' && trimmed ? T[1] : A[0]);
+          });
+        else (['L', 'R'] as const).forEach((s) => {
           const [x, y, ww, hh] = P.arms[s].rect,
             tall = hh > ww,
             // a robe's sleeves reach the wrists; other sleeves stop above the elbow
@@ -287,7 +325,7 @@ export function heroSpec({ gear, classId, variant }: HeroOpts): FigureSpec {
 
 /** Folds and light on the shirt under any armor: sloped shoulders, a collar, shadow down the far
     side and under the chest, and the cloth pulled in where the belt holds it. */
-function tailor(c: Ctx, A: Ramp, dress: 'heavy' | 'light' | 'robe' | null) {
+function tailor(c: Ctx, A: Ramp, dress: 'heavy' | 'light' | 'robe' | null, drawn = false) {
   const { u, P } = c,
     soft = mix(A[1], A[0], 0.45),
     lit = mix(A[1], A[2], 0.5),
@@ -297,7 +335,7 @@ function tailor(c: Ctx, A: Ramp, dress: 'heavy' | 'light' | 'robe' | null) {
   for (let y = 31; y <= 41; y++) {
     const [a0, b0] = c.torsoRange(y),
       // the chest is broad and the waist narrows above the belt
-      pinch = P.fem ? 0 : y >= 38 ? 2 : y === 37 ? 1 : 0,
+      pinch = P.fem || drawn ? 0 : y >= 38 ? 2 : y === 37 ? 1 : 0,
       a = a0 + pinch,
       b = b0 - pinch;
     for (let k = 0; k < pinch; k++) {

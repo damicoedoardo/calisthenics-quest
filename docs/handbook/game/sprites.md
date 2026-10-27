@@ -21,6 +21,7 @@ registry.ts           every sprite by id, and how to get its sheet
 engine/grid.ts        pixel grids and drawing tools (painter, outline, shading, aura, tint)
 engine/figure.ts      the base 64x64 humanoid: body, face, hair, arms, layer order
 engine/manga.ts       the manga head (the hero's default): face as text art, hair as shapes
+engine/drawn.ts       the hand-drawn body, an option tried in the Lab (hero `body: 'drawn'`)
 parts/weapons.ts      sword, stick, staff, wand, bow
 characters/*.ts       one file per character: hero, wanderer, mira, ember, book, vela (old Vela),
                       kindled (the flame's true form), villagers (Lia, Sol, the kid), and the chapter
@@ -77,6 +78,7 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Change an item rarity's colors, the dyes and gems a seed picks, or the legendaries' looks | `METAL`, `LEATHER`, `CLOTH`, `GEMS`, `TRIM`, `ACCENTS`, `THEMES` and `itemColors` in `characters/items.ts` |
 | Change a rare's shine or a legendary's glow and sparkles | `drawItem` in `characters/items.ts` (the `hover` clip, 8 frames; frame 0 is the still) |
 | Change the hero's clothes under any item (the shirt's cel shading and folds, the starter's wrapped top and red sash, wrist wraps, trousers and boots) | `tailor`, `trousers` and the sleeve loop in `characters/hero.ts`; the colors are `WRAP` and `SASH` there |
+| Change the hand-drawn body option (torso shape, the hanging arm, the legs and boots) | `TORSO`, `ARM_DOWN` and `LEGS` text rows in `engine/drawn.ts`; other arm poses are two bones (`limbs`, `bone`); the hero turns it on with `body: 'drawn'` (only the Lab panel "A hand-drawn body" does so far) |
 | Change how the manga hair is shaded (dark far side, dark lock tips, lines between locks) | `shadeHair` and each style's `strands` in `engine/manga.ts` |
 | Change how the hero wears an item (plate and its tabard, jerkin, robe and its folds, the charm, a legendary's mantle) | `itemOutfit` and `heroSpec` in `characters/hero.ts`; the weapon's trim, gem and legendary light are the `WeaponLook` in `parts/weapons.ts` |
 | Redraw Mira, Ember, the Book or a chapter enemy | its file in `characters/` (`mira.ts`, `ember.ts`, `book.ts`, `tomorrow.ts`, `mirror.ts`, `plateau.ts`, `summit.ts`) |

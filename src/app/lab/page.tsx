@@ -194,6 +194,23 @@ export default function Lab() {
         ))}
       </Panel>
 
+      <Panel title="A hand-drawn body (option)">
+        <p className="mb-3 text-xs text-slate-500">The same head and gear on a body drawn by hand: rounded shoulders, arms bent a little away from the body, a waist, weight on one leg, feet turned out, hands with a thumb. Left of each pair is today&apos;s hero, right is the option.</p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {(['none', 'warrior', 'archer', 'monk', 'mage'] as const).flatMap((cls) =>
+            (['idle', 'walk'] as const).map((action) => {
+              const o = cls === 'none' ? { look } : { gear: itemGear(cls, 'rare', cls), classId: cls, look };
+              return (
+                <div key={`${cls}${action}`} className="flex items-end justify-center gap-1 rounded-lg bg-ink-950 py-1">
+                  <Sprite id="hero" action={action} opts={o} size={80} />
+                  <Sprite id="hero" action={action} opts={{ ...o, body: 'drawn' }} size={80} />
+                </div>
+              );
+            }),
+          )}
+        </div>
+      </Panel>
+
       <Panel title="The hero in Fog items">
         <p className="mb-3 text-xs text-slate-500">Worn items dress the hero: plate, jerkin or robe, the item's colors, its charm on a cord, a legendary's glow.</p>
         <div className="grid grid-cols-4 gap-1.5">
