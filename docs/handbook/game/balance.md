@@ -40,12 +40,12 @@ kept there as aliases, so callers didn't change).
 
 | File | Holds | Used by |
 |---|---|---|
-| `src/balance/training.ts` | XP per workout, perfect week, comeback, XP per level, streak bonus, `WEEKLY_GOAL`, how often goals rise | `src/lib/game.ts` |
+| `src/balance/training.ts` | XP per workout, perfect week, comeback, XP per level, streak bonus, `WEEKLY_GOAL`, how often goals rise, how long the story lasts (`STORY_MONTHS`) | `src/lib/game.ts` |
 | `src/balance/stats.ts` | stat points per workout, starting points, what a point is worth, base stats, falloff, armor per point, crit size, pickup reach, class lean | `src/lib/stats.ts` |
 | `src/balance/economy.ts` | embers per workout, forge prices, melt values, vault size, how long the flame guards | `src/lib/forge.ts`, `src/lib/fog-gear.ts` |
 | `src/balance/items.ts` | item power, base damage/HP/armor per level, bonus sizes, rarity sizes and weights, how luck and depth lean rarer, requirements, the starter kit, drop chances and luck, the bag | `src/game/dungeon/items.ts`, `src/game/dungeon/engine.ts` |
 | `src/balance/power.ts` | the target split of power growth (training / gear / upgrades) and its slack | the balance sheet |
-| `src/balance/dungeon.ts` | `DIALS`, elites, run levels | `src/game/dungeon/content.ts`, `src/lib/fog.ts` |
+| `src/balance/dungeon.ts` | `DIALS`, elites, run levels, what the bot should win in a zone (`ZONE_WINS`) | `src/game/dungeon/content.ts`, `src/lib/fog.ts` |
 | `src/balance/upgrades.ts` | Mira's forge +1 to +15 (`STEPS`: embers, materials, odds, strength), misses (`FORGE_RISK`), safe marks, what a fall leaves of forged gear, co-op material drops and gifts, the look bands | `src/lib/forge.ts`, `src/lib/fog-gear.ts`, `src/game/dungeon/items.ts`, `engine.ts`, `PlusGlow.tsx` |
 | `src/balance/classes.ts` | the classes: base attacks (`ATTACK`), bodies (`CLASS_BODY`), abilities (`ABILITY`: clocks and sizes), the monk's calm (`CALM`), the two stats each leans to (`CLASS_LEAN`, `SECOND_LEAN`), and how fair they must be (`CLASS_FAIR`) | `src/game/rules.ts`, `src/game/dungeon/content.ts`, `engine.ts`, `src/lib/stats.ts` |
 | `src/balance/index.ts` | exports them all | |
@@ -61,7 +61,7 @@ until they are):
 | The flame's helpers | `FLAME_AT` in `fog.ts`; `FLAME`, `FIREBALL`, `FAIRY` in `rules.ts` | |
 | Floor layout, cleared-room speed | `LAYOUT`, `ROOM_ODDS`, `CLEAR_RUN` in `content.ts` | |
 | Item comparison weights (which item the bot and the bag call better) | `WORTH` in `items.ts` | |
-| Zone toughness (monster HP and damage per zone) | each chapter's `fog` block in `src/story/chapters/`; `pnpm fog:tune` prints new values | |
+| Zone toughness (monster HP and damage per zone), chapter length | each chapter's `fog` block and `workouts` in `src/story/chapters/`; `pnpm fog:tune` prints new toughness toward `ZONE_WINS`, and the story's length is checked against `STORY_MONTHS` | |
 | Co-op | `src/game/dungeon/engine.ts` (XP to every standing hero, drops each their own) | no scaling yet: a party meets one hero's monsters |
 
 ## Power: one scale for everything
@@ -132,6 +132,7 @@ before and after.
 
 | Date | Change | Why | Before → after | PR |
 |---|---|---|---|---|
+| 2026-10-27 | Pace: `STORY_MONTHS` (5-6) and `ZONE_WINS` (33% / 67% ± 15) set as goals; zone 4 hp/dmg 2.57/3.43 → 2.63/3.51, zone 5 2.7/5.38 → 2.92/5.81, zone 6 2.54/7.29 → 2.69/7.73 | Edoardo: the main story is done in 5-6 months; zones 4-6 were too easy on opening day | Story 78 workouts = 6.0 months (on target); `fog:sheet` opening day zones 4-6 51/39/44% → 43/27/31%, later 64/92/91% → 60/84/80%; class averages 29-32% / 68-73%, fair. Still flagged: zone 2 later 48%, zone 5 later 84% | pace PR |
 | 2026-10-27 | Classes: their numbers moved into `src/balance/classes.ts`; each leans to a second stat (`SECOND_LEAN`, 2 points: warrior Armor, archer Speed, monk Armor, mage Damage); warrior body HP 1.22 → 1.1, armor 0.18 → 0.1, damage 1.08 → 1.04; archer damage 1.13 → 1.22, Volley every 7 → 6 s, 1.5 → 1.8x | Edoardo: every class its own feel, but fair | `fog:sheet` class averages (open / later) warrior 52/88, monk 35/76, mage 34/74, archer 24/69 (24 runs) → warrior 34/71, monk 41/75, mage 32/74, archer 33/75 (48 runs), all within 10 points; power-scale gap warrior +30% / mage -22% → +16% / -19%; split 38/41/20 → 39/41/20 | classes PR |
 | 2026-10-27 | The monk's Stillness fills by fighting (`CALM`: +1 a hit landed, +2 a hit taken, ready at 44) instead of every 14 s | Edoardo: hiding and waiting must not heal | About one Stillness every 15-20 s of fighting, as before; `CLASSES=monk fog:sim steady 48` average (open / later) 33/74 → 36/78 | #45 |
 | 2026-10-27 | Stats: Reach out; Armor (its own stat, no longer from Health), Speed (walk) and Crit in; `POINT_WORTH` x4/3 on top of #42's (health 1.8, damage 0.0117, haste 0.00972, armor 0.0036; walk 0.0044, crit 0.0026); `powerScore` counts crits; item needs spread over 6 stats; archer leans Crit | Edoardo: loot comes to you, so Reach did nothing worth a point; six stats feel fuller but stay finite | 70 points a stat now = what 100 a stat gave (+79% damage, +64% attack speed, +103 HP, 21% blocked), plus +25% walk and 20% crit; split 39/41/20 → 38/41/20, power at 37 workouts 235 → 234, at 64 345 → 348; fog:sim in the PR | #44 |

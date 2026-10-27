@@ -8,6 +8,7 @@ Each goal is written next to its numbers in `src/balance/`. The sheet measures i
 
 | Goal | Measured |  |
 | --- | --- | --- |
+| The main story is done in 5 to 6 months at 3 workouts a week | 78 workouts, 6.0 months (the last zone opens at 64, month 4.9) | on target |
 | How often a steady player levels up (6 months) | 2.9 workouts a level | no goal set yet |
 | One item +0 to +5 in about 5 weeks of training | 5.0 weeks | on target |
 | One item +0 to +15 in about a year of training (embers; materials from co-op) | 62 weeks | on target |

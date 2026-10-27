@@ -10,7 +10,8 @@ import { powerOf, ZONES, xpToNext } from '@/lib/fog';
 import { seeded } from '@/lib/random';
 import { powerScore } from '@/game/power';
 import { CLASSES, type ClassId } from '@/lib/gear';
-import { POINTS, POWER_SPLIT, POWER_SPLIT_SLACK } from '@/balance';
+import { POINTS, POWER_SPLIT, POWER_SPLIT_SLACK, STORY_MONTHS } from '@/balance';
+import { CHAPTERS } from '@/story/chapters';
 import type { Build } from '@/lib/stats';
 import { createRun, stepRun } from '@/game/dungeon/engine';
 import { botInput } from '@/game/dungeon/bot';
@@ -287,6 +288,9 @@ function goals(): string {
   const spread = statPower({ health: 70, armor: 70, damage: 70, speed: 70, move: 70, crit: 70 }, undefined);
   const check = (ok: boolean) => (ok ? 'on target' : '**off target**');
   const open = 'no goal set yet';
+  const story = CHAPTERS.reduce((n, c) => n + c.workouts, 0),
+    months = story / WEEKLY_GOAL / (52 / 12),
+    lastOpens = story - CHAPTERS.at(-1)!.workouts;
   return [
     '## Goals',
     '',
@@ -295,6 +299,11 @@ function goals(): string {
     table(
       ['Goal', 'Measured', ''],
       [
+        [
+          `The main story is done in ${STORY_MONTHS.min} to ${STORY_MONTHS.max} months at ${WEEKLY_GOAL} workouts a week`,
+          `${story} workouts, ${months.toFixed(1)} months (the last zone opens at ${lastOpens}, month ${(lastOpens / WEEKLY_GOAL / (52 / 12)).toFixed(1)})`,
+          check(months >= STORY_MONTHS.min - 0.05 && months <= STORY_MONTHS.max + 0.05),
+        ],
         ['How often a steady player levels up (6 months)', `${perLevel.toFixed(1)} workouts a level`, open],
         ['One item +0 to +5 in about 5 weeks of training', `${weeks.toFixed(1)} weeks`, check(weeks >= 4 && weeks <= 6)],
         ['One item +0 to +15 in about a year of training (embers; materials from co-op)', `${weeksFor(toTop, WEEKLY_GOAL).toFixed(0)} weeks`, check(weeksFor(toTop, WEEKLY_GOAL) >= 40 && weeksFor(toTop, WEEKLY_GOAL) <= 70)],

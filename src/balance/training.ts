@@ -25,6 +25,11 @@ export const XP = {
 /** Workouts a week that count as hitting the goal (perfect week, the weekly stat points). */
 export const WEEKLY_GOAL = 3;
 
+/** How long the main story lasts for a player who hits the weekly goal (months), from the first
+    workout to the last chapter's last heart (each chapter's `workouts` in src/story/chapters/).
+    Edoardo's goal: the main story is done in five to six months. */
+export const STORY_MONTHS = { min: 5, max: 6 } as const;
+
 /** How fast the plan asks for more. Goal: strength comes with time, not just sessions. */
 export const PROGRESSION = {
   /** An exercise's goal goes up at most this often a week. */
