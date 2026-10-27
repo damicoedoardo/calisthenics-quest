@@ -7,6 +7,7 @@ import { fill, storyWords } from '@/story/engine';
 import type { FogLines } from '@/story/types';
 import { getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, ZONES, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
+import { zoneMusic } from '@/lib/music-zones';
 import { runSheets } from '@/game/sheets';
 import { Sprite } from './Sprite';
 import { SoundToggle, useMusic } from './Sound';
@@ -67,7 +68,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
   // The game code couldn't be fetched (offline before the Play tab ever loaded it).
   const [failed, setFailed] = useState(false);
 
-  useMusic(end ? null : hud?.boss ? 'fogBoss' : 'fog');
+  // Each zone has its own run and boss themes; the Warden halfway down has his own.
+  const tunes = zoneMusic(zone.id);
+  useMusic(end ? null : hud?.boss ? tunes.boss : hud?.warden ? 'warden' : tunes.run);
 
   useEffect(() => {
     const el = host.current;
@@ -107,7 +110,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
         },
         say: (text) => setSaid({ text, at: Date.now() }),
         end: (r) => {
-          music.sting(r.won ? 'victory' : 'defeat');
+          music.sting(r.won ? (zoneMusic(zone.id).win ?? 'victory') : 'defeat');
           const result: RunResult = { ...r, zone: zone.id };
           setBroken(recordsBroken(state.fog?.records?.[zone.id], result));
           setEnd(r);

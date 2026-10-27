@@ -85,6 +85,9 @@ export default function Lab() {
         <Link href="/lab/story" className="ml-auto rounded-lg bg-ink-800 px-3 py-2 text-xs text-gold-300">
           Story Lab
         </Link>
+        <Link href="/lab/music" className="rounded-lg bg-ink-800 px-3 py-2 text-xs text-gold-300">
+          Music
+        </Link>
       </header>
 
       <Panel title="Your hero">

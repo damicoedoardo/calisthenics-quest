@@ -8,13 +8,23 @@
  * "." is silence, "x" is a heartbeat thump.
  */
 
-export type TrackId = 'memory' | 'hollow' | 'heartbeat' | 'rise' | 'camp' | 'fog' | 'fogBoss';
-export type StingId = 'victory' | 'levelup' | 'defeat';
+import { ZONE_TRACKS, type ZoneStingId, type ZoneTrackId } from './music-zones';
 
-/** "thump" is a kick drum; "hat" and "snare" are noise drums. Drum tokens are just "x". */
-type Wave = 'square' | 'triangle' | 'sine' | 'sawtooth' | 'thump' | 'hat' | 'snare';
+export type TrackId = 'memory' | 'hollow' | 'heartbeat' | 'rise' | 'camp' | 'fog' | 'fogBoss' | ZoneTrackId;
+export type StingId = 'victory' | 'levelup' | 'defeat' | ZoneStingId;
 
-interface Voice {
+/** "thump" is a kick drum; "hat" and "snare" are noise drums. Drum tokens are just "x".
+    "anvil" and "glass" are struck, pitched sounds that ring out (see PINGS). */
+type Wave = 'square' | 'triangle' | 'sine' | 'sawtooth' | 'thump' | 'hat' | 'snare' | 'anvil' | 'glass';
+
+/** Struck sounds: sine partials [ratio to the note, volume] that die away over `decay` seconds.
+    The anvil's partials don't line up (that's what makes metal sound like metal); glass's do. */
+const PINGS: Record<'anvil' | 'glass', { partials: [number, number][]; decay: number }> = {
+  anvil: { partials: [[1, 1], [2.76, 0.55], [5.4, 0.3], [8.9, 0.12]], decay: 0.45 },
+  glass: { partials: [[1, 1], [2, 0.25], [3, 0.08]], decay: 1.3 },
+};
+
+export interface Voice {
   wave: Wave;
   gain: number;
   /** Low-pass cutoff in Hz, to soften square waves. */
@@ -22,7 +32,7 @@ interface Voice {
   pattern: string;
 }
 
-interface Track {
+export interface Track {
   bpm: number;
   stepsPerBeat: number;
   voices: Voice[];
@@ -295,6 +305,7 @@ export const TRACKS: Record<TrackId | StingId, Track> = {
       { wave: 'square', gain: 0.03, cutoff: 900, pattern: 'A2 - - - G#2 - - - G2 - - - - - . .' },
     ],
   },
+  ...ZONE_TRACKS,
   // A short fanfare for a hit that lands.
   victory: {
     bpm: 150,
@@ -442,8 +453,14 @@ class Engine {
     out.connect(this.bus);
     const stepDur = 60 / track.bpm / track.stepsPerBeat;
     const t0 = ctx.currentTime + 0.05;
-    for (const v of track.voices) for (const e of parsePattern(v.pattern).events) this.note(out, v, e, t0 + e.step * stepDur, stepDur * e.steps);
-    setTimeout(() => out.disconnect(), 4000);
+    let steps = 0;
+    for (const v of track.voices) {
+      const { events, length } = parsePattern(v.pattern);
+      steps = Math.max(steps, length);
+      for (const e of events) this.note(out, v, e, t0 + e.step * stepDur, stepDur * e.steps);
+    }
+    // Let the last notes ring before letting go.
+    setTimeout(() => out.disconnect(), (steps * stepDur + 2) * 1000);
   }
 
   /** Fade out `id` unless another screen asks for it right away. */
@@ -528,6 +545,25 @@ class Engine {
       const snare = v.wave === 'snare';
       this.hiss(out, snare ? 0.14 : 0.05, v.gain, snare ? 'bandpass' : 'highpass', snare ? 1800 : 7000, snare ? 1400 : 7000, snare ? 0.8 : 1, t);
       if (snare) this.tone(out, 'triangle', 190, 140, 0.08, v.gain * 0.8, t);
+      return;
+    }
+    if (v.wave === 'anvil' || v.wave === 'glass') {
+      const { partials, decay } = PINGS[v.wave],
+        f = noteFreq(e.note);
+      // Not through tone(): music shouldn't count against the cap on overlapping sound effects.
+      partials.forEach(([r, k]) => {
+        const o = ctx.createOscillator(),
+          g = ctx.createGain(),
+          d = decay / Math.sqrt(r);
+        o.type = 'sine';
+        o.frequency.value = f * r;
+        g.gain.setValueAtTime(v.gain * k, t);
+        g.gain.exponentialRampToValueAtTime(0.0008, t + d);
+        o.connect(g);
+        g.connect(out);
+        o.start(t);
+        o.stop(t + d + 0.02);
+      });
       return;
     }
     const g = ctx.createGain();
