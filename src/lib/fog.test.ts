@@ -18,7 +18,7 @@ const sessions = (n: number, lastDay = 25): Session[] =>
 
 describe('the Fog', () => {
   it('has a zone for every chapter, opening with it once the boss before falls', () => {
-    expect(ZONES.map((z) => z.boss)).toEqual(['tomorrow', 'mirror', 'knight', 'hollow', 'hollow', 'hollow']);
+    expect(ZONES.map((z) => z.boss)).toEqual(['tomorrow', 'mirror', 'knight', 'plateau', 'hollow', 'summit']);
     const s = initialState();
     expect(zoneStatus(s, ZONES[0]).state).toBe('open');
     expect(zoneStatus(s, ZONES[1])).toEqual({ state: 'locked', why: 'Beat the boss of The Ashen Edge first' });

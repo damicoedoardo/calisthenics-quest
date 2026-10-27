@@ -19,7 +19,9 @@ export type BossSheetKey =
   | 'knightBoss' | 'knightBossAttack' | 'knightBoss1' | 'knightBoss1Attack' | 'knightBoss2' | 'knightBoss2Attack'
   | 'plateauBoss' | 'plateauBossAttack' | 'plateauBoss1' | 'plateauBoss1Attack' | 'plateauBoss2' | 'plateauBoss2Attack'
   | 'hollowBoss' | 'hollowBossAttack' | 'hollowBossFade'
-  | 'summitBoss' | 'summitBossAttack';
+  | 'summitBoss' | 'summitBossAttack'
+  // the friends who climb the Summit with you
+  | 'wanderer' | 'mira' | 'vela';
 /** Every sheet a run gets: all of the regular ones, and only its own zone's boss sheets. */
 export type Sheets = Record<Exclude<SheetKey, BossSheetKey>, Sheet> & Partial<Record<BossSheetKey, Sheet>>;
 
