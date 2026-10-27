@@ -211,9 +211,10 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
   return (
     // Held sideways (the `land` screen), the tab bar becomes a rail down the left and the column
-    // takes the rest of the width; the header shrinks to one line.
-    <div ref={root} className="mx-auto flex min-h-dvh max-w-md flex-col land:ml-[calc(4.5rem+env(safe-area-inset-left))] land:mr-0 land:max-w-none land:pr-[env(safe-area-inset-right)]">
-      <header className="safe-top sticky top-0 z-20 bg-ink-950/90 px-4 pb-3 backdrop-blur land:!pt-2 land:pb-2">
+    // takes the rest of the width; the header shrinks to one line. On a computer (`desk`) the rail is
+    // wider, with the tab names beside their icons, and the column sits in the middle of the rest.
+    <div ref={root} className="mx-auto flex min-h-dvh max-w-md flex-col land:ml-[calc(4.5rem+env(safe-area-inset-left))] land:mr-0 land:max-w-none land:pr-[env(safe-area-inset-right)] desk:ml-56 desk:mr-0 desk:max-w-none">
+      <header className="safe-top sticky top-0 z-20 bg-ink-950/90 px-4 pb-3 backdrop-blur land:!pt-2 land:pb-2 desk:mx-auto desk:w-full desk:max-w-2xl desk:px-6 desk:pt-5">
         {sandbox && (
           <div className="mb-2 flex land:mb-1.5 land:py-1 items-center justify-between gap-2 rounded-lg border border-dashed border-sky-400/60 px-3 py-1.5 text-[11px] text-sky-300">
             <span>Sandbox: your real save is untouched</span>
@@ -223,7 +224,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           </div>
         )}
         <div className="flex items-center gap-3">
-          <div className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800 land:hidden">
+          <div className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800 land:hidden desk:hidden">
             <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} variant={heroVariant(state)} />
           </div>
           <div className="min-w-0 flex-1 land:flex land:items-center land:gap-4">
@@ -248,7 +249,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         </div>
       </header>
 
-      <main className="flex-1 px-4 pb-28 pt-2 land:pb-6">
+      <main className="flex-1 px-4 pb-28 pt-2 land:pb-6 desk:mx-auto desk:w-full desk:max-w-2xl desk:px-6 desk:pb-12">
         {tab === 'today' ? (
           <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook} />
         ) : tab === 'train' ? (
@@ -265,12 +266,17 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         )}
       </main>
 
-      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-ink-700 bg-ink-900/95 backdrop-blur land:right-auto land:top-0 land:flex land:w-[calc(4.5rem+env(safe-area-inset-left))] land:flex-col land:items-center land:justify-center land:gap-3 land:border-r land:border-t-0 land:pl-[env(safe-area-inset-left)]">
-        {/* Sideways, the hero from the header sits at the top of the rail. */}
-        <div aria-hidden className="hidden h-11 w-11 place-items-center rounded-xl bg-ink-800 land:grid">
-          <Hero gear={gear} classId={state.profile.classId} size={38} bounce={false} variant={heroVariant(state)} />
+      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-ink-700 bg-ink-900/95 backdrop-blur land:right-auto land:top-0 land:flex land:w-[calc(4.5rem+env(safe-area-inset-left))] land:flex-col land:items-center land:justify-center land:gap-3 land:border-r land:border-t-0 land:pl-[env(safe-area-inset-left)] desk:right-auto desk:top-0 desk:flex desk:w-56 desk:flex-col desk:gap-6 desk:border-r desk:border-t-0 desk:px-3 desk:py-6">
+        {/* Sideways, the hero from the header sits at the top of the rail; on a computer, bigger. */}
+        <div aria-hidden className="hidden h-11 w-11 place-items-center rounded-xl bg-ink-800 land:grid desk:mx-auto desk:grid desk:h-28 desk:w-28">
+          <span className="desk:hidden">
+            <Hero gear={gear} classId={state.profile.classId} size={38} bounce={false} variant={heroVariant(state)} />
+          </span>
+          <span className="hidden desk:block">
+            <Hero gear={gear} classId={state.profile.classId} size={96} bounce={false} variant={heroVariant(state)} />
+          </span>
         </div>
-        <div className="mx-auto grid max-w-md grid-cols-4 land:mx-0 land:w-full land:grid-cols-1">
+        <div className="mx-auto grid max-w-md grid-cols-4 land:mx-0 land:w-full land:grid-cols-1 desk:mx-0 desk:w-full desk:grid-cols-1 desk:gap-1">
           {TABS.map(({ id, label, icon }) => (
             <button
               key={id}
@@ -279,7 +285,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
                 setTab(id);
                 window.scrollTo({ top: 0 });
               }}
-              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium land:py-2 ${tab === id ? 'text-gold-400' : 'text-slate-500'}`}
+              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium land:py-2 desk:flex-row desk:gap-3 desk:rounded-xl desk:px-4 desk:py-3 desk:text-sm desk:hover:bg-ink-800/60 ${tab === id ? 'text-gold-400 desk:bg-ink-800 desk:ring-1 desk:ring-gold-400/30' : 'text-slate-500 desk:hover:text-slate-300'}`}
             >
               {/* Full color on the open tab; faded and grey on the others. */}
               <span className="grid h-[22px] place-items-center">

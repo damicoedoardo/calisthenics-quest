@@ -64,6 +64,14 @@ screen itself for the run (`useSideways`). The rest of the app stays upright. Si
 fills the whole screen and the camera follows you in it; the HUD is small and kept to the corners
 (see "Sideways on screen" in [dungeon.md](dungeon.md)).
 
+On a computer (mouse or trackpad: `useKeyboardPlay` in `src/components/useDesk.ts`) the run is
+played with keys and never asks you to turn anything. The scene's own keys: WASD or the arrows
+move, Q is the class ability, Space (or E, or Shift) dodges, a click on a monster aims at it; they
+do nothing while a card or the bag holds the run. `FogRun`'s keys: Esc or P pauses (and closes
+whatever is open), B or I the bag, M the map, 1 2 3 pick a skill, chest or stairs choice, Enter
+runs again at the end. Each button shows its key (`Key`), the pause menu lists them all
+(`KeyList`), the first tip talks keys, and on a big screen (`desk:`) the HUD is zoomed 1.4x.
+
 ## Balance
 
 `pnpm sim` writes snapshots of simulated players (see [../dev/testing.md](../dev/testing.md)), then

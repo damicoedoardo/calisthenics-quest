@@ -367,7 +367,7 @@ class DungeonScene extends Phaser.Scene {
   private taunt = 0;
   /** The boss's stage of its art, for its stage lines. */
   private stage = 0;
-  private keys: Record<'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'space' | 'shift', Phaser.Input.Keyboard.Key> | null = null;
+  private keys: Record<'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd', Phaser.Input.Keyboard.Key> | null = null;
   private stick: { id: number; x: number; y: number; dx: number; dy: number } | null = null;
   private fading: { draw: (g: Phaser.GameObjects.Graphics, p: number) => void; start: number; ms: number; up: boolean }[] = [];
   private acc = 0;
@@ -530,9 +530,14 @@ class DungeonScene extends Phaser.Scene {
     const kb = this.input.keyboard;
     if (kb) {
       const k = Phaser.Input.Keyboard.KeyCodes;
-      this.keys = kb.addKeys({ up: k.UP, down: k.DOWN, left: k.LEFT, right: k.RIGHT, w: k.W, a: k.A, s: k.S, d: k.D, space: k.SPACE, shift: k.SHIFT }) as DungeonScene['keys'];
-      this.keys?.space.on('down', () => (this.wantAbility = true));
-      this.keys?.shift.on('down', () => (this.wantDodge = true));
+      // On a computer: WASD or the arrows move, Q is the class ability, Space (or E, or Shift) dodges.
+      this.keys = kb.addKeys({ up: k.UP, down: k.DOWN, left: k.LEFT, right: k.RIGHT, w: k.W, a: k.A, s: k.S, d: k.D }) as DungeonScene['keys'];
+      // Ignored while the run holds still (a card or the bag is open), so nothing fires on the way back.
+      const on = (codes: number[], act: () => void) => {
+        for (const c of codes) kb.addKey(c).on('down', () => !this.paused && !this.run.hero.offer && !this.run.hero.relicOffer && !this.run.stairsAsk && act());
+      };
+      on([k.Q], () => (this.wantAbility = true));
+      on([k.SPACE, k.E, k.SHIFT], () => (this.wantDodge = true));
     }
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
       // A tap on a monster aims at it (again lets go); anywhere else, the move stick.
@@ -2407,6 +2412,8 @@ class DungeonScene extends Phaser.Scene {
   setPaused(on: boolean) {
     this.paused = on;
     this.run.paused = on;
+    // A key held down when the run stopped doesn't keep walking you once it goes on.
+    this.input?.keyboard?.resetKeys();
   }
 
   skipToBoss() {

@@ -37,6 +37,15 @@ Play (the Fog and the worlds | gear and power), Hero (hero and stat points | the
 editor puts its preview beside the choices. Upright must look exactly as before: add sideways
 changes only as `land:` classes.
 
+## On a computer: the tabs
+
+On a laptop or desktop window (the `desk:` variant in `tailwind.config.ts`: a mouse or trackpad,
+at least 1024px wide and over 600px tall, so never together with `land:`) `page.tsx` turns the tab
+bar into a wider rail down the left, with the hero big at its top and each tab's name beside its
+icon, and centers the header and the column (`max-w-2xl`) in the rest. The tabs keep their
+upright layout inside it. Add computer changes only as `desk:` classes. The Fog's keys are in
+[../game/fog.md](../game/fog.md).
+
 ## Components (`src/components/`)
 
 | Component | Job |
@@ -64,6 +73,7 @@ changes only as `land:` classes.
 | `DevPanel` | Developer mode's wrench and panel, see [dev-mode-and-labs.md](dev-mode-and-labs.md) |
 | `ServiceWorker` | Registers the offline worker, see [pwa.md](pwa.md) |
 | `useModal` | Focus trap and inert background for overlays inside a tab |
+| `useDesk` | `useKeyboardPlay`: true on a computer (mouse or trackpad), so the Fog shows its keys |
 
 ## Held sideways: the overlays
 
