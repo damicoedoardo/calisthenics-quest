@@ -7,6 +7,7 @@ import { PlaceBackdrop } from './Place';
 import { SoundToggle, useMusic } from './Sound';
 import { Sprite } from './Sprite';
 import { Weather } from './Weather';
+import { PixelSnap } from './sideways';
 import { useLook } from './Look';
 import { castMember } from '@/story/cast';
 import { PLACES, type PlaceId } from '@/story/places';
@@ -109,6 +110,10 @@ function Boss({ boss, stage, size, gear, classId }: { boss: 'mirror' | 'knight' 
   return <Sprite id="summitBoss" size={size} />;
 }
 
+/** Held sideways, where whoever is on screen stands, as a fraction of the backdrop's box (it reaches
+    9% past each edge for the camera): a quarter of the way across the screen. */
+const STAGE_SIDEWAYS = (0.09 + 0.25) / 1.18;
+
 const ENTER = { left: 'animate-enterleft', right: 'animate-enterright', below: 'animate-enterbelow' };
 const TAG = { gold: 'text-gold-300', red: 'text-red-400', sky: 'text-sky-300', amber: 'text-orange-300', slate: 'text-slate-300' };
 
@@ -208,81 +213,84 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
   const side = !!line && !(narrator && !line.show && !backdrop);
 
   return (
-    <div ref={box} tabIndex={-1} className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-ink-950 outline-none" onClick={advance} role="dialog" aria-modal="true" aria-live="polite">
-      {cam.place && (
-        <div key={`shake-${index}`} className={`absolute inset-0 ${shake}`}>
-          <div
-            className="absolute -inset-[9%] transition-transform ease-in-out"
-            style={{ transform: `translate(${cam.x}%, ${cam.y}%) scale(${cam.zoom})`, transitionDuration: `${ms}ms` }}
-          >
-            <PlaceBackdrop id={cam.place} className="h-full w-full" />
+    <PixelSnap.Provider value>
+      <div ref={box} tabIndex={-1} className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-ink-950 outline-none" onClick={advance} role="dialog" aria-modal="true" aria-live="polite">
+        {cam.place && (
+          <div key={`shake-${index}`} className={`absolute inset-0 ${shake}`}>
+            <div
+              className="absolute -inset-[9%] transition-transform ease-in-out"
+              style={{ transform: `translate(${cam.x}%, ${cam.y}%) scale(${cam.zoom})`, transitionDuration: `${ms}ms` }}
+            >
+              <PlaceBackdrop id={cam.place} className="h-full w-full" stage={STAGE_SIDEWAYS} />
+            </div>
+            {/* Held sideways the words sit beside the speaker, not at the bottom: a shorter shade keeps the ground in view. */}
+            <div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t [@media(orientation:landscape)_and_(max-height:600px)]:h-1/4 from-ink-950 via-ink-950/85 to-transparent" />
           </div>
-          <div className="absolute inset-x-0 bottom-0 h-[45%] bg-gradient-to-t from-ink-950 via-ink-950/85 to-transparent" />
+        )}
+        {weather !== 'none' && <Weather kind={weather} behind />}
+
+        <div className="safe-top land-safe-x relative z-10 flex justify-between px-4">
+          <SoundToggle />
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDone();
+            }}
+            className="rounded-md px-3 py-2 text-xs text-slate-400"
+          >
+            Skip
+          </button>
         </div>
-      )}
-      {weather !== 'none' && <Weather kind={weather} behind />}
 
-      <div className="safe-top land-safe-x relative z-10 flex justify-between px-4">
-        <SoundToggle />
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDone();
-          }}
-          className="rounded-md px-3 py-2 text-xs text-slate-400"
-        >
-          Skip
-        </button>
-      </div>
+        {shot && 'title' in shot && (
+          <div key={`title-${index}`} className="relative z-10 flex flex-1 animate-fadein items-center justify-center px-6 text-center">
+            <p className="font-pixel text-sm leading-relaxed text-gold-300 drop-shadow-[0_2px_0_#0b0d14]">{shot.title}</p>
+          </div>
+        )}
 
-      {shot && 'title' in shot && (
-        <div key={`title-${index}`} className="relative z-10 flex flex-1 animate-fadein items-center justify-center px-6 text-center">
-          <p className="font-pixel text-sm leading-relaxed text-gold-300 drop-shadow-[0_2px_0_#0b0d14]">{shot.title}</p>
-        </div>
-      )}
+        {line && (
+          // Held sideways, whoever is on screen stands on the left and the words sit beside them.
+          <div className={side ? 'land-safe-x contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:min-h-0 [@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:gap-6' : 'contents'}>
+            <div key={`shake-p-${index}`} className={`relative flex justify-center pb-6 ${narrator ? 'flex-[0.8] items-end' : 'flex-1 items-end'} ${side ? '[@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:pb-4' : ''} ${cam.place ? '' : shake}`}>
+              {narrator && !line.show
+                ? backdrop?.(index)
+                : (
+                  <div key={`${index}-${line.show ?? line.who}`} className={enter}>
+                    <Portrait line={line} gear={gear} classId={classId} flame={flame} />
+                  </div>
+                )}
+            </div>
 
-      {line && (
-        // Held sideways, whoever is on screen stands on the left and the words sit beside them.
-        <div className={side ? 'land-safe-x contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:min-h-0 [@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:gap-6' : 'contents'}>
-          <div key={`shake-p-${index}`} className={`relative flex justify-center pb-6 ${narrator ? 'flex-[0.8] items-end' : 'flex-1 items-end'} ${side ? '[@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:pb-4' : ''} ${cam.place ? '' : shake}`}>
-            {narrator && !line.show
-              ? backdrop?.(index)
-              : (
-                <div key={`${index}-${line.show ?? line.who}`} className={enter}>
-                  <Portrait line={line} gear={gear} classId={classId} flame={flame} />
+            <div className={`safe-bottom relative mx-auto w-full max-w-md px-4 pb-6 ${narrator ? 'flex-1' : ''} ${side ? '[@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:flex-col [@media(orientation:landscape)_and_(max-height:600px)]:justify-center [@media(orientation:landscape)_and_(max-height:600px)]:px-0 [@media(orientation:landscape)_and_(max-height:600px)]:pb-4' : ''}`}>
+              {film ? (
+                <div key={index} className="min-h-[132px] animate-fadein px-2 text-center">
+                  <p className="text-xl leading-relaxed text-slate-200">
+                    {line.text.slice(0, upTo)}
+                    {!done && <span className="opacity-0">{line.text.slice(shown)}</span>}
+                  </p>
+                  <p className="mt-4 text-xs text-slate-500">{done ? <span className="animate-blink">tap</span> : <span>&nbsp;</span>}</p>
+                </div>
+              ) : (
+                <div className={`min-h-[132px] rounded-xl p-4 pixel-border ${dark ? 'bg-[#140f1f]' : 'bg-ink-800/95'} ${narrator ? 'text-center' : ''}`}>
+                  {!narrator && <p className={`mb-2 font-pixel text-[10px] ${TAG[who?.tag ?? 'gold']}`}>{name}</p>}
+                  <p className={`text-lg leading-snug ${narrator ? 'italic text-slate-300' : dark ? 'text-red-100' : 'text-slate-100'}`}>
+                    {line.text.slice(0, upTo)}
+                    {!done && <span className="opacity-0">{line.text.slice(shown)}</span>}
+                  </p>
+                  <p className="mt-2 text-right text-xs text-slate-500">{done ? <span className="animate-blink">▼ tap</span> : <span>&nbsp;</span>}</p>
                 </div>
               )}
+            </div>
           </div>
+        )}
 
-          <div className={`safe-bottom relative mx-auto w-full max-w-md px-4 pb-6 ${narrator ? 'flex-1' : ''} ${side ? '[@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:flex-col [@media(orientation:landscape)_and_(max-height:600px)]:justify-center [@media(orientation:landscape)_and_(max-height:600px)]:px-0 [@media(orientation:landscape)_and_(max-height:600px)]:pb-4' : ''}`}>
-            {film ? (
-              <div key={index} className="min-h-[132px] animate-fadein px-2 text-center">
-                <p className="text-xl leading-relaxed text-slate-200">
-                  {line.text.slice(0, upTo)}
-                  {!done && <span className="opacity-0">{line.text.slice(shown)}</span>}
-                </p>
-                <p className="mt-4 text-xs text-slate-500">{done ? <span className="animate-blink">tap</span> : <span>&nbsp;</span>}</p>
-              </div>
-            ) : (
-              <div className={`min-h-[132px] rounded-xl p-4 pixel-border ${dark ? 'bg-[#140f1f]' : 'bg-ink-800/95'} ${narrator ? 'text-center' : ''}`}>
-                {!narrator && <p className={`mb-2 font-pixel text-[10px] ${TAG[who?.tag ?? 'gold']}`}>{name}</p>}
-                <p className={`text-lg leading-snug ${narrator ? 'italic text-slate-300' : dark ? 'text-red-100' : 'text-slate-100'}`}>
-                  {line.text.slice(0, upTo)}
-                  {!done && <span className="opacity-0">{line.text.slice(shown)}</span>}
-                </p>
-                <p className="mt-2 text-right text-xs text-slate-500">{done ? <span className="animate-blink">▼ tap</span> : <span>&nbsp;</span>}</p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+        {!line && !(shot && 'title' in shot) && <div className="flex-1" />}
 
-      {!line && !(shot && 'title' in shot) && <div className="flex-1" />}
-
-      <div
-        className={`pointer-events-none absolute inset-0 z-20 transition-opacity ${cam.fade === 'white' ? 'bg-white' : 'bg-black'}`}
-        style={{ opacity: cam.fade === 'none' ? 0 : 1, transitionDuration: `${ms}ms` }}
-      />
-    </div>
+        <div
+          className={`pointer-events-none absolute inset-0 z-20 transition-opacity ${cam.fade === 'white' ? 'bg-white' : 'bg-black'}`}
+          style={{ opacity: cam.fade === 'none' ? 0 : 1, transitionDuration: `${ms}ms` }}
+        />
+      </div>
+    </PixelSnap.Provider>
   );
 }

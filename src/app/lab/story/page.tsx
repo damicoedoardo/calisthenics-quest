@@ -201,7 +201,7 @@ export default function StoryLab() {
   if (place)
     return (
       <div className="fixed inset-0 z-50 bg-ink-950" onClick={() => setPlace(null)}>
-        <PlaceBackdrop id={place} className="absolute inset-0" />
+        <PlaceBackdrop id={place} className="absolute inset-0" stage={0.5} />
         {PLACES[place].weather !== 'none' && <Weather kind={PLACES[place].weather} />}
         <div className="safe-top relative flex items-center justify-between px-4">
           <p className="font-pixel text-[10px] text-gold-300 drop-shadow-[0_2px_0_#0b0d14]">{PLACES[place].name}</p>

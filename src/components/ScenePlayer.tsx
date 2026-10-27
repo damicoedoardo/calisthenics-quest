@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Dialogue } from './Dialogue';
 import { Ember } from './Characters';
 import { PlaceBackdrop } from './Place';
+import { PixelSnap, useSideways } from './sideways';
 import { useMusic } from './Sound';
 import { gearOf, type GameState } from '@/lib/game';
 import { flameStage, DEFAULT_FLAME_NAME } from '@/story/flame';
@@ -90,86 +91,90 @@ function AskCard({
   onAnswer: (r: SceneResult, after: Line[] | undefined) => void;
 }) {
   const [text, setText] = useState('');
+  const sideways = useSideways();
   useMusic(music);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-ink-950">
-      <PlaceBackdrop id={place} className="absolute inset-0 opacity-40" />
-      <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/80 to-ink-950/40" />
-      {/* Held sideways: the flame beside its name box, or the question beside its answers. */}
-      <div className="safe-top safe-bottom land-safe-x relative mx-auto flex w-full max-w-md flex-1 flex-col justify-end px-4 pb-8 [@media(orientation:landscape)_and_(max-height:600px)]:min-h-0 [@media(orientation:landscape)_and_(max-height:600px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:600px)]:flex-row [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:justify-center [@media(orientation:landscape)_and_(max-height:600px)]:gap-10 [@media(orientation:landscape)_and_(max-height:600px)]:overflow-y-auto [@media(orientation:landscape)_and_(max-height:600px)]:pb-3">
-        {/* You name a friend you can see. */}
-        {ask.kind === 'name' && (
-          <div className="mb-6 flex animate-pop justify-center [@media(orientation:landscape)_and_(max-height:600px)]:mb-0">
-            <Ember size={150} stage={stage} mood="soft" />
-          </div>
-        )}
-        <div className={`animate-fadein rounded-2xl bg-ink-800/95 p-5 pixel-border ${ask.kind === 'name' ? '[@media(orientation:landscape)_and_(max-height:600px)]:w-full [@media(orientation:landscape)_and_(max-height:600px)]:max-w-sm' : '[@media(orientation:landscape)_and_(max-height:600px)]:my-auto [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:w-full [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:gap-6'}`}>
-          <p className="text-center font-pixel text-[11px] leading-relaxed text-gold-300">{ask.kind === 'name' ? ask.prompt : `"${ask.prompt}"`}</p>
-
-          {ask.kind === 'name' ? (
-            <form
-              className="mt-5 space-y-3"
-              onSubmit={(e) => {
-                e.preventDefault();
-                onAnswer({ flame: text.trim() || DEFAULT_FLAME_NAME }, ask.after);
-              }}
-            >
-              <input
-                autoFocus
-                maxLength={16}
-                value={text}
-                onChange={(e) => setText(e.target.value)}
-                placeholder={ask.placeholder}
-                aria-label="Your flame's name"
-                className="w-full rounded-xl bg-ink-900 px-4 py-3.5 text-center text-lg text-slate-100 outline-none ring-1 ring-ink-600 focus:ring-gold-400"
-              />
-              <button type="submit" disabled={!text.trim()} className={goldButton}>
-                That&apos;s your name
-              </button>
-              <button type="button" onClick={() => onAnswer({ flame: DEFAULT_FLAME_NAME }, ask.after)} className="w-full py-2 text-xs text-slate-500">
-                Skip: call it {DEFAULT_FLAME_NAME}
-              </button>
-            </form>
-          ) : (
-            <div className="mt-5 space-y-2 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0">
-              {ask.choices.map((c) => (
-                <button
-                  key={c.label}
-                  onClick={() => onAnswer({ answer: { id: ask.id, value: c.value } }, c.after ?? ask.after)}
-                  className="w-full rounded-xl bg-ink-900 px-4 py-3 text-left text-sm text-slate-100 ring-1 ring-gold-400/25 active:scale-[.98] [@media(orientation:landscape)_and_(max-height:600px)]:py-2.5"
-                >
-                  {c.label}
-                </button>
-              ))}
-              {ask.write && (
-                <form
-                  className="flex gap-2 pt-1"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    if (text.trim()) onAnswer({ answer: { id: ask.id, value: text.trim() } }, ask.after);
-                  }}
-                >
-                  <input
-                    maxLength={80}
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    placeholder={ask.write}
-                    aria-label={`${ask.prompt} (in your own words)`}
-                    className="min-w-0 flex-1 rounded-xl bg-ink-900 px-3 py-3 text-sm text-slate-100 outline-none ring-1 ring-ink-600 focus:ring-gold-400"
-                  />
-                  <button type="submit" disabled={!text.trim()} className="rounded-xl bg-gold-400 px-4 font-pixel text-[9px] text-ink-950 disabled:opacity-40">
-                    Say it
-                  </button>
-                </form>
-              )}
-              <button onClick={() => onAnswer({}, undefined)} className="w-full pt-2 text-xs text-slate-500">
-                Skip
-              </button>
+    <PixelSnap.Provider value>
+      <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-ink-950">
+        <PlaceBackdrop id={place} className="absolute inset-0 opacity-40" stage={0.3} />
+        <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/80 to-ink-950/40" />
+        {/* Held sideways: the flame beside its name box, or the question beside its answers. */}
+        <div className="safe-top safe-bottom land-safe-x relative mx-auto flex w-full max-w-md flex-1 flex-col justify-end px-4 pb-8 [@media(orientation:landscape)_and_(max-height:600px)]:min-h-0 [@media(orientation:landscape)_and_(max-height:600px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:600px)]:flex-row [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:justify-center [@media(orientation:landscape)_and_(max-height:600px)]:gap-10 [@media(orientation:landscape)_and_(max-height:600px)]:overflow-y-auto [@media(orientation:landscape)_and_(max-height:600px)]:pb-3">
+          {/* You name a friend you can see. */}
+          {ask.kind === 'name' && (
+            <div className="mb-6 flex animate-pop justify-center [@media(orientation:landscape)_and_(max-height:600px)]:mb-0">
+              {/* Held sideways, three times its pixels (PixelSnap would round 150 down to two). */}
+              <Ember size={sideways ? 192 : 150} stage={stage} mood="soft" />
             </div>
           )}
+          <div className={`animate-fadein rounded-2xl bg-ink-800/95 p-5 pixel-border ${ask.kind === 'name' ? '[@media(orientation:landscape)_and_(max-height:600px)]:w-full [@media(orientation:landscape)_and_(max-height:600px)]:max-w-sm' : '[@media(orientation:landscape)_and_(max-height:600px)]:my-auto [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:w-full [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:gap-6'}`}>
+            <p className="text-center font-pixel text-[11px] leading-relaxed text-gold-300">{ask.kind === 'name' ? ask.prompt : `"${ask.prompt}"`}</p>
+
+            {ask.kind === 'name' ? (
+              <form
+                className="mt-5 space-y-3"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  onAnswer({ flame: text.trim() || DEFAULT_FLAME_NAME }, ask.after);
+                }}
+              >
+                <input
+                  autoFocus
+                  maxLength={16}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder={ask.placeholder}
+                  aria-label="Your flame's name"
+                  className="w-full rounded-xl bg-ink-900 px-4 py-3.5 text-center text-lg text-slate-100 outline-none ring-1 ring-ink-600 focus:ring-gold-400"
+                />
+                <button type="submit" disabled={!text.trim()} className={goldButton}>
+                  That&apos;s your name
+                </button>
+                <button type="button" onClick={() => onAnswer({ flame: DEFAULT_FLAME_NAME }, ask.after)} className="w-full py-2 text-xs text-slate-500">
+                  Skip: call it {DEFAULT_FLAME_NAME}
+                </button>
+              </form>
+            ) : (
+              <div className="mt-5 space-y-2 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0">
+                {ask.choices.map((c) => (
+                  <button
+                    key={c.label}
+                    onClick={() => onAnswer({ answer: { id: ask.id, value: c.value } }, c.after ?? ask.after)}
+                    className="w-full rounded-xl bg-ink-900 px-4 py-3 text-left text-sm text-slate-100 ring-1 ring-gold-400/25 active:scale-[.98] [@media(orientation:landscape)_and_(max-height:600px)]:py-2.5"
+                  >
+                    {c.label}
+                  </button>
+                ))}
+                {ask.write && (
+                  <form
+                    className="flex gap-2 pt-1"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      if (text.trim()) onAnswer({ answer: { id: ask.id, value: text.trim() } }, ask.after);
+                    }}
+                  >
+                    <input
+                      maxLength={80}
+                      value={text}
+                      onChange={(e) => setText(e.target.value)}
+                      placeholder={ask.write}
+                      aria-label={`${ask.prompt} (in your own words)`}
+                      className="min-w-0 flex-1 rounded-xl bg-ink-900 px-3 py-3 text-sm text-slate-100 outline-none ring-1 ring-ink-600 focus:ring-gold-400"
+                    />
+                    <button type="submit" disabled={!text.trim()} className="rounded-xl bg-gold-400 px-4 font-pixel text-[9px] text-ink-950 disabled:opacity-40">
+                      Say it
+                    </button>
+                  </form>
+                )}
+                <button onClick={() => onAnswer({}, undefined)} className="w-full pt-2 text-xs text-slate-500">
+                  Skip
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
+    </PixelSnap.Provider>
   );
 }

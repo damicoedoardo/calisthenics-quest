@@ -72,6 +72,7 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Redraw old Vela (hair, softer eyes, shawl, lamp, cane) | `characters/vela.ts`: her lamp raise is the `raise` clip in `clips.ts` |
 | Redraw the flame's true form (the finale's fire kid) | the `ROWS` and `TIPS` text art in `characters/kindled.ts` (`LOCKS` is the long hair a long or pony look gets) |
 | Change a story backdrop's props (Vela's lamp tower, the road, a campfire) | its function in `places.ts` (`lampTower`, `road`...); which place has which props is in `src/story/places.ts` |
+| Change how a backdrop widens held sideways (what spreads across, what stays on the stage) | `drawPlace` and its `PlaceCanvas` (`w`, `st`) in `places.ts`: props add `st` to their x; see [story.md](story.md) |
 | Change Vela's far tower on the Plateau, or how its lamp flashes | `FAR_TOWER` rows in `places.ts`; a place with it is drawn lit and unlit, and the `beacon` animation in `tailwind.config.ts` flashes the lit copy |
 | Change the looks a player starts with (boy, girl) | `STARTER_LOOKS` in `characters/hero.ts`; the editor's options are in `src/components/LookEditor.tsx` |
 | Redraw a dungeon monster | the `ROWS` text art in its file (`ram.ts`, `smoke.ts`, `seeker.ts`, `splitter.ts`, `shade.ts`); its palette sits under the rows |
@@ -83,6 +84,10 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Change a zone's dungeon colors (floor, stone, torch fire, water) | its entry in `THEMES` (`src/game/dungeon/themes.ts`); in developer mode the Fog's pause menu has a Theme button that cycles them |
 | Add a character | a file in `characters/`, then an entry in `SPRITES` (`registry.ts`) |
 | Use art from Aseprite or PixelLab | see below |
+
+`<Sprite size>` is the width in CSS pixels, any number. Inside `<PixelSnap>`
+(`src/components/sideways.ts`, used by the story's overlays) and with the phone held sideways, it
+is rounded to the nearest whole multiple of the frame (64, 128, 192), so the pixels stay square.
 
 Sprites are drawn on a 64x64 grid. The body and hair are designed at 32x32 ("body pixels") and
 doubled with Scale2x, so one body pixel is two sprite pixels. The manga head is the exception: it is

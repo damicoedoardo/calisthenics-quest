@@ -11,6 +11,7 @@ import { LookEditor } from './LookEditor';
 import { RiseUp } from './RiseUp';
 import { SoundToggle, useMusic } from './Sound';
 import { Weather } from './Weather';
+import { PixelSnap } from './sideways';
 import type { GameState, Kit, Letter } from '@/lib/game';
 import { equippedGear, type Gear, type GearSlot } from '@/lib/gear';
 import { music } from '@/lib/music';
@@ -62,9 +63,18 @@ function fadingBackdrop(gear: ReturnType<typeof equippedGear>) {
 
 /**
  * First run: pick boy or girl, the story opens, the player meets the voice in their head, loses,
- * gets up, writes their letter, and finally makes the hero look like them.
+ * gets up, writes their letter, and finally makes the hero look like them. Held sideways, every
+ * figure in it is drawn at a whole multiple of its pixels (PixelSnap).
  */
-export function Prologue({ state, onFinish, onLook, onExit, onSkip }: Props) {
+export function Prologue(props: Props) {
+  return (
+    <PixelSnap.Provider value>
+      <PrologueSteps {...props} />
+    </PixelSnap.Provider>
+  );
+}
+
+function PrologueSteps({ state, onFinish, onLook, onExit, onSkip }: Props) {
   const [step, setStep] = useState<Step>('title');
   const look = useLook();
   const firstRun = !state.profile.onboarded;

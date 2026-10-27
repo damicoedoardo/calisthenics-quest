@@ -75,14 +75,22 @@ edges clear of the notch, which is on the left or the right then.
 |---|---|
 | `Workout` | The exercise (name, cue, demo) on the left, its sets, reps and the reps-in-reserve buttons on the right; the big demo stands beside its name and cue; the rest timer has the flame beside the clock |
 | `AfterSession` | The battle as in portrait, a bit tighter; the loot card is wide, what you earned on the left, the level, gear, the flame's word and Continue on the right |
-| `Dialogue` | Whoever is on screen on the left, the words beside them; narration with nothing to show stays centered |
+| `Dialogue` | Whoever is on screen on the left, the words beside them; narration with nothing to show stays centered. The backdrop is drawn wide for the screen at a whole-number scale (sky, horizon and ground all show) and the shade at the bottom is shorter |
 | `ScenePlayer` | The question card puts the question beside its answers; naming the flame puts the flame beside the name box |
 | `Prologue` | Title and boy or girl side by side; the voice pick with the Hollow on the left and the answers in two columns; the letter (two columns of prompts), the gym or home pick and the look editor with who speaks and the button on the left |
-| `FirstFight`, `RiseUp`, `SitByFire` | The figures on the left, the words and the button on the right |
+| `FirstFight`, `RiseUp`, `SitByFire` | The figures on the left, the words and the button on the right; `SitByFire`'s camp is drawn wide like `Dialogue`'s |
 | `ClassPicker` | The hero you'd be on the left, the four classes and the button on the right |
 | `BookOfDays`, `ExerciseLibrary` | Wider, the pages and the list in two columns; the library's search and filters on one line, an exercise's demos and facts beside its how-to |
 | `DevPanel` | A wider sheet with its sections in two columns |
 | `Opening` | Fits as it is; the sound toggle keeps clear of the notch |
+
+Pixel art stays crisp sideways: the story's overlays (`Dialogue`, the question card, `SitByFire`,
+the whole `Prologue` with `FirstFight` and `RiseUp`) sit inside `<PixelSnap>`
+(`src/components/sideways.ts`), so every `<Sprite>` in them is drawn at a whole multiple of its
+64-pixel frame (140 becomes 128, 170 becomes 192), and a `PlaceBackdrop` given a `stage` is
+redrawn wider for the box instead of cropped from the tall upright picture (see
+[../game/story.md](../game/story.md)). Upright nothing changes: sizes stay as given and the
+backdrop is the same picture as before. `useSideways()` in the same file is the query as a hook.
 
 To change one, look for the variant in that component; try it at 844×390 (the `/lab/night` jumps
 and `/lab/story?play=<scene id>&back` reach most of them) and check portrait at 390×844 is unchanged.

@@ -3,6 +3,7 @@
 import { useSyncExternalStore, type CSSProperties } from 'react';
 import type { SpriteAction } from '@/sprites/clips';
 import { labelFor, presentationFor, sheetFor, type Sheet, type SpriteId, type SpriteOpts } from '@/sprites/registry';
+import { useSnappedSize } from './sideways';
 
 const noSubscribe = () => () => {};
 
@@ -33,8 +34,9 @@ interface SpriteProps<I extends SpriteId> {
 export function Sprite<I extends SpriteId>({ id, opts, action = 'idle', size = 64, playing = true, onEnd, flip = false, label, className = '' }: SpriteProps<I>) {
   const sheet = useSheet(id, action, opts);
   const look = presentationFor(id, opts);
-  const w = size,
-    h = sheet ? (size * sheet.h) / sheet.w : size,
+  // Held sideways in a story scene, a whole multiple of the frame (see PixelSnap).
+  const w = useSnappedSize(size, sheet?.w),
+    h = sheet ? (w * sheet.h) / sheet.w : w,
     animate = playing && !!sheet && sheet.frames > 1;
 
   return (
