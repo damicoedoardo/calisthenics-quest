@@ -23,7 +23,7 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 | `seenScenes`, `sceneMark` | Story scenes already played, and how many played at the last story moment |
 | `answers` | What the player chose in the story (heart moments, villager stories) |
 | `fog` | Zones cleared, runs, best records per zone, the last run |
-| `days` | The Book of Days: one page per day the app was opened |
+| `days` | The Book of Days: one page per day the app was opened (`dayNumber` in `src/lib/days.ts` counts them, today included) |
 
 ## Saving
 
