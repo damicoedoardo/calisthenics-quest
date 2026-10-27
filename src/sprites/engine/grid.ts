@@ -259,23 +259,57 @@ export function tint(gr: Grid, ramp: Ramp): Grid {
   );
 }
 
-/** Draws frames side by side into a PNG data URL (browser only). */
+/** CSS color to RGBA bytes, read once per color: "#rrggbb" by hand, anything else through a canvas. */
+const RGBA = new Map<string, [number, number, number, number]>();
+let probe: CanvasRenderingContext2D | null = null;
+function rgba(c: string): [number, number, number, number] {
+  let v = RGBA.get(c);
+  if (v) return v;
+  const hex = /^#([0-9a-f]{6})$/i.exec(c) ?? /^#([0-9a-f]{3})$/i.exec(c);
+  if (hex) {
+    const h = hex[1].length === 3 ? [...hex[1]].map((d) => d + d).join('') : hex[1];
+    v = [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16), 255];
+  } else {
+    probe ??= Object.assign(document.createElement('canvas'), { width: 1, height: 1 }).getContext('2d', { willReadFrequently: true });
+    if (!probe) return [0, 0, 0, 0];
+    probe.clearRect(0, 0, 1, 1);
+    probe.fillStyle = c;
+    probe.fillRect(0, 0, 1, 1);
+    const d = probe.getImageData(0, 0, 1, 1).data;
+    v = [d[0], d[1], d[2], d[3]];
+  }
+  RGBA.set(c, v);
+  return v;
+}
+
+/**
+ * Draws frames side by side into a PNG data URL (browser only). Pixels go straight into one
+ * ImageData: a fillRect per pixel was most of the time it took to open the app or start a run.
+ */
 export function toSheet(frames: Grid[]): string {
   const h = frames[0].length,
     w = frames[0][0].length,
+    W = w * frames.length,
     cv = document.createElement('canvas');
-  cv.width = w * frames.length;
+  cv.width = W;
   cv.height = h;
   const ctx = cv.getContext('2d');
   if (!ctx) return '';
+  const img = ctx.createImageData(W, h),
+    px = img.data;
   frames.forEach((g, f) => {
     for (let y = 0; y < h; y++)
       for (let x = 0; x < w; x++) {
         const c = g[y][x];
         if (!c) continue;
-        ctx.fillStyle = c;
-        ctx.fillRect(f * w + x, y, 1, 1);
+        const [r, gr, b, a] = rgba(c),
+          i = (y * W + f * w + x) * 4;
+        px[i] = r;
+        px[i + 1] = gr;
+        px[i + 2] = b;
+        px[i + 3] = a;
       }
   });
+  ctx.putImageData(img, 0, 0);
   return cv.toDataURL();
 }
