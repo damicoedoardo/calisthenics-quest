@@ -4,8 +4,8 @@ import { initialState, levelInfo, totalXp } from '@/lib/game';
 import { embersEarned, upgradeCost } from '@/lib/forge';
 import { salvageValue, vaultSize } from '@/lib/fog-gear';
 import { pointsEarned, statPower, STATS } from '@/lib/stats';
-import { MAX_PLUS, rollItem, rollRarity, RARITY, starterKit, type Item, type Rarity } from '@/game/dungeon/items';
-import { DROP_LUCK, DROPS, NEED } from '@/balance';
+import { evenPoints, MAX_PLUS, rollItem, wearAfter, rollRarity, RARITY, starterKit, type Item, type Rarity } from '@/game/dungeon/items';
+import { DROP_LUCK, DROPS } from '@/balance';
 import { powerOf, ZONES, xpToNext } from '@/lib/fog';
 import { seeded } from '@/lib/random';
 import { powerScore } from '@/game/power';
@@ -141,7 +141,11 @@ function middleWeapon(zone: number, floor: number, rarity: Rarity): Item {
 }
 
 /** Workouts until an even build has `n` points in each stat (the model requirements follow). */
-const workoutsFor = (n: number) => Math.max(0, Math.ceil((n * NEED.stats - NEED.start) / NEED.perWorkout));
+const workoutsFor = (n: number) => {
+  let w = 0;
+  while (Math.round(evenPoints(w)) < n) w++;
+  return w;
+};
 
 function items(): string {
   const starter = starterKit('warrior').weapon.base[0].v;
@@ -304,6 +308,14 @@ function goals(): string {
           `${story} workouts, ${months.toFixed(1)} months (the last zone opens at ${lastOpens}, month ${(lastOpens / WEEKLY_GOAL / (52 / 12)).toFixed(1)})`,
           check(months >= STORY_MONTHS.min - 0.05 && months <= STORY_MONTHS.max + 0.05),
         ],
+        (() => {
+          const gaps = ZONES.slice(0, -1).map((z, i) => ZONES[i + 1].workouts - z.workouts - wearAfter('legendary', 9));
+          return [
+            "A zone's best item (a floor 10 legendary) is wearable before the next zone opens",
+            `${wearAfter('legendary', 9)} workouts after a zone opens; the next opens ${Math.min(...gaps)} to ${Math.max(...gaps)} workouts after that`,
+            check(gaps.every((g) => g > 0)),
+          ];
+        })(),
         ['How often a steady player levels up (6 months)', `${perLevel.toFixed(1)} workouts a level`, open],
         ['One item +0 to +5 in about 5 weeks of training', `${weeks.toFixed(1)} weeks`, check(weeks >= 4 && weeks <= 6)],
         ['One item +0 to +15 in about a year of training (embers; materials from co-op)', `${weeksFor(toTop, WEEKLY_GOAL).toFixed(0)} weeks`, check(weeksFor(toTop, WEEKLY_GOAL) >= 40 && weeksFor(toTop, WEEKLY_GOAL) <= 70)],

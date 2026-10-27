@@ -9,14 +9,15 @@ Each goal is written next to its numbers in `src/balance/`. The sheet measures i
 | Goal | Measured |  |
 | --- | --- | --- |
 | The main story is done in 5 to 6 months at 3 workouts a week | 78 workouts, 6.0 months (the last zone opens at 64, month 4.9) | on target |
+| A zone's best item (a floor 10 legendary) is wearable before the next zone opens | 11 workouts after a zone opens; the next opens 1 to 3 workouts after that | on target |
 | How often a steady player levels up (6 months) | 2.9 workouts a level | no goal set yet |
 | One item +0 to +5 in about 5 weeks of training | 5.0 weeks | on target |
 | One item +0 to +15 in about a year of training (embers; materials from co-op) | 62 weeks | on target |
 | 70 points a stat gives about +80% damage, +65% attack speed, +105 HP, 20% blocked, +25% walk speed, 20% crit | +79%, +64%, +103 HP, 21% blocked, +25% walk, 20% crit | on target |
 | A comeback after 14 days away earns a bonus | +50 XP | on target |
-| 40% of power growth from training (± 7%) | 39% (38%-41%) | on target |
-| 40% of power growth from gear (± 7%) | 41% (38%-51%) | on target |
-| 20% of power growth from upgrades (± 7%) | 20% (12%-24%) | on target |
+| 40% of power growth from training (± 7%) | 41% (38%-45%) | on target |
+| 40% of power growth from gear (± 7%) | 39% (37%-45%) | on target |
+| 20% of power growth from upgrades (± 7%) | 19% (11%-24%) | on target |
 
 ## Power by workouts
 
@@ -27,16 +28,16 @@ Model player: 3 full workouts a week, every week at the goal, points spread even
 | Workouts | Power | From training | From gear | From upgrades | Gear from |
 | --- | --- | --- | --- | --- | --- |
 | 0 | 100 | - | - | - | - |
-| 6 | 126 | 33% | 61% | 6% | zone 1, floor 10 |
-| 12 | 145 | 38% | 51% | 12% | zone 2, floor 6 |
-| 18 | 162 | 41% | 46% | 12% | zone 2, floor 10 |
-| 24 | 183 | 39% | 44% | 17% | zone 3, floor 6 |
-| 30 | 200 | 41% | 42% | 17% | zone 3, floor 9 |
-| 37 | 230 | 38% | 40% | 22% | zone 4, floor 6 |
-| 43 | 249 | 40% | 38% | 22% | zone 4, floor 8 |
-| 50 | 282 | 38% | 38% | 24% | zone 5, floor 6 |
-| 56 | 300 | 39% | 38% | 24% | zone 5, floor 8 |
-| 64 | 338 | 38% | 38% | 24% | zone 6, floor 6 |
+| 6 | 122 | 38% | 56% | 6% | zone 1, floor 7 |
+| 12 | 139 | 44% | 45% | 11% | zone 2, floor 1 |
+| 18 | 158 | 45% | 43% | 12% | zone 2, floor 7 |
+| 24 | 175 | 43% | 41% | 16% | zone 3, floor 1 |
+| 30 | 197 | 43% | 40% | 17% | zone 3, floor 7 |
+| 37 | 220 | 42% | 38% | 21% | zone 4, floor 1 |
+| 43 | 246 | 40% | 38% | 22% | zone 4, floor 7 |
+| 50 | 270 | 40% | 37% | 23% | zone 5, floor 1 |
+| 56 | 297 | 39% | 37% | 23% | zone 5, floor 7 |
+| 64 | 324 | 40% | 37% | 23% | zone 6, floor 1 |
 | 70 | 351 | 38% | 38% | 24% | zone 6, floor 7 |
 | 100 | 433 | 43% | 34% | 23% | zone 6, floor 10 |
 
@@ -44,9 +45,9 @@ Each class with the same model (and how far above or below the four's average). 
 
 | Workouts | Warrior | Archer | Monk | Mage |
 | --- | --- | --- | --- | --- |
-| 0 | 117 (+15%) | 114 (+11%) | 94 (-8%) | 85 (-17%) |
-| 24 | 183 (+15%) | 177 (+11%) | 146 (-8%) | 131 (-18%) |
-| 64 | 338 (+16%) | 321 (+10%) | 269 (-8%) | 236 (-19%) |
+| 0 | 108 (+15%) | 104 (+11%) | 86 (-8%) | 78 (-17%) |
+| 24 | 175 (+15%) | 169 (+11%) | 139 (-8%) | 125 (-18%) |
+| 64 | 324 (+16%) | 309 (+10%) | 258 (-8%) | 227 (-19%) |
 
 ## Training over time
 
@@ -129,41 +130,41 @@ The starter weapon gives +5% damage. A weapon with middle rolls, by zone, floor 
 | Zone | Floor | Rarity | Damage | Bonuses | Needs points | Even build after |
 | --- | --- | --- | --- | --- | --- | --- |
 | 1 (0 workouts in) | 1 | Magic | +5% | 1 | 1 | 0 |
-| 1 (0 workouts in) | 1 | Rare | +6% | 3 | 1 | 0 |
-| 1 (0 workouts in) | 1 | Legendary | +7% | 4 | 1 | 0 |
-| 1 (0 workouts in) | 10 | Magic | +8% | 1 | 1 | 0 |
-| 1 (0 workouts in) | 10 | Rare | +9% | 3 | 1 | 0 |
-| 1 (0 workouts in) | 10 | Legendary | +11% | 4 | 1 | 0 |
-| 2 (12 workouts in) | 1 | Magic | +8% | 1 | 4 | 5 |
-| 2 (12 workouts in) | 1 | Rare | +9% | 3 | 5 | 7 |
-| 2 (12 workouts in) | 1 | Legendary | +12% | 4 | 6 | 9 |
-| 2 (12 workouts in) | 10 | Magic | +11% | 1 | 9 | 14 |
-| 2 (12 workouts in) | 10 | Rare | +12% | 3 | 11 | 17 |
-| 2 (12 workouts in) | 10 | Legendary | +16% | 4 | 12 | 18 |
-| 3 (24 workouts in) | 1 | Magic | +11% | 1 | 8 | 12 |
-| 3 (24 workouts in) | 1 | Rare | +13% | 3 | 9 | 14 |
-| 3 (24 workouts in) | 1 | Legendary | +16% | 4 | 11 | 17 |
-| 3 (24 workouts in) | 10 | Magic | +14% | 1 | 17 | 27 |
-| 3 (24 workouts in) | 10 | Rare | +16% | 3 | 20 | 32 |
-| 3 (24 workouts in) | 10 | Legendary | +20% | 4 | 23 | 36 |
-| 4 (37 workouts in) | 1 | Magic | +14% | 1 | 12 | 18 |
-| 4 (37 workouts in) | 1 | Rare | +16% | 3 | 14 | 22 |
-| 4 (37 workouts in) | 1 | Legendary | +21% | 4 | 16 | 25 |
+| 1 (0 workouts in) | 1 | Rare | +6% | 3 | 2 | 1 |
+| 1 (0 workouts in) | 1 | Legendary | +7% | 4 | 3 | 3 |
+| 1 (0 workouts in) | 10 | Magic | +8% | 1 | 3 | 3 |
+| 1 (0 workouts in) | 10 | Rare | +9% | 3 | 5 | 6 |
+| 1 (0 workouts in) | 10 | Legendary | +11% | 4 | 8 | 11 |
+| 2 (12 workouts in) | 1 | Magic | +8% | 1 | 8 | 11 |
+| 2 (12 workouts in) | 1 | Rare | +9% | 3 | 10 | 14 |
+| 2 (12 workouts in) | 1 | Legendary | +12% | 4 | 11 | 16 |
+| 2 (12 workouts in) | 10 | Magic | +11% | 1 | 11 | 16 |
+| 2 (12 workouts in) | 10 | Rare | +12% | 3 | 13 | 19 |
+| 2 (12 workouts in) | 10 | Legendary | +16% | 4 | 15 | 23 |
+| 3 (24 workouts in) | 1 | Magic | +11% | 1 | 16 | 24 |
+| 3 (24 workouts in) | 1 | Rare | +13% | 3 | 17 | 26 |
+| 3 (24 workouts in) | 1 | Legendary | +16% | 4 | 18 | 27 |
+| 3 (24 workouts in) | 10 | Magic | +14% | 1 | 18 | 27 |
+| 3 (24 workouts in) | 10 | Rare | +16% | 3 | 20 | 31 |
+| 3 (24 workouts in) | 10 | Legendary | +20% | 4 | 22 | 34 |
+| 4 (37 workouts in) | 1 | Magic | +14% | 1 | 24 | 37 |
+| 4 (37 workouts in) | 1 | Rare | +16% | 3 | 25 | 39 |
+| 4 (37 workouts in) | 1 | Legendary | +21% | 4 | 26 | 41 |
 | 4 (37 workouts in) | 10 | Magic | +17% | 1 | 26 | 41 |
-| 4 (37 workouts in) | 10 | Rare | +19% | 3 | 30 | 48 |
-| 4 (37 workouts in) | 10 | Legendary | +25% | 4 | 35 | 56 |
-| 5 (50 workouts in) | 1 | Magic | +17% | 1 | 16 | 25 |
-| 5 (50 workouts in) | 1 | Rare | +20% | 3 | 18 | 28 |
-| 5 (50 workouts in) | 1 | Legendary | +25% | 4 | 21 | 33 |
-| 5 (50 workouts in) | 10 | Magic | +20% | 1 | 35 | 56 |
-| 5 (50 workouts in) | 10 | Rare | +23% | 3 | 40 | 64 |
-| 5 (50 workouts in) | 10 | Legendary | +29% | 4 | 47 | 76 |
-| 6 (64 workouts in) | 1 | Magic | +20% | 1 | 20 | 32 |
-| 6 (64 workouts in) | 1 | Rare | +23% | 3 | 23 | 36 |
-| 6 (64 workouts in) | 1 | Legendary | +30% | 4 | 27 | 43 |
-| 6 (64 workouts in) | 10 | Magic | +23% | 1 | 44 | 71 |
-| 6 (64 workouts in) | 10 | Rare | +26% | 3 | 51 | 82 |
-| 6 (64 workouts in) | 10 | Legendary | +34% | 4 | 60 | 97 |
+| 4 (37 workouts in) | 10 | Rare | +19% | 3 | 28 | 44 |
+| 4 (37 workouts in) | 10 | Legendary | +25% | 4 | 30 | 47 |
+| 5 (50 workouts in) | 1 | Magic | +17% | 1 | 32 | 50 |
+| 5 (50 workouts in) | 1 | Rare | +20% | 3 | 33 | 52 |
+| 5 (50 workouts in) | 1 | Legendary | +25% | 4 | 34 | 54 |
+| 5 (50 workouts in) | 10 | Magic | +20% | 1 | 34 | 54 |
+| 5 (50 workouts in) | 10 | Rare | +23% | 3 | 36 | 57 |
+| 5 (50 workouts in) | 10 | Legendary | +29% | 4 | 38 | 60 |
+| 6 (64 workouts in) | 1 | Magic | +20% | 1 | 40 | 63 |
+| 6 (64 workouts in) | 1 | Rare | +23% | 3 | 41 | 65 |
+| 6 (64 workouts in) | 1 | Legendary | +30% | 4 | 43 | 68 |
+| 6 (64 workouts in) | 10 | Magic | +23% | 1 | 43 | 68 |
+| 6 (64 workouts in) | 10 | Rare | +26% | 3 | 44 | 70 |
+| 6 (64 workouts in) | 10 | Legendary | +34% | 4 | 47 | 75 |
 
 ## Drops and rarity
 

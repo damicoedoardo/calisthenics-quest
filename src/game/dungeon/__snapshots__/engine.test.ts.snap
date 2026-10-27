@@ -33,7 +33,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 1,
           "name": "Quiet Oath",
           "need": {
-            "n": 1,
+            "n": 2,
             "stat": "damage",
           },
           "rarity": "rare",
@@ -75,7 +75,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 4,
           "name": "Ashen sword",
           "need": {
-            "n": 1,
+            "n": 2,
             "stat": "damage",
           },
           "rarity": "common",
@@ -114,7 +114,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 5,
           "name": "Ashen sword",
           "need": {
-            "n": 1,
+            "n": 2,
             "stat": "damage",
           },
           "rarity": "common",
@@ -142,7 +142,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 6,
           "name": "Grave Song",
           "need": {
-            "n": 1,
+            "n": 3,
             "stat": "damage",
           },
           "rarity": "rare",
@@ -182,7 +182,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 7,
           "name": "First Light plate",
           "need": {
-            "n": 1,
+            "n": 8,
             "stat": "armor",
           },
           "rarity": "legendary",
@@ -205,7 +205,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 9,
           "name": "Ashen plate",
           "need": {
-            "n": 1,
+            "n": 3,
             "stat": "armor",
           },
           "rarity": "common",
@@ -213,26 +213,6 @@ exports[`replays > every zone plays the same run as before 1`] = `
         },
       ],
       "worn": {
-        "armor": {
-          "base": [
-            {
-              "id": "health",
-              "v": 5.333286173120141,
-            },
-            {
-              "id": "armor",
-              "v": 0.01684569627363235,
-            },
-          ],
-          "bonuses": [],
-          "cls": "warrior",
-          "id": "1ccthhj15vaskb",
-          "level": 0,
-          "name": "Ashen plate",
-          "need": null,
-          "rarity": "common",
-          "slot": "armor",
-        },
         "charm": {
           "base": [],
           "bonuses": [
@@ -253,29 +233,13 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "rarity": "magic",
           "slot": "charm",
         },
-        "weapon": {
-          "base": [
-            {
-              "id": "damage",
-              "v": 0.05045051784412935,
-            },
-          ],
-          "bonuses": [],
-          "cls": "warrior",
-          "id": "1m0spamdqgcdy",
-          "level": 0,
-          "name": "Ashen sword",
-          "need": null,
-          "rarity": "common",
-          "slot": "weapon",
-        },
       },
     },
     "height": null,
-    "hp": 464,
+    "hp": 465,
     "kills": 393,
     "level": 15,
-    "maxHp": 464,
+    "maxHp": 465,
     "room": 5,
     "seconds": 661,
     "why": "boss",
@@ -308,7 +272,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 16,
           "name": "Drowned jerkin of Wind",
           "need": {
-            "n": 8,
+            "n": 10,
             "stat": "armor",
           },
           "rarity": "magic",
@@ -356,7 +320,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 17,
           "name": "Grave Thorn",
           "need": {
-            "n": 9,
+            "n": 13,
             "stat": "armor",
           },
           "rarity": "rare",
@@ -380,7 +344,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 17,
           "name": "Drowned bow of Embers",
           "need": {
-            "n": 8,
+            "n": 11,
             "stat": "crit",
           },
           "rarity": "magic",
@@ -399,7 +363,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 17,
           "name": "Drowned bow",
           "need": {
-            "n": 7,
+            "n": 11,
             "stat": "crit",
           },
           "rarity": "common",
@@ -447,7 +411,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 19,
           "name": "Drowned jerkin of Embers",
           "need": {
-            "n": 9,
+            "n": 11,
             "stat": "armor",
           },
           "rarity": "magic",
@@ -471,7 +435,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 19,
           "name": "Drowned bow of Wind",
           "need": {
-            "n": 9,
+            "n": 11,
             "stat": "crit",
           },
           "rarity": "magic",
@@ -533,7 +497,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 25,
           "name": "Builder's wand",
           "need": {
-            "n": 12,
+            "n": 17,
             "stat": "speed",
           },
           "rarity": "common",
@@ -557,7 +521,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 26,
           "name": "Builder's wand of Focus",
           "need": {
-            "n": 14,
+            "n": 17,
             "stat": "speed",
           },
           "rarity": "magic",
@@ -580,7 +544,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 26,
           "name": "Builder's robe",
           "need": {
-            "n": 13,
+            "n": 17,
             "stat": "armor",
           },
           "rarity": "common",
@@ -603,7 +567,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 26,
           "name": "Builder's robe",
           "need": {
-            "n": 13,
+            "n": 17,
             "stat": "armor",
           },
           "rarity": "common",
@@ -643,7 +607,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 27,
           "name": "Blueprint robe",
           "need": {
-            "n": 20,
+            "n": 22,
             "stat": "armor",
           },
           "rarity": "legendary",
@@ -667,7 +631,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 28,
           "name": "Builder's wand of Wind",
           "need": {
-            "n": 16,
+            "n": 18,
             "stat": "speed",
           },
           "rarity": "magic",
@@ -715,7 +679,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 29,
           "name": "Builder's robe of Wind",
           "need": {
-            "n": 17,
+            "n": 18,
             "stat": "armor",
           },
           "rarity": "magic",
@@ -854,7 +818,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 38,
           "name": "Sunworn staff of Haste",
           "need": {
-            "n": 24,
+            "n": 26,
             "stat": "health",
           },
           "rarity": "magic",
@@ -882,7 +846,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 38,
           "name": "Sunworn wraps of Fury",
           "need": {
-            "n": 24,
+            "n": 26,
             "stat": "armor",
           },
           "rarity": "magic",
@@ -914,7 +878,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 39,
           "name": "Wild Vow",
           "need": {
-            "n": 30,
+            "n": 28,
             "stat": "armor",
           },
           "rarity": "rare",
@@ -1000,7 +964,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 40,
           "name": "Hollow plate",
           "need": {
-            "n": 14,
+            "n": 32,
             "stat": "armor",
           },
           "rarity": "common",
@@ -1042,7 +1006,7 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "level": 50,
           "name": "Summit bow of Life",
           "need": {
-            "n": 20,
+            "n": 40,
             "stat": "crit",
           },
           "rarity": "magic",

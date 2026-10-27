@@ -1,6 +1,6 @@
 import type { ClassId } from '@/lib/gear';
 import type { Build, StatId } from '@/lib/stats';
-import { BANDS, BONUS_SIZE, FALL_KEEP, ITEM_BASE, ITEM_POWER, ITEM_ROLL_LOW, MAX_PLUS, NEED, RARITY_LEAN, RARITY_SIZE, RARITY_WEIGHTS, SAFE_POINTS, SLOT_ODDS, STARTER, STEPS } from '@/balance';
+import { BANDS, BONUS_SIZE, FALL_KEEP, ITEM_BASE, ITEM_POWER, ITEM_ROLL_LOW, MAX_PLUS, POINTS, RARITY_LEAN, RARITY_SIZE, RARITY_WEIGHTS, SAFE_POINTS, SLOT_ODDS, STARTER, STARTING_POINTS, STEPS, WEAR_AFTER, WEEKLY_GOAL } from '@/balance';
 
 /* What the dungeon drops, as data: the things you wear, how rare they come, the bonuses they can
    carry, and what each asks of your training before you can wear it. engine.ts drops and wears
@@ -15,8 +15,8 @@ export const SLOT_NAME: Record<ItemSlot, string> = { weapon: 'Weapon', armor: 'A
 
 /** Diablo's colors: white, blue, yellow, orange. */
 export type Rarity = 'common' | 'magic' | 'rare' | 'legendary';
-/** Names and colors here; bonuses, need and power from RARITY_SIZE (src/balance/items.ts). */
-export const RARITY: Record<Rarity, { name: string; color: string; bonuses: readonly [number, number]; need: number; power: number }> = {
+/** Names and colors here; bonuses and power from RARITY_SIZE (src/balance/items.ts). */
+export const RARITY: Record<Rarity, { name: string; color: string; bonuses: readonly [number, number]; power: number }> = {
   common: { name: 'Common', color: '#e2e8f0', ...RARITY_SIZE.common },
   magic: { name: 'Magic', color: '#60a5fa', ...RARITY_SIZE.magic },
   rare: { name: 'Rare', color: '#facc15', ...RARITY_SIZE.rare },
@@ -152,8 +152,14 @@ export { ITEM_POWER };
 /** How big a bonus is at this level, before the roll. */
 const sizeOf = (id: BonusId, level: number) => (BONUSES[id].base + BONUSES[id].per * level) * ITEM_POWER;
 
-/** Stat points an even build has in each stat when a zone opens (this many workouts in). */
-const evenPoints = (workouts: number) => (NEED.start + workouts * NEED.perWorkout) / NEED.stats;
+/** Stat points a player who hits the weekly goal and spreads them over the six stats has in each
+    after this many workouts (what `WEAR_AFTER` asks for). */
+export const evenPoints = (workouts: number) => (STARTING_POINTS + workouts * (POINTS.full + POINTS.week / WEEKLY_GOAL)) / STAT_COUNT;
+const STAT_COUNT = 6;
+/** Which depth band of `WEAR_AFTER` a floor (0-9) is in. */
+const band = (floor: number) => (floor < 3 ? 0 : floor < 7 ? 1 : 2);
+/** Workouts after its zone opens until an item from this floor and rarity can be worn. */
+export const wearAfter = (rarity: Rarity, floor: number) => WEAR_AFTER[rarity][band(floor)];
 
 export interface DropAt {
   /** The zone (0-5), how many workouts in it opens, and the floor (0-9). */
@@ -211,7 +217,7 @@ export function rollItem(rnd: () => number, at: DropAt, rarity: Rarity): Item {
           ? `${mat} ${noun} of ${BONUSES[bonuses[0].id].word}`
           : `${mat} ${noun}`;
   const stat: StatId | null = slot === 'weapon' ? WEAPONS[cls].stat : slot === 'armor' ? 'armor' : null,
-    n = Math.round(evenPoints(at.workouts) * (NEED.fromFloor + NEED.perFloor9 * (at.floor / 9)) * r.need);
+    n = Math.round(evenPoints(at.workouts + wearAfter(rarity, at.floor)));
   return {
     id: Math.floor(rnd() * 2 ** 32).toString(36) + Math.floor(rnd() * 2 ** 32).toString(36),
     slot,
