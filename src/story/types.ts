@@ -208,6 +208,9 @@ export type Portrait =
   | { kind: 'kindled'; size: number; wave?: boolean }
   /** A villager as they look once you've helped them (dancing, running, the letter sealed). */
   | { kind: 'villager'; sprite: 'lia' | 'sol' | 'vela'; size: number }
+  /** A chapter's enemy as the Fog draws it, so the story and the dungeon show the same boss.
+      `stage` is how broken it is (0 whole, 2 nearly gone); the Mirror wears the player's look. */
+  | { kind: 'boss'; boss: 'mirror' | 'knight' | 'plateau' | 'summit'; stage?: 0 | 1 | 2; size: number }
   | { kind: 'none' };
 
 export interface CastMember {

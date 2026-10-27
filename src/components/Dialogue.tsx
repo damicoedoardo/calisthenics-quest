@@ -7,6 +7,7 @@ import { PlaceBackdrop } from './Place';
 import { SoundToggle, useMusic } from './Sound';
 import { Sprite } from './Sprite';
 import { Weather } from './Weather';
+import { useLook } from './Look';
 import { castMember } from '@/story/cast';
 import { PLACES, type PlaceId } from '@/story/places';
 import type { Line, Shot, Words } from '@/story/types';
@@ -92,9 +93,20 @@ function Portrait({ line, gear, classId, flame }: { line: Line; gear: Record<Gea
       return <Kindled size={p.size} wave={p.wave} />;
     case 'villager':
       return <Sprite id={p.sprite} size={p.size} opts={{ after: true }} />;
+    case 'boss':
+      return <Boss boss={p.boss} stage={p.stage ?? 0} size={p.size} gear={gear} classId={classId} />;
     default:
       return null;
   }
+}
+
+/** The Fog's boss sprites, shared with the story. */
+function Boss({ boss, stage, size, gear, classId }: { boss: 'mirror' | 'knight' | 'plateau' | 'summit'; stage: 0 | 1 | 2; size: number; gear: Record<GearSlot, Gear>; classId?: ClassId }) {
+  const look = useLook();
+  if (boss === 'mirror') return <Sprite id="mirrorBoss" opts={{ gear, classId, look }} size={size} />;
+  if (boss === 'knight') return <Sprite id="knightBoss" opts={{ stage }} size={size} />;
+  if (boss === 'plateau') return <Sprite id="plateauBoss" opts={{ stage }} size={size} />;
+  return <Sprite id="summitBoss" size={size} />;
 }
 
 const ENTER = { left: 'animate-enterleft', right: 'animate-enterright', below: 'animate-enterbelow' };

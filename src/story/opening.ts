@@ -9,7 +9,7 @@ export const COLD_OPEN: Line[] = [
   { who: 'narrator', text: 'Not how you looked. How it felt.', pause: 1.2 },
   { who: 'narrator', text: 'Lungs on fire. Hands shaking. And somehow, smiling.' },
   { who: 'narrator', text: 'The good ache the next morning, on the stairs. Laughing about it.', pause: 0.8 },
-  { who: 'narrator', text: "Back then you thought it would always be there. That's the thing about strength.", pause: 1.4 },
+  { who: 'narrator', text: 'Back then you thought it would always be there.', pause: 1.4 },
   { who: 'narrator', text: "It never tells you it's leaving.", pace: 'slow', pause: 1.2 },
 ];
 
@@ -21,7 +21,7 @@ export const FADING: Line[] = [
   { who: 'narrator', text: 'You still have the shoes. They are at the back of a cupboard. You know exactly which one.', pause: 0.8 },
   { who: 'narrator', text: 'Now the stairs feel longer. You walk past old photos a little faster than you used to.' },
   { who: 'narrator', text: 'Some mornings you almost start. Then you work out how far back you would be starting from, and you put that down too.' },
-  { who: 'narrator', text: "Nobody took it from you. That's the part that hurts. You put it down, one day at a time, and forgot where.", pause: 1.2, pace: 'slow' },
+  { who: 'narrator', text: 'Nobody took it from you. You put it down, one day at a time, and forgot where.', pause: 1.2, pace: 'slow' },
   { who: 'narrator', text: 'And somewhere along the way, a voice moved in.', pause: 1.6, music: 'none' },
 ];
 
@@ -71,7 +71,7 @@ export const MEET: Line[] = [
   { who: 'wanderer', text: "You got up. Most people don't, the first time." },
   { who: 'you', text: 'I lost.' },
   { who: 'wanderer', text: "You did. Good. Now you know what you're fighting." },
-  { who: 'wanderer', text: "It isn't a weight, or a number, or your age. It's a voice. And it wears your face." },
+  { who: 'wanderer', text: "You didn't lose to a monster. You lost to a voice that borrowed your face." },
   { who: 'you', text: "It's right, though. I used to be... more." },
   { who: 'wanderer', text: 'You used to be carrying less. That is not the same thing.', pause: 1 },
   { who: 'you', text: "Then why do I feel so ashamed?" },
@@ -80,7 +80,7 @@ export const MEET: Line[] = [
   { who: 'wanderer', text: 'Not in one swing. Nobody beats it in one swing.' },
   { who: 'wanderer', text: 'You beat it the way water beats stone. One drop. Then another. Then another.' },
   { who: 'you', text: 'And when I fail?' },
-  { who: 'wanderer', text: "You will. Many times. Failing isn't the end of the road. Stopping is. And even stopping wasn't the end. Look where you're standing." },
+  { who: 'wanderer', text: "You will. Many times. You stopped once already, remember? Look where you're standing." },
   { who: 'wanderer', text: 'One rule, before we walk. That voice talks to you like an enemy. I never will. Try not to, either.' },
   { who: 'wanderer', text: "Now write to the person you want to become. Not who you were. Who you're going to be." },
 ];
@@ -101,14 +101,14 @@ export const SEALED: Line[] = [
   { who: 'wanderer', text: "This one is empty. Every time you train, a page gets written. Rest days get a page too. Nothing in here is ever torn out." },
   { who: 'narrator', text: 'Something flickers in the ash at your feet. A spark, no bigger than a fingernail.', pause: 1.2 },
   { who: 'flame', text: "...hi. Sorry. I'm small right now. I used to be bigger." },
-  { who: 'flame', text: "I think I'm the part of you that never stopped wanting this." },
+  { who: 'flame', text: "I don't know where I came from. I just remember being warm, a long time ago." },
   { who: 'flame', mood: 'soft', text: "I waited a long time. I'm not upset. I'm just really, really glad you got up.", pace: 'slow' },
 ];
 
 export const FIRST_QUEST: Line[] = [
   { who: 'wanderer', text: 'Your first quest is simple. Show up three times this week.' },
   { who: 'wanderer', text: 'Not perfect. Present.' },
-  { who: 'wanderer', text: "Keep it small. You're not getting it all back this week. You're finding out if you can keep a promise to yourself." },
+  { who: 'wanderer', text: 'Keep it small. Smaller than you think you should.' },
   { who: 'flame', text: 'Every session you do, I grow. Just so you know. No pressure. (Some pressure.)' },
   { who: 'narrator', text: 'Chapter 1: The Ashlands.' },
 ];
