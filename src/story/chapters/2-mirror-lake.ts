@@ -20,7 +20,7 @@ export const MIRROR_LAKE: Chapter = {
     after: "Every time you fight who you were, you're the one who gets hurt. Walk past.",
     keepsake: { name: 'A Shard of the Mirror', text: 'It only shows week one. Look how far that is.' },
     hp: 1.25,
-    dmg: 1.5,
+    dmg: 1.4,
     ground: '#101826',
     fog: '#253a5c',
     // stages: [the Mirror splits into images of itself]

@@ -255,7 +255,7 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
 };
 /** How the Mirror splits: how often (s), when first, how long the images stay, and how long your
     reflections stay; and how much of your HP it costs to hit an image, or a reflection of you. */
-export const SPLIT = { every: 11, first: 6, last: 7, stay: 8, image: 0.08, reflection: 0.04 };
+export const SPLIT = { every: 11, first: 6, last: 7, stay: 8, image: 0.08, reflection: 0.025 };
 /** The Warden of the Ashes guards the last room of the middle floor (floor 5 of 10). */
 export const WARDEN = { name: 'the Warden of the Ashes' };
 /** The floor (from 0) whose last room holds the Warden, or -1 when the dungeon is too short for one. */
@@ -409,7 +409,7 @@ export const BOSSES: Record<FogBoss, MonsterDef & { plates?: number }> = {
     cost: 0,
   },
   mirror: {
-    hp: 700,
+    hp: 600,
     speed: 36,
     dmg: 16,
     r: 16,
