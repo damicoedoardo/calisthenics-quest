@@ -12,7 +12,7 @@ import { STAT_ICON } from './StatPoints';
 import { FogGearCard } from './FogGearCard';
 import { WorldPicker } from './WorldPicker';
 import { flameMood } from '@/story/daily';
-import { FLAME_STAGES, flameStage } from '@/story/flame';
+import { FLAME_STAGES, flameStage, heroVariant } from '@/story/flame';
 
 interface Props {
   state: GameState;
@@ -83,7 +83,7 @@ export function PlayTab({ state, onPlay, update }: Props) {
       <div className="space-y-4">
       <section className="rounded-2xl bg-ink-800 p-4 pixel-border">
         <div className="flex items-center gap-3">
-          <Hero gear={gearOf(state)} classId={state.profile.classId} size={72} />
+          <Hero gear={gearOf(state)} classId={state.profile.classId} size={72} variant={heroVariant(state)} />
           <Ember size={stage.id === 'spark' ? 64 : 44} stage={stage.id} mood={flameMood(state, now)} />
           <div className="min-w-0 flex-1">
             <p className="font-pixel text-xs text-gold-300">The Fog</p>

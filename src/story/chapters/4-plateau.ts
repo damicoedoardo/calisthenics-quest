@@ -39,6 +39,7 @@ export const PLATEAU: Chapter = {
         { who: 'narrator', show: 'plateau', text: 'The road stops climbing. Same rocks, same sky, for days. A stone giant sits across the road, so still it looks like part of the land.' },
         { who: 'hollow', text: "See? Nothing's changing.", shot: { pan: 'center' } },
         { who: 'flame', mood: 'soft', text: "Something is. I can feel it, I just can't see it yet." },
+        { who: 'you', text: "I liked it better when I could see it working." },
         { who: 'wanderer', text: 'Hills are easy. You can see yourself getting higher. This is the hard part of the map.' },
       ],
     },
@@ -49,6 +50,7 @@ export const PLATEAU: Chapter = {
         { who: 'narrator', show: 'plateau', text: 'The Plateau wakes, slowly. It looks at you as if you were weather.', shot: { shake: 'small' } },
         { who: 'plateau', text: '...Same.' },
         { who: 'plateau', text: '...As. ...Yesterday.' },
+        { who: 'you', text: "...Then I will come back tomorrow, and you can say it again." },
         { who: 'flame', mood: 'smoky', text: "Rude. Also, wrong. Probably. I'm pretty sure it's wrong." },
         { who: 'wanderer', text: "Don't look for change every day. Look every month." },
       ],
@@ -152,6 +154,7 @@ export const PLATEAU: Chapter = {
         write: 'Write your own',
         after: [
           { who: 'wanderer', text: 'Nobody can see that from the outside.', pause: 0.6 },
+          { who: 'you', text: "...I didn't know it either. Not until I said it.", pause: 0.8 },
           { who: 'flame', mood: 'soft', text: "I'm keeping that one. I keep all the good ones." },
         ],
       },
@@ -212,6 +215,8 @@ export const PLATEAU: Chapter = {
         { who: 'narrator', show: 'kid', text: 'The kid from the armor is watching, chin in hands.' },
         { who: 'kid', text: "It hasn't cracked. Why don't you stop?" },
         { who: 'mira', text: "Because it has. Inside. You'll see." },
+        { who: 'kid', text: "...How do you know?" },
+        { who: 'mira', text: "I've broken a lot of stones. Every one of them looked like this the day before." },
       ],
     },
     {
@@ -223,6 +228,23 @@ export const PLATEAU: Chapter = {
         { who: 'wanderer', text: 'Lots of people have feet.' },
         { who: 'vela', text: "Funny. I've watched that hooded one cross this flat for years. Always coming down from the mountain. Never going up. Until you.", answer: { id: 'vela', is: 'yes' } },
         { who: 'wanderer', text: "Walk. The dust doesn't keep secrets long, and neither do I." },
+      ],
+    },
+    {
+      // Teaching: the kid trains with you and wants to quit, and you hear yourself say what you
+      // learned. You didn't know you believed it until it came out.
+      id: 'ch4-kid-quits',
+      when: { workouts: 49, chapter: 4 },
+      lines: [
+        { who: 'narrator', show: 'kid', text: 'The kid from the village has been training with you on the flat road. Today they sit down halfway and will not get up.' },
+        { who: 'kid', text: "It's not working. I've done it for ages and I'm still bad." },
+        { who: 'narrator', text: "You know that sentence. You've said it, on this exact road, not long ago.", pause: 1, film: true },
+        { who: 'you', text: 'How long is ages?' },
+        { who: 'kid', text: '...Two weeks.', pause: 0.8 },
+        { who: 'you', text: 'I was bad for weeks. Then I was bad for months, but less. Then one day I noticed I had stopped counting.' },
+        { who: 'kid', text: "That's a terrible speech." },
+        { who: 'you', text: 'I know. Get up anyway.' },
+        { who: 'narrator', show: 'kid', text: 'They do. Walking beside them, you realize you meant every word. You have never heard yourself say it before.', pause: 1 },
       ],
     },
     {
@@ -242,9 +264,8 @@ export const PLATEAU: Chapter = {
       lines: [
         { who: 'narrator', show: 'flame', text: 'A rest day on the flat road. {flame} lies in the dust and watches the clouds go nowhere.', shot: { pan: 'up', seconds: 2 } },
         { who: 'flame', mood: 'sleepy', text: 'People think nothing happens on rest days. Everything happens. Just quietly.' },
-        { who: 'flame', mood: 'soft', text: 'Can I tell you something odd? Sometimes I remember things I shouldn\'t.' },
-        { who: 'flame', mood: 'soft', text: 'Grass stains. Being called in when it got dark, and pretending not to hear.' },
-        { who: 'flame', mood: 'sleepy', text: "I've never had knees. Why do I remember scraped knees?" },
+        { who: 'flame', mood: 'soft', text: 'Can I tell you something? I kept every time you almost believed in yourself. Every "maybe I could". There\'s a whole pile of them.' },
+        { who: 'flame', mood: 'sleepy', text: "The pile's been getting smaller lately. The maybes keep turning into yeses." },
       ],
     },
     {

@@ -23,7 +23,7 @@ engine/figure.ts      the base 64x64 humanoid: body, face, hair, arms, layer ord
 engine/manga.ts       the manga head (the hero's default): face as text art, hair as shapes
 parts/weapons.ts      sword, stick, staff, wand, bow
 characters/*.ts       one file per character: hero, wanderer, mira, ember, book, vela (old Vela),
-                      kindled (the flame's true form), villagers (Lia, Sol, the kid), and the chapter
+                      kindled (a kid made of fire, from the old finale; no scene uses it now), villagers (Lia, Sol, the kid), and the chapter
                       enemies tomorrow, mirror, plateau, summit, and the Fog's wisp, plus the
                       dungeon's monsters: ram, smoke (the Smoker), seeker, splitter (the
                       Splitling, and splitterPop, its one-shot death), shade, and the mid-boss
@@ -72,7 +72,7 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Redraw Mira, Ember, the Book or a chapter enemy | its file in `characters/` (`mira.ts`, `ember.ts`, `book.ts`, `tomorrow.ts`, `mirror.ts`, `plateau.ts`, `summit.ts`) |
 | Change how Lia, Sol or Vela look once you've helped them | `LIA_AFTER`, `SOL_AFTER` in `characters/villagers.ts`, `VELA_AFTER` in `vela.ts`; drawn with `{ after: true }`, and in the story by the cast ids `lia-after`, `sol-after`, `vela-after` |
 | Redraw old Vela (hair, softer eyes, shawl, lamp, cane) | `characters/vela.ts`: her lamp raise is the `raise` clip in `clips.ts` |
-| Redraw the flame's true form (the finale's fire kid) | the `ROWS` and `TIPS` text art in `characters/kindled.ts` (`LOCKS` is the long hair a long or pony look gets) |
+| Redraw the fire kid (unused since the finale changed) | the `ROWS` and `TIPS` text art in `characters/kindled.ts` (`LOCKS` is the long hair a long or pony look gets) |
 | Change a story backdrop's props (Vela's lamp tower, the road, a campfire) | its function in `places.ts` (`lampTower`, `road`...); which place has which props is in `src/story/places.ts` |
 | Change Vela's far tower on the Plateau, or how its lamp flashes | `FAR_TOWER` rows in `places.ts`; a place with it is drawn lit and unlit, and the `beacon` animation in `tailwind.config.ts` flashes the lit copy |
 | Change the looks a player starts with (boy, girl) | `STARTER_LOOKS` in `characters/hero.ts`; the editor's options are in `src/components/LookEditor.tsx` |
@@ -93,7 +93,7 @@ light/shadow edges automatically.
 
 ### Text-row art
 
-The dungeon's monsters and the flame's true form are hand-drawn as text: 32 rows of 32 characters, each character a color
+The dungeon's monsters and the fire kid are hand-drawn as text: 32 rows of 32 characters, each character a color
 from the sprite's palette (`'.'` is empty). `paintRows` puts them on a 32x32 grid, Scale2x doubles it
 to 64x64, then `autoshade` and `outline` run as for every sprite. Eyes, sparks and other fine
 details go on top at 64x64 with the painter, and the animation moves whole layers (`shifted`) or
@@ -121,6 +121,8 @@ eight-frame float where `bob` is the breath, and `lunge` is their attack, a wind
 
 The hero is drawn with the player's look (body, hair, hair color, skin), which `<LookProvider>`
 hands to every `<Hero />` on screen, so the Echo, the Best Self and the Hollow match the player.
+The `kindled` variant is the hero once the flame has fused with them in the finale: a red and
+orange fire aura that flickers (it stands in for the top-tier gear glow).
 
 Long lists show stills, not sheets: `stillFor(id, action, opts, frame)` (`registry.ts`) draws a
 single frame once and caches it (the exercise library's rows draw one as each row scrolls in).

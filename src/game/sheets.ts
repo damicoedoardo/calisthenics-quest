@@ -2,6 +2,7 @@ import { gearOf, type GameState } from '@/lib/game';
 import type { Zone } from '@/lib/fog';
 import { sheetFor, type Sheet } from '@/sprites/registry';
 import type { HeroOpts } from '@/sprites/characters/hero';
+import { heroVariant } from '@/story/flame';
 import type { BossSheetKey, Sheets } from './rules';
 
 /* Every sprite sheet a Fog run draws with. sheetFor caches what it builds, so drawing them while
@@ -54,13 +55,15 @@ function jobs(state: GameState, zone: Zone): Job[] {
     classId = state.profile.classId,
     look = state.profile.look,
     hero = { gear, classId, look };
+  // Once the flame has fused with you, you burn with it down there too.
+  const you = { ...hero, variant: heroVariant(state) };
   const plain = ['ember', 'mirror', 'golem', 'knight', 'book', 'summit', 'splitterPop', 'warden', 'lanternMid', 'foremanMid', 'sandGolemMid', 'sandGolemMidStone', 'whisperMid', 'galeMid'] as const;
   // The regular monsters dressed for this zone (wet glass at the lake, scrap iron at the forges...).
   const dressed = ['slime', 'wisp', 'ram', 'smoke', 'seeker', 'splitter', 'splitling', 'shade'] as const;
   return [
-    ['hero', () => sheetFor('hero', 'idle', hero)],
-    ['heroAttack', () => sheetFor('hero', 'attack', hero)],
-    ['heroWalk', () => sheetFor('hero', 'walk', hero)],
+    ['hero', () => sheetFor('hero', 'idle', you)],
+    ['heroAttack', () => sheetFor('hero', 'attack', you)],
+    ['heroWalk', () => sheetFor('hero', 'walk', you)],
     ['hollow', () => sheetFor('hero', 'idle', { ...hero, variant: 'hollow' })],
     ['echo', () => sheetFor('hero', 'idle', { ...hero, variant: 'echo' })],
     ...plain.map((id): Job => [id, () => sheetFor(id, 'idle')]),

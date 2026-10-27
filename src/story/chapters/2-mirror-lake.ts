@@ -41,6 +41,7 @@ export const MIRROR_LAKE: Chapter = {
         { who: 'narrator', text: 'Something in your chest drops. You know that face. You used to be that face.', pause: 1, film: true },
         { who: 'wanderer', text: "That's not you. That's a photograph. Photographs don't train." },
         { who: 'flame', mood: 'scared', text: "He's very shiny. Are we supposed to fight him? I don't want to fight him. He looks like you." },
+        { who: 'wanderer', text: "You don't have to fight him. You only have to stop believing him." },
       ],
     },
     {
@@ -55,6 +56,8 @@ export const MIRROR_LAKE: Chapter = {
         { who: 'narrator', text: 'You put your hand in the water, and both faces break into ripples.', pause: 1.2, film: true },
         { who: 'flame', mood: 'soft', text: "Hey. Look at me instead. I'm warmer than a lake." },
         { who: 'wanderer', text: "The gap isn't a debt, you know. Nobody is coming to collect it." },
+        { who: 'you', text: "...It feels like one.", pause: 0.8 },
+        { who: 'wanderer', text: "I know. It still isn't." },
       ],
     },
     {
@@ -64,6 +67,9 @@ export const MIRROR_LAKE: Chapter = {
         { who: 'narrator', show: 'flame', text: '{flame} rises up tall, and two tiny arms pop out of the fire.', shot: { zoom: 'in', seconds: 1.4 } },
         { who: 'flame', mood: 'happy', text: 'I can light the whole path now. Look how far back it goes.' },
         { who: 'flame', text: "And I've got arms! Tiny ones. I'll hold your rest timer from now on." },
+        { who: 'flame', mood: 'soft', text: "Want to know why I grew? You looked at the lake this month and didn't look away. I think you're someone who can look at themself now." },
+        { who: 'you', text: "...I didn't look away. Huh.", pause: 0.8 },
+        { who: 'flame', text: "Huh is right.", mood: "happy" },
       ],
     },
     {
@@ -75,6 +81,7 @@ export const MIRROR_LAKE: Chapter = {
         { who: 'echo', text: '...What does that have to do with anything?' },
         { who: 'wanderer', text: 'You had time, and nothing to carry. They have both hands full, and they still came. Which of you is stronger?' },
         { who: 'narrator', show: 'echo', text: 'The Echo opens its mouth, and for once nothing comes out.', pause: 0.8 },
+        { who: 'you', text: "...I never thought of it like that.", pause: 1 },
       ],
     },
     {
@@ -107,6 +114,7 @@ export const MIRROR_LAKE: Chapter = {
             after: [
               { who: 'lia', text: "...Thanks. Nobody sits with me any more. They all ask when I'm coming back." },
               { who: 'you', text: "I'm not asking. I'm just sitting." },
+              { who: 'lia', text: "...You've been gone too, haven't you? I can tell. You sit like someone who came back.", pause: 1 },
               { who: 'narrator', show: 'lia', text: "For a long time neither of you says anything. The lake doesn't either. It's the kindest thing it's done all month.", pause: 1.2 },
             ],
           },
@@ -150,6 +158,23 @@ export const MIRROR_LAKE: Chapter = {
         { who: 'mira', text: "Some will. Most are too busy worrying about their own. The ones who matter will just be glad you're back." },
         { who: 'lia', text: "...I think I'll dance tomorrow. No. Today." },
         { who: 'flame', mood: 'happy', text: 'Did you hear that? TODAY.' },
+      ],
+    },
+    {
+      // You are not the only one: the shore is lined with the stones of everyone who came back.
+      id: 'ch2-shore',
+      when: { workouts: 20, chapter: 2 },
+      music: 'memory',
+      shots: [{ pan: 'right', seconds: 2 }],
+      lines: [
+        { who: 'narrator', text: 'Walking the shore, you notice the stones. Small, warm-looking, laid out in lines. Hundreds of lines.' },
+        { who: 'you', text: 'Who left these?' },
+        { who: 'wanderer', text: 'Everyone who came back. Everyone who sat right where you sat, and missed who they were, and got up anyway.', pause: 0.8 },
+        { who: 'narrator', text: 'You crouch down. Some lines are short. Some stop, and start again a little further on.', pause: 1.2, film: true },
+        { who: 'flame', mood: 'soft', text: 'Look. That one stops for ages. Then it keeps going.' },
+        { who: 'you', text: '...I thought it was just me.', pause: 1 },
+        { who: 'wanderer', text: "It's never just you. The Hollow only says that because it works." },
+        { who: 'narrator', text: 'Before you leave, you put one of your stones at the end of a line that stopped. Just to keep it company.', pause: 1, film: true },
       ],
     },
     {
@@ -228,6 +253,7 @@ export const MIRROR_LAKE: Chapter = {
         { who: 'you', text: 'You did fine. You did so fine.', pace: 'slow', pause: 1 },
         { who: 'echo', text: "...You're further than week one. I hate that I'm glad about it.", music: 'rise' },
         { who: 'flame', mood: 'happy', text: 'Can we keep a piece? The week one piece. For the shelf. We need a shelf.' },
+        { who: 'wanderer', text: "Put the two pieces side by side. Week one and today. That's the only comparison that's fair." },
       ],
     },
 

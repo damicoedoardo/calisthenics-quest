@@ -215,7 +215,10 @@ describe('the months 4 to 6 rules', () => {
       const answers = Object.fromEntries(VILLAGERS.map((v) => [v, helped.includes(v) ? 'yes' : 'no']));
       const due = pendingScenes(inTheFog(63, answers), now).filter((s) => s.id.startsWith('ch5-gathering'));
       expect(due, `helped ${helped.join(', ') || 'nobody'}`).toHaveLength(1);
-      const lines = renderLines(due[0].lines, storyWords(inTheFog(63, answers)));
+      // Who arrives comes after the call-out choice, whichever way it goes.
+      const ask = due[0].ask,
+        arrive = ask?.kind === 'choice' ? ask.choices.flatMap((c) => c.after ?? []) : [];
+      const lines = renderLines([...due[0].lines, ...arrive], storyWords(inTheFog(63, answers)));
       // A villager you helped may appear in their after look (`lia-after`).
       const speakers = new Set(lines.flatMap((l) => [l.who, l.show ?? l.who]).map((id) => id.replace(/-after$/, '')));
       for (const v of VILLAGERS) expect(speakers.has(v as keyof typeof CAST), `${v} when helped ${helped.join(', ') || 'nobody'}`).toBe(helped.includes(v));
@@ -250,10 +253,10 @@ describe('the months 4 to 6 rules', () => {
   });
 
   it('reads a stand-in line when the heart answer is missing, and the answer when it is there', () => {
-    const finale = ALL_SCENES.find((p) => p.scene.id === 'finale')!.scene;
-    const flame = (heart1: string) => renderLines(finale.lines, { ...storyWords(initialState()), heart1 }).filter((l) => l.text.startsWith('I remember now'));
-    expect(flame('').map((l) => l.text)).toEqual(["I remember now. I'm the part of you that loved moving, back before anyone counted anything."]);
-    expect(flame('feeling free').map((l) => l.text)).toEqual(["I remember now. I'm the part of you that loved feeling free."]);
+    const scene = ALL_SCENES.find((p) => p.scene.id === 'ch6-remembering')!.scene;
+    const flame = (heart1: string) => renderLines(scene.lines, { ...storyWords(initialState()), heart1 }).filter((l) => l.text.startsWith('It used to be like that'));
+    expect(flame('').map((l) => l.text)).toEqual(['It used to be like that all the time, when you were small. Nobody had to tell you that you could.']);
+    expect(flame('feeling free').map((l) => l.text)).toEqual(['It used to be like that all the time. When you were small and loved feeling free, nobody had to tell you that you could.']);
   });
 });
 
