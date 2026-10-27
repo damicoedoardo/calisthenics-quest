@@ -318,8 +318,8 @@ class DungeonScene extends Phaser.Scene {
   run: Run;
   bot = false;
   private hero!: Phaser.GameObjects.Sprite;
-  /** The light of the hero's best-forged item (a new look every few pluses, BANDS): a glow, then sparks, then flames. */
-  private plusLook: { band: number; aura: Phaser.GameObjects.Image | null; fx: Phaser.GameObjects.Particles.ParticleEmitter[] } = { band: 0, aura: null, fx: [] };
+  /** The hero's light: the best-forged item's glow and sparks (BANDS), a legendary's flames. `band` is a key: band * 2, +1 with a legendary. */
+  private plusLook: { band: number; aura: Phaser.GameObjects.Image | null; fire: Phaser.GameObjects.Image | null; fx: Phaser.GameObjects.Particles.ParticleEmitter[] } = { band: 0, aura: null, fire: null, fx: [] };
   private foes = new Map<number, { s: Phaser.GameObjects.Sprite; base: number; born: number; squash: number; flash: number; tex: string; attackAt: number }>();
   /** Friends on the Summit's climb. */
   private allies: Phaser.GameObjects.Sprite[] = [];
@@ -1379,34 +1379,46 @@ class DungeonScene extends Phaser.Scene {
     };
   }
 
-  /** The hero's light for the best-forged thing they wear: none below +4, a glow, an aura in the
-      item's rarity color, sparks from +10, flames from +13. Still with reduced motion. */
+  /** The hero's light: the best-forged thing they wear shines (a glow from +4, sparks from +10; the
+      sprite's own aura grows with it, see drawHero), and a worn legendary burns with red flames.
+      Still with reduced motion. */
   private wearLook() {
     const worn = Object.values(this.run.hero.gear.worn).filter((x): x is Item => !!x),
       top = worn.reduce<Item | null>((b, x) => ((x.plus ?? 0) > (b?.plus ?? 0) ? x : b), null),
-      band = top ? bandOf(top.plus ?? 0) : 0;
-    if (band === this.plusLook.band && (band === 0 || this.plusLook.aura)) return;
+      band = top ? bandOf(top.plus ?? 0) : 0,
+      legend = worn.some((x) => x.rarity === 'legendary'),
+      key = band * 2 + (legend ? 1 : 0);
+    if (key === this.plusLook.band && (key === 0 || this.plusLook.aura || this.plusLook.fire)) return;
     this.plusLook.aura?.destroy();
+    this.plusLook.fire?.destroy();
     for (const e of this.plusLook.fx) e.destroy();
-    this.plusLook = { band, aura: null, fx: [] };
-    const color = top && glowOf(top);
-    if (!top || !color) return;
-    const b = BANDS[band],
-      tint = hex(color),
+    this.plusLook = { band: key, aura: null, fire: null, fx: [] };
+    const color = top && glowOf(top),
       still = reducedMotion();
-    const aura = this.add.image(this.hero.x, this.hero.y, 'mist').setTint(tint).setAlpha(0.18 + 0.06 * band).setScale(1.4 + 0.25 * band).setBlendMode(Phaser.BlendModes.ADD);
-    if (!still) this.tweens.add({ targets: aura, alpha: aura.alpha * 0.55, scale: aura.scale * 1.08, duration: 1100 - 120 * band, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.plusLook.aura = aura;
-    if (still) return;
-    if (b.sparks) {
-      const e = this.add.particles(0, 0, 'dot', { speed: { min: 10, max: 40 }, lifespan: 600, frequency: band >= 4 ? 70 : 140, alpha: { start: 0.9, end: 0 }, scale: { start: 0.9, end: 0.2 }, tint: [tint, 0xffffff], emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, 16) } as Phaser.Types.GameObjects.Particles.EmitZoneData, maxAliveParticles: 24 });
-      e.startFollow(this.hero).setDepth(90000);
-      this.plusLook.fx.push(e);
+    if (top && color && band) {
+      const tint = hex(color);
+      const aura = this.add.image(this.hero.x, this.hero.y, 'mist').setTint(tint).setAlpha(0.18 + 0.06 * band).setScale(1.4 + 0.25 * band).setBlendMode(Phaser.BlendModes.ADD);
+      if (!still) this.tweens.add({ targets: aura, alpha: aura.alpha * 0.55, scale: aura.scale * 1.08, duration: 1100 - 120 * band, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.plusLook.aura = aura;
+      if (!still && BANDS[band].sparks) {
+        const e = this.add.particles(0, 0, 'dot', { speed: { min: 10, max: 40 }, lifespan: 600, frequency: band >= 4 ? 70 : 140, alpha: { start: 0.9, end: 0 }, scale: { start: 0.9, end: 0.2 }, tint: [tint, 0xffffff], emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, 16) } as Phaser.Types.GameObjects.Particles.EmitZoneData, maxAliveParticles: 24 });
+        e.startFollow(this.hero).setDepth(90000);
+        this.plusLook.fx.push(e);
+      }
     }
-    if (b.blaze) {
-      const e = this.add.particles(0, 0, 'mist', { speedY: { min: -60, max: -30 }, speedX: { min: -8, max: 8 }, lifespan: 520, frequency: band >= 5 ? 45 : 80, alpha: { start: 0.5, end: 0 }, scale: { start: 0.22, end: 0.04 }, tint: band >= 5 ? [0xef4444, 0xfbbf24] : [0xfb923c, 0xfde68a], blendMode: Phaser.BlendModes.ADD, emitZone: { type: 'random', source: new Phaser.Geom.Rectangle(-10, -6, 20, 16) } as Phaser.Types.GameObjects.Particles.EmitZoneData, maxAliveParticles: 30 });
-      e.startFollow(this.hero).setDepth(90000);
-      this.plusLook.fx.push(e);
+    if (legend) {
+      // A red glow under the hero, like the plus's, that breathes fast.
+      const fire = this.add.image(this.hero.x, this.hero.y, 'mist').setTint(0xef4444).setAlpha(0.5).setScale(2.4).setBlendMode(Phaser.BlendModes.ADD);
+      if (!still) this.tweens.add({ targets: fire, alpha: 0.28, scale: 2.6, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      this.plusLook.fire = fire;
+    }
+    if (legend && !still) {
+      const sparks = this.add.particles(0, 0, 'dot', { speed: { min: 10, max: 40 }, lifespan: 600, frequency: 70, alpha: { start: 0.9, end: 0 }, scale: { start: 0.9, end: 0.2 }, tint: [0xef4444, 0xffffff], emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, 16) } as Phaser.Types.GameObjects.Particles.EmitZoneData, maxAliveParticles: 24 });
+      const flames = this.add.particles(0, 0, 'mist', { speedY: { min: -60, max: -30 }, speedX: { min: -8, max: 8 }, lifespan: 520, frequency: 35, alpha: { start: 0.7, end: 0 }, scale: { start: 0.3, end: 0.05 }, tint: [0xef4444, 0xfbbf24], blendMode: Phaser.BlendModes.ADD, emitZone: { type: 'random', source: new Phaser.Geom.Rectangle(-10, -6, 20, 16) } as Phaser.Types.GameObjects.Particles.EmitZoneData, maxAliveParticles: 30 });
+      for (const e of [sparks, flames]) {
+        e.startFollow(this.hero).setDepth(90000);
+        this.plusLook.fx.push(e);
+      }
     }
   }
 
@@ -1424,6 +1436,7 @@ class DungeonScene extends Phaser.Scene {
       playing = h.anims.currentAnim?.key;
     h.setPosition(hx, hy).setDepth(hy);
     this.plusLook.aura?.setPosition(hx, hy + 4).setDepth(hy - 1);
+    this.plusLook.fire?.setPosition(hx, hy + 4).setDepth(hy - 1);
     if (moving) {
       if (Math.abs(across) > 5) h.setFlipX(across < 0);
       h.setAngle(Math.sign(across) * 3);
