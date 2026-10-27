@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Play } from 'lucide-react';
 import { Sprite } from './Sprite';
 import { Ember } from './Characters';
 import { Hero } from './Hero';
@@ -153,7 +152,7 @@ export function PlayTab({ state, onPlay }: Props) {
               </div>
               {open && (
                 <button onClick={() => onPlay(z)} className="flex items-center gap-1.5 rounded-xl bg-gold-400 px-3 py-2 font-pixel text-[9px] text-ink-950 active:scale-95">
-                  <Play size={12} className="fill-ink-950" />
+                  <Sprite id="uiIcon" opts={{ name: 'play' }} size={14} label="" />
                   {st.state === 'cleared' ? 'Again' : 'Play'}
                 </button>
               )}

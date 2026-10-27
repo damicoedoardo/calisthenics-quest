@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bookmark, BookOpen, ChevronRight, Flame, Play, X } from 'lucide-react';
 import { BookOfDays } from './BookOfDays';
 import { Ember, Enemy, Hollow } from './Characters';
 import { SitByFire } from './SitByFire';
@@ -156,7 +155,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
         onClick={() => onStart(inProgress ? state.draft!.checkin : checkin)}
         className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] transition active:translate-y-1 active:shadow-none"
       >
-        <Play size={16} className="fill-ink-950" />
+        <Sprite id="uiIcon" opts={{ name: 'play' }} size={14} label="" />
         {inProgress ? 'Continue quest' : doneToday ? 'Start the next quest' : 'Start quest'}
       </button>
 
@@ -227,7 +226,7 @@ function RestCard({ state, now, onSit }: { state: GameState; now: Date; onSit: (
       ) : (
         <>
           <button onClick={onSit} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-ink-800 py-3 text-sm text-orange-200 ring-1 ring-orange-300/25 active:scale-[.98]">
-            <Flame size={16} /> Sit by the fire · 1 minute
+            <Sprite id="uiIcon" opts={{ name: 'flame' }} size={18} label="" /> Sit by the fire · 1 minute
           </button>
           <p className="mt-2 text-xs text-slate-500">
             {fullDayOff ? 'A full day of air: your Fog runs today start Rested.' : 'It counts as rest: your Fog runs today start Rested.'}
@@ -254,13 +253,13 @@ function QuoteCard({ state, now, update, onOpenBook }: { state: GameState; now: 
           aria-pressed={!!page.kept}
           className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs ${page.kept ? 'bg-gold-400/15 text-gold-300' : 'bg-ink-800 text-slate-300'}`}
         >
-          <Bookmark size={13} className={page.kept ? 'fill-gold-400 text-gold-400' : ''} /> {page.kept ? 'Kept' : 'Keep'}
+          <Sprite id="uiIcon" opts={{ name: page.kept ? 'bookmarkKept' : 'bookmark' }} size={14} label="" /> {page.kept ? 'Kept' : 'Keep'}
         </button>
       </div>
       <button onClick={onOpenBook} className="mt-3 flex w-full items-center gap-2 border-t border-ink-700 pt-3 text-left text-xs text-slate-400">
-        <BookOpen size={14} />
+        <Sprite id="uiIcon" opts={{ name: 'book' }} size={22} label="" />
         <span className="flex-1">Book of Days · {pages} {pages === 1 ? 'page' : 'pages'}</span>
-        <ChevronRight size={14} />
+        <Sprite id="uiIcon" opts={{ name: 'chevron' }} size={12} label="" />
       </button>
     </section>
   );
@@ -297,7 +296,7 @@ function InstallHint() {
         }}
         className="-m-2 p-2 text-sky-300"
       >
-        <X size={18} />
+        <Sprite id="uiIcon" opts={{ name: 'close' }} size={18} label="" />
       </button>
     </div>
   );

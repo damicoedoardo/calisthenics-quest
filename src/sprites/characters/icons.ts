@@ -851,8 +851,10 @@ export const ZONE_ICONS: PixelArt[] = [
   },
 ];
 
-/** Small marks for the screens around the game: a heart (full or spent), a check, a padlock. */
-export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock', PixelArt> = {
+/** Small marks for the screens around the game: a heart (full or spent), a check, a padlock, a
+    bookmark (kept or not), the Book of Days, an arrow on, a little flame (no face: that's Ember's),
+    play, and close. */
+export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookmark' | 'bookmarkKept' | 'book' | 'chevron' | 'flame' | 'play' | 'close', PixelArt> = {
   heart: {
     rows: [
       '.rr.rr.',
@@ -906,5 +908,33 @@ export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock', PixelAr
       'kkkkkkkkk',
     ],
     palette: { k: K, s: '#64748b', S: '#cbd5e1', Y: '#fde68a', y: '#d4a017' },
+  },
+  bookmark: {
+    rows: ['sssss', 's...s', 's...s', 's...s', 's...s', 'ss.ss', 's...s'],
+    palette: { s: '#94a3b8' },
+  },
+  bookmarkKept: {
+    rows: ['YYYYY', 'YyyyY', 'YyWyY', 'YyyyY', 'YyyyY', 'YY.YY', 'Y...Y'],
+    palette: { Y: '#d4a017', y: '#fbbf24', W: '#fde68a' },
+  },
+  book: {
+    rows: ['kkkkkkkk.', 'kbbbbbbwk', 'kbYYYYbwk', 'kbbbbbbwk', 'kbbYYbbwk', 'kbbbbbbwk', 'kBBBBBBwk', 'kkkkkkkk.'],
+    palette: { k: '#1c1917', b: '#9a3412', B: '#7c2d12', Y: '#fbbf24', w: '#e7e5e4' },
+  },
+  chevron: {
+    rows: ['s...', 'ss..', '.ss.', '..ss', '.ss.', 'ss..', 's...'],
+    palette: { s: '#94a3b8' },
+  },
+  flame: {
+    rows: ['...o...', '...oo..', '..ooo..', '.ooyoo.', '.oyyyo.', 'ooyWyoo', 'ooyWyoo', '.ooyoo.', '..ooo..'],
+    palette: { o: '#f97316', y: '#fde68a', W: '#ffffff' },
+  },
+  play: {
+    rows: ['k....', 'kk...', 'kkk..', 'kkkk.', 'kkkkk', 'kkkk.', 'kkk..', 'kk...', 'k....'],
+    palette: { k: K },
+  },
+  close: {
+    rows: ['x.....x', 'xx...xx', '.xx.xx.', '..xxx..', '.xx.xx.', 'xx...xx', 'x.....x'],
+    palette: { x: '#7dd3fc' },
   },
 };
