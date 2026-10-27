@@ -487,6 +487,10 @@ export function createRun(setup: RunSetup): Run {
 const later = (run: Run, s: number, fn: () => void) => run.timers.push({ at: run.t + s, run: fn });
 const emit = (run: Run, e: GameEvent) => run.events.push(e);
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
+// The same as Math.hypot(dx, dy) < r and > r, but most pairs are far apart, and a box test says so
+// without the square root. Same answers to the last bit, so replays don't move.
+const closer = (dx: number, dy: number, r: number) => dx < r && dx > -r && dy < r && dy > -r && Math.hypot(dx, dy) < r;
+const farther = (dx: number, dy: number, r: number) => dx > r || dx < -r || dy > r || dy < -r || Math.hypot(dx, dy) > r;
 
 // ---------- the floor's map ----------
 
@@ -784,7 +788,10 @@ function enterRoom(run: Run, from: Side | null) {
 }
 
 /** Whether a body of radius r at x, y would sit inside a pillar. */
-const inPillar = (run: Run, x: number, y: number, r: number) => run.terrain.pillars.some((p) => Math.hypot(p.x - x, p.y - y) < p.r + r);
+function inPillar(run: Run, x: number, y: number, r: number) {
+  for (const p of run.terrain.pillars) if (closer(p.x - x, p.y - y, p.r + r)) return true;
+  return false;
+}
 
 /** A point in the room for a monster: away from you and out of the pillars. */
 function spawnPoint(run: Run): [number, number] {
@@ -1111,8 +1118,9 @@ function outOfPillars(run: Run, o: { x: number; y: number }, r: number) {
   for (const p of run.terrain.pillars) {
     const dx = o.x - p.x,
       dy = o.y - p.y,
-      d = Math.hypot(dx, dy) || 1,
       min = p.r + r;
+    if (!closer(dx, dy, min)) continue;
+    const d = Math.hypot(dx, dy) || 1;
     if (d >= min) continue;
     o.x = p.x + (dx / d) * min;
     o.y = p.y + (dy / d) * min;
@@ -1120,7 +1128,9 @@ function outOfPillars(run: Run, o: { x: number; y: number }, r: number) {
 }
 
 function clearBullets(run: Run, x: number, y: number, r: number) {
-  run.bullets = run.bullets.filter((b) => Math.hypot(b.x - x, b.y - y) > r);
+  // Only build a new list when a shot goes.
+  if (run.bullets.every((b) => farther(b.x - x, b.y - y, r))) return;
+  run.bullets = run.bullets.filter((b) => farther(b.x - x, b.y - y, r));
 }
 
 // ---------- monsters ----------
@@ -1384,11 +1394,11 @@ function moveBullets(run: Run) {
     }
     if (inPillar(run, b.x, b.y, b.r - 2)) return false;
     for (const br of run.terrain.barrels)
-      if (br.alive && Math.hypot(br.x - b.x, br.y - b.y) < BARREL.r + b.r) {
+      if (br.alive && closer(br.x - b.x, br.y - b.y, BARREL.r + b.r)) {
         blowUp(run, br);
         return false;
       }
-    if (Math.hypot(b.x - h.x, b.y - h.y) < b.r + HERO_R - 2) {
+    if (closer(b.x - h.x, b.y - h.y, b.r + HERO_R - 2)) {
       if (run.t < run.ghostUntil) return true;
       hurt(run, b.dmg, 'shot');
       return false;
@@ -1888,12 +1898,12 @@ function moveShots(run: Run) {
     s.y += s.vy * STEP;
     if (s.x < ROOM.wall || s.x > run.area.w - ROOM.wall || s.y < ROOM.wall || s.y > run.area.h - ROOM.wall || inPillar(run, s.x, s.y, 2)) return false;
     for (const br of run.terrain.barrels)
-      if (br.alive && Math.hypot(br.x - s.x, br.y - s.y) < BARREL.r + 4) {
+      if (br.alive && closer(br.x - s.x, br.y - s.y, BARREL.r + 4)) {
         blowUp(run, br);
         return false;
       }
     let f: Foe | null = null;
-    for (const o of run.foes) if (o.alive && !s.hit.has(o) && run.t >= o.bornUntil && !untouchable(run, o) && Math.hypot(o.x - s.x, o.y - s.y) < o.def.r + 6) f = o;
+    for (const o of run.foes) if (o.alive && !s.hit.has(o) && run.t >= o.bornUntil && !untouchable(run, o) && closer(o.x - s.x, o.y - s.y, o.def.r + 6)) f = o;
     if (!f) return true;
     s.hit.add(f);
     if (s.kind === 'orb') {
@@ -1952,12 +1962,12 @@ function skills(run: Run) {
         fx = h.x + Math.cos(a) * FLAME.orbit,
         fy = h.y + Math.sin(a) * FLAME.orbit;
       for (const f of run.foes) {
-        if (!f.alive || now < f.flameAt || Math.hypot(f.x - fx, f.y - fy) >= FLAME.touch + f.def.r - 10) continue;
+        if (!f.alive || now < f.flameAt || !closer(f.x - fx, f.y - fy, FLAME.touch + f.def.r - 10)) continue;
         f.flameAt = now + FLAME.every / 1000;
         damage(run, f, pow(run, FLAME.dmg), 60, fx, fy);
       }
       // A flame also eats the shots it touches.
-      run.bullets = run.bullets.filter((b) => Math.hypot(b.x - fx, b.y - fy) > 12);
+      clearBullets(run, fx, fy, 12);
     }
   }
   const spark = run.ups.spark ?? 0;

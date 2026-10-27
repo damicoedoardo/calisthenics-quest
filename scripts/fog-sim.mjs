@@ -122,11 +122,17 @@ if (!isMainThread) {
     }
   } else {
     // For each zone, the scale on its enemies' hp and damage that puts the average of
-    // "when it opens" and "later" (6 workouts on, 18 for the last two zones: laterBy in src/sim/season.ts) on the middle of the two targets, by bisection.
+    // "when it opens" and "later" (6 workouts on, 18 for the last two zones: laterBy in src/sim/season.ts) on the middle of the two targets.
+    // The win rate falls with the scale along an S curve: logit(rate) = a - b * ln(scale). One
+    // measurement and a typical slope give the first guess; each new one fits the curve again, so a
+    // zone usually lands in two or three measurements. All zones search at once, so no core waits.
     const ZONES = [...new Set(snaps.map((s) => s.zone))];
     const { ZONES: zones } = await import(`${root}src/lib/fog.ts`);
     console.log(`Aim: ${pct(aimOpen)} of runs won when a zone opens, ${pct(aimLater)} later on (all classes together).\n`);
-    for (const z of ZONES) {
+    const logit = (p) => Math.log(p / (1 - p));
+    // Measured on zone 2: from scale 1 to 1.5 the win rate fell from 74% to 16%.
+    const SLOPE = 6;
+    const tuneZone = async (z) => {
       const open = snaps.find((s) => s.zone === z && s.label.endsWith('open')),
         later = snaps.find((s) => s.zone === z && s.label.endsWith('later'));
       const both = [open, later].filter(Boolean);
@@ -134,24 +140,36 @@ if (!isMainThread) {
       const at = async (scale) => {
         const r = await Promise.all(both.map((s) => measure(s, scale)));
         const rates = r.map((per) => rate(per.flatMap((p) => p.res)));
-        return { scale, rates, avg: rates.reduce((a, b) => a + b, 0) / rates.length, per: r };
+        const avg = rates.reduce((a, b) => a + b, 0) / rates.length,
+          n = r.flat().reduce((k, p) => k + p.res.length, 0);
+        // Half a win either way, so 0% and 100% still have a place on the curve.
+        return { scale, rates, avg, y: logit((avg * n + 0.5) / (n + 1)), per: r };
       };
-      // Bisection on a log scale, stopping once within 4 points of the aim.
-      let lo = 0.3,
-        hi = 3,
-        best = await at(1);
-      const now1 = best;
-      for (let i = 0; i < 7 && Math.abs(best.avg - aim) > 0.04; i++) {
-        const mid = Math.sqrt(lo * hi);
-        const m = await at(mid);
+      const now1 = await at(1),
+        pts = [now1];
+      let best = now1;
+      for (let i = 0; i < 6 && Math.abs(best.avg - aim) > 0.04; i++) {
+        // The slope: the line through the two points closest to the aim (the curve bends near 0%
+        // and 100%), or the typical one while there is only one.
+        let b = SLOPE;
+        const [p, q] = [...pts].sort((u, v) => Math.abs(u.y - logit(aim)) - Math.abs(v.y - logit(aim)));
+        if (q && Math.abs(Math.log(p.scale / q.scale)) > 0.01) b = Math.min(20, Math.max(1.5, -(p.y - q.y) / Math.log(p.scale / q.scale)));
+        // From the closest point, along that slope to the aim; never more than 2x in one go.
+        const step = Math.min(Math.log(2), Math.max(-Math.log(2), (best.y - logit(aim)) / b)),
+          next = Math.min(3, Math.max(0.3, best.scale * Math.exp(step)));
+        if (pts.some((p) => Math.abs(Math.log(p.scale / next)) < 0.005)) break;
+        const m = await at(next);
+        pts.push(m);
         if (Math.abs(m.avg - aim) < Math.abs(best.avg - aim)) best = m;
-        if (m.avg > aim) lo = mid;
-        else hi = mid;
       }
+      return { z, both, now1, best, tries: pts.length };
+    };
+    const found = await Promise.all(ZONES.map(tuneZone));
+    for (const { z, both, now1, best, tries } of found) {
       const zone = zones[z];
       const show = (m) => both.map((s, i) => `${s.label.split('-')[1]} ${pct(m.rates[i])}`).join(', ');
       console.log(`Zone ${z + 1} ${zone.name}: now hp ${zone.hp}, dmg ${zone.dmg} → ${show(now1)}`);
-      console.log(`  scale ${best.scale.toFixed(2)}: hp ${(zone.hp * best.scale).toFixed(2)}, dmg ${(zone.dmg * best.scale).toFixed(2)} → ${show(best)}`);
+      console.log(`  scale ${best.scale.toFixed(2)}: hp ${(zone.hp * best.scale).toFixed(2)}, dmg ${(zone.dmg * best.scale).toFixed(2)} → ${show(best)}   (${tries} measured)`);
       for (const [i, s] of both.entries()) console.log(`    ${s.label.padEnd(12)} ${best.per[i].map((p) => `${p.cls} ${pct(rate(p.res))}`).join('  ')}`);
     }
   }
