@@ -36,13 +36,14 @@ export function ExerciseLibrary({ state, onClose }: { state: GameState; onClose:
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-ink-950">
-      <header className="flex items-center justify-between px-4 pb-2 pt-[max(1rem,env(safe-area-inset-top))]">
+      <header className="land-safe-x flex items-center justify-between px-4 pb-2 pt-[max(1rem,env(safe-area-inset-top))] [@media(orientation:landscape)_and_(max-height:600px)]:pb-1 [@media(orientation:landscape)_and_(max-height:600px)]:pt-[max(0.5rem,env(safe-area-inset-top))]">
         <h1 className="font-pixel text-xs text-gold-300">Exercise library</h1>
         <button onClick={onClose} className="p-2 text-slate-400" aria-label="Close the library">
           <X size={20} />
         </button>
       </header>
-      <div className="space-y-2 px-4 pb-3">
+      {/* Held sideways: search and filters on one line, the list in two columns. */}
+      <div className="land-safe-x space-y-2 px-4 pb-3 [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-[minmax(0,4fr)_minmax(0,4fr)_minmax(0,3fr)] [@media(orientation:landscape)_and_(max-height:600px)]:gap-2 [@media(orientation:landscape)_and_(max-height:600px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:600px)]:pb-2">
         <label className="flex items-center gap-2 rounded-xl bg-ink-800 px-3 py-2 ring-1 ring-ink-700 focus-within:ring-sky-400/60">
           <Search size={16} className="text-slate-500" />
           <input
@@ -82,7 +83,7 @@ export function ExerciseLibrary({ state, onClose }: { state: GameState; onClose:
           <span className="shrink-0 text-slate-400">{all ? `${shown.length} of ${all.length}` : 'Loading…'}</span>
         </div>
       </div>
-      <ul className="flex-1 space-y-1.5 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+      <ul className="land-safe-x flex-1 space-y-1.5 overflow-y-auto px-4 pb-[max(1rem,env(safe-area-inset-bottom))] [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:600px)]:content-start [@media(orientation:landscape)_and_(max-height:600px)]:gap-1.5 [@media(orientation:landscape)_and_(max-height:600px)]:space-y-0">
         {shown.map((x) => (
           <li key={x.id}>
             <button onClick={() => setOpen(x)} className="flex w-full items-center gap-3 rounded-xl bg-ink-800 p-2 text-left active:bg-ink-700">
@@ -96,7 +97,7 @@ export function ExerciseLibrary({ state, onClose }: { state: GameState; onClose:
             </button>
           </li>
         ))}
-        {all && shown.length === 0 && <li className="py-8 text-center text-sm text-slate-400">Nothing matches. Try fewer words or another filter.</li>}
+        {all && shown.length === 0 && <li className="py-8 [@media(orientation:landscape)_and_(max-height:600px)]:col-span-2 text-center text-sm text-slate-400">Nothing matches. Try fewer words or another filter.</li>}
       </ul>
     </div>
   );
@@ -110,13 +111,16 @@ function Detail({ state, x, onBack }: { state: GameState; x: LibraryExercise; on
     look: sex === mine.sex ? mine : STARTER_LOOKS[sex],
   }));
   return (
-    <div className="fixed inset-0 z-40 flex flex-col overflow-y-auto bg-ink-950 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-      <header className="sticky top-0 -mx-4 flex items-center gap-2 bg-ink-950 px-2 pb-2 pt-[max(1rem,env(safe-area-inset-top))]">
+    <div className="land-safe-x fixed inset-0 z-40 flex flex-col overflow-y-auto bg-ink-950 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+      <header className="sticky top-0 -mx-4 [@media(orientation:landscape)_and_(max-height:600px)]:z-10 flex items-center gap-2 bg-ink-950 px-2 pb-2 pt-[max(1rem,env(safe-area-inset-top))] [@media(orientation:landscape)_and_(max-height:600px)]:mx-0 [@media(orientation:landscape)_and_(max-height:600px)]:px-0 [@media(orientation:landscape)_and_(max-height:600px)]:pt-[max(0.5rem,env(safe-area-inset-top))]">
         <button onClick={onBack} className="p-2 text-slate-400" aria-label="Back to the library">
           <ArrowLeft size={20} />
         </button>
         <h1 className="font-pixel text-xs leading-relaxed text-gold-300">{x.name}</h1>
       </header>
+      {/* Held sideways: the demos and facts on the left, the how-to on the right. */}
+      <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] [@media(orientation:landscape)_and_(max-height:600px)]:items-start [@media(orientation:landscape)_and_(max-height:600px)]:gap-x-6">
+      <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:block">
       <div className="mt-2 grid grid-cols-2 gap-2">
         {looks.map(({ label, look }) => (
           <figure key={label} className="rounded-2xl bg-ink-900 p-1.5 ring-1 ring-ink-700">
@@ -133,7 +137,9 @@ function Detail({ state, x, onBack }: { state: GameState; x: LibraryExercise; on
         <Fact label="Works" value={cap(x.primary.join(', ') || '–')} />
         <Fact label="Helps" value={cap(x.secondary.join(', ') || '–')} />
       </dl>
-      <h2 className="mt-5 font-pixel text-[10px] text-slate-300">How to</h2>
+      </div>
+      <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:block">
+      <h2 className="mt-5 [@media(orientation:landscape)_and_(max-height:600px)]:mt-2 font-pixel text-[10px] text-slate-300">How to</h2>
       {x.steps.length === 0 && <p className="mt-2 text-sm text-slate-400">No written steps for this one yet.</p>}
       <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-slate-300">
         {x.steps.map((s, i) => (
@@ -161,6 +167,8 @@ function Detail({ state, x, onBack }: { state: GameState; x: LibraryExercise; on
       <p className="mt-6 text-[11px] text-slate-500">
         {x.source === 'catalog' ? 'From free-exercise-db, an open public-domain catalog.' : 'From the FORMA program.'}
       </p>
+      </div>
+      </div>
     </div>
   );
 }

@@ -144,6 +144,8 @@ exports[`sprite registry > art fingerprints 1`] = `
   "flame torch sleepy": "94d981567dcc",
   "flame torch smoky": "b4f8540973e1",
   "flame torch soft": "850d5885dc26",
+  "fogBank attack": "fb979eb9ce03",
+  "fogBank idle": "fb979eb9ce03",
   "foremanMid attack": "2ec631941063",
   "foremanMid idle": "69072fc75da5",
   "galeMid attack": "00dfcb110a60",
@@ -308,6 +310,8 @@ exports[`sprite registry > art fingerprints 1`] = `
   "wisp zone 3": "80c320dcc9a8",
   "wisp zone 4": "fc20d889a9fe",
   "wisp zone 5": "80a71f9bfa8a",
+  "worldLock attack": "c3b10bbf9f8c",
+  "worldLock idle": "c3b10bbf9f8c",
   "zoneIcon attack": "d27b4b5d9e9b",
   "zoneIcon idle": "d27b4b5d9e9b",
 }

@@ -41,10 +41,10 @@ export function AfterSession({ result, before, after, onClose }: Props) {
 
   if (stage === 'battle' && before.chapter) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ink-950 px-6 text-center" onClick={() => hit && setStage('loot')}>
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ink-950 px-6 text-center [@media(orientation:landscape)_and_(max-height:600px)]:py-3" onClick={() => hit && setStage('loot')}>
         <p className="font-pixel text-[10px] text-slate-400">Chapter {before.chapter.n}</p>
         <p className="mt-1 font-pixel text-xs text-gold-300">vs {before.chapter.enemy}</p>
-        <div className="relative mt-8 flex items-end gap-10">
+        <div className="relative mt-8 flex items-end gap-10 [@media(orientation:landscape)_and_(max-height:600px)]:mt-4">
           <Hero gear={gearOf(result.state)} classId={result.state.profile.classId} size={110} bounce={false} />
           <div className={`relative ${hit ? 'animate-shake' : ''} ${defeated && hit ? 'opacity-30 grayscale transition-all duration-700' : ''}`}>
             <Enemy id={before.chapter.enemySprite} size={96} />
@@ -53,7 +53,7 @@ export function AfterSession({ result, before, after, onClose }: Props) {
             )}
           </div>
         </div>
-        <div className="mt-6 flex flex-wrap justify-center">
+        <div className="mt-6 flex flex-wrap justify-center [@media(orientation:landscape)_and_(max-height:600px)]:mt-4">
           {Array.from({ length: before.hearts }).map((_, i) => (
             // The heart this session takes pops as it goes dark.
             <Sprite key={i} id="uiIcon" opts={{ name: i < heartsShown ? 'heart' : 'heartEmpty' }} size={18} label="" className={hit && i === heartsShown && i < before.heartsLeft ? 'animate-pop' : ''} />
@@ -66,7 +66,7 @@ export function AfterSession({ result, before, after, onClose }: Props) {
               ? `${before.chapter.enemy} is defeated!`
               : `Your training hit for ${reps}. One heart down.`}
         </p>
-        {hit && <button className="mt-8 rounded-2xl bg-gold-400 px-8 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309]">Claim loot</button>}
+        {hit && <button className="mt-8 [@media(orientation:landscape)_and_(max-height:600px)]:mt-5 rounded-2xl bg-gold-400 px-8 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309]">Claim loot</button>}
       </div>
     );
   }
@@ -96,7 +96,7 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
 
   return (
     // Scrolls when the card is taller than a small screen (a level-up and new gear at once).
-    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-black/80 p-6 backdrop-blur-sm">
+    <div className="land-safe-x fixed inset-0 z-50 flex overflow-y-auto bg-black/80 p-6 backdrop-blur-sm [@media(orientation:landscape)_and_(max-height:600px)]:py-3">
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
         {pieces.map((p, i) => (
           <span
@@ -106,7 +106,9 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
           />
         ))}
       </div>
-      <div className="m-auto w-full max-w-sm animate-pop rounded-3xl bg-ink-800 p-6 text-center pixel-border">
+      {/* Held sideways: what you earned on the left, the level, gear and the flame's word on the right. */}
+      <div className="m-auto w-full max-w-sm animate-pop rounded-3xl bg-ink-800 p-6 text-center pixel-border [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:gap-x-8 [@media(orientation:landscape)_and_(max-height:600px)]:p-5">
+        <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:block">
         <p className="font-pixel text-sm text-gold-300">{session.kind === 'full' ? 'Quest complete!' : 'Minimum quest!'}</p>
         <ul className="mt-4 space-y-1 text-sm">
           {session.breakdown.map((l, i) => (
@@ -121,12 +123,14 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
           +{points} stat point{points === 1 ? '' : 's'} <span className="text-slate-400">for your champion, on the Hero tab</span>
         </p>
         <p className="mt-1 text-sm text-slate-200">
-          +{EMBERS[session.kind]} embers <span className="text-slate-400">for Mira&apos;s forge, at the camp</span>
+          +{EMBERS[session.kind]} embers <span className="text-slate-400">for Mira&apos;s forge, on the Play tab</span>
         </p>
         {session.better && <p className="mt-1 text-xs text-emerald-300">Better than last time.</p>}
         {!!session.heavier?.length && <p className="mt-1 text-xs text-sky-300">Too easy now: next time add a little weight to {session.heavier.map((id) => planExercises().find((x) => x.id === id)?.name ?? id).join(', ')}.</p>}
+        </div>
+        <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:block">
         {leveled && (
-          <p className="mt-2 font-pixel text-[11px] leading-relaxed text-sky-300">
+          <p className="mt-2 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0 font-pixel text-[11px] leading-relaxed text-sky-300">
             Level {levelAfter}. {lvl.title}.
             <br />
             <span className="text-slate-400">Not because you&apos;re strong. Because you came back.</span>
@@ -134,7 +138,7 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
         )}
 
         {newGear.length > 0 && (
-          <div className="mt-4 flex flex-col items-center">
+          <div className="mt-4 [@media(orientation:landscape)_and_(max-height:600px)]:first:mt-0 flex flex-col items-center">
             <Hero gear={gearOf(result.state)} classId={result.state.profile.classId} size={130} />
             {newGear.map((g) => (
               <p key={g.slot} className="mt-1 text-sm">
@@ -146,7 +150,7 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
         )}
 
         {flameSays && (
-          <p className="mt-4 text-sm italic leading-snug text-slate-300">
+          <p className="mt-4 [@media(orientation:landscape)_and_(max-height:600px)]:first:mt-0 text-sm italic leading-snug text-slate-300">
             <span className="not-italic text-orange-300">{result.state.profile.flame || 'A spark'}:</span> &ldquo;{flameSays}&rdquo;
           </p>
         )}
@@ -154,6 +158,7 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
         <button onClick={onClose} className="mt-6 w-full rounded-2xl bg-gold-400 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
           Continue
         </button>
+        </div>
       </div>
     </div>
   );

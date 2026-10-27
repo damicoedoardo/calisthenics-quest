@@ -16,9 +16,9 @@ signal.
 | Service worker | `public/sw.js`. Pages network-first (a fresh deploy wins), static assets and Google Fonts cache-first. Bump `CACHE` when the caching rules change |
 | Registration and updates | `src/components/ServiceWorker.tsx`, production builds only. On the first visit it sends the worker every file the page already loaded, tagged with the build id, so the app can start offline after a single visit; old builds' files are pruned |
 | Build id | `NEXT_PUBLIC_BUILD_ID` in `next.config.ts` (the Vercel commit sha). `next.config.ts` also serves `/sw.js` with no-cache |
-| Manifest | `src/app/manifest.ts` |
+| Manifest | `src/app/manifest.ts`. `orientation: 'any'`: the installed app turns with the phone (the tabs have a sideways layout, see [screens.md](screens.md)) |
 | Icons | `src/app/icon.svg`, `src/app/apple-icon.png`, `public/icon-*.png` (brand kit in the project's design files) |
-| iOS splash screens | `public/splash/*.png`, one per iPhone size, drawn by `scripts/splash.cjs`; sizes in `src/app/splash-sizes.json`, wired in `src/app/layout.tsx` |
+| iOS splash screens | `public/splash/*.png`, one per iPhone size, drawn by `scripts/splash.cjs`; sizes in `src/app/splash-sizes.json`, wired in `src/app/layout.tsx`. Portrait only: opened sideways, no image matches and iOS shows none |
 
 `public/data/exercises.json` is the exercise library as data for tools outside the app (not used
 by the app itself, which bundles the library), see [../game/exercise-library.md](../game/exercise-library.md).

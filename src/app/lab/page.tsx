@@ -88,6 +88,9 @@ export default function Lab() {
         <Link href="/lab/music" className="rounded-lg bg-ink-800 px-3 py-2 text-xs text-gold-300">
           Music
         </Link>
+        <Link href="/lab/worlds" className="rounded-lg bg-ink-800 px-3 py-2 text-xs text-gold-300">
+          Worlds
+        </Link>
       </header>
 
       <Panel title="Your hero">

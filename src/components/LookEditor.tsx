@@ -27,7 +27,7 @@ const swatch = (on: boolean) => `h-10 w-10 rounded-full transition active:scale-
 
 function Row({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div>
+    <div className="land:col-start-2">
       <p className="mb-2 font-pixel text-[9px] text-slate-500">{label}</p>
       <div className="flex flex-wrap gap-2">{children}</div>
     </div>
@@ -46,8 +46,9 @@ interface EditorProps {
 export function LookEditor({ look, onChange, gear, classId }: EditorProps) {
   const set = (patch: Partial<Look>) => onChange({ ...look, ...patch });
   return (
-    <div className="space-y-4">
-      <div className="flex justify-center rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 py-3">
+    // Sideways: the preview on the left, the choices beside it.
+    <div className="space-y-4 land:grid land:grid-cols-[auto_1fr] land:items-start land:gap-x-5 land:gap-y-3 land:space-y-0">
+      <div className="flex justify-center rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 py-3 land:row-span-4 land:px-6">
         <Hero gear={gear} classId={classId} look={look} size={168} />
       </div>
       <Row label="BODY">

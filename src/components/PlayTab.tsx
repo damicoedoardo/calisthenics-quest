@@ -10,6 +10,7 @@ import { FLAME_AT, ZONES, nextGrowth, powerOf, zoneStatus, type Zone } from '@/l
 import { STATS, pointsFree } from '@/lib/stats';
 import { STAT_ICON } from './StatPoints';
 import { FogGearCard } from './FogGearCard';
+import { WorldPicker } from './WorldPicker';
 import { flameMood } from '@/story/daily';
 import { FLAME_STAGES, flameStage } from '@/story/flame';
 
@@ -17,10 +18,7 @@ interface Props {
   state: GameState;
   onPlay: (zone: Zone) => void;
   update: (fn: (s: GameState) => GameState) => void;
-  onCamp: () => void;
 }
-
-const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 /** The game between workouts: your power from training, and the zones of the Fog. */
 
@@ -51,7 +49,7 @@ function useWarmRun(state: GameState) {
   }, [id]);
 }
 
-export function PlayTab({ state, onPlay, update, onCamp }: Props) {
+export function PlayTab({ state, onPlay, update }: Props) {
   useWarmRun(state);
   const now = new Date();
   const power = powerOf(state, now);
@@ -80,7 +78,9 @@ export function PlayTab({ state, onPlay, update, onCamp }: Props) {
   ];
 
   return (
-    <div className="space-y-4">
+    // Sideways: the worlds on the left, your gear and power on the right.
+    <div className="space-y-4 land:grid land:grid-cols-2 land:items-start land:gap-4 land:space-y-0">
+      <div className="space-y-4">
       <section className="rounded-2xl bg-ink-800 p-4 pixel-border">
         <div className="flex items-center gap-3">
           <Hero gear={gearOf(state)} classId={state.profile.classId} size={72} />
@@ -91,6 +91,12 @@ export function PlayTab({ state, onPlay, update, onCamp }: Props) {
           </div>
         </div>
       </section>
+
+      <WorldPicker state={state} onPlay={onPlay} />
+      </div>
+
+      <div className="space-y-4">
+      <FogGearCard state={state} update={update} />
 
       <section className="rounded-2xl bg-ink-800 p-4">
         <p className="font-pixel text-[10px] text-slate-400">Your power, from your training</p>
@@ -122,58 +128,7 @@ export function PlayTab({ state, onPlay, update, onCamp }: Props) {
             : 'Rest days count too: after a full day off, or a minute by the fire, runs start with one more free skill.'}
         </p>
       </section>
-
-      <button onClick={onCamp} className="flex w-full items-center gap-3 rounded-2xl bg-gold-400 p-4 text-left text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
-        <Sprite id="uiIcon" opts={{ name: 'play' }} size={20} label="" />
-        <span className="min-w-0 flex-1">
-          <span className="block font-pixel text-[11px]">To the camp</span>
-          <span className="mt-1 block text-xs text-ink-900">The fire, your vault, Mira&apos;s forge, and the gates into the Fog. Played sideways.</span>
-        </span>
-      </button>
-
-      <FogGearCard state={state} update={update} />
-
-      <section className="space-y-2">
-        <p className="font-pixel text-[10px] text-slate-400">The road through the Fog</p>
-        {ZONES.map((z) => {
-          const st = zoneStatus(state, z);
-          const best = state.fog?.best[z.id];
-          const open = st.state !== 'locked';
-          return (
-            <div key={z.id} className={`flex items-center gap-3 rounded-2xl p-3 ${open ? 'bg-ink-800' : 'bg-ink-900 opacity-80'}`}>
-              {/* The zone's view, dim and grey until it opens; a check once its boss is beaten. */}
-              <span className="relative grid h-10 w-10 shrink-0 place-items-center">
-                <Sprite id="zoneIcon" opts={{ zone: z.id }} size={36} label="" className={st.state === 'locked' ? 'opacity-50 brightness-50 grayscale' : ''} />
-                {st.state !== 'open' && (
-                  <span className="absolute -bottom-2 -right-2">
-                    <Sprite id="uiIcon" opts={{ name: st.state === 'cleared' ? 'check' : 'lock' }} size={st.state === 'cleared' ? 24 : 22} label={st.state === 'cleared' ? 'Cleared' : 'Locked'} />
-                  </span>
-                )}
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate-100">{z.name}</p>
-                <p className="text-[11px] text-slate-400">
-                  {st.state === 'locked'
-                    ? st.why
-                    : best
-                      ? best.won
-                        ? `Cleared in ${clock(best.seconds)}`
-                        : `Best: ${clock(best.seconds)}, level ${best.level}`
-                      : `Ten floors down, then ${z.bossName}.`}
-                </p>
-                {st.state === 'open' && !best && z.firstTry && <p className="mt-0.5 text-[11px] text-gold-300">{z.firstTry}</p>}
-                {st.state === 'open' && !best?.won && <p className="mt-0.5 text-[11px] text-sky-300">{z.hint}</p>}
-              </div>
-              {open && (
-                <button onClick={() => onPlay(z)} className="flex items-center gap-1.5 rounded-xl bg-gold-400 px-3 py-2 font-pixel text-[9px] text-ink-950 active:scale-95">
-                  <Sprite id="uiIcon" opts={{ name: 'play' }} size={14} label="" />
-                  {st.state === 'cleared' ? 'Again' : 'Play'}
-                </button>
-              )}
-            </div>
-          );
-        })}
-      </section>
+      </div>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { seeded } from './random';
 import { NO_GEAR, salvageValue, type FogGear } from './fog-gear';
 import { MAX_PLUS, rerollBonus, type Item } from '@/game/dungeon/items';
 
-/* Mira's forge at the camp. Workouts earn embers, and the forge spends them: upgrade an item
+/* Mira's forge, on the Play tab's gear card. Workouts earn embers, and the forge spends them: upgrade an item
    (+1 to +5), roll one of its bonuses again, or melt an item down for a few embers. Embers come
    mostly from training; melting down what the dungeon gives adds a little. */
 

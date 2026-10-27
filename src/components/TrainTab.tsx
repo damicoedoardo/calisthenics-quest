@@ -21,8 +21,10 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
   const kit = state.profile.kit ?? 'gym';
   const next = dayType(state);
   return (
-    <div className="space-y-6">
-      <button onClick={() => setLibrary(true)} className="flex w-full items-center gap-3 rounded-xl bg-ink-800 p-3 text-left ring-1 ring-ink-700 active:bg-ink-700">
+    // Sideways: the plan takes the right column, everything else stacks on the left. The last row
+    // soaks up the plan's extra height so the left cards stay together.
+    <div className="space-y-6 land:grid land:grid-cols-2 land:grid-rows-[auto_auto_auto_auto_1fr] land:items-start land:gap-x-4 land:gap-y-4 land:space-y-0">
+      <button onClick={() => setLibrary(true)} className="flex w-full land:col-start-1 items-center gap-3 rounded-xl bg-ink-800 p-3 text-left ring-1 ring-ink-700 active:bg-ink-700">
         <BookOpen size={18} className="shrink-0 text-gold-300" />
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold">Exercise library</span>
@@ -32,7 +34,7 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
       </button>
       {library && <ExerciseLibrary state={state} onClose={() => setLibrary(false)} />}
 
-      <section>
+      <section className="land:col-start-1">
         <h2 className="font-pixel text-xs text-gold-300">I train at</h2>
         <div className="mt-3 grid grid-cols-2 gap-2">
           {KITS.map((k) => (
@@ -49,7 +51,7 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
         </div>
       </section>
 
-      <section>
+      <section className="land:col-start-2 land:row-span-5 land:row-start-1">
         <div className="flex items-baseline justify-between">
           <h2 className="font-pixel text-xs text-gold-300">Your plan</h2>
           <p className="text-xs text-slate-400">Two days, one after the other</p>
@@ -86,11 +88,11 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
         ))}
       </section>
 
-      <p className="rounded-xl bg-ink-900 px-3 py-2 text-xs text-slate-400">
-        Each workout earns <span className="text-slate-200">{EMBERS.full} embers</span> ({EMBERS.mini} for the minimum quest) for Mira&apos;s forge at the camp. You have <span className="text-gold-300">{embersOf(state)}</span>.
+      <p className="rounded-xl bg-ink-900 px-3 py-2 text-xs text-slate-400 land:col-start-1">
+        Each workout earns <span className="text-slate-200">{EMBERS.full} embers</span> ({EMBERS.mini} for the minimum quest) for Mira&apos;s forge on the Play tab. You have <span className="text-gold-300">{embersOf(state)}</span>.
       </p>
 
-      <p className="text-center text-xs text-slate-500">Soon: tell your coach what you feel like, and it builds the workout from the library.</p>
+      <p className="text-center text-xs text-slate-500 land:col-start-1">Soon: tell your coach what you feel like, and it builds the workout from the library.</p>
     </div>
   );
 }

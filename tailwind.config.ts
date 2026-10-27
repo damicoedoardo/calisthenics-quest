@@ -4,6 +4,11 @@ export default {
   content: ['./src/**/*.{ts,tsx}'],
   theme: {
     extend: {
+      screens: {
+        // A phone held sideways: short and wide. The tabs get a side rail and two columns.
+        // (Tailwind's own `landscape:` stays as it is; this one leaves tablets and desktops out.)
+        land: { raw: '(orientation: landscape) and (max-height: 600px)' },
+      },
       fontFamily: {
         sans: ['Geist', 'system-ui', 'sans-serif'],
         pixel: ['"Press Start 2P"', 'monospace'],

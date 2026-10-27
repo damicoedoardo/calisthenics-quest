@@ -37,10 +37,12 @@ level or story.
   walk in with: only what your points let you wear today; the rest stays home, safe.
   `settleGear` runs after `recordRun`: a win or a walk out by the stairs keeps what you wore and
   puts the bag in the vault (the best first, the rest left behind if it's full); dying loses all
-  of it, except the one item your flame holds (see [camp.md](camp.md)). What a full vault can't take
+  of it, except the one item your flame holds (see [forge.md](forge.md)). Mid-run, `atRisk` says
+  the same thing ahead of time (what a fall would take, what the flame would hold, or would hold
+  if you trained), for the HUD's bag, the bag panel and the stairs card. What a full vault can't take
   is melted into embers. `wearFromVault` and `takeOffToVault` are the vault's buttons
   (`FogGearCard`), and "Melt down" is the forge's `salvage`. The items themselves are in
-  [dungeon.md](dungeon.md); the camp between runs, with Mira's forge, in [camp.md](camp.md).
+  [dungeon.md](dungeon.md); Mira's forge and the flame in [forge.md](forge.md).
 
 Tested in `src/lib/fog.test.ts` and `src/lib/fog-gear.test.ts`.
 
@@ -57,7 +59,9 @@ shared between the hero and the engine (speed, HP, attacks) and the sprite sheet
 starts (Phaser is big); `PlayTab.tsx` warms the code and sheets while the tab sits idle. A run is
 played with the phone held sideways: held upright, `FogRun` holds the run behind a "turn your
 phone" card (`usePortrait`), and where the browser allows it (Android, installed) it turns the
-screen itself for the run (`useSideways`). The rest of the app stays upright.
+screen itself for the run (`useSideways`). The rest of the app stays upright. Sideways, the room
+fills the whole screen and the camera follows you in it; the HUD is small and kept to the corners
+(see "Sideways on screen" in [dungeon.md](dungeon.md)).
 
 ## Balance
 

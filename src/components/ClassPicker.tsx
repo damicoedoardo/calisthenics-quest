@@ -21,9 +21,11 @@ export function ClassPicker({ workouts, current, onPick, onCancel }: Props) {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-ink-950">
-      <div className="safe-top mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-6">
-        <p className="mt-4 text-center font-pixel text-xs text-gold-300">Choose your class</p>
-        <div className="mt-4 flex justify-center">
+      {/* Held sideways: the hero you'd be on the left, the four classes and the button on the right. */}
+      <div className="safe-top land-safe-x mx-auto flex w-full max-w-md flex-1 flex-col px-4 pb-6 [@media(orientation:landscape)_and_(max-height:600px)]:min-h-0 [@media(orientation:landscape)_and_(max-height:600px)]:max-w-4xl [@media(orientation:landscape)_and_(max-height:600px)]:flex-row [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:gap-8 [@media(orientation:landscape)_and_(max-height:600px)]:pb-3">
+        <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:flex-col [@media(orientation:landscape)_and_(max-height:600px)]:items-center">
+        <p className="mt-4 text-center font-pixel text-xs text-gold-300 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0">Choose your class</p>
+        <div className="mt-4 flex justify-center [@media(orientation:landscape)_and_(max-height:600px)]:mt-2">
           <Hero gear={preview} classId={pick} size={170} />
         </div>
         <p className="mt-2 text-center text-xl font-bold text-slate-50">{cls.name}</p>
@@ -32,7 +34,9 @@ export function ClassPicker({ workouts, current, onPick, onCancel }: Props) {
           In the Fog it leans to {cls.lean}, a little. Your stat points do the rest.
         </p>
 
-        <div className="mt-6 grid grid-cols-2 gap-2">
+        </div>
+        <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:flex-col">
+        <div className="mt-6 grid grid-cols-2 gap-2 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0">
           {CLASSES.map((c) => (
             <button
               key={c.id}
@@ -53,8 +57,8 @@ export function ClassPicker({ workouts, current, onPick, onCancel }: Props) {
           ))}
         </div>
 
-        <div className="flex-1" />
-        <p className="mb-3 text-center text-xs text-slate-500">It only changes how you fight in the Fog. You can change class later on the Hero tab.</p>
+        <div className="flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:hidden" />
+        <p className="mb-3 [@media(orientation:landscape)_and_(max-height:600px)]:mt-4 text-center text-xs text-slate-500">It only changes how you fight in the Fog. You can change class later on the Hero tab.</p>
         <button
           onClick={() => onPick(pick)}
           className="w-full rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
@@ -66,6 +70,7 @@ export function ClassPicker({ workouts, current, onPick, onCancel }: Props) {
             Not now
           </button>
         )}
+        </div>
       </div>
     </div>
   );

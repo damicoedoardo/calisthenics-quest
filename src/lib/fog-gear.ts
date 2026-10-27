@@ -48,6 +48,28 @@ export interface GearOutcome {
   lost: Item[];
 }
 
+/** What a fall would cost right now, mid-run: the worn item the flame would hold, and what the Fog
+    would take. The starter kit always comes home, so it is never at risk. */
+export interface AtRisk {
+  /** Kept by the flame if you fall. */
+  held?: Item;
+  /** The guarded item the flame can't hold yet: no training in the last 2 days. */
+  cold?: Item;
+  /** Taken by the Fog if you fall. */
+  lost: Item[];
+}
+
+/** What you wear and carry in a run, as a fall would settle it (the same rule as `settleGear`). */
+export function atRisk(state: GameState, gear: { worn: FogGear['worn']; bag: Item[] }, now: Date): AtRisk {
+  const slot = gearOf(state).guard,
+    guarded = slot ? gear.worn[slot] : undefined,
+    pick = guarded && !guarded.starter ? guarded : undefined,
+    warm = flameGuards(state, now),
+    held = warm ? pick : undefined;
+  const lost = [...Object.values(gear.worn), ...gear.bag].filter((x): x is Item => !!x && !x.starter && x.id !== held?.id);
+  return { held, cold: warm ? undefined : pick, lost };
+}
+
 /** What you walk into a run wearing: only what your points let you wear today (the rest waits at
     home, safe). */
 export function wornFor(state: GameState): FogGear['worn'] {

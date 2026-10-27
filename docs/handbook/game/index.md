@@ -11,7 +11,7 @@ timestamp: 2026-10-27
 - [Training rules](training.md): the built-in plan, today's quest, logging, progression, XP, stat points, classes and gear
 - [Story](story.md): the six chapters as data, scene format, daily lines, rules for the words
 - [The Fog](fog.md): the rules around a run, zones, power from training, records, balance
-- [The camp](camp.md): between runs: the fire, the vault, Mira's forge (embers, upgrade, reroll, melt down), the gates
+- [Mira's forge and the flame](forge.md): gear between runs: embers, upgrade, reroll, melt down, the item your flame keeps
 - [The Fog's dungeon](dungeon.md): content, the pure engine, the bot, the Phaser scene, how to change each
 - [Exercise library](exercise-library.md): 887 exercises with pixel demos, tips and mistakes, searchable by a coach
 - [Sprites and animation](sprites.md): all pixel art as code, the registry, clips, the labs

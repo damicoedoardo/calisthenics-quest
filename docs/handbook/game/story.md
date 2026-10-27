@@ -97,6 +97,10 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
 | Change when the flame grows, or what it gives | `flame.ts` (its art: `src/sprites/characters/ember.ts`) |
 | Add daily lines or quotes | `daily/flame-lines.ts`, `daily/quotes.ts` (keep quote authors real) |
 
+Held sideways, `Dialogue` puts whoever is on screen on the left and the text box beside them, and
+the question card puts the question beside its answers (see
+[../app/screens.md](../app/screens.md)); nothing in a scene needs to change for it.
+
 Run `pnpm test` after a change: `story.test.ts` catches a misspelled speaker, place, song or word.
 
 ## Rules for the words

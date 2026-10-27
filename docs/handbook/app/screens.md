@@ -21,6 +21,19 @@ pieces of screen state, and decides what is on screen:
    readers). Overlays opened from inside a tab use `useModal` for the same thing.
 4. Back on the tabs, the next due scene from `scenesToPlay` (`src/story/engine.ts`) plays.
 
+## Held sideways: the tabs
+
+The tabs work both ways up. Upright, everything is one `max-w-md` column with the bottom tab bar.
+On a phone held sideways (the `land:` variant in `tailwind.config.ts`: landscape and at most
+600px tall; tablets and desktops keep the upright layout) `page.tsx` turns the tab bar into a rail
+down the left with the hero at its top, shrinks the header to one line (FORMA, level, XP bar),
+and lets the column take the full width, clear of the notch (`env(safe-area-inset-left/right)`).
+Each tab then splits into two columns of independent cards: Today (story and flame | check-in,
+quest, Start), Train (library, kit, embers | the plan, placed by grid so the upright order stays),
+Play (the Fog and the worlds | gear and power), Hero (hero and stat points | the rest); the look
+editor puts its preview beside the choices. Upright must look exactly as before: add sideways
+changes only as `land:` classes.
+
 ## Components (`src/components/`)
 
 | Component | Job |
@@ -32,9 +45,9 @@ pieces of screen state, and decides what is on screen:
 | `AfterSession` | After a workout: a short battle against the chapter enemy, then the loot (XP, stat points, better than last time, level, gear, the flame's word) |
 | `TrainTab` | The "Exercise library" button, gym or home, the plan's two days with today's targets, the embers workouts earn |
 | `ExerciseLibrary` | The whole exercise library over the Train tab: search, equipment, kind and movement filters, list rows with a demo still; an exercise shows the boy and girl demo, steps, tips and common mistakes. Loaded on demand. See [../game/exercise-library.md](../game/exercise-library.md) |
-| `Camp` | The camp between runs, held sideways: the Phaser camp scene and its panels (vault, Mira's forge, the fire, a gate), see [../game/camp.md](../game/camp.md) |
-| `PlayTab` | Power from training, "To the camp", what you take into the Fog (`FogGearCard`: worn gear and the vault), the zones, warms up the Fog's code and sprite sheets while idle |
-| `FogRun` | A run, held sideways: loads the Phaser scene on demand, the HUD, the depth ladder and the floor's minimap (`FloorMap`, tap for it big), the bag (`BagPanel`), the pickup note, the stairs card (deeper or leave), pause menu, skill picks, the recap with what came home or was lost (`GearRecap`), the "turn your phone" card |
+| `WorldPicker` | The road through the Fog as worlds you swipe: one big card in the middle (the chapter's place from `PlaceBackdrop`, its boss in front), neighbours peeking at the sides, arrows and dots; opens on the newest open world. Each card keeps what the old zone row showed (zone icon, name, best run, first-try tip, hint, Play or Again); a shut world is dark and fogged (`fogBank`), its boss a shadow, a big padlock (`worldLock`) and the reason it is shut; a cleared one has a check. Off-centre cards turn and shrink by scroll position and the picture drifts, all off under reduced motion. Props `{ state, onPlay }`; try it at `/lab/worlds` |
+| `PlayTab` | Power from training, your gear for the Fog (`FogGearCard`: worn gear with the flame's mark, the vault, Mira's forge for the tapped item, see [../game/forge.md](../game/forge.md)), the zones, warms up the Fog's code and sprite sheets while idle |
+| `FogRun` | A run, held sideways: loads the Phaser scene on demand, the HUD in the corners (`Vitals`: HP and level; the floor and its depth row, `DepthMap`; `BagButton` with a red count of what a fall would cost; pause; the floor's minimap, `FloorMap`, tap for it big), the bag (`BagPanel`) and the stairs card (deeper or leave), both showing what is at risk and the flame's kept item (`RiskLine`, `Guarded`), the pickup note, pause menu, skill picks (three cards side by side), the recap with what came home or was lost (`GearRecap`), the "turn your phone" card |
 | `ItemCard` | An item's tile and card (name in its rarity's color, what it gives, what it needs), shared by the run's bag and the Play tab |
 | `HeroTab` | Gear, class, look editor, the champion's stat points (`StatPoints`: spend, take back), keepsakes, quest log, Backup and Restore, cloud backup sign-in (`CloudSave`) |
 | `ScenePlayer`, `Dialogue` | Play a story scene: lines, camera shots, the question, the answer lines |
@@ -48,6 +61,32 @@ pieces of screen state, and decides what is on screen:
 | `ServiceWorker` | Registers the offline worker, see [pwa.md](pwa.md) |
 | `useModal` | Focus trap and inert background for overlays inside a tab |
 
+## Held sideways: the overlays
+
+Every full-screen overlay works with the phone held sideways too (a phone is about 844×390 CSS px
+then). Portrait keeps its own classes; the sideways layout is added on top with the Tailwind
+variant `[@media(orientation:landscape)_and_(max-height:600px)]:` (the same query as the tabs' `land:`, short and wide screens only, so
+tablets and desktops keep the portrait layout). The usual trick: the portrait column's groups sit
+in wrappers that are `contents` in portrait (no change to the layout) and become the two columns
+sideways. `land-safe-x` (in its own block at the end of `src/app/globals.css`) keeps an overlay's
+edges clear of the notch, which is on the left or the right then.
+
+| Overlay | Sideways |
+|---|---|
+| `Workout` | The exercise (name, cue, demo) on the left, its sets, reps and the reps-in-reserve buttons on the right; the big demo stands beside its name and cue; the rest timer has the flame beside the clock |
+| `AfterSession` | The battle as in portrait, a bit tighter; the loot card is wide, what you earned on the left, the level, gear, the flame's word and Continue on the right |
+| `Dialogue` | Whoever is on screen on the left, the words beside them; narration with nothing to show stays centered |
+| `ScenePlayer` | The question card puts the question beside its answers; naming the flame puts the flame beside the name box |
+| `Prologue` | Title and boy or girl side by side; the voice pick with the Hollow on the left and the answers in two columns; the letter (two columns of prompts), the gym or home pick and the look editor with who speaks and the button on the left |
+| `FirstFight`, `RiseUp`, `SitByFire` | The figures on the left, the words and the button on the right |
+| `ClassPicker` | The hero you'd be on the left, the four classes and the button on the right |
+| `BookOfDays`, `ExerciseLibrary` | Wider, the pages and the list in two columns; the library's search and filters on one line, an exercise's demos and facts beside its how-to |
+| `DevPanel` | A wider sheet with its sections in two columns |
+| `Opening` | Fits as it is; the sound toggle keeps clear of the notch |
+
+To change one, look for the variant in that component; try it at 844×390 (the `/lab/night` jumps
+and `/lab/story?play=<scene id>&back` reach most of them) and check portrait at 390×844 is unchanged.
+
 ## Rules for components
 
 - No rules and no art in components: call `src/lib/` and `src/story/`, draw with `<Sprite>`.
@@ -55,3 +94,5 @@ pieces of screen state, and decides what is on screen:
 - Icons are `lucide-react` or the pixel icons in `src/sprites/characters/icons.ts`.
 - Colors and fonts come from `tailwind.config.ts` (`ink`, `gold`, Geist, Press Start 2P for pixel text).
 - Respect `prefers-reduced-motion` (see `src/game/calm.ts` for the Fog).
+- A full-screen overlay works held sideways too: add the landscape variant, never change the
+  portrait classes (see above).
