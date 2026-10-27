@@ -38,7 +38,9 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change a boss's art | `BOSS_ART` in `scene.ts`, and its sheets in `src/game/sheets.ts` |
 | Add a zone | the chapter's `fog` in `src/story/chapters/`, then an entry in `ZONE_DUNGEONS` and `MIDS` (`content.ts`), `THEMES` (`themes.ts`) and `ZONE_MUSIC` (`src/lib/music-zones.ts`) |
 | Balance | the `DIALS` in `content.ts`; measure with `pnpm sim`, then `pnpm fog:sim` |
-| Change how much of the room the screen shows | `fitScreen` in `scene.ts` |
+| Change how much of the room the screen shows | `FIT` and `fitScreen` in `scene.ts` |
+| Change the run's HUD (HP and XP, floor and depth, bag, pause, ability buttons) | `Vitals`, `DepthMap`, `BagButton`, `AbilityButton` in `src/components/FogRun.tsx`; the safe-area classes `run-t`/`run-b`/`run-l`/`run-r`/`run-x` in `src/app/globals.css` |
+| Change what the run shows is at risk if you fall | `atRisk` in `src/lib/fog-gear.ts`; `RiskLine` and `Guarded` (the flame's badge) in `src/components/FogRun.tsx` |
 | Change how a floor is laid out (how many rooms, branches, shortcuts) | `LAYOUT` and `ROOM_ODDS` in `content.ts`, `makeFloor` in `engine.ts` |
 | Change the minimap | `FloorMap` in `src/components/FogRun.tsx` (it reads `Hud.map`, built by `miniMap` in `scene.ts`) |
 | Change where the bot goes on a floor | `route` in `bot.ts` |
@@ -63,7 +65,8 @@ stand. Walking back into a room you cleared finds it as you left it (`Cell.kept`
 nothing to fight. Clearing the last room puts the stairs down in it (`run.stairs`); walking onto
 them asks (`run.stairsAsk`, the run holds still): go deeper (`downStairs`, HP full), leave with
 what you carry (`takeStairs(run, 'leave')` ends the run with `why: 'left'`), or not yet. The bot
-always goes deeper. Cells are `seen` once you've stood next door to them, which is what
+always goes deeper. The stairs card shows what a fall on the next floor would cost (see "Items and
+the bag"); in developer mode the pause menu's "The stairs card" opens it anywhere (`askStairs`). Cells are `seen` once you've stood next door to them, which is what
 the minimap shows. The bot explores (`route`): the nearest room it hasn't been in, a shrine when
 hurt, and the stairs once it has been in most of the floor.
 
@@ -86,9 +89,25 @@ carried, never the starter kit; `src/lib/fog-gear.ts` settles it into the save
 (see [fog.md](fog.md)). The bot wears what it picks up when it's better (`botWear`) and picks up
 loot once a room is clear.
 
+What you'd lose is always on show: `atRisk` (`src/lib/fog-gear.ts`, the same rule as
+`settleGear`) says which worn item the flame would hold (`held`, the `guard` slot while you've
+trained in the last 2 days), which one it would hold if you trained (`cold`), and what the Fog
+would take (`lost`; never the starter kit). The bag button in the HUD has a red count of `lost`
+and a small flame while one is held; the bag panel and the stairs card show the tiles
+(`RiskLine`), with a flame badge (`Guarded`) on the kept one: "Kept by Pip if you fall".
+
 ## Sideways on screen
 
-The phone is held sideways in a run. The engine plays every room standing up (the way on, east, is
+The phone is held sideways in a run, and the room fills the whole screen, no black bands: the
+camera zooms until the room covers it both ways and follows you inside it, up and down as well as
+along (`fitScreen`). `FIT.see` keeps it readable on a short screen (at least that much of the
+room's height shows), and `FIT.hud` leaves a strip above the top wall for the HUD. What's off the
+screen gets a mark on its edge (`drawPad`). The HUD over it (`FogRun.tsx`) stays small and in the
+corners, clear of the notch: HP and level top left, the floor and its depth row top middle (with
+the boss bars under it), bag, pause and minimap top right, Dodge and the class ability under the
+right thumb; the left half is free for the move stick.
+
+The engine plays every room standing up (the way on, east, is
 its top wall); the scene shows it on its side, so on screen east is to the right. `P(x, y)` in `scene.ts` turns an engine point into a screen point (the room's height
 becomes the screen's width). The floor, walls, water and the effects in engine points (`fade`) are
 drawn on layers turned a quarter (`turn`); people, monsters, props, spike tips, shadows and words

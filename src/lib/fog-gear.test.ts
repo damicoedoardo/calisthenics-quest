@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { seeded } from './random';
 import { initialState, type GameState } from './game';
-import { discardItem, settleGear, takeOffToVault, vaultSize, wearFromVault, wornFor } from './fog-gear';
+import { atRisk, discardItem, settleGear, takeOffToVault, vaultSize, wearFromVault, wornFor } from './fog-gear';
 import { rollItem, type Item } from '@/game/dungeon/items';
 
 const rnd = seeded(21);
@@ -66,6 +66,30 @@ describe('Fog gear between runs', () => {
     const stale = settleGear(trained(4), fall, now);
     expect(stale.out.held).toBeUndefined();
     expect(stale.state.fogGear?.worn).toEqual({});
+  });
+
+  it('mid-run, shows what a fall would cost: the flame holds the guarded item, the starter kit is safe', () => {
+    const sword = item('weapon'),
+      plate = item('armor'),
+      found = item('charm'),
+      kit: Item = { ...item('armor'), starter: true },
+      now = new Date(2026, 9, 27, 12),
+      trained = (daysAgo: number): GameState => ({
+        ...strong(initialState()),
+        sessions: [{ id: 'a', date: new Date(now.getTime() - daysAgo * 864e5).toISOString(), kind: 'full', day: 'A', xp: 100, breakdown: [], entries: [] }],
+        fogGear: { worn: { weapon: sword }, vault: [], guard: 'weapon' },
+      });
+    const fresh = atRisk(trained(1), { worn: { weapon: sword, armor: plate }, bag: [found] }, now);
+    expect(fresh.held).toBe(sword);
+    expect(fresh.cold).toBeUndefined();
+    expect(fresh.lost).toEqual([plate, found]);
+    // The same fall, settled, loses the same things.
+    expect(settleGear(trained(1), { won: false, why: 'hp', gear: { worn: { weapon: sword, armor: plate }, bag: [found] } }, now).out.lost).toEqual(fresh.lost);
+    const stale = atRisk(trained(4), { worn: { weapon: sword, armor: kit }, bag: [] }, now);
+    expect(stale.held).toBeUndefined();
+    expect(stale.cold).toBe(sword);
+    expect(stale.lost).toEqual([sword]);
+    expect(atRisk(initialState(), { worn: { armor: kit }, bag: [] }, now)).toEqual({ held: undefined, cold: undefined, lost: [] });
   });
 
   it('what the full vault leaves behind, Mira melts into embers', () => {

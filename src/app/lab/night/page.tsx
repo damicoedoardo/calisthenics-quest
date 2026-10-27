@@ -44,10 +44,12 @@ function veteran(workouts: number, cleared: number): GameState {
   return s;
 }
 
-/** A veteran with points spent and Fog gear: a sword on, a few things in the vault, one they
-    can't wear yet. */
-function geared(): GameState {
-  const s = spendEvenly(veteran(14, 1)),
+/** A veteran with points spent and Fog gear: a sword (the flame guards it) and a charm on, a few things in
+    the vault, one they can't wear yet. `idle` moves every workout that many days back, so the
+    flame has gone cold and can't hold the sword. */
+function geared(idle = 0): GameState {
+  const v = veteran(14, 1),
+    s = spendEvenly(idle ? { ...v, sessions: v.sessions.map((x) => ({ ...x, date: new Date(Date.parse(x.date) - idle * DAY).toISOString() })) } : v),
     rnd = seeded(12),
     find = (slot: Item['slot'], rarity: Item['rarity'], floor: number) => {
       for (;;) {
@@ -55,7 +57,7 @@ function geared(): GameState {
         if (it.slot === slot) return it;
       }
     };
-  return { ...s, fogGear: { worn: { weapon: find('weapon', 'magic', 1) }, vault: [find('armor', 'rare', 2), find('charm', 'magic', 3), find('weapon', 'legendary', 9)] } };
+  return { ...s, fogGear: { worn: { weapon: find('weapon', 'magic', 1), charm: find('charm', 'magic', 2) }, vault: [find('armor', 'rare', 2), find('charm', 'magic', 3), find('weapon', 'legendary', 9)], guard: 'weapon' } };
 }
 
 /** Write the sandbox save and open the app on it at `query`. */
@@ -168,6 +170,7 @@ export default function NightLab() {
         <Row icon={<Swords size={16} />} label="The Fog, sideways" note="Hold the phone across: rooms run left to right, tap a monster to aim at it" onClick={() => open(veteran(14, 1), 'run=0')} />
         <Row icon={<Gem size={16} />} label="Loot: your gear and the vault" note="Play tab: what you wear into the Fog, the vault, an item you can't wear yet" onClick={() => open(geared(), 'tab=play')} />
         <Row icon={<Gem size={16} />} label="Loot in a run" note="Monsters and chests drop gear; the bag button top right; the stairs ask: deeper or leave with it" onClick={() => open(geared(), 'run=1')} />
+        <Row icon={<Gem size={16} />} label="Loot in a run, the flame gone cold" note="No workout in 4 days: the bag says training would let the flame hold your sword" onClick={() => open(geared(4), 'run=1')} />
         <Row icon={<Swords size={16} />} label="Exercise library" note="Train tab, top button: 870+ exercises, pixel demos for boy and girl" onClick={() => open(veteran(10, 1), 'tab=train')} />
       </Panel>
 

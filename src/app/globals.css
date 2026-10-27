@@ -32,6 +32,25 @@ body {
   padding-bottom: max(env(safe-area-inset-bottom), 8px);
 }
 
+/* The Fog's HUD, held sideways: pinned to the screen's corners but clear of the notch, which is on
+   the left or the right then, and of the home bar along the bottom. */
+.run-t {
+  top: max(env(safe-area-inset-top), 8px);
+}
+.run-b {
+  bottom: max(env(safe-area-inset-bottom), 12px);
+}
+.run-l {
+  left: max(env(safe-area-inset-left), 10px);
+}
+.run-r {
+  right: max(env(safe-area-inset-right), 10px);
+}
+.run-x {
+  padding-left: max(env(safe-area-inset-left), 10px);
+  padding-right: max(env(safe-area-inset-right), 10px);
+}
+
 .pixel-border {
   box-shadow:
     0 0 0 2px #0b0d14,
