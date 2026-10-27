@@ -929,9 +929,9 @@ class DungeonScene extends Phaser.Scene {
   }
 
   /** A boss acts out its attack, now and then, if its art has one. */
-  private bossAttack() {
-    const b = this.run.boss,
-      e = b && this.foes.get(b.id),
+  /** The boss (or the mid-boss) plays its attack once, when it has one. */
+  private bossAttack(b: Foe | null = this.run.boss) {
+    const e = b && this.foes.get(b.id),
       now = this.time.now;
     if (!e || now < e.attackAt) return;
     const key = `${e.tex}Attack`;
@@ -1275,6 +1275,9 @@ class DungeonScene extends Phaser.Scene {
             this.fade(260, (g, p) => g.lineStyle(2, 0x7dd3fc, 0.8 * (1 - p)).strokeEllipse(b.x, b.y + 18, 34 + 16 * p, 10 + 5 * p));
           }
         }
+        // The mid-boss winds up its own attack as it fires.
+        const mid = this.run.warden;
+        if (mid?.alive && e.x === mid.x && e.y === mid.y) this.bossAttack(mid);
         break;
       case 'split':
         this.speak(this.setup.lines?.stages[0]);
@@ -1415,6 +1418,7 @@ class DungeonScene extends Phaser.Scene {
         break;
       case 'phase': {
         const { x, y } = e;
+        this.bossAttack(this.run.warden);
         this.hitStop(70);
         this.sfx('roar', 0.9);
         this.cameras.main.shake(400, 0.01);
@@ -1468,6 +1472,7 @@ class DungeonScene extends Phaser.Scene {
       case 'repair': {
         const { x, y } = e;
         this.sfx('nova', 1.3);
+        this.bossAttack(this.run.warden);
         for (const f of this.run.foes)
           if (f.alive && f !== this.run.warden) {
             this.bits.particleTint = 0x86efac;
@@ -1479,6 +1484,7 @@ class DungeonScene extends Phaser.Scene {
       case 'swap': {
         const { x, y, toX, toY } = e;
         this.sfx('dash', 1.3);
+        this.bossAttack(this.run.warden);
         this.puffs.explode(4, x, y);
         this.puffs.explode(4, toX, toY);
         this.fade(300, (g, p) => g.lineStyle(3 * (1 - p) + 1, 0xc4b5fd, 0.7 * (1 - p)).lineBetween(x, y, toX, toY));
@@ -1487,6 +1493,7 @@ class DungeonScene extends Phaser.Scene {
       case 'gust': {
         const { x, y } = e;
         this.sfx('wave', 0.7);
+        this.bossAttack(this.run.warden);
         this.cameras.main.shake(300, 0.004);
         this.fade(700, (g, p) => g.lineStyle(6 * (1 - p) + 1, 0xe2e8f0, 0.6 * (1 - p)).strokeCircle(x, y, 40 + 420 * p));
         break;

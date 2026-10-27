@@ -23,7 +23,9 @@ export type BossSheetKey =
   | 'hollowBoss' | 'hollowBossAttack' | 'hollowBossFade'
   | 'summitBoss' | 'summitBossAttack'
   // the friends who climb the Summit with you
-  | 'wanderer' | 'mira' | 'vela';
+  | 'wanderer' | 'mira' | 'vela'
+  // the run's own mid-boss attacking (played once)
+  | 'wardenAttack' | 'lanternMidAttack' | 'foremanMidAttack' | 'sandGolemMidAttack' | 'sandGolemMidStoneAttack' | 'whisperMidAttack' | 'galeMidAttack';
 /** Every sheet a run gets: all of the regular ones, and only its own zone's boss sheets. */
 export type Sheets = Record<Exclude<SheetKey, BossSheetKey>, Sheet> & Partial<Record<BossSheetKey, Sheet>>;
 
