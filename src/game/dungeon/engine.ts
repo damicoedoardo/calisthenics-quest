@@ -67,6 +67,7 @@ import {
   type ShotStyle,
   TOMORROW_REACH,
   WATER,
+  CLEAR_RUN,
   abilityOf,
   midBoss,
   zoneDungeon,
@@ -1117,7 +1118,8 @@ function moveHero(run: Run, h: Hero, input: Input) {
     y /= len;
   }
   if (len > 0.05) h.facing = Math.atan2(y, x);
-  const speed = heroSpeed(h.ups) * (1 + 0.1 * relic(h, 'boots') + h.gearFx.move) * bodyOf(h).move;
+  // A cleared room is safe: cross it at a run, so the walk to the next fight is short.
+  const speed = heroSpeed(h.ups) * (1 + 0.1 * relic(h, 'boots') + h.gearFx.move) * bodyOf(h).move * (run.cleared ? CLEAR_RUN : 1);
   if (h.charge && now < h.charge.until) {
     h.vx = h.charge.x;
     h.vy = h.charge.y;
