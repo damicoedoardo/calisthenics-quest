@@ -138,8 +138,7 @@ function Forge({ item, embers, update, sure, onMelt }: { item: Item; embers: num
   if (item.starter) return null;
   const plus = item.plus ?? 0,
     top = plus >= MAX_PLUS,
-    cost = upgradeCost(item),
-    next: Item = { ...item, plus: plus + 1 };
+    cost = upgradeCost(item);
   return (
     <div className="rounded-xl bg-ink-900 p-3 ring-1 ring-gold-400/30">
       <div className="flex items-center gap-2">
@@ -171,7 +170,7 @@ function Forge({ item, embers, update, sure, onMelt }: { item: Item; embers: num
       <div className="mt-3 space-y-2">
         {!top && (
           <button onClick={() => update((s) => upgrade(s, item.id))} disabled={embers < cost} className="w-full rounded-lg bg-gold-400 py-2 text-xs font-semibold text-ink-950 disabled:bg-ink-700 disabled:text-slate-500">
-            {embers < cost ? `Upgrade to ${nameOf(next)} · ${cost - embers} more embers (a workout is 10)` : `Upgrade to ${nameOf(next)} · ${cost} embers`}
+            {embers < cost ? `Upgrade to +${plus + 1} · ${cost - embers} more embers (a workout is 10)` : `Upgrade to +${plus + 1} · ${cost} embers`}
           </button>
         )}
         {item.bonuses.map((b, i) => (
