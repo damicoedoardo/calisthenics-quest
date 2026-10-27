@@ -62,7 +62,7 @@ export interface Season {
   snapshots: { label: string; state: GameState }[];
 }
 
-const FULL_LETTER: Letter = { why: 'I want to feel strong again', want: 'ten pull-ups', forWho: 'my little brother', remind: 'I already did this once.' };
+const FULL_LETTER: Letter = { why: 'I want to feel strong again', want: 'do ten pull-ups', forWho: 'my little brother', remind: 'I already did this once.' };
 
 /** A random number generator that plays the same way every time. */
 export function seeded(seed: number): () => number {
