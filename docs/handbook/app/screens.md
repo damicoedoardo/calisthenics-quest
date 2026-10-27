@@ -54,7 +54,7 @@ changes only as `land:` classes.
 | `ScenePlayer`, `Dialogue` | Play a story scene: lines, camera shots, the question, the answer lines |
 | `ClassPicker` | Four weapons in the ash: pick the class |
 | `BookOfDays` | Every day the app was opened, newest first |
-| `Hero`, `Characters`, `Sprite` | Draw sprites; `Hero` only decides when to attack, `Sprite` renders any sprite id |
+| `Hero`, `Characters`, `Sprite` | Draw sprites; `Hero` only decides when to attack, `Sprite` renders any sprite id. Screens that show your hero (header, Hero tab, Play tab, after a workout) pass `variant={heroVariant(state)}`, so once the flame has fused with you in the finale you are drawn on fire |
 | `Look`, `LookEditor` | The player's look, shared through `LookProvider`, and its editor |
 | `Place`, `Weather` | A story place's backdrop; rain, ash, snow, embers, fog over the screen |
 | `Sound` | `useMusic` (a track while a screen is on), the mute toggle |
