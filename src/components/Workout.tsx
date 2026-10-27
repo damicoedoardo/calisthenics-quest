@@ -230,9 +230,22 @@ function Demo({ state, exercise, name, cue }: { state: GameState; exercise: stri
       {big && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ink-950/95 px-6 text-center" onClick={() => setBig(false)}>
           <p className="font-pixel text-xs text-gold-300">{name}</p>
-          <div className="mt-4 rounded-2xl bg-ink-900 p-2 ring-1 ring-ink-700">
-            <Sprite id="exercise" opts={opts} size={320} label={`${name}, demo`} />
-          </div>
+          {exercise === 'diamond-pushup' ? (
+            // From the side the diamond can't be seen, so this one also shows the front.
+            <div className="mt-4 space-y-2">
+              <div className="mx-auto w-fit rounded-2xl bg-ink-900 p-2 ring-1 ring-ink-700">
+                <Sprite id="exercise" opts={opts} size={192} label={`${name}, from the side`} />
+              </div>
+              <div className="mx-auto w-fit rounded-2xl bg-ink-900 p-2 ring-1 ring-ink-700">
+                <Sprite id="exercise" opts={{ ...opts, view: 'front' }} size={192} label={`${name}, from the front`} />
+              </div>
+              <p className="max-w-xs text-xs text-slate-400">From the front: hands together under your chest, thumbs and fingers touching.</p>
+            </div>
+          ) : (
+            <div className="mt-4 rounded-2xl bg-ink-900 p-2 ring-1 ring-ink-700">
+              <Sprite id="exercise" opts={opts} size={320} label={`${name}, demo`} />
+            </div>
+          )}
           <p className="mt-4 max-w-xs text-sm text-slate-300">{cue}</p>
           <p className="mt-6 text-xs text-slate-500">Tap to close</p>
         </div>
