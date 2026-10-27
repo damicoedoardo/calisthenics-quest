@@ -53,12 +53,13 @@ export const PLAYERS: PlayerKind[] = [
   },
   {
     id: 'never-tests',
-    about: 'Trains 3 times a week and never takes a max test',
+    about: 'Trains 3 times a week, never takes a max test and skips every question',
     trains: (d) => [0, 2, 4].includes(weekday(d)),
     visits: (_, r) => r() < 0.5,
     bossOnTry: 2,
     tests: 'never',
     flame: 'Fiamma',
+    answers: 'skip',
   },
   {
     id: 'night-owl',
