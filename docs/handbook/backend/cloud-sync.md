@@ -30,7 +30,8 @@ once the Google provider is turned on in the Supabase `forma` project (it isn't 
 
 The Link button turns into a spinner with "Sending" until Supabase answers. The FORMA look for the
 email is `supabase/templates/magic-link.html`, pasted by hand into Supabase > Authentication >
-Emails > Magic link. Supabase only lets you edit templates once custom SMTP is set up; until then
+Emails > Magic link. It shows the link and the 6-digit code (`{{ .Token }}`), because on iPhone the link opens
+in Safari, not the installed app, so the app also takes the code. Supabase only lets you edit templates once custom SMTP is set up; until then
 the email is Supabase's plain default.
 
 ## How a sync goes
