@@ -8,6 +8,10 @@ import { MAX_PLUS, rollItem, rollRarity, RARITY, starterKit, type Item, type Rar
 import { DROP_LUCK, DROPS, NEED } from '@/balance';
 import { ZONES, xpToNext } from '@/lib/fog';
 import { seeded } from '@/lib/random';
+import { powerScore } from '@/game/power';
+import { CLASSES, type ClassId } from '@/lib/gear';
+import { POINTS } from '@/balance';
+import type { Build } from '@/lib/stats';
 import { playSeason } from '@/sim/season';
 import { PLAYERS } from '@/sim/players';
 
@@ -147,6 +151,78 @@ function runLevels(): string {
   return ['## Run levels', '', 'Light to reach a level inside a run:', '', table(['Level', '2', '5', '10', '15', '20'], [['Light', ...[2, 5, 10, 15, 20].map((l) => at.get(l) ?? 0)]])].join('\n');
 }
 
+/* The model player for the power curve: 3 full workouts a week, every week at the goal, points
+   spread evenly, embers all spent on upgrades (weapon first, then armor, then charm). Gear: middle
+   rolls, rare, from the deepest floor of the newest open zone whose weapon the build can wear. */
+type Worn = Partial<Record<'weapon' | 'armor' | 'charm', Item>>;
+const modelPoints = (w: number) => STARTING_POINTS + w * POINTS.full + Math.floor(w / WEEKLY_GOAL) * POINTS.week;
+const evenBuild = (w: number): Build => {
+  const n = Math.floor(modelPoints(w) / 4);
+  return { health: n, damage: n, reach: n, speed: n };
+};
+function middleItem(zone: number, floor: number, slot: 'weapon' | 'armor' | 'charm', cls: ClassId): Item {
+  const first = { weapon: 0, armor: 0.5, charm: 0.9 }[slot];
+  let start = true;
+  const rnd = () => (start ? ((start = false), first) : 0.5);
+  return rollItem(rnd, { zone, workouts: ZONES[zone].workouts, floor, cls }, 'rare');
+}
+function modelGear(w: number, cls: ClassId, build: Build): { gear: Worn; where: string } {
+  const zone = ZONES.filter((z) => z.workouts <= w).length - 1,
+    stat = middleItem(zone, 0, 'weapon', cls).need?.stat ?? 'damage';
+  let floor = 9;
+  while (floor > 0 && (middleItem(zone, floor, 'weapon', cls).need?.n ?? 0) > (build[stat] ?? 0)) floor--;
+  return { gear: { weapon: middleItem(zone, floor, 'weapon', cls), armor: middleItem(zone, floor, 'armor', cls), charm: middleItem(zone, floor, 'charm', cls) }, where: `zone ${zone + 1}, floor ${floor + 1}` };
+}
+function upgraded(gear: Worn, embers: number): Worn {
+  const out = { ...gear };
+  for (const slot of ['weapon', 'armor', 'charm'] as const) {
+    let it = out[slot];
+    while (it && (it.plus ?? 0) < MAX_PLUS && upgradeCost(it) <= embers) {
+      embers -= upgradeCost(it);
+      it = { ...it, plus: (it.plus ?? 0) + 1 };
+    }
+    out[slot] = it;
+  }
+  return out;
+}
+
+function power(): string {
+  const at = [...new Set([0, 6, ...ZONES.map((z) => z.workouts), ...ZONES.map((z) => z.workouts + 6), 100])].sort((a, b) => a - b);
+  const cls: ClassId = 'warrior';
+  const rows = at.map((w) => {
+    const build = evenBuild(w),
+      { gear, where } = modelGear(w, cls, build),
+      base = powerScore(cls, {}).score,
+      trained = powerScore(cls, build).score,
+      geared = powerScore(cls, build, gear).score,
+      full = powerScore(cls, build, upgraded(gear, w * EMBERS.full)).score,
+      gain = full - base,
+      share = (v: number) => (gain > 0 ? pct(v / gain) : '-');
+    return [w, Math.round(full), share(trained - base), share(geared - trained), share(full - geared), where];
+  });
+  const classes = [0, 24, 64].map((w) => {
+    const scores = CLASSES.map((c) => {
+      const b = evenBuild(w);
+      return powerScore(c.id, b, upgraded(modelGear(w, c.id, b).gear, w * EMBERS.full)).score;
+    });
+    const mid = scores.reduce((a, b) => a + b, 0) / scores.length;
+    return [w, ...scores.map((v) => `${Math.round(v)} (${v >= mid ? '+' : ''}${Math.round((v / mid - 1) * 100)}%)`)];
+  });
+  return [
+    '## Power by workouts',
+    '',
+    'One number for how strong a hero is (`powerScore` in `src/game/power.ts`): damage a second times what you can take, square-rooted, with a warrior with no points in the starter kit at 100. It leaves out run skills, chest items, the flame, abilities and hits on many foes.',
+    '',
+    `Model player: ${WEEKLY_GOAL} full workouts a week, every week at the goal, points spread evenly, embers all spent on upgrades, wearing middle-roll rares from the deepest floor it can wear in the newest open zone. A warrior, with the share of the gain since 0 workouts that comes from each source:`,
+    '',
+    table(['Workouts', 'Power', 'From training', 'From gear', 'From upgrades', 'Gear from'], rows),
+    '',
+    "Each class with the same model (and how far above or below the four's average). The simulator's win rates are the real check; this shows the gap before abilities:",
+    '',
+    table(['Workouts', ...CLASSES.map((c) => c.name)], classes),
+  ].join('\n');
+}
+
 function goals(): string {
   const steady = playSeason(PLAYERS.find((p) => p.id === 'steady')!, 182).state;
   const perLevel = steady.sessions.length / (levelInfo(totalXp(steady)).level - 1);
@@ -180,6 +256,8 @@ describe('balance sheet', () => {
       'Written by `pnpm balance` from `src/balance/` and the real rules. Do not edit by hand. The rule and the changelog: `docs/handbook/game/balance.md`.',
       '',
       goals(),
+      '',
+      power(),
       '',
       training(),
       '',

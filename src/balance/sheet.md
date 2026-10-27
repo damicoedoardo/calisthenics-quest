@@ -13,6 +13,36 @@ Each goal is written next to its numbers in `src/balance/`. The sheet measures i
 | 100 points a stat gives about +60% damage, +48% attack speed, +75 HP | +62%, +49%, +77 HP | on target |
 | A comeback after 14 days away earns a bonus | +50 XP | on target |
 
+## Power by workouts
+
+One number for how strong a hero is (`powerScore` in `src/game/power.ts`): damage a second times what you can take, square-rooted, with a warrior with no points in the starter kit at 100. It leaves out run skills, chest items, the flame, abilities and hits on many foes.
+
+Model player: 3 full workouts a week, every week at the goal, points spread evenly, embers all spent on upgrades, wearing middle-roll rares from the deepest floor it can wear in the newest open zone. A warrior, with the share of the gain since 0 workouts that comes from each source:
+
+| Workouts | Power | From training | From gear | From upgrades | Gear from |
+| --- | --- | --- | --- | --- | --- |
+| 0 | 117 | 7% | 93% | 0% | zone 1, floor 6 |
+| 6 | 132 | 25% | 68% | 7% | zone 1, floor 10 |
+| 12 | 152 | 27% | 60% | 13% | zone 2, floor 6 |
+| 18 | 169 | 30% | 55% | 15% | zone 2, floor 10 |
+| 24 | 194 | 28% | 51% | 21% | zone 3, floor 6 |
+| 30 | 211 | 30% | 49% | 21% | zone 3, floor 9 |
+| 37 | 246 | 27% | 47% | 26% | zone 4, floor 6 |
+| 43 | 263 | 28% | 45% | 27% | zone 4, floor 8 |
+| 50 | 304 | 26% | 44% | 29% | zone 5, floor 6 |
+| 56 | 317 | 27% | 44% | 29% | zone 5, floor 7 |
+| 64 | 366 | 26% | 44% | 31% | zone 6, floor 6 |
+| 70 | 378 | 26% | 44% | 30% | zone 6, floor 7 |
+| 100 | 420 | 33% | 46% | 22% | zone 6, floor 10 |
+
+Each class with the same model (and how far above or below the four's average). The simulator's win rates are the real check; this shows the gap before abilities:
+
+| Workouts | Warrior | Archer | Monk | Mage |
+| --- | --- | --- | --- | --- |
+| 0 | 117 (+26%) | 97 (+5%) | 83 (-11%) | 74 (-20%) |
+| 24 | 194 (+27%) | 158 (+4%) | 136 (-11%) | 121 (-21%) |
+| 64 | 366 (+31%) | 284 (+2%) | 251 (-10%) | 216 (-23%) |
+
 ## Training over time
 
 Played by the season simulator (`src/sim/players.ts`): `steady` trains 3 times a week and spreads points, `twice-a-week` trains twice, `eager` trains every weekday and puts every point in Damage.
