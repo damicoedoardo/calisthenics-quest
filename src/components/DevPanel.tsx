@@ -81,6 +81,10 @@ export function DevPanel({ state, update, onPlayScene, onTurnOff, onClose }: Pro
             <Link href="/lab/story" className="text-sky-300 underline">
               Story Lab
             </Link>
+            {' · '}
+            <Link href="/lab/night" className="text-sky-300 underline">
+              What&apos;s new tonight
+            </Link>
           </p>
           <div className="flex gap-2">
             <select aria-label="Scene to play" value={sceneId} onChange={(e) => setSceneId(e.target.value)} className="min-w-0 flex-1 rounded-lg bg-ink-700 px-2 text-sm text-slate-200">

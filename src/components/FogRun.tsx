@@ -21,7 +21,11 @@ interface Props {
   dev: boolean;
   onEnd: (r: RunResult) => void;
   onLeave: () => void;
+  /** Developer mode (/lab/night): start the first attempt at the mid-boss, at the boss, or won (the recap). */
+  startAt?: RunStart;
 }
+
+export type RunStart = 'mid' | 'boss' | 'win';
 
 
 /* Every zone is a dungeon (src/game/dungeon), each with its own boss and ground. */
@@ -42,7 +46,7 @@ function bossLines(zone: Zone, state: GameState): FogLines {
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 /** A run in the Fog: the Phaser canvas, with the HUD, skill picks and results drawn over it. */
-export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
+export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const run = useRef<RunHandle | null>(null);
   const [hud, setHud] = useState<Hud | null>(null);
@@ -94,6 +98,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
     window.addEventListener('keydown', moved, { once: true });
     // A touch on the game itself (not on a skill card or a button over it).
     el.addEventListener('pointerdown', moved, { once: true });
+    let jump = 0;
     Promise.all([game, calm]).then(([{ startRun }]) => {
       if (cancelled) return;
       run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast' }, {
@@ -117,12 +122,25 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
           onEnd(result);
         },
       });
+      // Once the first room is up, jump ahead (only on the first attempt, so Again plays normally).
+      if (startAt && attempt === 0)
+        jump = window.setTimeout(() => {
+          const h = run.current;
+          if (startAt === 'mid') h?.skipToWarden();
+          else if (startAt === 'boss') h?.skipToBoss();
+          else {
+            // The recap: let the bot play a little first, so it has something to show.
+            h?.autopilot(true);
+            jump = window.setTimeout(() => run.current?.winNow(), 8000);
+          }
+        }, 900);
     }, () => {
       if (!cancelled) setFailed(true);
     });
     return () => {
       cancelled = true;
       clearTimeout(tipGone);
+      clearTimeout(jump);
       window.removeEventListener('keydown', moved);
       el.removeEventListener('pointerdown', moved);
       run.current?.destroy();

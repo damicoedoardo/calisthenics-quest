@@ -4,10 +4,19 @@ import { useCallback, useEffect, useState } from 'react';
 import { initialState, migrate, type GameState } from './game';
 
 const KEY = 'forma-state-v1';
+/** A separate save for trying things (/lab/night opens the app with ?sandbox): the real save is never read or written. */
+export const SANDBOX_KEY = 'forma-sandbox-v1';
+
+/** True when this page was opened as a sandbox. */
+export function inSandbox(): boolean {
+  return typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('sandbox');
+}
+
+const key = () => (inSandbox() ? SANDBOX_KEY : KEY);
 
 function load(): GameState {
   try {
-    const raw = localStorage.getItem(KEY);
+    const raw = localStorage.getItem(key());
     if (raw) return migrate(JSON.parse(raw));
   } catch {
     // Private mode or corrupt data: start fresh rather than crash.
@@ -17,7 +26,7 @@ function load(): GameState {
 
 function save(state: GameState) {
   try {
-    localStorage.setItem(KEY, JSON.stringify(state));
+    localStorage.setItem(key(), JSON.stringify(state));
   } catch {
     // Storage full or blocked; the in-memory state still works for this visit.
   }

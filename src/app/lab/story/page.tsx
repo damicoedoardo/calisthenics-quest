@@ -121,7 +121,22 @@ export default function StoryLab() {
     setPlaying({ scene: sceneFor(scene, state), state });
   };
 
+  // /lab/night links here with ?play=<scene id>&back: play that scene at once, and return when it ends.
+  const [backTo, setBackTo] = useState<string | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const hit = all.find((a) => a.scene.id === q.get('play'));
+    if (hit) play(hit.scene, hit.chapter);
+    if (q.has('back')) setBackTo('/lab/night');
+    // Once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const done = (r: SceneResult) => {
+    if (backTo) {
+      window.location.href = backTo;
+      return;
+    }
     setPlaying(null);
     // Carry what was named and answered into the scenes that follow.
     if (r.flame) setFlame(r.flame);

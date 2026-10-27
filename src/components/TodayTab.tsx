@@ -26,6 +26,8 @@ interface Props {
   update: (fn: (s: GameState) => GameState) => void;
   onStart: (checkin: Checkin) => void;
   onReplayOpening: () => void;
+  /** Developer mode (/lab/night): open with the Book of Days showing. */
+  openBook?: boolean;
 }
 
 const CHECKINS: { id: Checkin; label: string; note: string }[] = [
@@ -36,9 +38,12 @@ const CHECKINS: { id: Checkin; label: string; note: string }[] = [
 
 const ROLE_LABEL = { main: 'Main', core: 'Core', support: 'Support' } as const;
 
-export function TodayTab({ state, update, onStart, onReplayOpening }: Props) {
+export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: Props) {
   const now = new Date();
-  const [overlay, setOverlay] = useState<'fire' | 'book' | null>(null);
+  const [overlay, setOverlay] = useState<'fire' | 'book' | null>(openBook ? 'book' : null);
+  useEffect(() => {
+    if (openBook) setOverlay('book');
+  }, [openBook]);
   const [checkin, setCheckin] = useState<Checkin>(state.draft?.checkin ?? 'normal');
   const quest = todaysQuest(state, checkin);
   const story = storyState(state);
