@@ -26,7 +26,7 @@ describe('stat points', () => {
     s = refundPoint(s, 'damage');
     expect(pointsFree(s)).toBe(1);
     expect(pointsFree(resetBuild(s))).toBe(STARTING_POINTS);
-    expect(spendEvenly(initialState()).build).toEqual({ health: 2, damage: 2, reach: 1, speed: 1 });
+    expect(spendEvenly(initialState()).build).toEqual({ health: 1, armor: 1, damage: 1, speed: 1, move: 1, crit: 1 });
   });
 
   it('gives a little less for each point in the same stat', () => {

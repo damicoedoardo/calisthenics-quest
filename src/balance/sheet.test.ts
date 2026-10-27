@@ -49,16 +49,15 @@ function points(): string {
     st.name,
     ...at.map((n) => {
       const v = statPower({ [st.id]: n }, undefined)[st.id];
-      return st.id === 'health' ? `+${Math.round(v)}` : `+${pct(v)}`;
+      return st.id === 'health' ? `+${Math.round(v)}` : st.id === 'armor' || st.id === 'crit' ? pct(v) : `+${pct(v)}`;
     }),
   ]);
-  const armor = at.map((n) => pct(statPower({ health: n }, undefined).armor));
   return [
     '## What stat points give',
     '',
     `Every hero starts with ${STARTING_POINTS} points. A stat with this many points (no class lean):`,
     '',
-    table(['Stat', ...at.map((n) => `${n} pts`)], [...rows, ['Armor (from Health)', ...armor]]),
+    table(['Stat', ...at.map((n) => `${n} pts`)], rows),
   ].join('\n');
 }
 
@@ -152,7 +151,7 @@ function goals(): string {
   const perLevel = steady.sessions.length / (levelInfo(totalXp(steady)).level - 1);
   const toFive = Array.from({ length: MAX_PLUS }, (_, i) => upgradeCost({ plus: i } as Item)).reduce((a, b) => a + b, 0);
   const weeks = weeksFor(toFive, WEEKLY_GOAL);
-  const spread = statPower({ health: 100, damage: 100, reach: 100, speed: 100 }, undefined);
+  const spread = statPower({ health: 70, armor: 70, damage: 70, speed: 70, move: 70, crit: 70 }, undefined);
   const check = (ok: boolean) => (ok ? 'on target' : '**off target**');
   const open = 'no goal set yet';
   return [
@@ -165,7 +164,11 @@ function goals(): string {
       [
         ['How often a steady player levels up (6 months)', `${perLevel.toFixed(1)} workouts a level`, open],
         ['One item +0 to +5 in about 5 weeks of training', `${weeks.toFixed(1)} weeks`, check(weeks >= 4 && weeks <= 6)],
-        ['100 points a stat gives about +60% damage, +48% attack speed, +75 HP', `+${pct(spread.damage)}, +${pct(spread.speed)}, +${Math.round(spread.health)} HP`, check(Math.abs(spread.damage - 0.6) < 0.08 && Math.abs(spread.speed - 0.48) < 0.08 && Math.abs(spread.health - 75) < 10)],
+        [
+          '70 points a stat gives about +60% damage, +48% attack speed, +75 HP, 20% blocked, +25% walk speed, 20% crit',
+          `+${pct(spread.damage)}, +${pct(spread.speed)}, +${Math.round(spread.health)} HP, ${pct(spread.armor)} blocked, +${pct(spread.move)} walk, ${pct(spread.crit)} crit`,
+          check(Math.abs(spread.damage - 0.6) < 0.08 && Math.abs(spread.speed - 0.48) < 0.08 && Math.abs(spread.health - 75) < 10 && Math.abs(spread.armor - 0.2) < 0.04 && Math.abs(spread.move - 0.25) < 0.05 && Math.abs(spread.crit - 0.2) < 0.04),
+        ],
         [`A comeback after ${XP.comebackDays} days away earns a bonus`, `+${XP.comeback} XP`, check(XP.comeback > 0)],
       ],
     ),

@@ -13,14 +13,14 @@ const many = (n: number, rarity: Item['rarity'] = 'magic') => {
 };
 
 describe('items', () => {
-  it('weapons and armor are made for your class; weapons ask for its stat, armor for Health, charms for nothing', () => {
+  it('weapons and armor are made for your class; weapons ask for its stat, armor for Armor, charms for nothing', () => {
     for (const it of many(60)) {
       if (it.slot === 'charm') {
         expect(it.cls).toBeNull();
         expect(it.need).toBeNull();
       } else {
         expect(it.cls).toBe('warrior');
-        expect(it.need?.stat).toBe(it.slot === 'weapon' ? 'damage' : 'health');
+        expect(it.need?.stat).toBe(it.slot === 'weapon' ? 'damage' : 'armor');
       }
     }
   });
@@ -69,7 +69,7 @@ describe('items in a run', () => {
     give(weak, sword);
     wear(weak, sword.id);
     expect(weak.hero.gear.worn.weapon?.starter).toBe(true);
-    const run = fresh({ damage: 99, health: 99 }),
+    const run = fresh({ damage: 99, armor: 99 }),
       { damage } = run.hero.power,
       hp = run.hero.maxHp;
     give(run, sword);
@@ -139,7 +139,7 @@ describe('items in a run', () => {
   });
 
   it('a run drops items, and the end says what you wore and carried (never the starter kit)', () => {
-    const end = playRun({ zone: ZONES[0], power: { ...power, damage: 4, armor: 0.9, health: 600 }, classId: 'archer', seed: 11, build: { reach: 40, health: 40 } });
+    const end = playRun({ zone: ZONES[0], power: { ...power, damage: 4, armor: 0.9, health: 600 }, classId: 'archer', seed: 11, build: { crit: 40, armor: 40 } });
     const carried = [...Object.values(end.gear.worn), ...end.gear.bag];
     expect(carried.length).toBeGreaterThan(0);
     expect(carried.some((i) => i?.starter)).toBe(false);

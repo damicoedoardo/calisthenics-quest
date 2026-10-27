@@ -56,7 +56,7 @@ export const RARITY_LEAN = { commonPerLuck: 1, commonPerFloor: 0.06, rarerPerLuc
 /** Stat points an item asks for. Goal: what you find you can mostly wear soon, the best of it after a
     few more workouts. It follows an even build when the zone opens: (start + workouts * perWorkout) / stats
     points a stat, times fromFloor on the first floor rising by `perFloor9` by the tenth, times the rarity's `need`. */
-export const NEED = { start: 6, perWorkout: 3.67, stats: 4, fromFloor: 0.5, perFloor9: 0.6 } as const;
+export const NEED = { start: 6, perWorkout: 3.67, stats: 6, fromFloor: 0.5, perFloor9: 0.6 } as const;
 
 /** The free starter kit everyone has. */
 export const STARTER = { weaponDamage: 0.05, armorHealth: 6, armorArmor: 0.015 } as const;

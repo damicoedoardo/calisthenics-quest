@@ -13,6 +13,7 @@ import { StatPoints } from './StatPoints';
 import { CloudSave } from './Cloud';
 import { useLand } from './useLand';
 import { FriendsCard } from './Friends';
+import { ItemTile } from './ItemCard';
 import { getClass, tierText } from '@/lib/gear';
 import { gearOf, type GameState } from '@/lib/game';
 import { planExercises } from '@/lib/program';
@@ -21,6 +22,7 @@ import { storyState } from '@/story/engine';
 import { heroVariant } from '@/story/flame';
 import { ZONES } from '@/lib/fog';
 import { pointsFree } from '@/lib/stats';
+import { nameOf, RARITY, SLOT_NAME } from '@/game/dungeon/items';
 
 interface Props {
   state: GameState;
@@ -30,6 +32,36 @@ interface Props {
 }
 
 const exerciseName = (id: string) => planExercises().find((x) => x.id === id)?.name ?? id;
+
+/** What you wear right now, one tile per slot: the item's art in its rarity's frame and its name
+    in that color, or a dashed slot with the plain piece you start with. */
+function WornSlots({ state, tile }: { state: GameState; tile: number }) {
+  const gear = gearOf(state),
+    worn = state.fogGear?.worn ?? {};
+  return (
+    <ul className="grid grid-cols-3 gap-2 text-center">
+      {(['weapon', 'armor', 'charm'] as const).map((slot) => {
+        const it = worn[slot],
+          piece = gear[slot === 'charm' ? 'shield' : slot];
+        return (
+          <li key={slot} className="flex min-w-0 flex-col items-center gap-1 rounded-lg bg-ink-900/70 px-1 pb-1.5 pt-2">
+            {it ? (
+              <ItemTile item={it} size={tile} />
+            ) : (
+              <span className="grid place-items-center rounded-lg border border-dashed border-slate-600 text-[9px] text-slate-600" style={{ width: tile, height: tile }}>
+                empty
+              </span>
+            )}
+            <span className="text-[9px] uppercase tracking-wider text-slate-500">{SLOT_NAME[slot]}</span>
+            <span title={it ? nameOf(it) : piece.name} className="w-full truncate text-[10px] font-semibold leading-tight" style={{ color: it ? RARITY[it.rarity].color : tierText(piece.tier) }}>
+              {it ? `${nameOf(it)}${it.plus ? ` +${it.plus}` : ''}` : piece.name}
+            </span>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
@@ -193,16 +225,9 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
           <div className="grid min-h-0 flex-1 place-items-center">
             <Hero gear={gear} classId={state.profile.classId} size={112} variant={heroVariant(state)} />
           </div>
-          <ul className="w-full space-y-1 text-[11px]">
-            {(['weapon', 'armor', 'shield'] as const).map((slot) => (
-              <li key={slot} className="flex items-baseline justify-between gap-2 rounded-lg bg-ink-900/70 px-2 py-1">
-                <span className="uppercase tracking-wider text-slate-500">{slot}</span>
-                <span className="truncate font-semibold" style={{ color: tierText(gear[slot].tier) }}>
-                  {gear[slot].name}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <div className="w-full">
+            <WornSlots state={state} tile={36} />
+          </div>
           <div className="mt-1.5 grid w-full grid-cols-2 gap-1.5">
             <button onClick={onChangeClass} className="rounded-lg bg-ink-900/70 px-1 py-2 text-[11px] font-semibold text-slate-300">
               {cls ? 'Change class' : 'Choose a class'}
@@ -255,15 +280,8 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
       <section className="flex flex-col items-center rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 pb-4 pt-5">
         <p className="font-pixel text-[10px] text-slate-400">{cls ? cls.name : 'Adventurer'}</p>
         <Hero gear={gear} classId={state.profile.classId} size={180} variant={heroVariant(state)} />
-        <div className="mt-3 grid w-full grid-cols-3 gap-2 px-3 text-center text-xs">
-          {(['weapon', 'armor', 'shield'] as const).map((slot) => (
-            <div key={slot} className="rounded-lg bg-ink-900/70 px-2 py-2">
-              <p className="uppercase tracking-wider text-slate-500">{slot}</p>
-              <p className="mt-0.5 font-semibold" style={{ color: tierText(gear[slot].tier) }}>
-                {gear[slot].name}
-              </p>
-            </div>
-          ))}
+        <div className="mt-3 w-full px-3">
+          <WornSlots state={state} tile={48} />
         </div>
         <div className="mt-3 flex gap-2">
           <button onClick={onChangeClass} className="rounded-lg bg-ink-900/70 px-4 py-2 text-xs font-semibold text-slate-300">

@@ -790,8 +790,12 @@ const MAP_LOOK: Record<CellKind, { color: string; name: string }> = {
   boss: { color: '#a855f7', name: 'Boss' },
 };
 
-/** The floor's map, top right: the rooms you've been in, filled; the ones you've seen through a
-    door, as outlines in the color of what waits there; you, the gold one. Tap for it big, with
+/** A room you haven't been in yet. */
+const UNKNOWN_ROOM = { color: '#64748b', name: '?' };
+
+/** The floor's map, top right: the rooms you've been in, filled in the color of what was there;
+    the ones behind a door you haven't opened, as gray dashed outlines that don't say what waits
+    there (the stairs too); you, the gold one. Tap for it big, with
     names; the run holds still while it's open. */
 function FloorMap({ map, floor, midName, keys, hold }: { map: MiniMap; floor: number; midName: string; keys: boolean; hold: (on: boolean) => void }) {
   const [open, setOpen] = useState(false);
@@ -837,14 +841,14 @@ function FloorMap({ map, floor, midName, keys, hold }: { map: MiniMap; floor: nu
           const x = (c.x - x0) * step,
             y = (c.y - y0) * step,
             here = c.id === map.at,
-            { color } = MAP_LOOK[c.kind];
+            { color } = c.been || here ? MAP_LOOK[c.kind] : UNKNOWN_ROOM;
           return (
             <g key={c.id}>
               <rect x={x} y={y} width={s} height={s} rx={s / 6} fill={here ? '#fde68a' : c.been ? '#334155' : '#0b0d14'} stroke={here ? '#fbbf24' : color} strokeWidth={c.been && !here ? 1 : 2} strokeDasharray={c.been || here ? undefined : `${s / 5} ${s / 8}`} />
               {!names && c.been && !here && c.kind !== 'fight' && <rect x={x + s * 0.3} y={y + s * 0.3} width={s * 0.4} height={s * 0.4} fill={color} />}
               {names && (
                 <text x={x + s / 2} y={y + s / 2 + 3} textAnchor="middle" fontSize={8} fill={here ? '#0b0d14' : color} fontFamily="monospace">
-                  {here ? 'You' : c.kind === 'warden' ? midName.split(' ').pop()!.slice(0, 7) : MAP_LOOK[c.kind].name}
+                  {here ? 'You' : !c.been ? UNKNOWN_ROOM.name : c.kind === 'warden' ? midName.split(' ').pop()!.slice(0, 7) : MAP_LOOK[c.kind].name}
                 </text>
               )}
             </g>
@@ -871,7 +875,7 @@ function FloorMap({ map, floor, midName, keys, hold }: { map: MiniMap; floor: nu
           <div className="max-h-full max-w-full overflow-auto rounded-xl bg-ink-950/95 p-3 ring-1 ring-gold-400/40">
             <p className="font-pixel text-[9px] text-gold-300">Floor {floor}</p>
             <div className="mt-2">{draw(44, 12, true)}</div>
-            <p className="mt-2 max-w-xs text-[11px] leading-snug text-slate-400">Filled: rooms you've been in. Dashed: rooms you've seen through a door. Find the stairs to go down. {keys ? 'M or Esc to close.' : 'Tap to close.'}</p>
+            <p className="mt-2 max-w-xs text-[11px] leading-snug text-slate-400">Filled: rooms you've been in. Dashed: rooms behind a door, unknown until you go in. Find the stairs to go down. {keys ? 'M or Esc to close.' : 'Tap to close.'}</p>
           </div>
         </div>
       )}

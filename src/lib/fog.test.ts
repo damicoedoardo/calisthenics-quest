@@ -43,11 +43,11 @@ describe('the Fog', () => {
 
   it('turns stat points and workouts into power, and only training raises it', () => {
     const fresh = powerOf(initialState(), day(26));
-    expect(fresh).toMatchObject({ damage: 0.12, speed: 0.08, reach: 0.15, health: 0, armor: 0, flames: 0, fresh: false, fireballs: false, fairy: false, flameName: '' });
-    const trained = powerOf({ ...initialState(), build: { damage: 10, health: 10 }, sessions: sessions(6) }, day(26));
-    expect(trained.damage).toBeCloseTo(0.183, 3);
-    expect(trained.health).toBeCloseTo(9.68, 1);
-    expect(trained.armor).toBeCloseTo(0.026, 3);
+    expect(fresh).toMatchObject({ damage: 0.12, speed: 0.08, reach: 0.15, move: 0, crit: 0.05, health: 0, armor: 0, flames: 0, fresh: false, fireballs: false, fairy: false, flameName: '' });
+    const trained = powerOf({ ...initialState(), build: { damage: 10, health: 10, armor: 10 }, sessions: sessions(6) }, day(26));
+    expect(trained.damage).toBeCloseTo(0.204, 3);
+    expect(trained.health).toBeCloseTo(12.87, 1);
+    expect(trained.armor).toBeCloseTo(0.035, 3);
     expect(trained.speed).toBe(0.08);
     expect(trained.flames).toBe(2);
     expect(trained.fresh).toBe(true);

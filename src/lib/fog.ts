@@ -1,6 +1,6 @@
 import { daysSinceLastSession, type GameState } from './game';
 import { dayKey } from './days';
-import { RUN_LEVELS } from '@/balance';
+import { PICKUP_REACH, RUN_LEVELS } from '@/balance';
 import { buildOf, pointsFree, statPower } from './stats';
 import { CHAPTERS } from '@/story/chapters';
 import { chapterStart, storyState } from '@/story/engine';
@@ -140,14 +140,18 @@ export function edgeFor(state: GameState, zone: Zone): Edge {
 export interface Power {
   /** Extra max HP, from Health points. */
   health: number;
-  /** Damage taken is cut by this share, from Health points. */
+  /** Damage taken is cut by this share, from Armor points. */
   armor: number;
   /** Extra damage (0.12 = +12%), from Damage points. */
   damage: number;
-  /** Wider pickup reach for light (0.2 = +20%), from Reach points. */
+  /** Wider pickup reach for light (0.2 = +20%): the same for everyone, more from items. */
   reach: number;
-  /** Extra attack speed, from Speed points. */
+  /** Extra attack speed, from Haste points. */
   speed: number;
+  /** Extra walk speed, from Speed points. */
+  move: number;
+  /** The chance a hit does double, from Crit points. */
+  crit: number;
   /** Your flame's fire circling you, one more at each step of your workout count. */
   flames: number;
   /** Trained in the last two days: the run starts with a free skill. */
@@ -170,6 +174,7 @@ export function powerOf(state: GameState, now: Date): Power {
   const stage = stageIndex(flameStage(state.sessions.length).id);
   return {
     ...statPower(buildOf(state), state.profile.classId),
+    reach: PICKUP_REACH,
     flames: FLAME_AT.filter((n) => state.sessions.length >= n).length,
     fresh: gap !== null && gap <= 2,
     rested: isRested(state, now),

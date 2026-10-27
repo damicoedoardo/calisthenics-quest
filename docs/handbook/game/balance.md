@@ -40,7 +40,7 @@ kept there as aliases, so callers didn't change).
 | File | Holds | Used by |
 |---|---|---|
 | `src/balance/training.ts` | XP per workout, perfect week, comeback, XP per level, streak bonus, `WEEKLY_GOAL`, how often goals rise | `src/lib/game.ts` |
-| `src/balance/stats.ts` | stat points per workout, starting points, what a point is worth, base stats, falloff, armor from Health, class lean | `src/lib/stats.ts` |
+| `src/balance/stats.ts` | stat points per workout, starting points, what a point is worth, base stats, falloff, armor per point, crit size, pickup reach, class lean | `src/lib/stats.ts` |
 | `src/balance/economy.ts` | embers per workout, forge prices, melt values, vault size, how long the flame guards | `src/lib/forge.ts`, `src/lib/fog-gear.ts` |
 | `src/balance/items.ts` | item power, base damage/HP/armor per level, bonus sizes, rarity sizes and weights, how luck and depth lean rarer, requirements, the starter kit, drop chances and luck, the bag | `src/game/dungeon/items.ts`, `src/game/dungeon/engine.ts` |
 | `src/balance/dungeon.ts` | `DIALS`, elites, run levels | `src/game/dungeon/content.ts`, `src/lib/fog.ts` |
@@ -99,5 +99,6 @@ before and after.
 
 | Date | Change | Why | Before → after | PR |
 |---|---|---|---|---|
+| 2026-10-27 | Stats: Reach out; Armor (its own stat, no longer from Health), Speed (walk) and Crit in; points worth 4/3 as much; item needs spread over 6 stats; archer leans Crit | Edoardo: loot comes to you, so Reach did nothing worth a point; six stats feel fuller but stay finite | 70 points a stat now = what 100 a stat gave (+62% damage, +49% attack speed, +76 HP, 21% blocked), plus +25% walk and 20% crit; fog:sim in the PR | this PR |
 | 2026-10-27 | Item, rarity, requirement, drop, bag, dungeon dial, elite and run-level numbers moved into `src/balance/`; weapons, drops and run levels added to the sheet | Every number findable; hidden numbers in `rollItem`, `rollRarity` and `kill` named | No change in play: replays identical | #39 |
 | 2026-10-27 | Training, stat points and economy numbers moved into `src/balance/`; balance sheet added | Make every number findable and every change visible | No change in play: replays and the sheet's numbers are the same | #39 |

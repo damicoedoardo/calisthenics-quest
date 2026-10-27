@@ -301,6 +301,15 @@ describe('levels, migration', () => {
     expect(migrate({ ...s, sessions: fakeSessions(40) }).fogGear?.kit).toEqual(tiersAt(12));
   });
 
+  it('hands back the points in Reach, and bows that asked for Reach ask for Crit', () => {
+    const bow = { ...rollItem(seeded(5), { zone: 1, workouts: 10, floor: 3, cls: 'archer' }, 'magic'), slot: 'weapon' as const },
+      old = { ...bow, need: { stat: 'reach', n: 9 } } as unknown as typeof bow;
+    const s = migrate({ ...initialState(), build: { damage: 4, reach: 6 }, fogGear: { worn: { weapon: old }, vault: [old], kit: { weapon: 1, armor: 1, shield: 0 } } });
+    expect(s.build).toEqual({ damage: 4 });
+    expect(s.fogGear?.worn.weapon?.need).toEqual({ stat: 'crit', n: 9 });
+    expect(s.fogGear?.vault[0].need).toEqual({ stat: 'crit', n: 9 });
+  });
+
   it('the look follows a finer item you wear into the Fog', () => {
     const blade = rollItem(seeded(3), { zone: 3, workouts: 30, floor: 8, cls: 'warrior' }, 'legendary');
     const s: GameState = { ...initialState(), fogGear: { worn: { [blade.slot]: blade }, vault: [], kit: { weapon: 1, armor: 1, shield: 0 } } };
