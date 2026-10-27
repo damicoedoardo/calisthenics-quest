@@ -36,6 +36,9 @@ function bossJobs(zoneId: number, hero: Pick<HeroOpts, 'gear' | 'classId' | 'loo
     return [
       ['summitBoss', () => sheetFor('summitBoss', 'idle')],
       ['summitBossAttack', () => sheetFor('summitBoss', 'attack')],
+      ['wanderer', () => sheetFor('wanderer', 'idle')],
+      ['mira', () => sheetFor('mira', 'idle')],
+      ['vela', () => sheetFor('vela', 'idle')],
     ];
   return [];
 }
@@ -45,13 +48,16 @@ function jobs(state: GameState, zone: Zone): Job[] {
     classId = state.profile.classId,
     look = state.profile.look,
     hero = { gear, classId, look };
-  const plain = ['ember', 'slime', 'wisp', 'mirror', 'golem', 'knight', 'book', 'summit', 'ram', 'smoke', 'seeker', 'splitter', 'splitling', 'shade', 'splitterPop', 'warden'] as const;
+  const plain = ['ember', 'mirror', 'golem', 'knight', 'book', 'summit', 'splitterPop', 'warden'] as const;
+  // The regular monsters dressed for this zone (wet glass at the lake, scrap iron at the forges...).
+  const dressed = ['slime', 'wisp', 'ram', 'smoke', 'seeker', 'splitter', 'splitling', 'shade'] as const;
   return [
     ['hero', () => sheetFor('hero', 'idle', hero)],
     ['heroAttack', () => sheetFor('hero', 'attack', hero)],
     ['hollow', () => sheetFor('hero', 'idle', { ...hero, variant: 'hollow' })],
     ['echo', () => sheetFor('hero', 'idle', { ...hero, variant: 'echo' })],
     ...plain.map((id): Job => [id, () => sheetFor(id, 'idle')]),
+    ...dressed.map((id): Job => [id, () => sheetFor(id, 'idle', { zone: zone.id })]),
     ...bossJobs(zone.id, hero),
   ];
 }

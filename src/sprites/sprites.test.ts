@@ -6,12 +6,15 @@ import { DEFAULT_LOOK, STARTER_LOOKS, normalizeLook } from './characters/hero';
 import { HAIRSTYLES, SIZE, type HairStyle } from './engine/figure';
 import { MANGA_HAIR } from './engine/manga';
 import { tint, type Grid } from './engine/grid';
+import { PATHS } from '@/lib/skills';
+import { EXERCISES, type ExerciseId } from './characters/exercise';
 import { SPRITES, clipFor, framesFor, imageSheet, type SpriteId } from './registry';
 
 const painted = (g: Grid) => g.flat().filter(Boolean).length;
 const hash = (frames: Grid[]) => createHash('sha1').update(JSON.stringify(frames)).digest('hex').slice(0, 12);
 const ids = Object.keys(SPRITES) as SpriteId[];
 const actions: SpriteAction[] = ['idle', 'attack'];
+const ZONED = ['slime', 'wisp', 'ram', 'smoke', 'seeker', 'splitter', 'splitling', 'shade'] as const;
 
 describe('clips', () => {
   it('every clip has frames and a positive speed', () => {
@@ -90,6 +93,27 @@ describe('sprite registry', () => {
     expect(normalizeLook({ ...STARTER_LOOKS.f, hair: 'red', style: 'pony' })).toEqual({ ...STARTER_LOOKS.f, hair: 'red', style: 'pony' });
   });
 
+  it('the regular monsters have a variant for each zone, with the same eyes', () => {
+    for (const id of ZONED)
+      for (const zone of [1, 2, 3, 4, 5]) {
+        const base = framesFor(id, 'idle')[0],
+          g = framesFor(id, 'idle', { zone })[0];
+        expect(g, `${id} zone ${zone}`).toHaveLength(SIZE);
+        expect(hash([g]), `${id} zone ${zone}`).not.toBe(hash([base]));
+        expect(painted(g), `${id} zone ${zone}`).toBeGreaterThan(painted(base) / 2);
+      }
+  });
+
+  it('every exercise in the program has a demo, and every demo moves', () => {
+    for (const path of PATHS)
+      for (const node of path.nodes) {
+        expect(EXERCISES, node.id).toContain(node.id);
+        const frames = framesFor('exercise', 'idle', { exercise: node.id as ExerciseId });
+        expect(frames, node.id).toHaveLength(16);
+        expect(new Set(frames.map((g) => hash([g]))).size, node.id).toBeGreaterThan(1);
+      }
+  });
+
   it('PNG sheets pick their row and fall back to idle', () => {
     const png = {
       kind: 'image' as const,
@@ -120,6 +144,8 @@ describe('sprite registry', () => {
     for (const stage of ['spark', 'candle', 'torch', 'bonfire', 'fairy'] as const)
       for (const mood of ['happy', 'bright', 'soft', 'sleepy', 'smoky', 'scared', 'dim'] as const) prints[`flame ${stage} ${mood}`] = hash(framesFor('ember', 'idle', { stage, mood }));
     for (const id of ['lia', 'sol', 'vela'] as const) prints[`${id} after`] = hash(framesFor(id, 'idle', { after: true }));
+    for (const id of ZONED) for (const zone of [1, 2, 3, 4, 5]) prints[`${id} zone ${zone}`] = hash([...framesFor(id, 'idle', { zone }), ...framesFor(id, 'attack', { zone })]);
+    for (const exercise of EXERCISES) prints[`exercise ${exercise}`] = hash(framesFor('exercise', 'idle', { exercise }));
     prints['kindled long hair'] = hash(framesFor('kindled', 'idle', { hair: 'long' }));
     expect(prints).toMatchSnapshot();
   });

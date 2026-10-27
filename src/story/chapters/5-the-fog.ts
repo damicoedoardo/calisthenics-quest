@@ -18,13 +18,20 @@ export const THE_FOG: Chapter = {
   fog: {
     name: 'The Hollow Woods',
     boss: 'hollow',
-    hint: 'The Hollow walks out of the fog, speaking your own line.',
+    hint: "It can't be beaten. When its light opens, stand in it, and take its hand.",
     after: 'Nobody destroys it. You walked up to it anyway.',
     keepsake: { name: 'The Voice Stone', text: "Your Hollow's line, carved small enough to carry." },
-    hp: 6,
-    dmg: 2,
+    hp: 2.2,
+    dmg: 3.1,
     ground: '#111a17',
     fog: '#1f3b33',
+    // stages: [its light opens, its light goes dark]
+    lines: {
+      enter: 'Back again? You always stop around here.',
+      stages: ['Come into the light, then. I dare you.', 'See? Dark again. It always gets dark.'],
+      end: '...I only wanted you safe.',
+      taunts: ['{voice}', "Nobody's coming.", "You'll quit. You always do.", 'Go back to the quiet.'],
+    },
   },
   scenes: [
     {
@@ -152,10 +159,11 @@ export const THE_FOG: Chapter = {
         { who: 'narrator', text: 'You stand very still. You notice you are holding the first stone, in your pocket, hard enough to hurt.', film: true, pause: 1.6 },
         { who: 'narrator', text: 'Then, footsteps.', film: true, pause: 2, pace: 'slow' },
         { who: 'narrator', text: 'Not golden ones. Ordinary ones. More than one pair.', shot: { shake: 'small' }, music: 'rise' },
-        { who: 'lia', text: "You sat with me when nobody did. You didn't ask me when I was coming back. So I came.", shot: { enter: 'left' }, answer: { id: 'lia', is: 'yes' } },
-        { who: 'sol', text: 'You woke me up on a day you had every excuse not to. I owed you a morning. I brought a few.', shot: { enter: 'right' }, answer: { id: 'sol', is: 'yes' } },
-        { who: 'narrator', show: 'vela', text: "A light swings out of the fog: Vela's lamp, carried all the way from the flat road.", answer: { id: 'vela', is: 'yes' } },
-        { who: 'vela', text: "The light doesn't argue with the fog. It just stays on. I thought you could use one.", answer: { id: 'vela', is: 'yes' } },
+        { who: 'lia-after', text: "You sat with me when nobody did. You didn't ask me when I was coming back. So I came.", shot: { enter: 'left' }, answer: { id: 'lia', is: 'yes' } },
+        { who: 'sol-after', text: 'You woke me up on a day you had every excuse not to. I owed you a morning. I brought a few.', shot: { enter: 'right' }, answer: { id: 'sol', is: 'yes' } },
+        { who: 'narrator', show: 'vela-after', text: "A light swings out of the fog: Vela's lamp, carried all the way from the flat road.", answer: { id: 'vela', is: 'yes' } },
+        { who: 'vela-after', text: "The light doesn't argue with the fog. It just stays on. I thought you could use one.", answer: { id: 'vela', is: 'yes' } },
+        { who: 'vela-after', text: "And I've a letter in my coat. An answer, from home. I haven't opened it. One brave thing at a time. I'll open it when you're through.", answer: { id: 'vela', is: 'yes' } },
         { who: 'hollow', text: '...You were supposed to be alone.', pause: 0.8 },
         { who: 'you', text: 'So was I.', pause: 0.6 },
         { who: 'narrator', text: 'Nobody makes a speech. They just start walking, and somehow you end up in the middle.', film: true, pause: 1 },
@@ -207,13 +215,16 @@ export const THE_FOG: Chapter = {
     {
       id: 'ch5-victory',
       when: { beaten: 5 },
+      music: 'memory',
       lines: [
         { who: 'narrator', show: 'echo', text: 'The fog begins to thin. Golden footsteps come close, and stop beside you.' },
-        { who: 'echo', text: "I said cruel things. I was scared that if you got strong again, you'd forget me." },
-        { who: 'you', text: "I won't forget you. You're the reason I knew it was possible." },
-        { who: 'echo', text: 'You told me you lost {heart2}. Here. I kept it for you.', needs: 'heart2' },
-        { who: 'echo', text: "I'm not your goal. I'm your proof. You did it once. You can do it again." },
-        { who: 'narrator', text: 'The Echo turns into light and settles into your armor.' },
+        { who: 'echo', text: "I said cruel things. I was scared that if you got strong again, you'd forget me.", pause: 0.8 },
+        { who: 'you', text: "I won't forget you. You're how I knew it was possible." },
+        { who: 'echo', text: 'You told me you lost {heart2}. I kept some of it for you. Here.', needs: 'heart2', pause: 0.8 },
+        { who: 'narrator', text: 'The Echo puts something in your hands. It weighs nothing at all. You hold on to it anyway.', pause: 1.4, film: true, music: 'none' },
+        { who: 'echo', text: 'I was never the one you had to get back to.', pace: 'slow', pause: 1 },
+        { who: 'echo', text: "I was just one day you were brave. You've had a lot of those since. I counted.", music: 'memory' },
+        { who: 'narrator', text: 'The Echo turns into light and settles into your armor, right over your heart. It is warm there.', pause: 1.2, film: true },
         { who: 'narrator', show: 'hollow', text: 'The fog thins. The Hollow is still there. Smaller now.' },
         { who: 'hollow', text: "You still hear me, don't you?" },
         { who: 'you', text: 'Every day. I just stopped obeying you.' },
@@ -222,5 +233,6 @@ export const THE_FOG: Chapter = {
         { who: 'flame', mood: 'soft', text: "...It looked scared just then. Did you see? I didn't know it could be scared." },
       ],
     },
+
   ],
 };

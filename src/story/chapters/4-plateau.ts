@@ -15,14 +15,21 @@ export const PLATEAU: Chapter = {
   place: 'flat-road',
   fog: {
     name: 'The Flat Road',
-    boss: 'hollow',
-    hint: 'The Hollow walks out of the fog, speaking your own line.',
+    boss: 'plateau',
+    hint: 'It never shows how hurt it is. Keep hitting: it is breaking, even when it looks the same.',
     after: 'It looked like nothing was happening. Everything was happening.',
     keepsake: { name: 'A Cracked Stone', text: 'It broke all at once. It had been breaking for weeks.' },
-    hp: 4.5,
-    dmg: 1.8,
+    hp: 2.1,
+    dmg: 2.0,
     ground: '#1c1712',
     fog: '#4a3a26',
+    // stages: [first cracks (art stage 1), breaking (art stage 2)]
+    lines: {
+      enter: '...Same. ...As. ...Yesterday.',
+      stages: ['...Still. ...Same.', '...Same...? ...Same.'],
+      end: '...Not. ...The same.',
+      taunts: ['...Nothing. ...Changes.', '...Why. ...Bother.', '...Flat. ...Forever.', '...You. ...Again?'],
+    },
   },
   scenes: [
     {
@@ -45,6 +52,18 @@ export const PLATEAU: Chapter = {
         { who: 'plateau', text: '...As. ...Yesterday.' },
         { who: 'flame', mood: 'smoky', text: "Rude. Also, wrong. Probably. I'm pretty sure it's wrong." },
         { who: 'wanderer', text: "Don't look for change every day. Look every month." },
+      ],
+    },
+    {
+      // Lia's arc, what she gives back: a note in her own hand, and a student.
+      id: 'ch4-lia-bird',
+      when: { workouts: 40, chapter: 4, answer: { id: 'lia', is: 'yes' } },
+      lines: [
+        { who: 'narrator', show: 'flame', text: 'A paper bird comes skimming down the flat road and lands on your boot. It is folded a little crooked.' },
+        { who: 'narrator', text: 'Inside, in round handwriting: "Danced badly again today. Nobody laughed. One person clapped. It was me."', pause: 1.2, film: true },
+        { who: 'narrator', text: '"A little one at the lake asked me to teach her. I said I\'m not very good any more. She said: good, then you won\'t be scary."', film: true },
+        { who: 'narrator', text: '"Go and look at your reflection for me sometime. Be nice to them. Love, L."', pause: 1, film: true },
+        { who: 'flame', mood: 'soft', text: "Can I keep the bird? I'll hold it away from my face. Mostly." },
       ],
     },
     {
@@ -83,6 +102,19 @@ export const PLATEAU: Chapter = {
           },
         ],
       },
+    },
+    {
+      // Sol's arc, what she gives back: the rest she learned, posted to you.
+      id: 'ch4-sol-socks',
+      when: { workouts: 42, restDay: true, inChapter: 4, answer: { id: 'sol', is: 'yes' } },
+      music: 'camp',
+      lines: [
+        { who: 'narrator', show: 'sol-after', text: 'A parcel is waiting by the road, tied with string. Inside: a pair of very soft socks, and a note in hurried handwriting.' },
+        { who: 'narrator', text: '"Put these on. Do nothing today. That is an order from someone who learned it the hard way."', pause: 1, film: true },
+        { who: 'narrator', text: '"Nothing will fall over. I checked. Sol."', pause: 0.8, film: true },
+        { who: 'flame', mood: 'sleepy', text: "They're so soft. Can I sleep in one? Just my head." },
+        { who: 'narrator', show: 'flame', text: "You put the socks on. You do nothing, on purpose, for a whole day. You're getting better at it." },
+      ],
     },
     {
       // The Plateau doubt: the month's hardest moment. The stones from month one come back.
@@ -153,6 +185,25 @@ export const PLATEAU: Chapter = {
       ],
     },
     {
+      // Vela's arc, the turn and the gift: she comes down from the tower, and promises a light behind you.
+      id: 'ch4-vela-down',
+      when: { workouts: 46, chapter: 4, answer: { id: 'vela', is: 'yes' } },
+      place: 'lamp-road',
+      lines: [
+        { who: 'narrator', show: 'vela-after', text: 'The lamp is lit, but the tower is empty. Vela is at the bottom of the stairs, one hand on the rail. In the other, a letter: sealed, stamped, a little crumpled from being held.' },
+        { who: 'vela-after', text: "Don't look so surprised. I'm surprised enough for both of us." },
+        { who: 'vela-after', text: "I haven't come down in years. Up there the voice can't follow me. Down here it talks right in my ear." },
+        { who: 'vela-after', text: "People like us don't...", pace: 'slow', pause: 1.2 },
+        { who: 'vela-after', text: "...walk to the post stone. Yes, well. Today we do. Will you walk with me? I'm slow." },
+        { who: 'you', text: "Slow is fine. Slow is what I do." },
+        { who: 'narrator', text: "It takes her most of the afternoon. You don't hurry her once. When she stops to breathe, you stop too, and pretend you needed it.", pause: 1.4, film: true, music: 'none' },
+        { who: 'narrator', show: 'vela-after', text: 'At the post stone she holds the letter over the slot for a long moment. Then she lets go.', pause: 1.2 },
+        { who: 'vela', text: "There. Now it's somebody else's problem.", music: 'rise' },
+        { who: 'vela', text: 'Something for your road. It goes flat again after this. It always does. When it does, look back. My light will be on.' },
+        { who: 'flame', mood: 'soft', text: "We'll look back. We'll wave, even. Big waves." },
+      ],
+    },
+    {
       id: 'ch4-stone',
       when: { workouts: 47, chapter: 4 },
       place: 'lit-forges',
@@ -210,9 +261,12 @@ export const PLATEAU: Chapter = {
       id: 'ch4-victory',
       when: { beaten: 4 },
       lines: [
-        { who: 'plateau', text: '...Same. ...As...' },
-        { who: 'narrator', text: 'The Plateau shatters, all at once. It had been breaking for weeks.', shot: { shake: 'big' } },
-        { who: 'wanderer', text: 'It looked like nothing was happening. Everything was happening.' },
+        { who: 'plateau-breaking', text: '...Same. ...As...' },
+        { who: 'narrator', text: 'The Plateau shatters, all at once.', shot: { shake: 'big' }, pause: 0.6 },
+        { who: 'narrator', text: 'Inside, the stone is full of cracks. Fine ones, packed close, like the rings in a tree.', pause: 1.4, film: true, music: 'none' },
+        { who: 'narrator', text: 'Every one of them is a day it looked like nothing happened.', pace: 'slow', pause: 1.2, film: true },
+        { who: 'flame', mood: 'soft', text: "That one's a short day. That one's a day you nearly didn't come. That one... I don't know. A Tuesday." },
+        { who: 'narrator', show: 'flame', text: 'You pick up a piece. It is still warm. You put it in your pocket, next to the first stone.', pause: 0.8, music: 'rise' },
         { who: 'narrator', text: 'Behind you, the lamp on Vela\'s tower flashes twice. She saw.', answer: { id: 'vela', is: 'yes' } },
         { who: 'flame', mood: 'happy', text: 'Do you know who gets this far? Everyone who doesn\'t stop. That\'s the whole list.' },
         { who: 'narrator', text: 'Past the broken stone the road starts climbing again, into the trees. Into the fog.', shot: { pan: 'right', seconds: 2 } },

@@ -117,6 +117,8 @@ export interface GameState {
   draft: Draft | null;
   /** Story scenes already played. */
   seenScenes: string[];
+  /** How many scenes played at the last story moment (a day, a workout count and a test count). */
+  sceneMark?: { at: string; count: number };
   /** Runs in the Fog: zones cleared and best results. */
   fog?: FogProgress;
   /** What the player answered in the story: heart moments, villager stories. */

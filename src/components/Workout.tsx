@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Minus, Plus, Undo2, X } from 'lucide-react';
-import { REST_SECONDS, todaysQuest, type GameState, type Rir } from '@/lib/game';
+import { REST_SECONDS, gearOf, todaysQuest, type GameState, type Rir } from '@/lib/game';
 import { rewardFor, tierText } from '@/lib/gear';
 import { getPath } from '@/lib/skills';
+import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
+import { useLook } from './Look';
+import { Sprite } from './Sprite';
 
 interface Props {
   state: GameState;
@@ -121,6 +124,8 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         </div>
         <p className="mt-1 text-center text-sm text-slate-400">{q.cue}</p>
 
+        <Demo state={state} exercise={q.node.id} name={q.name} cue={q.cue} />
+
         <div className="mt-5 flex justify-center gap-2">
           {Array.from({ length: q.sets }).map((_, i) => (
             <div
@@ -202,6 +207,31 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
 
       {restUntil && <Rest until={restUntil} next={exerciseDone ? null : `Set ${logged.length + 1} of ${q.name}`} onDone={() => setRestUntil(null)} />}
     </div>
+  );
+}
+
+/** You doing the exercise, looping one rep: small above the sets, tap for a big one. */
+function Demo({ state, exercise, name, cue }: { state: GameState; exercise: string; name: string; cue: string }) {
+  const [big, setBig] = useState(false);
+  const look = useLook();
+  if (!(EXERCISES as string[]).includes(exercise)) return null;
+  const opts = { exercise: exercise as ExerciseId, gear: gearOf(state), classId: state.profile.classId, look };
+  return (
+    <>
+      <button onClick={() => setBig(true)} aria-label={`Show how to do ${name}`} className="mx-auto mt-3 block rounded-xl bg-ink-900 p-1 ring-1 ring-ink-700 active:scale-95">
+        <Sprite id="exercise" opts={opts} size={128} label={`${name}, demo`} />
+      </button>
+      {big && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ink-950/95 px-6 text-center" onClick={() => setBig(false)}>
+          <p className="font-pixel text-xs text-gold-300">{name}</p>
+          <div className="mt-4 rounded-2xl bg-ink-900 p-2 ring-1 ring-ink-700">
+            <Sprite id="exercise" opts={opts} size={320} label={`${name}, demo`} />
+          </div>
+          <p className="mt-4 max-w-xs text-sm text-slate-300">{cue}</p>
+          <p className="mt-6 text-xs text-slate-500">Tap to close</p>
+        </div>
+      )}
+    </>
   );
 }
 

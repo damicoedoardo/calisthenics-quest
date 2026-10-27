@@ -16,7 +16,7 @@ import { ClassPicker } from '@/components/ClassPicker';
 import { DevButton, DevPanel } from '@/components/DevPanel';
 import { LookProvider } from '@/components/Look';
 import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
-import { pendingScenes, storyState, type StoryState } from '@/story/engine';
+import { sawScene, scenesToPlay, storyState, type StoryState } from '@/story/engine';
 import { withTodayPage } from '@/story/daily';
 import type { Scene } from '@/story/types';
 import { useGameState } from '@/lib/store';
@@ -79,7 +79,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   // Play the next story scene whenever the player is back on the main screen.
   useEffect(() => {
     if (!ready || !state.profile.onboarded || replaying || training || after || scene || picker || run) return;
-    const next = pendingScenes(state, new Date())[0];
+    const next = scenesToPlay(state, new Date())[0];
     if (next) setScene(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, state.profile.onboarded, state.sessions.length, state.tests.length, replaying, training, after, scene, picker, run, storyTick]);
@@ -96,8 +96,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     (r: SceneResult) => {
       if (!scene) return;
       update((s) => ({
-        ...s,
-        seenScenes: s.seenScenes.includes(scene.id) ? s.seenScenes : [...s.seenScenes, scene.id],
+        ...sawScene(s, scene.id, new Date()),
         profile: r.flame ? { ...s.profile, flame: r.flame } : s.profile,
         answers: r.answer ? { ...s.answers, [r.answer.id]: r.answer.value } : s.answers,
       }));

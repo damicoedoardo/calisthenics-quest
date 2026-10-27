@@ -24,6 +24,13 @@ export const ASHLANDS: Chapter = {
     dmg: 1,
     ground: '#231d2e',
     fog: '#4a3f63',
+    // stages: [Tomorrow splits]
+    lines: {
+      enter: "Mmh... why now? Tomorrow's better.",
+      stages: ['Two of me. Twice the tomorrows.'],
+      end: 'Mmh... fine. Today, then.',
+      taunts: ['Start fresh on Monday.', "You're tired. Go tomorrow.", "Why rush? There's always later.", "Tomorrow you'll feel ready."],
+    },
   },
   scenes: [
     {
@@ -99,11 +106,14 @@ export const ASHLANDS: Chapter = {
         { who: 'flame', mood: 'happy', text: "Wait, we're not training today?" },
         { who: 'flame', mood: 'sleepy', text: '...Oh. Oh, this is nice.' },
         { who: 'hollow', text: 'Resting already? That was quick.' },
-        { who: 'wanderer', text: "Ignore it. It's never once been right about rest." },
-        { who: 'wanderer', text: "Your strength doesn't grow while you train. It grows now, while you rest. Workouts are fuel. Rest is air." },
-        { who: 'flame', mood: 'sleepy', text: 'Mm. Air. Wake me if anything exciting happens.' },
+        { who: 'narrator', text: "There it is, the old itch. A day off feels like a bill you'll have to pay later, with interest.", pause: 1, film: true },
+        { who: 'wanderer', text: "Nobody keeps that kind of book here. Sit down.", pause: 0.8 },
+        { who: 'narrator', show: 'flame', text: '{flame} gets the fire just right, then flops down beside it as if it did all the training.' },
+        { who: 'flame', mood: 'sleepy', text: "Your legs are mending. I can hear them. They're very busy in there." },
+        { who: 'flame', mood: 'sleepy', text: 'Wake me if anything exciting happens. Please let nothing exciting happen.' },
       ],
     },
+
     {
       id: 'ch1-tomorrow-splits',
       when: { workouts: 5 },
@@ -212,10 +222,11 @@ export const ASHLANDS: Chapter = {
         { who: 'narrator', show: 'tomorrow', text: 'Tomorrow splits one last time, and fades into the ash.', shot: { shake: 'small' } },
         { who: 'tomorrow', text: "Mmh... I'll be back. Tomorrow." },
         { who: 'flame', mood: 'happy', text: "And we'll be here. Today." },
-        { who: 'wanderer', text: 'You know what Tomorrow hates? Today.' },
-        { who: 'narrator', text: 'You pick up the first stone and put it in your pocket. You are not sure why. It just seems like something to keep.' },
+        { who: 'narrator', text: 'The Wanderer says nothing. Just looks at the line of stones by the fire for a long moment, and nods.', pause: 0.8 },
+        { who: 'narrator', text: 'You pick up the first stone and put it in your pocket. You are not sure why. It just seems like something to keep.', pause: 1 },
         { who: 'flame', mood: 'happy', text: "Month one. We're still here." },
       ],
     },
+
   ],
 };

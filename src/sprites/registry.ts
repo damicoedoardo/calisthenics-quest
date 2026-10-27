@@ -1,4 +1,6 @@
 import { equippedGear } from '@/lib/gear';
+import type { AbilityId, RelicId } from '@/game/dungeon/engine';
+import type { UpgradeId } from '@/lib/fog';
 import { CLIPS, type ClipFrame, type ClipId, type SpriteAction } from './clips';
 import { toSheet, type Grid } from './engine/grid';
 import { drawBook } from './characters/book';
@@ -26,6 +28,9 @@ import { drawSeeker } from './characters/seeker';
 import { drawSplitling, drawSplitter, drawSplitterPop } from './characters/splitter';
 import { drawShade } from './characters/shade';
 import { drawWarden } from './characters/warden';
+import { drawExercise, type ExerciseOpts } from './characters/exercise';
+import { ZONE_PLACE, dress, edged } from './characters/zoned';
+import { ABILITY_ICONS, DAY_ICONS, KEEPSAKE_ICONS, MARK_ICONS, RELIC_ICONS, SKILL_ICONS, type DayKind } from './characters/icons';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
    art for a character is a change here, never in a component. Two kinds:
@@ -84,6 +89,41 @@ const pixel = (label: string, art: PixelArt) =>
 const creature = (label: string, draw: DrawnSprite<NoOpts>['draw'], attack?: ClipId) =>
   drawn<NoOpts>({ label: () => label, defaults: {}, clips: () => (attack ? { idle: 'hover', attack } : { idle: 'hover' }), draw });
 
+/** Which zone a regular monster lives in: 0 is the Ashlands (the monster as drawn), 1-5 dress it
+    for the Mirror Lake, the Cold Forges, the Plateau, the Fog and the Summit (see zoned.ts). */
+export interface ZoneOpts {
+  zone: number;
+}
+
+/** A creature with a zone variant for each zone, from the same drawing. */
+const zoned = (label: string, draw: DrawnSprite<NoOpts>['draw'], attack: ClipId = 'lunge') =>
+  drawn<ZoneOpts>({
+    label: (o) => (o.zone > 0 && ZONE_PLACE[o.zone] ? `${ZONE_PLACE[o.zone]} ${label}` : label),
+    defaults: { zone: 0 },
+    clips: () => ({ idle: 'hover', attack }),
+    draw: (o, fr, f) => edged(dress(draw({}, fr, f), o.zone, f), o.zone),
+  });
+
+export interface KeepsakeOpts {
+  /** The zone whose boss gave it, 0-5. */
+  zone: number;
+}
+export interface RelicIconOpts {
+  name: RelicId;
+}
+export interface AbilityIconOpts {
+  name: AbilityId | 'dodge';
+}
+export interface SkillIconOpts {
+  name: UpgradeId;
+}
+export interface MarkIconOpts {
+  name: 'warden' | 'boss';
+}
+export interface DayIconOpts {
+  kind: DayKind;
+}
+
 const STARTER_GEAR = equippedGear(undefined, { push: 0, pull: 0, core: 0 });
 
 export const SPRITES = {
@@ -122,20 +162,39 @@ export const SPRITES = {
     look: () => ({ filter: 'drop-shadow(0 0 10px rgba(251,146,60,.6))' }),
   }),
   book: creature('The Book of Days', drawBook, 'hover'),
-  slime: creature('Tomorrow', drawTomorrow, 'lunge'),
+  slime: zoned('Tomorrow', drawTomorrow),
   mirror: creature('The Mirror', drawMirror, 'lunge'),
   golem: creature('The Plateau', drawPlateau, 'lunge'),
   summit: creature('The Summit', drawSummit),
-  wisp: creature('Ash Wisp', drawWisp, 'lunge'),
-  ram: creature('Ram', drawRam, 'lunge'),
-  smoke: creature('Smoker', drawSmoke, 'lunge'),
-  seeker: creature('Seeker', drawSeeker, 'lunge'),
-  splitter: creature('Splitter', drawSplitter, 'lunge'),
-  splitling: creature('Splitling', drawSplitling, 'lunge'),
+  wisp: zoned('Ash Wisp', drawWisp),
+  ram: zoned('Ram', drawRam),
+  smoke: zoned('Smoker', drawSmoke),
+  seeker: zoned('Seeker', drawSeeker),
+  splitter: zoned('Splitter', drawSplitter),
+  splitling: zoned('Splitling', drawSplitling),
   splitterPop: drawn<NoOpts>({ label: () => 'The Splitter splitting', defaults: {}, clips: () => ({ idle: 'pop' }), draw: drawSplitterPop }),
-  shade: creature('Shade', drawShade, 'lunge'),
+  shade: zoned('Shade', drawShade),
   warden: creature('The Warden of the Ashes', drawWarden, 'lunge'),
   // The dungeon bosses. The Mirror is you in glass (pass the player's look and gear, like the hero).
+  // app icons, hand-drawn at 16x16 (keepsakes) and 12x12 (Book of Days)
+  keepsake: drawn<KeepsakeOpts>({
+    label: (o) => `Keepsake ${o.zone + 1}`,
+    defaults: { zone: 0 },
+    clips: () => ({ idle: 'still' }),
+    draw: (o) => drawPixelArt(KEEPSAKE_ICONS[o.zone] ?? KEEPSAKE_ICONS[0]),
+  }),
+  dayIcon: drawn<DayIconOpts>({ label: (o) => o.kind, defaults: { kind: 'A visit' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(DAY_ICONS[o.kind]) }),
+  relicIcon: drawn<RelicIconOpts>({ label: (o) => o.name, defaults: { name: 'whetstone' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(RELIC_ICONS[o.name]) }),
+  abilityIcon: drawn<AbilityIconOpts>({ label: (o) => o.name, defaults: { name: 'charge' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(ABILITY_ICONS[o.name]) }),
+  skillIcon: drawn<SkillIconOpts>({ label: (o) => o.name, defaults: { name: 'power' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(SKILL_ICONS[o.name]) }),
+  markIcon: drawn<MarkIconOpts>({ label: (o) => o.name, defaults: { name: 'boss' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(MARK_ICONS[o.name]) }),
+  // you, doing an exercise of the program (the workout screen's demo)
+  exercise: drawn<ExerciseOpts>({
+    label: (o) => `How to do it: ${o.exercise}`,
+    defaults: { exercise: 'pushup', gear: STARTER_GEAR },
+    clips: () => ({ idle: 'rep' }),
+    draw: (o, _fr, f) => drawExercise(o, f),
+  }),
   mirrorBoss: drawn<HeroOpts>({
     label: () => 'The Mirror, you in glass',
     defaults: { gear: STARTER_GEAR },

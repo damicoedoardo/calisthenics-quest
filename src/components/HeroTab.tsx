@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Download, Film, Gem, Lock, Mail, Palette, Trophy, Upload } from 'lucide-react';
 import { SoundToggle } from './Sound';
 import { Hero } from './Hero';
+import { Sprite } from './Sprite';
 import { useLook } from './Look';
 import { LookEditor } from './LookEditor';
 import { PATHS } from '@/lib/skills';
@@ -297,14 +298,21 @@ function Keepsakes({ cleared }: { cleared: number }) {
             <li key={z.id} className={`rounded-xl p-3 ${won ? 'bg-ink-900 ring-1 ring-gold-400/25' : 'bg-ink-900/50'}`}>
               {won ? (
                 <>
-                  <p className="text-sm font-semibold text-slate-100">{z.keepsake.name}</p>
-                  <p className="mt-1 text-[11px] leading-snug text-slate-400">{z.keepsake.text}</p>
+                  <div className="flex items-center gap-2">
+                    <Sprite id="keepsake" opts={{ zone: z.id }} size={36} label={z.keepsake.name} className="shrink-0" />
+                    <p className="text-sm font-semibold leading-tight text-slate-100">{z.keepsake.name}</p>
+                  </div>
+                  <p className="mt-1.5 text-[11px] leading-snug text-slate-400">{z.keepsake.text}</p>
                 </>
               ) : (
-                <p className="flex items-center gap-1.5 text-xs text-slate-500">
-                  {/* Only the next boss has a name; the ones after it are still in the fog. */}
-                  <Lock size={12} /> {z.id === cleared ? z.bossName : '???'}
-                </p>
+                <div className="flex items-center gap-2">
+                  {/* Still in the fog: only its shape shows. */}
+                  <Sprite id="keepsake" opts={{ zone: z.id }} size={36} label="A keepsake not won yet" className="shrink-0 opacity-40 brightness-0 invert-[.35]" />
+                  <p className="flex items-center gap-1.5 text-xs text-slate-500">
+                    {/* Only the next boss has a name; the ones after it are still in the fog. */}
+                    <Lock size={12} /> {z.id === cleared ? z.bossName : '???'}
+                  </p>
+                </div>
               )}
             </li>
           );

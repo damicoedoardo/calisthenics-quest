@@ -1,15 +1,18 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ChevronsRight, CircleDot, Copy, Crosshair, Droplet, Flame, FlameKindling, Footprints, Gauge, Heart, HeartPlus, HeartPulse, Hourglass, Magnet, Pause, Shield, ShieldCheck, ShieldHalf, Skull, Sparkles, Sword, Swords, Waves, Wind, Zap, type LucideIcon } from 'lucide-react';
+import { Pause } from 'lucide-react';
 import type { GameState } from '@/lib/game';
-import { getUpgrade, nextGrowth, powerOf, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
+import { fill, storyWords } from '@/story/engine';
+import type { FogLines } from '@/story/types';
+import { getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, ZONES, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
 import { runSheets } from '@/game/sheets';
+import { Sprite } from './Sprite';
 import { SoundToggle, useMusic } from './Sound';
 import type { FreePick, Hud as SurviveHud, RunEnd as SurviveEnd, RunHandle as SurviveHandle } from '@/game/run';
 import type { Hud as DungeonHud, RunEnd as DungeonEnd } from '@/game/dungeon/scene';
-import { ABILITIES, DODGE, RELICS, WARDEN, type AbilityId, type RelicId } from '@/game/dungeon/engine';
+import { ABILITIES, DODGE, RELICS, ROOM_KINDS, WARDEN, type AbilityId, type RelicId, type RoomKind } from '@/game/dungeon/engine';
 
 interface Props {
   state: GameState;
@@ -20,42 +23,27 @@ interface Props {
   onLeave: () => void;
 }
 
-const ICONS: Record<UpgradeId, LucideIcon> = {
-  power: Sword,
-  haste: Zap,
-  multi: Copy,
-  flame: Flame,
-  spark: Sparkles,
-  nova: CircleDot,
-  swift: Wind,
-  vital: Heart,
-  magnet: Magnet,
-  guard: Shield,
-};
 
-/* Zone 1 is a dungeon (src/game/dungeon); the other zones still play the survive-the-waves run
-   (src/game/run.ts) until their dungeons are built. Both report through the same HUD. */
+/* Every zone is a dungeon (src/game/dungeon), each with its own boss and ground. The old
+   survive-the-waves run (src/game/run.ts) is kept behind isDungeon; both report through the same HUD. */
 type Hud = SurviveHud & Partial<DungeonHud>;
 type RunEnd = SurviveEnd & Partial<DungeonEnd>;
 type RunHandle = SurviveHandle & { ability?: () => void; dodge?: () => void; skipFloor?: () => void; skipToWarden?: () => void; pickRelic?: (id: RelicId) => void; cycleTheme?: () => string };
 
-const RELIC_ICONS: Record<RelicId, LucideIcon> = {
-  whetstone: Swords,
-  quick: Gauge,
-  iron: ShieldHalf,
-  boots: Footprints,
-  heart: HeartPlus,
-  hourglass: Hourglass,
-  fang: Droplet,
-  coal: Flame,
-  charm: ShieldCheck,
-};
 
-const ABILITY_ICONS: Record<AbilityId, LucideIcon> = { charge: ChevronsRight, volley: Crosshair, blink: Sparkles, still: HeartPulse, shock: Waves };
 /** The Warden's name at the start of a line. */
 const WARDEN_NAME = WARDEN.name.replace(/^the/, 'The');
 
-export const isDungeon = (zone: Zone) => zone.id === 0;
+export const isDungeon = (zone: Zone) => zone.id < ZONES.length;
+
+/** The boss's lines with the player's own words filled in; a line left empty (no words for it) is dropped. */
+function bossLines(zone: Zone, state: GameState): FogLines {
+  const words = storyWords(state),
+    say = (t: string) => fill(t, words),
+    some = (t: string) => /[a-z]/i.test(t);
+  const { enter, stages, end, taunts } = zone.lines;
+  return { enter: say(enter), stages: stages.map(say), end: say(end), taunts: taunts.map(say).filter(some) };
+}
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
@@ -79,9 +67,13 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
   const [auto, setAuto] = useState(bot !== null);
   const dungeon = isDungeon(zone);
   const [floorShown, setFloorShown] = useState<number | null>(null);
+  // The first-room tip: gone after the first move or a few seconds, whichever comes first.
+  const [tip, setTip] = useState(true);
+  /** Which of this zone's records the last run beat. */
+  const [broken, setBroken] = useState<ReturnType<typeof recordsBroken> | null>(null);
+  const [chest, setChest] = useState<{ choices: RelicId[]; have: Partial<Record<RelicId, number>> } | null>(null);
   // The game code couldn't be fetched (offline before the Play tab ever loaded it).
   const [failed, setFailed] = useState(false);
-  const [chest, setChest] = useState<{ choices: RelicId[]; have: Partial<Record<RelicId, number>> } | null>(null);
 
   useMusic(end ? null : hud?.boss ? 'fogBoss' : 'fog');
 
@@ -99,10 +91,17 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
     setHud(null);
     setEnd(null);
     setBoss(false);
+    setTip(true);
+    setBroken(null);
     setFailed(false);
+    const tipGone = setTimeout(() => setTip(false), 10000);
+    const moved = () => setTip(false);
+    window.addEventListener('keydown', moved, { once: true });
+    // A touch on the game itself (not on a skill card or a button over it).
+    el.addEventListener('pointerdown', moved, { once: true });
     Promise.all([game, calm]).then(([{ startRun }]) => {
       if (cancelled) return;
-      run.current = startRun(el, { zone, power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast' }, {
+      run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast' }, {
         hud: setHud,
         floor: (n: number) => {
           setFloorShown(n);
@@ -117,8 +116,10 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
         say: (text) => setSaid({ text, at: Date.now() }),
         end: (r) => {
           music.sting(r.won ? 'victory' : 'defeat');
+          const result: RunResult = { ...r, zone: zone.id };
+          if ('floor' in r && r.floor) setBroken(recordsBroken(state.fog?.records?.[zone.id], result));
           setEnd(r);
-          onEnd({ ...r, zone: zone.id });
+          onEnd(result);
         },
       });
     }, () => {
@@ -126,6 +127,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
     });
     return () => {
       cancelled = true;
+      clearTimeout(tipGone);
+      window.removeEventListener('keydown', moved);
+      el.removeEventListener('pointerdown', moved);
       run.current?.destroy();
       run.current = null;
     };
@@ -169,10 +173,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
               {hud.relics && Object.keys(hud.relics).length > 0 && (
                 <div className="mt-1 flex flex-wrap items-center gap-1">
                   {(Object.entries(hud.relics) as [RelicId, number][]).map(([id, n]) => {
-                    const Icon = RELIC_ICONS[id];
                     return (
                       <span key={id} className="flex items-center gap-0.5 rounded bg-ink-800/90 px-1 py-0.5 text-gold-300" title={RELICS[id].name}>
-                        <Icon size={10} />
+                        <Sprite id="relicIcon" opts={{ name: id }} size={14} label={RELICS[id].name} />
                         {n > 1 && <span className="font-mono text-[8px]">{n}</span>}
                       </span>
                     );
@@ -182,9 +185,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
             </div>
             <div className="w-16 text-right">
               <p className={`font-pixel text-[11px] ${hud.boss ? 'text-red-400' : 'text-slate-100'}`}>
-                {hud.boss ? 'BOSS' : hud.floor ? `${hud.floor}/${hud.floors}` : clock(left)}
+                {hud.climb != null ? 'CLIMB' : hud.boss ? 'BOSS' : hud.floor ? `${hud.floor}/${hud.floors}` : clock(left)}
               </p>
-              <p className="mt-1 font-mono text-[10px] text-slate-400">{hud.floor && !hud.boss ? `room ${hud.room}/${hud.rooms}` : `${hud.kills} down`}</p>
+              <p className="mt-1 font-mono text-[10px] text-slate-400">{hud.climb != null ? `ledge ${hud.climb + 1}` : hud.floor && !hud.boss ? `room ${hud.room}/${hud.rooms}` : `${hud.kills} down`}</p>
             </div>
             <button
               aria-label="Pause"
@@ -197,12 +200,18 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
               <Pause size={16} />
             </button>
           </div>
-          {hud.boss && <BossBar name={`${zone.bossName}${zone.boss === 'knight' ? ` · ${Math.ceil(hud.boss.hp)} plates` : ''}`} hp={hud.boss.hp} max={hud.boss.max} />}
+          {hud.boss && (
+            <BossBar
+              name={`${zone.bossName}${zone.boss === 'knight' ? ` · ${Math.ceil(hud.boss.hp)} plates` : hud.boss.label ? ` · ${hud.boss.label}` : ''}`}
+              hp={hud.boss.hp}
+              max={hud.boss.max}
+            />
+          )}
           {hud.warden && <BossBar name={WARDEN_NAME} hp={hud.warden.hp} max={hud.warden.max} ember={hud.warden.phase === 2 ? 'hot' : 'warm'} />}
         </div>
       )}
 
-      {hud?.floor && hud.floors && hud.rooms && !end && <DepthMap floor={hud.floor} floors={hud.floors} room={hud.room ?? 1} rooms={hud.rooms} boss={zone.bossName} mid={hud.wardenFloor ?? null} />}
+      {hud?.floor && hud.floors && hud.rooms && !end && <DepthMap floor={hud.floor} floors={hud.floors} room={hud.room ?? 1} rooms={hud.rooms} boss={zone.bossName} mid={hud.wardenFloor ?? null} path={hud.path ?? []} doors={hud.doors ?? null} />}
 
       {!hud && !end && !failed && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
       {failed && (
@@ -214,10 +223,10 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
         </div>
       )}
 
-      {hud && !end && hud.seconds < (dungeon ? 7 : 5) && (
-        <p className="pointer-events-none absolute inset-x-6 bottom-28 text-center text-sm text-slate-300 animate-pulse">
+      {tip && hud && !end && hud.seconds < (dungeon ? 6 : 5) && (
+        <p className={`pointer-events-none absolute inset-x-6 text-center text-sm text-slate-300 animate-pulse ${dungeon ? 'bottom-44' : 'bottom-28'}`}>
           {dungeon
-            ? `Drag anywhere to move. The small button (or Shift) dodges through shots. You attack on your own. Clear a room and the door opens. ${hud.floors} floors down, ${zone.bossName} waits. Fall, and the dungeon starts over.`
+            ? `Drag to move; you attack on your own. Dodge slips through shots. ${zone.bossName} waits ${hud.floors} floors down.`
             : 'Drag anywhere to move. You attack on your own.'}
         </p>
       )}
@@ -243,12 +252,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
 
       {boss && !offer && (
         <div className="pointer-events-none absolute inset-x-6 top-28 rounded-2xl bg-ink-950/85 p-4 text-center ring-1 ring-violet-500/50">
-          <p className="font-pixel text-xs leading-relaxed text-violet-300">{zone.bossName} walks out of the Fog</p>
-          {zone.boss === 'hollow' && state.profile.voice ? (
-            <p className="mt-2 text-sm italic text-slate-200">&ldquo;{state.profile.voice}&rdquo;</p>
-          ) : (
-            <p className="mt-2 text-sm text-slate-200">{zone.hint}</p>
-          )}
+          <p className="font-pixel text-xs leading-relaxed text-violet-300">{zone.boss === 'summit' ? 'The climb begins' : `${zone.bossName} walks out of the Fog`}</p>
+          {zone.boss === 'hollow' && state.profile.voice && <p className="mt-2 text-sm italic text-slate-200">&ldquo;{state.profile.voice}&rdquo;</p>}
+          <p className="mt-2 text-sm text-slate-200">{zone.hint}</p>
         </div>
       )}
 
@@ -271,12 +277,11 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
           <div className="mt-4 w-full max-w-sm space-y-2">
             {offer.choices.map((id) => {
               const u = getUpgrade(id),
-                Icon = ICONS[id],
                 next = (offer.levels[id] ?? 0) + 1;
               return (
                 <button key={id} onClick={() => pick(id)} className="flex w-full items-center gap-3 rounded-xl bg-ink-800 p-3 text-left ring-1 ring-gold-400/30 active:scale-[.98]">
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-ink-900 text-gold-300">
-                    <Icon size={22} />
+                    <Sprite id="skillIcon" opts={{ name: id }} size={28} label="" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
@@ -298,8 +303,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
           <p className="mt-2 text-center text-xs text-slate-400">Take one. It lasts until the end of this run.</p>
           <div className="mt-4 w-full max-w-sm space-y-2">
             {chest.choices.map((id) => {
-              const Icon = RELIC_ICONS[id],
-                n = chest.have[id] ?? 0;
+              const n = chest.have[id] ?? 0;
               return (
                 <button
                   key={id}
@@ -310,7 +314,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
                   className="flex w-full items-center gap-3 rounded-xl bg-ink-800 p-3 text-left ring-1 ring-gold-400/30 active:scale-[.98]"
                 >
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-ink-900 text-gold-300">
-                    <Icon size={22} />
+                    <Sprite id="relicIcon" opts={{ name: id }} size={28} label="" />
                   </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-baseline justify-between gap-2">
@@ -383,43 +387,74 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
         </div>
       )}
 
-      {end && <Results state={state} zone={zone} end={end} onAgain={() => setAttempt((a) => a + 1)} onLeave={onLeave} />}
+      {end && <Results state={state} zone={zone} end={end} broken={broken} onAgain={() => setAttempt((a) => a + 1)} onLeave={onLeave} />}
     </div>
   );
 }
 
 /** How deep you are: a ladder of floors down the left edge, filling as you go, the boss at the
     bottom. The floor you're on shows its rooms; an ember marks the Warden's floor. */
-function DepthMap({ floor, floors, room, rooms, boss, mid }: { floor: number; floors: number; room: number; rooms: number; boss: string; mid: number | null }) {
+function DepthMap({ floor, floors, room, rooms, boss, mid, path, doors }: { floor: number; floors: number; room: number; rooms: number; boss: string; mid: number | null; path: RoomKind[]; doors: RoomKind[] | null }) {
+  const [open, setOpen] = useState(false);
+  // What each room of this floor held, or what waits: the doors on offer, then the floor's last room.
+  const rows = Array.from({ length: rooms }, (_, r) => {
+    const n = r + 1;
+    if (n < room) return { n, text: ROOM_KINDS[path[r] ?? 'fight'].name, tone: 'text-slate-400' };
+    if (n === room) return { n, text: `${ROOM_KINDS[path[r] ?? 'fight'].name} (here)`, tone: 'text-gold-300' };
+    if (n === rooms) return floor === floors ? { n, text: boss, tone: 'text-red-400' } : floor === mid ? { n, text: WARDEN_NAME, tone: 'text-orange-300' } : { n, text: 'Stairs down', tone: 'text-slate-400' };
+    if (n === room + 1 && doors) return { n, text: doors.map((k) => ROOM_KINDS[k].name).join(' or '), tone: 'text-sky-300' };
+    return { n, text: '?', tone: 'text-slate-500' };
+  });
   return (
-    <div
-      className="pointer-events-none absolute left-1.5 top-24 flex flex-col items-center gap-[3px] rounded-lg bg-ink-950/50 px-1 py-1.5"
-      aria-label={`Floor ${floor} of ${floors}, ${mid ? `the Warden on floor ${mid}, ` : ''}${boss} at the bottom`}
-    >
-      {Array.from({ length: floors }, (_, i) => {
-        const n = i + 1,
-          here = n === floor,
-          warden = n === mid;
-        return (
-          <div key={n} className="relative flex items-center">
-            <div className={`flex items-center gap-[2px] ${here ? 'rounded-sm bg-gold-400/20 px-[2px] py-[2px] ring-1 ring-gold-300' : ''}`}>
-              {here ? (
-                Array.from({ length: rooms }, (_, r) => (
-                  <span
-                    key={r}
-                    className={`h-1.5 w-1.5 rounded-[1px] ${r + 1 < room ? 'bg-gold-300' : r + 1 === room ? 'animate-pulse bg-white' : (n === floors || warden) && r + 1 === rooms ? (warden ? 'bg-orange-500' : 'bg-red-500') : 'bg-ink-700'}`}
-                  />
-                ))
-              ) : (
-                <span className={`block h-1.5 w-4 rounded-[1px] ${n < floor ? 'bg-gold-400/70' : 'bg-ink-700/90'}`} />
-              )}
+    <>
+      <button
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={() => setOpen((o) => !o)}
+        className="pointer-events-auto absolute left-1.5 top-24 flex flex-col items-center gap-[3px] rounded-lg bg-ink-950/50 px-1 py-1.5"
+        aria-label={`Floor ${floor} of ${floors}, ${mid ? `the Warden on floor ${mid}, ` : ''}${boss} at the bottom. Tap for this floor's rooms.`}
+        aria-expanded={open}
+      >
+        {Array.from({ length: floors }, (_, i) => {
+          const n = i + 1,
+            here = n === floor,
+            warden = n === mid;
+          return (
+            <div key={n} className="relative flex items-center">
+              <div className={`flex items-center gap-[2px] ${here ? 'rounded-sm bg-gold-400/20 px-[2px] py-[2px] ring-1 ring-gold-300' : ''}`}>
+                {here ? (
+                  Array.from({ length: rooms }, (_, r) => (
+                    <span
+                      key={r}
+                      className={`h-1.5 w-1.5 rounded-[1px] ${r + 1 < room ? 'bg-gold-300' : r + 1 === room ? 'animate-pulse bg-white' : (n === floors || warden) && r + 1 === rooms ? (warden ? 'bg-orange-500' : 'bg-red-500') : 'bg-ink-700'}`}
+                    />
+                  ))
+                ) : (
+                  <span className={`block h-1.5 w-4 rounded-[1px] ${n < floor ? 'bg-gold-400/70' : 'bg-ink-700/90'}`} />
+                )}
+              </div>
+              {warden && <Sprite id="markIcon" opts={{ name: 'warden' }} size={14} label="The Warden" className={`absolute -right-4 ${n < floor ? 'opacity-40' : ''}`} />}
             </div>
-            {warden && <FlameKindling size={10} strokeWidth={2.5} className={`absolute -right-3.5 ${n < floor ? 'text-orange-400/40' : 'text-orange-400'}`} />}
-          </div>
-        );
-      })}
-      <Skull size={14} className={`mt-0.5 ${floor === floors ? 'animate-pulse text-red-400' : 'text-red-400/70'}`} />
-    </div>
+          );
+        })}
+        <Sprite id="markIcon" opts={{ name: 'boss' }} size={14} label="The boss" className={floor === floors ? 'animate-pulse' : 'opacity-70'} />
+      </button>
+      {open && (
+        <div onPointerDown={(e) => e.stopPropagation()} onClick={() => setOpen(false)} className="pointer-events-auto absolute left-10 top-24 z-10 w-44 animate-fadein rounded-lg bg-ink-950/95 p-2 ring-1 ring-gold-400/40">
+          <p className="font-pixel text-[8px] text-gold-300">
+            Floor {floor} of {floors}
+          </p>
+          <ol className="mt-1.5 space-y-1">
+            {rows.map((r) => (
+              <li key={r.n} className="flex items-baseline gap-1.5 text-[11px] leading-tight">
+                <span className="w-3 shrink-0 font-mono text-[9px] text-slate-500">{r.n}</span>
+                <span className={r.tone}>{r.text}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+    </>
   );
 }
 
@@ -439,8 +474,7 @@ function BossBar({ name, hp, max, ember }: { name: string; hp: number; max: numb
 /** The class ability: a big round button under your right thumb, filling up while it recharges.
     The dodge sits to its left, smaller, on its own short clock. */
 function AbilityButton({ id, ready, dodge, onUse, onDodge }: { id: AbilityId; ready: number; dodge: number; onUse: () => void; onDodge: () => void }) {
-  const Icon = ABILITY_ICONS[id],
-    up = ready >= 1,
+  const up = ready >= 1,
     dodgeUp = dodge >= 1;
   return (
     <div className="safe-bottom absolute bottom-6 right-5 flex items-end gap-3">
@@ -454,7 +488,7 @@ function AbilityButton({ id, ready, dodge, onUse, onDodge }: { id: AbilityId; re
           className={`relative grid h-12 w-12 place-items-center overflow-hidden rounded-full ring-2 ${dodgeUp ? 'bg-sky-300 text-ink-950 ring-sky-100 active:scale-95' : 'bg-ink-800/90 text-slate-500 ring-ink-700'}`}
         >
           {!dodgeUp && <span className="absolute inset-x-0 bottom-0 bg-sky-300/30" style={{ height: `${dodge * 100}%` }} />}
-          <Wind size={20} className="relative" />
+          <Sprite id="abilityIcon" opts={{ name: 'dodge' }} size={28} label="" className={dodgeUp ? '' : 'opacity-50 grayscale'} />
         </button>
         <span className="mt-1 font-pixel text-[8px] text-slate-300">Dodge</span>
       </div>
@@ -468,7 +502,7 @@ function AbilityButton({ id, ready, dodge, onUse, onDodge }: { id: AbilityId; re
           className={`relative grid h-16 w-16 place-items-center overflow-hidden rounded-full ring-2 ${up ? 'bg-gold-400 text-ink-950 ring-gold-200 active:scale-95' : 'bg-ink-800/90 text-slate-500 ring-ink-700'}`}
         >
           {!up && <span className="absolute inset-x-0 bottom-0 bg-gold-400/30" style={{ height: `${ready * 100}%` }} />}
-          <Icon size={26} className="relative" />
+          <Sprite id="abilityIcon" opts={{ name: id }} size={42} label="" className={up ? '' : 'opacity-50 grayscale'} />
         </button>
         <span className="mt-1 font-pixel text-[8px] text-slate-300">{ABILITIES[id].name}</span>
       </div>
@@ -476,11 +510,58 @@ function AbilityButton({ id, ready, dodge, onUse, onDodge }: { id: AbilityId; re
   );
 }
 
-function Results({ state, zone, end, onAgain, onLeave }: { state: GameState; zone: Zone; end: RunEnd; onAgain: () => void; onLeave: () => void }) {
+/** A dungeon run on one card: how deep, how long, how many, the Warden, and what you picked up.
+    A record that fell gets a BEST tag. */
+function Recap({ end, broken }: { end: RunEnd; broken: ReturnType<typeof recordsBroken> | null }) {
+  const relics = Object.entries(end.relics ?? {}) as [RelicId, number][];
+  const tiles: [string, string, boolean][] = [
+    ['Deepest', end.won ? 'All' : `${end.floor}·${end.room}`, !!broken?.depth],
+    ['Time', clock(end.seconds), !!broken?.fastest],
+    ['Down', String(end.kills), !!broken?.kills],
+  ];
+  return (
+    <div className="mt-5 w-full max-w-xs rounded-xl bg-ink-900 p-3 ring-2 ring-ink-700 shadow-[0_4px_0_#0b0d14]">
+      <p className="text-left font-pixel text-[9px] text-gold-300">Run recap</p>
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        {tiles.map(([k, v, best]) => (
+          <div key={k} className={`relative rounded-lg py-2 ${best ? 'bg-gold-400/10 ring-1 ring-gold-300' : 'bg-ink-800'}`}>
+            {best && <span className="absolute -top-2 right-1 rounded-sm bg-gold-400 px-1 py-0.5 font-pixel text-[7px] text-ink-950">BEST</span>}
+            <p className="font-mono text-lg font-bold text-slate-100">{v}</p>
+            <p className="text-[10px] text-slate-500">{k}</p>
+          </div>
+        ))}
+      </div>
+      {end.warden !== null && end.warden !== undefined && (
+        <p className={`mt-3 flex items-center gap-2 text-left text-xs ${end.warden ? 'text-orange-300' : 'text-slate-500'}`}>
+          <Sprite id="markIcon" opts={{ name: 'warden' }} size={14} label="" className={end.warden ? '' : 'opacity-40 grayscale'} />
+          {end.warden ? `${WARDEN_NAME} beaten` : `${WARDEN_NAME}: not yet`}
+        </p>
+      )}
+      <div className="mt-2 flex flex-wrap items-center gap-1 text-left">
+        {relics.length ? (
+          relics.map(([id, n]) => {
+            return (
+              <span key={id} className="flex items-center gap-1 rounded bg-ink-800 px-1.5 py-1 text-gold-300" title={RELICS[id].name}>
+                <Sprite id="relicIcon" opts={{ name: id }} size={12} label="" />
+                <span className="text-[10px] text-slate-300">{RELICS[id].name}</span>
+                {n > 1 && <span className="font-mono text-[9px] text-slate-400">x{n}</span>}
+              </span>
+            );
+          })
+        ) : (
+          <span className="text-xs text-slate-500">No chest items this run.</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Results({ state, zone, end, broken, onAgain, onLeave }: { state: GameState; zone: Zone; end: RunEnd; broken: ReturnType<typeof recordsBroken> | null; onAgain: () => void; onLeave: () => void }) {
   const hints = (['push', 'pull', 'core'] as const).map((p) => nextGrowth(state, p)).filter((h): h is string => !!h);
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/90 px-6 text-center">
       <p className={`font-pixel text-sm ${end.won ? 'text-gold-300' : 'text-slate-300'}`}>{end.won ? `${zone.name} cleared!` : 'The Fog took you'}</p>
+      {end.height != null && <p className="mt-2 font-pixel text-[10px] text-sky-300">{end.height === 0 ? 'The first ledge waits for you.' : `You climbed ${end.height} ledge${end.height === 1 ? '' : 's'} high.`}</p>}
       <p className="mt-3 text-sm text-slate-300">{end.won ? <>The Wanderer: &ldquo;{zone.after}&rdquo;</> : end.floor ? 'The dungeon starts over from the top. Losing here costs nothing: come back stronger.' : 'Losing here costs nothing. Come back stronger.'}</p>
       {end.won && (
         <div className="mt-4 w-full max-w-xs rounded-xl bg-ink-800 p-3 text-left ring-1 ring-gold-400/30">
@@ -488,18 +569,22 @@ function Results({ state, zone, end, onAgain, onLeave }: { state: GameState; zon
           <p className="mt-1 text-xs text-slate-400">{zone.keepsake.text}</p>
         </div>
       )}
-      <div className="mt-5 grid w-full max-w-xs grid-cols-3 gap-2">
-        {[
-          end.floor ? ['Floor', end.won ? 'All' : `${end.floor}·${end.room}`] : ['Level', String(end.level)],
-          ['Time', clock(end.seconds)],
-          ['Down', String(end.kills)],
-        ].map(([k, v]) => (
-          <div key={k} className="rounded-xl bg-ink-800 py-2">
-            <p className="font-mono text-lg font-bold text-slate-100">{v}</p>
-            <p className="text-[10px] text-slate-500">{k}</p>
-          </div>
-        ))}
-      </div>
+      {end.floor ? (
+        <Recap end={end} broken={broken} />
+      ) : (
+        <div className="mt-5 grid w-full max-w-xs grid-cols-3 gap-2">
+          {[
+            ['Level', String(end.level)],
+            ['Time', clock(end.seconds)],
+            ['Down', String(end.kills)],
+          ].map(([k, v]) => (
+            <div key={k} className="rounded-xl bg-ink-800 py-2">
+              <p className="font-mono text-lg font-bold text-slate-100">{v}</p>
+              <p className="text-[10px] text-slate-500">{k}</p>
+            </div>
+          ))}
+        </div>
+      )}
       {hints.length > 0 && (
         <div className="mt-5 w-full max-w-xs rounded-xl bg-ink-800 p-3 text-left">
           <p className="font-pixel text-[9px] text-gold-300">Train to grow</p>
