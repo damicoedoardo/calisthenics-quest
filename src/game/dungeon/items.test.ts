@@ -139,7 +139,7 @@ describe('items in a run', () => {
   });
 
   it('a run drops items, and the end says what you wore and carried (never the starter kit)', () => {
-    const end = playRun({ zone: ZONES[0], power, classId: 'archer', seed: 11, build: { reach: 40, health: 40 } });
+    const end = playRun({ zone: ZONES[0], power: { ...power, damage: 4, armor: 0.9, health: 600 }, classId: 'archer', seed: 11, build: { reach: 40, health: 40 } });
     const carried = [...Object.values(end.gear.worn), ...end.gear.bag];
     expect(carried.length).toBeGreaterThan(0);
     expect(carried.some((i) => i?.starter)).toBe(false);

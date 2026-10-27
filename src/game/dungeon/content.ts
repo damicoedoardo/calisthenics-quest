@@ -78,7 +78,7 @@ export interface Layout {
   rooms: number;
   side?: number;
 }
-export const LAYOUT: Layout = { floors: 10, rooms: 5, side: 3 };
+export const LAYOUT: Layout = { floors: 10, rooms: 3, side: 2 };
 
 /** The dials balance tests turn (scripts/fog-sim.mjs). */
 export const DIALS = {
