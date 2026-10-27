@@ -1212,7 +1212,14 @@ class DungeonScene extends Phaser.Scene {
         break;
       case 'shoot':
         this.sparks.explode(e.boss ? 3 : 1, e.x, e.y);
-        if (e.boss && this.run.boss && e.x === this.run.boss.x && e.y === this.run.boss.y) this.bossAttack();
+        if (e.boss && this.run.boss && e.x === this.run.boss.x && e.y === this.run.boss.y) {
+          this.bossAttack();
+          // On the lake, the one that shoots is the real Mirror: a ripple marks it as it fires.
+          if (this.setup.zone.boss === 'mirror') {
+            const b = this.run.boss;
+            this.fade(260, (g, p) => g.lineStyle(2, 0x7dd3fc, 0.8 * (1 - p)).strokeEllipse(b.x, b.y + 18, 34 + 16 * p, 10 + 5 * p));
+          }
+        }
         break;
       case 'split':
         this.speak(this.setup.lines?.stages[0]);

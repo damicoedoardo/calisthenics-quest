@@ -468,8 +468,8 @@ export const BOSSES: Record<FogBoss, MonsterDef & { plates?: number }> = {
   summit: { hp: 1, speed: 0, dmg: 0, r: 20, xp: 0, move: 'still', shoots: [], cost: 0 },
 } as Record<FogBoss, MonsterDef & { plates?: number }>;
 
-/** The bosses after the first are as tough as the floor they guard (like its monsters), so the
-    fight lasts long enough for its rule to matter. */
+/** Bosses are as tough as the floor they guard (like its monsters), so the fight lasts long
+    enough for its rule to matter. */
 export const BOSS_HP = 5;
 /** The Knight's armor clanks: after a plate falls, the next can't fall for this long (s). */
 export const PLATE_EVERY = 0.35;
@@ -1087,7 +1087,7 @@ function summonBoss(run: Run) {
   const which = run.setup.zone.boss,
     def = BOSSES[which],
     { zone } = run.setup;
-  const hp = def.plates ?? Math.round(def.hp * zone.hp * (which === 'tomorrow' ? 1 : BOSS_HP));
+  const hp = def.plates ?? Math.round(def.hp * zone.hp * BOSS_HP);
   const b: Foe = {
     id: ++run.ids,
     kind: 'boss',
