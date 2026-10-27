@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Minus, Plus, Wrench, X } from 'lucide-react';
+import { Minus, Plus, X } from 'lucide-react';
+import { Sprite } from './Sprite';
 import { initialState, type GameState } from '@/lib/game';
 import { CLASSES } from '@/lib/gear';
 import { PATHS } from '@/lib/skills';
@@ -29,7 +30,7 @@ export function DevButton({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="grid h-7 w-7 place-items-center rounded-full border border-dashed border-sky-400/60 text-sky-300"
     >
-      <Wrench size={14} />
+      <Sprite id="uiIcon" opts={{ name: 'wrench' }} size={22} label="" />
     </button>
   );
 }

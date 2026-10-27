@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Gamepad2, Map, Shield, Swords } from 'lucide-react';
 import { TodayTab } from '@/components/TodayTab';
 import { SkillsTab } from '@/components/SkillsTab';
 import { HeroTab } from '@/components/HeroTab';
@@ -14,6 +13,7 @@ import { AfterSession } from '@/components/AfterSession';
 import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
 import { ClassPicker } from '@/components/ClassPicker';
 import { DevButton, DevPanel } from '@/components/DevPanel';
+import { Sprite } from '@/components/Sprite';
 import { LookProvider } from '@/components/Look';
 import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { sawScene, scenesToPlay, storyState, type StoryState } from '@/story/engine';
@@ -25,11 +25,12 @@ import { skipIntro, useDevMode } from '@/lib/dev';
 
 type Tab = 'today' | 'skills' | 'play' | 'hero';
 
-const TABS: { id: Tab; label: string; Icon: typeof Swords }[] = [
-  { id: 'today', label: 'Today', Icon: Swords },
-  { id: 'skills', label: 'Skills', Icon: Map },
-  { id: 'play', label: 'Play', Icon: Gamepad2 },
-  { id: 'hero', label: 'Hero', Icon: Shield },
+// Each tab's pixel icon (src/sprites/characters/icons.ts): crossed swords, a skill tree, a game pad, a shield.
+const TABS: { id: Tab; label: string; icon: 'tabToday' | 'tabSkills' | 'tabPlay' | 'tabHero' }[] = [
+  { id: 'today', label: 'Today', icon: 'tabToday' },
+  { id: 'skills', label: 'Skills', icon: 'tabSkills' },
+  { id: 'play', label: 'Play', icon: 'tabPlay' },
+  { id: 'hero', label: 'Hero', icon: 'tabHero' },
 ];
 
 export default function Home() {
@@ -229,7 +230,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
       <nav className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-ink-700 bg-ink-900/95 backdrop-blur">
         <div className="mx-auto grid max-w-md grid-cols-4">
-          {TABS.map(({ id, label, Icon }) => (
+          {TABS.map(({ id, label, icon }) => (
             <button
               key={id}
               aria-current={tab === id ? 'page' : undefined}
@@ -239,7 +240,10 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
               }}
               className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${tab === id ? 'text-gold-400' : 'text-slate-500'}`}
             >
-              <Icon size={22} />
+              {/* Full color on the open tab; faded and grey on the others. */}
+              <span className="grid h-[22px] place-items-center">
+                <Sprite id="uiIcon" opts={{ name: icon }} size={22} label="" className={tab === id ? '' : 'opacity-70 grayscale'} />
+              </span>
               {label}
             </button>
           ))}

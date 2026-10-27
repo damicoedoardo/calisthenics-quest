@@ -853,8 +853,9 @@ export const ZONE_ICONS: PixelArt[] = [
 
 /** Small marks for the screens around the game: a heart (full or spent), a check, a padlock, a
     bookmark (kept or not), the Book of Days, an arrow on, a little flame (no face: that's Ember's),
-    play, and close. */
-export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookmark' | 'bookmarkKept' | 'book' | 'chevron' | 'flame' | 'play' | 'close', PixelArt> = {
+    play, and close; the tab bar's four (crossed swords, a skill tree, a game pad, a shield) and the
+    developer's wrench. */
+export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookmark' | 'bookmarkKept' | 'book' | 'chevron' | 'flame' | 'play' | 'close' | 'tabToday' | 'tabSkills' | 'tabPlay' | 'tabHero' | 'wrench', PixelArt> = {
   heart: {
     rows: [
       '.rr.rr.',
@@ -935,6 +936,26 @@ export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookm
   },
   close: {
     rows: ['x.....x', 'xx...xx', '.xx.xx.', '..xxx..', '.xx.xx.', 'xx...xx', 'x.....x'],
+    palette: { x: '#7dd3fc' },
+  },
+  tabToday: {
+    rows: ['W.......W', 'sW.....Ws', '.sW...Ws.', '..sW.Ws..', '...sWs...', '..hs.sh..', '.bh...hb.', 'bb.....bb', 'b.......b'],
+    palette: { W: '#f1f5f9', s: '#94a3b8', h: '#fbbf24', b: '#92400e' },
+  },
+  tabSkills: {
+    rows: ['...ggg...', '...gWg...', '...ggg...', '....s....', '..sssss..', '..s...s..', '.ggg.ggg.', '.gWg.gWg.', '.ggg.ggg.'],
+    palette: { g: '#34d399', W: '#ecfdf5', s: '#94a3b8' },
+  },
+  tabPlay: {
+    rows: ['.kkkkkkk.', 'kgggggggk', 'kgWgggrgk', 'kWWWgrgrk', 'kgWgggrgk', 'kggkkkggk', '.kk...kk.'],
+    palette: { k: '#94a3b8', g: '#475569', W: '#f1f5f9', r: '#ef4444' },
+  },
+  tabHero: {
+    rows: ['kkkkkkkkk', 'kBbbbYbbk', 'kBbbbYbbk', 'kYYYYYYYk', 'kbbbbYbbk', '.kbbbYbk.', '.kbbbYbk.', '..kbbYk..', '...kkk...'],
+    palette: { k: '#cbd5e1', B: '#8ea2ef', b: '#4a5fc0', Y: '#fbbf24' },
+  },
+  wrench: {
+    rows: ['.....xx..', '....x..x.', '....x...x', '.....x.x.', '....xxx..', '...xxx...', '..xxx....', '.xxx.....', '.xx......'],
     palette: { x: '#7dd3fc' },
   },
 };
