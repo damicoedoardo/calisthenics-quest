@@ -274,7 +274,8 @@ function InstallHint() {
     }
   }, []);
   if (!show) return null;
-  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  // iPads say they are Macs; a Mac with a touch screen is an iPad.
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (/macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   return (
     <div className="flex items-start gap-3 rounded-2xl bg-sky-950/60 p-3 text-sm ring-1 ring-sky-500/30">
       <p className="flex-1 text-sky-100">
@@ -288,7 +289,7 @@ function InstallHint() {
           } catch {}
           setShow(false);
         }}
-        className="text-sky-300"
+        className="-m-2 p-2 text-sky-300"
       >
         <X size={18} />
       </button>
