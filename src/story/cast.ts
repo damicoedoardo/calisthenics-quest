@@ -17,6 +17,10 @@ export const CAST = {
   kid: { name: 'The kid', portrait: { kind: 'sprite', sprite: 'kid', size: 120 } },
   lia: { name: 'Lia', portrait: { kind: 'sprite', sprite: 'lia', size: 140 }, tag: 'sky' },
   sol: { name: 'Sol', portrait: { kind: 'sprite', sprite: 'sol', size: 140 }, tag: 'sky' },
+  // Old Vela keeps the lamp on the Plateau. She borrows Mira's sprite until she has her own.
+  vela: { name: 'Vela', portrait: { kind: 'sprite', sprite: 'mira', size: 140 }, tag: 'sky' },
+  plateau: { name: 'The Plateau', portrait: { kind: 'sprite', sprite: 'golem', size: 160 }, tag: 'slate' },
+  summit: { name: 'The Summit', portrait: { kind: 'sprite', sprite: 'summit', size: 160 }, tag: 'slate' },
 } satisfies Record<string, CastMember>;
 
 export type CastId = keyof typeof CAST;
