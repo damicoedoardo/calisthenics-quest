@@ -34,7 +34,7 @@ export function SkillsTab({ state }: { state: GameState }) {
                     </span>
                     <div
                       className={`rounded-xl p-3 ${
-                        current ? 'bg-ink-700 ring-1 ring-sky-400/50' : beaten ? 'bg-ink-800' : 'bg-ink-900 opacity-70'
+                        current ? 'bg-ink-700 ring-1 ring-sky-400/50' : beaten ? 'bg-ink-800' : 'bg-ink-900 opacity-80'
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">

@@ -11,6 +11,9 @@ export default {
       colors: {
         ink: { 950: '#0b0d14', 900: '#11141f', 800: '#181c2b', 700: '#232840', 600: '#30375a' },
         gold: { 300: '#fde68a', 400: '#fbbf24', 500: '#f59e0b' },
+        // Tailwind's slate-500 reads at under 4:1 on the ink cards; this one keeps it the quiet
+        // grey under slate-400 but clears 4.5:1 on ink-950 to ink-700.
+        slate: { 500: '#8291a7' },
       },
       keyframes: {
         pop: { '0%': { transform: 'scale(.6)', opacity: '0' }, '70%': { transform: 'scale(1.08)' }, '100%': { transform: 'scale(1)', opacity: '1' } },

@@ -6,6 +6,7 @@ import { Hero } from './Hero';
 import { Enemy } from './Characters';
 import { music } from '@/lib/music';
 import { gearOf, levelInfo, totalXp, type FinishResult } from '@/lib/game';
+import { tierText } from '@/lib/gear';
 import { storyWords, type StoryState } from '@/story/engine';
 import { afterWorkoutLine } from '@/story/daily';
 
@@ -125,7 +126,7 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
             <Hero gear={gearOf(result.state)} classId={result.state.profile.classId} size={130} />
             {newGear.map((g) => (
               <p key={g.slot} className="mt-1 text-sm">
-                Forged: <span className="font-semibold" style={{ color: g.color }}>{g.name}</span>
+                Forged: <span className="font-semibold" style={{ color: tierText(g.tier) }}>{g.name}</span>
               </p>
             ))}
             <p className="mt-1 text-xs text-slate-400">Next skill unlocked on your tree.</p>

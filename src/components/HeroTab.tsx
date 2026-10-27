@@ -8,7 +8,7 @@ import { Sprite } from './Sprite';
 import { useLook } from './Look';
 import { LookEditor } from './LookEditor';
 import { PATHS } from '@/lib/skills';
-import { getClass } from '@/lib/gear';
+import { getClass, tierText } from '@/lib/gear';
 import { gearOf, logMaxTest, nextTestDate, nodeName, type GameState } from '@/lib/game';
 import { exportState, parseImport } from '@/lib/store';
 import { storyState } from '@/story/engine';
@@ -83,7 +83,7 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
           {(['weapon', 'armor', 'shield'] as const).map((slot) => (
             <div key={slot} className="rounded-lg bg-ink-900/70 px-2 py-2">
               <p className="uppercase tracking-wider text-slate-500">{slot}</p>
-              <p className="mt-0.5 font-semibold" style={{ color: gear[slot].tier === 0 ? '#64748b' : gear[slot].color }}>
+              <p className="mt-0.5 font-semibold" style={{ color: tierText(gear[slot].tier) }}>
                 {gear[slot].name}
               </p>
             </div>
@@ -308,7 +308,7 @@ function Keepsakes({ cleared }: { cleared: number }) {
                 <div className="flex items-center gap-2">
                   {/* Still in the fog: only its shape shows. */}
                   <Sprite id="keepsake" opts={{ zone: z.id }} size={36} label="A keepsake not won yet" className="shrink-0 opacity-40 brightness-0 invert-[.35]" />
-                  <p className="flex items-center gap-1.5 text-xs text-slate-600">
+                  <p className="flex items-center gap-1.5 text-xs text-slate-500">
                     {/* Only the next boss has a name; the ones after it are still in the fog. */}
                     <Lock size={12} /> {z.id === cleared ? z.bossName : '???'}
                   </p>

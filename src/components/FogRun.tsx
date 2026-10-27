@@ -2,20 +2,17 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Pause } from 'lucide-react';
-import { gearOf, type GameState } from '@/lib/game';
+import type { GameState } from '@/lib/game';
 import { fill, storyWords } from '@/story/engine';
 import type { FogLines } from '@/story/types';
 import { getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, ZONES, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
-import { sheetFor } from '@/sprites/registry';
+import { runSheets } from '@/game/sheets';
 import { Sprite } from './Sprite';
 import { SoundToggle, useMusic } from './Sound';
 import type { FreePick, Hud as SurviveHud, RunEnd as SurviveEnd, RunHandle as SurviveHandle } from '@/game/run';
 import type { Hud as DungeonHud, RunEnd as DungeonEnd } from '@/game/dungeon/scene';
 import { ABILITIES, DODGE, RELICS, ROOM_KINDS, WARDEN, type AbilityId, type RelicId, type RoomKind } from '@/game/dungeon/engine';
-import type { Sheet } from '@/sprites/registry';
-import type { HeroOpts } from '@/sprites/characters/hero';
-import type { BossSheetKey, Sheets } from '@/game/rules';
 
 interface Props {
   state: GameState;
@@ -38,41 +35,6 @@ type RunHandle = SurviveHandle & { ability?: () => void; dodge?: () => void; ski
 const WARDEN_NAME = WARDEN.name.replace(/^the/, 'The');
 
 export const isDungeon = (zone: Zone) => zone.id < ZONES.length;
-
-/** The dungeon boss sheets for a zone (by id: 1 the Mirror, 2 the Knight, 3 the Plateau, 4 the
-    Hollow, 5 the Summit). Only the run's own boss is drawn: they're big and there are many. */
-function bossSheets(zoneId: number, hero: Pick<HeroOpts, 'gear' | 'classId' | 'look'>): Partial<Record<BossSheetKey, Sheet>> {
-  if (zoneId === 1)
-    return { mirrorBoss: sheetFor('mirrorBoss', 'idle', hero), mirrorBossAttack: sheetFor('mirrorBoss', 'attack', hero), mirrorBossShatter: sheetFor('mirrorBossShatter', 'idle', hero) };
-  if (zoneId === 2)
-    return {
-      knightBoss: sheetFor('knightBoss', 'idle', { stage: 0 }),
-      knightBossAttack: sheetFor('knightBoss', 'attack', { stage: 0 }),
-      knightBoss1: sheetFor('knightBoss', 'idle', { stage: 1 }),
-      knightBoss1Attack: sheetFor('knightBoss', 'attack', { stage: 1 }),
-      knightBoss2: sheetFor('knightBoss', 'idle', { stage: 2 }),
-      knightBoss2Attack: sheetFor('knightBoss', 'attack', { stage: 2 }),
-    };
-  if (zoneId === 3)
-    return {
-      plateauBoss: sheetFor('plateauBoss', 'idle', { stage: 0 }),
-      plateauBossAttack: sheetFor('plateauBoss', 'attack', { stage: 0 }),
-      plateauBoss1: sheetFor('plateauBoss', 'idle', { stage: 1 }),
-      plateauBoss1Attack: sheetFor('plateauBoss', 'attack', { stage: 1 }),
-      plateauBoss2: sheetFor('plateauBoss', 'idle', { stage: 2 }),
-      plateauBoss2Attack: sheetFor('plateauBoss', 'attack', { stage: 2 }),
-    };
-  if (zoneId === 4) return { hollowBoss: sheetFor('hollowBoss', 'idle'), hollowBossAttack: sheetFor('hollowBoss', 'attack'), hollowBossFade: sheetFor('hollowBossFade', 'idle') };
-  if (zoneId === 5)
-    return {
-      summitBoss: sheetFor('summitBoss', 'idle'),
-      summitBossAttack: sheetFor('summitBoss', 'attack'),
-      wanderer: sheetFor('wanderer', 'idle'),
-      mira: sheetFor('mira', 'idle'),
-      vela: sheetFor('vela', 'idle'),
-    };
-  return {};
-}
 
 /** The boss's lines with the player's own words filled in; a line left empty (no words for it) is dropped. */
 function bossLines(zone: Zone, state: GameState): FogLines {
@@ -110,6 +72,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
   /** Which of this zone's records the last run beat. */
   const [broken, setBroken] = useState<ReturnType<typeof recordsBroken> | null>(null);
   const [chest, setChest] = useState<{ choices: RelicId[]; have: Partial<Record<RelicId, number>> } | null>(null);
+  // The game code couldn't be fetched (offline before the Play tab ever loaded it).
+  const [failed, setFailed] = useState(false);
 
   useMusic(end ? null : hud?.boss ? 'fogBoss' : 'fog');
 
@@ -117,45 +81,25 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
     const el = host.current;
     if (!el) return;
     let cancelled = false;
-    const gear = gearOf(state),
-      classId = state.profile.classId,
-      look = state.profile.look;
-    // the regular monsters dressed for this zone (wet glass at the lake, scrap iron at the forges...)
-    const z = { zone: zone.id };
-    const sheets: Sheets = {
-      hero: sheetFor('hero', 'idle', { gear, classId, look }),
-      heroAttack: sheetFor('hero', 'attack', { gear, classId, look }),
-      hollow: sheetFor('hero', 'idle', { gear, classId, look, variant: 'hollow' }),
-      ember: sheetFor('ember', 'idle'),
-      slime: sheetFor('slime', 'idle', z),
-      wisp: sheetFor('wisp', 'idle', z),
-      mirror: sheetFor('mirror', 'idle'),
-      golem: sheetFor('golem', 'idle'),
-      knight: sheetFor('knight', 'idle'),
-      echo: sheetFor('hero', 'idle', { gear, classId, look, variant: 'echo' }),
-      book: sheetFor('book', 'idle'),
-      summit: sheetFor('summit', 'idle'),
-      ram: sheetFor('ram', 'idle', z),
-      smoke: sheetFor('smoke', 'idle', z),
-      seeker: sheetFor('seeker', 'idle', z),
-      splitter: sheetFor('splitter', 'idle', z),
-      splitling: sheetFor('splitling', 'idle', z),
-      shade: sheetFor('shade', 'idle', z),
-      splitterPop: sheetFor('splitterPop', 'idle'),
-      warden: sheetFor('warden', 'idle'),
-      ...bossSheets(zone.id, { gear, classId, look }),
-    };
+    const classId = state.profile.classId;
+    // Ask for the game code first, so it downloads while the sprites are drawn.
+    const game = dungeon ? import('@/game/dungeon/scene') : import('@/game/run');
+    // No screen shake or flashes for players who asked their system for less motion.
+    const calm = import('@/game/calm');
+    // Built ahead (and cached) when the Play tab opens, so this is quick.
+    const sheets = runSheets(state, zone);
     setHud(null);
     setEnd(null);
     setBoss(false);
     setTip(true);
     setBroken(null);
+    setFailed(false);
     const tipGone = setTimeout(() => setTip(false), 10000);
     const moved = () => setTip(false);
     window.addEventListener('keydown', moved, { once: true });
     // A touch on the game itself (not on a skill card or a button over it).
     el.addEventListener('pointerdown', moved, { once: true });
-    (dungeon ? import('@/game/dungeon/scene') : import('@/game/run')).then(({ startRun }) => {
+    Promise.all([game, calm]).then(([{ startRun }]) => {
       if (cancelled) return;
       run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast' }, {
         hud: setHud,
@@ -178,6 +122,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
           onEnd(result);
         },
       });
+    }, () => {
+      if (!cancelled) setFailed(true);
     });
     return () => {
       cancelled = true;
@@ -267,7 +213,15 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
 
       {hud?.floor && hud.floors && hud.rooms && !end && <DepthMap floor={hud.floor} floors={hud.floors} room={hud.room ?? 1} rooms={hud.rooms} boss={zone.bossName} mid={hud.wardenFloor ?? null} path={hud.path ?? []} doors={hud.doors ?? null} />}
 
-      {!hud && !end && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
+      {!hud && !end && !failed && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
+      {failed && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
+          <p className="text-sm text-slate-300">The Fog has to download once, with a signal. After that it works offline too.</p>
+          <button onClick={onLeave} className="w-full max-w-xs rounded-xl bg-ink-800 py-3 text-sm text-slate-300">
+            Back
+          </button>
+        </div>
+      )}
 
       {tip && hud && !end && hud.seconds < (dungeon ? 6 : 5) && (
         <p className={`pointer-events-none absolute inset-x-6 text-center text-sm text-slate-300 animate-pulse ${dungeon ? 'bottom-44' : 'bottom-28'}`}>
@@ -449,7 +403,7 @@ function DepthMap({ floor, floors, room, rooms, boss, mid, path, doors }: { floo
     if (n === room) return { n, text: `${ROOM_KINDS[path[r] ?? 'fight'].name} (here)`, tone: 'text-gold-300' };
     if (n === rooms) return floor === floors ? { n, text: boss, tone: 'text-red-400' } : floor === mid ? { n, text: WARDEN_NAME, tone: 'text-orange-300' } : { n, text: 'Stairs down', tone: 'text-slate-400' };
     if (n === room + 1 && doors) return { n, text: doors.map((k) => ROOM_KINDS[k].name).join(' or '), tone: 'text-sky-300' };
-    return { n, text: '?', tone: 'text-slate-600' };
+    return { n, text: '?', tone: 'text-slate-500' };
   });
   return (
     <>

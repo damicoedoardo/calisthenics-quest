@@ -1,9 +1,12 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Check, Lock, Play } from 'lucide-react';
 import { Sprite } from './Sprite';
 import { Ember } from './Characters';
 import { Hero } from './Hero';
+import { isDungeon } from './FogRun';
+import { warmRunSheets } from '@/game/sheets';
 import { gearOf, type GameState } from '@/lib/game';
 import { FLAME_AT, ZONES, nextGrowth, powerOf, zoneStatus, type Zone } from '@/lib/fog';
 import { flameMood } from '@/story/daily';
@@ -23,7 +26,39 @@ function isLight(hex: string): boolean {
   return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 160;
 }
 
+/**
+ * While the Play tab sits idle, get the newest open zone's run ready: download and load the game
+ * code and draw its sprite sheets (both are cached), so tapping Play goes straight to the run.
+ */
+function useWarmRun(state: GameState) {
+  const zone = [...ZONES].reverse().find((z) => zoneStatus(state, z).state !== 'locked');
+  const id = zone?.id;
+  useEffect(() => {
+    if (!zone) return;
+    // Give the tab a moment to settle first.
+    let stop = () => {};
+    const t = window.setTimeout(() => {
+      // Both kinds of run: they share Phaser, so the second costs little, and either can then
+      // start offline.
+      const loads: (() => Promise<unknown>)[] = [() => import('@/game/dungeon/scene'), () => import('@/game/run')];
+      if (!isDungeon(zone)) loads.reverse();
+      void loads[0]()
+        .then(loads[1])
+        .then(() => import('@/game/calm'))
+        .catch(() => {});
+      stop = warmRunSheets(state, zone);
+    }, 600);
+    return () => {
+      window.clearTimeout(t);
+      stop();
+    };
+    // Once per zone: the sheets for a new look or gear are drawn when the run starts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+}
+
 export function PlayTab({ state, onPlay }: Props) {
+  useWarmRun(state);
   const now = new Date();
   const power = powerOf(state, now);
   const workouts = state.sessions.length;
@@ -102,7 +137,7 @@ export function PlayTab({ state, onPlay }: Props) {
           const best = state.fog?.best[z.id];
           const open = st.state !== 'locked';
           return (
-            <div key={z.id} className={`flex items-center gap-3 rounded-2xl p-3 ${open ? 'bg-ink-800' : 'bg-ink-900 opacity-70'}`}>
+            <div key={z.id} className={`flex items-center gap-3 rounded-2xl p-3 ${open ? 'bg-ink-800' : 'bg-ink-900 opacity-80'}`}>
               <span
                 className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl font-pixel text-[10px] ${isLight(z.fog) ? 'text-ink-900' : 'text-slate-200'}`}
                 style={{ background: z.fog }}

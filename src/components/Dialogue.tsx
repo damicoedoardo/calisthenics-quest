@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Hero } from './Hero';
 import { Ember, Hollow, Kindled } from './Characters';
 import { PlaceBackdrop } from './Place';
@@ -165,6 +165,29 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
 
+  // Keyboard players: Enter, Space or the right arrow do what a tap does, and focus starts on the
+  // scene, not on the tabs behind it.
+  const box = useRef<HTMLDivElement>(null);
+  const advanceRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    // Hand focus back where it was when the scene ends, so the next Tab doesn't start from nowhere.
+    const before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    box.current?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'ArrowRight') return;
+      // Enter on Skip (or in a text box) means that control, not the next line.
+      if (e.target instanceof HTMLElement && e.target.closest('button, input, textarea, select, a')) return;
+      e.preventDefault();
+      advanceRef.current();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      // After the tabs behind are interactive again (inert comes off in the same commit).
+      setTimeout(() => before?.isConnected && before.focus({ preventScroll: true }));
+    };
+  }, []);
+
   if (!beat) return null;
 
   const advance = () => {
@@ -172,6 +195,7 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
     else if (line && !done) setShown(full);
     else next();
   };
+  advanceRef.current = advance;
 
   const who = line ? castMember(line.who) : null;
   const name = who?.name.replace('{flame}', words?.flame || 'A spark') ?? '';
@@ -182,7 +206,7 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
   const weather = cam.place ? PLACES[cam.place].weather : 'none';
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-ink-950" onClick={advance} role="dialog" aria-live="polite">
+    <div ref={box} tabIndex={-1} className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-ink-950 outline-none" onClick={advance} role="dialog" aria-modal="true" aria-live="polite">
       {cam.place && (
         <div key={`shake-${index}`} className={`absolute inset-0 ${shake}`}>
           <div
@@ -234,7 +258,7 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
                   {line.text.slice(0, upTo)}
                   {!done && <span className="opacity-0">{line.text.slice(shown)}</span>}
                 </p>
-                <p className="mt-4 text-xs text-slate-600">{done ? <span className="animate-blink">tap</span> : <span>&nbsp;</span>}</p>
+                <p className="mt-4 text-xs text-slate-500">{done ? <span className="animate-blink">tap</span> : <span>&nbsp;</span>}</p>
               </div>
             ) : (
               <div className={`min-h-[132px] rounded-xl p-4 pixel-border ${dark ? 'bg-[#140f1f]' : 'bg-ink-800/95'} ${narrator ? 'text-center' : ''}`}>
