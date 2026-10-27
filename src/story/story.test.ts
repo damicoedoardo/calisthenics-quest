@@ -82,6 +82,20 @@ describe('the story files', () => {
     for (const n of [1, 2, 3, 4, 5, 6]) expect(QUOTES.filter((q) => q.fits === n || q.fits === 'any').length, `chapter ${n}`).toBeGreaterThanOrEqual(2);
   });
 
+  it("quotes the player's own words, so any answer reads right in anyone's mouth", () => {
+    // Letter parts and written answers can be in the first person ("my kids"): only ever inside quotes.
+    const own = ['why', 'want', 'forWho', 'remind', 'heart3', 'heart4', 'heart5', 'heart6'];
+    const quoted = (text: string, where: string) => {
+      for (const m of text.matchAll(/\{(\w+)\}/g)) {
+        if (!own.includes(m[1])) continue;
+        const before = text.slice(0, m.index).split('"').length - 1;
+        expect(before % 2, `${where}: {${m[1]}} outside quotes in "${text}"`).toBe(1);
+      }
+    };
+    for (const { scene } of ALL_SCENES) for (const l of linesOf(scene)) quoted(l.text, scene.id);
+    for (const lines of Object.values(FLAME_LINES)) for (const l of lines) quoted(l.text, 'flame line');
+  });
+
   it('keeps the script general: no digits in any line', () => {
     for (const { scene } of ALL_SCENES) for (const l of linesOf(scene)) expect(l.text.replace(/\{\w+\}/g, ''), scene.id).not.toMatch(/\d/);
   });
@@ -227,7 +241,8 @@ describe('the months 4 to 6 rules', () => {
   it('notices a run of Rough days, and only a run', () => {
     const rough = (kinds: Session['kind'][]) => ({ ...initialState(), sessions: kinds.map((k, i) => workout(day(i), k)) });
     const due = (s: GameState) => pendingScenes(s, day(10)).map((x) => x.id);
-    expect(due(rough(['full', 'mini', 'mini', 'mini']))).toContain('heavy-days');
+    expect(due(rough(['full', 'full', 'full', 'full', 'mini', 'mini', 'mini']))).toContain('heavy-days');
+    expect(due(rough(['full', 'mini', 'mini', 'mini']))).not.toContain('heavy-days');
     expect(due(rough(['mini', 'mini', 'full', 'mini']))).not.toContain('heavy-days');
   });
 

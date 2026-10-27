@@ -154,7 +154,7 @@ export const VILLAGE: Chapter = {
       when: { workouts: 34, answer: { id: 'sol', is: 'yes' } },
       place: 'lit-forges',
       lines: [
-        { who: 'narrator', show: 'sol', text: 'Three mornings in a row, Sol runs before she opens her work. On the fourth day she rests, all day. Her forge lights.' },
+        { who: 'narrator', show: 'sol', text: 'For a week, Sol runs before she opens her work. Then she rests, one whole day, on purpose. Her forge lights.' },
         { who: 'sol', text: 'Nothing fell over. Can you believe it? I took the time, and the world held on without me.' },
         { who: 'sol', text: "Rest isn't the prize for the work. It's part of the work." },
         { who: 'flame', mood: 'happy', text: "I've been SAYING that." },

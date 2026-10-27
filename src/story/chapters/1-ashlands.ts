@@ -37,7 +37,7 @@ export const ASHLANDS: Chapter = {
         { who: 'flame', mood: 'soft', text: 'Your hands are shaking.', pause: 1 },
         { who: 'you', text: '...Yeah.' },
         { who: 'flame', mood: 'happy', text: "Mine too. Well. I don't have hands. But I'm shaking." },
-        { who: 'wanderer', text: 'Two more this week. Not perfect. Present.' },
+        { who: 'wanderer', text: 'Again this week. Not perfect. Present.' },
       ],
     },
     {
@@ -62,7 +62,7 @@ export const ASHLANDS: Chapter = {
       id: 'class-choice',
       when: { workouts: 3, noClass: true },
       lines: [
-        { who: 'wanderer', text: 'Three pages. You kept your word.' },
+        { who: 'wanderer', text: 'A few pages now. You kept your word.' },
         { who: 'wanderer', text: "I found these in the ash while you trained. They've been waiting longer than you have." },
         { who: 'narrator', show: 'wanderer', text: 'As the Wanderer hands them over, you see a scar on the back of their hand. The same as yours.' },
         { who: 'wanderer', text: "Choose the one that feels like you. You'll still train everything. This is who you fight as." },
@@ -154,7 +154,7 @@ export const ASHLANDS: Chapter = {
         { who: 'flame', mood: 'soft', text: 'Can I ask why you stopped, last time?' },
         { who: 'flame', mood: 'soft', text: "You don't have to tell me. I just want to know what to watch out for." },
         { who: 'narrator', show: 'flame', text: "You don't answer. {flame} doesn't push. The quiet is the comfortable kind.", pause: 1.4 },
-        { who: 'flame', mood: 'soft', text: 'You wrote that you started again because {why}. I think about that a lot.', needs: 'why' },
+        { who: 'flame', mood: 'soft', text: 'You wrote: "I\'m starting again because {why}." I think about that a lot.', needs: 'why' },
         { who: 'flame', mood: 'soft', text: 'Can I ask you something else? Something from before all of it?', music: 'memory' },
       ],
       ask: {

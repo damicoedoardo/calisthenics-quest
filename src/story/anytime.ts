@@ -13,7 +13,7 @@ export const ANYTIME: Scene[] = [
     when: { daysInRow: 4 },
     music: 'camp',
     lines: [
-      { who: 'flame', mood: 'smoky', text: '*cough* Four days in a row. You\'re amazing. I\'m a little smoky.' },
+      { who: 'flame', mood: 'smoky', text: "*cough* Day after day after day. You're amazing. I'm a little smoky." },
       { who: 'flame', mood: 'smoky', text: 'A fire that never rests just burns out. I need air.' },
       { who: 'flame', mood: 'soft', text: 'Rest with me tomorrow? It counts. I promise it counts.' },
     ],
@@ -21,7 +21,7 @@ export const ANYTIME: Scene[] = [
   {
     // After a run of Rough days: a warm word that this is a game, and that heavy things deserve a person.
     id: 'heavy-days',
-    when: { roughRun: 3 },
+    when: { workouts: 6, roughRun: 3 },
     music: 'camp',
     lines: [
       { who: 'narrator', show: 'flame', text: "Another short one. {flame} doesn't say anything about it. It just sits a little closer than usual." },

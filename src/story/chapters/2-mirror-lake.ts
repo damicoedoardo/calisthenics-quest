@@ -75,7 +75,7 @@ export const MIRROR_LAKE: Chapter = {
       id: 'ch2-wanderer-knows',
       when: { workouts: 17, needs: 'want' },
       lines: [
-        { who: 'wanderer', text: 'You want to {want}.' },
+        { who: 'wanderer', text: '"One day I want to be able to {want}."' },
         { who: 'you', text: '...I never told you that.' },
         { who: 'wanderer', text: "Didn't you? ...Don't ask how I know." },
         { who: 'flame', mood: 'scared', text: "Okay, that's a little spooky." },
