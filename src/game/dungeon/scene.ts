@@ -1059,7 +1059,8 @@ class DungeonScene extends Phaser.Scene {
         // a pixel star where the blow lands: pops big, shrinks away
         this.hitSpark(e.x, e.y - 6, e.dmg >= 30 ? 1.6 : 1.1);
         this.sfx(e.boss ? 'bossHit' : 'hit');
-        this.number(e.x, e.y - 18, e.dmg, undefined, e.id);
+        // The Plateau never shows what a hit did.
+        if (!(e.boss && this.setup.zone.boss === 'plateau')) this.number(e.x, e.y - 18, e.dmg, undefined, e.id);
         if (e.dmg >= 30) this.hitStop(40, true);
         break;
       }

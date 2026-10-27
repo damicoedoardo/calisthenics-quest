@@ -472,7 +472,7 @@ export const BOSSES: Record<FogBoss, MonsterDef & { plates?: number }> = {
 export const CRACK = 0.1;
 /** The Hollow's light: its reach, how long you stand in it without stepping out to take its
     hand (s), and how long it stays dark, then lit. While lit, it tests you with a turning spiral. */
-export const LIGHT = { r: 78, hold: 3, dark: 6, lit: 5, first: 4, spiral: { every: 0.13, kind: 'spiral', n: 3, speed: 70, dmg: 9, turn: 0.17 } as Pattern };
+export const LIGHT = { r: 78, hold: 3, dark: 7, lit: 4.5, first: 6, drift: 16, spiral: { every: 0.11, kind: 'spiral', n: 3, speed: 72, dmg: 9, turn: 0.19 } as Pattern };
 /** The Summit's climb: each ledge makes the monsters this much tougher; the HP back on each
     ledge; how often your friends help (s). */
 export const CLIMB = { tougher: 0.14, heal: 0.08, every: { arrow: 0.8, hammer: 3.2, lamp: 5 } };
@@ -1741,7 +1741,9 @@ function steerBoss(run: Run, b: Foe) {
       if (!lit && now - (run.bossAt ?? 0) < LIGHT.first + 2) emit(run, { type: 'say', text: 'Its light opens. Stand in it.' });
     }
     if (b.phase === 2) {
-      b.vx = b.vy = 0;
+      // Lit, it still drifts a little, away from you: you follow it in.
+      b.vx = (-dx / d) * LIGHT.drift;
+      b.vy = (-dy / d) * LIGHT.drift;
       run.bossClock -= STEP;
       if (run.bossClock <= 0) {
         run.bossClock = LIGHT.spiral.every;
