@@ -284,7 +284,7 @@ export default function StoryLab() {
                         {s.ask ? ` · asks ${s.ask.kind === 'choice' ? s.ask.id : s.ask.kind}` : ''}
                       </span>
                     </span>
-                    <span className="shrink-0 text-[10px] text-slate-600">{s.lines.length}</span>
+                    <span className="shrink-0 text-[10px] text-slate-500">{s.lines.length}</span>
                   </button>
                 ))}
               </div>

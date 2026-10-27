@@ -43,6 +43,7 @@ function useWarmRun(state: GameState) {
       if (!isDungeon(zone)) loads.reverse();
       void loads[0]()
         .then(loads[1])
+        .then(() => import('@/game/calm'))
         .catch(() => {});
       stop = warmRunSheets(state, zone);
     }, 600);
@@ -135,7 +136,7 @@ export function PlayTab({ state, onPlay }: Props) {
           const best = state.fog?.best[z.id];
           const open = st.state !== 'locked';
           return (
-            <div key={z.id} className={`flex items-center gap-3 rounded-2xl p-3 ${open ? 'bg-ink-800' : 'bg-ink-900 opacity-70'}`}>
+            <div key={z.id} className={`flex items-center gap-3 rounded-2xl p-3 ${open ? 'bg-ink-800' : 'bg-ink-900 opacity-80'}`}>
               <span
                 className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl font-pixel text-[10px] ${isLight(z.fog) ? 'text-ink-900' : 'text-slate-200'}`}
                 style={{ background: z.fog }}

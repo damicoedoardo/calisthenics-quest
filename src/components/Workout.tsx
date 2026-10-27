@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Minus, Plus, Undo2, X } from 'lucide-react';
 import { REST_SECONDS, todaysQuest, type GameState, type Rir } from '@/lib/game';
-import { rewardFor } from '@/lib/gear';
+import { rewardFor, tierText } from '@/lib/gear';
 import { getPath } from '@/lib/skills';
 
 interface Props {
@@ -177,7 +177,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         {reward && (
           <p className="mt-6 text-center text-xs text-slate-400">
             Beat it at {q.node.unlockSets}×{q.node.unlockReps}
-            {unit} to forge <span style={{ color: reward.color }}>{reward.name}</span>
+            {unit} to forge <span style={{ color: tierText(reward.tier) }}>{reward.name}</span>
           </p>
         )}
 

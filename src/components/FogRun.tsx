@@ -92,13 +92,15 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
     const classId = state.profile.classId;
     // Ask for the game code first, so it downloads while the sprites are drawn.
     const game = dungeon ? import('@/game/dungeon/scene') : import('@/game/run');
+    // No screen shake or flashes for players who asked their system for less motion.
+    const calm = import('@/game/calm');
     // Built ahead (and cached) when the Play tab opens, so this is quick.
     const sheets = runSheets(state, zone);
     setHud(null);
     setEnd(null);
     setBoss(false);
     setFailed(false);
-    game.then(({ startRun }) => {
+    Promise.all([game, calm]).then(([{ startRun }]) => {
       if (cancelled) return;
       run.current = startRun(el, { zone, power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast' }, {
         hud: setHud,

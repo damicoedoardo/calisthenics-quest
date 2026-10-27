@@ -59,6 +59,13 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     if (busy) setDevOpen(false);
   }, [busy]);
   const { dev, live, toggle: setDev } = useDevMode();
+  // While a screen is open over the tabs, the tabs underneath are out of reach: no keyboard focus
+  // and nothing for a screen reader to wander into. (React 18 has no inert prop, so it's set here.)
+  const root = useRef<HTMLDivElement>(null);
+  const covered = busy || (dev && devOpen);
+  useEffect(() => {
+    root.current?.querySelectorAll(':scope > header, :scope > main, :scope > nav').forEach((el) => el.toggleAttribute('inert', covered));
+  });
   // Seven quick taps on the FORMA name unlock developer mode on the live app.
   const taps = useRef<number[]>([]);
   const tapName = () => {
@@ -137,7 +144,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-md flex-col">
+    <div ref={root} className="mx-auto flex min-h-dvh max-w-md flex-col">
       <header className="safe-top sticky top-0 z-20 bg-ink-950/90 px-4 pb-3 backdrop-blur">
         <div className="flex items-center gap-3">
           <div className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800">

@@ -94,7 +94,7 @@ export function RiseUp({ gear, onDone }: { gear: Record<GearSlot, Gear>; onDone:
           {!atHold && current && (
             <p key={line} className={`animate-fadein text-xl leading-relaxed ${current.who === 'hollow' ? 'text-red-300' : 'text-slate-200'}`}>
               {current.text}
-              <span className="mt-4 block text-xs text-slate-600">tap</span>
+              <span className="mt-4 block text-xs text-slate-500">tap</span>
             </p>
           )}
           {atHold && !stood && (
