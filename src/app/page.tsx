@@ -188,6 +188,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           {TABS.map(({ id, label, Icon }) => (
             <button
               key={id}
+              aria-current={tab === id ? 'page' : undefined}
               onClick={() => {
                 setTab(id);
                 window.scrollTo({ top: 0 });
