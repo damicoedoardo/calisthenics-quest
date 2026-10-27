@@ -8,6 +8,9 @@ export default {
         // A phone held sideways: short and wide. The tabs get a side rail and two columns.
         // (Tailwind's own `landscape:` stays as it is; this one leaves tablets and desktops out.)
         land: { raw: '(orientation: landscape) and (max-height: 600px)' },
+        // A computer: a mouse or trackpad, a keyboard, and room. The tabs get a side rail and the
+        // Fog shows its keys. Never at the same time as `land` (that one is 600px tall or less).
+        desk: { raw: '(hover: hover) and (pointer: fine) and (min-width: 1024px) and (min-height: 601px)' },
       },
       fontFamily: {
         sans: ['Geist', 'system-ui', 'sans-serif'],
