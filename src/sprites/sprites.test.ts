@@ -6,6 +6,8 @@ import { DEFAULT_LOOK, STARTER_LOOKS, normalizeLook } from './characters/hero';
 import { HAIRSTYLES, SIZE, type HairStyle } from './engine/figure';
 import { MANGA_HAIR } from './engine/manga';
 import { tint, type Grid } from './engine/grid';
+import { PATHS } from '@/lib/skills';
+import { EXERCISES, type ExerciseId } from './characters/exercise';
 import { SPRITES, clipFor, framesFor, imageSheet, type SpriteId } from './registry';
 
 const painted = (g: Grid) => g.flat().filter(Boolean).length;
@@ -102,6 +104,16 @@ describe('sprite registry', () => {
       }
   });
 
+  it('every exercise in the program has a demo, and every demo moves', () => {
+    for (const path of PATHS)
+      for (const node of path.nodes) {
+        expect(EXERCISES, node.id).toContain(node.id);
+        const frames = framesFor('exercise', 'idle', { exercise: node.id as ExerciseId });
+        expect(frames, node.id).toHaveLength(16);
+        expect(new Set(frames.map((g) => hash([g]))).size, node.id).toBeGreaterThan(1);
+      }
+  });
+
   it('PNG sheets pick their row and fall back to idle', () => {
     const png = {
       kind: 'image' as const,
@@ -133,6 +145,7 @@ describe('sprite registry', () => {
       for (const mood of ['happy', 'bright', 'soft', 'sleepy', 'smoky', 'scared', 'dim'] as const) prints[`flame ${stage} ${mood}`] = hash(framesFor('ember', 'idle', { stage, mood }));
     for (const id of ['lia', 'sol', 'vela'] as const) prints[`${id} after`] = hash(framesFor(id, 'idle', { after: true }));
     for (const id of ZONED) for (const zone of [1, 2, 3, 4, 5]) prints[`${id} zone ${zone}`] = hash([...framesFor(id, 'idle', { zone }), ...framesFor(id, 'attack', { zone })]);
+    for (const exercise of EXERCISES) prints[`exercise ${exercise}`] = hash(framesFor('exercise', 'idle', { exercise }));
     prints['kindled long hair'] = hash(framesFor('kindled', 'idle', { hair: 'long' }));
     expect(prints).toMatchSnapshot();
   });

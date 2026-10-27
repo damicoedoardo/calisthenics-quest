@@ -28,6 +28,7 @@ import { drawSeeker } from './characters/seeker';
 import { drawSplitling, drawSplitter, drawSplitterPop } from './characters/splitter';
 import { drawShade } from './characters/shade';
 import { drawWarden } from './characters/warden';
+import { drawExercise, type ExerciseOpts } from './characters/exercise';
 import { ZONE_PLACE, dress, edged } from './characters/zoned';
 import { ABILITY_ICONS, DAY_ICONS, KEEPSAKE_ICONS, MARK_ICONS, RELIC_ICONS, SKILL_ICONS, type DayKind } from './characters/icons';
 
@@ -187,6 +188,13 @@ export const SPRITES = {
   abilityIcon: drawn<AbilityIconOpts>({ label: (o) => o.name, defaults: { name: 'charge' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(ABILITY_ICONS[o.name]) }),
   skillIcon: drawn<SkillIconOpts>({ label: (o) => o.name, defaults: { name: 'power' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(SKILL_ICONS[o.name]) }),
   markIcon: drawn<MarkIconOpts>({ label: (o) => o.name, defaults: { name: 'boss' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(MARK_ICONS[o.name]) }),
+  // you, doing an exercise of the program (the workout screen's demo)
+  exercise: drawn<ExerciseOpts>({
+    label: (o) => `How to do it: ${o.exercise}`,
+    defaults: { exercise: 'pushup', gear: STARTER_GEAR },
+    clips: () => ({ idle: 'rep' }),
+    draw: (o, _fr, f) => drawExercise(o, f),
+  }),
   mirrorBoss: drawn<HeroOpts>({
     label: () => 'The Mirror, you in glass',
     defaults: { gear: STARTER_GEAR },

@@ -27,6 +27,9 @@ characters/icons.ts   app icons as text rows: the six keepsakes (Hero tab, sprit
                       what a day held in the Book of Days (sprite `dayIcon`), the dungeon's
                       relics (`relicIcon`), the ability and Dodge buttons (`abilityIcon`), the run's
                       level-up skills (`skillIcon`) and the floor track's Warden and boss (`markIcon`)
+characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look }): you doing
+                      each exercise of the program, a jointed skeleton with IK elbows and knees,
+                      one rep per loop of the 16-frame `rep` clip
 characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recolored onto the zone's
                       ramp and dressed (lake glass and drips, forge scrap and glowing cracks,
                       plateau sandstone, fog mist, summit ice)
@@ -58,6 +61,7 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Redraw a dungeon monster | the `ROWS` text art in its file (`ram.ts`, `smoke.ts`, `seeker.ts`, `splitter.ts`, `shade.ts`); its palette sits under the rows |
 | Change which sprite a dungeon monster uses, or its size | `DUNGEON_LOOKS` in `src/game/dungeon/scene.ts` (a new sheet also needs a `SheetKey` in `src/game/rules.ts` and a line in `sheets` in `FogRun.tsx`) |
 | Redraw the dungeon's pillars, barrels, chests, shrine, torches | the text rows in `src/game/dungeon/props.ts` (floor, walls, door, water and spikes are drawn in `scene.ts`) |
+| Fix an exercise demo's form (depth, lean, where the hands go) | its case in `poseFor` (`characters/exercise.ts`); a new exercise in `src/lib/skills.ts` needs one too (a test checks every program exercise has a demo) |
 | Change how a zone dresses its regular monsters | `ZONE_RAMPS` (colors) and the zone's branch of `dress` in `characters/zoned.ts`; the sprites that take `{ zone }` are the `zoned(...)` entries in `registry.ts` |
 | Change a zone's dungeon colors (floor, stone, torch fire, water) | its entry in `THEMES` (`src/game/dungeon/themes.ts`); in developer mode the Fog's pause menu has a Theme button that cycles them |
 | Add a character | a file in `characters/`, then an entry in `SPRITES` (`registry.ts`) |
