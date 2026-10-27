@@ -18,7 +18,7 @@ bot.ts              a player for balance tests (scripts/fog-sim.mjs) and the aut
 scene.ts            draws a run with Phaser and turns events into sound and sparks
 themes.ts           each zone's colors (floor, stone, torches, water)
 props.ts            pillars, barrels, chests, shrine and torches as text rows
-src/game/rules.ts   numbers shared with the hero (attack, HP, skills) and the sprite sheet names
+src/game/rules.ts   numbers shared with the hero (attack, HP, reach, from the stat points) and the sprite sheet names
 src/game/sheets.ts  which sprite sheets a run draws with
 ```
 

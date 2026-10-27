@@ -19,7 +19,7 @@ export const AFTER_LINES: Record<AfterKind, DailyLine[]> = {
     { text: 'Every page from before is still in the book. This one goes right after them.' },
   ],
   best: [
-    { text: 'Did you feel that? Something new. Something you could not do before.' },
+    { text: 'Did you feel that? Better than last time. Your body remembered.' },
     { text: "I'm doing loops. You can't see them but I'm doing loops." },
     { text: 'Remember this one, for the next time the Hollow says nothing changes.' },
     { text: 'That was {heart1} again, a bit. I knew it was still in there.', needs: 'heart1' },
@@ -61,7 +61,7 @@ export type MarginKind = 'back' | 'best' | 'short' | 'full' | 'fire' | 'rest' | 
 /** Notes in your own hand, in the margins of the Book of Days. Terse, like real margins. */
 export const MARGIN_NOTES: Record<MarginKind, string[]> = {
   back: ['Came back.', 'Came back. Glad I did.', 'Back again. Nothing lost.'],
-  best: ['Something new today.', 'Did a thing I could not do before.', 'New. Remember this one.'],
+  best: ['Something new today.', 'Better than last time.', 'New. Remember this one.'],
   short: ['Short, still counts.', 'Hard day. Came anyway.', 'Small. Still came.', 'Not much. Enough.'],
   full: ['Came anyway.', 'Showed up.', 'Said I would. Did.', 'Good one.', 'Another stone.', 'Tired. Good tired.', 'Kept my word.'],
   fire: ['Sat by the fire.', 'Breathed. Good.', 'A quiet minute. Needed it.'],

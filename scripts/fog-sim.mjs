@@ -25,7 +25,7 @@ function shift(state, now) {
   const last = state.sessions.length ? new Date(state.sessions.at(-1).date).getTime() : now - DAY;
   const delta = now - DAY - last;
   const move = (d) => new Date(new Date(d).getTime() + delta).toISOString();
-  return { ...state, sessions: state.sessions.map((s) => ({ ...s, date: move(s.date) })), tests: state.tests.map((t) => ({ ...t, date: move(t.date) })), days: [], draft: null };
+  return { ...state, sessions: state.sessions.map((s) => ({ ...s, date: move(s.date) })), days: [], draft: null };
 }
 
 if (!isMainThread) {

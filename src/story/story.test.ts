@@ -31,10 +31,9 @@ function linesOf(scene: (typeof ALL_SCENES)[number]['scene']): Line[] {
 const tokens = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
 
 describe('the story files', () => {
-  it('has six chapters, 78 workouts, and three max tests', () => {
+  it('has six chapters and 78 workouts', () => {
     expect(CHAPTERS.map((c) => c.n)).toEqual([1, 2, 3, 4, 5, 6]);
     expect(CHAPTERS.reduce((a, c) => a + c.workouts, 0)).toBe(78);
-    expect(CHAPTERS.map((c) => c.tests)).toEqual([0, 1, 1, 2, 2, 3]);
     expect(CHAPTERS.map((c) => chapterStart(c.n))).toEqual([0, 12, 24, 37, 50, 64]);
   });
 
@@ -135,7 +134,7 @@ describe('the story files', () => {
   });
 });
 
-const workout = (date: Date, kind: Session['kind'] = 'full', unlocked: string[] = []): Session => ({
+const workout = (date: Date, kind: Session['kind'] = 'full', better = false): Session => ({
   id: date.toISOString(),
   date: date.toISOString(),
   kind,
@@ -143,7 +142,7 @@ const workout = (date: Date, kind: Session['kind'] = 'full', unlocked: string[] 
   xp: 100,
   breakdown: [],
   entries: [],
-  unlocked,
+  better,
 });
 
 describe('every day', () => {
@@ -166,7 +165,7 @@ describe('every day', () => {
     expect(todayMoment(trained(27), tue(27, 23))).toBe('trained');
     expect(todayMoment(trained(26), tue(27, 23))).toBe('rest');
     expect(todayMoment({ ...initialState(), sessions: [workout(tue(26), 'mini')] }, tue(27))).toBe('rough');
-    expect(todayMoment({ ...initialState(), sessions: [workout(tue(26), 'full', ['push-2'])] }, tue(27))).toBe('best');
+    expect(todayMoment({ ...initialState(), sessions: [workout(tue(26), 'full', true)] }, tue(27))).toBe('best');
     expect(flameMood(trained(10), tue(27))).toBe('dim');
     expect(flameMood(trained(24, 25, 26, 27), tue(27))).toBe('smoky');
   });
@@ -203,11 +202,10 @@ describe('every day', () => {
 
 describe('the months 4 to 6 rules', () => {
   const day = (i: number) => new Date(2026, 0, 1 + i, 18);
-  /** A player in month five after `n` workouts, with the max tests months two and four asked for. */
+  /** A player after `n` workouts (month five starts at 50). */
   const inTheFog = (n: number, answers: GameState['answers'] = {}): GameState => {
     const sessions = Array.from({ length: n }, (_, i) => workout(day(i)));
-    const test = (i: number) => ({ id: `t${i}`, date: sessions[i].date, pushups: 20, pullups: 3, lsitSec: 5, xp: 200 });
-    return { ...initialState(), sessions, tests: [test(20), test(45)], answers };
+    return { ...initialState(), sessions, answers };
   };
   const now = day(70);
 
@@ -230,13 +228,9 @@ describe('the months 4 to 6 rules', () => {
     expect(pendingScenes(inTheFog(63), now).map((s) => s.id)).toContain('ch5-gathering-alone');
   });
 
-  it('does not play a month\'s scenes before the month starts, even while the last one waits for a test', () => {
-    // Month four is done but its max test is missing: month five's workout scenes wait.
-    const waiting = { ...inTheFog(52), tests: [] as GameState['tests'] };
-    waiting.tests = inTheFog(52).tests.slice(0, 1);
-    const ids = pendingScenes(waiting, now).map((s) => s.id);
-    expect(ids).toContain('ch5-wings');
-    expect(ids.filter((id) => id.startsWith('ch5-') && id !== 'ch5-wings')).toEqual([]);
+  it("does not play a month's scenes before the month starts", () => {
+    expect(pendingScenes(inTheFog(49), now).filter((s) => s.id.startsWith('ch5-'))).toEqual([]);
+    expect(pendingScenes(inTheFog(50), now).some((s) => s.id.startsWith('ch5-'))).toBe(true);
   });
 
   it('skips a story beat whose moment is long gone, but never a scene that waits for something else', () => {

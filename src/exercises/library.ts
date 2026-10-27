@@ -1,4 +1,3 @@
-import { PATHS } from '@/lib/skills';
 import type { ExerciseId } from '@/sprites/characters/exercise';
 import type { Kit } from '@/sprites/characters/moves';
 import { classify } from './classify';
@@ -42,18 +41,18 @@ export interface LibraryExercise extends CatalogExercise {
 
 type Base = Omit<LibraryExercise, 'kit' | 'family' | 'region' | 'kind' | 'tips' | 'mistakes'>;
 
-/** The program's moves with no catalog entry of their own, shown from the skill tree. */
-const PROGRAM_ONLY: Record<string, Pick<CatalogExercise, 'equipment' | 'level' | 'force' | 'primary' | 'secondary'>> = {
-  'archer-pushup': { equipment: 'body only', level: 'intermediate', force: 'push', primary: ['chest'], secondary: ['triceps', 'shoulders'] },
-  'dead-hang': { equipment: 'body only', level: 'beginner', force: 'static', primary: ['forearms'], secondary: ['lats', 'shoulders'] },
-  negatives: { equipment: 'body only', level: 'beginner', force: 'pull', primary: ['lats'], secondary: ['biceps', 'middle back'] },
-  'strict-pullup': { equipment: 'body only', level: 'intermediate', force: 'pull', primary: ['lats'], secondary: ['biceps', 'middle back'] },
-  'lsit-pullup': { equipment: 'body only', level: 'expert', force: 'pull', primary: ['lats'], secondary: ['abdominals', 'biceps'] },
-  'knee-raise': { equipment: 'body only', level: 'beginner', force: 'pull', primary: ['abdominals'], secondary: [] },
-  'tuck-lsit': { equipment: 'body only', level: 'beginner', force: 'static', primary: ['abdominals'], secondary: ['triceps', 'shoulders'] },
-  'one-leg-lsit': { equipment: 'body only', level: 'intermediate', force: 'static', primary: ['abdominals'], secondary: ['quadriceps', 'triceps'] },
-  lsit: { equipment: 'body only', level: 'expert', force: 'static', primary: ['abdominals'], secondary: ['quadriceps', 'triceps'] },
-  'toes-to-bar': { equipment: 'body only', level: 'expert', force: 'pull', primary: ['abdominals'], secondary: ['lats', 'forearms'] },
+/** Bodyweight moves with a hand-drawn demo and no catalog entry of their own. */
+const PROGRAM_ONLY: Record<string, Pick<CatalogExercise, 'name' | 'steps' | 'equipment' | 'level' | 'force' | 'primary' | 'secondary'>> = {
+  'archer-pushup': { name: 'Archer push-up', steps: ['Wide hands, shift onto one arm, the other stays straight. Reps per side.'], equipment: 'body only', level: 'intermediate', force: 'push', primary: ['chest'], secondary: ['triceps', 'shoulders'] },
+  'dead-hang': { name: 'Dead hang', steps: ['Full grip on the bar, shoulders active, breathe.'], equipment: 'body only', level: 'beginner', force: 'static', primary: ['forearms'], secondary: ['lats', 'shoulders'] },
+  negatives: { name: 'Pull-up negatives', steps: ['Jump to the top, lower yourself over 5 slow seconds.'], equipment: 'body only', level: 'beginner', force: 'pull', primary: ['lats'], secondary: ['biceps', 'middle back'] },
+  'strict-pullup': { name: 'Strict pull-up', steps: ['Dead hang start, no kipping. Many small sets beat one big one.'], equipment: 'body only', level: 'intermediate', force: 'pull', primary: ['lats'], secondary: ['biceps', 'middle back'] },
+  'lsit-pullup': { name: 'L-sit pull-up', steps: ['Hold the legs at 90° for the whole rep.'], equipment: 'body only', level: 'expert', force: 'pull', primary: ['lats'], secondary: ['abdominals', 'biceps'] },
+  'knee-raise': { name: 'Hanging knee raise', steps: ['Knees to chest, no swinging. Control the way down.'], equipment: 'body only', level: 'beginner', force: 'pull', primary: ['abdominals'], secondary: [] },
+  'tuck-lsit': { name: 'Tuck L-sit', steps: ['On dip bars or parallettes, push the floor away, knees tucked.'], equipment: 'body only', level: 'beginner', force: 'static', primary: ['abdominals'], secondary: ['triceps', 'shoulders'] },
+  'one-leg-lsit': { name: 'One-leg L-sit', steps: ['One leg straight, one tucked. Switch each set.'], equipment: 'body only', level: 'intermediate', force: 'static', primary: ['abdominals'], secondary: ['quadriceps', 'triceps'] },
+  lsit: { name: 'Full L-sit', steps: ['Both legs straight and locked, toes pointed.'], equipment: 'body only', level: 'expert', force: 'static', primary: ['abdominals'], secondary: ['quadriceps', 'triceps'] },
+  'toes-to-bar': { name: 'Toes to bar', steps: ['Straight legs up to the bar, slow on the way down.'], equipment: 'body only', level: 'expert', force: 'pull', primary: ['abdominals'], secondary: ['lats', 'forearms'] },
 };
 
 /** Staples the catalog is missing, written for FORMA. */
@@ -80,18 +79,14 @@ const OWN: Base[] = [
 ];
 
 function programOnly(): Base[] {
-  return PATHS.flatMap((p) => p.nodes)
-    .filter((n) => n.id in PROGRAM_ONLY)
-    .map((n) => ({
-      id: `forma:${n.id}`,
-      name: n.name,
-      category: 'strength',
-      mechanic: 'compound',
-      steps: [n.cue],
-      ...PROGRAM_ONLY[n.id],
-      demo: n.id as ExerciseId,
-      source: 'forma' as const,
-    }));
+  return Object.entries(PROGRAM_ONLY).map(([id, x]) => ({
+    id: `forma:${id}`,
+    category: 'strength',
+    mechanic: 'compound',
+    ...x,
+    demo: id as ExerciseId,
+    source: 'forma' as const,
+  }));
 }
 
 /** Adds the movement's coaching; the kit is the classifier's for catalog entries, none otherwise. */

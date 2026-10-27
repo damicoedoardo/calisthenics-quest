@@ -18,12 +18,13 @@ losing costs nothing, runs are free to replay, and only real training makes you 
   one zone per chapter, each with its boss (`BOSS_NAME`).
 - **Opening**: `zoneStatus` opens a zone when its chapter has started and the zone before it is
   cleared.
-- **Power from training**: `powerOf(state, now)` turns the save into a run's power. Push skills
-  raise Strike (damage), Pull raises Reach (attack speed, pickup range), Core raises Hold (HP,
-  armor). The flame's fires circle you at `FLAME_AT` workouts (1, 6, 15, 30); a bonfire throws
+- **Power from training**: `powerOf(state, now)` turns the save into a run's power. The stat
+  points the player put into the champion give Health (HP, a little armor), Damage, Reach (pickup
+  range) and Speed (attack speed), see `statPower` in `src/lib/stats.ts` and
+  [training.md](training.md). The flame's fires circle you at `FLAME_AT` workouts (1, 6, 15, 30); a bonfire throws
   fireballs, a fire fairy heals when you're low. Training in the last two days gives a free run
   skill, resting (a day off or a minute by the fire) one more. `nextGrowth` writes the "train to
-  grow" hints.
+  grow" hint (points waiting to be spent, or that workouts earn them).
 - **Run skills**: `UPGRADES` and `rollUpgrades` (three random choices per level-up), `xpToNext`.
 - **Records**: `recordRun` saves runs, clears and each zone's bests (deepest, most monsters,
   fastest win) and the last run for the flame to talk about. The mid-boss guards floor

@@ -401,7 +401,7 @@ const depth = (run: Run) => (run.layout.floors > 1 ? run.floor / (run.layout.flo
 export function createRun(setup: RunSetup): Run {
   const body = CLASS_BODY[attackOf(setup.classId)],
     hp = Math.round(heroMaxHp(setup.power) * body.hp),
-    power = { ...setup.power, armor: setup.power.armor + body.armor, strike: (1 + setup.power.strike) * body.dmg - 1 };
+    power = { ...setup.power, armor: setup.power.armor + body.armor, damage: (1 + setup.power.damage) * body.dmg - 1 };
   setup = { ...setup, power };
   const run: Run = {
     setup,

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { TodayTab } from '@/components/TodayTab';
-import { SkillsTab } from '@/components/SkillsTab';
+import { TrainTab } from '@/components/TrainTab';
 import { HeroTab } from '@/components/HeroTab';
 import { PlayTab } from '@/components/PlayTab';
 import { FogRun, type RunStart } from '@/components/FogRun';
@@ -23,12 +23,12 @@ import { inSandbox, useGameState } from '@/lib/store';
 import { recordRun, ZONES, type Zone } from '@/lib/fog';
 import { skipIntro, useDevMode } from '@/lib/dev';
 
-type Tab = 'today' | 'skills' | 'play' | 'hero';
+type Tab = 'today' | 'train' | 'play' | 'hero';
 
-// Each tab's pixel icon (src/sprites/characters/icons.ts): crossed swords, a skill tree, a game pad, a shield.
-const TABS: { id: Tab; label: string; icon: 'tabToday' | 'tabSkills' | 'tabPlay' | 'tabHero' }[] = [
+// Each tab's pixel icon (src/sprites/characters/icons.ts): crossed swords, a dumbbell, a game pad, a shield.
+const TABS: { id: Tab; label: string; icon: 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabHero' }[] = [
   { id: 'today', label: 'Today', icon: 'tabToday' },
-  { id: 'skills', label: 'Skills', icon: 'tabSkills' },
+  { id: 'train', label: 'Train', icon: 'tabTrain' },
   { id: 'play', label: 'Play', icon: 'tabPlay' },
   { id: 'hero', label: 'Hero', icon: 'tabHero' },
 ];
@@ -51,8 +51,6 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const [picker, setPicker] = useState<'story' | 'manual' | null>(null);
   const [replaying, setReplaying] = useState(false);
   const [run, setRun] = useState<Zone | null>(null);
-  // Bumped when something may have unlocked a scene outside a session (a max test).
-  const [storyTick, setStoryTick] = useState(0);
   const [devOpen, setDevOpen] = useState(false);
   // /lab/night opens the app on a sandbox save at a given spot: ?tab=, ?run=<zone>&at=, ?workout, ?book.
   const [sandbox, setSandbox] = useState(false);
@@ -66,7 +64,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     setSandbox(true);
     const q = new URLSearchParams(window.location.search);
     const t = q.get('tab');
-    if (t === 'today' || t === 'skills' || t === 'play' || t === 'hero') setTab(t);
+    if (t === 'today' || t === 'train' || t === 'play' || t === 'hero') setTab(t);
     const zone = ZONES.find((z) => String(z.id) === q.get('run'));
     if (zone) {
       const at = q.get('at');
@@ -112,7 +110,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     const next = scenesToPlay(state, new Date())[0];
     if (next) setScene(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, state.profile.onboarded, state.sessions.length, state.tests.length, replaying, training, after, scene, picker, run, storyTick]);
+  }, [ready, state.profile.onboarded, state.sessions.length, replaying, training, after, scene, picker, run]);
 
   // A page in the Book of Days for every day the app is opened (and today's line follows the day).
   const today = new Date().toDateString();
@@ -165,8 +163,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         onExit={replaying ? () => setReplaying(false) : undefined}
         onSkip={dev && !replaying ? () => update((s) => skipIntro(s, new Date())) : undefined}
         onLook={(look) => update((s) => ({ ...s, profile: { ...s.profile, look } }))}
-        onFinish={({ letter, voice, progress }) => {
-          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, letter, voice }, progress: progress ?? s.progress }));
+        onFinish={({ letter, voice, kit }) => {
+          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, letter, voice, kit: kit ?? s.profile.kit } }));
           setReplaying(false);
         }}
       />
@@ -213,8 +211,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       <main className="flex-1 px-4 pb-28 pt-2">
         {tab === 'today' ? (
           <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook} />
-        ) : tab === 'skills' ? (
-          <SkillsTab state={state} />
+        ) : tab === 'train' ? (
+          <TrainTab state={state} update={update} />
         ) : tab === 'play' ? (
           <PlayTab state={state} onPlay={setRun} />
         ) : (
@@ -222,7 +220,6 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
             state={state}
             update={update}
             onChangeClass={() => setPicker('manual')}
-            onTestLogged={() => setStoryTick((t) => t + 1)}
             onReplayOpening={() => setReplaying(true)}
           />
         )}
@@ -271,7 +268,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       {scene && <ScenePlayer key={scene.id} scene={scene} state={state} onDone={endScene} />}
       {picker && (
         <ClassPicker
-          progress={state.progress}
+          workouts={state.sessions.length}
           current={state.profile.classId}
           onPick={(id) => {
             update((s) => ({ ...s, profile: { ...s.profile, classId: id } }));

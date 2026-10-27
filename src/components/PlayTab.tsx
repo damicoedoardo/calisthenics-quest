@@ -7,6 +7,8 @@ import { Hero } from './Hero';
 import { warmRunSheets } from '@/game/sheets';
 import { gearOf, type GameState } from '@/lib/game';
 import { FLAME_AT, ZONES, nextGrowth, powerOf, zoneStatus, type Zone } from '@/lib/fog';
+import { STATS, pointsFree } from '@/lib/stats';
+import { STAT_ICON } from './StatPoints';
 import { flameMood } from '@/story/daily';
 import { FLAME_STAGES, flameStage } from '@/story/flame';
 
@@ -57,9 +59,7 @@ export function PlayTab({ state, onPlay }: Props) {
     fairy = FLAME_STAGES.find((s) => s.id === 'fairy')!.at;
   const toGo = (n: number) => `${n - workouts} more workout${n - workouts === 1 ? '' : 's'}`;
   const rows = [
-    { icon: 'power' as const, name: 'Strike', from: 'Push', value: `+${Math.round(power.strike * 100)}% damage`, hint: nextGrowth(state, 'push') },
-    { icon: 'haste' as const, name: 'Reach', from: 'Pull', value: `+${Math.round(power.reach * 100)}% speed`, hint: nextGrowth(state, 'pull') },
-    { icon: 'vital' as const, name: 'Hold', from: 'Core', value: `+${power.hold} HP`, hint: nextGrowth(state, 'core') },
+    ...STATS.map((st) => ({ icon: STAT_ICON[st.id], name: st.name, from: 'Points', value: st.show(power[st.id]), hint: null })),
     {
       icon: 'flame' as const,
       name: power.flameName ? `${power.flameName}'s fire` : 'Your flame',
@@ -91,6 +91,7 @@ export function PlayTab({ state, onPlay }: Props) {
 
       <section className="rounded-2xl bg-ink-800 p-4">
         <p className="font-pixel text-[10px] text-slate-400">Your power, from your training</p>
+        <p className={`mt-1 text-[11px] ${pointsFree(state) ? 'font-semibold text-gold-300' : 'text-sky-300'}`}>{nextGrowth(state)}</p>
         <ul className="mt-3 space-y-2.5">
           {rows.map(({ icon, name, from, value, hint }) => (
             <li key={name} className="flex items-start gap-3">

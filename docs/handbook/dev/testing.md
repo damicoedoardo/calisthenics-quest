@@ -12,7 +12,7 @@ Tests are Vitest, next to the code (`*.test.ts`), with `@/` mapped to `src/` (`v
 
 | Test | Guards |
 |---|---|
-| `src/lib/game.test.ts`, `fog.test.ts`, `dev.test.ts`, `music.test.ts` | The rules: XP, quests, progression, zones, power, dev helpers, music patterns |
+| `src/lib/game.test.ts`, `stats.test.ts`, `fog.test.ts`, `dev.test.ts`, `music.test.ts` | The rules: XP, the plan and quests, progression, saves from older versions, stat points, gear, zones, power, dev helpers, music patterns |
 | `src/story/story.test.ts`, `fill.test.ts` | Six chapters and their lengths, unique scene ids, every speaker, place, song, sprite and `{word}` exists, player words only inside quotes, no digits in lines, daily lines don't repeat for three weeks |
 | `src/sprites/sprites.test.ts` | Draws every sprite and action and keeps a pixel fingerprint (snapshot). A failing fingerprint after a change you didn't mean to make is a bug |
 | `src/game/dungeon/engine.test.ts` | Replays a whole seeded bot run in every zone (snapshot). A refactor keeps them identical; a balance change moves them on purpose |
@@ -24,7 +24,7 @@ Accept intended snapshot changes with `pnpm test -u`, and say in the PR why they
 ## Simulators
 
 - **Season** (`src/sim/`): `pnpm sim` plays the kinds of player in `src/sim/players.ts` (add one to
-  try a new kind) day by day through the real workouts, story, flame, Fog and Book of Days, and
+  try a new kind; each also spends stat points their way: spread, all on Damage, or never) day by day through the real workouts, story, flame, Fog and Book of Days, and
   writes each timeline and Fog snapshots to `sim-out/` (git-ignored).
 - **Fog** (`scripts/fog-sim.mjs`): `pnpm fog:sim steady 100` plays hundreds of bot runs per zone
   and class on those snapshots, on every core, with the game's own engine and bot (Node runs the

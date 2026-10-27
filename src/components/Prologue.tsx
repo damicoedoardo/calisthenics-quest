@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
-import { Headphones, Minus, Plus } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { Headphones } from 'lucide-react';
 import { Dialogue } from './Dialogue';
 import { Book, Ember, Enemy, Hollow, Wanderer } from './Characters';
 import { Hero } from './Hero';
@@ -11,20 +11,19 @@ import { LookEditor } from './LookEditor';
 import { RiseUp } from './RiseUp';
 import { SoundToggle, useMusic } from './Sound';
 import { Weather } from './Weather';
-import { placement, type GameState, type Letter } from '@/lib/game';
+import type { GameState, Kit, Letter } from '@/lib/game';
 import { equippedGear, type Gear, type GearSlot } from '@/lib/gear';
-import { getPath } from '@/lib/skills';
 import { music } from '@/lib/music';
 import { COLD_OPEN, FADING, FIRST_QUEST, HOLLOW_MEET, LETTER_PROMPTS, MEET, SEALED, VOICES } from '@/story/opening';
 import { renderLines, storyWords } from '@/story/engine';
 import { STARTER_LOOKS } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
 
-type Step = 'title' | 'cold' | 'fading' | 'voice' | 'hollow' | 'fight' | 'fallen' | 'meet' | 'letter' | 'sealed' | 'placement' | 'quest' | 'look';
+type Step = 'title' | 'cold' | 'fading' | 'voice' | 'hollow' | 'fight' | 'fallen' | 'meet' | 'letter' | 'sealed' | 'kit' | 'quest' | 'look';
 
 interface Props {
   state: GameState;
-  onFinish: (patch: { letter: Letter; voice: string; progress?: GameState['progress'] }) => void;
+  onFinish: (patch: { letter: Letter; voice: string; kit?: Kit }) => void;
   /** Saves the player's look right away (the boy/girl pick, then the editor after the story). */
   onLook: (look: Look) => void;
   /** Shown on the title screen when the opening is replayed. */
@@ -35,23 +34,6 @@ interface Props {
 
 const goldButton =
   'w-full rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none disabled:opacity-40';
-
-function Stepper({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-xl bg-ink-800 p-3">
-      <p className="text-sm text-slate-200">{label}</p>
-      <div className="flex items-center gap-2">
-        <button aria-label={`Fewer ${label}`} onClick={() => onChange(Math.max(0, value - 1))} className="grid h-10 w-10 place-items-center rounded-lg bg-ink-700 active:scale-95">
-          <Minus size={16} />
-        </button>
-        <span className="w-8 text-center font-mono text-xl font-bold">{value}</span>
-        <button aria-label={`More ${label}`} onClick={() => onChange(value + 1)} className="grid h-10 w-10 place-items-center rounded-lg bg-ink-700 active:scale-95">
-          <Plus size={16} />
-        </button>
-      </div>
-    </div>
-  );
-}
 
 /** The fading montage: who you were turns gray, and something stands behind you. */
 function fadingBackdrop(gear: ReturnType<typeof equippedGear>) {
@@ -83,18 +65,17 @@ export function Prologue({ state, onFinish, onLook, onExit, onSkip }: Props) {
   const [letter, setLetter] = useState<Letter>(state.profile.letter);
   const [voice, setVoice] = useState(state.profile.voice);
   const [custom, setCustom] = useState(!!state.profile.voice && !VOICES.includes(state.profile.voice));
-  const [counts, setCounts] = useState({ push: 15, pull: 3, core: 10 });
-  const gear = equippedGear(undefined, state.progress);
+  const [kit, setKit] = useState<Kit>(state.profile.kit ?? 'gym');
+  const gear = equippedGear(undefined, state.sessions.length);
   // A dull, cracked blade for the first fight.
   const fightGear: Record<GearSlot, Gear> = { ...gear, weapon: { ...gear.weapon, tier: 1, color: '#6b7280', glow: undefined } };
-  // Only brand-new players are placed; anyone replaying keeps their progress.
-  const needsPlacement = !state.profile.onboarded && state.sessions.length === 0;
-  const placed = useMemo(() => placement(counts.push, counts.pull, counts.core), [counts]);
+  // Only brand-new players are asked where they train; anyone replaying keeps their answer.
+  const asksKit = !state.profile.onboarded && state.sessions.length === 0;
   // The flame gets its name after the first workout; until then it's "A spark".
   const words = { ...storyWords(state), ...letter, voice: voice.trim() || "You're not enough.", flame: state.profile.flame ?? '' };
   const go = useCallback((s: Step) => () => setStep(s), []);
 
-  const finish = () => onFinish({ letter, voice: voice.trim(), progress: needsPlacement ? placed : undefined });
+  const finish = () => onFinish({ letter, voice: voice.trim(), kit: asksKit ? kit : undefined });
   const begin = () => {
     music.unlock();
     setStep('cold');
@@ -218,15 +199,15 @@ export function Prologue({ state, onFinish, onLook, onExit, onSkip }: Props) {
           gear={gear}
           backdrop={(i) => (i < 2 ? <Wanderer size={140} /> : i < 5 ? <Book size={120} /> : <Ember size={72} stage="spark" mood="soft" />)}
           flame="spark"
-          onDone={go(needsPlacement ? 'placement' : 'quest')}
+          onDone={go(asksKit ? 'kit' : 'quest')}
         />
       );
     case 'quest':
       return (
         <Dialogue key="quest" lines={FIRST_QUEST} gear={gear} flame="spark" cinematic backdrop={() => <Enemy id="slime" size={110} />} onDone={firstRun ? go('look') : finish} />
       );
-    case 'placement':
-      return <Placement counts={counts} setCounts={setCounts} placed={placed} onDone={go('quest')} />;
+    case 'kit':
+      return <KitPick kit={kit} setKit={setKit} onDone={go('quest')} />;
     case 'look':
       return <MakeItYours look={look} setLook={onLook} gear={gear} onDone={finish} />;
   }
@@ -355,40 +336,32 @@ function LetterForm({ letter, setLetter, onDone }: { letter: Letter; setLetter: 
   );
 }
 
-function Placement({
-  counts,
-  setCounts,
-  placed,
-  onDone,
-}: {
-  counts: { push: number; pull: number; core: number };
-  setCounts: (c: { push: number; pull: number; core: number }) => void;
-  placed: GameState['progress'];
-  onDone: () => void;
-}) {
+const KITS: { id: Kit; label: string; note: string }[] = [
+  { id: 'gym', label: 'At a gym', note: 'Barbells, dumbbells, cables' },
+  { id: 'home', label: 'At home', note: 'No kit: a chair, a table, the floor' },
+];
+
+function KitPick({ kit, setKit, onDone }: { kit: Kit; setKit: (k: Kit) => void; onDone: () => void }) {
   useMusic('rise');
   return (
     <div className="safe-top safe-bottom mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6">
       <div className="mt-4 flex items-center gap-3">
         <Ember size={64} stage="spark" />
-        <p className="flex-1 text-sm text-slate-300">&ldquo;Before we walk: roughly how many can you do today? Guess low. I won&apos;t judge.&rdquo;</p>
+        <p className="flex-1 text-sm text-slate-300">&ldquo;Before we walk: where will you train? Either is fine. You can change it on the Train tab.&rdquo;</p>
       </div>
       <div className="mt-6 flex-1 space-y-3">
-        <Stepper label="Push-ups" value={counts.push} onChange={(v) => setCounts({ ...counts, push: v })} />
-        <Stepper label="Pull-ups" value={counts.pull} onChange={(v) => setCounts({ ...counts, pull: v })} />
-        <Stepper label="Hanging knee raises" value={counts.core} onChange={(v) => setCounts({ ...counts, core: v })} />
-        <div className="rounded-xl bg-ink-900 p-4 text-sm">
-          <p className="text-xs uppercase tracking-wider text-slate-500">You start at</p>
-          <ul className="mt-2 space-y-1">
-            {(['push', 'pull', 'core'] as const).map((p) => (
-              <li key={p} className="flex justify-between">
-                <span className="text-slate-400">{getPath(p).name}</span>
-                <span className="font-semibold text-slate-100">{getPath(p).nodes[placed[p]].name}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-3 text-xs text-slate-500">Starting a step lower on purpose, so day one feels winnable.</p>
-        </div>
+        {KITS.map((k) => (
+          <button
+            key={k.id}
+            aria-pressed={kit === k.id}
+            onClick={() => setKit(k.id)}
+            className={`w-full rounded-xl p-4 text-left ${kit === k.id ? 'bg-ink-700 ring-2 ring-gold-400' : 'bg-ink-800'}`}
+          >
+            <span className="block font-semibold">{k.label}</span>
+            <span className="block text-xs text-slate-400">{k.note}</span>
+          </button>
+        ))}
+        <p className="px-1 text-xs text-slate-500">Every workout starts light, with a warm-up, and ends with a stretch. Day one should feel winnable.</p>
       </div>
       <button onClick={onDone} className={`mt-5 ${goldButton}`}>
         Begin the road

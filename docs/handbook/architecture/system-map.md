@@ -19,8 +19,8 @@ src/
 │                   layout (fonts, splash, service worker), manifest, icons, globals.css
 ├── components/     React screens and widgets. They play data and call rules; they own no rules or art
 ├── lib/            Pure rules and engines, no React (except store.ts and dev.ts hooks):
-│                   game.ts (save shape, XP, quests, progression), skills.ts (the skill paths),
-│                   gear.ts (classes, gear tiers), fog.ts (Fog rules), days.ts (calendar days),
+│                   game.ts (save shape, XP, quests, progression), program.ts (the built-in plan),
+│                   stats.ts (stat points), gear.ts (classes, gear tiers), fog.ts (Fog rules), days.ts (calendar days),
 │                   music.ts + music-zones.ts (chiptune engine and tracks), random.ts (seeded RNG),
 │                   store.ts (load/save), dev.ts (developer mode)
 ├── story/          The six-month story as data, plus its engine (which scene is due, how a line reads)

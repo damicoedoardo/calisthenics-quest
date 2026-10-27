@@ -13,12 +13,11 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 
 | Field | What |
 |---|---|
-| `version` | 2. Older saves go through `migrate()` |
-| `profile` | `onboarded`, the `letter` (why, want, forWho, remind), the Hollow's `voice`, `classId`, `look`, the flame's name |
-| `progress` | Index of the node trained on each path (`push`, `pull`, `core`); equal to the path's length when done |
-| `reps` | Current per-set target by skill node id |
-| `sessions` | Every finished workout: entries, sets with reps in reserve, XP breakdown, unlocks, raises |
-| `tests` | Max tests (push-ups, pull-ups, L-sit seconds) |
+| `version` | 3. Older saves go through `migrate()`; version 3 dropped the calisthenics skill tree and max tests (a v2 save keeps its sessions, story, Fog and Book of Days) |
+| `profile` | `onboarded`, the `letter` (why, want, forWho, remind), the Hollow's `voice`, `classId`, `look`, the flame's name, `kit` (gym or home) |
+| `reps` | Current per-set target by exercise id |
+| `sessions` | Every finished workout: entries, sets with reps in reserve, XP breakdown, raises, `heavier`, `better` |
+| `build` | Stat points spent on the champion, per stat (earned points are counted from `sessions`) |
 | `draft` | The workout in progress, or null. A draft left from an earlier day is closed onto that day (`closeStaleDraft`) |
 | `seenScenes`, `sceneMark` | Story scenes already played, and how many played at the last story moment |
 | `answers` | What the player chose in the story (heart moments, villager stories) |
@@ -37,7 +36,7 @@ because iOS can clear data of sites not on the home screen.
 
 Add new fields as optional (`fog?`, `answers?`, `days?` are examples), or bump `version` and
 teach `migrate()` (`src/lib/game.ts`) to upgrade old saves. A save from the live app must always
-load. `parseImport` (Hero tab Restore) accepts versions 1 and 2 and runs `migrate` too.
+load. `parseImport` (Hero tab Restore) accepts versions 1 to 3 and runs `migrate` too.
 
 ## Sandbox
 

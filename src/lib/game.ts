@@ -1,21 +1,17 @@
-import { PATHS, getPath, type PathId, type SkillNode } from './skills';
-import { classPath, equippedGear, type ClassId, type Gear } from './gear';
+import { PLAN, cueOf, type DayType, type Kit, type Slot, type SlotRole } from './program';
+import { equippedGear, type ClassId, type Gear } from './gear';
+import type { Build } from './stats';
 import type { Look } from '@/sprites/engine/figure';
 import type { FogProgress } from './fog';
 import type { AnswerId } from '@/story/types';
 
 export const XP_FULL_SESSION = 100;
 export const XP_MINI_SESSION = 30;
-export const XP_UNLOCK = 250;
 export const XP_PERFECT_WEEK = 100;
 export const XP_RETURN = 50;
-export const XP_MAX_TEST = 200;
 export const XP_PER_LEVEL = 500;
-export const CLASS_BONUS = 0.1;
 export const WEEKLY_GOAL = 3;
 export const REST_SECONDS = 90;
-/** Days that must pass between two max tests for the test to give XP again. */
-export const TEST_COOLDOWN_DAYS = 21;
 /** A gap this long earns the return bonus. */
 export const RETURN_GAP_DAYS = 14;
 /** Strength comes with time, not just sessions: an exercise's goal goes up at most this often a week. */
@@ -23,7 +19,7 @@ export const MAX_RAISES_PER_WEEK = 2;
 
 export type Rir = '4+' | '2-3' | '0-1';
 export type Checkin = 'rough' | 'normal' | 'strong';
-export type DayType = 'A' | 'B';
+export type { DayType, Kit } from './program';
 
 export interface SetLog {
   reps: number;
@@ -50,19 +46,12 @@ export interface Session {
   xp: number;
   breakdown: XpLine[];
   entries: SessionEntry[];
-  /** Node ids beaten in this session. */
-  unlocked: string[];
   /** Exercise ids whose goal went up after this session. Missing on older saves. */
   raised?: string[];
-}
-
-export interface MaxTest {
-  id: string;
-  date: string;
-  pushups: number;
-  pullups: number;
-  lsitSec: number;
-  xp: number;
+  /** Weighted exercises that reached the top of their range: add a little weight, start again. */
+  heavier?: string[];
+  /** A set beat the best set of the same exercise last time (one more rep, a longer hold). */
+  better?: boolean;
 }
 
 export interface Draft {
@@ -89,6 +78,8 @@ export interface Profile {
   look?: Look;
   /** The name the player gave the flame. Missing until it asks. */
   flame?: string;
+  /** What the built-in plan trains with. Missing means the gym. */
+  kit?: Kit;
 }
 
 /** A page of the Book of Days: one for every day the app was opened. */
@@ -106,18 +97,17 @@ export interface DayPage {
 }
 
 export interface GameState {
-  version: 2;
+  version: 3;
   profile: Profile;
-  /** Index of the node currently trained on each path; equal to nodes.length when the path is complete. */
-  progress: Record<PathId, number>;
-  /** Current per-set target (reps or seconds) by node id. */
+  /** Current per-set target (reps or seconds) by exercise id. */
   reps: Record<string, number>;
   sessions: Session[];
-  tests: MaxTest[];
+  /** Stat points put into the champion (src/lib/stats.ts). Missing means none spent. */
+  build?: Build;
   draft: Draft | null;
   /** Story scenes already played. */
   seenScenes: string[];
-  /** How many scenes played at the last story moment (a day, a workout count and a test count). */
+  /** How many scenes played at the last story moment (a day and a workout count). */
   sceneMark?: { at: string; count: number };
   /** Runs in the Fog: zones cleared and best results. */
   fog?: FogProgress;
@@ -129,12 +119,10 @@ export interface GameState {
 
 export function initialState(): GameState {
   return {
-    version: 2,
+    version: 3,
     profile: { onboarded: false, letter: { why: '', want: '', forWho: '', remind: '' }, voice: '' },
-    progress: { push: 1, pull: 1, core: 0 },
     reps: {},
     sessions: [],
-    tests: [],
     draft: null,
     seenScenes: [],
   };
@@ -202,7 +190,7 @@ const TITLES: [number, string][] = [
 ];
 
 export function totalXp(state: GameState): number {
-  return state.sessions.reduce((a, s) => a + s.xp, 0) + state.tests.reduce((a, t) => a + t.xp, 0);
+  return state.sessions.reduce((a, s) => a + s.xp, 0);
 }
 
 export function levelInfo(xp: number) {
@@ -217,71 +205,49 @@ export function levelInfo(xp: number) {
   };
 }
 
-// ---------- skills ----------
+// ---------- today's quest ----------
 
-export function repsFor(state: GameState, node: SkillNode): number {
-  return state.reps[node.id] ?? node.startReps;
+export function repsFor(state: GameState, slot: Slot): number {
+  return state.reps[slot.id] ?? slot.low;
 }
 
 export function gearOf(state: GameState) {
-  return equippedGear(state.profile.classId, state.progress);
+  return equippedGear(state.profile.classId, state.sessions.length);
 }
 
-// ---------- today's quest ----------
-
-/** Sessions alternate: A leads with Push, B leads with Pull. Core is in both. */
+/** Sessions alternate between the plan's two days. */
 export function dayType(state: GameState): DayType {
   return state.sessions.length % 2 === 0 ? 'A' : 'B';
 }
 
-export type BlockRole = 'main' | 'core' | 'support';
-
 export interface QuestExercise {
   id: string;
-  role: BlockRole;
-  path: PathId;
+  role: SlotRole;
   name: string;
   cue: string;
   unit: 'reps' | 'sec';
   sets: number;
   reps: number;
-  node: SkillNode;
-  /** Only the current node of a path can be beaten. */
-  canUnlock: boolean;
+  slot: Slot;
 }
 
-function block(state: GameState, path: PathId, role: BlockRole): QuestExercise | null {
-  const nodes = getPath(path).nodes;
-  const at = state.progress[path];
-  // Support work is the node below the current one: solid volume, no unlock.
-  const index = role === 'support' ? Math.max(0, Math.min(at, nodes.length) - 1) : at;
-  const node = nodes[index];
-  if (!node) return null;
-  return {
-    id: node.id,
-    role,
-    path,
-    name: node.name,
-    cue: node.cue,
-    unit: node.unit,
-    sets: node.sets,
-    reps: repsFor(state, node),
-    node,
-    canUnlock: role !== 'support' && index === at,
-  };
+/** Warm-ups and stretches are one tap, not sets to log. */
+export const isTap = (q: Pick<QuestExercise, 'role'>) => q.role === 'warmup' || q.role === 'stretch';
+
+function exercise(state: GameState, slot: Slot): QuestExercise {
+  return { id: slot.id, role: slot.role, name: slot.name, cue: cueOf(slot.id), unit: slot.unit, sets: slot.sets, reps: repsFor(state, slot), slot };
 }
 
+/**
+ * Today's workout from the built-in plan. Every day opens with the warm-up and ends with the stretch;
+ * a Rough day keeps those and one exercise of at most 3 sets.
+ */
 export function todaysQuest(state: GameState, checkin: Checkin = state.draft?.checkin ?? 'normal'): QuestExercise[] {
-  const day = dayType(state);
-  const main: PathId = day === 'A' ? 'push' : 'pull';
-  const other: PathId = day === 'A' ? 'pull' : 'push';
-  // A fully beaten path hands the lead to the other one.
-  const lead = block(state, main, 'main') ?? block(state, other, 'main');
-  // A Rough day is one exercise; with both main paths beaten, core is what's left to train.
-  const rough = lead ?? block(state, 'core', 'core');
-  if (checkin === 'rough') return rough ? [{ ...rough, sets: Math.min(rough.sets, 3) }] : [];
-  const list = [lead, block(state, 'core', 'core'), block(state, other, 'support')].filter((b): b is QuestExercise => !!b);
-  return list.filter((b, i) => list.findIndex((o) => o.id === b.id) === i);
+  const day = PLAN[state.profile.kit ?? 'gym'][dayType(state)];
+  const list = day.map((s) => exercise(state, s));
+  if (checkin !== 'rough') return list;
+  const lead = list.find((q) => !isTap(q));
+  return list.filter((q) => isTap(q) || q === lead).map((q) => (q === lead ? { ...q, sets: Math.min(q.sets, 3) } : q));
 }
 
 /** Session XP with the current streak, for the "+XP" preview on Today. */
@@ -298,9 +264,16 @@ export interface FinishResult {
   newGear: Gear[];
 }
 
+/** The best set of an exercise in the last session that did it. */
+function lastBest(state: GameState, id: string): number | null {
+  const last = state.sessions.findLast((s) => s.entries.some((e) => e.exerciseId === id));
+  const entry = last?.entries.find((e) => e.exerciseId === id);
+  return entry ? Math.max(...entry.sets.map((x) => x.reps)) : null;
+}
+
 /**
- * Close the current draft as a session: award XP, beat nodes whose unlock
- * target was hit, and raise targets for exercises done cleanly.
+ * Close the current draft as a session: award XP, raise targets for exercises done cleanly, and
+ * note whether a set beat last time.
  */
 export function finishSession(state: GameState, now: Date, idGen: () => string = defaultId): FinishResult | null {
   const draft = state.draft;
@@ -309,36 +282,37 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
   const entries: SessionEntry[] = quest
     .map((q) => ({ exerciseId: q.id, target: q.reps, sets: (draft.sets[q.id] ?? []).slice(0, q.sets) }))
     .filter((e) => e.sets.length > 0);
-  if (entries.length === 0) return null;
+  if (!entries.some((e) => !isTap(quest.find((q) => q.id === e.exerciseId)!))) return null;
 
   const totalSets = quest.reduce((a, q) => a + q.sets, 0);
   const doneSets = entries.reduce((a, e) => a + e.sets.length, 0);
   const kind: Session['kind'] = draft.checkin !== 'rough' && doneSets * 2 >= totalSets ? 'full' : 'mini';
 
-  const progress = { ...state.progress };
   const reps = { ...state.reps };
-  const unlocked: string[] = [];
   const raised: string[] = [];
+  const heavier: string[] = [];
+  let better = false;
   const week = weekKey(now);
   const raisesThisWeek = (id: string) => state.sessions.filter((s) => weekKey(new Date(s.date)) === week && s.raised?.includes(id)).length;
   const raisedLastTime = (id: string) => !!state.sessions.findLast((s) => s.entries.some((e) => e.exerciseId === id))?.raised?.includes(id);
 
   for (const q of quest) {
     const entry = entries.find((e) => e.exerciseId === q.id);
-    if (!entry) continue;
-    const node = q.node;
-    const atTarget = entry.sets.filter((s) => s.reps >= node.unlockReps).length;
-    if (q.canUnlock && atTarget >= node.unlockSets) {
-      unlocked.push(node.id);
-      progress[q.path] += 1;
-      continue;
-    }
+    if (!entry || isTap(q)) continue;
+    const best = lastBest(state, q.id);
+    if (best !== null && entry.sets.some((x) => x.reps > best)) better = true;
     // Every set done at target with reps to spare: ask for a little more next time. At most twice a
     // week, and a hold only every other time: a second held comes slower than a rep.
-    const clean = entry.sets.length >= q.sets && entry.sets.every((s) => s.reps >= q.reps && s.rir !== '0-1');
-    if (clean && q.reps < node.unlockReps && raisesThisWeek(q.id) < MAX_RAISES_PER_WEEK && !(q.unit === 'sec' && raisedLastTime(q.id))) {
-      reps[q.id] = Math.min(q.reps + 1, node.unlockReps);
+    const clean = entry.sets.length >= q.sets && entry.sets.every((x) => x.reps >= q.reps && x.rir !== '0-1');
+    if (!clean || raisesThisWeek(q.id) >= MAX_RAISES_PER_WEEK || (q.unit === 'sec' && raisedLastTime(q.id))) continue;
+    const step = q.unit === 'sec' ? 5 : 1;
+    if (q.reps < q.slot.high) {
+      reps[q.id] = Math.min(q.reps + step, q.slot.high);
       raised.push(q.id);
+    } else if (q.slot.weighted) {
+      // the top of the range, clean: a little more weight, back to the bottom
+      reps[q.id] = q.slot.low;
+      heavier.push(q.id);
     }
   }
 
@@ -348,21 +322,15 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
   breakdown.push({ label: kind === 'full' ? 'Quest complete' : 'Minimum quest', xp: base });
   const streakXp = Math.round(base * (streakMultiplier(streak) - 1));
   if (streakXp > 0) breakdown.push({ label: `Streak ×${streakMultiplier(streak).toFixed(1)}`, xp: streakXp });
-  const bonusPath = classPath(state.profile.classId, state.progress);
-  const lead = quest[0];
-  if (bonusPath && lead && lead.path === bonusPath && entries.some((e) => e.exerciseId === lead.id)) {
-    breakdown.push({ label: 'Class bonus', xp: Math.round(base * CLASS_BONUS) });
-  }
   const gap = daysSinceLastSession(state, now);
   if (gap !== null && gap >= RETURN_GAP_DAYS) breakdown.push({ label: 'Welcome back', xp: XP_RETURN });
   if (sessionsThisWeek(state, now) + 1 === WEEKLY_GOAL) breakdown.push({ label: 'Perfect week', xp: XP_PERFECT_WEEK });
-  for (const id of unlocked) breakdown.push({ label: `${nodeName(id)} beaten`, xp: XP_UNLOCK });
   const xp = breakdown.reduce((a, l) => a + l.xp, 0);
 
   const before = levelInfo(totalXp(state)).level;
   const gearBefore = gearOf(state);
-  const session: Session = { id: idGen(), date: now.toISOString(), kind, day: dayType(state), xp, breakdown, entries, unlocked, raised };
-  const next: GameState = { ...state, progress, reps, sessions: [...state.sessions, session], draft: null };
+  const session: Session = { id: idGen(), date: now.toISOString(), kind, day: dayType(state), xp, breakdown, entries, raised, heavier, better };
+  const next: GameState = { ...state, reps, sessions: [...state.sessions, session], draft: null };
   const gearAfter = gearOf(next);
   const newGear = (['weapon', 'armor', 'shield'] as const).filter((s) => gearAfter[s].tier > gearBefore[s].tier).map((s) => gearAfter[s]);
   return { state: next, session, levelBefore: before, levelAfter: levelInfo(totalXp(next)).level, newGear };
@@ -382,41 +350,6 @@ export function closeStaleDraft(state: GameState, now: Date): GameState {
   return finishSession(state, started)?.state ?? { ...state, draft: null };
 }
 
-export function nodeName(id: string): string {
-  return PATHS.flatMap((p) => p.nodes).find((n) => n.id === id)?.name ?? 'Skill';
-}
-
-export function logMaxTest(
-  state: GameState,
-  values: { pushups: number; pullups: number; lsitSec: number },
-  now: Date,
-  idGen: () => string = defaultId,
-): { state: GameState; test: MaxTest } {
-  const last = state.tests[state.tests.length - 1];
-  const daysSince = last ? (now.getTime() - new Date(last.date).getTime()) / 86_400_000 : Infinity;
-  const test: MaxTest = { id: idGen(), date: now.toISOString(), ...values, xp: daysSince >= TEST_COOLDOWN_DAYS ? XP_MAX_TEST : 0 };
-  return { state: { ...state, tests: [...state.tests, test] }, test };
-}
-
-export function nextTestDate(state: GameState): Date | null {
-  const last = state.tests[state.tests.length - 1];
-  if (!last) return null;
-  return new Date(new Date(last.date).getTime() + TEST_COOLDOWN_DAYS * 86_400_000);
-}
-
-// ---------- placement ----------
-
-/**
- * Starting nodes from a rough self-estimate. Guesses land one step low on
- * purpose so day one feels winnable.
- */
-export function placement(pushups: number, pullups: number, kneeRaises: number): Record<PathId, number> {
-  const push = pushups < 8 ? 0 : pushups < 30 ? 1 : 2;
-  const pull = pullups === 0 ? 1 : pullups < 6 ? 1 : pullups < 10 ? 2 : 3;
-  const core = kneeRaises < 15 ? 0 : 1;
-  return { push, pull, core };
-}
-
 // ---------- migration ----------
 
 interface V1Session {
@@ -428,14 +361,42 @@ interface V1Session {
   unlocked: string[];
 }
 
-/** Bring older saves forward. Unknown shapes fall back to a fresh state. */
+interface V2Session extends Omit<Session, 'better' | 'heavier'> {
+  unlocked?: string[];
+}
+
+/** A session from before the move to any workout: it keeps its date, XP and sets. */
+function fromV2(s: V2Session): Session {
+  const { unlocked: _unlocked, ...rest } = s;
+  return rest;
+}
+
+/**
+ * Bring older saves forward. Version 3 dropped the calisthenics skill tree and the max tests:
+ * sessions, story, Fog and the Book of Days carry over, the old skill levels and tests don't.
+ * Unknown shapes fall back to a fresh state.
+ */
 export function migrate(raw: unknown): GameState {
   const fresh = initialState();
   if (!raw || typeof raw !== 'object') return fresh;
   const r = raw as Record<string, unknown>;
-  if (r.version === 2) {
+  const profileOf = (p: Partial<Profile> | undefined): Profile => ({ ...fresh.profile, ...p, letter: { ...fresh.profile.letter, ...p?.letter } });
+  if (r.version === 3) {
     const s = r as unknown as GameState;
-    return { ...fresh, ...s, profile: { ...fresh.profile, ...s.profile, letter: { ...fresh.profile.letter, ...s.profile?.letter } } };
+    return { ...fresh, ...s, profile: profileOf(s.profile) };
+  }
+  if (r.version === 2) {
+    const { progress: _progress, tests: _tests, reps: _reps, ...s } = r as unknown as GameState & { progress?: unknown; tests?: unknown };
+    return {
+      ...fresh,
+      ...s,
+      version: 3,
+      // the old targets were for skill-tree moves; the new plan starts fresh
+      reps: {},
+      sessions: ((s.sessions ?? []) as V2Session[]).map(fromV2),
+      draft: null,
+      profile: profileOf(s.profile),
+    };
   }
   if (r.version === 1) {
     const sessions: Session[] = ((r.sessions as V1Session[]) ?? []).map((s, i) => ({
@@ -450,15 +411,8 @@ export function migrate(raw: unknown): GameState {
         target: e.reps,
         sets: Array.from({ length: e.setsDone }, () => ({ reps: e.reps, rir: '2-3' as Rir })),
       })),
-      unlocked: s.unlocked,
     }));
-    return {
-      ...fresh,
-      progress: (r.progress as GameState['progress']) ?? fresh.progress,
-      reps: (r.reps as GameState['reps']) ?? {},
-      sessions,
-      tests: (r.tests as MaxTest[]) ?? [],
-    };
+    return { ...fresh, sessions };
   }
   return fresh;
 }

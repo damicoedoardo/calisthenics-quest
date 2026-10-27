@@ -97,7 +97,6 @@ export function addFakeWorkouts(state: GameState, n: number, now: Date, skipStor
     xp: 100,
     breakdown: [{ label: 'Dev workout', xp: 100 }],
     entries: [],
-    unlocked: [],
   }));
   const next = { ...state, sessions: [...state.sessions, ...added] };
   return skipStory ? skipDueScenes(next, now) : next;

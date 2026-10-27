@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Pause, Play, Swords } from 'lucide-react';
 import { Sprite, useSheet } from '@/components/Sprite';
-import { equippedGear, type ClassId, type Tier } from '@/lib/gear';
+import { uniformGear, type ClassId, type Tier } from '@/lib/gear';
 import { CLIPS, type SpriteAction } from '@/sprites/clips';
 import { DEFAULT_LOOK, type HeroVariant } from '@/sprites/characters/hero';
 import { HAIRSTYLES, type Look } from '@/sprites/engine/figure';
@@ -63,7 +63,7 @@ export default function Lab() {
   const [acting, setActing] = useState(false);
   const [light, setLight] = useState(false);
 
-  const gear = equippedGear(classId, { push: tier, pull: tier, core: tier });
+  const gear = uniformGear(classId, tier);
   const opts = { gear, classId, variant, look };
   const action: SpriteAction = acting ? 'attack' : 'idle';
   const idleClip = clipFor('hero', 'idle', opts) ?? 'idle';

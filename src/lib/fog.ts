@@ -1,6 +1,6 @@
 import { daysSinceLastSession, type GameState } from './game';
 import { dayKey } from './days';
-import { getPath, type PathId } from './skills';
+import { buildOf, pointsFree, statPower } from './stats';
 import { CHAPTERS } from '@/story/chapters';
 import { chapterStart, storyState } from '@/story/engine';
 import { isRested } from '@/story/daily';
@@ -10,7 +10,8 @@ import type { FogBoss, FogZone } from '@/story/types';
 /* The Fog: the game you play between workouts. A run is a few minutes of surviving waves of
    Fog creatures, picking new skills as you level, until the zone's boss shows up. Runs are free to
    replay and losing costs nothing. What makes you stronger, and what opens the next zone, is
-   real training: your skill tree is your power, and your workouts call your flame to fight with you.
+   real training: your workouts earn stat points you put into your champion, and call your flame to
+   fight with you.
    Each chapter of the story has a zone, written in its chapter file (src/story/chapters). */
 
 export interface Zone extends FogZone {
@@ -101,10 +102,7 @@ export function zoneStatus(state: GameState, zone: Zone): ZoneStatus {
   const story = storyState(state);
   if (!story.finished && story.index + 1 < zone.chapter) {
     const left = zone.workouts - state.sessions.length;
-    return {
-      state: 'locked',
-      why: left > 0 ? `Opens with chapter ${zone.chapter}: ${left} workout${left === 1 ? '' : 's'} to go` : `Opens with chapter ${zone.chapter}: take your max test on the Hero tab`,
-    };
+    return { state: 'locked', why: `Opens with chapter ${zone.chapter}: ${left} workout${left === 1 ? '' : 's'} to go` };
   }
   return { state: 'open' };
 }
@@ -112,15 +110,16 @@ export function zoneStatus(state: GameState, zone: Zone): ZoneStatus {
 // ---------- power from training ----------
 
 export interface Power {
-  /** Skill-tree level per path: beaten skills, the same number that forges your gear. */
-  levels: Record<PathId, number>;
-  /** Push: extra damage (0.12 = +12%). */
-  strike: number;
-  /** Pull: extra attack speed, and a wider pickup reach. */
-  reach: number;
-  /** Core: extra max HP and less damage taken. */
-  hold: number;
+  /** Extra max HP, from Health points. */
+  health: number;
+  /** Damage taken is cut by this share, from Health points. */
   armor: number;
+  /** Extra damage (0.12 = +12%), from Damage points. */
+  damage: number;
+  /** Wider pickup reach for light (0.2 = +20%), from Reach points. */
+  reach: number;
+  /** Extra attack speed, from Speed points. */
+  speed: number;
   /** Your flame's fire circling you, one more at each step of your workout count. */
   flames: number;
   /** Trained in the last two days: the run starts with a free skill. */
@@ -139,15 +138,10 @@ export interface Power {
 export const FLAME_AT = [1, 6, 15, 30];
 
 export function powerOf(state: GameState, now: Date): Power {
-  const levels = state.progress;
   const gap = daysSinceLastSession(state, now);
   const stage = stageIndex(flameStage(state.sessions.length).id);
   return {
-    levels,
-    strike: 0.12 * levels.push,
-    reach: 0.08 * levels.pull,
-    hold: 15 * levels.core,
-    armor: Math.min(0.4, 0.04 * levels.core),
+    ...statPower(buildOf(state), state.profile.classId),
     flames: FLAME_AT.filter((n) => state.sessions.length >= n).length,
     fresh: gap !== null && gap <= 2,
     rested: isRested(state, now),
@@ -157,12 +151,11 @@ export function powerOf(state: GameState, now: Date): Power {
   };
 }
 
-/** What your next real step would add, per path, for the "train to grow" hints. */
-export function nextGrowth(state: GameState, path: PathId): string | null {
-  const node = getPath(path).nodes[state.progress[path]];
-  if (!node) return null;
-  const gain = path === 'push' ? 'Strike +12%' : path === 'pull' ? 'Reach +8%' : 'Hold +15 HP';
-  return `Beat ${node.name}: ${gain}`;
+/** The "train to grow" hint: points waiting to be spent, or what earns the next ones. */
+export function nextGrowth(state: GameState): string {
+  const free = pointsFree(state);
+  if (free > 0) return `${free} point${free === 1 ? '' : 's'} to spend on the Hero tab`;
+  return 'Every workout earns points for your champion';
 }
 
 // ---------- skills you pick during a run ----------

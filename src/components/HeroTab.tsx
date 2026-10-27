@@ -1,16 +1,17 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { Download, Film, Gem, Lock, Mail, Palette, Trophy, Upload } from 'lucide-react';
+import { Download, Film, Gem, Lock, Mail, Palette, Upload } from 'lucide-react';
 import { SoundToggle } from './Sound';
 import { Hero } from './Hero';
 import { Sprite } from './Sprite';
 import { useLook } from './Look';
 import { LookEditor } from './LookEditor';
 import { useModal } from './useModal';
-import { PATHS } from '@/lib/skills';
+import { StatPoints } from './StatPoints';
 import { getClass, tierText } from '@/lib/gear';
-import { gearOf, logMaxTest, nextTestDate, nodeName, type GameState } from '@/lib/game';
+import { gearOf, type GameState } from '@/lib/game';
+import { planExercises } from '@/lib/program';
 import { exportState, parseImport } from '@/lib/store';
 import { storyState } from '@/story/engine';
 import { ZONES } from '@/lib/fog';
@@ -19,40 +20,23 @@ interface Props {
   state: GameState;
   update: (fn: (s: GameState) => GameState) => void;
   onChangeClass: () => void;
-  onTestLogged: () => void;
   onReplayOpening: () => void;
 }
 
+const exerciseName = (id: string) => planExercises().find((x) => x.id === id)?.name ?? id;
+
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
-export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOpening }: Props) {
+export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props) {
   const gear = gearOf(state);
   const cls = getClass(state.profile.classId);
   const story = storyState(state);
-  const [test, setTest] = useState({ pushups: '', pullups: '', lsitSec: '' });
-  const [msg, setMsg] = useState('');
   const [backupMsg, setBackupMsg] = useState('');
   const [letterOpen, setLetterOpen] = useState(false);
   const [editingLook, setEditingLook] = useState(false);
   const look = useLook();
-  const first = state.tests[0];
-  const best = state.tests.reduce(
-    (a, t) => ({ pushups: Math.max(a.pushups, t.pushups), pullups: Math.max(a.pullups, t.pullups), lsitSec: Math.max(a.lsitSec, t.lsitSec) }),
-    { pushups: 0, pullups: 0, lsitSec: 0 },
-  );
-  const nextTest = nextTestDate(state);
-  const testReady = !nextTest || nextTest <= new Date();
   const letter = state.profile.letter;
   const hasLetter = !!(letter.why || letter.want || letter.forWho || letter.remind);
-
-  const submitTest = () => {
-    const values = { pushups: Number(test.pushups) || 0, pullups: Number(test.pullups) || 0, lsitSec: Number(test.lsitSec) || 0 };
-    const res = logMaxTest(state, values, new Date());
-    update(() => res.state);
-    setTest({ pushups: '', pullups: '', lsitSec: '' });
-    setMsg(res.test.xp ? `+${res.test.xp} XP. Saved.` : 'Saved. Test XP comes back after the 3-week cooldown.');
-    onTestLogged();
-  };
 
   const download = () => {
     const blob = new Blob([exportState(state)], { type: 'application/json' });
@@ -100,6 +84,8 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
         </div>
       </section>
 
+      <StatPoints state={state} update={update} />
+
       {editingLook && (
         <Overlay label="Your look" onClose={() => setEditingLook(false)}>
           <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6 pt-4">
@@ -140,72 +126,11 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
 
       <section className="grid grid-cols-3 gap-2">
         <Stat label="Quests" value={state.sessions.length} />
-        <Stat label="Skills beaten" value={state.sessions.reduce((a, s) => a + s.unlocked.length, 0)} />
+        <Stat label="Beat last time" value={state.sessions.filter((s) => s.better).length} />
         <Stat label="Chapter" value={story.finished ? 'Done' : story.index + 1} />
       </section>
 
       <Keepsakes cleared={state.fog?.cleared ?? 0} />
-
-      <section className="rounded-2xl bg-ink-800 p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-2 font-pixel text-[10px] text-gold-300">
-            <Trophy size={14} /> Max test
-          </h2>
-          <p className="text-xs text-slate-400">
-            {testReady ? 'Ready: +200 XP' : `Next XP on ${nextTest!.toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}`}
-          </p>
-        </div>
-        <p className="mt-1 text-xs text-slate-400">The only day you go all out. Every 3 to 4 weeks, fresh, after a warm-up.</p>
-
-        {first && (
-          <div className="mt-3 grid grid-cols-3 gap-2 text-center">
-            {(
-              [
-                ['Push-ups', 'pushups', ''],
-                ['Pull-ups', 'pullups', ''],
-                ['L-sit', 'lsitSec', 's'],
-              ] as const
-            ).map(([label, key, unit]) => (
-              <div key={key} className="rounded-lg bg-ink-900 p-2">
-                <p className="text-[11px] text-slate-400">{label}</p>
-                <p className="font-mono text-lg font-bold">
-                  {best[key]}
-                  {unit}
-                </p>
-                <p className="text-[11px] text-emerald-400">{best[key] > first[key] ? `+${best[key] - first[key]} since ${fmtDate(first.date)}` : 'your start'}</p>
-              </div>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-3 grid grid-cols-3 gap-2">
-          {(
-            [
-              ['pushups', 'Push-ups'],
-              ['pullups', 'Pull-ups'],
-              ['lsitSec', 'L-sit sec'],
-            ] as const
-          ).map(([key, label]) => (
-            <input
-              key={key}
-              inputMode="numeric"
-              placeholder={label}
-              aria-label={label}
-              value={test[key]}
-              onChange={(e) => setTest({ ...test, [key]: e.target.value.replace(/\D/g, '') })}
-              className="w-full rounded-lg bg-ink-900 px-1 py-2.5 text-center text-sm outline-none ring-1 ring-ink-600 focus:ring-gold-400"
-            />
-          ))}
-        </div>
-        <button
-          onClick={submitTest}
-          disabled={!test.pushups && !test.pullups && !test.lsitSec}
-          className="mt-3 w-full rounded-xl bg-ink-600 py-3 text-sm font-semibold active:scale-[.98] disabled:opacity-40"
-        >
-          Log test
-        </button>
-        {msg && <p className="mt-2 text-center text-xs text-gold-300">{msg}</p>}
-      </section>
 
       {state.sessions.length > 0 && (
         <section className="rounded-2xl bg-ink-800 p-4">
@@ -222,7 +147,8 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
                     </span>
                     <span className="font-mono font-semibold text-gold-300">+{s.xp}</span>
                   </div>
-                  {s.unlocked.length > 0 && <p className="text-xs text-emerald-400">Beat {s.unlocked.map(nodeName).join(', ')}</p>}
+                  {s.better && <p className="text-xs text-emerald-400">Better than last time</p>}
+                  {!!s.heavier?.length && <p className="text-xs text-sky-300">Next time a little heavier: {s.heavier.map(exerciseName).join(', ')}</p>}
                 </li>
               ))}
           </ul>
@@ -239,26 +165,6 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
         <button onClick={onReplayOpening} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold">
           <Film size={16} /> Replay the opening
         </button>
-        <p className="mt-2 text-xs text-slate-400">Your level on each path. Change it if it feels too easy or too hard.</p>
-        <div className="mt-2 space-y-2">
-          {PATHS.map((path) => (
-            <label key={path.id} className="flex items-center justify-between gap-3 text-sm">
-              <span className="text-slate-300">{path.name}</span>
-              <select
-                value={state.progress[path.id]}
-                onChange={(e) => update((s) => ({ ...s, progress: { ...s.progress, [path.id]: Number(e.target.value) } }))}
-                className="max-w-[60%] rounded-lg bg-ink-900 px-2 py-2 text-sm ring-1 ring-ink-600"
-              >
-                {path.nodes.map((n, i) => (
-                  <option key={n.id} value={i}>
-                    {i + 1}. {n.name}
-                  </option>
-                ))}
-                <option value={path.nodes.length}>All beaten</option>
-              </select>
-            </label>
-          ))}
-        </div>
         <p className="mt-4 text-xs text-slate-400">Your progress lives on this phone. Back it up now and then.</p>
         <div className="mt-2 grid grid-cols-2 gap-2">
           <button onClick={download} className="flex items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold">

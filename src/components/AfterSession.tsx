@@ -7,6 +7,8 @@ import { Sprite } from './Sprite';
 import { music } from '@/lib/music';
 import { gearOf, levelInfo, totalXp, type FinishResult } from '@/lib/game';
 import { tierText } from '@/lib/gear';
+import { planExercises } from '@/lib/program';
+import { pointsEarned } from '@/lib/stats';
 import type { StoryState } from '@/story/engine';
 import { afterWorkoutLine } from '@/story/daily';
 
@@ -61,9 +63,7 @@ export function AfterSession({ result, before, after, onClose }: Props) {
             ? 'Your reps strike...'
             : defeated
               ? `${before.chapter.enemy} is defeated!`
-              : before.heartsLeft === 0
-                ? `Your training hit for ${reps}. Your max test on the Hero tab finishes it.`
-                : `Your training hit for ${reps}. One heart down.`}
+              : `Your training hit for ${reps}. One heart down.`}
         </p>
         {hit && <button className="mt-8 rounded-2xl bg-gold-400 px-8 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309]">Claim loot</button>}
       </div>
@@ -78,6 +78,7 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
   const leveled = levelAfter > levelBefore;
   const big = leveled || newGear.length > 0;
   const lvl = levelInfo(totalXp(result.state));
+  const points = pointsEarned(result.state).total - pointsEarned({ ...result.state, sessions: result.state.sessions.slice(0, -1) }).total;
   // The flame's word on this workout: the first, a comeback, a new best, a short one...
   // Until the player names their flame (in the first chapter's scene) it's just "A spark", as in the scenes.
   const flameSays = useMemo(() => afterWorkoutLine(result.state), [result.state]);
@@ -115,6 +116,11 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
           ))}
         </ul>
         <p className="mt-3 border-t border-ink-600 pt-3 text-4xl font-bold text-gold-400">+{session.xp} XP</p>
+        <p className="mt-1 text-sm text-slate-200">
+          +{points} stat point{points === 1 ? '' : 's'} <span className="text-slate-400">for your champion, on the Hero tab</span>
+        </p>
+        {session.better && <p className="mt-1 text-xs text-emerald-300">Better than last time.</p>}
+        {!!session.heavier?.length && <p className="mt-1 text-xs text-sky-300">Too easy now: next time add a little weight to {session.heavier.map((id) => planExercises().find((x) => x.id === id)?.name ?? id).join(', ')}.</p>}
         {leveled && (
           <p className="mt-2 font-pixel text-[11px] leading-relaxed text-sky-300">
             Level {levelAfter}. {lvl.title}.
@@ -131,7 +137,7 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
                 Forged: <span className="font-semibold" style={{ color: tierText(g.tier) }}>{g.name}</span>
               </p>
             ))}
-            <p className="mt-1 text-xs text-slate-400">Next skill unlocked on your tree.</p>
+            <p className="mt-1 text-xs text-slate-400">Mira forged it from your workouts.</p>
           </div>
         )}
 

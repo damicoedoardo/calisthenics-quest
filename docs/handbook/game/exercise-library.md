@@ -8,7 +8,7 @@ timestamp: 2026-10-27
 
 # Exercise library
 
-Code: `src/exercises/`. Shown in the app from the Skills tab ("Exercise library",
+Code: `src/exercises/`. Shown in the app from the Train tab ("Exercise library",
 `src/components/ExerciseLibrary.tsx`): search, filters for equipment, kind (stretch, mobility...)
 and movement, and per exercise the boy and girl demo, how-to steps, "Do it well" tips and common
 mistakes.

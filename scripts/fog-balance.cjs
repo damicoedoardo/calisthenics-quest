@@ -33,7 +33,6 @@ function shift(state, now) {
   return {
     ...state,
     sessions: state.sessions.map((s) => ({ ...s, date: move(s.date) })),
-    tests: state.tests.map((t) => ({ ...t, date: move(t.date) })),
     days: [],
     draft: null,
     seenScenes: [...new Set([...state.seenScenes, ...seen])],
@@ -67,11 +66,11 @@ function shift(state, now) {
         .then((el) => el.getAttribute('data-run-end'))
         .catch(() => null);
       const r = end ? JSON.parse(end) : { won: null };
-      const p = base.progress;
-      const row = { label, zone, try: k + 1, workouts: base.sessions.length, levels: `${p.push}/${p.pull}/${p.core}`, cls: base.profile.classId ?? '-', ...r, wall: (Date.now() - t0) / 1000, errors: errors.length };
+      const b = base.build ?? {};
+      const row = { label, zone, try: k + 1, workouts: base.sessions.length, levels: `${b.health ?? 0}/${b.damage ?? 0}/${b.reach ?? 0}/${b.speed ?? 0}`, cls: base.profile.classId ?? '-', ...r, wall: (Date.now() - t0) / 1000, errors: errors.length };
       rows.push(row);
       const result = row.won ? 'WON' : row.won === false ? 'lost' : 'TIMEOUT';
-      console.log(`${label} #${row.try} w${row.workouts} lv${row.levels} ${row.cls}: ${result} at ${row.seconds}s, boss at ${row.bossAt ?? '-'}, hp ${row.hp}/${row.maxHp} (${row.wall.toFixed(1)} s)${row.errors ? `, ${row.errors} errors: ${errors[0].slice(0, 120)}` : ''}`);
+      console.log(`${label} #${row.try} w${row.workouts} pts${row.levels} ${row.cls}: ${result} at ${row.seconds}s, boss at ${row.bossAt ?? '-'}, hp ${row.hp}/${row.maxHp} (${row.wall.toFixed(1)} s)${row.errors ? `, ${row.errors} errors: ${errors[0].slice(0, 120)}` : ''}`);
       await ctx.close();
     }
   }

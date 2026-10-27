@@ -12,7 +12,6 @@ export const FORMA: Chapter = {
   enemy: 'The Summit',
   enemySprite: 'summit',
   workouts: 14,
-  tests: 3,
   place: 'summit',
   fog: {
     name: 'The Summit',
@@ -162,14 +161,6 @@ export const FORMA: Chapter = {
         { who: 'narrator', text: 'Your armor hums, softly. The Echo, settled in there, says one quiet thing.' },
         { who: 'echo', text: 'Not bad. ...Not bad at all.' },
         { who: 'flame', mood: 'sleepy', text: "Sleep. Big day tomorrow. Well. Normal day. That's sort of the point." },
-      ],
-    },
-    {
-      id: 'ch6-await-test',
-      when: { awaitingTest: 6 },
-      lines: [
-        { who: 'wanderer', text: "One last test. Not to prove anything. Just to see how far you've come." },
-        { who: 'wanderer', text: "Fresh, after a warm-up, on the Hero tab. Whatever it says, it can't measure the part that matters: that you kept coming." },
       ],
     },
     {

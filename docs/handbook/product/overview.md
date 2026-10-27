@@ -25,10 +25,10 @@ costs nothing.
 
 | Tab | What it is | Code |
 |---|---|---|
-| Today | The flame and its line for the day, today's quest (Day A Push + Core, Day B Pull + Core), the rest card on rest days, the Book of Days | `src/components/TodayTab.tsx` |
-| Skills | The three skill paths (Push, Pull, Core) and where you are on each, and the exercise library (887 exercises, pixel demos, tips and mistakes) | `src/components/SkillsTab.tsx` |
+| Today | The flame and its line for the day, today's quest (the plan's Day A or B: warm-up, main lifts, core, stretch), the rest card on rest days, the Book of Days | `src/components/TodayTab.tsx` |
+| Train | The exercise library (887 exercises, pixel demos, tips and mistakes), gym or home, the plan | `src/components/TrainTab.tsx` |
 | Play | The Fog: your power from training, the zones, a run | `src/components/PlayTab.tsx`, `FogRun.tsx` |
-| Hero | Level, gear, class, look, keepsakes, max test, backup | `src/components/HeroTab.tsx` |
+| Hero | Gear, class, look, the champion's stat points, keepsakes, backup | `src/components/HeroTab.tsx` |
 
 Over the tabs: the opening (first run only), the workout logger, the after-session fight and
 loot, story scenes, the class picker. See [../app/screens.md](../app/screens.md).

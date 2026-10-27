@@ -855,7 +855,7 @@ export const ZONE_ICONS: PixelArt[] = [
     bookmark (kept or not), the Book of Days, an arrow on, a little flame (no face: that's Ember's),
     play, and close; the tab bar's four (crossed swords, a skill tree, a game pad, a shield) and the
     developer's wrench. */
-export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookmark' | 'bookmarkKept' | 'book' | 'chevron' | 'flame' | 'play' | 'close' | 'tabToday' | 'tabSkills' | 'tabPlay' | 'tabHero' | 'wrench', PixelArt> = {
+export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookmark' | 'bookmarkKept' | 'book' | 'chevron' | 'flame' | 'play' | 'close' | 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabHero' | 'wrench', PixelArt> = {
   heart: {
     rows: [
       '.rr.rr.',
@@ -942,9 +942,10 @@ export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookm
     rows: ['W.......W', 'sW.....Ws', '.sW...Ws.', '..sW.Ws..', '...sWs...', '..hs.sh..', '.bh...hb.', 'bb.....bb', 'b.......b'],
     palette: { W: '#f1f5f9', s: '#94a3b8', h: '#fbbf24', b: '#92400e' },
   },
-  tabSkills: {
-    rows: ['...ggg...', '...gWg...', '...ggg...', '....s....', '..sssss..', '..s...s..', '.ggg.ggg.', '.gWg.gWg.', '.ggg.ggg.'],
-    palette: { g: '#34d399', W: '#ecfdf5', s: '#94a3b8' },
+  // A dumbbell: training of any kind.
+  tabTrain: {
+    rows: ['.gg...gg.', 'gWg...gWg', 'gWgsssgWg', 'gggsssggg', 'dgd...dgd', '.dd...dd.'],
+    palette: { g: '#f97316', W: '#fed7aa', d: '#c2410c', s: '#cbd5e1' },
   },
   tabPlay: {
     rows: ['.kkkkkkk.', 'kgggggggk', 'kgWgggrgk', 'kWWWgrgrk', 'kgWgggrgk', 'kggkkkggk', '.kk...kk.'],

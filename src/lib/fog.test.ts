@@ -13,7 +13,6 @@ const sessions = (n: number, lastDay = 25): Session[] =>
     xp: 100,
     breakdown: [],
     entries: [],
-    unlocked: [],
   }));
 
 describe('the Fog', () => {
@@ -26,17 +25,18 @@ describe('the Fog', () => {
     expect(zoneStatus(cleared, ZONES[0]).state).toBe('cleared');
     expect(zoneStatus(cleared, ZONES[1])).toEqual({ state: 'locked', why: 'Opens with chapter 2: 12 workouts to go' });
     expect(zoneStatus({ ...cleared, sessions: sessions(12) }, ZONES[1]).state).toBe('open');
-    const two: GameState = { ...s, sessions: sessions(24), fog: { cleared: 2, runs: 5, best: {} } };
-    expect(zoneStatus(two, ZONES[2])).toEqual({ state: 'locked', why: 'Opens with chapter 3: take your max test on the Hero tab' });
+    const two: GameState = { ...s, sessions: sessions(23), fog: { cleared: 2, runs: 5, best: {} } };
+    expect(zoneStatus(two, ZONES[2])).toEqual({ state: 'locked', why: 'Opens with chapter 3: 1 workout to go' });
   });
 
-  it('turns the skill tree and workouts into power, and only training raises it', () => {
+  it('turns stat points and workouts into power, and only training raises it', () => {
     const fresh = powerOf(initialState(), day(26));
-    expect(fresh).toMatchObject({ strike: 0.12, reach: 0.08, hold: 0, flames: 0, fresh: false, fireballs: false, fairy: false, flameName: '' });
-    const trained = powerOf({ ...initialState(), progress: { push: 3, pull: 2, core: 2 }, sessions: sessions(6) }, day(26));
-    expect(trained.strike).toBeCloseTo(0.36);
-    expect(trained.hold).toBe(30);
-    expect(trained.armor).toBeCloseTo(0.08);
+    expect(fresh).toMatchObject({ damage: 0.12, speed: 0.08, reach: 0.15, health: 0, armor: 0, flames: 0, fresh: false, fireballs: false, fairy: false, flameName: '' });
+    const trained = powerOf({ ...initialState(), build: { damage: 10, health: 10 }, sessions: sessions(6) }, day(26));
+    expect(trained.damage).toBeCloseTo(0.183, 3);
+    expect(trained.health).toBeCloseTo(9.68, 1);
+    expect(trained.armor).toBeCloseTo(0.026, 3);
+    expect(trained.speed).toBe(0.08);
     expect(trained.flames).toBe(2);
     expect(trained.fresh).toBe(true);
     expect(powerOf({ ...initialState(), sessions: sessions(1, 20) }, day(26)).fresh).toBe(false);

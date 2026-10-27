@@ -11,7 +11,6 @@ export const PLATEAU: Chapter = {
   enemy: 'The Plateau',
   enemySprite: 'golem',
   workouts: 13,
-  tests: 2,
   place: 'flat-road',
   fog: {
     name: 'The Flat Road',
@@ -246,15 +245,6 @@ export const PLATEAU: Chapter = {
         { who: 'flame', mood: 'soft', text: 'Can I tell you something odd? Sometimes I remember things I shouldn\'t.' },
         { who: 'flame', mood: 'soft', text: 'Grass stains. Being called in when it got dark, and pretending not to hear.' },
         { who: 'flame', mood: 'sleepy', text: "I've never had knees. Why do I remember scraped knees?" },
-      ],
-    },
-    {
-      id: 'ch4-await-test',
-      when: { awaitingTest: 4 },
-      lines: [
-        { who: 'narrator', show: 'plateau', text: 'The Plateau has no hearts left, and still it sits there, looking the same as ever.' },
-        { who: 'wanderer', text: "The stone hides its cracks. Let's look anyway." },
-        { who: 'wanderer', text: 'Take your max test on the Hero tab, fresh, after a warm-up. Not against anyone. Against the day you started this month.' },
       ],
     },
     {

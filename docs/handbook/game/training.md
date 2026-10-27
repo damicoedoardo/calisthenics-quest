@@ -1,62 +1,92 @@
 ---
 type: reference
 title: Training rules
-description: The real-world side of FORMA in src/lib — skill paths and nodes, today's quest, logging sets, progression and unlocks, XP and levels, streaks, max tests, classes and gear.
-tags: [game, training, rules, xp]
+description: The real-world side of FORMA in src/lib — the built-in plan (gym or home), today's quest, logging sets, progression, "better than last time", XP and levels, stat points for the champion, classes and gear.
+tags: [game, training, rules, xp, stats]
 timestamp: 2026-10-27
 ---
 
 # Training rules
 
-All of it is pure functions in `src/lib/game.ts`, with the skill paths in `src/lib/skills.ts` and
-classes and gear in `src/lib/gear.ts`. Tested in `src/lib/game.test.ts`. The player-facing
-summary is in the root `README.md` ("How the game works"); keep the two in step.
+FORMA trains any kind of workout, not only calisthenics. All of it is pure functions: the plan in
+`src/lib/program.ts`, quests, logging and XP in `src/lib/game.ts`, stat points in
+`src/lib/stats.ts`, classes and gear in `src/lib/gear.ts`. Tested in `src/lib/game.test.ts` and
+`src/lib/stats.test.ts`. The player-facing summary is in the root `README.md` ("How the game
+works"); keep the two in step.
 
-## Skill paths (`skills.ts`)
+## The built-in plan (`program.ts`)
 
-Three paths, `PATHS`: **Push** (incline push-up up to archer push-up), **Pull** (dead hang up to
-L-sit pull-up), **Core** (knee raise up to toes-to-bar). Each `SkillNode` has a form cue, a unit
-(reps or seconds), sets, a starting target and the target that beats it. `state.progress[path]`
-is the node being trained. `placement()` picks starting nodes from a self-estimate, one step low
-on purpose.
+`PLAN[kit][day]`: two full-body days, A and B, that alternate (`dayType`), for a **gym** or for
+**home** (no kit). The player picks the kit in the opening and can change it on the Train tab
+(`profile.kit`, missing means gym). Every day is a list of `Slot`s, each a library exercise by its
+demo id (so it has a pixel demo and coaching), with a role:
+
+- `warmup` and `stretch`: one tap ("Done"), no reps logged, no rest timer. Every day opens with
+  the warm-up and ends with the stretch.
+- `main` and `core`: sets logged with reps left in the tank.
+
+A slot has a target range (`low`..`high`); `weighted` slots are done with a weight the player
+picks. `cueOf(id)` is the exercise's first coaching tip.
+
+This is the plan until the workout planner (an LLM that builds sessions from the exercise library,
+with code-checked guardrails) lands, and the offline fallback after it.
 
 ## Today's quest
 
-- `dayType`: sessions alternate Day A (Push leads) and Day B (Pull leads); Core is in both.
-- `todaysQuest`: the lead path's current node, core's current node, and one support exercise
-  (the node below the current one on the other path, never unlockable). A path that is fully
-  beaten hands the lead over.
-- The check-in: **Rough** is one exercise, at most 3 sets, and counts as a minimum session;
-  Normal and Strong are the full quest.
+- `todaysQuest`: the day's slots with their current targets (`state.reps[id]`, else `low`).
+- The check-in: **Rough** keeps the warm-up and the stretch around one exercise of at most 3 sets,
+  and counts as a minimum session; Normal and Strong are the full day.
+- The warm-up alone is not a workout: `finishSession` needs one logged set of real work.
 
 ## Logging and progression
 
 - A set is logged as reps plus reps left in the tank (`Rir`: `4+`, `2-3`, `0-1`), then a
   `REST_SECONDS` (90 s) rest timer.
 - `finishSession` turns the draft into a `Session`: full if at least half the sets were done and
-  the day wasn't Rough, otherwise mini. Sets done at target with reps to spare raise that
-  exercise's target by one rep (or 2 seconds), at most `MAX_RAISES_PER_WEEK` times a week.
-- Meeting a node's unlock target beats it: the path moves to the next node and the gear tier rises.
+  the day wasn't Rough, otherwise mini.
+- Every set at target with reps to spare raises that exercise's target by one rep (holds by 5
+  seconds, every other time), at most `MAX_RAISES_PER_WEEK` times a week, up to `high`. A
+  `weighted` exercise done cleanly at `high` goes back to `low` and is listed in
+  `session.heavier`: "add a little weight next time".
+- `session.better`: some set beat the best set of the same exercise last time. It earns a stat
+  point and drives a few story scenes (`when.better`).
 
 ## XP and levels
 
-Constants at the top of `game.ts`: full session 100, minimum 30, skill beaten 250, perfect week
-(3 sessions, `WEEKLY_GOAL`) 100, welcome back after 14+ days 50, max test 200 (once per 21 days).
-Weekly streak +10% per perfect week in a row (max +50%), class +10%. A level is 500 XP.
+Constants at the top of `game.ts`: full session 100, minimum 30, perfect week (3 sessions,
+`WEEKLY_GOAL`) 100, welcome back after 14+ days 50. Weekly streak +10% per perfect week in a row
+(max +50%). A level is 500 XP.
+
+## Stat points (`stats.ts`)
+
+Training earns points; the champion spends them in the Fog. Every workout earns them whatever it
+was, so the reward never depends on the plan: `POINTS` per full workout, short workout, week at
+the goal, and "better than last time", plus `STARTING_POINTS`. `pointsEarned` derives them from
+the sessions; only what was spent is saved (`state.build`).
+
+- Four stats (`STATS`): **Health** (HP and a little armor), **Damage**, **Reach** (pickup range
+  for light), **Speed** (attack speed). `spendPoint`, `refundPoint`, and `resetBuild` (take all
+  back, free, any time) on the Hero tab.
+- Each point in the same stat is worth a little less (`statValue`, `FALLOFF`), so spreading pays.
+- `BASE` is what every champion has before any point. The sizes are set so a player who spreads
+  their points ends six months where the old skill tree ended; check with the season and Fog
+  simulators ([../dev/testing.md](../dev/testing.md)) after changing them.
+- `statPower(build, classId)` is what the Fog reads (through `powerOf`, see [fog.md](fog.md)).
 
 ## Classes and gear (`gear.ts`)
 
-Warrior (Push, sword), Archer (Pull, bow), Monk (Core, staff), Mage (whichever path is behind,
-wand). Gear has a weapon, armor and shield slot; each beaten skill is one tier (0 to 6), and the
-class's path forges the weapon. The art for each tier is in [sprites.md](sprites.md).
+Warrior (sword), Archer (bow), Monk (staff), Mage (wand). A class only changes how you fight in
+the Fog: its attack style there, and a small lean to one stat (`CLASS_LEAN` in `stats.ts`, as if
+it had `CLASS_LEAN_POINTS` more there). Gear has a weapon, armor and shield slot; one slot goes up
+a tier every `GEAR_EVERY` workouts, in turn (`tiersAt`, `nextForge`), up to tier 6. The art for
+each tier is in [sprites.md](sprites.md).
 
-## Max tests
+## How to change things
 
-`logMaxTest`: push-ups, pull-ups, L-sit seconds. Chapters 2 and 5 of the story need one; see
-[story.md](story.md).
-
-## Coming next
-
-FORMA is moving to general workouts (gym, weights, cardio) with an exercise library. When that
-lands, this page and `skills.ts` change together. The exercise demos are in
-`src/sprites/characters/exercise.ts`, and a test checks every program exercise has one.
+| I want to... | Edit |
+|---|---|
+| Change the exercises of a day, or add a kit | `PLAN` in `src/lib/program.ts` (the exercise needs a demo: a test checks) |
+| Change how fast targets go up | `finishSession` and `MAX_RAISES_PER_WEEK` in `src/lib/game.ts` |
+| Change how many points a workout gives | `POINTS`, `STARTING_POINTS` in `src/lib/stats.ts` |
+| Change what a point is worth | `STATS[].per`, `BASE`, `FALLOFF` in `src/lib/stats.ts`, then `pnpm sim` and `pnpm fog:sim` |
+| Change how often gear is forged | `GEAR_EVERY` in `src/lib/gear.ts` |

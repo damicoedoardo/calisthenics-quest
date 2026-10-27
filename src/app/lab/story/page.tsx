@@ -68,12 +68,11 @@ function describe(w: When): string {
   if (w.chapter) parts.push(`chapter ${w.chapter} started`);
   if (w.inChapter) parts.push(`in chapter ${w.inChapter}`);
   if (w.beaten) parts.push(`chapter ${w.beaten} beaten`);
-  if (w.awaitingTest) parts.push(`chapter ${w.awaitingTest} waits for a test`);
   if (w.restDay !== undefined) parts.push(w.restDay ? 'rest day' : 'not a rest day');
   if (w.shortSession) parts.push('after a short workout');
   if (w.daysInRow) parts.push(`${w.daysInRow} days in a row`);
   if (w.perfectWeek) parts.push('a full week');
-  if (w.skill) parts.push(`${w.skill.path} past ${w.skill.past}`);
+  if (w.better) parts.push(`beat last time in ${w.better} workout${w.better === 1 ? '' : 's'}`);
   if (w.noClass) parts.push('no class yet');
   if (w.answer) parts.push(w.answer.is === undefined ? `answered ${w.answer.id}` : `${w.answer.id} = ${w.answer.is || '(none)'}`);
   if (w.needs) parts.push(`needs {${w.needs}}`);

@@ -61,8 +61,8 @@ export function exportState(state: GameState): string {
 
 export function parseImport(raw: string): GameState | null {
   try {
-    const parsed = JSON.parse(raw) as { version?: number; progress?: unknown; sessions?: unknown };
-    if ((parsed?.version !== 1 && parsed?.version !== 2) || !parsed.progress || !Array.isArray(parsed.sessions)) return null;
+    const parsed = JSON.parse(raw) as { version?: number; sessions?: unknown };
+    if (![1, 2, 3].includes(parsed?.version ?? 0) || !Array.isArray(parsed.sessions)) return null;
     return migrate(parsed);
   } catch {
     return null;
