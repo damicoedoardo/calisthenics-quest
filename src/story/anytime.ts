@@ -35,14 +35,18 @@ export const ANYTIME: Scene[] = [
     ],
   },
   {
-    // Plays again after every long absence (its id gets the workout count added).
     id: 'return',
     when: { away: 8 },
     lines: [
+      { who: 'narrator', show: 'flame', text: 'The camp is dark. Just one small glow in the ash, where {flame} has been keeping an ember going.', pause: 0.8 },
       { who: 'hollow', text: 'See? I told you. You always...' },
-      { who: 'flame', mood: 'soft', text: '...come back. You always come back. I kept one ember lit.' },
-      { who: 'wanderer', text: "You're here. That's the only part that matters. We start light today." },
-      { who: 'wanderer', text: 'You told me once: "{remind}." Do you still mean it?', needs: 'remind' },
+      { who: 'flame', mood: 'soft', text: '...come back. You always come back.', pause: 0.8 },
+      { who: 'narrator', text: "{flame} doesn't ask where you've been. It leans against your hand until the ember catches.", pause: 1.2, film: true },
+      { who: 'flame', mood: 'soft', text: "I didn't count the days. I was busy keeping warm for you." },
+      { who: 'wanderer', text: 'Nothing in the book was torn out. Every page is still there. We start light today.' },
+      { who: 'wanderer', text: 'You asked me once to remind you: "{remind}." So. I\'m reminding you.', needs: 'remind' },
+      { who: 'flame', mood: 'happy', text: "Hi. Hi. Okay, I'm done. ...Hi." },
     ],
   },
+
 ];

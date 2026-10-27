@@ -226,11 +226,13 @@ export const MIRROR_LAKE: Chapter = {
       id: 'ch2-victory',
       when: { beaten: 2 },
       lines: [
-        { who: 'narrator', text: 'The Mirror cracks. In the pieces you see your week one, and today.', shot: { shake: 'big' } },
-        { who: 'wanderer', text: "That's the only comparison that counts. You, last month. Not the Echo." },
-        { who: 'echo', text: "...You're further than week one. I hate that I'm glad about it." },
-        { who: 'flame', mood: 'happy', text: 'Can we keep a piece? For the shelf. We need a shelf.' },
+        { who: 'narrator', text: 'The Mirror cracks. In one piece you see yourself in week one: red in the face, nearly turning back. In another, today.', shot: { shake: 'big' } },
+        { who: 'narrator', text: "You look at week one for a long time. You expected to be embarrassed. You aren't. You just want to tell them it's going to be okay.", pause: 1.2, film: true, music: 'none' },
+        { who: 'you', text: 'You did fine. You did so fine.', pace: 'slow', pause: 1 },
+        { who: 'echo', text: "...You're further than week one. I hate that I'm glad about it.", music: 'rise' },
+        { who: 'flame', mood: 'happy', text: 'Can we keep a piece? The week one piece. For the shelf. We need a shelf.' },
       ],
     },
+
   ],
 };

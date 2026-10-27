@@ -208,13 +208,16 @@ export const THE_FOG: Chapter = {
     {
       id: 'ch5-victory',
       when: { beaten: 5 },
+      music: 'memory',
       lines: [
         { who: 'narrator', show: 'echo', text: 'The fog begins to thin. Golden footsteps come close, and stop beside you.' },
-        { who: 'echo', text: "I said cruel things. I was scared that if you got strong again, you'd forget me." },
-        { who: 'you', text: "I won't forget you. You're the reason I knew it was possible." },
-        { who: 'echo', text: 'You told me you lost {heart2}. Here. I kept it for you.', needs: 'heart2' },
-        { who: 'echo', text: "I'm not your goal. I'm your proof. You did it once. You can do it again." },
-        { who: 'narrator', text: 'The Echo turns into light and settles into your armor.' },
+        { who: 'echo', text: "I said cruel things. I was scared that if you got strong again, you'd forget me.", pause: 0.8 },
+        { who: 'you', text: "I won't forget you. You're how I knew it was possible." },
+        { who: 'echo', text: 'You told me you lost {heart2}. I kept some of it for you. Here.', needs: 'heart2', pause: 0.8 },
+        { who: 'narrator', text: 'The Echo puts something in your hands. It weighs nothing at all. You hold on to it anyway.', pause: 1.4, film: true, music: 'none' },
+        { who: 'echo', text: 'I was never the one you had to get back to.', pace: 'slow', pause: 1 },
+        { who: 'echo', text: "I was just one day you were brave. You've had a lot of those since. I counted.", music: 'memory' },
+        { who: 'narrator', text: 'The Echo turns into light and settles into your armor, right over your heart. It is warm there.', pause: 1.2, film: true },
         { who: 'narrator', show: 'hollow', text: 'The fog thins. The Hollow is still there. Smaller now.' },
         { who: 'hollow', text: "You still hear me, don't you?" },
         { who: 'you', text: 'Every day. I just stopped obeying you.' },
@@ -223,5 +226,6 @@ export const THE_FOG: Chapter = {
         { who: 'flame', mood: 'soft', text: "...It looked scared just then. Did you see? I didn't know it could be scared." },
       ],
     },
+
   ],
 };
