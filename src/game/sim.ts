@@ -163,7 +163,9 @@ export function simulateRun(setup: SimSetup): SimEnd {
     fairyAt = 0,
     elites = 0,
     orbit = 0,
-    flames = 0;
+    flames = 0,
+    /** Foes up, the boss too (as Phaser's countActive counts). */
+    alive = 0;
   const shoved = { until: 0, x: 0, y: 0 };
   const cd = { attack: 0.5, spawn: 0.5, spark: 2, nova: 3, fireball: 2.5 };
   const ups: Partial<Record<UpgradeId, number>> = {};
@@ -190,7 +192,8 @@ export function simulateRun(setup: SimSetup): SimEnd {
   };
 
   const addFoe = (k: FoeKind, x: number, y: number, which?: FogBoss): Foe | null => {
-    if (k !== 'boss' && foes.reduce((n, f) => n + (f.active ? 1 : 0), 0) >= MAX_FOES) return null;
+    if (k !== 'boss' && alive >= MAX_FOES) return null;
+    alive++;
     const s = which ? bosses[which] : FOES[k as Exclude<FoeKind, 'boss'>];
     // Phaser reuses dead foes; here a dead one is dropped at the next tidy-up.
     const f: Foe = {
@@ -376,6 +379,7 @@ export function simulateRun(setup: SimSetup): SimEnd {
 
   const kill = (f: Foe) => {
     kills++;
+    alive--;
     if (f.xp > 0) gems.push({ x: f.x, y: f.y, value: f.xp, pulled: false });
     f.active = false;
     if (f === boss) end(true, 'boss');
@@ -434,11 +438,8 @@ export function simulateRun(setup: SimSetup): SimEnd {
         fire(Math.atan2(tg.y - hero.y, tg.x - hero.x) + (i - (n - 1) / 2) * 0.4, 250, dmg, 0, tg, true);
       }
     } else if (kind === 'wave') {
-      for (let i = 0; i < n; i++) {
-        const R = 110 + i * 20;
-        if (i === 0) burst(hero.x, hero.y, R, dmg);
-        else later(i * 180, () => burst(hero.x, hero.y, R, dmg));
-      }
+      // A delayed call, even the first: it lands on the next frame, as in the game.
+      for (let i = 0; i < n; i++) later(i * 180, () => burst(hero.x, hero.y, 110 + i * 20, dmg));
     } else if (target) {
       const base = Math.atan2(target.y - hero.y, target.x - hero.x);
       for (let i = 0; i < n; i++) slash(base + (i * Math.PI * 2) / n, dmg);
@@ -506,7 +507,9 @@ export function simulateRun(setup: SimSetup): SimEnd {
           fy = hero.y + Math.sin(a) * FLAME.orbit;
         for (const f of foes) {
           if (!f.active || now < f.flameAt) continue;
-          if (Math.hypot(f.x - fx, f.y - fy) < FLAME.touch) {
+          const dx = f.x - fx,
+            dy = f.y - fy;
+          if (dx * dx + dy * dy < FLAME.touch * FLAME.touch) {
             f.flameAt = now + FLAME.every;
             damage(f, pow(FLAME.dmg), 60, fx, fy);
           }
@@ -629,7 +632,7 @@ export function simulateRun(setup: SimSetup): SimEnd {
       s.x += s.vx * dt;
       s.y += s.vy * dt;
     }
-    // Foes push each other apart, half the overlap each.
+    // Foes push each other apart, half the overlap each, as Phaser's separateCircle does.
     byX.sort((p, q) => p.x - q.x);
     for (let i = 0; i < byX.length; i++) {
       const f = byX[i];
@@ -644,6 +647,8 @@ export function simulateRun(setup: SimSetup): SimEnd {
           gap = rr - d,
           nx = d ? dx / d : 1,
           ny = d ? dy / d : 0;
+        // Arcade physics with no bounce: both stop dead (it matters for a foe being knocked back).
+        f.vx = f.vy = o.vx = o.vy = 0;
         f.x -= (nx * gap) / 2;
         f.y -= (ny * gap) / 2;
         o.x += (nx * gap) / 2;
@@ -652,7 +657,9 @@ export function simulateRun(setup: SimSetup): SimEnd {
     }
     for (const f of foes) {
       if (!f.active) continue;
-      if (Math.hypot(f.x - hero.x, f.y + f.dy - (hero.y + HERO_DY)) < f.r + HERO_R) hurt(f);
+      const dx = f.x - hero.x,
+        dy = f.y + f.dy - (hero.y + HERO_DY);
+      if (dx * dx + dy * dy < (f.r + HERO_R) ** 2) hurt(f);
       if (over) return;
     }
   };
@@ -665,7 +672,7 @@ export function simulateRun(setup: SimSetup): SimEnd {
   while (!over) {
     frame++;
     now = frame * FRAME * 1000;
-    for (let i = 0; i < timers.length; i++) {
+    for (let i = 0; timers.length && i < timers.length; i++) {
       if (timers[i].at <= now) {
         const run = timers[i].run;
         timers.splice(i--, 1);

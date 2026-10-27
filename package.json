@@ -10,7 +10,9 @@
     "start": "next start",
     "test": "vitest run",
     "sim": "SIM_OUT=sim-out vitest run src/sim",
-    "fog:balance": "node scripts/fog-balance.cjs"
+    "fog:balance": "node scripts/fog-balance.cjs",
+    "fog:sim": "node --no-warnings scripts/fog-sim.mjs",
+    "fog:tune": "node --no-warnings scripts/fog-sim.mjs tune"
   },
   "engines": {
     "node": ">=18"
