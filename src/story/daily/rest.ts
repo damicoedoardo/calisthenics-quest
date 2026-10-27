@@ -13,7 +13,7 @@ export const REST_TRUTHS: string[] = [
   'Rest is when the work you did turns into strength.',
   'Today, notice one thing you did for yourself this week. Just notice it.',
   'Go outside for a few minutes, if you can. No goal. Just air.',
-  'If you feel guilty for resting, that is the Hollow talking. The fire is happy.',
+  'The fire curls up low and happy in the ash. "Stay a while. I\'m keeping it warm for tomorrow."',
   'Rest days are not a pause in the story. They are pages too.',
   'Do one kind thing for the person who trained this week. It was you.',
   'A rest day you planned is part of the plan. Nothing to make up for.',

@@ -421,6 +421,18 @@ class DungeonScene extends Phaser.Scene {
     };
     this.input.on(Phaser.Input.Events.POINTER_UP, release);
     this.input.on(Phaser.Input.Events.POINTER_UP_OUTSIDE, release);
+    // Anything asked of the scene before it was built (a dev skip on a slow phone) runs now.
+    this.built = true;
+    for (const f of this.waiting.splice(0)) f();
+  }
+
+  /** The scene is created by Phaser a moment after startRun returns (later on a busy phone).
+      Calls from outside that touch rooms or sprites wait until then, so nothing is used before it exists. */
+  private built = false;
+  private waiting: (() => void)[] = [];
+  private whenBuilt(f: () => void) {
+    if (this.built) f();
+    else this.waiting.push(f);
   }
 
   /** The screen filled: a room as wide as the phone, the camera following you up and down it
@@ -734,6 +746,7 @@ class DungeonScene extends Phaser.Scene {
 
   /** Developer mode: show the next zone's theme in this run, to preview every dungeon's look. */
   cycleTheme(): string {
+    if (!this.built) return this.theme.name;
     this.theme = THEMES[(THEMES.indexOf(this.theme) + 1) % THEMES.length];
     this.themeTextures();
     this.floorTiles.setTexture('ground');
@@ -2090,8 +2103,10 @@ class DungeonScene extends Phaser.Scene {
   }
 
   skipToBoss() {
-    skipToBoss(this.run);
-    for (const e of takeEvents(this.run)) this.react(e);
+    this.whenBuilt(() => {
+      skipToBoss(this.run);
+      for (const e of takeEvents(this.run)) this.react(e);
+    });
   }
 
   winNow() {
@@ -2107,13 +2122,17 @@ class DungeonScene extends Phaser.Scene {
   }
 
   skipFloor() {
-    skipFloor(this.run);
-    for (const e of takeEvents(this.run)) this.react(e);
+    this.whenBuilt(() => {
+      skipFloor(this.run);
+      for (const e of takeEvents(this.run)) this.react(e);
+    });
   }
 
   skipToWarden() {
-    skipToWarden(this.run);
-    for (const e of takeEvents(this.run)) this.react(e);
+    this.whenBuilt(() => {
+      skipToWarden(this.run);
+      for (const e of takeEvents(this.run)) this.react(e);
+    });
   }
 }
 
