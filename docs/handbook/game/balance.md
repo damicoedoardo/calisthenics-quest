@@ -43,6 +43,7 @@ kept there as aliases, so callers didn't change).
 | `src/balance/stats.ts` | stat points per workout, starting points, what a point is worth, base stats, falloff, armor from Health, class lean | `src/lib/stats.ts` |
 | `src/balance/economy.ts` | embers per workout, forge prices, melt values, vault size, how long the flame guards | `src/lib/forge.ts`, `src/lib/fog-gear.ts` |
 | `src/balance/items.ts` | item power, base damage/HP/armor per level, bonus sizes, rarity sizes and weights, how luck and depth lean rarer, requirements, the starter kit, drop chances and luck, the bag | `src/game/dungeon/items.ts`, `src/game/dungeon/engine.ts` |
+| `src/balance/power.ts` | the target split of power growth (training / gear / upgrades) and its slack | the balance sheet |
 | `src/balance/dungeon.ts` | `DIALS`, elites, run levels | `src/game/dungeon/content.ts`, `src/lib/fog.ts` |
 | `src/balance/index.ts` | exports them all | |
 
@@ -76,6 +77,13 @@ embers spent on upgrades, middle-roll rares from the deepest floor it can wear) 
 gain into training, gear and upgrades, then puts the four classes side by side. This is the
 curve to tune against: decide how strong a player should be after N workouts and how much of it
 comes from each source, then set the numbers to match, instead of tuning each one alone.
+
+**The target** (`POWER_SPLIT` in `src/balance/power.ts`, Edoardo's pick): 40% of the growth from
+training (stat points), 40% from gear, 20% from upgrades, each within `POWER_SPLIT_SLACK`. The
+sheet's Goals table averages the split over each zone's opening and six workouts later and flags
+it when it drifts. The levers: `POINT_WORTH` (training), `ITEM_POWER` (gear), `PLUS_STEP` and the
+forge prices (upgrades). Move one, run `pnpm balance`, and keep total power about where it was
+(the "Power" column) so the zones don't need retuning.
 
 ## The balance sheet
 
@@ -116,6 +124,7 @@ before and after.
 
 | Date | Change | Why | Before → after | PR |
 |---|---|---|---|---|
-| 2026-10-27 | `powerScore` and "Power by workouts" on the sheet (no number changed) | One scale to compare training, gear, upgrades and classes | Today: training ~27%, gear ~45-60%, upgrades up to ~30% of the gain; warrior +27%, mage -21% before abilities | |
+| 2026-10-27 | Target split 40/40/20 set; `POINT_WORTH` x1.35, `ITEM_POWER` 2.2 → 1.76 | Training should earn more of a player's power (Edoardo's pick) | Split 28/48/24 → 39/41/20; power at 37 workouts 246 → 235, at 64 366 → 345; `fog:sim steady 24` zone win rates (open / later) 20/78, 26/51, 32/55, 50/51, 32/93, 32/85 → 20/81, 25/43, 21/70, 51/55, 40/98, 33/91 | #42 |
+| 2026-10-27 | `powerScore` and "Power by workouts" on the sheet (no number changed) | One scale to compare training, gear, upgrades and classes | Training ~27%, gear ~45-60%, upgrades up to ~30% of the gain; warrior +27%, mage -21% before abilities | #42 |
 | 2026-10-27 | Item, rarity, requirement, drop, bag, dungeon dial, elite and run-level numbers moved into `src/balance/`; weapons, drops and run levels added to the sheet | Every number findable; hidden numbers in `rollItem`, `rollRarity` and `kill` named | No change in play: replays identical | #39 |
 | 2026-10-27 | Training, stat points and economy numbers moved into `src/balance/`; balance sheet added | Make every number findable and every change visible | No change in play: replays and the sheet's numbers are the same | #39 |

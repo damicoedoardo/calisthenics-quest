@@ -24,8 +24,8 @@ export interface Stat {
 
 const pct = (what: string) => (v: number) => `+${Math.round(v * 100)}% ${what}`;
 
-/* Sized so a player who spreads their points ends six months (about 100 points a stat) where the
-   old skill tree ended: +60% damage, +48% attack speed, +75 HP. */
+/* What a point is worth per stat is in src/balance/stats.ts (POINT_WORTH), sized so points are about
+   40% of a player's power growth (POWER_SPLIT). */
 export const STATS: Stat[] = [
   { id: 'health', name: 'Health', text: 'More HP, and you take a little less damage', per: POINT_WORTH.health, show: (v) => `+${Math.round(v)} HP` },
   { id: 'damage', name: 'Damage', text: 'Every hit lands harder', per: POINT_WORTH.damage, show: pct('damage') },

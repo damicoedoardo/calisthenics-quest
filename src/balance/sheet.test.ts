@@ -10,7 +10,7 @@ import { ZONES, xpToNext } from '@/lib/fog';
 import { seeded } from '@/lib/random';
 import { powerScore } from '@/game/power';
 import { CLASSES, type ClassId } from '@/lib/gear';
-import { POINTS } from '@/balance';
+import { POINTS, POWER_SPLIT, POWER_SPLIT_SLACK } from '@/balance';
 import type { Build } from '@/lib/stats';
 import { playSeason } from '@/sim/season';
 import { PLAYERS } from '@/sim/players';
@@ -186,19 +186,28 @@ function upgraded(gear: Worn, embers: number): Worn {
   return out;
 }
 
+/** The model warrior's power at `w` workouts, and the share of its gain from each source. */
+function split(w: number, cls: ClassId = 'warrior') {
+  const build = evenBuild(w),
+    { gear, where } = modelGear(w, cls, build),
+    base = powerScore(cls, {}).score,
+    trained = powerScore(cls, build).score,
+    geared = powerScore(cls, build, gear).score,
+    full = powerScore(cls, build, upgraded(gear, w * EMBERS.full)).score,
+    gain = full - base;
+  return { full, where, training: (trained - base) / gain, gear: (geared - trained) / gain, upgrades: (full - geared) / gain };
+}
+
+/** Each zone's opening and six workouts later, past the first zone (where there is little gain yet). */
+const splitAt = () => ZONES.slice(1).flatMap((z) => [z.workouts, z.workouts + 6]);
+
 function power(): string {
-  const at = [...new Set([0, 6, ...ZONES.map((z) => z.workouts), ...ZONES.map((z) => z.workouts + 6), 100])].sort((a, b) => a - b);
   const cls: ClassId = 'warrior';
-  const rows = at.map((w) => {
-    const build = evenBuild(w),
-      { gear, where } = modelGear(w, cls, build),
-      base = powerScore(cls, {}).score,
-      trained = powerScore(cls, build).score,
-      geared = powerScore(cls, build, gear).score,
-      full = powerScore(cls, build, upgraded(gear, w * EMBERS.full)).score,
-      gain = full - base,
-      share = (v: number) => (gain > 0 ? pct(v / gain) : '-');
-    return [w, Math.round(full), share(trained - base), share(geared - trained), share(full - geared), where];
+  const at = [...new Set([0, 6, ...ZONES.map((z) => z.workouts), ...ZONES.map((z) => z.workouts + 6), 100])].sort((a, b) => a - b);
+    const rows = at.map((w) => {
+    if (w === 0) return [0, Math.round(powerScore(cls, {}).score), '-', '-', '-', '-'];
+    const s = split(w, cls);
+    return [w, Math.round(s.full), pct(s.training), pct(s.gear), pct(s.upgrades), s.where];
   });
   const classes = [0, 24, 64].map((w) => {
     const scores = CLASSES.map((c) => {
@@ -241,8 +250,13 @@ function goals(): string {
       [
         ['How often a steady player levels up (6 months)', `${perLevel.toFixed(1)} workouts a level`, open],
         ['One item +0 to +5 in about 5 weeks of training', `${weeks.toFixed(1)} weeks`, check(weeks >= 4 && weeks <= 6)],
-        ['100 points a stat gives about +60% damage, +48% attack speed, +75 HP', `+${pct(spread.damage)}, +${pct(spread.speed)}, +${Math.round(spread.health)} HP`, check(Math.abs(spread.damage - 0.6) < 0.08 && Math.abs(spread.speed - 0.48) < 0.08 && Math.abs(spread.health - 75) < 10)],
+        ['100 points a stat gives about +80% damage, +65% attack speed, +105 HP', `+${pct(spread.damage)}, +${pct(spread.speed)}, +${Math.round(spread.health)} HP`, check(Math.abs(spread.damage - 0.8) < 0.08 && Math.abs(spread.speed - 0.65) < 0.08 && Math.abs(spread.health - 105) < 10)],
         [`A comeback after ${XP.comebackDays} days away earns a bonus`, `+${XP.comeback} XP`, check(XP.comeback > 0)],
+        ...(['training', 'gear', 'upgrades'] as const).map((k) => {
+          const shares = splitAt().map((w) => split(w)[k]),
+            avg = shares.reduce((a, b) => a + b, 0) / shares.length;
+          return [`${pct(POWER_SPLIT[k])} of power growth from ${k} (± ${pct(POWER_SPLIT_SLACK)})`, `${pct(avg)} (${pct(Math.min(...shares))}-${pct(Math.max(...shares))})`, check(Math.abs(avg - POWER_SPLIT[k]) <= POWER_SPLIT_SLACK)];
+        }),
       ],
     ),
   ].join('\n');
