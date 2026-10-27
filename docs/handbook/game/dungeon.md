@@ -103,3 +103,5 @@ pile-up can't stall a slow phone; real fights peak far below the caps.
 
 `pnpm test` replays a whole bot run in every zone (`engine.test.ts`): a refactor keeps those
 replays exactly as they were, and a balance change moves them on purpose (`pnpm test -u`).
+Hot loops (shots, pillars, barrels) test distance with `closer` / `farther`: a box test, then the
+exact `Math.hypot`, so they give the same answers and replays stay put (see `dev/testing.md`).
