@@ -246,170 +246,131 @@ exports[`replays > every zone plays the same run as before 1`] = `
     "won": true,
   },
   {
-    "bossAt": 406,
+    "bossAt": 402,
     "floor": 10,
     "gear": {
       "bag": [
         {
           "base": [
             {
-              "id": "health",
-              "v": 18.36130696004257,
+              "id": "damage",
+              "v": 0.10478407110907138,
             },
+          ],
+          "bonuses": [
             {
-              "id": "armor",
-              "v": 0.029403637726456305,
+              "id": "health",
+              "v": 17.320130341423674,
+            },
+          ],
+          "cls": "archer",
+          "id": "gn6e32vm6eqe",
+          "level": 15,
+          "name": "Drowned bow of Life",
+          "need": {
+            "n": 10,
+            "stat": "crit",
+          },
+          "rarity": "magic",
+          "slot": "weapon",
+        },
+        {
+          "base": [
+            {
+              "id": "damage",
+              "v": 0.09018319071929902,
             },
           ],
           "bonuses": [
             {
               "id": "move",
-              "v": 0.051189153864599025,
+              "v": 0.05050962301987316,
             },
           ],
           "cls": "archer",
-          "id": "1bl6n36x42l19",
-          "level": 16,
-          "name": "Drowned jerkin of Wind",
+          "id": "ota32216c2xw9",
+          "level": 15,
+          "name": "Drowned bow of Wind",
           "need": {
             "n": 10,
-            "stat": "armor",
+            "stat": "crit",
           },
           "rarity": "magic",
-          "slot": "armor",
+          "slot": "weapon",
         },
         {
           "base": [],
           "bonuses": [
             {
-              "id": "heal",
-              "v": 1.0561665025416762,
+              "id": "armor",
+              "v": 0.01888265574874822,
             },
-          ],
-          "cls": null,
-          "id": "78nsj7105njeo",
-          "level": 16,
-          "name": "Drowned ring",
-          "need": null,
-          "rarity": "common",
-          "slot": "charm",
-        },
-        {
-          "base": [
             {
               "id": "health",
-              "v": 23.224470011045923,
-            },
-            {
-              "id": "armor",
-              "v": 0.031251477715233345,
-            },
-          ],
-          "bonuses": [
-            {
-              "id": "damage",
-              "v": 0.07321722042734037,
+              "v": 20.19587988262996,
             },
             {
               "id": "pickup",
-              "v": 0.21226973354844378,
-            },
-          ],
-          "cls": "archer",
-          "id": "1qgwz2andd7im",
-          "level": 17,
-          "name": "Grave Thorn",
-          "need": {
-            "n": 13,
-            "stat": "armor",
-          },
-          "rarity": "rare",
-          "slot": "armor",
-        },
-        {
-          "base": [
-            {
-              "id": "damage",
-              "v": 0.10574447143416257,
-            },
-          ],
-          "bonuses": [
-            {
-              "id": "heal",
-              "v": 1.1751680732262135,
-            },
-          ],
-          "cls": "archer",
-          "id": "14qdnloy8z8ox",
-          "level": 17,
-          "name": "Drowned bow of Embers",
-          "need": {
-            "n": 11,
-            "stat": "crit",
-          },
-          "rarity": "magic",
-          "slot": "weapon",
-        },
-        {
-          "base": [
-            {
-              "id": "damage",
-              "v": 0.08389242183316313,
-            },
-          ],
-          "bonuses": [],
-          "cls": "archer",
-          "id": "ef12fvng7zh0",
-          "level": 17,
-          "name": "Drowned bow",
-          "need": {
-            "n": 11,
-            "stat": "crit",
-          },
-          "rarity": "common",
-          "slot": "weapon",
-        },
-        {
-          "base": [],
-          "bonuses": [
-            {
-              "id": "damage",
-              "v": 0.05521237128126809,
-            },
-            {
-              "id": "speed",
-              "v": 0.06802573867869938,
+              "v": 0.22464179178695196,
             },
           ],
           "cls": null,
-          "id": "wg02af11xis0m",
-          "level": 18,
-          "name": "Drowned ring of Fury",
+          "id": "6ms4tz1du0g5y",
+          "level": 16,
+          "name": "Ember Song",
           "need": null,
-          "rarity": "magic",
+          "rarity": "rare",
           "slot": "charm",
         },
         {
           "base": [
             {
               "id": "health",
-              "v": 21.086574434967712,
+              "v": 18.876873376592997,
             },
             {
               "id": "armor",
-              "v": 0.031029518812339018,
+              "v": 0.024766802167616044,
             },
           ],
           "bonuses": [
             {
-              "id": "heal",
-              "v": 1.3005964222611859,
+              "id": "damage",
+              "v": 0.07008200206453169,
             },
           ],
           "cls": "archer",
-          "id": "339sop9vxopx",
-          "level": 19,
-          "name": "Drowned jerkin of Embers",
+          "id": "1w4crr5ejxt24",
+          "level": 17,
+          "name": "Drowned jerkin of Fury",
+          "need": {
+            "n": 11,
+            "stat": "armor",
+          },
+          "rarity": "magic",
+          "slot": "armor",
+        },
+        {
+          "base": [
+            {
+              "id": "health",
+              "v": 21.392861458810515,
+            },
+            {
+              "id": "armor",
+              "v": 0.028930304139994836,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "cooldown",
+              "v": 0.08564547479501144,
+            },
+          ],
+          "cls": "archer",
+          "id": "1x4zunnbd719y",
+          "level": 17,
+          "name": "Drowned jerkin of Focus",
           "need": {
             "n": 11,
             "stat": "armor",
@@ -421,25 +382,81 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "base": [
             {
               "id": "damage",
-              "v": 0.11112700491222349,
+              "v": 0.10025782771920562,
             },
           ],
           "bonuses": [
             {
-              "id": "move",
-              "v": 0.06065811859050859,
+              "id": "armor",
+              "v": 0.018188326437177885,
             },
           ],
           "cls": "archer",
-          "id": "1v3qryj1j1y29m",
-          "level": 19,
-          "name": "Drowned bow of Wind",
+          "id": "1879hpz1lzq7gf",
+          "level": 18,
+          "name": "Drowned bow of Stone",
           "need": {
             "n": 11,
             "stat": "crit",
           },
           "rarity": "magic",
           "slot": "weapon",
+        },
+        {
+          "base": [
+            {
+              "id": "health",
+              "v": 21.34273593762098,
+            },
+            {
+              "id": "armor",
+              "v": 0.031430354123325656,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "move",
+              "v": 0.05383206873166003,
+            },
+          ],
+          "cls": "archer",
+          "id": "1c93zuu1tnggyk",
+          "level": 19,
+          "name": "Drowned jerkin of Wind",
+          "need": {
+            "n": 11,
+            "stat": "armor",
+          },
+          "rarity": "magic",
+          "slot": "armor",
+        },
+        {
+          "base": [
+            {
+              "id": "health",
+              "v": 22.886153268041557,
+            },
+            {
+              "id": "armor",
+              "v": 0.033663805887942023,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "cooldown",
+              "v": 0.08920381823965162,
+            },
+          ],
+          "cls": "archer",
+          "id": "vn1ejuevhi5z",
+          "level": 19,
+          "name": "Drowned jerkin of Focus",
+          "need": {
+            "n": 11,
+            "stat": "armor",
+          },
+          "rarity": "magic",
+          "slot": "armor",
         },
       ],
       "worn": {
@@ -447,35 +464,43 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "base": [],
           "bonuses": [
             {
-              "id": "speed",
-              "v": 0.06206259877583944,
+              "id": "health",
+              "v": 21.383560393318536,
+            },
+            {
+              "id": "move",
+              "v": 0.0685127956969738,
+            },
+            {
+              "id": "heal",
+              "v": 1.6104473766267302,
             },
             {
               "id": "damage",
-              "v": 0.06241841873363592,
+              "v": 0.09438016988493504,
             },
             {
-              "id": "cooldown",
-              "v": 0.08335874448185786,
+              "id": "speed",
+              "v": 0.0943578874448687,
             },
           ],
           "cls": null,
-          "id": "q7ge1n461cuw",
-          "level": 10,
-          "name": "Storm Vow",
+          "id": "1bb7gnvh4i4rd",
+          "level": 15,
+          "name": "Lia's Shard",
           "need": null,
-          "rarity": "rare",
+          "rarity": "legendary",
           "slot": "charm",
         },
       },
     },
     "height": null,
-    "hp": 304,
-    "kills": 320,
-    "level": 14,
-    "maxHp": 410,
+    "hp": 275,
+    "kills": 353,
+    "level": 13,
+    "maxHp": 383,
     "room": 4,
-    "seconds": 416,
+    "seconds": 409,
     "why": "boss",
     "won": true,
   },
