@@ -44,7 +44,9 @@ docs/handbook/   The handbook
   `seeded()` (`src/lib/random.ts`) or an `rng` argument. No React or DOM below `src/components/`.
 - **Design for balance**: a number that sets how strong, fast, rare or costly something is gets a
   name and a one-line goal in `src/balance/`, never inline in a formula. Change one: `pnpm balance`,
-  commit the sheet, add a changelog row. The rule: `docs/handbook/game/balance.md`.
+  commit the sheet, add a changelog row, keep the 40/40/20 power split on target. Use the
+  `designing-for-balance` skill (`.claude/skills/designing-for-balance/SKILL.md`) for anything
+  with such a number. The rule: `docs/handbook/game/balance.md`.
 - **Content is data** (story, monsters, zones, music, sprites). Components only play it.
 - **Art is code**: draw with `<Sprite id="..." />`, never in a component.
 - **One save**: every change goes through `update(fn)` from `useGameState`. New save fields are

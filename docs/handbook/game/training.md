@@ -70,9 +70,9 @@ falloff, armor, class lean) are in `src/balance/stats.ts`.
   for light), **Speed** (attack speed). `spendPoint`, `refundPoint`, and `resetBuild` (take all
   back, free, any time) on the Hero tab.
 - Each point in the same stat is worth a little less (`statValue`, `FALLOFF`), so spreading pays.
-- `BASE` is what every champion has before any point. The sizes are set so a player who spreads
-  their points ends six months where the old skill tree ended; check with the season and Fog
-  simulators ([../dev/testing.md](../dev/testing.md)) after changing them.
+- `BASE` is what every champion has before any point. What a point is worth is set so points are
+  about 40% of a player's power growth (`POWER_SPLIT`, see [balance.md](balance.md)); check with
+  `pnpm balance` and the Fog simulator ([../dev/testing.md](../dev/testing.md)) after changing it.
 - `statPower(build, classId)` is what the Fog reads (through `powerOf`, see [fog.md](fog.md)).
 
 ## Classes and gear (`gear.ts`)

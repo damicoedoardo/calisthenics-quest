@@ -45,8 +45,8 @@ describe('the Fog', () => {
     const fresh = powerOf(initialState(), day(26));
     expect(fresh).toMatchObject({ damage: 0.12, speed: 0.08, reach: 0.15, health: 0, armor: 0, flames: 0, fresh: false, fireballs: false, fairy: false, flameName: '' });
     const trained = powerOf({ ...initialState(), build: { damage: 10, health: 10 }, sessions: sessions(6) }, day(26));
-    expect(trained.damage).toBeCloseTo(0.183, 3);
-    expect(trained.health).toBeCloseTo(9.68, 1);
+    expect(trained.damage).toBeCloseTo(0.205, 3);
+    expect(trained.health).toBeCloseTo(13.07, 1);
     expect(trained.armor).toBeCloseTo(0.026, 3);
     expect(trained.speed).toBe(0.08);
     expect(trained.flames).toBe(2);

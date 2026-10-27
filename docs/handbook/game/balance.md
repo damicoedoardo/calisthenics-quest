@@ -14,7 +14,8 @@ of these numbers, change it, see what it does, and later see when and why it cha
 
 ## The rule (design for balance)
 
-Every feature follows this. The short form is in [`AGENTS.md`](../../../AGENTS.md).
+Every feature follows this. The short form is in [`AGENTS.md`](../../../AGENTS.md); the step by
+step for agents is the `designing-for-balance` skill (`.claude/skills/designing-for-balance/SKILL.md`).
 
 1. **Every balance number has a name and a home.** A number that sets how strong, fast, rare or
    costly something is lives in `src/balance/`, never inline in a formula. Layout, art and
@@ -43,6 +44,7 @@ kept there as aliases, so callers didn't change).
 | `src/balance/stats.ts` | stat points per workout, starting points, what a point is worth, base stats, falloff, armor from Health, class lean | `src/lib/stats.ts` |
 | `src/balance/economy.ts` | embers per workout, forge prices, melt values, vault size, how long the flame guards | `src/lib/forge.ts`, `src/lib/fog-gear.ts` |
 | `src/balance/items.ts` | item power, base damage/HP/armor per level, bonus sizes, rarity sizes and weights, how luck and depth lean rarer, requirements, the starter kit, drop chances and luck, the bag | `src/game/dungeon/items.ts`, `src/game/dungeon/engine.ts` |
+| `src/balance/power.ts` | the target split of power growth (training / gear / upgrades) and its slack | the balance sheet |
 | `src/balance/dungeon.ts` | `DIALS`, elites, run levels | `src/game/dungeon/content.ts`, `src/lib/fog.ts` |
 | `src/balance/upgrades.ts` | Mira's forge +1 to +15 (`STEPS`: embers, materials, odds, strength), misses (`FORGE_RISK`), safe marks, what a fall leaves of forged gear, co-op material drops and gifts, the look bands | `src/lib/forge.ts`, `src/lib/fog-gear.ts`, `src/game/dungeon/items.ts`, `engine.ts`, `PlusGlow.tsx` |
 | `src/balance/index.ts` | exports them all | |
@@ -60,6 +62,29 @@ until they are):
 | Item comparison weights (which item the bot and the bag call better) | `WORTH` in `items.ts` | |
 | Zone toughness (monster HP and damage per zone) | each chapter's `fog` block in `src/story/chapters/`; `pnpm fog:tune` prints new values | |
 | Co-op | `src/game/dungeon/engine.ts` (XP to every standing hero, drops each their own) | no scaling yet: a party meets one hero's monsters |
+
+## Power: one scale for everything
+
+Classes, gear, rarity and upgrades all add strength in different ways, so they are compared on
+one number: `powerScore(cls, build, worn)` in `src/game/power.ts`. It uses the engine's own
+formulas: damage a second against one foe times what you can take (HP over the share of damage
+that gets through), square-rooted, with a warrior with no points in the starter kit at 100.
+Doubling both halves doubles it. It leaves out what only happens inside a run (run skills,
+chest items, the flame's fire, class abilities, the dodge, hitting many foes), so it compares
+builds and gear; the Fog simulator's win rates compare whole classes.
+
+The sheet's "Power by workouts" plays a model player (3 full workouts a week, points spread,
+embers spent on upgrades, middle-roll rares from the deepest floor it can wear) and splits the
+gain into training, gear and upgrades, then puts the four classes side by side. This is the
+curve to tune against: decide how strong a player should be after N workouts and how much of it
+comes from each source, then set the numbers to match, instead of tuning each one alone.
+
+**The target** (`POWER_SPLIT` in `src/balance/power.ts`, Edoardo's pick): 40% of the growth from
+training (stat points), 40% from gear, 20% from upgrades, each within `POWER_SPLIT_SLACK`. The
+sheet's Goals table averages the split over each zone's opening and six workouts later and flags
+it when it drifts. The levers: `POINT_WORTH` (training), `ITEM_POWER` (gear), `STEPS` in `upgrades.ts`
+(upgrades). Move one, run `pnpm balance`, and keep total power about where it was
+(the "Power" column) so the zones don't need retuning.
 
 ## The balance sheet
 
@@ -92,6 +117,7 @@ not milliseconds).
 | Change the dungeon's dials, elites, run levels | `src/balance/dungeon.ts`, then `pnpm sim` and `pnpm fog:sim` |
 | Add a feature with numbers | a file (or entry) in `src/balance/`, export it from `index.ts`, a goal row in `sheet.test.ts` |
 | Change something not moved yet | where the table above says, and move it into `src/balance/` if you're there anyway |
+| See how strong a player is at N workouts, and from what | "Power by workouts" in `src/balance/sheet.md`; the formula in `src/game/power.ts` |
 | See what changed and why | the changelog below, then `git log -- src/balance` |
 
 ## Changelog
@@ -101,6 +127,8 @@ before and after.
 
 | Date | Change | Why | Before → after | PR |
 |---|---|---|---|---|
+| 2026-10-27 | Target split 40/40/20 set; `POINT_WORTH` x1.35, `ITEM_POWER` 2.2 → 1.76 | Training should earn more of a player's power (Edoardo's pick) | Split 28/48/24 → 39/41/20; power at 37 workouts 246 → 235, at 64 366 → 345; `fog:sim steady 24` zone win rates (open / later) 20/78, 26/51, 32/55, 50/51, 32/93, 32/85 → 20/81, 25/43, 21/70, 51/55, 40/98, 33/91 | #42 |
+| 2026-10-27 | `powerScore` and "Power by workouts" on the sheet (no number changed) | One scale to compare training, gear, upgrades and classes | Training ~27%, gear ~45-60%, upgrades up to ~30% of the gain; warrior +27%, mage -21% before abilities | #42 |
 | 2026-10-27 | Mira's forge goes to +15: `STEPS` (embers 55 to 140 a step from +6, co-op materials from +6, odds 90% down to 30% from +7), `FORGE_RISK`, `SAFE_POINTS`, `FALL_KEEP`, co-op `MAT_DROPS`, `GIFTS`; `FORGE.upgradeStep` replaced by `STEPS` | Edoardo: NosTale-style +15 with co-op-only materials and a new look per band | +0 to +5 unchanged (5.0 weeks); +15 about 62 weeks of embers for one item; a zone 1 co-op run finds about 2-3 threads and half a shard a hero; solo replays identical | forge +15 PR |
 | 2026-10-27 | Item, rarity, requirement, drop, bag, dungeon dial, elite and run-level numbers moved into `src/balance/`; weapons, drops and run levels added to the sheet | Every number findable; hidden numbers in `rollItem`, `rollRarity` and `kill` named | No change in play: replays identical | #39 |
 | 2026-10-27 | Training, stat points and economy numbers moved into `src/balance/`; balance sheet added | Make every number findable and every change visible | No change in play: replays and the sheet's numbers are the same | #39 |
