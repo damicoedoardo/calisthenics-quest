@@ -51,6 +51,8 @@ export interface ExerciseOpts {
   gear: Record<GearSlot, Gear>;
   classId?: ClassId;
   look?: Look;
+  /** 'front' shows the diamond push-up from the head end, so the hands' diamond shows. */
+  view?: 'side' | 'front';
 }
 
 type P = [number, number];
@@ -430,7 +432,35 @@ function archer(s: number, depth: number): Pose {
   };
 }
 
-function poseFor(id: ExerciseId, f: number): { pose: Pose; props: Parameters<typeof props>[1]; band?: { from: P; to: P } } {
+/** Front view of the diamond push-up: the hands together under the chest, thumbs and fingers
+    touching; the elbows bend back along the ribs, so from the front they only edge out a little
+    and the upper arms look short. d = 0 arms straight, 1 chest just above the hands. */
+function diamondFront(d: number): Pose {
+  const c = lerp([32, 37.5], [32, 47], d);
+  const ls: P = add(c, [-6, 0]),
+    rs: P = add(c, [6, 0]);
+  const lh: P = [30, FLOOR - 1],
+    rh: P = [34, FLOOR - 1];
+  // upper arms foreshortened (they point back, away from us), forearms seen full length
+  const left = arm(ls, lh, [-1, -0.6], 7, 11),
+    right = arm(rs, rh, [1, -0.6], 7, 11);
+  const hip = add(c, [0, -3]);
+  const far = (x: number): Leg => ({ hip, knee: [32 + x, 50], foot: [32 + x * 1.2, FLOOR - 1], toes: [0, 1] });
+  return {
+    front: true,
+    // the head held in line with the back: from the front it sits just over the shoulders, so the
+    // hands stay in view under the chest
+    head: add(c, [0, -3.5]),
+    face: [0, 1],
+    up: [0, -1],
+    shoulder: c,
+    hip: add(c, [0, -2]),
+    near: { arm: left, leg: far(2) },
+    far: { arm: right, leg: far(-2) },
+  };
+}
+
+function poseFor(id: ExerciseId, f: number, view: ExerciseOpts['view'] = 'side'): { pose: Pose; props: Parameters<typeof props>[1]; band?: { from: P; to: P } } {
   const d = REP[f % 16],
     b = breath(f);
   switch (id) {
@@ -439,7 +469,7 @@ function poseFor(id: ExerciseId, f: number): { pose: Pose; props: Parameters<typ
     case 'pushup':
       return { pose: pushup(d, FLOOR - 1, 8, false), props: 'floor' };
     case 'diamond-pushup':
-      return { pose: pushup(d, FLOOR - 1, 8, true), props: 'floor' };
+      return { pose: view === 'front' ? diamondFront(d) : pushup(d, FLOOR - 1, 8, true), props: 'floor' };
     case 'archer-pushup': {
       const half = f % 16 < 8 ? -1 : 1,
         k = REP[(f % 8) * 2];
@@ -519,7 +549,7 @@ function poseFor(id: ExerciseId, f: number): { pose: Pose; props: Parameters<typ
 
 /** One frame of an exercise demo: the props, then you on them. */
 export function drawExercise(o: ExerciseOpts, f: number): Grid {
-  const { pose, props: kind, band } = poseFor(o.exercise, f);
+  const { pose, props: kind, band } = poseFor(o.exercise, f, o.view);
   const g = grid(64);
   props(g, kind);
   const fig = drawFigure(pose, colorsFor(o), o.look);

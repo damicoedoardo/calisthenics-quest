@@ -207,6 +207,8 @@ exports[`sprite registry > art fingerprints 1`] = `
   "summit idle": "3c5725a9ceb0",
   "summitBoss attack": "e02be48eb561",
   "summitBoss idle": "696bedf70767",
+  "uiIcon attack": "b5f9aaacba84",
+  "uiIcon idle": "b5f9aaacba84",
   "vela after": "bb2391a67bd4",
   "vela attack": "a163acc313f6",
   "vela idle": "b0aa0411ea15",
@@ -223,5 +225,7 @@ exports[`sprite registry > art fingerprints 1`] = `
   "wisp zone 3": "80c320dcc9a8",
   "wisp zone 4": "fc20d889a9fe",
   "wisp zone 5": "80a71f9bfa8a",
+  "zoneIcon attack": "d27b4b5d9e9b",
+  "zoneIcon idle": "d27b4b5d9e9b",
 }
 `;
