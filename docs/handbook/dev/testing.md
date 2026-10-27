@@ -28,7 +28,14 @@ Accept intended snapshot changes with `pnpm test -u`, and say in the PR why they
   writes each timeline and Fog snapshots to `sim-out/` (git-ignored).
 - **Fog** (`scripts/fog-sim.mjs`): `pnpm fog:sim steady 100` plays hundreds of bot runs per zone
   and class on those snapshots, on every core, with the game's own engine and bot (Node runs the
-  TypeScript through `scripts/ts-hooks.mjs`, which also lets it import JSON the bundler way). `pnpm fog:tune steady 60` finds each zone's HP and damage for the target win rates.
+  TypeScript through `scripts/ts-hooks.mjs`, which also lets it import JSON the bundler way). `pnpm fog:tune steady 60` finds each zone's HP and damage for the target win rates. It fits
+  the S curve of win rate against the zone's scale (a straight line in logit of the rate against
+  ln of the scale) and usually lands in two or three measurements per zone, with all zones
+  searched at once. Every measurement plays the same seeds, so two scales compare fairly.
+- **Keeping the sims fast**: a run is ~20 game minutes at 60 steps a second, so the engine's
+  per-step loops are the cost. Distance checks go through `closer` / `farther` in `engine.ts`
+  (a box test, then the exact `Math.hypot`), and lists are only rebuilt when something leaves.
+  A speed-up must not move a single replay: `pnpm test` must pass with no snapshot change.
 - **In-browser balance** (`scripts/fog-balance.cjs`): the bot plays a production build in a
   browser; needs `pnpm build && pnpm start -p 3124` running.
 

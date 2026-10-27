@@ -70,18 +70,19 @@ function beyond(run: Run, d: Door): [number, number] {
 /** After this long (s) in a room without hurting anything, the bot walks right up to the monsters:
     keeping its distance can leave it shooting into a pillar forever while a monster hides behind. */
 const STALL = 20;
-const progress = new WeakMap<Run, { room: string; hp: number; at: number }>();
+const progress = new WeakMap<Run, { floor: number; at: number; climb: number | null; hp: number; since: number }>();
 
 /** Seconds in this room since anything got hurt (or since the room cleared). */
 function idle(run: Run): number {
-  const room = `${run.floor}.${run.map.at}.${run.climb}`,
-    hp = run.foes.reduce((n, f) => n + (f.alive ? f.hp : 0), 0) + run.kills * 1e4,
-    p = progress.get(run);
-  if (!p || p.room !== room || p.hp !== hp) {
-    progress.set(run, { room, hp, at: run.t });
+  let hp = 0;
+  for (const f of run.foes) hp += f.alive ? f.hp : 0;
+  hp += run.kills * 1e4;
+  const p = progress.get(run);
+  if (!p || p.floor !== run.floor || p.at !== run.map.at || p.climb !== run.climb || p.hp !== hp) {
+    progress.set(run, { floor: run.floor, at: run.map.at, climb: run.climb, hp, since: run.t });
     return 0;
   }
-  return run.t - p.at;
+  return run.t - p.since;
 }
 
 export function botInput(run: Run): Input {
@@ -133,8 +134,10 @@ export function botInput(run: Run): Input {
   for (const p of T.pillars) {
     const dx = h.x - p.x,
       dy = h.y - p.y,
-      d = Math.hypot(dx, dy) || 1,
       reach = p.r + 10 + 26;
+    // A box test first: most pillars are far off, and it gives the same answer.
+    if (dx > reach || dx < -reach || dy > reach || dy < -reach) continue;
+    const d = Math.hypot(dx, dy) || 1;
     if (d > reach) continue;
     const w = (reach - d) / 26;
     // Off it, and around it, so it never pins you. Once the room has stalled, around it on the side
