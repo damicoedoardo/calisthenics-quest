@@ -160,7 +160,7 @@ export const VILLAGE: Chapter = {
     {
       id: 'ch3-rest',
       when: { restDay: true, inChapter: 3 },
-      place: 'lit-forges',
+      place: 'cold-forges',
       music: 'camp',
       lines: [
         { who: 'narrator', show: 'flame', text: 'A rest day in the village. {flame} sits in a cold forge, warming it up for whoever comes next.' },

@@ -31,6 +31,8 @@ export const THE_FOG: Chapter = {
       // The flame grows wings at the end of the Plateau, whatever the chapter is waiting for.
       id: 'ch5-wings',
       when: { workouts: 50 },
+      // Still on the Plateau: the fog only comes after this.
+      place: 'flat-road',
       lines: [
         { who: 'narrator', show: 'flame', text: 'The Plateau has no hearts left. In the quiet after the last workout, {flame} goes very still.' },
         { who: 'flame', mood: 'scared', text: "...Something's happening. Is something happening? Something is DEFINITELY happening." },
@@ -46,7 +48,7 @@ export const THE_FOG: Chapter = {
       music: 'hollow',
       shots: [{ title: 'Chapter 5: The Fog', seconds: 2.4 }],
       lines: [
-        { who: 'narrator', text: 'The fog rolls in, thick and cold. In the middle of it, a shape you know. Your face, with empty eyes.' },
+        { who: 'narrator', show: 'hollow', text: 'The fog rolls in, thick and cold. In the middle of it, a shape you know. Your face, with empty eyes.' },
         { who: 'hollow', text: '{voice}', needs: 'voice' },
         { who: 'hollow', text: "Remember me? You've been busy. {sessions} sessions. Cute." },
         { who: 'hollow', text: "You've started before. You always stop around here. It gets boring, you get tired, and you get smart about it." },
@@ -200,13 +202,13 @@ export const THE_FOG: Chapter = {
       id: 'ch5-victory',
       when: { beaten: 5 },
       lines: [
-        { who: 'narrator', text: 'The fog begins to thin. Golden footsteps come close, and stop beside you.' },
+        { who: 'narrator', show: 'echo', text: 'The fog begins to thin. Golden footsteps come close, and stop beside you.' },
         { who: 'echo', text: "I said cruel things. I was scared that if you got strong again, you'd forget me." },
         { who: 'you', text: "I won't forget you. You're the reason I knew it was possible." },
         { who: 'echo', text: 'You told me you lost {heart2}. Here. I kept it for you.', needs: 'heart2' },
         { who: 'echo', text: "I'm not your goal. I'm your proof. You did it once. You can do it again." },
         { who: 'narrator', text: 'The Echo turns into light and settles into your armor.' },
-        { who: 'narrator', text: 'The fog thins. The Hollow is still there. Smaller now.' },
+        { who: 'narrator', show: 'hollow', text: 'The fog thins. The Hollow is still there. Smaller now.' },
         { who: 'hollow', text: "You still hear me, don't you?" },
         { who: 'you', text: 'Every day. I just stopped obeying you.' },
         { who: 'hollow', text: "I'll be back." },
