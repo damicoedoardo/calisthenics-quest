@@ -10,6 +10,7 @@ Each goal is written next to its numbers in `src/balance/`. The sheet measures i
 | --- | --- | --- |
 | How often a steady player levels up (6 months) | 2.9 workouts a level | no goal set yet |
 | One item +0 to +5 in about 5 weeks of training | 5.0 weeks | on target |
+| One item +0 to +15 in about a year of training (embers; materials from co-op) | 62 weeks | on target |
 | 100 points a stat gives about +60% damage, +48% attack speed, +75 HP | +62%, +49%, +77 HP | on target |
 | A comeback after 14 days away earns a bonus | +50 XP | on target |
 
@@ -46,22 +47,45 @@ Every hero starts with 6 points. A stat with this many points (no class lean):
 
 ## Forge and embers
 
-A full workout earns 10 embers, a short one 4; a reroll costs 15. Weeks below are at 3 full workouts a week, no melting.
+A full workout earns 10 embers, a short one 4; a reroll costs 15. From +6 a step also asks for co-op materials; from +7 it can miss (each miss +5% on the next try, +10% after training in the last 2 days, a miss slips one plus 50% of the time but never under +6, +10, +13). Embers below count the tries on average, at 3 full workouts a week, no melting.
 
-| Upgrade | Cost | Total so far | Weeks of training |
-| --- | --- | --- | --- |
-| +0 → +1 | 10 | 10 | 0.3 |
-| +1 → +2 | 20 | 30 | 1.0 |
-| +2 → +3 | 30 | 60 | 2.0 |
-| +3 → +4 | 40 | 100 | 3.3 |
-| +4 → +5 | 50 | 150 | 5.0 |
+| Upgrade | Embers a try | Materials a try | Holds | Tries | Embers so far | Weeks of training | Item strength |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| +0 → +1 | 10 | - | 100% | 1.00 | 10 | 0.3 | x1.10 |
+| +1 → +2 | 20 | - | 100% | 1.00 | 30 | 1.0 | x1.20 |
+| +2 → +3 | 30 | - | 100% | 1.00 | 60 | 2.0 | x1.30 |
+| +3 → +4 | 40 | - | 100% | 1.00 | 100 | 3.3 | x1.40 |
+| +4 → +5 | 50 | - | 100% | 1.00 | 150 | 5.0 | x1.50 |
+| +5 → +6 | 55 | 2 ember thread | 100% | 1.00 | 205 | 6.8 | x1.58 |
+| +6 → +7 | 60 | 3 ember thread | 90% | 1.10 | 271 | 9.0 | x1.66 |
+| +7 → +8 | 65 | 5 ember thread | 80% | 1.23 | 351 | 11.7 | x1.74 |
+| +8 → +9 | 70 | 8 ember thread | 70% | 1.39 | 449 | 15.0 | x1.82 |
+| +9 → +10 | 80 | 10 ember thread, 1 bond shard | 60% | 1.59 | 577 | 19.2 | x1.92 |
+| +10 → +11 | 90 | 12 ember thread, 2 bond shard | 50% | 1.86 | 744 | 24.8 | x1.99 |
+| +11 → +12 | 100 | 15 ember thread, 3 bond shard | 45% | 2.02 | 946 | 31.5 | x2.06 |
+| +12 → +13 | 110 | 15 ember thread, 4 bond shard, 1 warden coal | 40% | 2.21 | 1190 | 39.7 | x2.16 |
+| +13 → +14 | 125 | 20 ember thread, 5 bond shard, 2 warden coal | 35% | 2.44 | 1494 | 49.8 | x2.24 |
+| +14 → +15 | 140 | 25 ember thread, 6 bond shard, 3 warden coal, 1 heartstone | 30% | 2.71 | 1873 | 62.4 | x2.39 |
 
-| Melt down | At +0 | At +5 |
+| Melt down | At +0 | At +15 |
 | --- | --- | --- |
-| common | 3 | 11 |
-| magic | 6 | 21 |
-| rare | 12 | 42 |
-| legendary | 30 | 105 |
+| common | 3 | 26 |
+| magic | 6 | 51 |
+| rare | 12 | 102 |
+| legendary | 30 | 255 |
+
+Co-op materials: the chance each source drops one, for each hero in a party (solo runs drop none):
+
+| Source | Ember thread | Bond shard | Warden coal | Heartstone |
+| --- | --- | --- | --- | --- |
+| plain | 0.0% | - | - | - |
+| elite | 0.6% | 0.1% | - | - |
+| chest | 5.0% | 0.8% | - | - |
+| warden | 50.0% | 10.0% | 8.0% | - |
+| boss | 50.0% | 10.0% | 8.0% | - |
+| clear | - | - | - | 3.3% |
+
+Found by one hero in a co-op run of zone 1 (two bots, 3 runs, on average): 2.7 ember thread, 0.7 bond shard.
 
 ## Weapons
 

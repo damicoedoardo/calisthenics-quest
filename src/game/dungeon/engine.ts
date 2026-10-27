@@ -1,4 +1,5 @@
 import type { ClassId } from '@/lib/gear';
+import { MAT_DROPS, MAT_IDS, type MatId } from '@/balance';
 import { rollUpgrades, xpToNext, type Edge, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import {
   ATTACK,
@@ -283,7 +284,9 @@ export type GameEvent =
   | { type: 'say'; text: string }
   /** Something to wear: dropped on the floor, or picked up into the bag. */
   | { type: 'drop'; x: number; y: number; item: Item }
-  | { type: 'loot'; item: Item };
+  | { type: 'loot'; item: Item }
+  /** You found co-op materials for Mira's forge. */
+  | { type: 'mat'; mat: MatId; n: number; x: number; y: number };
 
 /** Why a run starts with a free skill: trained lately, rested, or a workout since the boss lost its hearts. */
 export type FreePick = 'fresh' | 'rested' | 'past';
@@ -344,6 +347,8 @@ export interface RunEnd {
   gear: { worn: Partial<Record<ItemSlot, Item>>; bag: Item[] };
   /** How many ledges of the Summit's climb you went up, or null off the Summit. */
   height: number | null;
+  /** Co-op materials you found (only in a party; kept however the run ends). */
+  mats?: Partial<Record<MatId, number>>;
 }
 
 /** One hero in a run: where they stand, their body, their growth and what they carry. Solo play is
@@ -403,6 +408,8 @@ export interface Hero {
   pendingLevels: number;
   /** A pick waiting for the player: the run holds still until it's made. */
   offer: { choices: UpgradeId[]; free: FreePick | null } | null;
+  /** Co-op materials found so far (a party only). */
+  mats: Partial<Record<MatId, number>>;
 }
 
 export interface Run {
@@ -566,6 +573,7 @@ function newHero(hs: HeroSetup, id: number): Hero {
     free: [...(power.fresh ? (['fresh'] as const) : []), ...(power.rested ? (['rested'] as const) : []), ...Array<FreePick>(hs.edge?.picks ?? 0).fill('past')],
     pendingLevels: 0,
     offer: null,
+    mats: {},
   };
 }
 
@@ -1924,6 +1932,7 @@ function kill(run: Run, f: Foe, by: Hero) {
   // Now and then a monster drops something to wear: elites and golems far more often.
   if (f !== run.boss && f !== run.warden && f.def.xp > 0 && run.rnd() < (f.elite ? DROPS.elite : f.kind === 'golem' ? DROPS.golem : DROPS.plain)) dropEach(run, f.x, f.y, f.elite || f.kind === 'golem' ? DROP_LUCK.elite : 0);
   if (f === run.warden) dropEach(run, f.x, f.y + 30, DROP_LUCK.midBoss);
+  if (f.def.xp > 0 || f === run.boss || f === run.warden) findMats(run, f === run.boss ? 'boss' : f === run.warden ? 'warden' : f.elite || f.kind === 'golem' ? 'elite' : 'plain', f.x, f.y);
   if (f.kind === 'splitter')
     for (let i = 0; i < 3; i++) {
       const a = (i / 3) * Math.PI * 2 + run.rnd();
@@ -2257,6 +2266,7 @@ function openChest(run: Run, h: Hero) {
   }
   emit(run, { type: 'chest', x: c.x, y: c.y });
   if (run.rnd() < DROPS.chest) dropEach(run, c.x, c.y + 34, DROP_LUCK.chest);
+  findMats(run, 'chest', c.x, c.y);
   h.relicOffer = choices;
   if (run.setup.autoPick) pickRelic(run, RELIC_BOT.find((id) => choices.includes(id)) ?? choices[0], h);
 }
@@ -2330,6 +2340,20 @@ function dropItem(run: Run, x: number, y: number, luck: number, to: Hero) {
 /** A drop is personal: each standing hero gets their own item, for their class, a little apart. */
 function dropEach(run: Run, x: number, y: number, luck: number) {
   standing(run).forEach((h, i) => dropItem(run, x + i * 26, y, luck, h));
+}
+
+/** Co-op materials: in a party, each standing hero rolls their own from `from`'s odds. A solo run
+    rolls nothing (so solo runs play exactly as before). */
+function findMats(run: Run, from: keyof typeof MAT_DROPS, x: number, y: number) {
+  if (run.party.length < 2) return;
+  const odds: Partial<Record<MatId, number>> = MAT_DROPS[from];
+  for (const h of standing(run))
+    for (const mat of MAT_IDS) {
+      const p = odds[mat];
+      if (!p || run.rnd() >= p) continue;
+      h.mats[mat] = (h.mats[mat] ?? 0) + 1;
+      if (h === run.hero) emit(run, { type: 'mat', mat, n: 1, x, y });
+    }
 }
 
 /** Loot a hero can see and take: theirs, or anyone's when there's no `for`. */
@@ -2431,6 +2455,8 @@ function end(run: Run, won: boolean, why: RunEnd['why']) {
   if (run.over) return;
   // On the Summit there's no top: however the climb ends, a ledge climbed is a win.
   if (run.climb !== null) won = run.climb >= 1;
+  // A co-op win with nobody down: a chance of the rarest material.
+  if (won && run.party.length > 1 && standing(run).length === run.party.length) findMats(run, 'clear', run.hero.x, run.hero.y);
   run.over = {
     won,
     seconds: Math.floor(run.t),
@@ -2444,6 +2470,7 @@ function end(run: Run, won: boolean, why: RunEnd['why']) {
     why,
     height: run.climb,
     gear: { worn: Object.fromEntries(Object.entries(run.hero.gear.worn).filter(([, it]) => it && !it.starter)) as Partial<Record<ItemSlot, Item>>, bag: [...run.hero.gear.bag] },
+    ...(Object.keys(run.hero.mats).length ? { mats: { ...run.hero.mats } } : {}),
   };
   if (!won) run.hero.hp = 0;
 }

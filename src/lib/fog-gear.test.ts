@@ -89,7 +89,7 @@ describe('Fog gear between runs', () => {
     expect(stale.held).toBeUndefined();
     expect(stale.cold).toBe(sword);
     expect(stale.lost).toEqual([sword]);
-    expect(atRisk(initialState(), { worn: { armor: kit }, bag: [] }, now)).toEqual({ held: undefined, cold: undefined, lost: [] });
+    expect(atRisk(initialState(), { worn: { armor: kit }, bag: [] }, now)).toEqual({ held: undefined, cold: undefined, lost: [], slip: [] });
   });
 
   it('what the full vault leaves behind, Mira melts into embers', () => {

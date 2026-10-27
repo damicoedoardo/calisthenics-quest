@@ -21,13 +21,14 @@ the workout planner (the LLM key must live on a server).
 | `backend/app/saves.py` | Where saves are kept: `PgStore` (Postgres) and `MemoryStore` (tests), same rules |
 | `backend/app/routes/save.py` | `GET`, `PUT`, `DELETE /save` |
 | `backend/app/friends.py`, `routes/friends.py` | Friend cards and friendships: `PUT /me`, `/friends` ([friends.md](friends.md)); creates its tables on start |
+| `backend/app/gifts.py`, `routes/gifts.py` | Forge materials friends give each other: `POST /gifts`, `GET /gifts`, `POST /gifts/claim` ([friends.md](friends.md)); creates its table on start |
 | `backend/db/init.sql` | The schema, run by Postgres on first boot |
 | `backend/tests/` | pytest: the save rules and the token check, no database needed |
 
 ## Login
 
 Supabase does the login (its own `forma` project, not minlit's) and signs a token; the api only
-checks it, with Supabase's public keys (JWKS), and never issues tokens. Every `/save`, `/me` and `/friends` route needs
+checks it, with Supabase's public keys (JWKS), and never issues tokens. Every `/save`, `/me`, `/friends` and `/gifts` route needs
 `Authorization: Bearer <token>`; the player is the token's `sub`.
 
 ## The save rules
