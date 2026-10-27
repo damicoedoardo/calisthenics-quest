@@ -54,7 +54,13 @@ export function AfterSession({ result, before, after, onClose }: Props) {
           ))}
         </div>
         <p className="mt-4 text-sm text-slate-300">
-          {hit ? (defeated ? `${before.chapter.enemy} is defeated!` : `Your training hit for ${reps}. One heart down.`) : 'Your reps strike...'}
+          {!hit
+            ? 'Your reps strike...'
+            : defeated
+              ? `${before.chapter.enemy} is defeated!`
+              : before.heartsLeft === 0
+                ? `Your training hit for ${reps}. Your max test on the Hero tab finishes it.`
+                : `Your training hit for ${reps}. One heart down.`}
         </p>
         {hit && <button className="mt-8 rounded-2xl bg-gold-400 px-8 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309]">Claim loot</button>}
       </div>
@@ -81,7 +87,8 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
   );
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-6 backdrop-blur-sm">
+    // Scrolls when the card is taller than a small screen (a level-up and new gear at once).
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-black/80 p-6 backdrop-blur-sm">
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
         {pieces.map((p, i) => (
           <span
@@ -91,7 +98,7 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
           />
         ))}
       </div>
-      <div className="w-full max-w-sm animate-pop rounded-3xl bg-ink-800 p-6 text-center pixel-border">
+      <div className="m-auto w-full max-w-sm animate-pop rounded-3xl bg-ink-800 p-6 text-center pixel-border">
         <p className="font-pixel text-sm text-gold-300">{session.kind === 'full' ? 'Quest complete!' : 'Minimum quest!'}</p>
         <ul className="mt-4 space-y-1 text-sm">
           {session.breakdown.map((l, i) => (
