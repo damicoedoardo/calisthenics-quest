@@ -3,7 +3,7 @@
 import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, Dumbbell, Film, Gem, Music, Play, Sparkles, Swords } from 'lucide-react';
-import { addFakeWorkouts, clearNextZone, skipIntro } from '@/lib/dev';
+import { addFakeWorkouts, clearNextZone, skipDueScenes, skipIntro } from '@/lib/dev';
 import { initialState, type GameState } from '@/lib/game';
 import { ZONES } from '@/lib/fog';
 import { SANDBOX_KEY } from '@/lib/store';
@@ -36,6 +36,8 @@ function veteran(workouts: number, cleared: number): GameState {
     s = withTodayPage(s, day);
   }
   for (let i = 0; i < cleared; i++) s = clearNextZone(s);
+  // Nothing waiting to play over the screen being opened (a rest-day scene, say).
+  for (let i = 0; i < 5; i++) s = skipDueScenes(s, new Date());
   return s;
 }
 

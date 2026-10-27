@@ -56,7 +56,7 @@ export function fastStory(): boolean {
 }
 
 /** Story scenes that are due right now, marked as seen so they don't play. */
-function skipDueScenes(state: GameState, now: Date): GameState {
+export function skipDueScenes(state: GameState, now: Date): GameState {
   const due = pendingScenes(state, now).map((s) => s.id);
   return due.length ? { ...state, seenScenes: [...state.seenScenes, ...due] } : state;
 }
