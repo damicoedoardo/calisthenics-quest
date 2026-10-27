@@ -48,6 +48,32 @@ pieces of screen state, and decides what is on screen:
 | `ServiceWorker` | Registers the offline worker, see [pwa.md](pwa.md) |
 | `useModal` | Focus trap and inert background for overlays inside a tab |
 
+## Held sideways (landscape phones)
+
+Every full-screen overlay works with the phone held sideways too (a phone is about 844×390 CSS px
+then). Portrait keeps its own classes; the sideways layout is added on top with the Tailwind
+variant `[@media(orientation:landscape)_and_(max-height:600px)]:` (short and wide screens only, so
+tablets and desktops keep the portrait layout). The usual trick: the portrait column's groups sit
+in wrappers that are `contents` in portrait (no change to the layout) and become the two columns
+sideways. `land-safe-x` (in its own block at the end of `src/app/globals.css`) keeps an overlay's
+edges clear of the notch, which is on the left or the right then.
+
+| Overlay | Sideways |
+|---|---|
+| `Workout` | The exercise (name, cue, demo) on the left, its sets, reps and the reps-in-reserve buttons on the right; the big demo stands beside its name and cue; the rest timer has the flame beside the clock |
+| `AfterSession` | The battle as in portrait, a bit tighter; the loot card is wide, what you earned on the left, the level, gear, the flame's word and Continue on the right |
+| `Dialogue` | Whoever is on screen on the left, the words beside them; narration with nothing to show stays centered |
+| `ScenePlayer` | The question card puts the question beside its answers; naming the flame puts the flame beside the name box |
+| `Prologue` | Title and boy or girl side by side; the voice pick with the Hollow on the left and the answers in two columns; the letter (two columns of prompts), the gym or home pick and the look editor with who speaks and the button on the left |
+| `FirstFight`, `RiseUp`, `SitByFire` | The figures on the left, the words and the button on the right |
+| `ClassPicker` | The hero you'd be on the left, the four classes and the button on the right |
+| `BookOfDays`, `ExerciseLibrary` | Wider, the pages and the list in two columns; the library's search and filters on one line, an exercise's demos and facts beside its how-to |
+| `DevPanel` | A wider sheet with its sections in two columns |
+| `Opening` | Fits as it is; the sound toggle keeps clear of the notch |
+
+To change one, look for the variant in that component; try it at 844×390 (the `/lab/night` jumps
+and `/lab/story?play=<scene id>&back` reach most of them) and check portrait at 390×844 is unchanged.
+
 ## Rules for components
 
 - No rules and no art in components: call `src/lib/` and `src/story/`, draw with `<Sprite>`.
@@ -55,3 +81,5 @@ pieces of screen state, and decides what is on screen:
 - Icons are `lucide-react` or the pixel icons in `src/sprites/characters/icons.ts`.
 - Colors and fonts come from `tailwind.config.ts` (`ink`, `gold`, Geist, Press Start 2P for pixel text).
 - Respect `prefers-reduced-motion` (see `src/game/calm.ts` for the Fog).
+- A full-screen overlay works held sideways too: add the landscape variant, never change the
+  portrait classes (see above).

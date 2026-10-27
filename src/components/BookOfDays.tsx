@@ -45,7 +45,8 @@ export function BookOfDays({ state, onClose }: { state: GameState; onClose: () =
 
   return (
     <div ref={box} role="dialog" aria-modal="true" aria-label="Book of Days" className="fixed inset-0 z-50 !mt-0 overflow-y-auto bg-ink-950 outline-none">
-      <div className="safe-top safe-bottom mx-auto max-w-md space-y-4 px-4 pb-16">
+      {/* Held sideways: wider, with the pages in two columns. */}
+      <div className="safe-top safe-bottom land-safe-x mx-auto max-w-md space-y-4 px-4 pb-16 [@media(orientation:landscape)_and_(max-height:600px)]:max-w-4xl [@media(orientation:landscape)_and_(max-height:600px)]:pb-8">
         <header className="flex items-center gap-3 pt-2">
           <button onClick={onClose} aria-label="Back" className="rounded-lg bg-ink-800 p-2 text-slate-300">
             <ArrowLeft size={16} />
@@ -89,7 +90,7 @@ export function BookOfDays({ state, onClose }: { state: GameState; onClose: () =
 
         {pages.length === 0 && <p className="py-8 text-center text-sm text-slate-500">{kept ? 'Tap Keep under a quote on Today to keep it here.' : 'Your first page is today.'}</p>}
 
-        <ol className="space-y-3">
+        <ol className="space-y-3 [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:600px)]:gap-3 [@media(orientation:landscape)_and_(max-height:600px)]:space-y-0">
           {pages.map((p) => (
             <li key={p.day} className="rounded-2xl bg-ink-900 p-4 ring-1 ring-ink-700">
               <div className="flex items-baseline justify-between">

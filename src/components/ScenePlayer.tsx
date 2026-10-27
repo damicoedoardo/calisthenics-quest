@@ -96,14 +96,15 @@ function AskCard({
     <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-ink-950">
       <PlaceBackdrop id={place} className="absolute inset-0 opacity-40" />
       <div className="absolute inset-0 bg-gradient-to-t from-ink-950 via-ink-950/80 to-ink-950/40" />
-      <div className="safe-top safe-bottom relative mx-auto flex w-full max-w-md flex-1 flex-col justify-end px-4 pb-8">
+      {/* Held sideways: the flame beside its name box, or the question beside its answers. */}
+      <div className="safe-top safe-bottom land-safe-x relative mx-auto flex w-full max-w-md flex-1 flex-col justify-end px-4 pb-8 [@media(orientation:landscape)_and_(max-height:600px)]:min-h-0 [@media(orientation:landscape)_and_(max-height:600px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:600px)]:flex-row [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:justify-center [@media(orientation:landscape)_and_(max-height:600px)]:gap-10 [@media(orientation:landscape)_and_(max-height:600px)]:overflow-y-auto [@media(orientation:landscape)_and_(max-height:600px)]:pb-3">
         {/* You name a friend you can see. */}
         {ask.kind === 'name' && (
-          <div className="mb-6 flex animate-pop justify-center">
+          <div className="mb-6 flex animate-pop justify-center [@media(orientation:landscape)_and_(max-height:600px)]:mb-0">
             <Ember size={150} stage={stage} mood="soft" />
           </div>
         )}
-        <div className="animate-fadein rounded-2xl bg-ink-800/95 p-5 pixel-border">
+        <div className={`animate-fadein rounded-2xl bg-ink-800/95 p-5 pixel-border ${ask.kind === 'name' ? '[@media(orientation:landscape)_and_(max-height:600px)]:w-full [@media(orientation:landscape)_and_(max-height:600px)]:max-w-sm' : '[@media(orientation:landscape)_and_(max-height:600px)]:my-auto [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:w-full [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:gap-6'}`}>
           <p className="text-center font-pixel text-[11px] leading-relaxed text-gold-300">{ask.kind === 'name' ? ask.prompt : `"${ask.prompt}"`}</p>
 
           {ask.kind === 'name' ? (
@@ -131,12 +132,12 @@ function AskCard({
               </button>
             </form>
           ) : (
-            <div className="mt-5 space-y-2">
+            <div className="mt-5 space-y-2 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0">
               {ask.choices.map((c) => (
                 <button
                   key={c.label}
                   onClick={() => onAnswer({ answer: { id: ask.id, value: c.value } }, c.after ?? ask.after)}
-                  className="w-full rounded-xl bg-ink-900 px-4 py-3 text-left text-sm text-slate-100 ring-1 ring-gold-400/25 active:scale-[.98]"
+                  className="w-full rounded-xl bg-ink-900 px-4 py-3 text-left text-sm text-slate-100 ring-1 ring-gold-400/25 active:scale-[.98] [@media(orientation:landscape)_and_(max-height:600px)]:py-2.5"
                 >
                   {c.label}
                 </button>
