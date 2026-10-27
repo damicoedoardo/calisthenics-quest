@@ -29,13 +29,27 @@ pieces of screen state, and decides what is on screen:
 The tabs work both ways up. Upright, everything is one `max-w-md` column with the bottom tab bar.
 On a phone held sideways (the `land:` variant in `tailwind.config.ts`: landscape and at most
 600px tall; tablets and desktops keep the upright layout) `page.tsx` turns the tab bar into a rail
-down the left with the hero at its top, shrinks the header to one line (FORMA, level, XP bar),
-and lets the column take the full width, clear of the notch (`env(safe-area-inset-left/right)`).
-Each tab then splits into two columns of independent cards: Today (story and flame | check-in,
-quest, Start), Train (library, kit, embers | the plan, placed by grid so the upright order stays),
-Play (the Fog and the worlds | gear and power), Hero (hero and stat points | the rest); the look
-editor puts its preview beside the choices. Upright must look exactly as before: add sideways
-changes only as `land:` classes.
+down the left with the hero at its top (the open tab on a lit tile), shrinks the header to one
+line (FORMA, level, XP bar; the sandbox note becomes a small tag at its end), keeps clear of the
+notch (`env(safe-area-inset-left/right)`), and makes the tab exactly fill the rest of the screen:
+`main` is the one thing that scrolls, and only if a screen can't fit.
+
+Each tab then lays out a screen of its own, built for the width rather than the upright cards split
+in two: the tab asks `useLand()` (`src/components/useLand.ts`, the same media query) and returns
+its sideways arrangement, reusing the same pieces (most take a `land` prop that only changes
+classes). Panels share the height, and what may be long scrolls inside its own panel.
+
+| Tab | Sideways |
+|---|---|
+| Today | A strip along the top (the chapter's enemy and hearts, the flame and its week, a rest day, the quote with Keep and the Book of Days; it scrolls sideways when it can't fit), and under it the quest board: the exercises side by side as tiles with their still, and at the end of the row the check-in and a big Start, always in sight |
+| Train | A side column (the library button, gym or home, the coming-soon note) beside the plan: Day A and Day B as two equal panels, the embers line under them |
+| Play | A bar with you, your flame, the Fog's line and three views: Worlds (the picker fills the screen, each world a wide card with its picture on the left and its words and Play on the right; Play stays put while the words scroll), Gear (`FogGearCard` as three columns: worn with the fall line, the vault, the tapped item and Mira's forge, or Mira waiting) and Power (the six powers two by three, warmed up and rested under them). A dot on Power when points wait |
+| Hero | You on a stage (class, hero, gear, change class or look) beside one panel with tabs: Champion (`StatPoints`, the four stats two by two; a dot when points wait), Log (the three counts, the letter, the quest log), Keepsakes, Settings |
+
+Upright must look exactly as before: the upright branch keeps its markup, and sideways changes are
+`useLand` branches or `land:` classes only. The look editor puts its preview beside the choices.
+Try it at 844×390 and 740×360 with the `/lab/night` jumps (`?sandbox&tab=…`; "Loot: your gear and
+the vault" opens a geared Play tab) and check 390×844 is unchanged.
 
 ## Components (`src/components/`)
 
@@ -64,6 +78,7 @@ changes only as `land:` classes.
 | `DevPanel` | Developer mode's wrench and panel, see [dev-mode-and-labs.md](dev-mode-and-labs.md) |
 | `ServiceWorker` | Registers the offline worker, see [pwa.md](pwa.md) |
 | `useModal` | Focus trap and inert background for overlays inside a tab |
+| `useLand` | True while the phone is held sideways (the `land:` query); the tabs use it to pick their sideways screen |
 
 ## Held sideways: the overlays
 

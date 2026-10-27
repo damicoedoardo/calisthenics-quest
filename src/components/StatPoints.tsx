@@ -11,7 +11,8 @@ import { Sprite } from './Sprite';
 
 export const STAT_ICON = { health: 'vital', damage: 'power', reach: 'magnet', speed: 'haste' } as const;
 
-export function StatPoints({ state, update }: { state: GameState; update: (fn: (s: GameState) => GameState) => void }) {
+/** `land`: the Hero tab held sideways, where the card is the first tab of a panel and fills it. */
+export function StatPoints({ state, update, land = false }: { state: GameState; update: (fn: (s: GameState) => GameState) => void; land?: boolean }) {
   const [why, setWhy] = useState(false);
   const build = buildOf(state);
   const free = pointsFree(state);
@@ -20,50 +21,60 @@ export function StatPoints({ state, update }: { state: GameState; update: (fn: (
   const spent = Object.values(build).some((n) => (n ?? 0) > 0);
 
   return (
-    <section className="rounded-2xl bg-ink-800 p-4">
-      <div className="flex items-center justify-between">
+    <section className={land ? 'flex h-full flex-col' : 'rounded-2xl bg-ink-800 p-4'}>
+      <div className="flex items-center justify-between gap-2">
         <h2 className="font-pixel text-[10px] text-gold-300">Champion</h2>
         <p className={`text-xs ${free ? 'font-semibold text-gold-300' : 'text-slate-400'}`}>
           {free ? `${free} point${free === 1 ? '' : 's'} to spend` : 'Every workout earns points'}
         </p>
       </div>
-      <p className="mt-1 text-xs text-slate-400">Your training makes your champion stronger in the Fog. Put your points where you like; you can take them back any time.</p>
+      <p className={`mt-1 text-slate-400 ${land ? 'text-[11px] leading-snug' : 'text-xs'}`}>Your training makes your champion stronger in the Fog. Put your points where you like; you can take them back any time.</p>
 
-      <ul className="mt-3 space-y-2">
+      {/* Sideways the four stats are four tiles, two by two, that share the panel's height. */}
+      <ul className={land ? 'mt-3 grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-2' : 'mt-3 space-y-2'}>
         {STATS.map((st) => {
           const n = build[st.id] ?? 0;
+          const minus = (
+            <button
+              onClick={() => update((s) => refundPoint(s, st.id))}
+              disabled={n === 0}
+              aria-label={`Take a point out of ${st.name}`}
+              className={`grid place-items-center rounded-lg bg-ink-700 active:scale-95 disabled:opacity-30 ${land ? 'h-8 w-8 shrink-0' : 'h-9 w-9'}`}
+            >
+              <Minus size={14} />
+            </button>
+          );
+          const plus = (
+            <button
+              onClick={() => update((s) => spendPoint(s, st.id))}
+              disabled={free === 0}
+              aria-label={`Put a point into ${st.name} (${nextPoint(build, st.id, state.profile.classId)})`}
+              className={`grid place-items-center rounded-lg bg-gold-400 text-ink-950 active:scale-95 disabled:bg-ink-700 disabled:text-slate-500 ${land ? 'h-8 w-8 shrink-0' : 'h-9 w-9'}`}
+            >
+              <Plus size={14} />
+            </button>
+          );
+          const name = (
+            <p className="flex items-baseline gap-2 text-sm font-semibold">
+              {st.name}
+              <span className="font-mono text-xs font-normal text-slate-400">{n}</span>
+            </p>
+          );
           return (
-            <li key={st.id} className="flex items-center gap-3 rounded-xl bg-ink-900 p-2.5">
+            <li key={st.id} className={`flex items-center rounded-xl bg-ink-900 ${land ? 'gap-2 px-2.5 py-2' : 'gap-3 p-2.5'}`}>
               <Sprite id="skillIcon" opts={{ name: STAT_ICON[st.id] }} size={28} label="" className="shrink-0" />
               <div className="min-w-0 flex-1">
-                <p className="flex items-baseline gap-2 text-sm font-semibold">
-                  {st.name}
-                  <span className="font-mono text-xs font-normal text-slate-400">{n}</span>
-                </p>
+                {name}
                 <p className="text-[11px] text-slate-400">{st.show(power[st.id])}</p>
               </div>
-              <button
-                onClick={() => update((s) => refundPoint(s, st.id))}
-                disabled={n === 0}
-                aria-label={`Take a point out of ${st.name}`}
-                className="grid h-9 w-9 place-items-center rounded-lg bg-ink-700 active:scale-95 disabled:opacity-30"
-              >
-                <Minus size={14} />
-              </button>
-              <button
-                onClick={() => update((s) => spendPoint(s, st.id))}
-                disabled={free === 0}
-                aria-label={`Put a point into ${st.name} (${nextPoint(build, st.id, state.profile.classId)})`}
-                className="grid h-9 w-9 place-items-center rounded-lg bg-gold-400 text-ink-950 active:scale-95 disabled:bg-ink-700 disabled:text-slate-500"
-              >
-                <Plus size={14} />
-              </button>
+              {minus}
+              {plus}
             </li>
           );
         })}
       </ul>
 
-      <div className="mt-3 flex items-center justify-between text-xs">
+      <div className={`flex items-center justify-between text-xs ${land ? 'mt-2' : 'mt-3'}`}>
         <button onClick={() => setWhy(!why)} className="text-slate-400 underline-offset-2 hover:underline">
           {earned.total} points earned {why ? '' : '(how?)'}
         </button>
