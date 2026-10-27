@@ -86,7 +86,7 @@ function recap(run: Run): RunEnd {
   const over = run.over!,
     wf = wardenFloor(run.layout);
   const warden = wf < 0 ? null : over.won || run.floor > wf || (run.floor === wf && !!run.warden && !run.warden.alive);
-  return { ...over, relics: { ...run.relics }, warden };
+  return { ...over, relics: { ...run.hero.relics }, warden };
 }
 
 /** Most particles and drawn effects alive at once. Measured fights peak far below this (bits 38,
@@ -538,7 +538,7 @@ class DungeonScene extends Phaser.Scene {
       // A tap on a monster aims at it (again lets go); anywhere else, the move stick.
       const f = this.foeAt(p.worldX, p.worldY);
       if (f) {
-        this.wantLock = this.run.lock === f.id ? null : f.id;
+        this.wantLock = this.run.hero.lock === f.id ? null : f.id;
         return;
       }
       if (!this.stick) this.stick = { id: p.id, x: p.x, y: p.y, dx: 0, dy: 0 };
@@ -1090,29 +1090,29 @@ class DungeonScene extends Phaser.Scene {
       this.wantLock = undefined;
       stepRun(run, input);
       for (const e of takeEvents(run)) this.react(e);
-      if (run.offer || run.over || run.stairsAsk || this.time.now < this.stopUntil) break;
+      if (run.hero.offer || run.over || run.stairsAsk || this.time.now < this.stopUntil) break;
     }
     if (run.stairsAsk && !this.asked) {
       this.asked = true;
       if (this.bot) this.stairsChoice('deeper');
       else this.bus.stairs();
     }
-    if (run.relicOffer && !this.offered) {
+    if (run.hero.relicOffer && !this.offered) {
       this.offered = true;
       if (this.bot) {
         this.offered = false;
-        this.pickRelic(run.relicOffer[0]);
-      } else this.bus.relic(run.relicOffer, { ...run.relics });
+        this.pickRelic(run.hero.relicOffer[0]);
+      } else this.bus.relic(run.hero.relicOffer, { ...run.hero.relics });
     }
-    if (run.offer && !this.offered) {
+    if (run.hero.offer && !this.offered) {
       this.offered = true;
       this.sparks.explode(30, this.hero.x, this.hero.y);
       if (this.bot) {
         this.offered = false;
-        return this.pick(this.botPick(run.offer.choices));
+        return this.pick(this.botPick(run.hero.offer.choices));
       }
       music.sting('levelup');
-      this.bus.levelUp(run.offer.choices, { ...run.ups }, run.offer.free);
+      this.bus.levelUp(run.hero.offer.choices, { ...run.hero.ups }, run.hero.offer.free);
     }
     this.sync();
     this.syncLoot();
@@ -1287,25 +1287,25 @@ class DungeonScene extends Phaser.Scene {
   private hud(): Hud {
     const r = this.run;
     return {
-      hp: Math.max(0, Math.ceil(r.hp)),
-      maxHp: r.maxHp,
-      xp: r.xp,
-      xpNext: xpToNext(r.level),
-      level: r.level,
+      hp: Math.max(0, Math.ceil(r.hero.hp)),
+      maxHp: r.hero.maxHp,
+      xp: r.hero.xp,
+      xpNext: xpToNext(r.hero.level),
+      level: r.hero.level,
       seconds: Math.floor(r.t),
-      kills: r.kills,
+      kills: r.hero.kills,
       boss: this.bossBar(),
       climb: r.climb,
       warden: r.warden?.alive ? { hp: Math.max(0, r.warden.hp), max: r.warden.maxHp, phase: r.warden.phase } : null,
       wardenFloor: wardenFloor(r.layout) >= 0 ? wardenFloor(r.layout) + 1 : null,
       floor: r.floor + 1,
       floors: r.layout.floors,
-      ability: { id: r.ability, ready: Math.min(1, 1 - (r.abilityAt - r.t) / ABILITIES[r.ability].cd) },
-      dodge: Math.min(1, 1 - (r.dodgeAt - r.t) / DODGE.cd),
+      ability: { id: r.hero.ability, ready: Math.min(1, 1 - (r.hero.abilityAt - r.t) / ABILITIES[r.hero.ability].cd) },
+      dodge: Math.min(1, 1 - (r.hero.dodgeAt - r.t) / DODGE.cd),
       cleared: r.cleared,
-      relics: { ...r.relics },
+      relics: { ...r.hero.relics },
       map: this.miniMap(),
-      gear: { worn: { ...r.gear.worn }, bag: [...r.gear.bag] },
+      gear: { worn: { ...r.hero.gear.worn }, bag: [...r.hero.gear.bag] },
     };
   }
 
@@ -1334,7 +1334,7 @@ class DungeonScene extends Phaser.Scene {
       h.setAngle(0);
       if (playing === 'heroWalk') h.play('hero');
     }
-    const blink = r.t < r.hurtUntil || r.t < r.ghostUntil;
+    const blink = r.t < r.hero.hurtUntil || r.t < r.hero.ghostUntil;
     h.setAlpha(blink ? (Math.floor(now / 80) % 2 ? 0.35 : 1) : 1);
 
     // Monsters.
@@ -1454,9 +1454,9 @@ class DungeonScene extends Phaser.Scene {
       if (sight !== null) this.dark.setPosition(hx, hy).setDisplaySize((3000 * sight) / DARK_REF, (3000 * sight) / DARK_REF);
     }
     // Your flame's fires, circling you.
-    while (this.flames.length < r.flames) this.flames.push(this.add.sprite(hx, hy, 'ember').play('ember').setScale(0.42));
+    while (this.flames.length < r.hero.flames) this.flames.push(this.add.sprite(hx, hy, 'ember').play('ember').setScale(0.42));
     this.flames.forEach((fl, i) => {
-      const a = r.orbit + (i / Math.max(1, r.flames)) * Math.PI * 2;
+      const a = r.hero.orbit + (i / Math.max(1, r.hero.flames)) * Math.PI * 2;
       fl.setPosition(...this.P(r.hero.x + Math.cos(a) * FLAME_RING, r.hero.y + Math.sin(a) * FLAME_RING));
       fl.setDepth(fl.y + 1);
     });
@@ -2107,7 +2107,7 @@ class DungeonScene extends Phaser.Scene {
   private drawVignette() {
     const r = this.run,
       cam = this.cameras.main,
-      share = r.hp / r.maxHp,
+      share = r.hero.hp / r.hero.maxHp,
       hit = Math.max(0, 1 - (this.time.now - this.hurtAt) / 240),
       low = !r.over && share < 0.3;
     if (!low && hit <= 0) {
@@ -2144,7 +2144,7 @@ class DungeonScene extends Phaser.Scene {
       return true;
     });
     // The monster you tapped: a ring under it, and corner ticks round it.
-    const lk = r.lock === null ? undefined : r.foes.find((f) => f.id === r.lock && f.alive);
+    const lk = r.hero.lock === null ? undefined : r.foes.find((f) => f.id === r.hero.lock && f.alive);
     if (lk) {
       const [X, Y] = this.P(lk.x, lk.y),
         q = lk.def.r + 10 + 2 * Math.sin(now / 120);
@@ -2202,7 +2202,7 @@ class DungeonScene extends Phaser.Scene {
     // The stairs down: a gold ring pulsing round them.
     if (r.stairs) this.fx.lineStyle(2, 0xfbbf24, 0.25 + 0.3 * ((Math.sin(now / 220) + 1) / 2)).strokeCircle(r.stairs.x, r.stairs.y, 32);
     // The ward, while it's up.
-    if (relic(r, 'charm') && r.t >= r.wardAt) this.fx.lineStyle(2, 0x7dd3fc, 0.35 + 0.15 * Math.sin(now / 180)).strokeCircle(r.hero.x, r.hero.y, 24);
+    if (relic(r, 'charm') && r.t >= r.hero.wardAt) this.fx.lineStyle(2, 0x7dd3fc, 0.35 + 0.15 * Math.sin(now / 180)).strokeCircle(r.hero.x, r.hero.y, 24);
     // A ram's line before it charges.
     for (const f of r.foes) {
       if (!f.alive) continue;
@@ -2374,7 +2374,7 @@ class DungeonScene extends Phaser.Scene {
     if (r.doorOpen) for (const d of r.doors) if (!d.been) edge(...this.P(d.x + INWARD[d.side][0] * ROOM.wall, d.y + INWARD[d.side][1] * ROOM.wall), this.doorColor(d), 14);
     if (r.stairs) edge(...this.P(r.stairs.x, r.stairs.y), 0xfbbf24, 12);
     if (r.chest && !r.chest.opened) edge(...this.P(r.chest.x, r.chest.y), 0xfbbf24, 10);
-    if (r.terrain.shrine && !r.terrain.shrine.used && r.hp < r.maxHp * 0.6) edge(...this.P(r.terrain.shrine.x, r.terrain.shrine.y), 0x86efac, 10);
+    if (r.terrain.shrine && !r.terrain.shrine.used && r.hero.hp < r.hero.maxHp * 0.6) edge(...this.P(r.terrain.shrine.x, r.terrain.shrine.y), 0x86efac, 10);
     if (!this.stick) return;
     const [sx, sy] = this.onPad(this.stick.x, this.stick.y),
       k = 1 / cam.zoom;
