@@ -241,6 +241,8 @@ export interface DailyLine {
   needs?: WordKey;
   /** Only said while this chapter is the current one (a line about the Fog belongs to the Fog). */
   inChapter?: number;
+  /** Only said from this chapter on (a line that names the Knight waits until you've met him). */
+  fromChapter?: number;
 }
 
 /** Words for the road: one a day under the flame's line. */

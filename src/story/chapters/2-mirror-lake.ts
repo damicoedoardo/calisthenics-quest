@@ -174,6 +174,26 @@ export const MIRROR_LAKE: Chapter = {
       ],
     },
     {
+      // Lia's arc, the turn: she dances badly, laughs, and hands you the kindness back.
+      id: 'ch2-lia-dance',
+      when: { workouts: 22, answer: { id: 'lia', is: 'yes' } },
+      lines: [
+        { who: 'narrator', show: 'lia', text: 'Lia is dancing at the edge of the lake. It is not good. She wobbles on a turn, stops, and starts again from the middle.' },
+        { who: 'lia', text: "Don't clap. I mean it. I'm terrible." },
+        { who: 'you', text: "You're moving." },
+        { who: 'lia', text: 'I keep looking for her. The girl who was good at this. Every turn, I check if she is watching.', pause: 1 },
+        { who: 'lia', text: "She isn't. It's only me out here. And I'm... having fun? Badly. But fun." },
+        { who: 'narrator', text: "She laughs at herself. Not the mean kind. The kind you'd give a friend who tripped.", pause: 1.2, film: true },
+        { who: 'lia', text: 'Your turn. Come here.' },
+        { who: 'narrator', show: 'lia', text: 'She pulls you down to the water. Your reflection looks back: tired, a bit rumpled, still here.', shot: { pan: 'down', seconds: 1.6 } },
+        { who: 'lia', text: "Say one kind thing to them. I'll go first.", pause: 0.8 },
+        { who: 'lia', text: 'That one kept showing up. Even on the bad days. I saw.', pace: 'slow' },
+        { who: 'you', text: "...They're trying.", pause: 1.2 },
+        { who: 'lia', text: 'See? Not so hard. Now you have to say it again tomorrow.' },
+        { who: 'flame', mood: 'happy', text: "I'll remind you. I'm extremely good at reminding." },
+      ],
+    },
+    {
       // The grief scene: the hardest moment of the month, given room.
       id: 'ch2-grief',
       when: { workouts: 23, chapter: 2 },

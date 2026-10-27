@@ -6,6 +6,7 @@ import { Book } from './Characters';
 import { dayKey, daysApart } from '@/lib/days';
 import type { DayPage, GameState } from '@/lib/game';
 import { ALL_SCENES, storyWords } from '@/story/engine';
+import { marginNote } from '@/story/daily';
 import type { AnswerId } from '@/story/types';
 
 const HEARTS: Extract<AnswerId, `heart${number}`>[] = ['heart1', 'heart2', 'heart3', 'heart4', 'heart5', 'heart6'];
@@ -91,6 +92,8 @@ export function BookOfDays({ state, onClose }: { state: GameState; onClose: () =
                 <p className="font-pixel text-[10px] text-gold-300">{dateLabel(p.day)}</p>
                 <p className="text-xs text-slate-400">{whatHappened(p, state)}</p>
               </div>
+              {/* A note in your own hand, like the margins the Wanderer shows you on the mountain. */}
+              {marginNote(state, p) && <p className="mt-1 -rotate-1 font-mono text-xs text-amber-200/80">{marginNote(state, p)}</p>}
               <p className="mt-2 text-sm italic text-slate-300">
                 <span className="not-italic text-orange-300">{state.profile.flame ?? 'A spark'}:</span> &ldquo;{p.line}&rdquo;
               </p>
