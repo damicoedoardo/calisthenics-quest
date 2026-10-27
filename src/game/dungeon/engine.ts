@@ -97,7 +97,7 @@ export const ROOM = { w: 420, h: 760, wall: 22, door: 84 };
 
 const WARD_EVERY = 12;
 /** How many of a relic you have. */
-export const relic = (run: Pick<Run, 'relics'>, id: RelicId) => run.relics[id] ?? 0;
+export const relic = (run: Pick<Run, 'hero'>, id: RelicId) => run.hero.relics[id] ?? 0;
 
 export interface Rect {
   x: number;
@@ -334,6 +334,58 @@ export interface RunEnd {
   height: number | null;
 }
 
+/** One hero in a run: where they stand, their body, their growth and what they carry. Solo play is
+    a party of one; all of it is per player so a co-op run can hold several. */
+export interface Hero {
+  /** Where you stand (px), how you're moving, and which way you face. */
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  facing: number;
+  /** The monster you tapped, which your attacks go to first while it's in reach. */
+  lock: number | null;
+  relics: Partial<Record<RelicId, number>>;
+  /** Your power before what you wear, then what you wear and carry. */
+  base: Power;
+  gear: { worn: Partial<Record<ItemSlot, Item>>; bag: Item[] };
+  /** What worn items add that Power has no field for. */
+  gearFx: { move: number; heal: number; cooldown: number };
+  /** Max HP that comes from your power and gear (the rest is relics and skills). */
+  gearMax: number;
+  /** Three items to pick from, from an opened chest: the run holds still until one is taken. */
+  relicOffer: RelicId[] | null;
+  /** The Ward Charm's ward is up from then. */
+  wardAt: number;
+  hp: number;
+  maxHp: number;
+  xp: number;
+  level: number;
+  kills: number;
+  hurtUntil: number;
+  /** Untouchable until then (dodge, charge, blink). */
+  ghostUntil: number;
+  /** A rush in a straight line: the warrior's charge (it hits what it passes) or a dodge (it doesn't). */
+  charge: { until: number; x: number; y: number; hit: Set<Foe>; harm: boolean } | null;
+  /** The dodge is ready again then. */
+  dodgeAt: number;
+  /** The Gale's gust on you (px/s), added to how you walk. */
+  wind: { x: number; y: number };
+  shove: { until: number; x: number; y: number };
+  ability: AbilityId;
+  abilityAt: number;
+  cd: { attack: number; spark: number; nova: number; fireball: number };
+  ups: Partial<Record<UpgradeId, number>>;
+  flames: number;
+  orbit: number;
+  fairyAt: number;
+  mirrorHurtAt: number;
+  free: FreePick[];
+  pendingLevels: number;
+  /** A pick waiting for the player: the run holds still until it's made. */
+  offer: { choices: UpgradeId[]; free: FreePick | null } | null;
+}
+
 export interface Run {
   setup: RunSetup;
   layout: Layout;
@@ -348,8 +400,6 @@ export interface Run {
   map: FloorMap;
   /** This room's size, and what's on its floor. */
   area: { w: number; h: number };
-  /** The monster you tapped, which your attacks go to first while it's in reach. */
-  lock: number | null;
   terrain: Terrain;
   /** Waves still to come in this room. */
   waves: MonsterKind[][];
@@ -360,53 +410,20 @@ export interface Run {
   doors: Door[];
   chest: { x: number; y: number; opened: boolean } | null;
   stairs: { x: number; y: number } | null;
-  relics: Partial<Record<RelicId, number>>;
-  /** Your power before what you wear, what you wear and carry, and what's on the floor here. */
-  base: Power;
-  gear: { worn: Partial<Record<ItemSlot, Item>>; bag: Item[] };
+  /** Items on the floor here. */
   loot: { id: number; x: number; y: number; item: Item; full?: boolean }[];
-  /** What worn items add that Power has no field for. */
-  gearFx: { move: number; heal: number; cooldown: number };
-  /** Max HP that comes from your power and gear (the rest is relics and skills). */
-  gearMax: number;
   /** Standing on the stairs: deeper, or out with what you carry? The run holds still. */
   stairsAsk: boolean;
-  /** Three items to pick from, from an opened chest: the run holds still until one is taken. */
-  relicOffer: RelicId[] | null;
-  /** The Ward Charm's ward is up from then. */
-  wardAt: number;
   /** Monsters already met this run (their first time gets a line). */
   met: Set<MonsterKind>;
   cleared: boolean;
   doorOpen: boolean;
-  hero: { x: number; y: number; vx: number; vy: number; facing: number };
-  hp: number;
-  maxHp: number;
-  xp: number;
-  level: number;
-  kills: number;
-  hurtUntil: number;
-  /** Untouchable until then (dodge, charge, blink). */
-  ghostUntil: number;
-  /** A rush in a straight line: the warrior's charge (it hits what it passes) or a dodge (it doesn't). */
-  charge: { until: number; x: number; y: number; hit: Set<Foe>; harm: boolean } | null;
-  /** The dodge is ready again then. */
-  dodgeAt: number;
+  /** You: where you stand and all that is yours (a party of one; co-op will hold more). */
+  hero: Hero;
   /** The floor-5 mid-boss (the Warden of the Ashes, the Drowned Lantern...) while it stands. */
   warden: Foe | null;
   /** How far you see while the Drowned Lantern burns (px), or null. */
   dim: number | null;
-  /** The Gale's gust on you (px/s), added to how you walk. */
-  wind: { x: number; y: number };
-  shove: { until: number; x: number; y: number };
-  ability: AbilityId;
-  abilityAt: number;
-  cd: { attack: number; spark: number; nova: number; fireball: number };
-  ups: Partial<Record<UpgradeId, number>>;
-  flames: number;
-  orbit: number;
-  fairyAt: number;
-  mirrorHurtAt: number;
   foes: Foe[];
   bullets: Bullet[];
   shots: Shot[];
@@ -422,10 +439,6 @@ export interface Run {
   climb: number | null;
   /** Friends who climb with you on the Summit. */
   allies: Ally[];
-  free: FreePick[];
-  pendingLevels: number;
-  /** A pick waiting for the player: the run holds still until it's made. */
-  offer: { choices: UpgradeId[]; free: FreePick | null } | null;
   events: GameEvent[];
   over: RunEnd | null;
   paused: boolean;
@@ -454,7 +467,6 @@ export function createRun(setup: RunSetup): Run {
     room: -1,
     map: makeFloor(layout, 0, floorSeed(setup.seed, 0)),
     area: { w: ROOM.w, h: ROOM.h },
-    lock: null,
     terrain: { water: [], pillars: [], spikes: [], barrels: [], shrine: null },
     waves: [],
     mines: [],
@@ -463,39 +475,45 @@ export function createRun(setup: RunSetup): Run {
     doors: [],
     chest: null,
     stairs: null,
-    relics: {},
-    base,
-    gear: { worn: { weapon: setup.worn?.weapon ?? kit.weapon, armor: setup.worn?.armor ?? kit.armor, ...(setup.worn?.charm ? { charm: setup.worn.charm } : {}) }, bag: [] },
     loot: [],
-    gearFx: { move: 0, heal: 0, cooldown: 0 },
-    gearMax: 0,
     stairsAsk: false,
-    relicOffer: null,
-    wardAt: 0,
     cleared: false,
     doorOpen: false,
-    hero: { x: ROOM.w / 2, y: ROOM.h - 70, vx: 0, vy: 0, facing: -Math.PI / 2 },
-    hp,
-    maxHp: hp,
-    xp: 0,
-    level: 1,
-    kills: 0,
-    hurtUntil: 0,
-    ghostUntil: 0,
-    charge: null,
-    dodgeAt: 0,
+    hero: {
+      x: ROOM.w / 2, y: ROOM.h - 70, vx: 0, vy: 0, facing: -Math.PI / 2,
+      lock: null,
+      relics: {},
+      base,
+      gear: { worn: { weapon: setup.worn?.weapon ?? kit.weapon, armor: setup.worn?.armor ?? kit.armor, ...(setup.worn?.charm ? { charm: setup.worn.charm } : {}) }, bag: [] },
+      gearFx: { move: 0, heal: 0, cooldown: 0 },
+      gearMax: 0,
+      relicOffer: null,
+      wardAt: 0,
+      hp,
+      maxHp: hp,
+      xp: 0,
+      level: 1,
+      kills: 0,
+      hurtUntil: 0,
+      ghostUntil: 0,
+      charge: null,
+      dodgeAt: 0,
+      wind: { x: 0, y: 0 },
+      shove: { until: 0, x: 0, y: 0 },
+      ability: abilityOf(setup.classId),
+      abilityAt: 0,
+      cd: { attack: 0.5, spark: 2, nova: 3, fireball: 2.5 },
+      ups: {},
+      flames: power.flames,
+      orbit: 0,
+      fairyAt: 0,
+      mirrorHurtAt: 0,
+      free: [...(power.fresh ? (['fresh'] as const) : []), ...(power.rested ? (['rested'] as const) : [])],
+      pendingLevels: 0,
+      offer: null,
+    },
     warden: null,
     dim: null,
-    wind: { x: 0, y: 0 },
-    shove: { until: 0, x: 0, y: 0 },
-    ability: abilityOf(setup.classId),
-    abilityAt: 0,
-    cd: { attack: 0.5, spark: 2, nova: 3, fireball: 2.5 },
-    ups: {},
-    flames: power.flames,
-    orbit: 0,
-    fairyAt: 0,
-    mirrorHurtAt: 0,
     foes: [],
     bullets: [],
     shots: [],
@@ -508,16 +526,13 @@ export function createRun(setup: RunSetup): Run {
     hold: 0,
     climb: null,
     allies: [],
-    free: [...(power.fresh ? (['fresh'] as const) : []), ...(power.rested ? (['rested'] as const) : [])],
-    pendingLevels: 0,
-    offer: null,
     events: [],
     over: null,
     paused: false,
   };
   applyGear(run);
   enterRoom(run, null);
-  if (run.free.length) later(run, 0.7, () => offer(run, run.free.shift()!));
+  if (run.hero.free.length) later(run, 0.7, () => offer(run, run.hero.free.shift()!));
   return run;
 }
 
@@ -783,14 +798,14 @@ function enterRoom(run: Run, from: Side | null) {
   for (const id of Object.values(c.links)) if (id !== undefined) run.map.cells[id].seen = true;
   run.kind = c.kind === 'stairs' || c.kind === 'warden' || c.kind === 'boss' ? 'fight' : c.kind;
   run.area = back?.area ?? roomSize(run);
-  run.lock = null;
+  run.hero.lock = null;
   run.terrain = back?.terrain ?? buildTerrain(run);
   const { w, h } = run.area;
   [run.hero.x, run.hero.y] = from === 'e' ? [w / 2, 70] : from === 'n' ? [70, h / 2] : from === 's' ? [w - 70, h / 2] : [w / 2, h - 70];
-  run.charge = null;
+  run.hero.charge = null;
   run.warden = null;
   run.dim = null;
-  run.wind = { x: 0, y: 0 };
+  run.hero.wind = { x: 0, y: 0 };
   run.waves = [];
   if (c.cleared) {
     run.cleared = run.doorOpen = true;
@@ -958,8 +973,8 @@ function throughDoor(run: Run, d: Door) {
   if (climbing(run)) {
     // Up to the next ledge: the same room of the map, one ledge higher.
     run.climb = (run.climb ?? 0) + 1;
-    const heal = Math.round(run.maxHp * CLIMB.heal);
-    run.hp = Math.min(run.maxHp, run.hp + heal);
+    const heal = Math.round(run.hero.maxHp * CLIMB.heal);
+    run.hero.hp = Math.min(run.hero.maxHp, run.hero.hp + heal);
     emit(run, { type: 'ledge', height: run.climb });
     emit(run, { type: 'heal', x: run.hero.x, y: run.hero.y, n: heal });
     enterRoom(run, 'w');
@@ -981,8 +996,8 @@ function newFloor(run: Run, floor: number, toEnd = false) {
 
 /** Down the stairs, with a breath on the way. */
 function downStairs(run: Run) {
-  const heal = Math.round(run.maxHp * DIALS.stairs);
-  run.hp = Math.min(run.maxHp, run.hp + heal);
+  const heal = Math.round(run.hero.maxHp * DIALS.stairs);
+  run.hero.hp = Math.min(run.hero.maxHp, run.hero.hp + heal);
   emit(run, { type: 'floor', floor: run.floor + 1 });
   emit(run, { type: 'heal', x: run.hero.x, y: run.hero.y, n: heal });
   newFloor(run, run.floor + 1);
@@ -991,7 +1006,7 @@ function downStairs(run: Run) {
 // ---------- the step ----------
 
 export function stepRun(run: Run, input: Input) {
-  if (run.over || run.paused || run.offer || run.relicOffer || run.stairsAsk) return;
+  if (run.over || run.paused || run.hero.offer || run.hero.relicOffer || run.stairsAsk) return;
   run.t += STEP;
   const now = run.t;
   for (let i = 0; i < run.timers.length; i++) {
@@ -999,7 +1014,7 @@ export function stepRun(run: Run, input: Input) {
       const fn = run.timers[i].run;
       run.timers.splice(i--, 1);
       fn();
-      if (run.over || run.offer || run.relicOffer || run.stairsAsk) return;
+      if (run.over || run.hero.offer || run.hero.relicOffer || run.stairsAsk) return;
     }
   }
   if (run.bossAt !== null && now - run.bossAt >= (run.climb !== null ? CLIMB.limit : BOSS_LIMIT)) {
@@ -1007,7 +1022,7 @@ export function stepRun(run: Run, input: Input) {
     return end(run, false, 'limit');
   }
   if (now >= RUN_LIMIT) return end(run, false, 'limit');
-  if (input.lock !== undefined) run.lock = input.lock;
+  if (input.lock !== undefined) run.hero.lock = input.lock;
   if (input.dodge) dodge(run, input);
   moveHero(run, input);
   if (input.ability) useAbility(run, input);
@@ -1036,18 +1051,18 @@ function moveHero(run: Run, input: Input) {
     y /= len;
   }
   if (len > 0.05) h.facing = Math.atan2(y, x);
-  const speed = heroSpeed(run.ups) * (1 + 0.1 * relic(run, 'boots') + run.gearFx.move) * bodyOf(run).move;
-  if (run.charge && now < run.charge.until) {
-    h.vx = run.charge.x;
-    h.vy = run.charge.y;
-  } else if (now < run.shove.until) {
-    h.vx = run.shove.x;
-    h.vy = run.shove.y;
+  const speed = heroSpeed(run.hero.ups) * (1 + 0.1 * relic(run, 'boots') + run.hero.gearFx.move) * bodyOf(run).move;
+  if (run.hero.charge && now < run.hero.charge.until) {
+    h.vx = run.hero.charge.x;
+    h.vy = run.hero.charge.y;
+  } else if (now < run.hero.shove.until) {
+    h.vx = run.hero.shove.x;
+    h.vy = run.hero.shove.y;
   } else {
-    run.charge = null;
+    run.hero.charge = null;
     const wade = run.terrain.water.some((q) => inRect(q, h.x, h.y)) ? Math.min(1, WATER.hero + 0.15 * relic(run, 'boots')) : 1;
-    h.vx = x * speed * wade + run.wind.x;
-    h.vy = y * speed * wade + run.wind.y;
+    h.vx = x * speed * wade + run.hero.wind.x;
+    h.vy = y * speed * wade + run.hero.wind.y;
   }
   h.x += h.vx * STEP;
   h.y += h.vy * STEP;
@@ -1068,13 +1083,13 @@ function moveHero(run: Run, input: Input) {
   // Loot: into the bag, while there's room.
   for (const l of run.loot) {
     if (Math.hypot(l.x - h.x, l.y - h.y) > 20 + HERO_R) continue;
-    if (run.gear.bag.length >= BAG) {
+    if (run.hero.gear.bag.length >= BAG) {
       if (!l.full) emit(run, { type: 'say', text: 'Your bag is full. Wear or drop something to make room.' });
       l.full = true;
       continue;
     }
     run.loot = run.loot.filter((o) => o !== l);
-    run.gear.bag.push(l.item);
+    run.hero.gear.bag.push(l.item);
     emit(run, { type: 'loot', item: l.item });
     if (run.setup.autoPick) botWear(run, l.item);
     break;
@@ -1087,16 +1102,16 @@ function moveHero(run: Run, input: Input) {
   const sh = run.terrain.shrine;
   if (sh && !sh.used && Math.hypot(sh.x - h.x, sh.y - h.y) < SHRINE.r + HERO_R) {
     sh.used = true;
-    const heal = Math.round(run.maxHp * DIALS.shrine);
-    run.hp = Math.min(run.maxHp, run.hp + heal);
+    const heal = Math.round(run.hero.maxHp * DIALS.shrine);
+    run.hero.hp = Math.min(run.hero.maxHp, run.hero.hp + heal);
     emit(run, { type: 'shrine', x: sh.x, y: sh.y });
     emit(run, { type: 'heal', x: h.x, y: h.y, n: heal });
   }
-  if (run.charge?.harm) {
+  if (run.hero.charge?.harm) {
     clearBullets(run, h.x, h.y, HERO_R + 24);
     for (const f of run.foes) {
-      if (!f.alive || run.charge.hit.has(f) || dist(f, h) > f.def.r + HERO_R + 12) continue;
-      run.charge.hit.add(f);
+      if (!f.alive || run.hero.charge.hit.has(f) || dist(f, h) > f.def.r + HERO_R + 12) continue;
+      run.hero.charge.hit.add(f);
       damage(run, f, pow(run, ATTACK.slash.dmg * 2), 220);
     }
   }
@@ -1107,25 +1122,25 @@ function moveHero(run: Run, input: Input) {
 function dodge(run: Run, input: Input) {
   const now = run.t,
     h = run.hero;
-  if (now < run.dodgeAt || (run.charge && now < run.charge.until)) return;
-  run.dodgeAt = now + DODGE.cd;
+  if (now < run.hero.dodgeAt || (run.hero.charge && now < run.hero.charge.until)) return;
+  run.hero.dodgeAt = now + DODGE.cd;
   let dx = input.x,
     dy = input.y;
   if (Math.hypot(dx, dy) < 0.1) [dx, dy] = [Math.cos(h.facing), Math.sin(h.facing)];
   const d = Math.hypot(dx, dy) || 1;
   dx /= d;
   dy /= d;
-  run.charge = { until: now + DODGE.secs, x: dx * DODGE.speed, y: dy * DODGE.speed, hit: new Set(), harm: false };
-  run.ghostUntil = Math.max(run.ghostUntil, now + DODGE.ghost);
+  run.hero.charge = { until: now + DODGE.secs, x: dx * DODGE.speed, y: dy * DODGE.speed, hit: new Set(), harm: false };
+  run.hero.ghostUntil = Math.max(run.hero.ghostUntil, now + DODGE.ghost);
   emit(run, { type: 'dodge', x: h.x, y: h.y, toX: h.x + dx * DODGE.speed * DODGE.secs, toY: h.y + dy * DODGE.speed * DODGE.secs });
 }
 
 function useAbility(run: Run, input: Input) {
   const now = run.t,
     h = run.hero;
-  if (now < run.abilityAt) return;
-  const a = run.ability;
-  run.abilityAt = now + ABILITIES[a].cd / (1 + 0.25 * relic(run, 'hourglass') + run.gearFx.cooldown);
+  if (now < run.hero.abilityAt) return;
+  const a = run.hero.ability;
+  run.hero.abilityAt = now + ABILITIES[a].cd / (1 + 0.25 * relic(run, 'hourglass') + run.hero.gearFx.cooldown);
   let dx = input.x,
     dy = input.y;
   if (Math.hypot(dx, dy) < 0.1) {
@@ -1140,8 +1155,8 @@ function useAbility(run: Run, input: Input) {
   if (a === 'charge') {
     const speed = 620,
       secs = 0.28;
-    run.charge = { until: now + secs, x: dx * speed, y: dy * speed, hit: new Set(), harm: true };
-    run.ghostUntil = now + secs + 0.1;
+    run.hero.charge = { until: now + secs, x: dx * speed, y: dy * speed, hit: new Set(), harm: true };
+    run.hero.ghostUntil = now + secs + 0.1;
     emit(run, { type: 'ability', id: a, x: from.x, y: from.y, toX: from.x + dx * speed * secs, toY: from.y + dy * speed * secs });
   } else if (a === 'volley') {
     const dmg = pow(run, ATTACK.arrow.dmg * 1.5);
@@ -1151,7 +1166,7 @@ function useAbility(run: Run, input: Input) {
     h.x = clamp(h.x + dx * 150, ROOM.wall + HERO_R, run.area.w - ROOM.wall - HERO_R);
     h.y = clamp(h.y + dy * 150, ROOM.wall + HERO_R, run.area.h - ROOM.wall - HERO_R);
     outOfPillars(run, h, HERO_R);
-    run.ghostUntil = now + 0.3;
+    run.hero.ghostUntil = now + 0.3;
     clearBullets(run, h.x, h.y, 90);
     burst(run, h.x, h.y, 80, pow(run, ATTACK.orb.dmg * 1.5), 'ability');
     emit(run, { type: 'ability', id: a, x: from.x, y: from.y, toX: h.x, toY: h.y });
@@ -1160,8 +1175,8 @@ function useAbility(run: Run, input: Input) {
     burst(run, h.x, h.y, 110, pow(run, ATTACK.slash.dmg * 1.6), 'ability', undefined, 300);
     emit(run, { type: 'ability', id: a, x: h.x, y: h.y, toX: h.x, toY: h.y });
   } else {
-    const heal = Math.round(run.maxHp * 0.15);
-    run.hp = Math.min(run.maxHp, run.hp + heal);
+    const heal = Math.round(run.hero.maxHp * 0.15);
+    run.hero.hp = Math.min(run.hero.maxHp, run.hero.hp + heal);
     clearBullets(run, h.x, h.y, 140);
     burst(run, h.x, h.y, 140, pow(run, ATTACK.wave.dmg), 'ability', undefined, 260);
     emit(run, { type: 'ability', id: a, x: h.x, y: h.y, toX: h.x, toY: h.y });
@@ -1455,7 +1470,7 @@ function moveBullets(run: Run) {
         return false;
       }
     if (closer(b.x - h.x, b.y - h.y, b.r + HERO_R - 2)) {
-      if (run.t < run.ghostUntil) return true;
+      if (run.t < run.hero.ghostUntil) return true;
       hurt(run, b.dmg, 'shot');
       return false;
     }
@@ -1567,7 +1582,7 @@ function steerBoss(run: Run, b: Foe) {
       run.bossClock = b.hp <= b.maxHp * 0.5 ? 5.5 : 8;
       emit(run, { type: 'shout', x: b.x, y: b.y });
       emit(run, { type: 'say', text: '"Not good enough!" Keep hitting.' });
-      if (d < 260) run.shove = { until: now + 0.45, x: (dx / d) * 320, y: (dy / d) * 320 };
+      if (d < 260) run.hero.shove = { until: now + 0.45, x: (dx / d) * 320, y: (dy / d) * 320 };
     }
     b.vx = (dx / d) * b.speed;
     b.vy = (dy / d) * b.speed;
@@ -1636,7 +1651,7 @@ function steerBoss(run: Run, b: Foe) {
 
 // ---------- hitting ----------
 
-const pow = (run: Run, base: number) => heroDamage(base, run.setup.power, run.ups) * (1 + DIALS.relic * 0.12 * relic(run, 'whetstone'));
+const pow = (run: Run, base: number) => heroDamage(base, run.setup.power, run.hero.ups) * (1 + DIALS.relic * 0.12 * relic(run, 'whetstone'));
 
 /** The Hollow: nothing you throw at it lands. */
 const untouchable = (run: Run, f: Foe) => f === run.boss && run.setup.zone.boss === 'hollow';
@@ -1719,7 +1734,7 @@ function stepMid(run: Run, f: Foe) {
       return;
     }
     case 'gale': {
-      run.wind = { x: 0, y: 0 };
+      run.hero.wind = { x: 0, y: 0 };
       if (now >= f.act && !f.windUntil) {
         f.windUntil = now + GALE.wind;
         emit(run, { type: 'wind', id: f.id });
@@ -1739,7 +1754,7 @@ function stepMid(run: Run, f: Foe) {
         dx = h.x - f.x,
         dy = h.y - f.y,
         d = Math.hypot(dx, dy) || 1;
-      run.wind = { x: (dx / d) * GALE.push * (hot ? 1.2 : 1), y: (dy / d) * GALE.push * (hot ? 1.2 : 1) };
+      run.hero.wind = { x: (dx / d) * GALE.push * (hot ? 1.2 : 1), y: (dy / d) * GALE.push * (hot ? 1.2 : 1) };
       const { w, h: hh } = run.area,
         edge = Math.min(h.x, w - h.x, h.y, hh - h.y) - ROOM.wall;
       if (edge < GALE.edge) hurt(run, GALE.bite * run.setup.zone.dmg, 'touch');
@@ -1753,13 +1768,13 @@ function midFalls(run: Run) {
   const f = run.warden!;
   emit(run, { type: 'midSay', text: midBoss(run.setup.zone).fall });
   run.dim = null;
-  run.wind = { x: 0, y: 0 };
+  run.hero.wind = { x: 0, y: 0 };
   if (f.kind === 'foreman' || f.kind === 'whisper') for (const o of run.foes) if (o.alive && o !== f) fade(run, o);
 }
 
 /** The monster you tapped, while it stands, can be hit and is in reach. */
 function locked(run: Run, reach: number): Foe | null {
-  const f = run.lock === null ? undefined : run.foes.find((o) => o.id === run.lock);
+  const f = run.hero.lock === null ? undefined : run.foes.find((o) => o.id === run.hero.lock);
   if (!f?.alive || run.t < f.bornUntil || untouchable(run, f) || dist(f, run.hero) > reach) return null;
   return f;
 }
@@ -1823,11 +1838,11 @@ function damage(run: Run, f: Foe, amount: number, knock = 0, fromX = run.hero.x,
 
 function kill(run: Run, f: Foe) {
   f.alive = false;
-  run.kills++;
+  run.hero.kills++;
   emit(run, { type: 'kill', id: f.id, x: f.x, y: f.y, kind: f.kind, elite: f.elite });
   if (f.def.xp > 0) run.gems.push({ id: ++run.ids, x: f.x, y: f.y, value: f.def.xp, pulled: false });
-  const fang = relic(run, 'fang') + run.gearFx.heal;
-  if (fang && f !== run.boss) run.hp = Math.min(run.maxHp, run.hp + fang);
+  const fang = relic(run, 'fang') + run.hero.gearFx.heal;
+  if (fang && f !== run.boss) run.hero.hp = Math.min(run.hero.maxHp, run.hero.hp + fang);
   // Now and then a monster drops something to wear: elites and golems far more often.
   if (f !== run.boss && f !== run.warden && f.def.xp > 0 && run.rnd() < (f.elite ? DROPS.elite : f.kind === 'golem' ? DROPS.golem : DROPS.plain)) dropItem(run, f.x, f.y, f.elite || f.kind === 'golem' ? 0.5 : 0);
   if (f === run.warden) dropItem(run, f.x, f.y + 30, 2);
@@ -1845,7 +1860,7 @@ function kill(run: Run, f: Foe) {
   if (f === run.boss) {
     // The boss's own drop goes straight into your bag: you take it home.
     const it = newItem(run, 2);
-    run.gear.bag.push(it);
+    run.hero.gear.bag.push(it);
     emit(run, { type: 'loot', item: it });
     end(run, true, 'boss');
   }
@@ -1863,12 +1878,12 @@ function nudge(run: Run, f: Foe, knock: number, fromX: number, fromY: number) {
 
 function hitYourself(run: Run, kind: 'image' | 'reflection') {
   if (run.over) return;
-  if (!run.mirrorHurtAt) emit(run, { type: 'say', text: kind === 'image' ? 'Only an image, and it cut you. The real Mirror is the one that shoots.' : 'That was you. Walk past your reflections.' });
-  run.mirrorHurtAt = run.t;
-  const n = Math.max(2, Math.round(run.maxHp * SPLIT[kind]));
-  run.hp -= n;
+  if (!run.hero.mirrorHurtAt) emit(run, { type: 'say', text: kind === 'image' ? 'Only an image, and it cut you. The real Mirror is the one that shoots.' : 'That was you. Walk past your reflections.' });
+  run.hero.mirrorHurtAt = run.t;
+  const n = Math.max(2, Math.round(run.hero.maxHp * SPLIT[kind]));
+  run.hero.hp -= n;
   emit(run, { type: 'hurt', x: run.hero.x, y: run.hero.y, dmg: n, by: kind });
-  if (run.hp <= 0) end(run, false, 'hp');
+  if (run.hero.hp <= 0) end(run, false, 'hp');
 }
 
 function burst(run: Run, x: number, y: number, R: number, dmg: number, color: Extract<GameEvent, { type: 'burst' }>['color'], skip?: Foe, knock = 160) {
@@ -1888,16 +1903,16 @@ function fire(run: Run, kind: 'arrow' | 'orb', angle: number, speed: number, dmg
 
 function attack(run: Run) {
   const h = run.hero;
-  run.cd.attack -= STEP;
-  if (run.cd.attack > 0) return;
+  run.hero.cd.attack -= STEP;
+  if (run.hero.cd.attack > 0) return;
   const kind = attackOf(run.setup.classId),
     reach = kind === 'slash' ? SLASH_REACH : RANGE,
     b = run.boss?.alive && run.setup.zone.boss !== 'mirror' && !untouchable(run, run.boss) && run.t >= run.boss.bornUntil && dist(run.boss, h) <= reach ? run.boss : null,
     target = locked(run, reach) ?? b ?? nearest(run, h.x, h.y, undefined, reach);
   if (!target && kind !== 'wave') return;
   if (kind === 'wave' && !nearest(run, h.x, h.y, undefined, 150)) return;
-  run.cd.attack = attackCooldown(kind, run.setup.power, run.ups) / (1 + DIALS.relic * 0.1 * relic(run, 'quick')) / bodyOf(run).haste;
-  const n = 1 + (run.ups.multi ?? 0),
+  run.hero.cd.attack = attackCooldown(kind, run.setup.power, run.hero.ups) / (1 + DIALS.relic * 0.1 * relic(run, 'quick')) / bodyOf(run).haste;
+  const n = 1 + (run.hero.ups.multi ?? 0),
     dmg = pow(run, ATTACK[kind].dmg),
     angle = target ? Math.atan2(target.y - h.y, target.x - h.x) : h.facing;
   emit(run, { type: 'attack', kind, x: h.x, y: h.y, angle, n, r: kind === 'slash' ? SLASH_REACH - 10 : undefined });
@@ -2002,10 +2017,10 @@ function skills(run: Run) {
     h = run.hero,
     now = run.t;
   if (power.fireballs) {
-    run.cd.fireball -= STEP;
-    if (run.cd.fireball <= 0) {
+    run.hero.cd.fireball -= STEP;
+    if (run.hero.cd.fireball <= 0) {
       const target = nearest(run, h.x, h.y, undefined, RANGE);
-      run.cd.fireball = target ? FIREBALL.every : 0.3;
+      run.hero.cd.fireball = target ? FIREBALL.every : 0.3;
       if (target) {
         const tx = target.x,
           ty = target.y;
@@ -2013,17 +2028,17 @@ function skills(run: Run) {
       }
     }
   }
-  if (power.fairy && run.hp < run.maxHp * FAIRY.below && now >= run.fairyAt) {
-    run.fairyAt = now + FAIRY.restMs / 1000;
-    const heal = Math.round(run.maxHp * FAIRY.heal);
-    run.hp = Math.min(run.maxHp, run.hp + heal);
+  if (power.fairy && run.hero.hp < run.hero.maxHp * FAIRY.below && now >= run.hero.fairyAt) {
+    run.hero.fairyAt = now + FAIRY.restMs / 1000;
+    const heal = Math.round(run.hero.maxHp * FAIRY.heal);
+    run.hero.hp = Math.min(run.hero.maxHp, run.hero.hp + heal);
     emit(run, { type: 'heal', x: h.x, y: h.y, n: heal });
     emit(run, { type: 'say', text: `${power.flameName || 'Your flame'} heals you` });
   }
-  if (run.flames > 0) {
-    run.orbit += STEP * FLAME.spin;
-    for (let i = 0; i < run.flames; i++) {
-      const a = run.orbit + (i / run.flames) * Math.PI * 2,
+  if (run.hero.flames > 0) {
+    run.hero.orbit += STEP * FLAME.spin;
+    for (let i = 0; i < run.hero.flames; i++) {
+      const a = run.hero.orbit + (i / run.hero.flames) * Math.PI * 2,
         fx = h.x + Math.cos(a) * FLAME.orbit,
         fy = h.y + Math.sin(a) * FLAME.orbit;
       for (const f of run.foes) {
@@ -2035,20 +2050,20 @@ function skills(run: Run) {
       clearBullets(run, fx, fy, 12);
     }
   }
-  const spark = run.ups.spark ?? 0;
+  const spark = run.hero.ups.spark ?? 0;
   if (spark > 0) {
-    run.cd.spark -= STEP;
-    if (run.cd.spark <= 0) {
-      run.cd.spark = 2;
+    run.hero.cd.spark -= STEP;
+    if (run.hero.cd.spark <= 0) {
+      run.hero.cd.spark = 2;
       const hit = sparkHit(spark);
       chain(run, hit.jumps, pow(run, hit.dmg));
     }
   }
-  const nova = run.ups.nova ?? 0;
+  const nova = run.hero.ups.nova ?? 0;
   if (nova > 0) {
-    run.cd.nova -= STEP;
-    if (run.cd.nova <= 0) {
-      run.cd.nova = 3;
+    run.hero.cd.nova -= STEP;
+    if (run.hero.cd.nova <= 0) {
+      run.hero.cd.nova = 3;
       const hit = novaHit(nova);
       // The burst of light also wipes the shots inside it.
       clearBullets(run, h.x, h.y, hit.r);
@@ -2092,7 +2107,7 @@ function helpers(run: Run) {
 
 function pullGems(run: Run) {
   const h = run.hero,
-    reach = gemReach(run.setup.power, run.ups);
+    reach = gemReach(run.setup.power, run.hero.ups);
   run.gems = run.gems.filter((g) => {
     const dx = h.x - g.x,
       dy = h.y - g.y,
@@ -2162,56 +2177,56 @@ function openChest(run: Run) {
   }
   emit(run, { type: 'chest', x: c.x, y: c.y });
   if (run.rnd() < DROPS.chest) dropItem(run, c.x, c.y + 34, 1);
-  run.relicOffer = choices;
+  run.hero.relicOffer = choices;
   if (run.setup.autoPick) pickRelic(run, RELIC_BOT.find((id) => choices.includes(id)) ?? choices[0]);
 }
 
 export function pickRelic(run: Run, id: RelicId) {
-  if (!run.relicOffer) return;
-  run.relicOffer = null;
-  run.relics[id] = relic(run, id) + 1;
+  if (!run.hero.relicOffer) return;
+  run.hero.relicOffer = null;
+  run.hero.relics[id] = relic(run, id) + 1;
   if (id === 'heart') {
-    run.maxHp += 20;
-    run.hp = Math.min(run.maxHp, run.hp + 20);
+    run.hero.maxHp += 20;
+    run.hero.hp = Math.min(run.hero.maxHp, run.hero.hp + 20);
   }
-  if (id === 'coal') run.flames++;
+  if (id === 'coal') run.hero.flames++;
   emit(run, { type: 'relic', id });
 }
 
 function gain(run: Run, n: number) {
-  run.xp += n;
-  while (run.xp >= xpToNext(run.level)) {
-    run.xp -= xpToNext(run.level);
-    run.level++;
-    run.pendingLevels++;
+  run.hero.xp += n;
+  while (run.hero.xp >= xpToNext(run.hero.level)) {
+    run.hero.xp -= xpToNext(run.hero.level);
+    run.hero.level++;
+    run.hero.pendingLevels++;
   }
-  if (run.pendingLevels > 0 && !run.offer) offer(run, null);
+  if (run.hero.pendingLevels > 0 && !run.hero.offer) offer(run, null);
 }
 
 function offer(run: Run, free: FreePick | null) {
-  const choices = rollUpgrades(run.ups, run.rnd);
+  const choices = rollUpgrades(run.hero.ups, run.rnd);
   if (choices.length === 0) {
-    run.pendingLevels = 0;
-    run.free = [];
-    run.hp = Math.min(run.maxHp, run.hp + 20);
+    run.hero.pendingLevels = 0;
+    run.hero.free = [];
+    run.hero.hp = Math.min(run.hero.maxHp, run.hero.hp + 20);
     return;
   }
-  if (!free) run.pendingLevels--;
-  run.offer = { choices, free };
+  if (!free) run.hero.pendingLevels--;
+  run.hero.offer = { choices, free };
   if (run.setup.autoPick) pick(run, BOT_PICKS.find((id) => choices.includes(id)) ?? choices[0]);
 }
 
 export function pick(run: Run, id: UpgradeId) {
-  if (!run.offer) return;
-  run.offer = null;
-  run.ups[id] = (run.ups[id] ?? 0) + 1;
+  if (!run.hero.offer) return;
+  run.hero.offer = null;
+  run.hero.ups[id] = (run.hero.ups[id] ?? 0) + 1;
   if (id === 'vital') {
-    run.maxHp += 25;
-    run.hp = run.maxHp;
+    run.hero.maxHp += 25;
+    run.hero.hp = run.hero.maxHp;
   }
-  if (id === 'flame') run.flames = run.setup.power.flames + (run.ups.flame ?? 0) + relic(run, 'coal');
-  if (run.free.length) offer(run, run.free.shift()!);
-  else if (run.pendingLevels > 0) offer(run, null);
+  if (id === 'flame') run.hero.flames = run.setup.power.flames + (run.hero.ups.flame ?? 0) + relic(run, 'coal');
+  if (run.hero.free.length) offer(run, run.hero.free.shift()!);
+  else if (run.hero.pendingLevels > 0) offer(run, null);
 }
 
 // ---------- things to wear ----------
@@ -2232,19 +2247,19 @@ function dropItem(run: Run, x: number, y: number, luck: number, item: Item = new
 
 /** Your power with what you wear: weapon damage, armor HP, charms, and your class's build. */
 function applyGear(run: Run) {
-  const t = itemTotals(ITEM_SLOTS.map((s) => run.gear.worn[s])),
-    b = run.base,
+  const t = itemTotals(ITEM_SLOTS.map((s) => run.hero.gear.worn[s])),
+    b = run.hero.base,
     body = bodyOf(run);
   run.setup = {
     ...run.setup,
     power: { ...b, health: b.health + (t.health ?? 0), armor: b.armor + body.armor + (t.armor ?? 0), damage: (1 + b.damage + (t.damage ?? 0)) * body.dmg - 1, speed: b.speed + (t.speed ?? 0), reach: b.reach + (t.pickup ?? 0) },
   };
-  run.gearFx = { move: t.move ?? 0, heal: t.heal ?? 0, cooldown: t.cooldown ?? 0 };
+  run.hero.gearFx = { move: t.move ?? 0, heal: t.heal ?? 0, cooldown: t.cooldown ?? 0 };
   const max = Math.round(heroMaxHp(run.setup.power) * body.hp),
-    d = max - run.gearMax;
-  run.gearMax = max;
-  run.maxHp += d;
-  run.hp = Math.max(1, Math.min(run.maxHp, run.hp + Math.max(0, d)));
+    d = max - run.hero.gearMax;
+  run.hero.gearMax = max;
+  run.hero.maxHp += d;
+  run.hero.hp = Math.max(1, Math.min(run.hero.maxHp, run.hero.hp + Math.max(0, d)));
 }
 
 /** Points short of what an item asks (0: you can wear it). */
@@ -2252,30 +2267,30 @@ export const shortFor = (run: Pick<Run, 'setup'>, it: Item) => shortOf(it, run.s
 
 /** Wear an item from the bag; what you wore goes into the bag (the starter kit just goes). */
 export function wear(run: Run, id: string) {
-  const it = run.gear.bag.find((o) => o.id === id);
+  const it = run.hero.gear.bag.find((o) => o.id === id);
   if (!it || shortFor(run, it) > 0) return;
-  const old = run.gear.worn[it.slot];
-  run.gear.bag = run.gear.bag.filter((o) => o !== it);
-  if (old && !old.starter) run.gear.bag.push(old);
-  run.gear.worn[it.slot] = it;
+  const old = run.hero.gear.worn[it.slot];
+  run.hero.gear.bag = run.hero.gear.bag.filter((o) => o !== it);
+  if (old && !old.starter) run.hero.gear.bag.push(old);
+  run.hero.gear.worn[it.slot] = it;
   applyGear(run);
 }
 
 /** Take a worn item off into the bag (a weapon or armor slot gets the starter kit back). */
 export function takeOff(run: Run, slot: ItemSlot) {
-  const it = run.gear.worn[slot];
-  if (!it || it.starter || run.gear.bag.length >= BAG) return;
-  run.gear.bag.push(it);
-  if (slot === 'charm') delete run.gear.worn.charm;
-  else run.gear.worn[slot] = starterKit(run.setup.classId)[slot];
+  const it = run.hero.gear.worn[slot];
+  if (!it || it.starter || run.hero.gear.bag.length >= BAG) return;
+  run.hero.gear.bag.push(it);
+  if (slot === 'charm') delete run.hero.gear.worn.charm;
+  else run.hero.gear.worn[slot] = starterKit(run.setup.classId)[slot];
   applyGear(run);
 }
 
 /** Leave an item from the bag on the floor. */
 export function dropFromBag(run: Run, id: string) {
-  const it = run.gear.bag.find((o) => o.id === id);
+  const it = run.hero.gear.bag.find((o) => o.id === id);
   if (!it) return;
-  run.gear.bag = run.gear.bag.filter((o) => o !== it);
+  run.hero.gear.bag = run.hero.gear.bag.filter((o) => o !== it);
   const l = { id: ++run.ids, x: run.hero.x, y: run.hero.y + 36, item: it, full: true };
   run.loot.push(l);
   emit(run, { type: 'drop', x: l.x, y: l.y, item: it });
@@ -2283,9 +2298,9 @@ export function dropFromBag(run: Run, id: string) {
 
 /** The bot wears what it picks up when it can and it's better than what it has. */
 function botWear(run: Run, it: Item) {
-  if (shortFor(run, it) === 0 && itemScore(it) > itemScore(run.gear.worn[it.slot])) wear(run, it.id);
+  if (shortFor(run, it) === 0 && itemScore(it) > itemScore(run.hero.gear.worn[it.slot])) wear(run, it.id);
   // It keeps room in the bag by leaving what it won't wear.
-  if (run.gear.bag.length >= BAG) run.gear.bag.shift();
+  if (run.hero.gear.bag.length >= BAG) run.hero.gear.bag.shift();
 }
 
 /** On the stairs: down to the next floor, out of the Fog with what you carry, or not yet. */
@@ -2303,19 +2318,19 @@ export function takeStairs(run: Run, choice: 'deeper' | 'leave' | 'stay') {
 
 function hurt(run: Run, dmg: number, by: 'shot' | 'touch') {
   const now = run.t;
-  if (run.over || now < run.hurtUntil || now < run.ghostUntil) return;
-  if (relic(run, 'charm') && now >= run.wardAt) {
+  if (run.over || now < run.hero.hurtUntil || now < run.hero.ghostUntil) return;
+  if (relic(run, 'charm') && now >= run.hero.wardAt) {
     // The ward takes it.
-    run.wardAt = now + WARD_EVERY;
-    run.hurtUntil = now + INVULNERABLE;
+    run.hero.wardAt = now + WARD_EVERY;
+    run.hero.hurtUntil = now + INVULNERABLE;
     emit(run, { type: 'ward', x: run.hero.x, y: run.hero.y });
     return;
   }
-  const taken = dmg * (1 - armorOf(run.setup.power, run.ups)) / (1 + DIALS.relic * 0.14 * relic(run, 'iron'));
-  run.hp -= taken;
-  run.hurtUntil = now + INVULNERABLE;
+  const taken = dmg * (1 - armorOf(run.setup.power, run.hero.ups)) / (1 + DIALS.relic * 0.14 * relic(run, 'iron'));
+  run.hero.hp -= taken;
+  run.hero.hurtUntil = now + INVULNERABLE;
   emit(run, { type: 'hurt', x: run.hero.x, y: run.hero.y, dmg: Math.round(taken), by });
-  if (run.hp <= 0) end(run, false, 'hp');
+  if (run.hero.hp <= 0) end(run, false, 'hp');
 }
 
 function end(run: Run, won: boolean, why: RunEnd['why']) {
@@ -2325,18 +2340,18 @@ function end(run: Run, won: boolean, why: RunEnd['why']) {
   run.over = {
     won,
     seconds: Math.floor(run.t),
-    kills: run.kills,
-    level: run.level,
-    hp: won ? Math.max(0, Math.ceil(run.hp)) : 0,
-    maxHp: run.maxHp,
+    kills: run.hero.kills,
+    level: run.hero.level,
+    hp: won ? Math.max(0, Math.ceil(run.hero.hp)) : 0,
+    maxHp: run.hero.maxHp,
     floor: run.floor + 1,
     room: run.room + 1,
     bossAt: run.bossAt === null ? null : Math.floor(run.bossAt),
     why,
     height: run.climb,
-    gear: { worn: Object.fromEntries(Object.entries(run.gear.worn).filter(([, it]) => it && !it.starter)) as Partial<Record<ItemSlot, Item>>, bag: [...run.gear.bag] },
+    gear: { worn: Object.fromEntries(Object.entries(run.hero.gear.worn).filter(([, it]) => it && !it.starter)) as Partial<Record<ItemSlot, Item>>, bag: [...run.hero.gear.bag] },
   };
-  if (!won) run.hp = 0;
+  if (!won) run.hero.hp = 0;
 }
 
 /** Developer mode: end the run as if the boss fell. */
