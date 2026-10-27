@@ -341,18 +341,20 @@ export const SPLIT = { every: 11, first: 6, last: 7, stay: 8, image: 0.08, refle
 export interface MidBoss {
   kind: MidKind;
   name: string;
+  /** How to beat it, in a few words: on the floor's banner and as it rises. */
+  tip: string;
   enter: string;
   hot: string;
   fall: string;
 }
 /** The mid-boss guarding the last room of the middle floor (floor 5 of 10), by zone. */
 export const MIDS: MidBoss[] = [
-  { kind: 'warden', name: 'the Warden of the Ashes', enter: 'Guarding the stairs. Come back tomorrow.', hot: 'Still here? Tomorrow would be easier.', fall: 'The stairs are open. Today.' },
-  { kind: 'lantern', name: 'the Drowned Lantern', enter: 'Better not to look too closely.', hot: "Back then you didn't need a light.", fall: "The light's back. It's only you. Good." },
-  { kind: 'foreman', name: 'the Foreman', enter: 'Redo it. All of it. Properly this time.', hot: "Faster won't fix sloppy.", fall: 'Sloppy, and it still worked.' },
-  { kind: 'sandGolem', name: 'the Sand Golem', enter: "Stand still. Nothing's moving anyway.", hot: 'Cracks? Probably nothing.', fall: 'Sand, all along. It was moving.' },
-  { kind: 'whisper', name: 'the Whisper', enter: 'Shh. Nobody will notice if you stop.', hot: 'Louder now. Still only a whisper.', fall: 'Quiet. You kept walking anyway.' },
-  { kind: 'gale', name: 'the Gale', enter: 'Turn back. The top is too far.', hot: 'Harder. Everyone else turns back here.', fall: 'Just a breeze now. Keep climbing.' },
+  { kind: 'warden', name: 'the Warden of the Ashes', tip: 'Walk around it with its turning arms', enter: 'Guarding the stairs. Come back tomorrow.', hot: 'Still here? Tomorrow would be easier.', fall: 'The stairs are open. Today.' },
+  { kind: 'lantern', name: 'the Drowned Lantern', tip: 'Hit it to bring the light back', enter: 'Better not to look too closely.', hot: "Back then you didn't need a light.", fall: "The light's back. It's only you. Good." },
+  { kind: 'foreman', name: 'the Foreman', tip: 'Keep hitting the Foreman, or it mends its crew', enter: 'Redo it. All of it. Properly this time.', hot: "Faster won't fix sloppy.", fall: 'Sloppy, and it still worked.' },
+  { kind: 'sandGolem', name: 'the Sand Golem', tip: 'It only takes hits while it walks', enter: "Stand still. Nothing's moving anyway.", hot: 'Cracks? Probably nothing.', fall: 'Sand, all along. It was moving.' },
+  { kind: 'whisper', name: 'the Whisper', tip: 'Find the one that glows, and stay on it', enter: 'Shh. Nobody will notice if you stop.', hot: 'Louder now. Still only a whisper.', fall: 'Quiet. You kept walking anyway.' },
+  { kind: 'gale', name: 'the Gale', tip: 'Lean into a gust, and stay off the edges', enter: 'Turn back. The top is too far.', hot: 'Harder. Everyone else turns back here.', fall: 'Just a breeze now. Keep climbing.' },
 ];
 export const midBoss = (zone: Pick<Zone, 'id'>) => MIDS[clamp(zone.id, 0, MIDS.length - 1)];
 /** The Warden of the Ashes, the first zone's mid-boss. */
@@ -775,6 +777,8 @@ export type GameEvent =
   | { type: 'repair'; x: number; y: number }
   | { type: 'swap'; x: number; y: number; toX: number; toY: number }
   | { type: 'gust'; x: number; y: number }
+  /** The mid-boss speaks (in the speech bubble, over it). */
+  | { type: 'midSay'; text: string }
   | { type: 'say'; text: string };
 
 export type FreePick = 'fresh' | 'rested';
@@ -1138,7 +1142,8 @@ function enterRoom(run: Run) {
     run.warden = f;
     startMid(run, f);
     emit(run, { type: 'warden' });
-    emit(run, { type: 'say', text: mid.enter });
+    emit(run, { type: 'midSay', text: mid.enter });
+    emit(run, { type: 'say', text: `${mid.tip}.` });
     return;
   }
   if (run.kind !== 'fight') emit(run, { type: 'say', text: `${ROOM_KINDS[run.kind].name} room. ${ROOM_KINDS[run.kind].text}` });
@@ -1504,7 +1509,7 @@ function moveFoes(run: Run) {
     if (f === run.warden && f.phase === 1 && f.hp <= f.maxHp * 0.5) {
       f.phase = 2;
       emit(run, { type: 'phase', x: f.x, y: f.y });
-      emit(run, { type: 'say', text: midBoss(run.setup.zone).hot });
+      emit(run, { type: 'midSay', text: midBoss(run.setup.zone).hot });
     }
     // Touch (a charging ram hits harder).
     if (f.def.dmg > 0 && dist(f, h) < f.def.r + HERO_R) hurt(run, f.def.dmg * (f !== run.warden && now < f.dashUntil ? 1.5 : 1), 'touch');
@@ -2035,7 +2040,7 @@ function stepMid(run: Run, f: Foe) {
 /** A mid-boss falls: what it brought falls with it. */
 function midFalls(run: Run) {
   const f = run.warden!;
-  emit(run, { type: 'say', text: midBoss(run.setup.zone).fall });
+  emit(run, { type: 'midSay', text: midBoss(run.setup.zone).fall });
   run.dim = null;
   run.wind = { x: 0, y: 0 };
   if (f.kind === 'foreman' || f.kind === 'whisper') for (const o of run.foes) if (o.alive && o !== f) fade(run, o);

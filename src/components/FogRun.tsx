@@ -255,7 +255,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
             {floorShown === hud?.floors
               ? `${zone.bossName} is down here, in the last room.`
               : floorShown === hud?.wardenFloor
-                ? `Halfway down. ${midName(zone)} guards this floor's last room.`
+                ? `Halfway down. ${midName(zone)} guards this floor's last room. ${midBoss(zone).tip}.`
                 : `${(hud?.floors ?? floorShown) - floorShown} more below, then ${zone.bossName}. A breath on the stairs: a little HP back.`}
           </p>
         </div>

@@ -22,6 +22,7 @@ import {
   CREW,
   GALE,
   hardened,
+  isWardenRoom,
   midBoss,
   RELICS,
   zoneDungeon,
@@ -269,6 +270,10 @@ class DungeonScene extends Phaser.Scene {
   /** The boss's speech bubble, until `speechUntil`; the next taunt comes at `tauntAt`. */
   private speech!: Phaser.GameObjects.Text;
   private speechUntil = 0;
+  /** Who the bubble hangs over when it isn't the boss: the mid-boss, or where it fell. */
+  private speaker: { foe: Foe; x: number; y: number } | null = null;
+  /** The chest the mid-boss left, called out until it's opened. */
+  private chestCall: Phaser.GameObjects.Text | null = null;
   private tauntAt = 0;
   private taunt = 0;
   /** The boss's stage of its art, for its stage lines. */
@@ -892,9 +897,10 @@ class DungeonScene extends Phaser.Scene {
   }
 
   /** The boss says something: a bubble over it for a few seconds. Empty lines are skipped. */
-  private speak(text: string | undefined, ms = 2800) {
+  private speak(text: string | undefined, ms = 2800, from: Foe | null = null) {
     if (!text?.trim()) return;
-    this.speech.setText(text).setVisible(true);
+    this.speaker = from ? { foe: from, x: from.x, y: from.y } : null;
+    this.speech.setText(from ? `${midBoss(this.setup.zone).name.replace(/^the/, 'The')}\n${text}` : text).setVisible(true);
     this.speechUntil = this.time.now + ms;
     this.tauntAt = Math.max(this.tauntAt, this.time.now + ms + 9000);
   }
@@ -904,6 +910,17 @@ class DungeonScene extends Phaser.Scene {
     const r = this.run,
       now = this.time.now,
       who = r.boss?.alive ? r.boss : r.climb !== null && this.summit ? this.summit : null;
+    // A mid-boss's line: over it while it stands, where it fell after.
+    if (this.speaker && now < this.speechUntil && !r.boss?.alive) {
+      const sp = this.speaker;
+      if (sp.foe.alive) [sp.x, sp.y] = [sp.foe.x, sp.foe.y];
+      const size = 32 * (this.foes.get(sp.foe.id)?.base ?? 1),
+        cam = this.cameras.main,
+        // Near the top of the screen the HUD covers what's above it: hang the bubble below instead.
+        below = sp.y - size - 6 - this.speech.height < cam.worldView.y + 110 / cam.zoom;
+      this.speech.setOrigin(0.5, below ? 0 : 1).setPosition(clampX(sp.x, r.area.w), below ? sp.y + size + 8 : sp.y - size - 6);
+      return;
+    }
     if (who && now >= this.tauntAt && !r.over && this.setup.lines?.taunts.length) {
       const t = this.setup.lines.taunts;
       this.speak(t[this.taunt++ % t.length]);
@@ -913,6 +930,7 @@ class DungeonScene extends Phaser.Scene {
       if (now >= this.speechUntil) this.speech.setVisible(false);
       if (!who) return;
     }
+    this.speech.setOrigin(0.5, 1);
     const top = who === this.summit ? this.summit.y + 80 : who.y - 32 * (this.foes.get(r.boss?.id ?? -1)?.base ?? 1) - 6;
     this.speech.setPosition(clampX(who.x, this.run.area.w), Math.max(ROOM.wall + 24, top));
   }
@@ -1444,6 +1462,7 @@ class DungeonScene extends Phaser.Scene {
         }
         break;
       case 'room':
+        this.chestCall = null;
         this.cameras.main.fadeIn(250, 7, 8, 13);
         this.newRoom();
         break;
@@ -1527,11 +1546,23 @@ class DungeonScene extends Phaser.Scene {
           this.chest = this.add.image(r.chest.x, r.chest.y + 10, 'chest').setOrigin(0.5, 1).setDepth(r.chest.y);
           this.roomBits.push(this.chest);
           this.puffs.explode(10, r.chest.x, r.chest.y);
+          // The mid-boss's chest, called out over it until it's opened.
+          if (isWardenRoom(r)) {
+            this.chestCall = this.add
+              .text(r.chest.x, r.chest.y - 34, 'CHEST', { fontFamily: '"Press Start 2P", monospace', fontSize: '9px', color: '#fde68a', backgroundColor: '#0b0d14cc', padding: { x: 5, y: 4 } })
+              .setOrigin(0.5, 1)
+              .setDepth(150500);
+            this.roomBits.push(this.chestCall);
+            this.tweens.add({ targets: this.chestCall, y: r.chest.y - 42, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+          }
         }
-        this.bus.say(single ? (last ? 'Room clear. The boss is through that door.' : warden ? `Room clear. ${midBoss(this.setup.zone).name.replace(/^the/, 'The')} waits through that door.` : 'Room clear. The stairs go down.') : r.chest ? 'Room clear. Open the chest, then pick a door.' : 'Room clear. Pick a door: each says what waits behind it.');
+        if (r.chest && isWardenRoom(r)) this.bus.say(`${midBoss(this.setup.zone).name.replace(/^the/, 'The')} left a chest. Open it, then take the stairs.`);
+        else this.bus.say(single ? (last ? 'Room clear. The boss is through that door.' : warden ? `Room clear. ${midBoss(this.setup.zone).name.replace(/^the/, 'The')} waits through that door.` : 'Room clear. The stairs go down.') : r.chest ? 'Room clear. Open the chest, then pick a door.' : 'Room clear. Pick a door: each says what waits behind it.');
         break;
       }
       case 'chest':
+        this.chestCall?.destroy();
+        this.chestCall = null;
         this.chest?.setTexture('chest-open');
         this.sparks.explode(30, e.x, e.y - 10);
         this.sfx('gem', 0.6);
@@ -1589,6 +1620,9 @@ class DungeonScene extends Phaser.Scene {
       }
       case 'say':
         this.bus.say(e.text);
+        break;
+      case 'midSay':
+        if (this.run.warden) this.speak(e.text, 3400, this.run.warden);
         break;
     }
   }
@@ -1755,6 +1789,8 @@ class DungeonScene extends Phaser.Scene {
         }
       } else this.fx.lineStyle(1, 0xfde68a, 0.12 + 0.1 * p).strokeCircle(hb.x, hb.y, LIGHT.r);
     }
+    // The mid-boss's chest: a gold ring pulsing round it until it's opened.
+    if (this.chestCall && r.chest && !r.chest.opened) this.fx.lineStyle(3, 0xfbbf24, 0.35 + 0.35 * ((Math.sin(now / 180) + 1) / 2)).strokeCircle(r.chest.x, r.chest.y - 4, 26);
     // The way out, once open.
     if (r.doorOpen) {
       const p = (Math.sin(now / 200) + 1) / 2;
