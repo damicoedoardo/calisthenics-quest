@@ -15,8 +15,9 @@ engine/manga.ts       the manga head (the hero's default): face as text art, hai
 parts/weapons.ts      sword, stick, staff, wand, bow
 characters/*.ts       one file per character: hero, wanderer, mira, ember, book, and the chapter
                       enemies tomorrow, mirror, plateau, summit, and the Fog's wisp, plus the
-                      dungeon's monsters: ram, smoke (the Smoker), seeker, splitter (and the
-                      Splitling), shade
+                      dungeon's monsters: ram, smoke (the Smoker), seeker, splitter (the
+                      Splitling, and splitterPop, its one-shot death), shade, and the mid-boss
+                      warden (the Warden of the Ashes)
 characters/pixel.ts   text-row art: paintRows (one character per pixel) and shifted
 ```
 
@@ -40,7 +41,8 @@ characters/pixel.ts   text-row art: paintRows (one character per pixel) and shif
 | Change the looks a player starts with (boy, girl) | `STARTER_LOOKS` in `characters/hero.ts`; the editor's options are in `src/components/LookEditor.tsx` |
 | Redraw a dungeon monster | the `ROWS` text art in its file (`ram.ts`, `smoke.ts`, `seeker.ts`, `splitter.ts`, `shade.ts`); its palette sits under the rows |
 | Change which sprite a dungeon monster uses, or its size | `DUNGEON_LOOKS` in `src/game/dungeon/scene.ts` (a new sheet also needs a `SheetKey` in `src/game/rules.ts` and a line in `sheets` in `FogRun.tsx`) |
-| Redraw the dungeon's pillars, barrels, chests, shrine, torches | the text rows in `src/game/dungeon/props.ts` (floor, walls, door and water are drawn in `scene.ts`) |
+| Redraw the dungeon's pillars, barrels, chests, shrine, torches | the text rows in `src/game/dungeon/props.ts` (floor, walls, door, water and spikes are drawn in `scene.ts`) |
+| Change a zone's dungeon colors (floor, stone, torch fire, water) | its entry in `THEMES` (`src/game/dungeon/themes.ts`); in developer mode the Fog's pause menu has a Theme button that cycles them |
 | Add a character | a file in `characters/`, then an entry in `SPRITES` (`registry.ts`) |
 | Use art from Aseprite or PixelLab | see below |
 

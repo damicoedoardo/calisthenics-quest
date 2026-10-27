@@ -798,10 +798,24 @@ class DungeonScene extends Phaser.Scene {
             y = e.y;
           for (let i = 0; i < e.n; i++) {
             const a = e.angle + (i * Math.PI * 2) / e.n;
-            this.fade(160, (g, p) => {
-              g.lineStyle(7 * (1 - p) + 1, 0xfef3c7, 0.9 * (1 - p)).beginPath();
-              g.arc(x, y, R * (0.75 + 0.25 * p), a - 1.2, a + 1.2);
-              g.strokePath();
+            // A crescent: a thick bright edge with fainter bands inside it, sweeping open, and a
+            // glint riding its leading tip.
+            this.fade(190, (g, p) => {
+              const q = 1 - p,
+                sweep = 1.2 * Math.min(1, p * 3),
+                r0 = R * (0.75 + 0.25 * p);
+              [
+                [0, 9, 0xfffbeb, 0.95],
+                [7, 6, 0xfde68a, 0.6],
+                [13, 4, 0xfbbf24, 0.35],
+              ].forEach(([off, w, c, al]) => {
+                g.lineStyle(w * q + 1, c, al * q).beginPath();
+                g.arc(x, y, r0 - off, a - sweep, a + sweep);
+                g.strokePath();
+              });
+              const tx = x + Math.cos(a + sweep) * r0,
+                ty = y + Math.sin(a + sweep) * r0;
+              g.fillStyle(0xffffff, q).fillRect(tx - 1, ty - 4, 2, 8).fillRect(tx - 4, ty - 1, 8, 2);
             });
           }
         }
@@ -814,7 +828,15 @@ class DungeonScene extends Phaser.Scene {
           ent.flash = now + 50;
           ent.squash = now + 90;
         }
-        this.sparks.explode(2, e.x, e.y - 6);
+        this.sparks.explode(3, e.x, e.y - 6);
+        // a white star where the blow lands
+        const hx = e.x,
+          hy = e.y - 6;
+        this.fade(110, (g, p) => {
+          const s = 10 * (1 - p) + 3;
+          g.fillStyle(0xffffff, 0.9 * (1 - p)).fillRect(hx - s, hy - 1, s * 2, 2).fillRect(hx - 1, hy - s, 2, s * 2);
+          g.fillStyle(0xfef3c7, 0.5 * (1 - p)).fillCircle(hx, hy, 5 * (1 - p) + 2);
+        });
         this.sfx(e.boss ? 'bossHit' : 'hit');
         this.number(e.x, e.y - 18, e.dmg);
         break;
@@ -863,6 +885,14 @@ class DungeonScene extends Phaser.Scene {
           g.lineStyle(5 * (1 - p) + 1, color, 0.8 * (1 - p)).strokeCircle(x, y, R * (0.3 + 0.7 * p));
           g.fillStyle(color, 0.12 * (1 - p)).fillCircle(x, y, R * (0.3 + 0.7 * p));
         });
+        if (e.color === 'wave') {
+          // the monk's wave hits the floor: a second, white shock ring and dust kicked out
+          this.fade(320, (g, p) => {
+            const q = Math.max(0, p * 1.3 - 0.3);
+            g.lineStyle(3 * (1 - p) + 1, 0xfffbeb, 0.9 * (1 - p)).strokeCircle(x, y, R * (0.15 + 0.85 * q));
+          });
+          this.puffs.explode(8, x, y + 8);
+        }
         break;
       }
       case 'chain': {
@@ -1061,6 +1091,20 @@ class DungeonScene extends Phaser.Scene {
         const p = 1 - (f.windUntil - r.t) / 0.8;
         this.fx.lineStyle(2, 0xa78bfa, 0.9).strokeCircle(f.dashX, f.dashY, 26 - 10 * p);
         this.fx.fillStyle(0x6b21a8, 0.2 + 0.3 * p).fillCircle(f.dashX, f.dashY, 16);
+      }
+    }
+    // Your shots: arrows leave a short streak, orbs glow and pulse.
+    for (const sh of r.shots) {
+      const sp = Math.hypot(sh.vx, sh.vy) || 1;
+      if (sh.kind === 'arrow') {
+        const tx = sh.x - (sh.vx / sp) * 28,
+          ty = sh.y - (sh.vy / sp) * 28;
+        this.fx.lineStyle(3, 0xfde68a, 0.4).lineBetween(tx, ty, sh.x, sh.y);
+        this.fx.lineStyle(1, 0xffffff, 0.6).lineBetween((tx + sh.x) / 2, (ty + sh.y) / 2, sh.x, sh.y);
+      } else if (sh.kind === 'orb') {
+        const pulse = 1 + 0.2 * Math.sin(now / 60 + sh.id);
+        this.fx.fillStyle(0xa78bfa, 0.18).fillCircle(sh.x, sh.y, 12 * pulse);
+        this.fx.fillStyle(0xc4b5fd, 0.25).fillCircle(sh.x - (sh.vx / sp) * 8, sh.y - (sh.vy / sp) * 8, 5);
       }
     }
     // Smoke bombs: in the air, then a circle filling up until it bursts.

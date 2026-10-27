@@ -50,11 +50,11 @@ export const THEMES: Theme[] = [
     water: ['#0a1830', '#1c3e6e', '#4a7fc0', '#e2e8f0'],
   },
   {
-    // The Cold Forges: soot-brown brick, deep forge fire, black quench water.
+    // The Cold Forges: soot-black iron-grey brick, deep red forge fire, black quench water.
     name: 'Village of Almosts',
     ground: '#1c1916',
     fog: '#4b4038',
-    stone: ['#120f0c', '#26201b', '#3a3029', '#4a3e34', '#5e5044', '#736354', '#9a8672'],
+    stone: ['#0e0e10', '#1e1d1d', '#2e2c2b', '#3c3936', '#4e4945', '#625b55', '#8c847b'],
     moss: '#5c6b2a',
     fire: ['#7f1d1d', '#dc2626', '#fb923c', '#fde68a'],
     glow: '#ea580c',
@@ -65,7 +65,7 @@ export const THEMES: Theme[] = [
     name: 'Plateau',
     ground: '#1c1712',
     fog: '#4a3a26',
-    stone: ['#1a130b', '#33261a', '#4a3825', '#5e4830', '#7a5e3c', '#957548', '#c4a06a'],
+    stone: ['#21170c', '#3f2d19', '#5a4124', '#71532f', '#8f6b3d', '#ad8650', '#d9b47a'],
     moss: '#6b7a26',
     fire: ['#8a6512', '#d9ad3a', '#f7e08a', '#fff7d6'],
     glow: '#fbbf24',
