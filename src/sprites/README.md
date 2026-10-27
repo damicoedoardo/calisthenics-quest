@@ -23,6 +23,9 @@ characters/*.ts       one file per character: hero, wanderer, mira, ember, book,
                       stage 0-2), monolith.ts (plateauBoss, stage 0-2), hollowBoss.ts (hollowBoss
                       and hollowBossFade), summitSpirit.ts (summitBoss)
 characters/pixel.ts   text-row art: paintRows (one character per pixel) and shifted
+characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recolored onto the zone's
+                      ramp and dressed (lake glass and drips, forge scrap and glowing cracks,
+                      plateau sandstone, fog mist, summit ice)
 ```
 
 ## How to change things
@@ -49,6 +52,7 @@ characters/pixel.ts   text-row art: paintRows (one character per pixel) and shif
 | Redraw a dungeon monster | the `ROWS` text art in its file (`ram.ts`, `smoke.ts`, `seeker.ts`, `splitter.ts`, `shade.ts`); its palette sits under the rows |
 | Change which sprite a dungeon monster uses, or its size | `DUNGEON_LOOKS` in `src/game/dungeon/scene.ts` (a new sheet also needs a `SheetKey` in `src/game/rules.ts` and a line in `sheets` in `FogRun.tsx`) |
 | Redraw the dungeon's pillars, barrels, chests, shrine, torches | the text rows in `src/game/dungeon/props.ts` (floor, walls, door, water and spikes are drawn in `scene.ts`) |
+| Change how a zone dresses its regular monsters | `ZONE_RAMPS` (colors) and the zone's branch of `dress` in `characters/zoned.ts`; the sprites that take `{ zone }` are the `zoned(...)` entries in `registry.ts` |
 | Change a zone's dungeon colors (floor, stone, torch fire, water) | its entry in `THEMES` (`src/game/dungeon/themes.ts`); in developer mode the Fog's pause menu has a Theme button that cycles them |
 | Add a character | a file in `characters/`, then an entry in `SPRITES` (`registry.ts`) |
 | Use art from Aseprite or PixelLab | see below |
