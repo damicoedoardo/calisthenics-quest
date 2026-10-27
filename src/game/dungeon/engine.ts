@@ -149,7 +149,9 @@ const RUN_LIMIT = 2400;
 
 // ---------- monsters ----------
 
-export type MonsterKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'ram' | 'book' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade' | 'warden' | 'image';
+export type MonsterKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'ram' | 'book' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade' | 'warden' | 'image' | MidKind;
+/** The floor-5 mid-bosses, one per zone (MIDS). */
+export type MidKind = 'warden' | 'lantern' | 'foreman' | 'sandGolem' | 'whisper' | 'gale';
 export type FoeKind = MonsterKind | 'boss';
 
 /** How a monster moves: walks at you, keeps its distance, circles you at its range, stands still,
@@ -252,12 +254,121 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
   // The Mirror's images of itself: they look just like it, but only the real one shoots. A hit
   // shatters an image, and hurts you.
   image: { hp: 1, speed: 36, dmg: 12, r: 16, xp: 0, move: 'keep', range: 190, shoots: [], cost: 0 },
+  // The other zones' mid-bosses (MIDS): each a small echo of its zone's lesson.
+  // The Drowned Lantern (Mirror Lake): the room dims while it burns; each hit brings light back.
+  lantern: {
+    hp: 820,
+    speed: 40,
+    dmg: 14,
+    r: 22,
+    xp: 30,
+    move: 'keep',
+    range: 200,
+    shoots: [
+      { every: 2.6, kind: 'ring', n: 14, speed: 85, dmg: 8, style: 'wiggle', first: 1.5 },
+      { every: 1.9, kind: 'aimed', n: 2, speed: 110, dmg: 8, style: 'homing', above: 0.5, first: 2.2 },
+      { every: 0.2, kind: 'spiral', n: 3, speed: 80, dmg: 7, turn: 0.2, below: 0.5 },
+    ],
+    cost: 0,
+  },
+  // The Foreman (the Village): mends and rebuilds its crew, unless it's been hit just before.
+  foreman: {
+    hp: 700,
+    speed: 44,
+    dmg: 16,
+    r: 20,
+    xp: 30,
+    move: 'keep',
+    range: 170,
+    shoots: [
+      { every: 2.2, kind: 'spread', n: 5, arc: 0.8, speed: 120, dmg: 9, first: 1.8 },
+      { every: 1.4, kind: 'aimed', n: 2, speed: 130, dmg: 9, first: 2.4 },
+      { every: 3.2, kind: 'ring', n: 16, speed: 90, dmg: 8, below: 0.5 },
+    ],
+    cost: 0,
+  },
+  // The Sand Golem (the Plateau): walks, then stands and hardens. It only takes hits while it walks.
+  sandGolem: {
+    hp: 620,
+    speed: 46,
+    dmg: 18,
+    r: 24,
+    xp: 30,
+    move: 'chase',
+    shoots: [
+      { every: 1.6, kind: 'aimed', n: 3, speed: 120, dmg: 9, first: 1.5 },
+      { every: 2.4, kind: 'spread', n: 9, arc: 1.4, speed: 105, dmg: 9, below: 0.5 },
+    ],
+    cost: 0,
+  },
+  // The Whisper (the Fog): a wisp among wisps, that trades places with one of them.
+  whisper: {
+    hp: 480,
+    speed: 70,
+    dmg: 12,
+    r: 15,
+    xp: 30,
+    move: 'orbit',
+    range: 170,
+    shoots: [
+      { every: 1.8, kind: 'spread', n: 5, arc: 0.7, speed: 135, dmg: 9, first: 1.6 },
+      { every: 2.8, kind: 'ring', n: 12, speed: 95, dmg: 8, style: 'ramp', below: 0.5 },
+    ],
+    cost: 0,
+  },
+  // The Gale (the Summit): gusts that blow you toward the edge of the room, where the drop bites.
+  gale: {
+    hp: 640,
+    speed: 26,
+    dmg: 14,
+    r: 22,
+    xp: 30,
+    move: 'keep',
+    range: 120,
+    shoots: [
+      { every: 0.3, kind: 'spiral', n: 2, speed: 85, dmg: 7, turn: 0.3, first: 1.5 },
+      { every: 2.5, kind: 'aimed', n: 3, speed: 130, dmg: 9, below: 0.5 },
+    ],
+    cost: 0,
+  },
 };
 /** How the Mirror splits: how often (s), when first, how long the images stay, and how long your
     reflections stay; and how much of your HP it costs to hit an image, or a reflection of you. */
 export const SPLIT = { every: 11, first: 6, last: 7, stay: 8, image: 0.08, reflection: 0.025 };
-/** The Warden of the Ashes guards the last room of the middle floor (floor 5 of 10). */
-export const WARDEN = { name: 'the Warden of the Ashes' };
+/** A floor-5 mid-boss: its monster, its name, and what is said as it rises, past half, and as it
+    falls. Each is a smaller echo of its zone's lesson. */
+export interface MidBoss {
+  kind: MidKind;
+  name: string;
+  enter: string;
+  hot: string;
+  fall: string;
+}
+/** The mid-boss guarding the last room of the middle floor (floor 5 of 10), by zone. */
+export const MIDS: MidBoss[] = [
+  { kind: 'warden', name: 'the Warden of the Ashes', enter: 'The Warden of the Ashes guards the stairs. Walk with its turning arms.', hot: 'The Warden burns hotter. It aims at you now: keep moving.', fall: 'The Warden falls. It leaves a chest.' },
+  { kind: 'lantern', name: 'the Drowned Lantern', enter: 'The Drowned Lantern dims the room. Every hit on it brings the light back.', hot: 'The Lantern flickers. What you see is less than what is there.', fall: 'The Lantern goes out, and the room is clear to see. It leaves a chest.' },
+  { kind: 'foreman', name: 'the Foreman', enter: 'The Foreman mends its crew. Keep hitting it, and it has no time to.', hot: 'The Foreman works faster. So can you.', fall: 'The Foreman stops, and its crew falls apart. It leaves a chest.' },
+  { kind: 'sandGolem', name: 'the Sand Golem', enter: 'The Sand Golem turns to stone when it stands still. Hit it while it walks.', hot: 'Cracks run through the sand. Keep going.', fall: 'The Sand Golem pours away. It leaves a chest.' },
+  { kind: 'whisper', name: 'the Whisper', enter: 'The Whisper hides among the wisps. Watch for the one that glows before it moves.', hot: 'The Whisper grows louder. It is still only a whisper.', fall: 'The Whisper goes quiet, and the wisps with it. It leaves a chest.' },
+  { kind: 'gale', name: 'the Gale', enter: 'The Gale blows you toward the edge. Lean into it, and step back in.', hot: 'The Gale blows harder. Stay near the middle.', fall: 'The Gale drops to a breeze. It leaves a chest.' },
+];
+export const midBoss = (zone: Pick<Zone, 'id'>) => MIDS[clamp(zone.id, 0, MIDS.length - 1)];
+/** The Warden of the Ashes, the first zone's mid-boss. */
+export const WARDEN = MIDS[0];
+/** The Drowned Lantern's dark: how far you see when it rises, at its darkest, how fast it dims
+    (px/s), and how much light each hit brings back. */
+export const DIM = { full: 300, low: 120, fade: 9, back: 5 };
+/** The Foreman's crew: how many, who, how often it mends them (s), and how long a hit on it keeps
+    it from mending. */
+export const CREW = { size: 3, kinds: ['ram', 'slime', 'ram'] as MonsterKind[], every: 3.2, guard: 1.6 };
+/** The Sand Golem: seconds walking (hits land) and standing (hard as stone). */
+export const SAND = { walk: 2.8, rest: 2.2 };
+/** The Whisper: wisps around it, how often it trades places with one (s), and the glow before. */
+export const SWAP = { crowd: 5, every: 4.2, wind: 0.8 };
+/** The Gale: how often it gusts (s), the warning, how long a gust blows, how hard (px/s), how
+    close to the wall the drop bites, and what it costs. */
+export const GALE = { every: 5.5, wind: 1, blow: 2, push: 105, edge: 60, bite: 10 };
 /** The floor (from 0) whose last room holds the Warden, or -1 when the dungeon is too short for one. */
 export const wardenFloor = (layout: Layout) => (layout.floors >= 4 ? Math.floor(layout.floors / 2) - 1 : -1);
 export const isWardenRoom = (r: Pick<Run, 'floor' | 'room' | 'layout'>) => r.floor === wardenFloor(r.layout) && r.room === r.layout.rooms - 1;
@@ -560,6 +671,8 @@ export interface Foe {
   elite: boolean;
   /** 2 once a two-phase foe (the Warden) is past half its HP. */
   phase: number;
+  /** When you last hit it (run seconds). */
+  hitAt: number;
   alive: boolean;
 }
 
@@ -657,6 +770,10 @@ export type GameEvent =
   | { type: 'light'; on: boolean; x: number; y: number }
   | { type: 'ledge'; height: number }
   | { type: 'help'; kind: AllyKind; x: number; y: number; toX: number; toY: number }
+  /** The Foreman mends its crew; the Whisper trades places with a wisp; the Gale gusts. */
+  | { type: 'repair'; x: number; y: number }
+  | { type: 'swap'; x: number; y: number; toX: number; toY: number }
+  | { type: 'gust'; x: number; y: number }
   | { type: 'say'; text: string };
 
 export type FreePick = 'fresh' | 'rested';
@@ -739,8 +856,12 @@ export interface Run {
   charge: { until: number; x: number; y: number; hit: Set<Foe>; harm: boolean } | null;
   /** The dodge is ready again then. */
   dodgeAt: number;
-  /** The Warden of the Ashes while it stands. */
+  /** The floor-5 mid-boss (the Warden of the Ashes, the Drowned Lantern...) while it stands. */
   warden: Foe | null;
+  /** How far you see while the Drowned Lantern burns (px), or null. */
+  dim: number | null;
+  /** The Gale's gust on you (px/s), added to how you walk. */
+  wind: { x: number; y: number };
   shove: { until: number; x: number; y: number };
   ability: AbilityId;
   abilityAt: number;
@@ -830,6 +951,8 @@ export function createRun(setup: RunSetup): Run {
     charge: null,
     dodgeAt: 0,
     warden: null,
+    dim: null,
+    wind: { x: 0, y: 0 },
     shove: { until: 0, x: 0, y: 0 },
     ability: abilityOf(setup.classId),
     abilityAt: 0,
@@ -992,6 +1115,8 @@ function enterRoom(run: Run) {
   run.hero.y = run.area.h - 70;
   run.charge = null;
   run.warden = null;
+  run.dim = null;
+  run.wind = { x: 0, y: 0 };
   emit(run, { type: 'room' });
   if (climbing(run)) {
     startLedge(run);
@@ -1005,12 +1130,14 @@ function enterRoom(run: Run) {
   if (isWardenRoom(run)) {
     // The Warden alone: it rises at the top of the room while you walk in.
     run.waves = [];
-    const f = addFoe(run, 'warden', run.area.w / 2, 170);
+    const mid = midBoss(run.setup.zone),
+      f = addFoe(run, mid.kind, run.area.w / 2, 170);
     f.bornUntil = run.t + 1.4;
     f.next = f.def.shoots.map((p) => run.t + 1.4 + (p.first ?? p.every));
     run.warden = f;
+    startMid(run, f);
     emit(run, { type: 'warden' });
-    emit(run, { type: 'say', text: 'The Warden of the Ashes guards the stairs. Walk with its turning arms.' });
+    emit(run, { type: 'say', text: mid.enter });
     return;
   }
   if (run.kind !== 'fight') emit(run, { type: 'say', text: `${ROOM_KINDS[run.kind].name} room. ${ROOM_KINDS[run.kind].text}` });
@@ -1071,6 +1198,7 @@ function addFoe(run: Run, kind: MonsterKind, x: number, y: number): Foe {
     act: run.t + 1.2 + run.rnd() * 1.5,
     elite,
     phase: 1,
+    hitAt: -99,
     alive: true,
   };
   run.foes.push(f);
@@ -1111,6 +1239,7 @@ function summonBoss(run: Run) {
     act: 0,
     elite: false,
     phase: 1,
+    hitAt: -99,
     alive: true,
   };
   run.foes.push(b);
@@ -1224,8 +1353,8 @@ function moveHero(run: Run, input: Input) {
   } else {
     run.charge = null;
     const wade = run.terrain.water.some((q) => inRect(q, h.x, h.y)) ? Math.min(1, WATER.hero + 0.15 * relic(run, 'boots')) : 1;
-    h.vx = x * speed * wade;
-    h.vy = y * speed * wade;
+    h.vx = x * speed * wade + run.wind.x;
+    h.vy = y * speed * wade + run.wind.y;
   }
   h.x += h.vx * STEP;
   h.y += h.vy * STEP;
@@ -1354,6 +1483,7 @@ function moveFoes(run: Run) {
       if (f === run.boss) steerBoss(run, f);
       else steer(run, f);
     }
+    if (f === run.warden) stepMid(run, f);
     const wade = f !== run.boss && run.terrain.water.some((q) => inRect(q, f.x, f.y)) ? WATER.foe : 1;
     f.x = clamp(f.x + f.vx * STEP * wade, ROOM.wall + f.def.r, run.area.w - ROOM.wall - f.def.r);
     f.y = clamp(f.y + f.vy * STEP * wade, ROOM.wall + f.def.r, run.area.h - ROOM.wall - f.def.r);
@@ -1369,14 +1499,14 @@ function moveFoes(run: Run) {
       if (f === run.boss && run.setup.zone.boss === 'hollow' && f.phase === 2) return;
       shoot(run, f, p);
     });
-    // The Warden's second phase: a roar, and the cross stops turning.
+    // A mid-boss's second phase: a roar, and new volleys (the Warden's cross stops turning).
     if (f === run.warden && f.phase === 1 && f.hp <= f.maxHp * 0.5) {
       f.phase = 2;
       emit(run, { type: 'phase', x: f.x, y: f.y });
-      emit(run, { type: 'say', text: 'The Warden burns hotter. It aims at you now: keep moving.' });
+      emit(run, { type: 'say', text: midBoss(run.setup.zone).hot });
     }
     // Touch (a charging ram hits harder).
-    if (f.def.dmg > 0 && dist(f, h) < f.def.r + HERO_R) hurt(run, f.def.dmg * (now < f.dashUntil ? 1.5 : 1), 'touch');
+    if (f.def.dmg > 0 && dist(f, h) < f.def.r + HERO_R) hurt(run, f.def.dmg * (f !== run.warden && now < f.dashUntil ? 1.5 : 1), 'touch');
     if (run.over) return;
   }
   // Monsters push each other apart.
@@ -1794,6 +1924,122 @@ const pow = (run: Run, base: number) => heroDamage(base, run.setup.power, run.up
 /** The Hollow: nothing you throw at it lands. */
 const untouchable = (run: Run, f: Foe) => f === run.boss && run.setup.zone.boss === 'hollow';
 
+// ---------- the mid-bosses ----------
+
+/** The Sand Golem stands as stone between its walks. */
+export const hardened = (run: Pick<Run, 't'>, f: Foe) => f.kind === 'sandGolem' && run.t >= f.dashUntil;
+
+/** What a mid-boss brings with it as it rises. */
+function startMid(run: Run, f: Foe) {
+  const t0 = f.bornUntil;
+  if (f.kind === 'lantern') run.dim = DIM.full;
+  if (f.kind === 'foreman') {
+    CREW.kinds.forEach((k, i) => (addFoe(run, k, run.area.w * (0.25 + 0.25 * i), 280).bornUntil = t0));
+    f.act = t0 + CREW.every;
+  }
+  if (f.kind === 'sandGolem') f.dashUntil = t0 + SAND.walk;
+  if (f.kind === 'whisper') {
+    for (let i = 0; i < SWAP.crowd; i++) addFoe(run, 'wisp', run.area.w * (0.15 + 0.175 * i), 230 + (i % 2) * 70).bornUntil = t0;
+    f.act = t0 + SWAP.every;
+  }
+  if (f.kind === 'gale') f.act = t0 + 2;
+}
+
+/** A mid-boss's own rule, every step (after it has chosen where to walk). */
+function stepMid(run: Run, f: Foe) {
+  const now = run.t,
+    hot = f.phase === 2;
+  if (now < f.bornUntil) return;
+  const crew = run.foes.filter((o) => o.alive && o !== f);
+  switch (f.kind) {
+    case 'lantern':
+      if (run.dim !== null) run.dim = Math.max(DIM.low, run.dim - DIM.fade * (hot ? 1.5 : 1) * STEP);
+      return;
+    case 'foreman':
+      if (now < f.act) return;
+      f.act = now + CREW.every * (hot ? 0.75 : 1);
+      // Hit just now: it blocks instead of mending.
+      if (now - f.hitAt < CREW.guard) return;
+      for (const o of crew) o.hp = o.maxHp;
+      if (crew.length < CREW.size) addFoe(run, CREW.kinds[crew.length % CREW.kinds.length], f.x + 40, f.y + 30).bornUntil = now + 0.6;
+      emit(run, { type: 'repair', x: f.x, y: f.y });
+      return;
+    case 'sandGolem':
+      // Walking, then standing as stone (it doesn't move), then walking again.
+      if (now >= f.dashUntil + SAND.rest * (hot ? 0.8 : 1)) f.dashUntil = now + SAND.walk;
+      if (hardened(run, f)) f.vx = f.vy = 0;
+      return;
+    case 'whisper': {
+      const wisps = crew.filter((o) => o.kind === 'wisp');
+      if (now < f.act) return;
+      if (!f.windUntil) {
+        // It glows, and so does the wisp it will trade with.
+        const w = wisps[Math.floor(run.rnd() * wisps.length)];
+        if (!w) {
+          f.act = now + SWAP.every;
+          addFoe(run, 'wisp', f.x + 60, f.y);
+          return;
+        }
+        f.windUntil = now + SWAP.wind;
+        f.dashX = w.id;
+        emit(run, { type: 'wind', id: f.id });
+        emit(run, { type: 'wind', id: w.id });
+        return;
+      }
+      if (now < f.windUntil) return;
+      const w = wisps.find((o) => o.id === f.dashX);
+      f.windUntil = 0;
+      f.act = now + SWAP.every * (hot ? 0.7 : 1);
+      if (w) {
+        const [x, y] = [f.x, f.y];
+        f.x = w.x;
+        f.y = w.y;
+        w.x = x;
+        w.y = y;
+        emit(run, { type: 'swap', x, y, toX: f.x, toY: f.y });
+      }
+      if (wisps.length < SWAP.crowd) addFoe(run, 'wisp', run.area.w * (0.2 + 0.6 * run.rnd()), 200 + run.rnd() * 200).bornUntil = now + 0.5;
+      return;
+    }
+    case 'gale': {
+      run.wind = { x: 0, y: 0 };
+      if (now >= f.act && !f.windUntil) {
+        f.windUntil = now + GALE.wind;
+        emit(run, { type: 'wind', id: f.id });
+      }
+      if (!f.windUntil || now < f.windUntil) return;
+      if (!f.dashUntil || f.dashUntil < f.windUntil) {
+        f.dashUntil = now + GALE.blow;
+        emit(run, { type: 'gust', x: f.x, y: f.y });
+      }
+      if (now >= f.dashUntil) {
+        f.windUntil = 0;
+        f.act = now + GALE.every * (hot ? 0.7 : 1);
+        return;
+      }
+      // Blowing: away from the Gale, toward the walls; and the edge bites.
+      const h = run.hero,
+        dx = h.x - f.x,
+        dy = h.y - f.y,
+        d = Math.hypot(dx, dy) || 1;
+      run.wind = { x: (dx / d) * GALE.push * (hot ? 1.2 : 1), y: (dy / d) * GALE.push * (hot ? 1.2 : 1) };
+      const { w, h: hh } = run.area,
+        edge = Math.min(h.x, w - h.x, h.y, hh - h.y) - ROOM.wall;
+      if (edge < GALE.edge) hurt(run, GALE.bite * run.setup.zone.dmg, 'touch');
+      return;
+    }
+  }
+}
+
+/** A mid-boss falls: what it brought falls with it. */
+function midFalls(run: Run) {
+  const f = run.warden!;
+  emit(run, { type: 'say', text: midBoss(run.setup.zone).fall });
+  run.dim = null;
+  run.wind = { x: 0, y: 0 };
+  if (f.kind === 'foreman' || f.kind === 'whisper') for (const o of run.foes) if (o.alive && o !== f) fade(run, o);
+}
+
 function nearest(run: Run, x: number, y: number, skip?: Set<Foe>, within = Infinity): Foe | null {
   let best: Foe | null = null,
     bd = within * within;
@@ -1816,6 +2062,13 @@ function damage(run: Run, f: Foe, amount: number, knock = 0, fromX = run.hero.x,
   // A plate falls to any hit, however small, but only one at a time.
   if (knight && run.t < f.act) return;
   if (knight) f.act = run.t + PLATE_EVERY;
+  // The Sand Golem, standing still, is stone: the hit glances off.
+  if (f === run.warden && f.kind === 'sandGolem' && hardened(run, f)) {
+    emit(run, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg: 0, boss: false });
+    return;
+  }
+  f.hitAt = run.t;
+  if (f === run.warden && run.dim !== null) run.dim = Math.min(DIM.full, run.dim + DIM.back);
   const dmg = knight ? 1 : Math.max(1, Math.round(amount));
   if (f.kind === 'reflection' || f.kind === 'image') {
     // A copy of you, or of the Mirror: it shatters, and you feel it.
@@ -1856,7 +2109,7 @@ function kill(run: Run, f: Foe) {
       const a = (i / 3) * Math.PI * 2 + run.rnd();
       addFoe(run, 'splitling', f.x + Math.cos(a) * 18, f.y + Math.sin(a) * 18).bornUntil = run.t + 0.25;
     }
-  if (f === run.warden) emit(run, { type: 'say', text: 'The Warden falls. It leaves a chest.' });
+  if (f === run.warden) midFalls(run);
   if (f === run.boss && run.setup.zone.boss === 'plateau') {
     run.bullets = [];
     emit(run, { type: 'shatter', x: f.x, y: f.y });

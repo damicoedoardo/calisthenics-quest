@@ -1,5 +1,5 @@
 import { attackOf, clamp, RANGE } from '../rules';
-import { BARREL, CHARGE, createRun, LIGHT, zoneDungeon, inRect, spikeState, stepRun, TOMORROW_REACH, type Input, type Rect, type RoomKind, type Run, type RunEnd, type RunSetup } from './engine';
+import { BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, spikeState, stepRun, TOMORROW_REACH, type Input, type Rect, type RoomKind, type Run, type RunEnd, type RunSetup } from './engine';
 
 /* The bot: a steady, careful player, not a great one. It sidesteps shots on course to hit it,
    keeps its class's distance from monsters (a sword goes close, the rest stay back), plays each
@@ -68,7 +68,7 @@ export function botInput(run: Run): Input {
 
   // Shots on course to hit within SEE seconds: step off their line. In the fog, only the ones
   // close enough to see.
-  const see = Math.min(220, zoneDungeon(run.setup.zone).sight ?? 220);
+  const see = Math.min(220, zoneDungeon(run.setup.zone).sight ?? run.dim ?? 220);
   for (const b of run.bullets) {
     if (now - b.born < REACTION || !noticed(b.id)) continue;
     const rx = h.x - b.x,
@@ -195,7 +195,21 @@ export function botInput(run: Run): Input {
     }
   }
   const b = run.boss?.alive ? run.boss : null;
-  const goal = b ?? (near && !run.cleared ? near : null);
+  // The Foreman and the Whisper: on them, so they're the nearest to hit (the Foreman never gets to
+  // mend; the Whisper can't hide behind its wisps).
+  const foreman = run.warden?.alive && (run.warden.kind === 'foreman' || run.warden.kind === 'whisper') ? run.warden : null;
+  const goal = b ?? foreman ?? (near && !run.cleared ? near : null);
+  // The Gale's gust: lean into it, and keep off the edge where it bites.
+  if (run.wind.x || run.wind.y) {
+    x -= (run.wind.x / GALE.push) * 1.6;
+    y -= (run.wind.y / GALE.push) * 1.6;
+    const e = GALE.edge + ROOM.wall + 30;
+    if (h.x < e) x += 2;
+    if (h.x > run.area.w - e) x -= 2;
+    if (h.y < e) y += 2;
+    if (h.y > run.area.h - e) y -= 2;
+    danger += 1;
+  }
   const shrine = T.shrine && !T.shrine.used && run.hp < run.maxHp * 0.6 ? T.shrine : null;
   if (shrine) {
     const dx = shrine.x - h.x,
@@ -224,6 +238,8 @@ export function botInput(run: Run): Input {
                 : 170
         : melee || stuck
           ? 40
+          : foreman
+            ? 80
           : attackOf(run.setup.classId) === 'wave'
             ? 80
             : RANGE * 0.7,

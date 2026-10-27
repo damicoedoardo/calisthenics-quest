@@ -2,7 +2,56 @@ import { describe, expect, it } from 'vitest';
 import { powerOf, ZONES } from '@/lib/fog';
 import { initialState } from '@/lib/game';
 import { botInput, playRun } from './bot';
-import { createRun, DODGE, isBossRoom, isWardenRoom, LIGHT, pickRelic, skipToBoss, skipToWarden, SPLIT, stepRun, takeEvents, wardenFloor } from './engine';
+import { CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LIGHT, MIDS, pickRelic, SAND, skipToBoss, skipToWarden, SPLIT, stepRun, takeEvents, wardenFloor } from './engine';
+
+describe('mid-bosses', () => {
+  const power = powerOf(initialState(), new Date());
+  const still = { x: 0, y: 0, ability: false };
+  const midRun = (z: number) => {
+    const run = createRun({ zone: ZONES[z], power, classId: undefined, seed: 5 });
+    skipToWarden(run);
+    return run;
+  };
+
+  it('each zone has its own, and it guards the middle floor', () => {
+    expect(new Set(MIDS.map((m) => m.kind)).size).toBe(ZONES.length);
+    ZONES.forEach((z, i) => expect(midRun(i).warden?.kind).toBe(MIDS[i].kind));
+  });
+
+  it('the Drowned Lantern dims the room, and the dark lifts when it falls', () => {
+    const run = midRun(1);
+    expect(run.dim).toBe(DIM.full);
+    for (let i = 0; i < 60 * 8; i++) stepRun(run, still);
+    expect(run.dim).toBeLessThan(DIM.full);
+  });
+
+  it('the Foreman mends its crew unless it was just hit', () => {
+    const run = midRun(2);
+    for (let i = 0; i < 60 * 2; i++) stepRun(run, still);
+    const crew = run.foes.filter((f) => f.alive && f !== run.warden);
+    expect(crew.length).toBe(CREW.size);
+    crew[0].hp = 1;
+    for (let i = 0; i < 60 * (CREW.every + 0.5) && !run.over; i++) stepRun(run, still);
+    expect(crew[0].hp).toBe(crew[0].maxHp);
+  });
+
+  it('the Sand Golem takes no hits while it stands as stone', () => {
+    const run = midRun(3),
+      g = run.warden!;
+    for (let i = 0; i < 60 * (1.5 + SAND.walk + 0.3); i++) stepRun(run, still);
+    expect(hardened(run, g)).toBe(true);
+  });
+
+  it('the bot beats each of them', () => {
+    const strong = { ...power, strike: 6, armor: 0.95, hold: 2000 };
+    MIDS.forEach((_, z) => {
+      const run = createRun({ zone: ZONES[z], power: strong, classId: 'archer', seed: 9, autoPick: true });
+      skipToWarden(run);
+      for (let i = 0; i < 60 * 120 && run.warden?.alive && !run.over; i++) stepRun(run, botInput(run));
+      expect(run.warden?.alive, MIDS[z].name).toBe(false);
+    });
+  });
+});
 
 describe('dungeon', () => {
   const power = powerOf(initialState(), new Date());
