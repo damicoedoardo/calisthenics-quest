@@ -93,7 +93,19 @@ export function drawHollowBoss(_o: unknown, frame: ClipFrame, f: number): Grid {
       u.p(30 + Math.cos(t) * 16, 30 + Math.sin(t) * 13, a % 2 ? LIGHT[2] : LIGHT[1]);
     }
   }
-  return pic;
+  return haze(pic);
+}
+
+/** A faint cold haze one pixel around the whole shape, so the dark cloak stands off the Fog's dark
+    floor instead of melting into it. */
+function haze(g: Grid): Grid {
+  const out = g.map((row) => row.slice());
+  for (let y = 0; y < g.length; y++)
+    for (let x = 0; x < g[y].length; x++) {
+      if (g[y][x]) continue;
+      if (g[y - 1]?.[x] || g[y + 1]?.[x] || g[y][x - 1] || g[y][x + 1]) out[y][x] = (x + y) % 2 ? '#4a5378' : '#3a4262';
+    }
+  return out;
 }
 
 /** Fading, played once: it thins from the hem up into motes, and the light rises free. */

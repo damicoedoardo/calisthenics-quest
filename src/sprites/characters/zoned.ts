@@ -11,10 +11,10 @@ import { grid, luma, mix, type Grid } from '../engine/grid';
    Zone 0 (the Ashlands) is the monster as drawn. */
 
 export const ZONE_RAMPS: Record<number, string[]> = {
-  1: ['#0b1e33', '#1d4a73', '#3b82c4', '#8fd3f5', '#e0f7ff'],
-  2: ['#141214', '#2e2a2a', '#57504a', '#8a7f74', '#c9bfb2'],
+  1: ['#10304d', '#2b78ad', '#5cc0e8', '#b4ecff', '#f2fdff'],
+  2: ['#1e1b1c', '#46403c', '#7a7068', '#ada296', '#e2d9cc'],
   3: ['#2a1c0e', '#5e4024', '#9a6d3c', '#d1a868', '#f5e2b8'],
-  4: ['#08110e', '#16302a', '#2f5a4e', '#6f9c8c', '#c7e5d9'],
+  4: ['#1d4038', '#3f7e6c', '#79bea6', '#bdeedb', '#f0fff8'],
   5: ['#1e2f4a', '#4a6c94', '#8fb3d9', '#d6e9f7', '#ffffff'],
 };
 export const ZONE_PLACE = ['Ashlands', 'Mirror Lake', 'Cold Forges', 'Plateau', 'Fog', 'Summit'];
@@ -164,10 +164,10 @@ export function dress(src: Grid, zone: number, f: number): Grid {
     const span = Math.max(1, y1 - y0);
     for (let y = y0; y <= y1; y++) {
       const t = (y - y0) / span;
-      if (t < 0.55) continue;
+      if (t < 0.65) continue;
       for (let x = 0; x < w; x++) {
         if (!g[y][x] || accent(g[y][x]!)) continue;
-        const keep = t < 0.7 ? (x + y + f) % 3 !== 0 : t < 0.85 ? (x + y + f) % 2 === 0 : (x + 2 * y + f) % 4 === 0;
+        const keep = t < 0.8 ? (x + y + f) % 4 !== 0 : t < 0.92 ? (x + y + f) % 2 === 0 : (x + 2 * y + f) % 3 === 0;
         if (!keep) g[y][x] = null;
       }
     }
