@@ -142,6 +142,7 @@ export const ASHLANDS: Chapter = {
         { who: 'flame', text: 'In the Fog I can circle you twice now. Two flames. Watch.' },
         { who: 'flame', mood: 'soft', text: "I didn't grow because you were amazing, by the way. I grew because you were there. That's all it takes with me." },
         { who: 'flame', mood: 'soft', text: "Every promise you keep to yourself, I believe in you a little harder. Then you do too, a little. That's how I grow." },
+        { who: 'flame', mood: 'soft', text: "So here's what I believe now: you're someone who keeps promises to themself. You don't have to believe it yet. Borrow mine." },
       ],
     },
     {

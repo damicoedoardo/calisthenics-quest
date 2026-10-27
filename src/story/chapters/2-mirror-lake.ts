@@ -64,6 +64,7 @@ export const MIRROR_LAKE: Chapter = {
         { who: 'narrator', show: 'flame', text: '{flame} rises up tall, and two tiny arms pop out of the fire.', shot: { zoom: 'in', seconds: 1.4 } },
         { who: 'flame', mood: 'happy', text: 'I can light the whole path now. Look how far back it goes.' },
         { who: 'flame', text: "And I've got arms! Tiny ones. I'll hold your rest timer from now on." },
+        { who: 'flame', mood: 'soft', text: "Want to know why I grew? You looked at the lake this month and didn't look away. I think you're someone who can look at themself now." },
       ],
     },
     {

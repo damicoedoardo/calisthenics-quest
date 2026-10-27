@@ -115,6 +115,7 @@ export const VILLAGE: Chapter = {
         { who: 'narrator', show: 'flame', text: '{flame} roars up into a bonfire. All over the village, doors open and people come out to look.', shot: { zoom: 'in', seconds: 1.6 } },
         { who: 'flame', mood: 'happy', text: "I'm not a candle any more. Tell everyone." },
         { who: 'flame', text: "In the Fog I can throw fire now. Stand back. Or don't, I'll aim." },
+        { who: 'flame', mood: 'soft', text: "Here's what I believe about you now. You're someone who finishes. Not perfectly. Finishes." },
         { who: 'narrator', text: 'Someone in a doorway takes their coat off the hook. Just to hold it, for now.', pause: 0.8 },
       ],
     },

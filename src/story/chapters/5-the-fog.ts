@@ -45,6 +45,7 @@ export const THE_FOG: Chapter = {
         { who: 'narrator', show: 'flame', text: 'Two wings of flame unfold from its back, and {flame} lifts off the ground, wobbling.', shot: { zoom: 'in', seconds: 1.6 } },
         { who: 'flame', mood: 'happy', text: "Wings. I have wings. I've been growing these the whole time, and I didn't even know." },
         { who: 'wanderer', text: "Neither did the Plateau. That's how it works. It hides, and hides, and then it shows all at once." },
+        { who: 'flame', mood: 'soft', text: "You walked a whole flat month with no proof it was working. That's what grew these. I believe you're someone who keeps going without proof." },
         { who: 'flame', mood: 'happy', text: "In the Fog I'll fly next to you now. And when you're hurt, I can patch you up a little. I'm a fire fairy. Is that a real thing? It's a real thing now." },
       ],
     },

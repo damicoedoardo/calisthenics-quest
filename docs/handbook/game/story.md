@@ -111,5 +111,6 @@ Run `pnpm test` after a change: `story.test.ts` catches a misspelled speaker, pl
 - The player's own words make it personal: the letter, the Hollow's line, the heart moments.
 - Nothing is taken away for missing days. Villager stories are opt-in.
 - The flame is the part of you that never stopped believing in you (it says so in the opening).
-  It grows as you believe in yourself, and in the finale it fuses with you. It never turns into a
-  person or a child.
+  It grows as you believe in yourself (each growth scene names who it now believes you are), and
+  in the finale, after the people you met give back what you taught them, it fuses with you. It
+  never turns into a person or a child.
