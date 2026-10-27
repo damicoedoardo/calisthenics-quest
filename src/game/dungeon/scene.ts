@@ -69,11 +69,20 @@ function recap(run: Run): RunEnd {
   return { ...over, relics: { ...run.relics }, warden };
 }
 
+/** The system asks for less motion: no hit-stop and no buzz. */
+function reducedMotion(): boolean {
+  try {
+    return !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
+
 /** A light buzz on phones, for the moments you should feel: never with reduced motion or the sound off. */
 function buzz(pattern: number | number[]) {
   try {
     if (typeof navigator === 'undefined' || !('vibrate' in navigator) || music.muted) return;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    if (reducedMotion()) return;
     navigator.vibrate(pattern);
   } catch {
     // Some browsers refuse vibrate outside a tap: it's only a nicety.
@@ -279,6 +288,8 @@ class DungeonScene extends Phaser.Scene {
   private stopSpent = { from: 0, ms: 0 };
   /** A red edge on the screen that beats when you're low. */
   private vignette!: Phaser.GameObjects.Image;
+  /** When you were last hurt: the red edge pulses for a moment. */
+  private hurtAt = -1e9;
   /** Damage numbers by the monster they belong to, so quick hits add up in one number. */
   private numberOf = new Map<Phaser.GameObjects.Text, { key: number; n: number; at: number; y: number }>();
   private offered = false;
@@ -1244,7 +1255,8 @@ class DungeonScene extends Phaser.Scene {
         this.hero.setTintFill(0xff6b6b);
         this.time.delayedCall(90, () => !this.run.over && this.hero.clearTint());
         this.cameras.main.shake(120, 0.006);
-        this.cameras.main.flash(120, 140, 20, 20);
+        // A red pulse at the screen's edge, not a full-screen flash: easy on small screens.
+        this.hurtAt = this.time.now;
         this.sfx('hurt');
         this.bits.particleTint = 0xef4444;
         this.bits.explode(6, e.x, e.y);
@@ -1656,9 +1668,8 @@ class DungeonScene extends Phaser.Scene {
 
   /** Hold the world still for a moment. `minor` stops don't come back-to-back. */
   private hitStop(ms: number, minor = false) {
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return; // no freezes for players who asked for less motion
     const now = this.time.now;
-    if (minor && now < this.stopCool) return;
+    if (reducedMotion() || (minor && now < this.stopCool)) return;
     if (now - this.stopSpent.from >= 1000) this.stopSpent = { from: now, ms: 0 };
     // Only the part that reaches past a stop already running costs anything.
     const add = Math.min(Math.max(0, now + ms - Math.max(now, this.stopUntil)), STOP_BUDGET - this.stopSpent.ms);
@@ -1668,22 +1679,27 @@ class DungeonScene extends Phaser.Scene {
     this.stopCool = now + ms + 200;
   }
 
-  /** Below 30% HP the screen's edge beats red, faster and stronger the lower you are. */
+  /** The red screen edge: a short pulse when you are hurt, and below 30% HP a beat that grows
+      faster and stronger the lower you are. */
   private drawVignette() {
     const r = this.run,
       cam = this.cameras.main,
-      share = r.hp / r.maxHp;
-    if (r.over || share >= 0.3) {
+      share = r.hp / r.maxHp,
+      hit = Math.max(0, 1 - (this.time.now - this.hurtAt) / 240),
+      low = !r.over && share < 0.3;
+    if (!low && hit <= 0) {
       this.vignette.setVisible(false);
       return;
     }
-    const beat = (Math.sin(this.time.now / (110 + 300 * share)) + 1) / 2;
+    const beat = (Math.sin(this.time.now / (110 + 300 * share)) + 1) / 2,
+      lowAlpha = low ? 0.35 + 0.15 * beat + 0.35 * beat * (1 - share / 0.3) : 0;
     this.vignette
       .setVisible(true)
       .setPosition(cam.width / 2, cam.height / 2)
       .setDisplaySize(cam.width / cam.zoom + 4, cam.height / cam.zoom + 4)
-      .setAlpha(0.35 + 0.15 * beat + 0.35 * beat * (1 - share / 0.3));
+      .setAlpha(Math.min(1, Math.max(lowAlpha, 0.6 * hit)));
   }
+
 
   private fade(ms: number, draw: (g: Phaser.GameObjects.Graphics, p: number) => void) {
     this.fading.push({ draw, start: this.time.now, ms });
