@@ -139,15 +139,8 @@ const DUNGEON_LOOKS: Record<Exclude<MonsterKind, keyof typeof FOE_LOOKS>, Look> 
   // The Mirror's images look exactly like it (the scene swaps in the Mirror's own art, BOSS_ART).
   image: { tex: BOSS_LOOKS.mirror.tex, scale: BOSS_LOOKS.mirror.scale, bits: BOSS_LOOKS.mirror.bits },
 };
-/** The same monsters wear each zone's light: cold on the lake, sooty in the village, sandy on the
-    plateau, ghostly in the fog, pale on the mountain (by zone id; none in the first). */
-const ZONE_TINT: (number | undefined)[] = [undefined, 0xc7ddff, 0xffd6b8, 0xf6e2b0, 0xb6f0d6, 0xeef2ff];
-const looks = (kind: Foe['kind'], zone: Zone): Look => {
-  if (kind === 'boss') return BOSS_LOOKS[zone.boss];
-  const look = kind in DUNGEON_LOOKS ? DUNGEON_LOOKS[kind as keyof typeof DUNGEON_LOOKS] : FOE_LOOKS[kind as keyof typeof FOE_LOOKS],
-    tint = kind === 'reflection' || kind === 'image' || kind === 'warden' ? undefined : ZONE_TINT[zone.id];
-  return tint && !('tint' in look && look.tint) ? { ...look, tint } : look;
-};
+const looks = (kind: Foe['kind'], zone: Zone): Look =>
+  kind === 'boss' ? BOSS_LOOKS[zone.boss] : kind in DUNGEON_LOOKS ? DUNGEON_LOOKS[kind as keyof typeof DUNGEON_LOOKS] : FOE_LOOKS[kind as keyof typeof FOE_LOOKS];
 /** Each zone boss's own art, in the stages of its fight (the Knight's plates falling, the
     Plateau's cracks), and its height on screen (1 = the hero's). Until a zone's sheets are loaded
     the boss wears its stand-in from BOSS_LOOKS. Swapping a boss's art is a change here. */

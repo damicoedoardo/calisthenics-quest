@@ -473,9 +473,9 @@ export const CRACK = 0.1;
 /** The Hollow's light: its reach, how long you stand in it without stepping out to take its
     hand (s), and how long it stays dark, then lit. While lit, it tests you with a turning spiral. */
 export const LIGHT = { r: 78, hold: 3, dark: 7, lit: 4.5, first: 6, drift: 16, spiral: { every: 0.11, kind: 'spiral', n: 3, speed: 72, dmg: 9, turn: 0.19 } as Pattern };
-/** The Summit's climb: each ledge makes the monsters this much tougher; the HP back on each
+/** The Summit's climb: how long the light lasts on the mountain (s); each ledge makes the monsters this much tougher; the HP back on each
     ledge; how often your friends help (s). */
-export const CLIMB = { tougher: 0.14, heal: 0.08, every: { arrow: 0.8, hammer: 3.2, lamp: 5 } };
+export const CLIMB = { limit: 120, tougher: 0.14, heal: 0.08, every: { arrow: 0.8, hammer: 3.2, lamp: 5 } };
 export type AllyKind = 'wanderer' | 'mira' | 'vela';
 export interface Ally {
   kind: AllyKind;
@@ -1174,7 +1174,7 @@ export function stepRun(run: Run, input: Input) {
       if (run.over || run.offer || run.relicOffer) return;
     }
   }
-  if (run.bossAt !== null && now - run.bossAt >= BOSS_LIMIT) {
+  if (run.bossAt !== null && now - run.bossAt >= (run.climb !== null ? CLIMB.limit : BOSS_LIMIT)) {
     emit(run, { type: 'say', text: run.climb !== null ? 'The light fades on the mountain. You climbed, and that counts.' : 'The Fog closes in. Train, and come back.' });
     return end(run, false, 'limit');
   }
