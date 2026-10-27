@@ -1,0 +1,14 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && git config core.hooksPath .githooks && echo 'Handbook: read docs/handbook/index.md first; update it before every push (skill updating-handbook, pre-push hook enforces).'"
+          }
+        ]
+      }
+    ]
+  }
+}
