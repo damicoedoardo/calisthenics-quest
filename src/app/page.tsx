@@ -6,7 +6,7 @@ import { TodayTab } from '@/components/TodayTab';
 import { SkillsTab } from '@/components/SkillsTab';
 import { HeroTab } from '@/components/HeroTab';
 import { PlayTab } from '@/components/PlayTab';
-import { FogRun } from '@/components/FogRun';
+import { FogRun, type RunStart } from '@/components/FogRun';
 import { Hero } from '@/components/Hero';
 import { Prologue } from '@/components/Prologue';
 import { Workout } from '@/components/Workout';
@@ -19,8 +19,8 @@ import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checki
 import { sawScene, scenesToPlay, storyState, type StoryState } from '@/story/engine';
 import { withTodayPage } from '@/story/daily';
 import type { Scene } from '@/story/types';
-import { useGameState } from '@/lib/store';
-import { recordRun, type Zone } from '@/lib/fog';
+import { inSandbox, useGameState } from '@/lib/store';
+import { recordRun, ZONES, type Zone } from '@/lib/fog';
 import { skipIntro, useDevMode } from '@/lib/dev';
 
 type Tab = 'today' | 'skills' | 'play' | 'hero';
@@ -53,6 +53,31 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   // Bumped when something may have unlocked a scene outside a session (a max test).
   const [storyTick, setStoryTick] = useState(0);
   const [devOpen, setDevOpen] = useState(false);
+  // /lab/night opens the app on a sandbox save at a given spot: ?tab=, ?run=<zone>&at=, ?workout, ?book.
+  const [sandbox, setSandbox] = useState(false);
+  const [runStart, setRunStart] = useState<RunStart | undefined>();
+  const [openBook, setOpenBook] = useState(false);
+  const jumped = useRef(false);
+  useEffect(() => {
+    if (!ready || jumped.current) return;
+    jumped.current = true;
+    if (!inSandbox()) return;
+    setSandbox(true);
+    const q = new URLSearchParams(window.location.search);
+    const t = q.get('tab');
+    if (t === 'today' || t === 'skills' || t === 'play' || t === 'hero') setTab(t);
+    const zone = ZONES.find((z) => String(z.id) === q.get('run'));
+    if (zone) {
+      const at = q.get('at');
+      setRunStart(at === 'mid' || at === 'boss' || at === 'win' ? at : undefined);
+      setRun(zone);
+    }
+    if (q.has('workout')) {
+      update((s) => ({ ...s, draft: s.draft ?? { startedAt: new Date().toISOString(), checkin: 'normal', sets: {} } }));
+      setTraining(true);
+    }
+    if (q.has('book')) setOpenBook(true);
+  }, [ready, update]);
   // Anything that takes the screen (a scene, a run, a workout) closes the panel for good.
   const busy = !!(run || training || after || scene || picker);
   useEffect(() => {
@@ -149,6 +174,14 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   return (
     <div ref={root} className="mx-auto flex min-h-dvh max-w-md flex-col">
       <header className="safe-top sticky top-0 z-20 bg-ink-950/90 px-4 pb-3 backdrop-blur">
+        {sandbox && (
+          <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-dashed border-sky-400/60 px-3 py-1.5 text-[11px] text-sky-300">
+            <span>Sandbox: your real save is untouched</span>
+            <a href="/lab/night" className="shrink-0 underline">
+              Back to tonight
+            </a>
+          </div>
+        )}
         <div className="flex items-center gap-3">
           <div className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800">
             <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} />
@@ -177,7 +210,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
       <main className="flex-1 px-4 pb-28 pt-2">
         {tab === 'today' ? (
-          <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} />
+          <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook} />
         ) : tab === 'skills' ? (
           <SkillsTab state={state} />
         ) : tab === 'play' ? (
@@ -215,7 +248,19 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       {dev && devOpen && !busy && (
         <DevPanel state={state} update={update} onPlayScene={setScene} onTurnOff={live ? () => setDev(false) : undefined} onClose={() => setDevOpen(false)} />
       )}
-      {run && <FogRun state={state} zone={run} dev={dev} onEnd={(r) => update((s) => recordRun(s, r))} onLeave={() => setRun(null)} />}
+      {run && (
+        <FogRun
+          state={state}
+          zone={run}
+          dev={dev}
+          startAt={runStart}
+          onEnd={(r) => update((s) => recordRun(s, r))}
+          onLeave={() => {
+            setRun(null);
+            setRunStart(undefined);
+          }}
+        />
+      )}
       {training && <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />}
       {after && <AfterSession result={after.result} before={after.before} after={after.after} onClose={() => setAfter(null)} />}
       {scene && <ScenePlayer key={scene.id} scene={scene} state={state} onDone={endScene} />}
