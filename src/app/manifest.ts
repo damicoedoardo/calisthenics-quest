@@ -9,7 +9,8 @@ export default function manifest(): MetadataRoute.Manifest {
     start_url: '/',
     scope: '/',
     display: 'standalone',
-    orientation: 'portrait',
+    // Both ways: the tabs have a sideways layout, and the Fog runs sideways.
+    orientation: 'any',
     background_color: '#0b0d14',
     theme_color: '#0b0d14',
     categories: ['health', 'fitness', 'games'],

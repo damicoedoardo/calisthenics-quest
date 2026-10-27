@@ -14,7 +14,8 @@ export const metadata: Metadata = {
     capable: true,
     title: 'FORMA',
     statusBarStyle: 'black-translucent',
-    // iOS launch screens (drawn by scripts/splash.cjs): one per iPhone screen size, portrait.
+    // iOS launch screens (drawn by scripts/splash.cjs): one per iPhone screen size, portrait only.
+    // Opened while held sideways, no image matches and iOS shows none.
     startupImage: SPLASH.map(({ w, h, dpr }) => ({
       url: `/splash/${w * dpr}x${h * dpr}.png`,
       media: `(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${dpr}) and (orientation: portrait)`,

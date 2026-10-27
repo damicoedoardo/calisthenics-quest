@@ -62,6 +62,9 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
 
   return (
     <div className="space-y-5">
+      {/* Sideways: you and your champion on the left, the rest on the right. */}
+      <div className="space-y-5 land:grid land:grid-cols-2 land:items-start land:gap-4 land:space-y-0">
+      <div className="space-y-5">
       <section className="flex flex-col items-center rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 pb-4 pt-5">
         <p className="font-pixel text-[10px] text-slate-400">{cls ? cls.name : 'Adventurer'}</p>
         <Hero gear={gear} classId={state.profile.classId} size={180} />
@@ -89,7 +92,7 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
 
       {editingLook && (
         <Overlay label="Your look" onClose={() => setEditingLook(false)}>
-          <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6 pt-4">
+          <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6 pt-4 land:min-h-0 land:max-w-3xl land:pl-[max(env(safe-area-inset-left),1rem)] land:pr-[max(env(safe-area-inset-right),1rem)] land:pb-4 land:pt-2">
             <h2 className="mb-4 font-pixel text-xs text-gold-300">Your look</h2>
             <div className="flex-1">
               <LookEditor
@@ -101,14 +104,16 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
             </div>
             <button
               onClick={() => setEditingLook(false)}
-              className="mt-5 w-full rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
+              className="mt-5 w-full rounded-2xl land:mt-3 land:py-3 bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
             >
               Done
             </button>
           </div>
         </Overlay>
       )}
+      </div>
 
+      <div className="space-y-5">
       {hasLetter && (
         <section className="rounded-2xl bg-ink-800 p-4">
           <button onClick={() => setLetterOpen(!letterOpen)} className="flex w-full items-center gap-2 font-pixel text-[10px] text-gold-300">
@@ -188,6 +193,8 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
         {backupMsg && <p className="mt-2 text-center text-xs text-gold-300">{backupMsg}</p>}
         <CloudSave sandbox={inSandbox()} />
       </section>
+      </div>
+      </div>
     </div>
   );
 }
