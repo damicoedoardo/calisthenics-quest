@@ -80,6 +80,9 @@ export interface Layout {
 }
 export const LAYOUT: Layout = { floors: 10, rooms: 3, side: 2 };
 
+/** How much faster you move once a room is cleared: nothing left to fight, so cross it quickly. */
+export const CLEAR_RUN = 2.5;
+
 /** The dials balance tests turn (scripts/fog-sim.mjs). */
 export const DIALS = {
   /** Monster HP, on top of the zone's. */

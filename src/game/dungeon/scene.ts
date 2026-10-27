@@ -1326,13 +1326,16 @@ class DungeonScene extends Phaser.Scene {
       if (Math.abs(across) > 5) h.setFlipX(across < 0);
       h.setAngle(Math.sign(across) * 3);
       if (playing === 'hero' && this.anims.exists('heroWalk')) h.play('heroWalk');
+      // Running through a cleared room: quicker steps and a thicker trail of dust.
+      h.anims.timeScale = r.cleared ? 1.8 : 1;
       if (now >= this.trailAt) {
-        this.trailAt = now + 240;
+        this.trailAt = now + (r.cleared ? 90 : 240);
         this.puffs.explode(1, hx, hy + 24);
       }
     } else {
       h.setAngle(0);
       if (playing === 'heroWalk') h.play('hero');
+      h.anims.timeScale = 1;
     }
     const blink = r.t < r.hurtUntil || r.t < r.ghostUntil;
     h.setAlpha(blink ? (Math.floor(now / 80) % 2 ? 0.35 : 1) : 1);
