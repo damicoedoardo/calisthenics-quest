@@ -9,6 +9,7 @@ import { botInput } from './bot';
 import { BARREL, CHEST, CHEST_OPEN, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STONE, type Prop } from './props';
 import {
   ABILITIES,
+  DODGE,
   FLAME_RING,
   ROOM,
   SHRINE,
@@ -22,8 +23,10 @@ import {
   pick,
   skipFloor,
   skipToBoss,
+  skipToWarden,
   stepRun,
   takeEvents,
+  wardenFloor,
   winNow,
   type AbilityId,
   type Foe,
@@ -63,12 +66,18 @@ export interface Hud {
   seconds: number;
   kills: number;
   boss: { hp: number; max: number } | null;
+  /** The Warden of the Ashes, the mid-boss, while it stands. */
+  warden: { hp: number; max: number; phase: number } | null;
+  /** The floor (from 1) whose last room holds the Warden, or null. */
+  wardenFloor: number | null;
   floor: number;
   floors: number;
   room: number;
   rooms: number;
   /** The class ability: 1 when ready. */
   ability: { id: AbilityId; ready: number };
+  /** The dodge: 1 when ready. */
+  dodge: number;
   cleared: boolean;
   relics: Partial<Record<RelicId, number>>;
 }
@@ -88,10 +97,12 @@ export interface RunEvents {
 export interface RunHandle {
   pick: (id: UpgradeId) => void;
   ability: () => void;
+  dodge: () => void;
   pause: () => void;
   resume: () => void;
   skipToBoss: () => void;
   skipFloor: () => void;
+  skipToWarden: () => void;
   pickRelic: (id: RelicId) => void;
   winNow: () => void;
   autopilot: (on: boolean) => void;
@@ -112,6 +123,8 @@ const DUNGEON_LOOKS: Record<Exclude<MonsterKind, keyof typeof FOE_LOOKS>, Look> 
   splitter: { tex: 'splitter', scale: 0.78, bits: [0x86efac, 0x15803d, 0xdcfce7] },
   splitling: { tex: 'splitling', scale: 0.5, bits: [0x86efac, 0x15803d] },
   shade: { tex: 'shade', scale: 0.65, bits: [0xa78bfa, 0x6b21a8, 0x1e1b4b] },
+  // The Warden of the Ashes: the golem, much bigger, the grey of cold ash, embers glowing under it.
+  warden: { tex: 'golem', scale: 1.45, tint: 0xd6c3b0, bits: [0x78716c, 0xf97316, 0xfde68a] },
 };
 const looks = (kind: Foe['kind'], zone: Zone): Look =>
   kind === 'boss' ? BOSS_LOOKS[zone.boss] : kind in DUNGEON_LOOKS ? DUNGEON_LOOKS[kind as keyof typeof DUNGEON_LOOKS] : FOE_LOOKS[kind as keyof typeof FOE_LOOKS];
@@ -155,11 +168,20 @@ class DungeonScene extends Phaser.Scene {
   private puffs!: Phaser.GameObjects.Particles.ParticleEmitter;
   private numbers: Phaser.GameObjects.Text[] = [];
   private bossLabel: Phaser.GameObjects.Text | null = null;
-  private keys: Record<'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'space', Phaser.Input.Keyboard.Key> | null = null;
+  private keys: Record<'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'space' | 'shift', Phaser.Input.Keyboard.Key> | null = null;
   private stick: { id: number; x: number; y: number; dx: number; dy: number } | null = null;
   private fading: { draw: (g: Phaser.GameObjects.Graphics, p: number) => void; start: number; ms: number }[] = [];
   private acc = 0;
   private wantAbility = false;
+  private wantDodge = false;
+  /** Hit-stop: the world holds still until then (the engine's steps wait, none are lost). */
+  private stopUntil = 0;
+  /** Small hit-stops don't come back before then, so a flurry of hits doesn't stutter. */
+  private stopCool = 0;
+  /** A red edge on the screen that beats when you're low. */
+  private vignette!: Phaser.GameObjects.Image;
+  /** Damage numbers by the monster they belong to, so quick hits add up in one number. */
+  private numberOf = new Map<Phaser.GameObjects.Text, { key: number; n: number; at: number; y: number }>();
   private offered = false;
   private ended = false;
   private hudAt = 0;
@@ -239,6 +261,7 @@ class DungeonScene extends Phaser.Scene {
       );
     }
     this.pad = this.add.graphics().setScrollFactor(0).setDepth(300000);
+    this.vignette = this.add.image(0, 0, 'vignette').setScrollFactor(0).setDepth(250000).setVisible(false);
     this.cameras.main.startFollow(this.hero, true, 0.14, 0.14);
     this.newRoom();
     this.scale.on(Phaser.Scale.Events.RESIZE, () => this.fitScreen());
@@ -246,8 +269,9 @@ class DungeonScene extends Phaser.Scene {
     const kb = this.input.keyboard;
     if (kb) {
       const k = Phaser.Input.Keyboard.KeyCodes;
-      this.keys = kb.addKeys({ up: k.UP, down: k.DOWN, left: k.LEFT, right: k.RIGHT, w: k.W, a: k.A, s: k.S, d: k.D, space: k.SPACE }) as DungeonScene['keys'];
+      this.keys = kb.addKeys({ up: k.UP, down: k.DOWN, left: k.LEFT, right: k.RIGHT, w: k.W, a: k.A, s: k.S, d: k.D, space: k.SPACE, shift: k.SHIFT }) as DungeonScene['keys'];
       this.keys?.space.on('down', () => (this.wantAbility = true));
+      this.keys?.shift.on('down', () => (this.wantDodge = true));
     }
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
       if (!this.stick) this.stick = { id: p.id, x: p.x, y: p.y, dx: 0, dy: 0 };
@@ -394,6 +418,20 @@ class DungeonScene extends Phaser.Scene {
       ctx.fillRect(0, 0, 64, 64);
       mist.refresh();
     }
+    // The low-HP edge: clear in the middle, red toward the corners. Smooth, unlike the pixel art.
+    if (this.textures.exists('vignette')) this.textures.remove('vignette');
+    const vig = this.textures.createCanvas('vignette', 128, 128);
+    if (vig) {
+      const ctx = vig.getContext(),
+        grad = ctx.createRadialGradient(64, 64, 34, 64, 64, 92);
+      grad.addColorStop(0, 'rgba(220,38,38,0)');
+      grad.addColorStop(0.55, 'rgba(220,38,38,0.35)');
+      grad.addColorStop(1, 'rgba(127,29,29,0.95)');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, 128, 128);
+      vig.refresh();
+      vig.setFilter(Phaser.Textures.FilterMode.LINEAR);
+    }
     const diamond = (w: number, h: number) => [new Phaser.Math.Vector2(w / 2, 0), new Phaser.Math.Vector2(w, h / 2), new Phaser.Math.Vector2(w / 2, h), new Phaser.Math.Vector2(0, h / 2)];
     tex('gem', 8, 10, () => {
       g.fillStyle(0x7dd3fc).fillPoints(diamond(8, 10), true);
@@ -532,16 +570,24 @@ class DungeonScene extends Phaser.Scene {
   update(_time: number, deltaMs: number) {
     if (this.ended || this.paused) return;
     const run = this.run;
+    // Hit-stop: for a few frames nothing moves, so a big hit lands. The engine's steps just wait.
+    if (this.time.now < this.stopUntil) {
+      this.drawFx();
+      this.drawPad();
+      this.drawVignette();
+      return;
+    }
     this.acc += Math.min(deltaMs, 100);
     let steps = 0;
     while (this.acc >= STEP * 1000 && steps < 6) {
       this.acc -= STEP * 1000;
       steps++;
-      const input = this.bot ? botInput(run) : { ...this.stickInput(), ability: this.wantAbility };
+      const input = this.bot ? botInput(run) : { ...this.stickInput(), ability: this.wantAbility, dodge: this.wantDodge };
       this.wantAbility = false;
+      this.wantDodge = false;
       stepRun(run, input);
       for (const e of takeEvents(run)) this.react(e);
-      if (run.offer || run.over) break;
+      if (run.offer || run.over || this.time.now < this.stopUntil) break;
     }
     if (run.relicOffer && !this.offered) {
       this.offered = true;
@@ -563,6 +609,7 @@ class DungeonScene extends Phaser.Scene {
     this.sync();
     this.drawFx();
     this.drawPad();
+    this.drawVignette();
     if (this.time.now >= this.hudAt) {
       this.hudAt = this.time.now + 100;
       this.bus.hud(this.hud());
@@ -607,11 +654,14 @@ class DungeonScene extends Phaser.Scene {
       seconds: Math.floor(r.t),
       kills: r.kills,
       boss: r.boss ? { hp: Math.max(0, r.boss.hp), max: r.boss.maxHp } : null,
+      warden: r.warden?.alive ? { hp: Math.max(0, r.warden.hp), max: r.warden.maxHp, phase: r.warden.phase } : null,
+      wardenFloor: wardenFloor(r.layout) >= 0 ? wardenFloor(r.layout) + 1 : null,
       floor: r.floor + 1,
       floors: r.layout.floors,
       room: r.room + 1,
       rooms: r.layout.rooms,
       ability: { id: r.ability, ready: Math.min(1, 1 - (r.abilityAt - r.t) / ABILITIES[r.ability].cd) },
+      dodge: Math.min(1, 1 - (r.dodgeAt - r.t) / DODGE.cd),
       cleared: r.cleared,
       relics: { ...r.relics },
     };
@@ -766,31 +816,50 @@ class DungeonScene extends Phaser.Scene {
           ent.flash = now + 50;
           ent.squash = now + 90;
         }
-        this.sparks.explode(2, e.x, e.y - 6);
+        this.sparks.explode(e.dmg >= 30 ? 6 : 2, e.x, e.y - 6);
         this.sfx(e.boss ? 'bossHit' : 'hit');
-        this.number(e.x, e.y - 18, e.dmg);
+        this.number(e.x, e.y - 18, e.dmg, undefined, e.id);
+        if (e.dmg >= 30) this.hitStop(40, true);
         break;
       }
       case 'kill': {
         const look = looks(e.kind, this.setup.zone);
         const boss = e.kind === 'boss',
-          R = 30 * look.scale,
+          huge = boss || e.kind === 'warden',
+          big = huge || e.kind === 'golem' || e.elite,
+          R = 30 * look.scale * (e.elite ? ELITE.r : 1),
           x = e.x,
           y = e.y;
+        // The body pops: a white flash of its own shape that bursts wide and flat, then is gone.
+        const ent = this.foes.get(e.id);
+        if (ent) {
+          this.foes.delete(e.id);
+          const s = ent.s.setTintFill(0xffffff).setAlpha(1);
+          this.tweens.add({ targets: s, scaleX: s.scaleX * 1.7, scaleY: s.scaleY * 0.35, alpha: 0, duration: huge ? 380 : 190, ease: 'Quad.easeOut', onComplete: () => s.destroy() });
+        }
         for (const c of look.bits) {
           this.bits.particleTint = c;
-          this.bits.explode(boss ? 24 : e.kind === 'golem' ? 10 : 4, x, y);
+          this.bits.explode(huge ? 36 : big ? 16 : 8, x, y);
         }
-        this.fade(boss ? 600 : 220, (g, p) => {
-          g.fillStyle(0xffffff, 0.5 * (1 - p)).fillCircle(x, y, R * (0.4 + 0.4 * p));
-          g.lineStyle(3 * (1 - p) + 1, 0xffffff, 0.8 * (1 - p)).strokeCircle(x, y, R * (0.5 + 0.9 * p));
+        this.sparks.explode(huge ? 30 : big ? 12 : 4, x, y);
+        this.fade(huge ? 700 : big ? 380 : 260, (g, p) => {
+          g.fillStyle(0xffffff, 0.6 * (1 - p)).fillCircle(x, y, R * (0.5 + 0.5 * p));
+          g.lineStyle(4 * (1 - p) + 1, 0xffffff, 0.9 * (1 - p)).strokeCircle(x, y, R * (0.6 + 1.4 * p));
+          if (big) g.lineStyle(2, look.bits[0], 0.7 * (1 - p)).strokeCircle(x, y, R * (0.8 + 2.4 * p));
         });
-        if (e.kind === 'golem' || boss) this.cameras.main.shake(150, 0.005);
-        this.sfx('kill', e.kind === 'golem' || boss ? 0.6 : e.kind === 'wisp' ? 1.3 : 1);
+        if (big) {
+          this.cameras.main.shake(huge ? 320 : 160, huge ? 0.01 : 0.006);
+          this.hitStop(huge ? 70 : 60);
+        }
+        this.sfx('kill', big ? 0.6 : e.kind === 'wisp' ? 1.3 : 1);
         if (boss) this.bossLabel?.destroy();
+        if (e.kind === 'warden') this.cameras.main.flash(300, 255, 180, 90);
         break;
       }
       case 'hurt':
+        this.hitStop(70);
+        this.hero.setTintFill(0xff6b6b);
+        this.time.delayedCall(90, () => !this.run.over && this.hero.clearTint());
         this.cameras.main.shake(120, 0.006);
         this.cameras.main.flash(120, 140, 20, 20);
         this.sfx('hurt');
@@ -823,13 +892,55 @@ class DungeonScene extends Phaser.Scene {
       }
       case 'ability': {
         const { x, y, toX, toY } = e;
-        this.sfx(e.id === 'volley' ? 'arrow' : e.id === 'still' ? 'nova' : 'dash');
+        this.sfx(e.id === 'volley' ? 'arrow' : e.id === 'still' || e.id === 'shock' ? 'nova' : 'dash');
         this.cameras.main.shake(100, 0.004);
-        if (e.id === 'charge' || e.id === 'dash' || e.id === 'blink') {
+        if (e.id === 'charge' || e.id === 'blink') {
           this.fade(300, (g, p) => g.lineStyle(10 * (1 - p) + 2, 0x7dd3fc, 0.6 * (1 - p)).lineBetween(x, y, toX, toY));
           this.puffs.explode(10, x, y + 10);
         }
         if (e.id === 'still') this.fade(500, (g, p) => g.lineStyle(4, 0x86efac, 0.8 * (1 - p)).strokeCircle(x, y, 30 + 120 * p));
+        if (e.id === 'shock') {
+          this.puffs.explode(14, x, y + 10);
+          this.fade(380, (g, p) => {
+            g.lineStyle(6 * (1 - p) + 1, 0x7dd3fc, 0.9 * (1 - p)).strokeCircle(x, y, 20 + 90 * p);
+            g.fillStyle(0x7dd3fc, 0.15 * (1 - p)).fillCircle(x, y, 20 + 90 * p);
+          });
+        }
+        break;
+      }
+      case 'dodge': {
+        const { x, y, toX, toY } = e;
+        this.sfx('dash', 1.3);
+        this.puffs.explode(6, x, y + 18);
+        // Afterimages along the way: you were there, and now you're not.
+        for (let i = 0; i < 3; i++) {
+          const k = i / 3,
+            ghost = this.add
+              .image(x + (toX - x) * k, y + (toY - y) * k, this.hero.texture.key, this.hero.frame.name)
+              .setScale(this.hero.scaleX, this.hero.scaleY)
+              .setFlipX(this.hero.flipX)
+              .setTintFill(0x7dd3fc)
+              .setAlpha(0.55 - i * 0.12)
+              .setDepth(y - 1);
+          this.tweens.add({ targets: ghost, alpha: 0, duration: 260 + i * 60, onComplete: () => ghost.destroy() });
+        }
+        this.fade(220, (g, p) => g.lineStyle(6 * (1 - p) + 1, 0xe0f2fe, 0.5 * (1 - p)).lineBetween(x, y, toX, toY));
+        break;
+      }
+      case 'warden':
+        this.cameras.main.flash(400, 120, 60, 20);
+        this.cameras.main.shake(600, 0.007);
+        this.sfx('roar', 1.15);
+        break;
+      case 'phase': {
+        const { x, y } = e;
+        this.hitStop(70);
+        this.sfx('roar', 0.9);
+        this.cameras.main.shake(400, 0.01);
+        this.cameras.main.flash(250, 160, 50, 10);
+        this.bits.particleTint = 0xf97316;
+        this.bits.explode(30, x, y);
+        this.fade(600, (g, p) => g.lineStyle(8 * (1 - p) + 1, 0xf97316, 0.9 * (1 - p)).strokeCircle(x, y, 40 + 200 * p));
         break;
       }
       case 'heal':
@@ -842,7 +953,7 @@ class DungeonScene extends Phaser.Scene {
         break;
       case 'spawn':
         this.puffs.explode(5, e.x, e.y + 20);
-        if (e.kind === 'golem') {
+        if (e.kind === 'golem' || e.kind === 'warden') {
           this.sfx('stomp');
           this.cameras.main.shake(180, 0.004);
         }
@@ -886,9 +997,10 @@ class DungeonScene extends Phaser.Scene {
         this.sfx('nova', 0.7);
         // What's behind each door, written over it.
         const single = r.doors.length === 1,
-          last = r.floor === r.layout.floors - 1 && r.room === r.layout.rooms - 2;
+          last = r.floor === r.layout.floors - 1 && r.room === r.layout.rooms - 2,
+          warden = r.floor === wardenFloor(r.layout) && r.room === r.layout.rooms - 2;
         for (const d of r.doors) {
-          const look = single ? { label: last ? 'BOSS' : 'STAIRS', color: last ? 0xa855f7 : 0xfbbf24 } : DOOR_LOOK[d.kind];
+          const look = single ? (last ? { label: 'BOSS', color: 0xa855f7 } : warden ? { label: 'WARDEN', color: 0xf97316 } : { label: 'STAIRS', color: 0xfbbf24 }) : DOOR_LOOK[d.kind];
           this.roomBits.push(
             this.add
               .text(d.x, ROOM.wall + 34, look.label, { fontFamily: '"Press Start 2P", monospace', fontSize: '9px', color: `#${look.color.toString(16).padStart(6, '0')}`, stroke: '#0b0d14', strokeThickness: 3 })
@@ -902,7 +1014,7 @@ class DungeonScene extends Phaser.Scene {
           this.roomBits.push(this.chest);
           this.puffs.explode(10, r.chest.x, r.chest.y);
         }
-        this.bus.say(single ? (last ? 'Room clear. The boss is through that door.' : 'Room clear. The stairs go down.') : r.chest ? 'Room clear. Open the chest, then pick a door.' : 'Room clear. Pick a door: each says what waits behind it.');
+        this.bus.say(single ? (last ? 'Room clear. The boss is through that door.' : warden ? 'Room clear. The Warden of the Ashes waits through that door.' : 'Room clear. The stairs go down.') : r.chest ? 'Room clear. Open the chest, then pick a door.' : 'Room clear. Pick a door: each says what waits behind it.');
         break;
       }
       case 'chest':
@@ -955,18 +1067,65 @@ class DungeonScene extends Phaser.Scene {
     }
   }
 
-  private number(x: number, y: number, n: number, color?: string) {
+  /** A floating number. Quick hits on the same monster (`key`) add up in one number instead of
+      piling up, and a new number steps above the ones already floating there. */
+  private number(x: number, y: number, n: number, color?: string, key?: number) {
+    const now = this.time.now;
+    if (key !== undefined)
+      for (const [t, o] of this.numberOf)
+        if (o.key === key && t.visible && now - o.at < 220) {
+          o.n += n;
+          o.at = now;
+          this.showNumber(t, t.x, o.y, o.n, color, true);
+          return;
+        }
     const t = this.numbers.find((x) => !x.visible);
     if (!t) return;
+    let at = y;
+    for (let i = 0; i < 4 && this.numbers.some((o) => o !== t && o.visible && Math.abs(o.x - x) < 24 && Math.abs(o.y - at) < 11); i++) at -= 12;
+    const px = x + (at === y ? Phaser.Math.Between(-5, 5) : Phaser.Math.Between(6, 12) * (Math.round((y - at) / 12) % 2 ? 1 : -1));
+    if (key !== undefined) this.numberOf.set(t, { key, n, at: now, y: at });
+    else this.numberOf.delete(t);
+    this.showNumber(t, px, at, n, color, false);
+  }
+
+  private showNumber(t: Phaser.GameObjects.Text, x: number, y: number, n: number, color: string | undefined, again: boolean) {
     const big = n >= 30;
+    this.tweens.killTweensOf(t);
     t.setText(color === HEAL ? `+${n}` : String(n))
       .setColor(color ?? (big ? '#fbbf24' : '#ffffff'))
-      .setFontSize(big ? 11 : 8)
-      .setPosition(x + Phaser.Math.Between(-6, 6), y)
+      .setFontSize(big ? 11 : 9)
+      .setPosition(x, y)
       .setVisible(true)
       .setAlpha(1)
-      .setScale(big ? 1.4 : 1);
-    this.tweens.add({ targets: t, y: y - (big ? 26 : 18), alpha: 0, scale: 1, duration: big ? 600 : 450, onComplete: () => t.setVisible(false) });
+      .setScale(big || again ? 1.35 : 1);
+    this.tweens.add({ targets: t, y: y - (big ? 24 : 16), scale: 1, duration: 140, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: t, alpha: 0, delay: big ? 380 : 260, duration: 260, onComplete: () => t.setVisible(false) });
+  }
+
+  /** Hold the world still for a moment. `minor` stops don't come back-to-back. */
+  private hitStop(ms: number, minor = false) {
+    const now = this.time.now;
+    if (minor && now < this.stopCool) return;
+    this.stopUntil = Math.max(this.stopUntil, now + ms);
+    this.stopCool = now + ms + 200;
+  }
+
+  /** Below 30% HP the screen's edge beats red, faster and stronger the lower you are. */
+  private drawVignette() {
+    const r = this.run,
+      cam = this.cameras.main,
+      share = r.hp / r.maxHp;
+    if (r.over || share >= 0.3) {
+      this.vignette.setVisible(false);
+      return;
+    }
+    const beat = (Math.sin(this.time.now / (110 + 300 * share)) + 1) / 2;
+    this.vignette
+      .setVisible(true)
+      .setPosition(cam.width / 2, cam.height / 2)
+      .setDisplaySize(cam.width / cam.zoom + 4, cam.height / cam.zoom + 4)
+      .setAlpha(0.35 + 0.15 * beat + 0.35 * beat * (1 - share / 0.3));
   }
 
   private fade(ms: number, draw: (g: Phaser.GameObjects.Graphics, p: number) => void) {
@@ -987,6 +1146,14 @@ class DungeonScene extends Phaser.Scene {
     if (r.boss?.alive && this.setup.zone.boss === 'tomorrow') {
       const far = Math.hypot(r.boss.x - r.hero.x, r.boss.y - r.hero.y) > 200;
       this.fx.lineStyle(2, far ? 0x86efac : 0x94a3b8, far ? 0.5 : 0.18).strokeCircle(r.boss.x, r.boss.y, 200);
+    }
+    // Embers under the Warden: amber while it turns its cross, red once it's past half.
+    const wd = r.warden;
+    if (wd?.alive) {
+      const hot = wd.phase === 2,
+        p = (Math.sin(now / (hot ? 90 : 160)) + 1) / 2;
+      this.fx.fillStyle(hot ? 0xef4444 : 0xf97316, 0.12 + 0.12 * p).fillEllipse(wd.x, wd.y + wd.def.r, wd.def.r * 3.4, wd.def.r * 1.3);
+      this.fx.lineStyle(2, hot ? 0xef4444 : 0xfbbf24, 0.4 + 0.3 * p).strokeEllipse(wd.x, wd.y + wd.def.r, wd.def.r * 3.4, wd.def.r * 1.3);
     }
     // The way out, once open.
     if (r.doorOpen) {
@@ -1130,6 +1297,10 @@ class DungeonScene extends Phaser.Scene {
     this.wantAbility = true;
   }
 
+  dodge() {
+    this.wantDodge = true;
+  }
+
   setPaused(on: boolean) {
     this.paused = on;
     this.run.paused = on;
@@ -1156,6 +1327,11 @@ class DungeonScene extends Phaser.Scene {
     skipFloor(this.run);
     for (const e of takeEvents(this.run)) this.react(e);
   }
+
+  skipToWarden() {
+    skipToWarden(this.run);
+    for (const e of takeEvents(this.run)) this.react(e);
+  }
 }
 
 export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents): RunHandle {
@@ -1174,10 +1350,12 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
   return {
     pick: (id) => scene.pick(id),
     ability: () => scene.ability(),
+    dodge: () => scene.dodge(),
     pause: () => scene.setPaused(true),
     resume: () => scene.setPaused(false),
     skipToBoss: () => scene.skipToBoss(),
     skipFloor: () => scene.skipFloor(),
+    skipToWarden: () => scene.skipToWarden(),
     pickRelic: (id) => scene.pickRelic(id),
     winNow: () => scene.winNow(),
     autopilot: (on) => (scene.bot = on),
