@@ -814,7 +814,7 @@ class DungeonScene extends Phaser.Scene {
       case 'hurt':
         this.hitStop(70);
         this.hero.setTintFill(0xff6b6b);
-        this.time.delayedCall(90, () => this.hero.clearTint());
+        this.time.delayedCall(90, () => !this.run.over && this.hero.clearTint());
         this.cameras.main.shake(120, 0.006);
         this.cameras.main.flash(120, 140, 20, 20);
         this.sfx('hurt');
