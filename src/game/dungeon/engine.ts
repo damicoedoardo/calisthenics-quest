@@ -149,7 +149,7 @@ const RUN_LIMIT = 2400;
 
 // ---------- monsters ----------
 
-export type MonsterKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'ram' | 'book' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade';
+export type MonsterKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'ram' | 'book' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade' | 'warden';
 export type FoeKind = MonsterKind | 'boss';
 
 /** How a monster moves: walks at you, keeps its distance, circles you at its range, stands still,
@@ -176,6 +176,10 @@ export interface Pattern {
   r?: number;
   /** Only below this share of HP (a boss's second phase). */
   below?: number;
+  /** Only above this share of HP (a first phase that stops when the second starts). */
+  above?: number;
+  /** How far a spiral turns between volleys (radians). */
+  turn?: number;
   /** Fired only when a charge ends or a blink lands, not on a clock. */
   on?: 'move';
 }
@@ -227,7 +231,30 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
   splitling: { hp: 9, speed: 74, dmg: 5, r: 10, xp: 0, move: 'chase', shoots: [], cost: 0 },
   // A shade of you: vanishes, lands near you (watch for the mark) and fires a ring that starts slow.
   shade: { hp: 30, speed: 60, dmg: 9, r: 13, xp: 3, move: 'blink', range: 190, shoots: [{ every: 0, on: 'move', kind: 'ring', n: 10, speed: 140, dmg: 8, style: 'ramp' }], cost: 3 },
+  // The Warden of the Ashes, halfway down: a great golem that guards the stairs. First it turns a
+  // slow cross of shots (walk around it with the arms); hurt past half, it stops turning and fires
+  // aimed bursts at you, with a ring now and then. It never joins an ordinary room.
+  warden: {
+    hp: 560,
+    speed: 30,
+    dmg: 16,
+    r: 26,
+    xp: 30,
+    move: 'chase',
+    shoots: [
+      { every: 0.2, kind: 'spiral', n: 4, speed: 72, dmg: 8, turn: 0.13, above: 0.5, first: 1.2 },
+      { every: 2.6, kind: 'spread', n: 5, arc: 0.9, speed: 110, dmg: 9, above: 0.5, first: 2.5 },
+      { every: 1.5, kind: 'aimed', n: 3, speed: 120, dmg: 9, below: 0.5 },
+      { every: 3.2, kind: 'ring', n: 18, speed: 80, dmg: 8, below: 0.5 },
+    ],
+    cost: 0,
+  },
 };
+/** The Warden of the Ashes guards the last room of the middle floor (floor 5 of 10). */
+export const WARDEN = { name: 'the Warden of the Ashes' };
+/** The floor (from 0) whose last room holds the Warden, or -1 when the dungeon is too short for one. */
+export const wardenFloor = (layout: Layout) => (layout.floors >= 4 ? Math.floor(layout.floors / 2) - 1 : -1);
+export const isWardenRoom = (r: Pick<Run, 'floor' | 'room' | 'layout'>) => r.floor === wardenFloor(r.layout) && r.room === r.layout.rooms - 1;
 
 /** Monsters that join deeper down, by the floor (of 10) they first show on and how common they are. */
 const UNLOCK: [MonsterKind, number, number][] = [
@@ -335,15 +362,17 @@ const RAMP = { from: 0.25, over: 1.1 };
 
 // ---------- class abilities ----------
 
-export type AbilityId = 'charge' | 'volley' | 'blink' | 'still' | 'dash';
+export type AbilityId = 'charge' | 'volley' | 'blink' | 'still' | 'shock';
 
 export const ABILITIES: Record<AbilityId, { name: string; text: string; cd: number }> = {
   charge: { name: 'Charge', text: 'Rush ahead, untouchable, hitting everything you pass.', cd: 6 },
   volley: { name: 'Volley', text: 'Loose arrows all around you that pierce through.', cd: 7 },
   blink: { name: 'Blink', text: 'Vanish and appear ahead, bursting where you land and wiping shots nearby.', cd: 8 },
   still: { name: 'Stillness', text: 'Breathe: heal some HP and push everything away.', cd: 14 },
-  dash: { name: 'Dash', text: 'A quick dodge: untouchable for a moment.', cd: 5 },
+  shock: { name: 'Shockwave', text: 'Knock back everything near you and wipe the shots around you.', cd: 6 },
 };
+/** Every class can dodge: a short dash, untouchable for a moment, on its own short clock. */
+export const DODGE = { cd: 2.5, speed: 480, secs: 0.17, ghost: 0.27 };
 
 /** Up close you take more hits, so the sword's class is built to: more HP and armor. */
 /** Each class in the dungeon, against the others: HP, armor, and damage (orbs and waves hit crowds, so less each). */
@@ -355,7 +384,7 @@ export const CLASS_BODY: Record<'slash' | 'arrow' | 'orb' | 'wave', { hp: number
 };
 
 export function abilityOf(cls: ClassId | undefined): AbilityId {
-  return cls === 'warrior' ? 'charge' : cls === 'archer' ? 'volley' : cls === 'mage' ? 'blink' : cls === 'monk' ? 'still' : 'dash';
+  return cls === 'warrior' ? 'charge' : cls === 'archer' ? 'volley' : cls === 'mage' ? 'blink' : cls === 'monk' ? 'still' : 'shock';
 }
 
 // ---------- the world ----------
@@ -386,6 +415,8 @@ export interface Foe {
   act: number;
   /** Bigger, tougher, worth more (elite rooms). */
   elite: boolean;
+  /** 2 once a two-phase foe (the Warden) is past half its HP. */
+  phase: number;
   alive: boolean;
 }
 
@@ -450,12 +481,15 @@ export interface Gem {
 export type GameEvent =
   | { type: 'attack'; kind: AttackKind; x: number; y: number; angle: number; n: number; r?: number }
   | { type: 'hit'; id: number; x: number; y: number; dmg: number; boss: boolean }
-  | { type: 'kill'; x: number; y: number; kind: FoeKind }
+  | { type: 'kill'; id: number; x: number; y: number; kind: FoeKind; elite: boolean }
   | { type: 'hurt'; x: number; y: number; dmg: number; by: 'shot' | 'touch' }
   | { type: 'shoot'; x: number; y: number; boss: boolean }
   | { type: 'burst'; x: number; y: number; r: number; color: 'nova' | 'orb' | 'wave' | 'fire' | 'ability' }
   | { type: 'chain'; points: { x: number; y: number }[] }
   | { type: 'ability'; id: AbilityId; x: number; y: number; toX: number; toY: number }
+  | { type: 'dodge'; x: number; y: number; toX: number; toY: number }
+  | { type: 'warden' }
+  | { type: 'phase'; x: number; y: number }
   | { type: 'heal'; x: number; y: number; n: number }
   | { type: 'gem' }
   | { type: 'spawn'; x: number; y: number; kind: FoeKind }
@@ -492,6 +526,8 @@ export interface Input {
   y: number;
   /** The ability button went down this step. */
   ability: boolean;
+  /** The dodge button went down this step. */
+  dodge?: boolean;
 }
 
 export interface RunEnd {
@@ -544,9 +580,14 @@ export interface Run {
   level: number;
   kills: number;
   hurtUntil: number;
-  /** Untouchable until then (dash, charge, blink). */
+  /** Untouchable until then (dodge, charge, blink). */
   ghostUntil: number;
-  charge: { until: number; x: number; y: number; hit: Set<Foe> } | null;
+  /** A rush in a straight line: the warrior's charge (it hits what it passes) or a dodge (it doesn't). */
+  charge: { until: number; x: number; y: number; hit: Set<Foe>; harm: boolean } | null;
+  /** The dodge is ready again then. */
+  dodgeAt: number;
+  /** The Warden of the Ashes while it stands. */
+  warden: Foe | null;
   shove: { until: number; x: number; y: number };
   ability: AbilityId;
   abilityAt: number;
@@ -627,6 +668,8 @@ export function createRun(setup: RunSetup): Run {
     hurtUntil: 0,
     ghostUntil: 0,
     charge: null,
+    dodgeAt: 0,
+    warden: null,
     shove: { until: 0, x: 0, y: 0 },
     ability: abilityOf(setup.classId),
     abilityAt: 0,
@@ -697,6 +740,7 @@ function fillRoom(run: Run): MonsterKind[][] {
 /** How big a room is: never smaller than a phone screen, taller deeper down. The boss's is fixed. */
 function roomSize(run: Run) {
   if (isBossRoom(run)) return { w: 480, h: 900 };
+  if (isWardenRoom(run)) return { w: 460, h: 860 };
   return { w: ROOM.w + Math.round(run.rnd() * 5) * 20, h: ROOM.h + Math.round(run.rnd() * (3 + 5 * depth(run))) * 30 };
 }
 
@@ -706,7 +750,7 @@ function buildTerrain(run: Run): Terrain {
   const { w, h } = run.area,
     rnd = run.rnd,
     fl = floorOf10(run),
-    boss = isBossRoom(run),
+    boss = isBossRoom(run) || isWardenRoom(run),
     m = ROOM.wall;
   const t: Terrain = { water: [], pillars: [], spikes: [], barrels: [], shrine: null };
   const rects = () => [...t.water, ...t.spikes];
@@ -774,17 +818,29 @@ function enterRoom(run: Run) {
   run.doorOpen = false;
   run.doors = [];
   run.chest = null;
-  run.kind = isBossRoom(run) ? 'fight' : run.nextKind;
+  run.kind = isBossRoom(run) || isWardenRoom(run) ? 'fight' : run.nextKind;
   run.nextKind = 'fight';
   run.area = roomSize(run);
   run.terrain = buildTerrain(run);
   run.hero.x = run.area.w / 2;
   run.hero.y = run.area.h - 70;
   run.charge = null;
+  run.warden = null;
   emit(run, { type: 'room' });
   if (isBossRoom(run)) {
     run.waves = [];
     later(run, 1.2, () => summonBoss(run));
+    return;
+  }
+  if (isWardenRoom(run)) {
+    // The Warden alone: it rises at the top of the room while you walk in.
+    run.waves = [];
+    const f = addFoe(run, 'warden', run.area.w / 2, 170);
+    f.bornUntil = run.t + 1.4;
+    f.next = f.def.shoots.map((p) => run.t + 1.4 + (p.first ?? p.every));
+    run.warden = f;
+    emit(run, { type: 'warden' });
+    emit(run, { type: 'say', text: 'The Warden of the Ashes guards the stairs. Walk with its turning arms.' });
     return;
   }
   if (run.kind !== 'fight') emit(run, { type: 'say', text: `${ROOM_KINDS[run.kind].name} room. ${ROOM_KINDS[run.kind].text}` });
@@ -842,6 +898,7 @@ function addFoe(run: Run, kind: MonsterKind, x: number, y: number): Foe {
     dashY: 0,
     act: run.t + 1.2 + run.rnd() * 1.5,
     elite,
+    phase: 1,
     alive: true,
   };
   run.foes.push(f);
@@ -881,6 +938,7 @@ function summonBoss(run: Run) {
     dashY: 0,
     act: 0,
     elite: false,
+    phase: 1,
     alive: true,
   };
   run.foes.push(b);
@@ -927,6 +985,7 @@ export function stepRun(run: Run, input: Input) {
     return end(run, false, 'limit');
   }
   if (now >= RUN_LIMIT) return end(run, false, 'limit');
+  if (input.dodge) dodge(run, input);
   moveHero(run, input);
   if (input.ability) useAbility(run, input);
   moveFoes(run);
@@ -988,13 +1047,31 @@ function moveHero(run: Run, input: Input) {
     emit(run, { type: 'shrine', x: sh.x, y: sh.y });
     emit(run, { type: 'heal', x: h.x, y: h.y, n: heal });
   }
-  if (run.charge) {
+  if (run.charge?.harm) {
     for (const f of run.foes) {
       if (!f.alive || run.charge.hit.has(f) || dist(f, h) > f.def.r + HERO_R + 12) continue;
       run.charge.hit.add(f);
       damage(run, f, pow(run, ATTACK.slash.dmg * 2), 220);
     }
   }
+}
+
+/** A short dash, untouchable for a moment: shots pass through you. It goes where you push the
+    stick, or the way you face. */
+function dodge(run: Run, input: Input) {
+  const now = run.t,
+    h = run.hero;
+  if (now < run.dodgeAt || (run.charge && now < run.charge.until)) return;
+  run.dodgeAt = now + DODGE.cd;
+  let dx = input.x,
+    dy = input.y;
+  if (Math.hypot(dx, dy) < 0.1) [dx, dy] = [Math.cos(h.facing), Math.sin(h.facing)];
+  const d = Math.hypot(dx, dy) || 1;
+  dx /= d;
+  dy /= d;
+  run.charge = { until: now + DODGE.secs, x: dx * DODGE.speed, y: dy * DODGE.speed, hit: new Set(), harm: false };
+  run.ghostUntil = Math.max(run.ghostUntil, now + DODGE.ghost);
+  emit(run, { type: 'dodge', x: h.x, y: h.y, toX: h.x + dx * DODGE.speed * DODGE.secs, toY: h.y + dy * DODGE.speed * DODGE.secs });
 }
 
 function useAbility(run: Run, input: Input) {
@@ -1014,10 +1091,10 @@ function useAbility(run: Run, input: Input) {
   dx /= d;
   dy /= d;
   const from = { x: h.x, y: h.y };
-  if (a === 'charge' || a === 'dash') {
-    const speed = a === 'charge' ? 620 : 520,
-      secs = a === 'charge' ? 0.28 : 0.22;
-    run.charge = { until: now + secs, x: dx * speed, y: dy * speed, hit: a === 'charge' ? new Set() : new Set(run.foes) };
+  if (a === 'charge') {
+    const speed = 620,
+      secs = 0.28;
+    run.charge = { until: now + secs, x: dx * speed, y: dy * speed, hit: new Set(), harm: true };
     run.ghostUntil = now + secs + 0.1;
     emit(run, { type: 'ability', id: a, x: from.x, y: from.y, toX: from.x + dx * speed * secs, toY: from.y + dy * speed * secs });
   } else if (a === 'volley') {
@@ -1032,6 +1109,10 @@ function useAbility(run: Run, input: Input) {
     clearBullets(run, h.x, h.y, 90);
     burst(run, h.x, h.y, 80, pow(run, ATTACK.orb.dmg * 1.5), 'ability');
     emit(run, { type: 'ability', id: a, x: from.x, y: from.y, toX: h.x, toY: h.y });
+  } else if (a === 'shock') {
+    clearBullets(run, h.x, h.y, 110);
+    burst(run, h.x, h.y, 110, pow(run, ATTACK.slash.dmg * 1.2), 'ability', undefined, 300);
+    emit(run, { type: 'ability', id: a, x: h.x, y: h.y, toX: h.x, toY: h.y });
   } else {
     const heal = Math.round(run.maxHp * 0.15);
     run.hp = Math.min(run.maxHp, run.hp + heal);
@@ -1078,10 +1159,17 @@ function moveFoes(run: Run) {
     // Volleys.
     f.def.shoots.forEach((p, i) => {
       if (p.on || now < f.next[i]) return;
-      f.next[i] = now + p.every / (f === run.boss ? 1 : DIALS.fire);
+      f.next[i] = now + p.every / (f === run.boss || f === run.warden ? 1 : DIALS.fire);
       if (p.below && f.hp > f.maxHp * p.below) return;
+      if (p.above && f.hp <= f.maxHp * p.above) return;
       shoot(run, f, p);
     });
+    // The Warden's second phase: a roar, and the cross stops turning.
+    if (f === run.warden && f.phase === 1 && f.hp <= f.maxHp * 0.5) {
+      f.phase = 2;
+      emit(run, { type: 'phase', x: f.x, y: f.y });
+      emit(run, { type: 'say', text: 'The Warden burns hotter. It aims at you now: keep moving.' });
+    }
     // Touch (a charging ram hits harder).
     if (dist(f, h) < f.def.r + HERO_R) hurt(run, f.def.dmg * (now < f.dashUntil ? 1.5 : 1), 'touch');
     if (run.over) return;
@@ -1210,9 +1298,9 @@ function moved(run: Run, f: Foe) {
 function shoot(run: Run, f: Foe, p: Pattern) {
   const h = run.hero,
     at = Math.atan2(h.y - f.y, h.x - f.x),
-    boss = f === run.boss,
+    boss = f === run.boss || f === run.warden,
     r = p.r ?? (boss ? 7 : 5),
-    dmg = p.dmg * run.setup.zone.dmg * (boss ? 1 : (1 + DIALS.deepDmg * depth(run)) * (f.elite ? ELITE.dmg : 1)),
+    dmg = p.dmg * run.setup.zone.dmg * (f === run.boss ? 1 : (1 + DIALS.deepDmg * depth(run)) * (f.elite ? ELITE.dmg : 1)),
     speed = p.speed * DIALS.speed,
     style = p.style ?? 'plain';
   if (p.kind === 'mine') {
@@ -1245,7 +1333,7 @@ function shoot(run: Run, f: Foe, p: Pattern) {
     const off = run.rnd() * Math.PI * 2;
     for (let i = 0; i < p.n; i++) add(off + (i / p.n) * Math.PI * 2);
   } else {
-    f.spin += 0.32;
+    f.spin += p.turn ?? 0.32;
     for (let i = 0; i < p.n; i++) add(f.spin + (i / p.n) * Math.PI * 2);
   }
   emit(run, { type: 'shoot', x: f.x, y: f.y, boss });
@@ -1443,7 +1531,7 @@ function damage(run: Run, f: Foe, amount: number, knock = 0, fromX = run.hero.x,
 function kill(run: Run, f: Foe) {
   f.alive = false;
   run.kills++;
-  emit(run, { type: 'kill', x: f.x, y: f.y, kind: f.kind });
+  emit(run, { type: 'kill', id: f.id, x: f.x, y: f.y, kind: f.kind, elite: f.elite });
   if (f.def.xp > 0) run.gems.push({ id: ++run.ids, x: f.x, y: f.y, value: f.def.xp, pulled: false });
   const fang = relic(run, 'fang');
   if (fang && f !== run.boss) run.hp = Math.min(run.maxHp, run.hp + fang);
@@ -1452,6 +1540,7 @@ function kill(run: Run, f: Foe) {
       const a = (i / 3) * Math.PI * 2 + run.rnd();
       addFoe(run, 'splitling', f.x + Math.cos(a) * 18, f.y + Math.sin(a) * 18).bornUntil = run.t + 0.25;
     }
+  if (f === run.warden) emit(run, { type: 'say', text: 'The Warden falls. It leaves a chest.' });
   if (f === run.boss) end(run, true, 'boss');
 }
 
@@ -1674,8 +1763,8 @@ function checkRoom(run: Run) {
     run.bullets = [];
     run.mines = [];
     openDoors(run);
-    // Treasure and elite rooms leave a chest.
-    if (run.kind === 'treasure' || run.kind === 'elite') {
+    // Treasure and elite rooms leave a chest, and the Warden always does.
+    if (run.kind === 'treasure' || run.kind === 'elite' || isWardenRoom(run)) {
       let x = run.area.w / 2,
         y = run.area.h * 0.45;
       for (let i = 0; i < 8 && inPillar(run, x, y, 30); i++) y += 40;
@@ -1690,7 +1779,7 @@ function checkRoom(run: Run) {
 function openDoors(run: Run) {
   const { w } = run.area,
     { floors, rooms } = run.layout;
-  const single = run.room === rooms - 1 || (run.floor === floors - 1 && run.room === rooms - 2) || rooms < 3;
+  const single = run.room === rooms - 1 || ((run.floor === floors - 1 || run.floor === wardenFloor(run.layout)) && run.room === rooms - 2) || rooms < 3;
   if (single) {
     run.doors = [{ x: w / 2, kind: 'fight' }];
     return;
@@ -1823,6 +1912,16 @@ export function skipFloor(run: Run) {
   run.room = 0;
   run.timers = [];
   emit(run, { type: 'floor', floor: run.floor });
+  enterRoom(run);
+}
+
+/** Developer mode: straight to the Warden's room on the middle floor. */
+export function skipToWarden(run: Run) {
+  const f = wardenFloor(run.layout);
+  if (run.boss || f < 0) return;
+  run.floor = f;
+  run.room = run.layout.rooms - 1;
+  run.timers = [];
   enterRoom(run);
 }
 

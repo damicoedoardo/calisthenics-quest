@@ -5,8 +5,9 @@ import { BARREL, CHARGE, createRun, inRect, spikeState, stepRun, TOMORROW_REACH,
    keeps its class's distance from monsters (a sword goes close, the rest stay back), plays each
    boss by its rule, walks out through the door when a room is clear, and uses the ability when it
    helps. It reads the ground too: around pillars, out of water and rising spikes, away from
-   barrels, bombs and a ram's line, to the shrine when hurt. It plays the same engine as a person:
-   the same input, the same steps. */
+   barrels, bombs and a ram's line, to the shrine when hurt. When a shot it sees is about to land
+   anyway, it dodges through it. It plays the same engine as a person: the same input, the same
+   steps. */
 
 /** The way out of a rectangle, from a point in it: toward its nearest edge. */
 function outOf(q: Rect, x: number, y: number): [number, number] {
@@ -19,6 +20,8 @@ function outOf(q: Rect, x: number, y: number): [number, number] {
 }
 
 const SEE = 0.7;
+/** The bot dodges a shot it sees will land within this long (s). */
+const DODGE_SEE = 0.18;
 /** A person needs this long (s) to notice a new shot; the bot doesn't see it before. */
 export const REACTION = 0.25;
 /** Share of shots a person keeps track of in a busy room; the rest the bot doesn't see coming. */
@@ -42,7 +45,9 @@ export function botInput(run: Run): Input {
     now = run.t;
   let x = 0,
     y = 0,
-    danger = 0;
+    danger = 0,
+    // Something about to land that a step won't beat: worth the dodge.
+    imminent = false;
 
   // Shots on course to hit within SEE seconds: step off their line.
   for (const b of run.bullets) {
@@ -58,6 +63,7 @@ export function botInput(run: Run): Input {
       miss = Math.hypot(cx, cy),
       room = b.r + 10 + 12;
     if (miss > room) continue;
+    if (tc < DODGE_SEE && miss < b.r + 10) imminent = true;
     const w = (1 - tc / SEE) * 3 * (1 - miss / room + 0.3);
     // Away from where it passes; if dead on, sideways to its path.
     let ax = -cx,
@@ -113,6 +119,7 @@ export function botInput(run: Run): Input {
       dy = h.y - mn.y,
       d = Math.hypot(dx, dy) || 1;
     if (d > mn.r + 24) continue;
+    if (d < mn.r + 8 && now > mn.at - DODGE_SEE) imminent = true;
     x += (dx / d) * 3;
     y += (dy / d) * 3;
     danger += 2;
@@ -137,6 +144,7 @@ export function botInput(run: Run): Input {
       const along = -dx * f.dashX + -dy * f.dashY,
         side = -dx * -f.dashY + -dy * f.dashX;
       if (along > -20 && along < CHARGE.speed * CHARGE.dash + 40 && Math.abs(side) < f.def.r + 34) {
+        if (now >= f.windUntil && along < 90) imminent = true;
         const s = side >= 0 ? -1 : 1;
         x += -f.dashY * s * 3;
         y += f.dashX * s * 3;
@@ -226,15 +234,19 @@ export function botInput(run: Run): Input {
         ability = close >= 3 || !!b;
         break;
       case 'blink':
-      case 'dash':
         ability = danger > 2.5 || (low && danger > 1);
+        break;
+      case 'shock':
+        ability = close >= 3 || danger > 2.5 || (!!b && Math.hypot(b.x - h.x, b.y - h.y) < 110);
         break;
       case 'still':
         ability = low || danger > 3;
         break;
     }
   }
-  return { x: mx, y: my, ability };
+  // The dodge: through a shot that's about to land, along the way it was already stepping.
+  const dodge = imminent && now >= run.dodgeAt && !(run.charge && now < run.charge.until);
+  return { x: mx, y: my, ability, dodge };
 }
 
 /** Plays one whole run with the bot, as fast as the computer goes. */
