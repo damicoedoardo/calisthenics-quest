@@ -149,7 +149,7 @@ export const MIRROR_LAKE: Chapter = {
     {
       id: 'ch2-friend',
       when: { workouts: 21, chapter: 2 },
-      place: 'ashlands-camp',
+      place: 'lake-camp',
       music: 'camp',
       lines: [
         { who: 'narrator', show: 'wanderer', text: 'At the fire, the Wanderer pokes the coals and asks you something odd.' },
@@ -171,6 +171,26 @@ export const MIRROR_LAKE: Chapter = {
         { who: 'flame', mood: 'sleepy', text: "The lake only shows you clearly when it's calm. Funny, right?" },
         { who: 'flame', mood: 'sleepy', text: 'Same with people, I think.' },
         { who: 'narrator', show: 'flame', text: '{flame} drifts out onto the water and floats there like a tiny lantern, doing nothing at all, very seriously.' },
+      ],
+    },
+    {
+      // Lia's arc, the turn: she dances badly, laughs, and hands you the kindness back.
+      id: 'ch2-lia-dance',
+      when: { workouts: 22, answer: { id: 'lia', is: 'yes' } },
+      lines: [
+        { who: 'narrator', show: 'lia', text: 'Lia is dancing at the edge of the lake. It is not good. She wobbles on a turn, stops, and starts again from the middle.' },
+        { who: 'lia', text: "Don't clap. I mean it. I'm terrible." },
+        { who: 'you', text: "You're moving." },
+        { who: 'lia', text: 'I keep looking for her. The girl who was good at this. Every turn, I check if she is watching.', pause: 1 },
+        { who: 'lia', text: "She isn't. It's only me out here. And I'm... having fun? Badly. But fun." },
+        { who: 'narrator', text: "She laughs at herself. Not the mean kind. The kind you'd give a friend who tripped.", pause: 1.2, film: true },
+        { who: 'lia', text: 'Your turn. Come here.' },
+        { who: 'narrator', show: 'lia', text: 'She pulls you down to the water. Your reflection looks back: tired, a bit rumpled, still here.', shot: { pan: 'down', seconds: 1.6 } },
+        { who: 'lia', text: "Say one kind thing to them. I'll go first.", pause: 0.8 },
+        { who: 'lia', text: 'That one kept showing up. Even on the bad days. I saw.', pace: 'slow' },
+        { who: 'you', text: "...They're trying.", pause: 1.2 },
+        { who: 'lia', text: 'See? Not so hard. Now you have to say it again tomorrow.' },
+        { who: 'flame', mood: 'happy', text: "I'll remind you. I'm extremely good at reminding." },
       ],
     },
     {

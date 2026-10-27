@@ -120,6 +120,7 @@ function AskCard({
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder={ask.placeholder}
+                aria-label="Your flame's name"
                 className="w-full rounded-xl bg-ink-900 px-4 py-3.5 text-center text-lg text-slate-100 outline-none ring-1 ring-ink-600 focus:ring-gold-400"
               />
               <button type="submit" disabled={!text.trim()} className={goldButton}>
@@ -153,6 +154,7 @@ function AskCard({
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     placeholder={ask.write}
+                    aria-label={`${ask.prompt} (in your own words)`}
                     className="min-w-0 flex-1 rounded-xl bg-ink-900 px-3 py-3 text-sm text-slate-100 outline-none ring-1 ring-ink-600 focus:ring-gold-400"
                   />
                   <button type="submit" disabled={!text.trim()} className="rounded-xl bg-gold-400 px-4 font-pixel text-[9px] text-ink-950 disabled:opacity-40">

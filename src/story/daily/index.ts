@@ -5,6 +5,7 @@ import type { DailyLine, FlameMood, Moment, Quote } from '../types';
 import { FLAME_LINES, MOMENT_MOOD } from './flame-lines';
 import { QUOTES } from './quotes';
 import { FIRE_LINES, REST_TRUTHS } from './rest';
+import { AFTER_LINES, MARGIN_NOTES, type AfterKind, type MarginKind } from './after';
 
 /* Every day: the flame's line, the day's words for the road and the rest card, and the Book of
    Days page that keeps them. All picks are fixed for the day and change the next. */
@@ -80,17 +81,23 @@ function recentPages(state: GameState, now: Date): DayPage[] {
   return (state.days ?? []).filter((d) => d.day !== key && daysApart(new Date(`${d.day}T12:00:00`), now) < NO_REPEAT_DAYS);
 }
 
-/** Today's line from the flame, with your words filled in. */
-export function flameLine(state: GameState, now: Date): string {
+/** The lines from a list this player can be told now, with their words filled in. */
+function usableLines(lines: DailyLine[], state: GameState): string[] {
   const words = storyWords(state);
-  const said = new Set(recentPages(state, now).map((d) => d.line));
   const chapter = storyState(state).index + 1;
-  // "That's {sessions} pages now" reads wrong after only one.
   const usable = (l: DailyLine) =>
     (!l.needs || words[l.needs].trim()) &&
     (!l.inChapter || l.inChapter === chapter) &&
+    (!l.fromChapter || chapter >= l.fromChapter) &&
+    // "That's {sessions} pages now" reads wrong after only one.
     !(l.text.includes('{sessions}') && state.sessions.length < 2);
-  const all = FLAME_LINES[todayMoment(state, now)].filter(usable).map((l) => fill(l.text, words));
+  return lines.filter(usable).map((l) => fill(l.text, words));
+}
+
+/** Today's line from the flame, with your words filled in. */
+export function flameLine(state: GameState, now: Date): string {
+  const said = new Set(recentPages(state, now).map((d) => d.line));
+  const all = usableLines(FLAME_LINES[todayMoment(state, now)], state);
   const fresh = all.filter((t) => !said.has(t));
   return pick(fresh.length ? fresh : all, daySeed(now), 1) ?? '';
 }
@@ -112,7 +119,49 @@ export function restTruth(now: Date): string {
 }
 
 export function fireLine(state: GameState, now: Date): string {
-  return fill(pick(FIRE_LINES, daySeed(now), 4)?.text ?? '', storyWords(state));
+  return pick(usableLines(FIRE_LINES, state), daySeed(now), 4) ?? '';
+}
+
+/** The kind of workout `state`'s last one was: the first, a comeback, a new best, short, or full. */
+export function afterKind(state: GameState): AfterKind {
+  const n = state.sessions.length;
+  const last = state.sessions[n - 1];
+  const before = state.sessions[n - 2];
+  if (n <= 1) return 'first';
+  if (before && daysApart(new Date(before.date), new Date(last.date)) >= MISSED_AFTER) return 'back';
+  if (last.unlocked.length) return 'best';
+  return last.kind === 'mini' ? 'short' : 'full';
+}
+
+/** What the flame says on the loot card, right after the workout that ends `state`. */
+export function afterWorkoutLine(state: GameState): string {
+  const lines = usableLines(AFTER_LINES[afterKind(state)], state);
+  // Walk through the list one workout at a time, so a line never comes back before the rest have had a turn.
+  return lines.length ? lines[state.sessions.length % lines.length] : '';
+}
+
+/** What a Book of Days page held, for the note in its margin. */
+export function marginKind(state: GameState, page: DayPage): MarginKind {
+  const date = new Date(`${page.day}T12:00:00`);
+  const i = state.sessions.findIndex((s) => dayKey(new Date(s.date)) === page.day);
+  if (i >= 0) {
+    const that = state.sessions.filter((s) => dayKey(new Date(s.date)) === page.day);
+    const before = state.sessions[i - 1];
+    if (before && daysApart(new Date(before.date), new Date(state.sessions[i].date)) >= MISSED_AFTER) return 'back';
+    if (that.some((s) => s.unlocked.length)) return 'best';
+    return that.every((s) => s.kind === 'mini') ? 'short' : 'full';
+  }
+  if (page.fire) return 'fire';
+  const rest = state.sessions.some((s) => {
+    const d = daysApart(new Date(s.date), date);
+    return d === 1 || d === 2;
+  });
+  return rest ? 'rest' : 'visit';
+}
+
+/** The note in your handwriting in a page's margin ('' for a quiet visit). */
+export function marginNote(state: GameState, page: DayPage): string {
+  return pick(MARGIN_NOTES[marginKind(state, page)], daySeed(new Date(`${page.day}T12:00:00`)), 6) ?? '';
 }
 
 /**

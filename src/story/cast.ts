@@ -23,6 +23,11 @@ export const CAST = {
   sol: { name: 'Sol', portrait: { kind: 'sprite', sprite: 'sol', size: 140 }, tag: 'sky' },
   // Old Vela keeps the lamp on the Plateau.
   vela: { name: 'Vela', portrait: { kind: 'sprite', sprite: 'vela', size: 140 }, tag: 'sky' },
+  // The villagers once you've helped them: Lia dancing again, Sol in new running shoes, Vela with
+  // her letter sealed and stamped. Same names; use them as `who` or `show` in their later scenes.
+  'lia-after': { name: 'Lia', portrait: { kind: 'villager', sprite: 'lia', size: 140 }, tag: 'sky' },
+  'sol-after': { name: 'Sol', portrait: { kind: 'villager', sprite: 'sol', size: 140 }, tag: 'sky' },
+  'vela-after': { name: 'Vela', portrait: { kind: 'villager', sprite: 'vela', size: 140 }, tag: 'sky' },
   plateau: { name: 'The Plateau', portrait: { kind: 'sprite', sprite: 'golem', size: 160 }, tag: 'slate' },
   summit: { name: 'The Summit', portrait: { kind: 'sprite', sprite: 'summit', size: 160 }, tag: 'slate' },
 } satisfies Record<string, CastMember>;

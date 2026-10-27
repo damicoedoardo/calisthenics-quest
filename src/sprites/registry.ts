@@ -16,7 +16,7 @@ import { drawPlateau } from './characters/plateau';
 import { drawSummit } from './characters/summit';
 import { drawTomorrow } from './characters/tomorrow';
 import { drawWanderer } from './characters/wanderer';
-import { drawKid, drawLia, drawSol } from './characters/villagers';
+import { drawKid, drawLia, drawSol, type VillagerOpts } from './characters/villagers';
 import { drawVela } from './characters/vela';
 import { drawKindled, type KindledOpts } from './characters/kindled';
 import { drawWisp } from './characters/wisp';
@@ -135,9 +135,10 @@ export const SPRITES = {
   mira: drawn<NoOpts>({ label: () => 'Mira the Smith', defaults: {}, clips: () => ({ idle: 'idle', attack: 'swing' }), draw: drawMira, look: () => ({ shadow: true }) }),
   knight: drawn<NoOpts>({ label: () => 'The Perfect Knight', defaults: {}, clips: () => ({ idle: 'idle', attack: 'swing' }), draw: drawKnight, look: () => ({ shadow: true }) }),
   kid: drawn<NoOpts>({ label: () => 'The kid inside the armor', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawKid, look: () => ({ shadow: true }) }),
-  lia: drawn<NoOpts>({ label: () => 'Lia the dancer', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawLia, look: () => ({ shadow: true }) }),
-  sol: drawn<NoOpts>({ label: () => 'Sol the runner', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawSol, look: () => ({ shadow: true }) }),
-  vela: drawn<NoOpts>({ label: () => 'Old Vela', defaults: {}, clips: () => ({ idle: 'idle', attack: 'raise' }), draw: drawVela, look: () => ({ shadow: true }) }),
+  // Villagers: { after: true } is how they look once you've helped them.
+  lia: drawn<VillagerOpts>({ label: ({ after }) => (after ? 'Lia, dancing again' : 'Lia the dancer'), defaults: { after: false }, clips: () => ({ idle: 'idle' }), draw: drawLia, look: () => ({ shadow: true }) }),
+  sol: drawn<VillagerOpts>({ label: ({ after }) => (after ? 'Sol, running again' : 'Sol the runner'), defaults: { after: false }, clips: () => ({ idle: 'idle' }), draw: drawSol, look: () => ({ shadow: true }) }),
+  vela: drawn<VillagerOpts>({ label: ({ after }) => (after ? 'Old Vela, letter sealed' : 'Old Vela'), defaults: { after: false }, clips: () => ({ idle: 'idle', attack: 'raise' }), draw: drawVela, look: () => ({ shadow: true }) }),
   kindled: drawn<KindledOpts>({
     label: () => "Your flame's true form",
     defaults: { hair: 'short' },
