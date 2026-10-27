@@ -28,7 +28,7 @@ export const ASHLANDS: Chapter = {
       enter: "Mmh... why now? Tomorrow's better.",
       stages: ['Two of me. Twice the tomorrows.'],
       end: 'Mmh... fine. Today, then.',
-      taunts: ['Start fresh on Monday.', "You're tired. Go tomorrow.", "Why rush? There's always later.", "Tomorrow you'll feel ready."],
+      taunts: ['Tomorrow you can still be anyone.', 'Start fresh on Monday.', "You're tired. Go tomorrow.", "Tomorrow you'll feel ready."],
     },
   },
   scenes: [
@@ -114,6 +114,34 @@ export const ASHLANDS: Chapter = {
     },
 
     {
+      // Out of breath, and what it means: not weakness, coming back. Everyone who came back felt it.
+      id: 'ch1-breath',
+      when: { workouts: 3, chapter: 1 },
+      lines: [
+        { who: 'narrator', text: 'You finish, and for a minute you cannot do anything but breathe. Hands on your knees.' },
+        { who: 'hollow', text: 'Look at you. Wrecked, after that?' },
+        { who: 'flame', mood: 'soft', text: "That feeling isn't you being weak. It's what coming back feels like.", pause: 0.8 },
+        { who: 'flame', mood: 'soft', text: "Everyone who ever came back felt exactly this. Every single one. You're in very good company." },
+        { who: 'you', text: "...It's kind of a good feeling?", pause: 1 },
+        { who: 'flame', mood: 'happy', text: "It's the best one. Don't tell the Hollow." },
+      ],
+    },
+    {
+      // Someone like you made it: the Wanderer's own first day back (and a quiet clue to who they are).
+      id: 'ch1-wanderer-first',
+      when: { workouts: 4, chapter: 1 },
+      place: 'ashlands-camp',
+      music: 'camp',
+      lines: [
+        { who: 'narrator', show: 'wanderer', text: 'The Wanderer watches you sit down hard by the fire after the last set.' },
+        { who: 'wanderer', text: 'My first day back, I lasted about as long as you did.' },
+        { who: 'you', text: 'You?', pause: 0.6 },
+        { who: 'wanderer', text: 'Then I sat on the floor and laughed. I could not stop. It was so bad it was funny.', pause: 0.8 },
+        { who: 'wanderer', text: "The second day was a little less bad. That's the whole story, really. It just keeps going." },
+        { who: 'flame', mood: 'happy', text: 'I like this story. Tell it again in a month.' },
+      ],
+    },
+    {
       id: 'ch1-tomorrow-splits',
       when: { workouts: 5 },
       shots: [{ pan: 'down', seconds: 1.6 }],
@@ -122,6 +150,8 @@ export const ASHLANDS: Chapter = {
         { who: 'tomorrow', text: 'Mmh... why today? Tomorrow is better. Tomorrow is always better.' },
         { who: 'tomorrow', text: "Tomorrow you'll have more time. More energy. You'll be a whole new person. Why waste today on the old one?" },
         { who: 'flame', mood: 'smoky', text: "It's so soft. Why is it so soft? I want to nap on it. That's the problem, isn't it." },
+        { who: 'tomorrow', text: '...And if you start today, you might find out you can\'t. Tomorrow you can still be anyone.', pause: 1, pace: 'slow' },
+        { who: 'narrator', text: 'It says it gently, like a favor. For a second it almost sounds kind.', pause: 1, film: true },
         { who: 'wanderer', text: "Every time you say 'tomorrow', it makes another one. Every time you show up, there's one less." },
       ],
     },

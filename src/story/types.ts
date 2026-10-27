@@ -120,7 +120,7 @@ export interface When {
 }
 
 /** Saved answers: heart moments, and whether you joined a villager's story. */
-export type AnswerId = 'heart1' | 'heart2' | 'heart3' | 'heart4' | 'heart5' | 'heart6' | 'lia' | 'sol' | 'vela';
+export type AnswerId = 'heart1' | 'heart2' | 'heart3' | 'heart4' | 'heart5' | 'heart6' | 'lia' | 'sol' | 'vela' | 'call';
 
 export interface Choice {
   label: string;

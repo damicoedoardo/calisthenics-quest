@@ -1,10 +1,68 @@
-import type { Chapter } from '../types';
+import type { Ask, Chapter, Line } from '../types';
 
 /* Month 5. Lesson: you don't silence the voice, you walk anyway. The healing step: the inner critic
    never fully leaves, so you learn to walk beside it, let yourself be looked after, and find out
    you were never as alone as it said. The heart moment is the Hollow's own question: what do you
    hold on to? Near the end, the villagers you helped walk out of the fog (Mira and the Echo come
-   when you helped none). */
+   when you helped none). Before they come, you choose whether to call out for help: asking is the
+   hardest step, and if you can't, the flame asks for you. */
+
+/** Call out into the fog, or stay quiet; either way, footsteps. `arrive` is who comes. */
+function callOut(arrive: Line[]): Ask {
+  return {
+    kind: 'choice',
+    id: 'call',
+    prompt: 'The fog is silent.',
+    choices: [
+      {
+        label: 'Call for help',
+        value: 'yes',
+        after: [
+          { who: 'you', text: '...Is anyone there? I could use some help.', pace: 'slow' },
+          { who: 'narrator', text: "Your voice is very small in the fog. It's the hardest thing you've said all year.", pause: 1.2, film: true },
+          ...arrive,
+        ],
+      },
+      {
+        label: 'Stay quiet',
+        value: 'no',
+        after: [
+          { who: 'narrator', show: 'flame', text: "{flame} looks at you, then out at the fog. It knows you can't. So it does it for you." },
+          { who: 'flame', mood: 'scared', text: 'HELLO? We could use a hand over here! Anyone!' },
+          ...arrive,
+        ],
+      },
+    ],
+  };
+}
+
+/** Who walks out of the fog at the gathering: the villagers you helped. */
+const HELPED_ARRIVE: Line[] = [
+  { who: 'narrator', text: 'Then, footsteps.', film: true, pause: 2, pace: 'slow' },
+  { who: 'narrator', text: 'Not golden ones. Ordinary ones. More than one pair.', shot: { shake: 'small' }, music: 'rise' },
+  { who: 'lia-after', text: "You sat with me when nobody did. You didn't ask me when I was coming back. So I came.", shot: { enter: 'left' }, answer: { id: 'lia', is: 'yes' } },
+  { who: 'sol-after', text: 'You woke me up on a day you had every excuse not to. I owed you a morning. I brought a few.', shot: { enter: 'right' }, answer: { id: 'sol', is: 'yes' } },
+  { who: 'narrator', show: 'vela-after', text: "A light swings out of the fog: Vela's lamp, carried all the way from the flat road.", answer: { id: 'vela', is: 'yes' } },
+  { who: 'vela-after', text: "The light doesn't argue with the fog. It just stays on. I thought you could use one.", answer: { id: 'vela', is: 'yes' } },
+  { who: 'vela-after', text: "And I've a letter in my coat. An answer, from home. I haven't opened it. One brave thing at a time. I'll open it when you're through.", answer: { id: 'vela', is: 'yes' } },
+  { who: 'hollow', text: '...You were supposed to be alone.', pause: 0.8 },
+  { who: 'you', text: 'So was I.', pause: 0.6 },
+  { who: 'narrator', text: 'Nobody makes a speech. They just start walking, and somehow you end up in the middle.', film: true, pause: 1 },
+  { who: 'flame', mood: 'soft', text: '...Oh.', pause: 1 },
+];
+
+/** Who walks out of the fog when you helped nobody: Mira and the Echo. */
+const ALONE_ARRIVE: Line[] = [
+  { who: 'narrator', text: 'Then, footsteps.', film: true, pause: 2, pace: 'slow' },
+  { who: 'narrator', text: 'Heavy boots, and the clank of a hammer.', shot: { shake: 'small' }, music: 'rise' },
+  { who: 'mira', text: "Heard there was fog. I brought a hammer. Don't know what I'll hit with it, but I brought it.", shot: { enter: 'left' } },
+  { who: 'mira', text: "Asked or not, we'd have come. That's what a village is for." },
+  { who: 'narrator', show: 'echo', text: 'Behind her, faint and golden, the Echo. Keeping its distance, but there.' },
+  { who: 'echo', text: "Don't make it weird. I'm only here because you're the only one who remembers me." },
+  { who: 'hollow', text: '...You were supposed to be alone.', pause: 0.8 },
+  { who: 'flame', mood: 'soft', text: "Nobody's ever as alone as the Hollow says. It just counts very badly." },
+  { who: 'narrator', text: 'Nobody makes a speech. They just start walking, and somehow you end up in the middle.', film: true, pause: 1 },
+];
 
 export const THE_FOG: Chapter = {
   n: 5,
@@ -157,18 +215,8 @@ export const THE_FOG: Chapter = {
         { who: 'hollow', text: 'You were always going to end up alone out here. Everyone does.', pause: 1 },
         { who: 'hollow', text: '{voice}', needs: 'voice', pause: 1 },
         { who: 'narrator', text: 'You stand very still. You notice you are holding the first stone, in your pocket, hard enough to hurt.', film: true, pause: 1.6 },
-        { who: 'narrator', text: 'Then, footsteps.', film: true, pause: 2, pace: 'slow' },
-        { who: 'narrator', text: 'Not golden ones. Ordinary ones. More than one pair.', shot: { shake: 'small' }, music: 'rise' },
-        { who: 'lia-after', text: "You sat with me when nobody did. You didn't ask me when I was coming back. So I came.", shot: { enter: 'left' }, answer: { id: 'lia', is: 'yes' } },
-        { who: 'sol-after', text: 'You woke me up on a day you had every excuse not to. I owed you a morning. I brought a few.', shot: { enter: 'right' }, answer: { id: 'sol', is: 'yes' } },
-        { who: 'narrator', show: 'vela-after', text: "A light swings out of the fog: Vela's lamp, carried all the way from the flat road.", answer: { id: 'vela', is: 'yes' } },
-        { who: 'vela-after', text: "The light doesn't argue with the fog. It just stays on. I thought you could use one.", answer: { id: 'vela', is: 'yes' } },
-        { who: 'vela-after', text: "And I've a letter in my coat. An answer, from home. I haven't opened it. One brave thing at a time. I'll open it when you're through.", answer: { id: 'vela', is: 'yes' } },
-        { who: 'hollow', text: '...You were supposed to be alone.', pause: 0.8 },
-        { who: 'you', text: 'So was I.', pause: 0.6 },
-        { who: 'narrator', text: 'Nobody makes a speech. They just start walking, and somehow you end up in the middle.', film: true, pause: 1 },
-        { who: 'flame', mood: 'soft', text: '...Oh.', pause: 1 },
       ],
+      ask: callOut(HELPED_ARRIVE),
     },
     {
       id: 'ch5-gathering-alone',
@@ -180,16 +228,8 @@ export const THE_FOG: Chapter = {
         { who: 'hollow', text: 'You were always going to end up alone out here. Everyone does.', pause: 1 },
         { who: 'hollow', text: '{voice}', needs: 'voice', pause: 1 },
         { who: 'narrator', text: 'You stand very still. You notice you are holding the first stone, in your pocket, hard enough to hurt.', film: true, pause: 1.6 },
-        { who: 'narrator', text: 'Then, footsteps.', film: true, pause: 2, pace: 'slow' },
-        { who: 'narrator', text: 'Heavy boots, and the clank of a hammer.', shot: { shake: 'small' }, music: 'rise' },
-        { who: 'mira', text: "Heard there was fog. I brought a hammer. Don't know what I'll hit with it, but I brought it.", shot: { enter: 'left' } },
-        { who: 'mira', text: "You didn't ask. You don't have to. That's what a village is for." },
-        { who: 'narrator', show: 'echo', text: 'Behind her, faint and golden, the Echo. Keeping its distance, but there.' },
-        { who: 'echo', text: "Don't make it weird. I'm only here because you're the only one who remembers me." },
-        { who: 'hollow', text: '...You were supposed to be alone.', pause: 0.8 },
-        { who: 'flame', mood: 'soft', text: "Nobody's ever as alone as the Hollow says. It just counts very badly." },
-        { who: 'narrator', text: 'Nobody makes a speech. They just start walking, and somehow you end up in the middle.', film: true, pause: 1 },
       ],
+      ask: callOut(ALONE_ARRIVE),
     },
     {
       id: 'ch5-short',

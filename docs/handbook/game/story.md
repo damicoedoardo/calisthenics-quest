@@ -57,7 +57,8 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
   side by side). Letter parts and written answers can be in the first person ("my kids"), so they
   only ever appear inside quotes of what the player wrote; a test checks it.
 - **answer** on a line: only shown when the player gave that answer, e.g. Vela speaks in a scene
-  only if you joined her story (`answer: { id: 'vela', is: 'yes' }`).
+  only if you joined her story (`answer: { id: 'vela', is: 'yes' }`). It works in a question's
+  answer lines too (`sceneFor` filters both), so a choice can lead into a gathering of whoever you helped.
 - **shot** on a line, or **shots** before the first line: `{ title }`, `{ place }` (cut to another
   place), `{ pan }`, `{ zoom }`, `{ fade }`, `{ shake }`, `{ enter }` (how the speaker comes in).
   Each takes `seconds`.

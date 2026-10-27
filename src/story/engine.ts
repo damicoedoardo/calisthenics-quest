@@ -5,7 +5,7 @@ import { CAST, type CastId } from './cast';
 import { CHAPTERS } from './chapters';
 import type { PlaceId } from './places';
 import { DEFAULT_FLAME_NAME } from './flame';
-import type { AnswerId, Chapter, Line, Scene, When, WordKey, Words } from './types';
+import type { AnswerId, Ask, Chapter, Line, Scene, When, WordKey, Words } from './types';
 
 /* Reads the story files: which chapter you're in, which scenes are due, and how a line reads
    with your own words in it. Nothing here knows the story itself. */
@@ -116,10 +116,17 @@ function longGone(w: When, state: GameState): boolean {
   return state.sessions.length - w.workouts > CATCH_UP;
 }
 
-/** A scene as this player gets it: lines that wait for an answer they didn't give are left out. */
+/** A scene as this player gets it: lines that wait for an answer they didn't give are left out,
+    in the question's answer lines too. */
 export function sceneFor(scene: Scene, state: GameState): Scene {
-  const lines = scene.lines.filter((l) => !l.answer || gave(state, l.answer));
-  return lines.length === scene.lines.length ? scene : { ...scene, lines };
+  const keep = (ls: Line[]) => ls.filter((l) => !l.answer || gave(state, l.answer));
+  return { ...scene, lines: keep(scene.lines), ask: askFor(scene.ask, keep) };
+}
+
+function askFor(ask: Ask | undefined, keep: (ls: Line[]) => Line[]): Ask | undefined {
+  if (ask?.kind === 'name') return { ...ask, after: keep(ask.after) };
+  if (ask?.kind === 'choice') return { ...ask, after: ask.after && keep(ask.after), choices: ask.choices.map((c) => ({ ...c, after: c.after && keep(c.after) })) };
+  return ask;
 }
 
 /**

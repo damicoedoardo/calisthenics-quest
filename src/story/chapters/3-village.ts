@@ -55,6 +55,23 @@ export const VILLAGE: Chapter = {
       ],
     },
     {
+      // Learning: Mira teaches you properly, and the lesson is which hits to remember.
+      id: 'ch3-apprentice',
+      when: { workouts: 27, chapter: 3 },
+      place: 'lit-forges',
+      lines: [
+        { who: 'narrator', show: 'mira', text: 'Mira puts a hammer in your hand and points at the anvil. You hit it. It goes wrong.' },
+        { who: 'mira', text: 'Again.' },
+        { who: 'narrator', text: 'Again. And again. Your arm aches. At the gate the Knight is watching, and you can feel him counting the bad ones.', pause: 1, film: true },
+        { who: 'mira', text: 'Stop. That one. Did you feel it?', pause: 0.8 },
+        { who: 'you', text: '...It sounded different.' },
+        { who: 'mira', text: "That's the one you remember. Not the twenty before it." },
+        { who: 'mira', text: 'Anyone who remembers the bad ones and forgets the good ones never learns a thing. Ask him.', pause: 0.6 },
+        { who: 'narrator', show: 'knight', text: 'The Knight looks away.' },
+        { who: 'mira', text: 'Same time tomorrow. Bring your arms.' },
+      ],
+    },
+    {
       id: 'ch3-sol',
       when: { workouts: 28, chapter: 3 },
       lines: [

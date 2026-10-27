@@ -154,6 +154,23 @@ export const MIRROR_LAKE: Chapter = {
       ],
     },
     {
+      // You are not the only one: the shore is lined with the stones of everyone who came back.
+      id: 'ch2-shore',
+      when: { workouts: 20, chapter: 2 },
+      music: 'memory',
+      shots: [{ pan: 'right', seconds: 2 }],
+      lines: [
+        { who: 'narrator', text: 'Walking the shore, you notice the stones. Small, warm-looking, laid out in lines. Hundreds of lines.' },
+        { who: 'you', text: 'Who left these?' },
+        { who: 'wanderer', text: 'Everyone who came back. Everyone who sat right where you sat, and missed who they were, and got up anyway.', pause: 0.8 },
+        { who: 'narrator', text: 'You crouch down. Some lines are short. Some stop, and start again a little further on.', pause: 1.2, film: true },
+        { who: 'flame', mood: 'soft', text: 'Look. That one stops for ages. Then it keeps going.' },
+        { who: 'you', text: '...I thought it was just me.', pause: 1 },
+        { who: 'wanderer', text: "It's never just you. The Hollow only says that because it works." },
+        { who: 'narrator', text: 'Before you leave, you put one of your stones at the end of a line that stopped. Just to keep it company.', pause: 1, film: true },
+      ],
+    },
+    {
       id: 'ch2-friend',
       when: { workouts: 21, chapter: 2 },
       place: 'lake-camp',

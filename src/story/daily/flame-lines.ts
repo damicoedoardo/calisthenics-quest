@@ -44,6 +44,7 @@ export const FLAME_LINES: Record<Moment, DailyLine[]> = {
     { text: 'Today counts. It always will. Nothing can un-count it.' },
     { text: 'Another stone for the line. I put it right at the end, where you can see it.', fromChapter: 2 },
     { text: 'You said you would, and you did. I keep noticing that.' },
+    { text: "Every workout is a vote for who you're becoming. That one counted." },
     { text: 'Your hands did that. The same hands that were shaking in the ash.' },
     { text: "If you're tired, good tired, that's me. Hi." },
     { text: 'You told the Echo you lost {heart2}. I think a little of it came back today. Don\'t tell the Echo.', needs: 'heart2' },
@@ -85,6 +86,7 @@ export const FLAME_LINES: Record<Moment, DailyLine[]> = {
     { text: "I'm still lit. A little lower, but still lit." },
     { text: "Let's not make up for lost time. Let's just do today." },
     { text: 'Start small today. Small still counts.' },
+    { text: "Missing once is just life. Let's not make it twice. Small is plenty." },
     { text: "No catching up. There's nothing to catch up on. There's just today." },
     { text: "If the Hollow's talking this morning, I'm sitting right on top of it. Start small. I've got it." },
     { text: "The line of stones is right where you left it. I didn't let anyone touch it.", fromChapter: 2 },
@@ -93,6 +95,7 @@ export const FLAME_LINES: Record<Moment, DailyLine[]> = {
   rough: [
     { text: 'Small counts. Show up small and I\'ll do the rest.' },
     { text: "A rough day, and you still came. I saw." },
+    { text: 'Small votes count too. On days like this, maybe they count most.' },
     { text: "Short workouts are still workouts. I don't count minutes, I count pages." },
     { text: 'Go easy on yourself today. I am.' },
     { text: "You don't have to believe in yourself today. I've got that part. You just bring your shoes." },

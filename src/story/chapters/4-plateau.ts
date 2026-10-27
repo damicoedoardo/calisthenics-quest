@@ -226,6 +226,23 @@ export const PLATEAU: Chapter = {
       ],
     },
     {
+      // Teaching: the kid trains with you and wants to quit, and you hear yourself say what you
+      // learned. You didn't know you believed it until it came out.
+      id: 'ch4-kid-quits',
+      when: { workouts: 49, chapter: 4 },
+      lines: [
+        { who: 'narrator', show: 'kid', text: 'The kid from the village has been training with you on the flat road. Today they sit down halfway and will not get up.' },
+        { who: 'kid', text: "It's not working. I've done it for ages and I'm still bad." },
+        { who: 'narrator', text: "You know that sentence. You've said it, on this exact road, not long ago.", pause: 1, film: true },
+        { who: 'you', text: 'How long is ages?' },
+        { who: 'kid', text: '...Two weeks.', pause: 0.8 },
+        { who: 'you', text: 'I was bad for weeks. Then I was bad for months, but less. Then one day I noticed I had stopped counting.' },
+        { who: 'kid', text: "That's a terrible speech." },
+        { who: 'you', text: 'I know. Get up anyway.' },
+        { who: 'narrator', show: 'kid', text: 'They do. Walking beside them, you realize you meant every word. You have never heard yourself say it before.', pause: 1 },
+      ],
+    },
+    {
       id: 'ch4-small-step',
       when: { workouts: 38, shortSession: true, inChapter: 4 },
       lines: [

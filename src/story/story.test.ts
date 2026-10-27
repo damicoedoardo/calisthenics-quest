@@ -215,7 +215,10 @@ describe('the months 4 to 6 rules', () => {
       const answers = Object.fromEntries(VILLAGERS.map((v) => [v, helped.includes(v) ? 'yes' : 'no']));
       const due = pendingScenes(inTheFog(63, answers), now).filter((s) => s.id.startsWith('ch5-gathering'));
       expect(due, `helped ${helped.join(', ') || 'nobody'}`).toHaveLength(1);
-      const lines = renderLines(due[0].lines, storyWords(inTheFog(63, answers)));
+      // Who arrives comes after the call-out choice, whichever way it goes.
+      const ask = due[0].ask,
+        arrive = ask?.kind === 'choice' ? ask.choices.flatMap((c) => c.after ?? []) : [];
+      const lines = renderLines([...due[0].lines, ...arrive], storyWords(inTheFog(63, answers)));
       // A villager you helped may appear in their after look (`lia-after`).
       const speakers = new Set(lines.flatMap((l) => [l.who, l.show ?? l.who]).map((id) => id.replace(/-after$/, '')));
       for (const v of VILLAGERS) expect(speakers.has(v as keyof typeof CAST), `${v} when helped ${helped.join(', ') || 'nobody'}`).toBe(helped.includes(v));
