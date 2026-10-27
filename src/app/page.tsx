@@ -6,8 +6,6 @@ import { TrainTab } from '@/components/TrainTab';
 import { HeroTab } from '@/components/HeroTab';
 import { PlayTab } from '@/components/PlayTab';
 import { FogRun, type RunStart } from '@/components/FogRun';
-import { Camp } from '@/components/Camp';
-import type { StationId } from '@/game/camp/layout';
 import { Hero } from '@/components/Hero';
 import { Prologue } from '@/components/Prologue';
 import { Workout } from '@/components/Workout';
@@ -55,8 +53,6 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const [picker, setPicker] = useState<'story' | 'manual' | null>(null);
   const [replaying, setReplaying] = useState(false);
   const [run, setRun] = useState<Zone | null>(null);
-  // The camp is open (and where you stand in it: the gate you came back through).
-  const [camp, setCamp] = useState<{ at?: StationId } | null>(null);
   const [devOpen, setDevOpen] = useState(false);
   // /lab/night opens the app on a sandbox save at a given spot: ?tab=, ?run=<zone>&at=, ?workout, ?book.
   const [sandbox, setSandbox] = useState(false);
@@ -84,7 +80,6 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       setTraining(true);
     }
     if (q.has('book')) setOpenBook(true);
-    if (q.has('camp')) setCamp({});
   }, [ready, update]);
   // Anything that takes the screen (a scene, a run, a workout) closes the panel for good.
   const busy = !!(run || training || after || scene || picker);
@@ -223,7 +218,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         ) : tab === 'train' ? (
           <TrainTab state={state} update={update} />
         ) : tab === 'play' ? (
-          <PlayTab state={state} onPlay={setRun} update={update} onCamp={() => setCamp({})} />
+          <PlayTab state={state} onPlay={setRun} update={update} />
         ) : (
           <HeroTab
             state={state}
@@ -265,17 +260,13 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           zone={run}
           dev={dev}
           startAt={runStart}
-          fromCamp={!!camp}
           onEnd={(r) => update((s) => settleGear(recordRun(s, r), r).state)}
           onLeave={() => {
-            // A run started at a gate comes back to it.
-            if (camp) setCamp({ at: `gate${run.id}` });
             setRun(null);
             setRunStart(undefined);
           }}
         />
       )}
-      {camp && !run && <Camp state={state} update={update} at={camp.at} onPlay={setRun} onLeave={() => setCamp(null)} />}
       {training && <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />}
       {after && <AfterSession result={after.result} before={after.before} after={after.after} onClose={() => setAfter(null)} />}
       {scene && <ScenePlayer key={scene.id} scene={scene} state={state} onDone={endScene} />}

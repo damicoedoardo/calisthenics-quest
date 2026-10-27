@@ -27,8 +27,6 @@ interface Props {
   onLeave: () => void;
   /** Developer mode (/lab/night): start the first attempt at the mid-boss, at the boss, or won (the recap). */
   startAt?: RunStart;
-  /** Started at a camp gate: the way out says so. */
-  fromCamp?: boolean;
 }
 
 export type RunStart = 'mid' | 'boss' | 'win';
@@ -82,7 +80,7 @@ export function useSideways() {
 }
 
 /** A run in the Fog: the Phaser canvas, with the HUD, skill picks and results drawn over it. */
-export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, fromCamp }: Props) {
+export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const run = useRef<RunHandle | null>(null);
   const [hud, setHud] = useState<Hud | null>(null);
@@ -535,7 +533,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, fromCamp }: 
         </div>
       )}
 
-      {end && <Results state={state} zone={zone} end={end} broken={broken} gear={gearOut} back={fromCamp ? 'Back to the camp' : 'Back'} onAgain={() => setAttempt((a) => a + 1)} onLeave={onLeave} />}
+      {end && <Results state={state} zone={zone} end={end} broken={broken} gear={gearOut} onAgain={() => setAttempt((a) => a + 1)} onLeave={onLeave} />}
 
       {portrait && !failed && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-5 bg-ink-950 px-8 text-center">
@@ -758,7 +756,7 @@ function Recap({ end, broken, midName }: { end: RunEnd; broken: ReturnType<typeo
   );
 }
 
-function Results({ state, zone, end, broken, gear, back, onAgain, onLeave }: { back: string; state: GameState; zone: Zone; end: RunEnd; broken: ReturnType<typeof recordsBroken> | null; gear: (GearOutcome & { first: boolean }) | null; onAgain: () => void; onLeave: () => void }) {
+function Results({ state, zone, end, broken, gear, onAgain, onLeave }: { state: GameState; zone: Zone; end: RunEnd; broken: ReturnType<typeof recordsBroken> | null; gear: (GearOutcome & { first: boolean }) | null; onAgain: () => void; onLeave: () => void }) {
   const hints = [nextGrowth(state)],
     left = end.why === 'left';
   return (
@@ -810,7 +808,7 @@ function Results({ state, zone, end, broken, gear, back, onAgain, onLeave }: { b
         Run again
       </button>
       <button onClick={onLeave} className="mb-auto mt-2 w-full max-w-xs py-3 text-sm text-slate-400">
-        {back}
+        Back
       </button>
     </div>
   );
@@ -928,7 +926,7 @@ function GearRecap({ out, vault, first, flame }: { out: GearOutcome; vault: numb
       )}
       {!out.kept && out.lost.length > 0 && first && (
         <p className="mt-2 text-xs italic text-slate-300">
-          <span className="not-italic text-gold-300">Mira:</span> &ldquo;The Fog takes what you carried, not who you are. Your training is still yours. Come back to the fire.&rdquo;
+          <span className="not-italic text-gold-300">Mira:</span> &ldquo;The Fog takes what you carried, not who you are. Your training is still yours, and so is your flame.&rdquo;
         </p>
       )}
     </div>

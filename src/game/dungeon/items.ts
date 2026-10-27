@@ -16,9 +16,9 @@ export const SLOT_NAME: Record<ItemSlot, string> = { weapon: 'Weapon', armor: 'A
 export type Rarity = 'common' | 'magic' | 'rare' | 'legendary';
 export const RARITY: Record<Rarity, { name: string; color: string; bonuses: [number, number]; need: number; power: number }> = {
   common: { name: 'Common', color: '#e2e8f0', bonuses: [0, 0], need: 0.9, power: 1 },
-  magic: { name: 'Magic', color: '#60a5fa', bonuses: [1, 1], need: 1, power: 1.05 },
-  rare: { name: 'Rare', color: '#facc15', bonuses: [2, 3], need: 1.15, power: 1.1 },
-  legendary: { name: 'Legendary', color: '#fb923c', bonuses: [4, 4], need: 1.35, power: 1.3 },
+  magic: { name: 'Magic', color: '#60a5fa', bonuses: [1, 1], need: 1, power: 1.1 },
+  rare: { name: 'Rare', color: '#facc15', bonuses: [2, 3], need: 1.15, power: 1.25 },
+  legendary: { name: 'Legendary', color: '#fb923c', bonuses: [4, 4], need: 1.35, power: 1.6 },
 };
 /** How often each rarity drops (deeper floors and bosses lean rarer, see `rollRarity`). */
 export const RARITY_ODDS: [Rarity, number][] = [
@@ -104,8 +104,11 @@ const LEGENDS: Record<ClassId | 'charm', string[]> = {
   charm: ['The Wanderer\'s Coin', 'Lia\'s Shard', 'Sol\'s Nail', 'Vela\'s Seal', 'Rook\'s Pebble', 'The Summit Stone'],
 };
 
+/** How much the dungeon's finds give next to the starter kit: big enough that a good weapon is
+    worth training for (a mid-dungeon one is about one run skill). */
+export const ITEM_POWER = 2.2;
 /** How big a bonus is at this level, before the roll. */
-const sizeOf = (id: BonusId, level: number) => BONUSES[id].base + BONUSES[id].per * level;
+const sizeOf = (id: BonusId, level: number) => (BONUSES[id].base + BONUSES[id].per * level) * ITEM_POWER;
 
 /** Stat points an even build has in each stat when a zone opens (this many workouts in). */
 const evenPoints = (workouts: number) => (6 + workouts * 3.67) / 4;
@@ -138,11 +141,11 @@ export function rollItem(rnd: () => number, at: DropAt, rarity: Rarity): Item {
     mat = MATERIAL[Math.min(MATERIAL.length - 1, at.zone)];
   const base: Item['base'] =
     slot === 'weapon'
-      ? [{ id: 'damage', v: (0.03 + 0.0018 * level) * r.power * roll() }]
+      ? [{ id: 'damage', v: (0.03 + 0.0018 * level) * ITEM_POWER * r.power * roll() }]
       : slot === 'armor'
         ? [
-            { id: 'health', v: (4 + 0.5 * level) * r.power * roll() },
-            { id: 'armor', v: (0.01 + 0.0004 * level) * r.power * roll() },
+            { id: 'health', v: (4 + 0.5 * level) * ITEM_POWER * r.power * roll() },
+            { id: 'armor', v: (0.01 + 0.0004 * level) * ITEM_POWER * r.power * roll() },
           ]
         : [];
   const [lo, hi] = r.bonuses,
