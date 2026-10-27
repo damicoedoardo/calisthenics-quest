@@ -7,7 +7,7 @@ import { Enemy } from './Characters';
 import { music } from '@/lib/music';
 import { gearOf, levelInfo, totalXp, type FinishResult } from '@/lib/game';
 import { tierText } from '@/lib/gear';
-import { storyWords, type StoryState } from '@/story/engine';
+import type { StoryState } from '@/story/engine';
 import { afterWorkoutLine } from '@/story/daily';
 
 const CONFETTI = ['#fbbf24', '#f97316', '#22d3ee', '#a78bfa', '#34d399'];
@@ -78,6 +78,7 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
   const big = leveled || newGear.length > 0;
   const lvl = levelInfo(totalXp(result.state));
   // The flame's word on this workout: the first, a comeback, a new best, a short one...
+  // Until the player names their flame (in the first chapter's scene) it's just "A spark", as in the scenes.
   const flameSays = useMemo(() => afterWorkoutLine(result.state), [result.state]);
   const pieces = useMemo(
     () =>
@@ -135,7 +136,7 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
 
         {flameSays && (
           <p className="mt-4 text-sm italic leading-snug text-slate-300">
-            <span className="not-italic text-orange-300">{storyWords(result.state).flame}:</span> &ldquo;{flameSays}&rdquo;
+            <span className="not-italic text-orange-300">{result.state.profile.flame || 'A spark'}:</span> &ldquo;{flameSays}&rdquo;
           </p>
         )}
 
