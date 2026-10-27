@@ -40,6 +40,9 @@ export interface Track {
   rain?: number;
   /** Skip the echo: fast music with drums turns to mush in it. */
   dry?: boolean;
+  /** Overall volume (default 1), so every theme plays as loud as the others. Measured, not guessed:
+      see "Levels" in music-zones.ts. */
+  level?: number;
 }
 
 const bars = (...b: string[]) => b.join(' ');
@@ -348,6 +351,8 @@ export function parsePattern(pattern: string): { events: NoteEvent[]; length: nu
 }
 
 const MUTE_KEY = 'forma-muted';
+/** Cancels the limiter's built-in make-up gain (measured: see music-zones.ts, "Levels"). */
+const LIMIT_TRIM = 0.78;
 
 export type SfxId = 'slash' | 'arrow' | 'orb' | 'wave' | 'hit' | 'bossHit' | 'kill' | 'gem' | 'hurt' | 'spark' | 'nova' | 'flame' | 'roar' | 'dash' | 'stomp';
 
@@ -364,7 +369,8 @@ interface Playing {
 }
 
 class Engine {
-  private ctx: AudioContext | null = null;
+  /** A live AudioContext in the app; an OfflineAudioContext when rendering a track to measure it. */
+  private ctx: BaseAudioContext | null = null;
   private master: GainNode | null = null;
   private bus: GainNode | null = null;
   private sfxOut: GainNode | null = null;
@@ -378,8 +384,8 @@ class Engine {
   private listeners = new Set<() => void>();
   muted = false;
 
-  constructor() {
-    if (typeof window === 'undefined') return;
+  constructor(live = true) {
+    if (!live || typeof window === 'undefined') return;
     try {
       this.muted = localStorage.getItem(MUTE_KEY) === '1';
     } catch {
@@ -389,8 +395,9 @@ class Engine {
     window.addEventListener('pointerdown', () => this.unlock(), { passive: true });
     document.addEventListener('visibilitychange', () => {
       if (!this.ctx) return;
-      if (document.hidden) void this.ctx.suspend();
-      else void this.ctx.resume();
+      const live = this.ctx as AudioContext;
+      if (document.hidden) void live.suspend();
+      else void live.resume();
     });
   }
 
@@ -400,38 +407,75 @@ class Engine {
     if (!this.ctx) {
       const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!Ctx) return;
-      this.ctx = new Ctx();
-      this.master = this.ctx.createGain();
-      this.master.gain.value = this.muted ? 0 : 0.7;
-      this.master.connect(this.ctx.destination);
-      // A soft echo makes the chiptune feel like it's in a big, empty space.
-      this.bus = this.ctx.createGain();
-      const delay = this.ctx.createDelay(1);
-      delay.delayTime.value = 0.34;
-      const feedback = this.ctx.createGain();
-      feedback.gain.value = 0.32;
-      const wet = this.ctx.createGain();
-      wet.gain.value = 0.3;
-      this.bus.connect(this.master);
-      this.bus.connect(delay);
-      delay.connect(feedback);
-      feedback.connect(delay);
-      delay.connect(wet);
-      wet.connect(this.master);
-      // Effects go through a compressor, so a screen full of hits can't clip.
-      const comp = this.ctx.createDynamicsCompressor();
-      comp.threshold.value = -18;
-      comp.ratio.value = 6;
-      comp.connect(this.master);
-      this.sfxOut = this.ctx.createGain();
-      this.sfxOut.gain.value = 0.6;
-      this.sfxOut.connect(comp);
-      this.noiseBuf = this.ctx.createBuffer(1, this.ctx.sampleRate, this.ctx.sampleRate);
-      const data = this.noiseBuf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      this.wire(new Ctx());
     }
-    if (this.ctx.state === 'suspended') void this.ctx.resume();
+    const ctx = this.ctx as AudioContext | null;
+    if (ctx?.state === 'suspended') void ctx.resume();
     if (this.wanted && this.playing?.id !== this.wanted) this.start(this.wanted);
+  }
+
+  /** Builds the mix on a context: the master volume, the echo bus, the effects compressor, noise. */
+  private wire(ctx: BaseAudioContext) {
+    this.ctx = ctx;
+    this.master = this.ctx.createGain();
+    this.master.gain.value = this.muted ? 0 : 0.7;
+    // A limiter last in line: where drums and notes happen to land together, it catches the peak
+    // instead of letting it clip.
+    const limit = this.ctx.createDynamicsCompressor();
+    limit.threshold.value = -4.5;
+    limit.knee.value = 2;
+    limit.ratio.value = 20;
+    limit.attack.value = 0.002;
+    limit.release.value = 0.12;
+    // The compressor adds its own make-up gain (about 2.2 dB at these settings); trim takes it back
+    // out, so the music plays as loud as before and only the peaks change.
+    const trim = this.ctx.createGain();
+    trim.gain.value = LIMIT_TRIM;
+    this.master.connect(limit);
+    limit.connect(trim);
+    trim.connect(this.ctx.destination);
+    // A soft echo makes the chiptune feel like it's in a big, empty space.
+    this.bus = this.ctx.createGain();
+    const delay = this.ctx.createDelay(1);
+    delay.delayTime.value = 0.34;
+    const feedback = this.ctx.createGain();
+    feedback.gain.value = 0.32;
+    const wet = this.ctx.createGain();
+    wet.gain.value = 0.3;
+    this.bus.connect(this.master);
+    this.bus.connect(delay);
+    delay.connect(feedback);
+    feedback.connect(delay);
+    delay.connect(wet);
+    wet.connect(this.master);
+    // Effects go through a compressor, so a screen full of hits can't clip.
+    const comp = this.ctx.createDynamicsCompressor();
+    comp.threshold.value = -18;
+    comp.ratio.value = 6;
+    comp.connect(this.master);
+    this.sfxOut = this.ctx.createGain();
+    this.sfxOut.gain.value = 0.6;
+    this.sfxOut.connect(comp);
+    this.noiseBuf = this.ctx.createBuffer(1, this.ctx.sampleRate, this.ctx.sampleRate);
+    const data = this.noiseBuf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  }
+
+  /** Plays a track or a sting into an offline context, through the same mix as the app. */
+  renderInto(ctx: OfflineAudioContext, id: TrackId | StingId, seconds: number) {
+    this.wire(ctx);
+    const track = TRACKS[id],
+      out = ctx.createGain();
+    out.gain.value = track.level ?? 1;
+    out.connect(track.dry && this.master ? this.master : this.bus!);
+    const stepDur = 60 / track.bpm / track.stepsPerBeat,
+      voices = track.voices.map((v) => ({ v, ...parsePattern(v.pattern) })),
+      length = Math.max(...voices.map((v) => v.length)),
+      // A sting plays once; a track loops for as long as asked.
+      loops = (id as StingId) in STING_IDS ? 1 : Math.ceil(seconds / (length * stepDur));
+    for (let k = 0; k < loops; k++)
+      for (const { v, events } of voices) for (const e of events) this.note(out, v, e, 0.05 + (k * length + e.step) * stepDur, stepDur * e.steps);
+    if (track.rain) this.rain(out, track.rain);
   }
 
   play(id: TrackId) {
@@ -450,6 +494,7 @@ class Engine {
     if (!ctx || !this.bus) return;
     const track = TRACKS[id];
     const out = ctx.createGain();
+    out.gain.value = track.level ?? 1;
     out.connect(this.bus);
     const stepDur = 60 / track.bpm / track.stepsPerBeat;
     const t0 = ctx.currentTime + 0.05;
@@ -512,7 +557,7 @@ class Engine {
     const track = TRACKS[id];
     const out = ctx.createGain();
     out.gain.setValueAtTime(0, ctx.currentTime);
-    out.gain.setTargetAtTime(1, ctx.currentTime, 0.3);
+    out.gain.setTargetAtTime(track.level ?? 1, ctx.currentTime, 0.3);
     out.connect(track.dry && this.master ? this.master : this.bus);
 
     const voices = track.voices.map((v) => ({ v, ...parsePattern(v.pattern) }));
@@ -552,12 +597,16 @@ class Engine {
         f = noteFreq(e.note);
       // Not through tone(): music shouldn't count against the cap on overlapping sound effects.
       partials.forEach(([r, k]) => {
+        // Partials high up turn shrill on phone speakers: soften them past 4 kHz, drop them past 8.
+        const hz = f * r,
+          soft = hz > 8000 ? 0 : hz > 4000 ? (4000 / hz) ** 2 : 1;
+        if (!soft) return;
         const o = ctx.createOscillator(),
           g = ctx.createGain(),
           d = decay / Math.sqrt(r);
         o.type = 'sine';
         o.frequency.value = f * r;
-        g.gain.setValueAtTime(v.gain * k, t);
+        g.gain.setValueAtTime(v.gain * k * soft, t);
         g.gain.exponentialRampToValueAtTime(0.0008, t + d);
         o.connect(g);
         g.connect(out);
@@ -756,3 +805,13 @@ class Engine {
 }
 
 export const music = new Engine();
+
+const STING_IDS: Record<StingId, true> = { victory: true, levelup: true, defeat: true, shatter: true, warmth: true };
+
+/** Renders `seconds` of a track (or a whole sting) to samples, mono, exactly as the app mixes it.
+    Browser only. Used to measure loudness and to save tracks as audio files. */
+export async function renderTrack(id: TrackId | StingId, seconds: number, sampleRate = 44100): Promise<Float32Array> {
+  const ctx = new OfflineAudioContext(1, Math.round(seconds * sampleRate), sampleRate);
+  new Engine(false).renderInto(ctx, id, seconds);
+  return (await ctx.startRendering()).getChannelData(0);
+}

@@ -187,8 +187,14 @@ const SUMMIT_HARMONY = transpose(SUMMIT_TUNE, 4);
 const WARDEN_BASS = loop(4, bars('A1 A1 A2 A1 A#1 A1 A2 A1', 'A1 A1 A2 A1 G1 A1 A#1 A1'));
 const WARDEN_TUNE = bars('A4 - A#4 A4 - - E5 -', 'D5 - C5 - A#4 - A4 -', 'A4 - A#4 A4 - - G5 -', 'F5 - E5 - D5 - E5 -', 'A5 - - - G5 - F5 -', 'E5 - F5 - E5 - D5 -', 'C5 - A#4 - A4 - G4 -', 'A4 - - - E4 - A#4 -');
 
+/* Levels: every theme is set (with `level`) to play as loud as the zone-1 themes it replaces, measured
+   by rendering 30 s of each offline and taking its loudness (LUFS, as streaming services do): runs at
+   about -25.5 like `fog`, bosses about -24.5 like `fogBoss`, peaks kept under -3 dBFS. After changing
+   a theme, measure it again rather than trusting your ears on a laptop. */
+
 export const ZONE_TRACKS: Record<ZoneTrackId | ZoneStingId, Track> = {
   lake: {
+    level: 1.36,
     bpm: 104,
     stepsPerBeat: 2,
     dry: true,
@@ -203,6 +209,7 @@ export const ZONE_TRACKS: Record<ZoneTrackId | ZoneStingId, Track> = {
     ],
   },
   lakeBoss: {
+    level: 1.75,
     bpm: 132,
     stepsPerBeat: 2,
     dry: true,
@@ -216,12 +223,13 @@ export const ZONE_TRACKS: Record<ZoneTrackId | ZoneStingId, Track> = {
       { wave: 'square', gain: 0.026, cutoff: 2600, pattern: twice(MIRROR_TUNE) },
       // the Mirror copies you: the same tune in glass, three steps behind
       { wave: 'glass', gain: 0.055, pattern: twice(later(MIRROR_TUNE, 3)) },
-      { wave: 'thump', gain: 0.42, pattern: loop(16, 'x . . . x . . .') },
+      { wave: 'thump', gain: 0.3, pattern: loop(16, 'x . . . x . . .') },
       { wave: 'snare', gain: 0.08, pattern: bars(loop(15, '. . x . . . x .'), '. . x . x x x x') },
       { wave: 'hat', gain: 0.022, pattern: loop(16, 'x x x x x x x x') },
     ],
   },
   forge: {
+    level: 1.50,
     bpm: 112,
     stepsPerBeat: 2,
     dry: true,
@@ -235,6 +243,7 @@ export const ZONE_TRACKS: Record<ZoneTrackId | ZoneStingId, Track> = {
     ],
   },
   forgeBoss: {
+    level: 1.30,
     bpm: 138,
     stepsPerBeat: 2,
     dry: true,
@@ -248,6 +257,7 @@ export const ZONE_TRACKS: Record<ZoneTrackId | ZoneStingId, Track> = {
     ],
   },
   plateau: {
+    level: 1.40,
     bpm: 96,
     stepsPerBeat: 2,
     voices: [
@@ -259,6 +269,7 @@ export const ZONE_TRACKS: Record<ZoneTrackId | ZoneStingId, Track> = {
     ],
   },
   plateauBoss: {
+    level: 1.27,
     bpm: 112,
     stepsPerBeat: 2,
     dry: true,
@@ -273,6 +284,7 @@ export const ZONE_TRACKS: Record<ZoneTrackId | ZoneStingId, Track> = {
     ],
   },
   woods: {
+    level: 1.50,
     bpm: 84,
     stepsPerBeat: 2,
     voices: [
@@ -284,6 +296,7 @@ export const ZONE_TRACKS: Record<ZoneTrackId | ZoneStingId, Track> = {
     ],
   },
   woodsBoss: {
+    level: 1.33,
     bpm: 112,
     stepsPerBeat: 2,
     dry: true,
@@ -297,6 +310,7 @@ export const ZONE_TRACKS: Record<ZoneTrackId | ZoneStingId, Track> = {
     ],
   },
   summit: {
+    level: 1.27,
     bpm: 120,
     stepsPerBeat: 2,
     voices: [
@@ -310,6 +324,7 @@ export const ZONE_TRACKS: Record<ZoneTrackId | ZoneStingId, Track> = {
     ],
   },
   summitBoss: {
+    level: 1.06,
     bpm: 140,
     stepsPerBeat: 2,
     dry: true,
@@ -326,6 +341,7 @@ export const ZONE_TRACKS: Record<ZoneTrackId | ZoneStingId, Track> = {
     ],
   },
   warden: {
+    level: 1.38,
     bpm: 144,
     stepsPerBeat: 2,
     dry: true,
@@ -333,7 +349,7 @@ export const ZONE_TRACKS: Record<ZoneTrackId | ZoneStingId, Track> = {
       { wave: 'square', gain: 0.06, cutoff: 750, pattern: WARDEN_BASS },
       { wave: 'sawtooth', gain: 0.022, cutoff: 1500, pattern: WARDEN_TUNE },
       { wave: 'anvil', gain: 0.04, pattern: loop(8, 'A5 . . . . . . .') },
-      { wave: 'thump', gain: 0.45, pattern: loop(8, 'x . x . x . . x') },
+      { wave: 'thump', gain: 0.34, pattern: loop(8, 'x . x . x . . x') },
       { wave: 'snare', gain: 0.1, pattern: bars(loop(7, '. . x . . . x .'), 'x x . x x x x x') },
       { wave: 'hat', gain: 0.024, pattern: loop(8, 'x x x x x x x x') },
     ],
