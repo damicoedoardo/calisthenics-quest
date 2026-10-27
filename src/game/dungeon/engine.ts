@@ -409,7 +409,7 @@ export const BOSSES: Record<FogBoss, MonsterDef & { plates?: number }> = {
     cost: 0,
   },
   mirror: {
-    hp: 520,
+    hp: 700,
     speed: 36,
     dmg: 16,
     r: 16,
@@ -468,13 +468,18 @@ export const BOSSES: Record<FogBoss, MonsterDef & { plates?: number }> = {
   summit: { hp: 1, speed: 0, dmg: 0, r: 20, xp: 0, move: 'still', shoots: [], cost: 0 },
 } as Record<FogBoss, MonsterDef & { plates?: number }>;
 
+/** The bosses after the first are as tough as the floor they guard (like its monsters), so the
+    fight lasts long enough for its rule to matter. */
+export const BOSS_HP = 5;
+/** The Knight's armor clanks: after a plate falls, the next can't fall for this long (s). */
+export const PLATE_EVERY = 0.35;
 /** The Plateau shows a new crack each time this share of its HP is gone. */
 export const CRACK = 0.1;
 /** The Hollow's light: its reach, how long you stand in it without stepping out to take its
     hand (s), and how long it stays dark, then lit. While lit, it tests you with a turning spiral. */
 export const LIGHT = { r: 78, hold: 3, dark: 7, lit: 4.5, first: 6, drift: 16, spiral: { every: 0.11, kind: 'spiral', n: 3, speed: 72, dmg: 9, turn: 0.19 } as Pattern };
-/** The Summit's climb: how long the light lasts on the mountain (s); each ledge makes the monsters this much tougher; the HP back on each
-    ledge; how often your friends help (s). */
+/** The Summit's climb: how long the light lasts on the mountain (s), how much tougher each ledge
+    makes the monsters, the HP back on each ledge, and how often your friends help (s). */
 export const CLIMB = { limit: 120, tougher: 0.14, heal: 0.08, every: { arrow: 0.8, hammer: 3.2, lamp: 5 } };
 export type AllyKind = 'wanderer' | 'mira' | 'vela';
 export interface Ally {
@@ -1080,7 +1085,7 @@ function summonBoss(run: Run) {
   const which = run.setup.zone.boss,
     def = BOSSES[which],
     { zone } = run.setup;
-  const hp = def.plates ?? Math.round(def.hp * zone.hp);
+  const hp = def.plates ?? Math.round(def.hp * zone.hp * (which === 'tomorrow' ? 1 : BOSS_HP));
   const b: Foe = {
     id: ++run.ids,
     kind: 'boss',
@@ -1803,7 +1808,11 @@ function nearest(run: Run, x: number, y: number, skip?: Set<Foe>, within = Infin
 function damage(run: Run, f: Foe, amount: number, knock = 0, fromX = run.hero.x, fromY = run.hero.y) {
   if (!f.alive || run.t < f.bornUntil || untouchable(run, f)) return;
   const boss = f === run.boss;
-  const dmg = boss && run.setup.zone.boss === 'knight' ? 1 : Math.max(1, Math.round(amount));
+  const knight = boss && run.setup.zone.boss === 'knight';
+  // A plate falls to any hit, however small, but only one at a time.
+  if (knight && run.t < f.act) return;
+  if (knight) f.act = run.t + PLATE_EVERY;
+  const dmg = knight ? 1 : Math.max(1, Math.round(amount));
   if (f.kind === 'reflection' || f.kind === 'image') {
     // A copy of you, or of the Mirror: it shatters, and you feel it.
     hitYourself(run, f.kind);

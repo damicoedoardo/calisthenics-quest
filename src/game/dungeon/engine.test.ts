@@ -124,7 +124,7 @@ describe('dungeon', () => {
   });
 
   const still = { x: 0, y: 0, ability: false };
-  const tough = { ...power, armor: 0.95, strike: 6 };
+  const tough = { ...power, armor: 0.95, strike: 20 };
 
   it('the Mirror splits into images that never shoot; hitting one hurts you and shatters it', () => {
     const run = createRun({ ...setup, zone: ZONES[1], power: { ...power, armor: 0.95 }, seed: 4 });
@@ -188,9 +188,10 @@ describe('dungeon', () => {
 
   it('the bot plays every boss', () => {
     for (const z of [1, 2, 3, 4]) {
-      const run = createRun({ ...setup, zone: ZONES[z], power: tough, seed: 8, autoPick: true });
+      const run = createRun({ ...setup, zone: ZONES[z], classId: 'archer', power: tough, seed: 8, autoPick: true });
       skipToBoss(run);
-      run.hp = run.maxHp = 100000;
+      // Plenty of HP (but not on the lake, where hitting a copy costs a share of it).
+      if (z !== 1) run.hp = run.maxHp = 100000;
       while (!run.over) {
         stepRun(run, botInput(run));
         run.events.length = 0;
