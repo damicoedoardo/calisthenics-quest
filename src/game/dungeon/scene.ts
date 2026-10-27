@@ -4,7 +4,9 @@ import { xpToNext, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import { music, type SfxId } from '@/lib/music';
 import type { Sheet } from '@/sprites/registry';
 import { BOSSES as BOSS_LOOKS, FOES as FOE_LOOKS, type SheetKey, type Stats } from '../rules';
+import { R } from '@/sprites/palette';
 import { botInput } from './bot';
+import { BARREL, CHEST, CHEST_OPEN, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STONE, type Prop } from './props';
 import {
   ABILITIES,
   FLAME_RING,
@@ -141,6 +143,9 @@ class DungeonScene extends Phaser.Scene {
   private roomBits: Phaser.GameObjects.GameObject[] = [];
   private barrels = new Map<number, Phaser.GameObjects.Image>();
   private shrine: Phaser.GameObjects.Image | null = null;
+  /** Torches on the side walls; their flames are drawn each frame on `torchFire`. */
+  private torches: { x: number; y: number }[] = [];
+  private torchFire!: Phaser.GameObjects.Graphics;
   private chest: Phaser.GameObjects.Image | null = null;
   private fx!: Phaser.GameObjects.Graphics;
   private shadows!: Phaser.GameObjects.Graphics;
@@ -195,6 +200,7 @@ class DungeonScene extends Phaser.Scene {
     this.floorTiles = this.add.tileSprite(0, 0, ROOM.w, ROOM.h, 'ground').setOrigin(0).setDepth(-3);
     this.ground = this.add.graphics().setDepth(-1.5);
     this.room = this.add.graphics().setDepth(-1);
+    this.torchFire = this.add.graphics().setDepth(-0.5);
     this.shadows = this.add.graphics().setDepth(0.5);
     this.fx = this.add.graphics().setDepth(90000);
     const fogTint = hex(zone.fog);
@@ -307,6 +313,16 @@ class DungeonScene extends Phaser.Scene {
     }
     for (const p of T.pillars) this.roomBits.push(this.add.image(p.x, p.y + p.r * 0.35, 'pillar').setOrigin(0.5, 1).setScale(p.r / 20).setDepth(p.y + p.r));
     for (const b of T.barrels) this.barrels.set(b.id, this.add.image(b.x, b.y + 6, 'barrel').setOrigin(0.5, 1).setDepth(b.y));
+    // Torches down both side walls, each throwing a warm pool of light.
+    this.torches = [];
+    for (let y = 150; y < h - 100; y += 240)
+      for (const x of [ROOM.wall / 2, w - ROOM.wall / 2]) {
+        this.torches.push({ x, y });
+        this.roomBits.push(this.add.image(x, y, 'sconce').setDepth(-0.6));
+        const glow = this.add.image(x, y - 8, 'mist').setTint(0xf08a3a).setAlpha(0.22).setScale(2.2).setDepth(-0.7);
+        this.tweens.add({ targets: glow, alpha: 0.32, scale: 2.4, duration: 180 + (y % 7) * 30, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        this.roomBits.push(glow);
+      }
     if (T.shrine) {
       this.shrine = this.add.image(T.shrine.x, T.shrine.y + 8, 'shrine').setOrigin(0.5, 1).setDepth(T.shrine.y);
       this.roomBits.push(this.shrine);
@@ -330,11 +346,31 @@ class DungeonScene extends Phaser.Scene {
     const base = Phaser.Display.Color.HexStringToColor(zone.ground);
     const lighter = base.clone().lighten(8).color,
       darker = base.clone().darken(5).color;
+    // Flagstones: two courses of big slabs, laid so the tile repeats seamlessly. Soft edges (light
+    // top-left, shade bottom-right) and thin mortar, so the floor stays quiet under the fight.
+    const COURSES: [number, number, number[]][] = [
+      [0, 30, [30, 30]],
+      [32, 30, [14, 30, 14]],
+    ];
     tex('ground', 64, 64, () => {
-      g.fillStyle(base.color).fillRect(0, 0, 64, 64);
-      g.fillStyle(darker).fillRect(0, 0, 64, 1).fillRect(0, 0, 1, 64).fillRect(32, 0, 1, 32).fillRect(0, 32, 64, 1).fillRect(16, 32, 1, 32);
+      const mortar = base.clone().darken(4).color,
+        lit = base.clone().lighten(3).color,
+        shade = base.clone().darken(2).color;
+      g.fillStyle(mortar).fillRect(0, 0, 64, 64);
       const rnd = new Phaser.Math.RandomDataGenerator(['forma']);
-      for (let i = 0; i < 18; i++) g.fillStyle(i % 2 ? lighter : darker).fillRect(rnd.between(0, 62), rnd.between(0, 62), rnd.between(1, 2), rnd.between(1, 2));
+      COURSES.forEach(([y, h, widths], row) => {
+        let x = 0;
+        widths.forEach((w, i) => {
+          g.fillStyle((row + i) % 2 ? shade : base.color).fillRect(x, y, w, h);
+          g.fillStyle(lit).fillRect(x, y, w - 1, 1).fillRect(x, y, 1, h - 1);
+          g.fillStyle(mortar).fillRect(x + 1, y + h - 1, w - 1, 1).fillRect(x + w - 1, y + 1, 1, h - 1);
+          // wear: a few chips and specks
+          for (let k = 0; k < 3; k++) g.fillStyle(k % 2 ? lighter : darker).fillRect(x + rnd.between(3, w - 5), y + rnd.between(3, h - 4), rnd.between(1, 2), 1);
+          x += w + 2;
+        });
+      });
+      // one slab cracked across
+      g.fillStyle(mortar).fillRect(36, 8, 5, 1).fillRect(40, 9, 4, 1).fillRect(43, 10, 4, 1).fillRect(46, 9, 3, 1);
     });
     tex('stone', 10, 7, () => {
       g.fillStyle(0x3f3a4d).fillRect(1, 2, 8, 5).fillRect(2, 1, 6, 1);
@@ -403,45 +439,26 @@ class DungeonScene extends Phaser.Scene {
       g.fillStyle(0xfef3c7).fillRect(2, 1, 8, 10);
       g.fillStyle(0xa16207).fillRect(3, 3, 6, 1).fillRect(3, 5, 6, 1).fillRect(3, 7, 4, 1);
     });
-    // A stone pillar seen from the front-top: radius 20, scaled per pillar.
-    tex('pillar', 44, 64, () => {
-      g.fillStyle(0x000000, 0.3).fillEllipse(22, 58, 44, 12);
-      g.fillStyle(0x3d3549).fillRect(4, 14, 36, 44);
-      g.fillStyle(0x4a4158).fillRect(8, 14, 6, 44);
-      g.fillStyle(0x2a2433).fillRect(32, 14, 8, 44).fillRect(4, 30, 36, 2).fillRect(4, 46, 36, 2);
-      g.fillStyle(0x5b5570).fillEllipse(22, 14, 40, 16);
-      g.fillStyle(0x6b6478).fillEllipse(20, 12, 28, 8);
-    });
-    tex('barrel', 24, 28, () => {
-      g.fillStyle(0x000000, 0.3).fillEllipse(12, 25, 24, 6);
-      g.fillStyle(0x7c2d12).fillRect(3, 6, 18, 19);
-      g.fillStyle(0x9a3412).fillRect(5, 6, 6, 19);
-      g.fillStyle(0x44403c).fillRect(3, 9, 18, 2).fillRect(3, 19, 18, 2);
-      g.fillStyle(0xb45309).fillEllipse(12, 6, 18, 6);
-      g.fillStyle(0xef4444).fillRect(10, 13, 4, 4);
-    });
-    tex('chest', 30, 26, () => {
+    // The furniture, drawn as text rows (props.ts), two texture pixels per character.
+    const prop = (key: string, { rows, palette }: Prop, under?: () => void) =>
+      tex(key, rows[0].length * 2, rows.length * 2, () => {
+        under?.();
+        rows.forEach((row, y) =>
+          [...row].forEach((ch, x) => {
+            const c = palette[ch];
+            if (c) g.fillStyle(hex(c)).fillRect(x * 2, y * 2, 2, 2);
+          }),
+        );
+      });
+    prop('pillar', PILLAR, () => g.fillStyle(0x000000, 0.3).fillEllipse(22, 58, 44, 12));
+    prop('barrel', BARREL, () => g.fillStyle(0x000000, 0.3).fillEllipse(12, 25, 24, 6));
+    prop('chest', CHEST, () => g.fillStyle(0x000000, 0.3).fillEllipse(15, 24, 30, 6));
+    prop('chest-open', CHEST_OPEN, () => {
       g.fillStyle(0x000000, 0.3).fillEllipse(15, 24, 30, 6);
-      g.fillStyle(0x78350f).fillRect(2, 8, 26, 15);
-      g.fillStyle(0x92400e).fillRect(2, 3, 26, 7);
-      g.fillStyle(0xfbbf24).fillRect(2, 9, 26, 2).fillRect(12, 7, 6, 7);
-      g.fillStyle(0xfef3c7).fillRect(14, 9, 2, 3);
+      g.fillStyle(hex(R.gold[2]), 0.25).fillEllipse(15, 8, 30, 14);
     });
-    tex('chest-open', 30, 26, () => {
-      g.fillStyle(0x000000, 0.3).fillEllipse(15, 24, 30, 6);
-      g.fillStyle(0x78350f).fillRect(2, 10, 26, 13);
-      g.fillStyle(0x1c1917).fillRect(4, 10, 22, 4);
-      g.fillStyle(0x92400e).fillRect(2, 0, 26, 6);
-      g.fillStyle(0xfbbf24).fillRect(2, 10, 26, 2);
-    });
-    tex('shrine', 36, 40, () => {
-      g.fillStyle(0x86efac, 0.18).fillCircle(18, 24, 18);
-      g.fillStyle(0x57534e).fillRect(6, 30, 24, 8);
-      g.fillStyle(0x78716c).fillRect(8, 28, 20, 3);
-      g.fillStyle(0xa8a29e).fillRect(12, 14, 12, 14);
-      g.fillStyle(0x86efac).fillCircle(18, 10, 6);
-      g.fillStyle(0xdcfce7).fillCircle(16, 8, 2);
-    });
+    prop('shrine', SHRINE_PROP, () => g.fillStyle(0x86efac, 0.18).fillCircle(18, 24, 18));
+    prop('sconce', SCONCE);
     g.destroy();
   }
 
@@ -452,33 +469,61 @@ class DungeonScene extends Phaser.Scene {
       H = this.run.area.h,
       w = ROOM.wall,
       door = ROOM.door,
-      dl = (W - door) / 2;
-    const wall = 0x2a2433,
-      top = 0x3d3549,
-      edge = 0x15111c;
-    g.fillStyle(wall).fillRect(0, 0, W, w).fillRect(0, H - w, W, w).fillRect(0, 0, w, H).fillRect(W - w, 0, w, H);
-    // Bricks.
-    g.fillStyle(top);
-    for (let x = 0; x < W; x += 16) {
-      g.fillRect(x, 2, 14, 6).fillRect(x + 8, 11, 14, 6);
-      g.fillRect(x, H - w + 2, 14, 6).fillRect(x + 8, H - w + 11, 14, 6);
-    }
-    for (let y = w; y < H - w; y += 16) {
-      g.fillRect(3, y, 6, 14).fillRect(12, y + 8, 6, 14);
-      g.fillRect(W - w + 3, y, 6, 14).fillRect(W - w + 12, y + 8, 6, 14);
-    }
-    g.fillStyle(edge).fillRect(w, w, W - 2 * w, 3);
+      dl = (W - door) / 2,
+      S = STONE.map(hex);
+    // The wall's mass, then brick courses: 7px tall, staggered, a lit top edge on each brick.
+    g.fillStyle(S[1]).fillRect(0, 0, W, w).fillRect(0, H - w, W, w).fillRect(0, 0, w, H).fillRect(W - w, 0, w, H);
+    // A brick, cut to the wall it sits in (x0..x1) so none hangs over the edge.
+    const brick = (x: number, y: number, bw: number, bh: number, x0 = 0, x1 = W) => {
+      const a = Math.max(x, x0),
+        b = Math.min(x + bw, x1);
+      if (b - a < 2) return;
+      g.fillStyle(S[2]).fillRect(a, y, b - a, bh);
+      g.fillStyle(S[3]).fillRect(a, y, b - a - 1, 1);
+      g.fillStyle(S[1]).fillRect(b - 1, y, 1, bh);
+    };
+    for (let row = 0; row < 2; row++)
+      for (let x = row * -8; x < W; x += 16) {
+        brick(x, row * 7, 15, 6);
+        brick(x, H - w + 6 + row * 7, 15, 6);
+      }
+    for (let y = w, n = 0; y < H - w; y += 7, n++)
+      for (const x0 of [0, W - w]) for (let x = x0 - (n % 2 ? 8 : 0); x < x0 + w; x += 12) brick(x, y, 11, 6, x0, x0 + w);
+    // The top wall's face, in shadow under a lit ledge; the bottom wall's top, catching the light.
+    g.fillStyle(S[4]).fillRect(w, 14, W - 2 * w, 2);
+    g.fillStyle(S[0]).fillRect(w, 16, W - 2 * w, w - 16);
+    g.fillStyle(S[4]).fillRect(0, H - w, W, 2);
+    // Inner edges of the side walls, then the shadow the walls throw on the floor.
+    g.fillStyle(S[3]).fillRect(w - 2, w, 2, H - 2 * w).fillRect(W - w, w, 2, H - 2 * w);
+    g.fillStyle(0x000000, 0.28).fillRect(w, w, W - 2 * w, 10).fillRect(w, w, 6, H - 2 * w).fillRect(W - w - 6, w, 6, H - 2 * w);
+    g.fillStyle(0x000000, 0.14).fillRect(w, w + 10, W - 2 * w, 8);
+    // The doorways: a stone frame either way.
+    const frame = (l: number) => {
+      g.fillStyle(S[4]).fillRect(l - 6, 0, 6, w).fillRect(l + door, 0, 6, w);
+      g.fillStyle(S[5]).fillRect(l - 6, 0, 2, w).fillRect(l + door, 0, 2, w);
+      for (let y = 5; y < w; y += 6) g.fillStyle(S[2]).fillRect(l - 6, y, 6, 1).fillRect(l + door, y, 6, 1);
+    };
     if (this.run.doorOpen) {
       for (const d of this.run.doors) {
         const l = d.x - door / 2,
-          color = DOOR_LOOK[d.kind].color;
+          color = this.run.doors.length > 1 ? DOOR_LOOK[d.kind].color : 0xfbbf24;
         g.fillStyle(0x07080d).fillRect(l, 0, door, w);
-        g.fillStyle(this.run.doors.length > 1 ? color : 0xfbbf24, 0.35).fillRect(l + 6, w - 4, door - 12, 4);
+        // stairs going down into the dark, lit from below by what waits there
+        for (let k = 0; k < 3; k++) g.fillStyle(S[1 + k]).fillRect(l + 4 + (2 - k) * 4, 6 + k * 5, door - 8 - (2 - k) * 8, 2);
+        g.fillStyle(color, 0.35).fillRect(l + 6, w - 4, door - 12, 4);
+        frame(l);
       }
     } else {
-      g.fillStyle(0x1a1522).fillRect(dl, 0, door, w);
-      g.fillStyle(0x6b6478);
-      for (let x = dl + 6; x < dl + door - 4; x += 10) g.fillRect(x, 2, 3, w - 4);
+      // a portcullis: iron bars, two crossbars, points at the bottom
+      g.fillStyle(0x0b0d14).fillRect(dl, 0, door, w);
+      const iron = R.iron.map(hex);
+      for (let x = dl + 5; x < dl + door - 4; x += 10) {
+        g.fillStyle(iron[1]).fillRect(x, 0, 3, w - 3);
+        g.fillStyle(iron[2]).fillRect(x, 0, 1, w - 3);
+        g.fillStyle(iron[1]).fillRect(x + 1, w - 3, 1, 2);
+      }
+      g.fillStyle(iron[0]).fillRect(dl, 5, door, 2).fillRect(dl, 13, door, 2);
+      frame(dl);
     }
   }
 
@@ -986,15 +1031,24 @@ class DungeonScene extends Phaser.Scene {
     const r = this.run,
       g = this.ground.clear(),
       now = this.time.now;
+    // Pools: a stone rim, deep water darkest under the near edge, light dancing on the surface.
+    const water = R.water.map(hex);
     for (const q of r.terrain.water) {
-      g.fillStyle(0x1e3a5f, 0.85).fillRect(q.x, q.y, q.w, q.h);
-      g.lineStyle(2, 0x3b82f6, 0.6).strokeRect(q.x, q.y, q.w, q.h);
-      g.fillStyle(0x60a5fa, 0.35);
+      g.fillStyle(hex(STONE[3])).fillRect(q.x - 3, q.y - 3, q.w + 6, q.h + 6);
+      g.fillStyle(hex(STONE[5])).fillRect(q.x - 3, q.y + q.h, q.w + 6, 2);
+      g.fillStyle(water[0]).fillRect(q.x, q.y, q.w, q.h);
+      g.fillStyle(0x0b2547).fillRect(q.x, q.y, q.w, 6);
+      g.fillStyle(water[1], 0.45).fillRect(q.x, q.y + q.h - 6, q.w, 6);
       for (let i = 0; i < 6; i++) {
-        const y = q.y + ((i + 0.5) * q.h) / 6,
-          x = q.x + 8 + ((now / 30 + i * 37) % (q.w - 30));
-        g.fillRect(x, y, 14, 2);
+        const y = q.y + 10 + ((i + 0.5) * (q.h - 16)) / 6,
+          x = q.x + 6 + ((now / 30 + i * 37) % (q.w - 28)),
+          len = 8 + (i % 3) * 4;
+        g.fillStyle(water[2], 0.55).fillRect(x, y, len, 2);
+        g.fillStyle(water[1], 0.6).fillRect(x + 3, y + 2, len - 4, 1);
       }
+      // a glint that comes and goes
+      const k = Math.floor(now / 220) % 9;
+      if (k < 3) g.fillStyle(0xffffff, 0.8 - k * 0.25).fillRect(q.x + ((q.w * 0.3 + q.x) % (q.w - 10)) + 4, q.y + q.h * 0.4, 2, 2);
     }
     for (const q of r.terrain.spikes) {
       const st = spikeState(q, r.t);
@@ -1007,6 +1061,17 @@ class DungeonScene extends Phaser.Scene {
           } else g.fillStyle(st === 'warn' ? 0xef4444 : 0x44403c).fillCircle(x, y, 3);
         }
     }
+    // Torch flames: a few pixels of fire that never sit still.
+    const l = this.torchFire.clear(),
+      fire = R.fire.map(hex);
+    this.torches.forEach((t, i) => {
+      const k = Math.floor(now / 110 + i * 3) % 4,
+        sway = k === 1 ? -1 : k === 3 ? 1 : 0;
+      l.fillStyle(fire[1]).fillRect(t.x - 3, t.y - 14, 6, 6);
+      l.fillStyle(fire[1]).fillRect(t.x - 2 + sway, t.y - 18 - (k % 2), 4, 4);
+      l.fillStyle(fire[2]).fillRect(t.x - 2, t.y - 13, 4, 4);
+      l.fillStyle(hex(R.light[2])).fillRect(t.x - 1 + sway, t.y - 12, 2, 2);
+    });
     if (r.terrain.shrine && !r.terrain.shrine.used) {
       const { x, y } = r.terrain.shrine;
       g.fillStyle(0x86efac, 0.12 + 0.08 * Math.sin(now / 250)).fillCircle(x, y, SHRINE.r + 14);
