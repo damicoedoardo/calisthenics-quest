@@ -368,6 +368,20 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
   return { state: next, session, levelBefore: before, levelAfter: levelInfo(totalXp(next)).level, newGear };
 }
 
+/**
+ * A workout left open on an earlier day (the app was closed mid-quest) is saved on the day it was
+ * done, so its sets still count and don't get mixed into today's workout. Half a day of grace, so a
+ * late workout that runs past midnight isn't cut short.
+ */
+export function closeStaleDraft(state: GameState, now: Date): GameState {
+  const draft = state.draft;
+  if (!draft) return state;
+  const started = new Date(draft.startedAt);
+  const stale = started.toDateString() !== now.toDateString() && now.getTime() - started.getTime() > 12 * 3_600_000;
+  if (!stale) return state;
+  return finishSession(state, started)?.state ?? { ...state, draft: null };
+}
+
 export function nodeName(id: string): string {
   return PATHS.flatMap((p) => p.nodes).find((n) => n.id === id)?.name ?? 'Skill';
 }

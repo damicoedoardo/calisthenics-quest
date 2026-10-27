@@ -15,7 +15,7 @@ import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
 import { ClassPicker } from '@/components/ClassPicker';
 import { DevButton, DevPanel } from '@/components/DevPanel';
 import { LookProvider } from '@/components/Look';
-import { finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
+import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { pendingScenes, storyState, type StoryState } from '@/story/engine';
 import { withTodayPage } from '@/story/daily';
 import type { Scene } from '@/story/types';
@@ -79,10 +79,11 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
   // A page in the Book of Days for every day the app is opened (and today's line follows the day).
   const today = new Date().toDateString();
+  // A quest left open on an earlier day is saved on that day first, so it isn't mixed into today's.
   useEffect(() => {
-    if (!ready || !state.profile.onboarded) return;
-    update((s) => withTodayPage(s, new Date()));
-  }, [ready, state.profile.onboarded, state.sessions.length, today, update]);
+    if (!ready || !state.profile.onboarded || training) return;
+    update((s) => withTodayPage(closeStaleDraft(s, new Date()), new Date()));
+  }, [ready, state.profile.onboarded, state.sessions.length, today, training, update]);
 
   const endScene = useCallback(
     (r: SceneResult) => {
