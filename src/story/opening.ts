@@ -19,6 +19,7 @@ export const FADING: Line[] = [
   { who: 'narrator', text: 'A busy week. Then a tired month. Then a whole stretch of life when everything else came first.' },
   { who: 'narrator', text: '“Next Monday,” you said. You said it so many times it stopped meaning anything.' },
   { who: 'narrator', text: 'You still have the shoes. They are at the back of a cupboard. You know exactly which one.', pause: 0.8 },
+  { who: 'narrator', text: 'You missed it the way you miss a friend you stopped calling. After a while, calling felt harder than missing.', pause: 0.8 },
   { who: 'narrator', text: 'Now the stairs feel longer. You walk past old photos a little faster than you used to.' },
   { who: 'narrator', text: 'Some mornings you almost start. Then you work out how far back you would be starting from, and you put that down too.' },
   { who: 'narrator', text: 'Nobody took it from you. You put it down, one day at a time, and forgot where.', pause: 1.2, pace: 'slow' },
@@ -39,6 +40,7 @@ export const HOLLOW_MEET: Line[] = [
   { who: 'hollow', text: 'I was there every time you looked in the mirror and looked away. Every time you said "next Monday" and we both knew.' },
   { who: 'hollow', text: "Remember the last time you tried? I was there. I'm always there." },
   { who: 'hollow', text: "If you don't try, you can't fail. Put the sword down. Stay here with me. It's quiet here." },
+  { who: 'narrator', text: "Your hand tightens on the sword. You don't know why. It just does.", pause: 0.8 },
   { who: 'you', text: '...No.' },
   { who: 'hollow', text: 'No? Alright. Show me.' },
 ];
@@ -76,6 +78,8 @@ export const MEET: Line[] = [
   { who: 'wanderer', text: 'You used to be carrying less. That is not the same thing.', pause: 1 },
   { who: 'you', text: "Then why do I feel so ashamed?" },
   { who: 'wanderer', text: "...Because you still care. You wouldn't feel a thing if you didn't.", pause: 1.4, pace: 'slow' },
+  { who: 'you', text: "It's been so long. It feels stupid to start again now." },
+  { who: 'wanderer', text: "Coming back always feels stupid. That's how you know it's coming back, and not starting.", pause: 1 },
   { who: 'you', text: 'How do I beat it?' },
   { who: 'wanderer', text: 'Not in one swing. Nobody beats it in one swing.' },
   { who: 'wanderer', text: 'You beat it the way water beats stone. One drop. Then another. Then another.' },
@@ -102,6 +106,8 @@ export const SEALED: Line[] = [
   { who: 'narrator', text: 'Something flickers in the ash at your feet. A spark, no bigger than a fingernail.', pause: 1.2 },
   { who: 'flame', text: "...hi. Sorry. I'm small right now. I used to be bigger." },
   { who: 'flame', text: "I'm the part of you that never stopped believing in you. Even when you did." },
+  { who: 'you', text: "...Why? I didn't give you much to go on." },
+  { who: 'flame', text: "I know. I did it anyway. That's kind of my whole thing.", pause: 0.8 },
   { who: 'flame', mood: 'soft', text: "I got really small. But I never went out. I'm just really, really glad you got up.", pace: 'slow' },
 ];
 
