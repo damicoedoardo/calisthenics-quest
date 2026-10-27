@@ -143,6 +143,26 @@ export const SHRINE: Prop = {
   palette: { ...stone, m: MOSS, r: '#86efac', c: '#15803d', C: '#86efac', w: '#f0fdf4' },
 };
 
+/** Stairs down: steps into the dark, lit gold from below. Lies flat on the floor. */
+export const STAIRS: Prop = {
+  rows: [
+    '..66666666666666..',
+    '.6777777777777776.',
+    '675555555555555576',
+    '674444444444444476',
+    '671444444444444176',
+    '671333333333333176',
+    '671133333333331176',
+    '671122222222221176',
+    '671112222222211176',
+    '671111111111111176',
+    '671111yyyyyy111176',
+    '.6777777777777776.',
+    '..66666666666666..',
+  ],
+  palette: { ...stone, y: R.gold[2] },
+};
+
 /** A torch in an iron bracket, for the side walls (its flame is drawn live, so it flickers). */
 export const SCONCE: Prop = {
   rows: [

@@ -34,7 +34,8 @@ Tested in `src/lib/fog.test.ts`.
 
 ## The run itself
 
-A run is a dungeon of ten floors per zone, played by a pure engine and drawn by Phaser:
+A run is a dungeon of ten floors per zone, each a map of rooms to explore down to the stairs (a
+minimap in the corner fills in as you go), played by a pure engine and drawn by Phaser:
 [dungeon.md](dungeon.md) has the files and the how-to table. `src/game/rules.ts` holds numbers
 shared between the hero and the engine (speed, HP, attacks) and the sprite sheet names;
 `src/game/sheets.ts` builds the sheets a run needs; `src/game/calm.ts` drops shake and flashes for

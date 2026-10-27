@@ -73,7 +73,7 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Change the looks a player starts with (boy, girl) | `STARTER_LOOKS` in `characters/hero.ts`; the editor's options are in `src/components/LookEditor.tsx` |
 | Redraw a dungeon monster | the `ROWS` text art in its file (`ram.ts`, `smoke.ts`, `seeker.ts`, `splitter.ts`, `shade.ts`); its palette sits under the rows |
 | Change which sprite a dungeon monster uses, or its size | `DUNGEON_LOOKS` in `src/game/dungeon/scene.ts` (a new sheet also needs a `SheetKey` in `src/game/rules.ts` and its sheet in `src/game/sheets.ts`) |
-| Redraw the dungeon's pillars, barrels, chests, shrine, torches | the text rows in `src/game/dungeon/props.ts` (floor, walls, door, water and spikes are drawn in `scene.ts`) |
+| Redraw the dungeon's pillars, barrels, chests, shrine, stairs, torches | the text rows in `src/game/dungeon/props.ts` (floor, walls, door, water and spikes are drawn in `scene.ts`) |
 | Fix an exercise demo's form (depth, lean, where the hands go) | its case in `poseFor` (`characters/exercise.ts`); a new exercise in the plan (`src/lib/program.ts`) needs one too (a test checks every plan exercise has a demo) |
 | Fix a library movement's demo, or add one | its case in `frame` (`characters/moves.ts`); a new one also needs an id in `MOVES`, coaching and a classifier rule, see [exercise-library.md](exercise-library.md) |
 | Change how a zone dresses its regular monsters | `ZONE_RAMPS` (colors) and the zone's branch of `dress` in `characters/zoned.ts`; the sprites that take `{ zone }` are the `zoned(...)` entries in `registry.ts` |

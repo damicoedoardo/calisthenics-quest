@@ -11,8 +11,8 @@ import { zoneMusic } from '@/lib/music-zones';
 import { runSheets } from '@/game/sheets';
 import { Sprite } from './Sprite';
 import { SoundToggle, useMusic } from './Sound';
-import type { FreePick, Hud, RunEnd, RunHandle } from '@/game/dungeon/scene';
-import { ABILITIES, DODGE, RELICS, ROOM_KINDS, midBoss, type AbilityId, type RelicId, type RoomKind } from '@/game/dungeon/engine';
+import type { FreePick, Hud, MiniMap, RunEnd, RunHandle } from '@/game/dungeon/scene';
+import { ABILITIES, DODGE, RELICS, ROOM_KINDS, midBoss, type AbilityId, type CellKind, type RelicId } from '@/game/dungeon/engine';
 
 interface Props {
   state: GameState;
@@ -242,7 +242,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
               <p className={`font-pixel text-[11px] ${hud.boss ? 'text-red-400' : 'text-slate-100'}`}>
                 {hud.climb != null ? 'CLIMB' : hud.boss ? 'BOSS' : hud.floor ? `${hud.floor}/${hud.floors}` : clock(left)}
               </p>
-              <p className="mt-1 font-mono text-[10px] text-slate-400">{hud.climb != null ? `ledge ${hud.climb + 1}` : hud.floor && !hud.boss ? `room ${hud.room}/${hud.rooms}` : `${hud.kills} down`}</p>
+              <p className="mt-1 font-mono text-[10px] text-slate-400">{hud.climb != null ? `ledge ${hud.climb + 1}` : `${hud.kills} down`}</p>
             </div>
             <button
               aria-label="Pause"
@@ -266,7 +266,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
         </div>
       )}
 
-      {hud?.floor && hud.floors && hud.rooms && !end && <DepthMap floor={hud.floor} floors={hud.floors} room={hud.room ?? 1} rooms={hud.rooms} boss={zone.bossName} midName={midName(zone)} mid={hud.wardenFloor ?? null} path={hud.path ?? []} doors={hud.doors ?? null} />}
+      {hud?.floor && hud.floors && !end && <DepthMap floor={hud.floor} floors={hud.floors} boss={zone.bossName} midName={midName(zone)} mid={hud.wardenFloor ?? null} />}
+      {hud?.map && hud.climb == null && !end && <FloorMap map={hud.map} floor={hud.floor} midName={midName(zone)} hold={(on) => (on ? run.current?.pause() : run.current?.resume())} />}
 
       {!hud && !end && !failed && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
       {failed && (
@@ -453,65 +454,108 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
 }
 
 /** How deep you are: a ladder of floors down the left edge, filling as you go, the boss at the
-    bottom. The floor you're on shows its rooms; an ember marks the Warden's floor. */
-function DepthMap({ floor, floors, room, rooms, boss, midName, mid, path, doors }: { floor: number; floors: number; room: number; rooms: number; boss: string; midName: string; mid: number | null; path: RoomKind[]; doors: RoomKind[] | null }) {
+    bottom; an ember marks the Warden's floor. */
+function DepthMap({ floor, floors, boss, midName, mid }: { floor: number; floors: number; boss: string; midName: string; mid: number | null }) {
+  return (
+    <div
+      className="absolute left-1.5 top-16 flex flex-col items-center gap-[3px] rounded-lg bg-ink-950/50 px-1 py-1.5"
+      role="img"
+      aria-label={`Floor ${floor} of ${floors}, ${mid ? `${midName.replace(/^The/, 'the')} on floor ${mid}, ` : ''}${boss} at the bottom.`}
+    >
+      {Array.from({ length: floors }, (_, i) => {
+        const n = i + 1,
+          warden = n === mid;
+        return (
+          <div key={n} className="relative flex items-center">
+            <span className={`block h-1.5 w-4 rounded-[1px] ${n === floor ? 'animate-pulse bg-white ring-1 ring-gold-300' : n < floor ? 'bg-gold-400/70' : 'bg-ink-700/90'}`} />
+            {warden && <Sprite id="markIcon" opts={{ name: 'warden' }} size={14} label={midName} className={`absolute -right-4 ${n < floor ? 'opacity-40' : ''}`} />}
+          </div>
+        );
+      })}
+      <Sprite id="markIcon" opts={{ name: 'boss' }} size={14} label="The boss" className={floor === floors ? 'animate-pulse' : 'opacity-70'} />
+    </div>
+  );
+}
+
+/** Each kind of room's color on the map, and its name there (the mid-boss's is its own). */
+const MAP_LOOK: Record<CellKind, { color: string; name: string }> = {
+  fight: { color: '#cbd5e1', name: ROOM_KINDS.fight.name },
+  elite: { color: '#f87171', name: ROOM_KINDS.elite.name },
+  treasure: { color: '#fbbf24', name: 'Chest' },
+  rest: { color: '#86efac', name: ROOM_KINDS.rest.name },
+  stairs: { color: '#fbbf24', name: 'Stairs' },
+  warden: { color: '#f97316', name: '' },
+  boss: { color: '#a855f7', name: 'Boss' },
+};
+
+/** The floor's map, top right: the rooms you've been in, filled; the ones you've seen through a
+    door, as outlines in the color of what waits there; you, the gold one. Tap for it big, with
+    names; the run holds still while it's open. */
+function FloorMap({ map, floor, midName, hold }: { map: MiniMap; floor: number; midName: string; hold: (on: boolean) => void }) {
   const [open, setOpen] = useState(false);
-  // What each room of this floor held, or what waits: the doors on offer, then the floor's last room.
-  const rows = Array.from({ length: rooms }, (_, r) => {
-    const n = r + 1;
-    if (n < room) return { n, text: ROOM_KINDS[path[r] ?? 'fight'].name, tone: 'text-slate-400' };
-    if (n === room) return { n, text: `${ROOM_KINDS[path[r] ?? 'fight'].name} (here)`, tone: 'text-gold-300' };
-    if (n === rooms) return floor === floors ? { n, text: boss, tone: 'text-red-400' } : floor === mid ? { n, text: midName, tone: 'text-orange-300' } : { n, text: 'Stairs down', tone: 'text-slate-400' };
-    if (n === room + 1 && doors) return { n, text: doors.map((k) => ROOM_KINDS[k].name).join(' or '), tone: 'text-sky-300' };
-    return { n, text: '?', tone: 'text-slate-500' };
-  });
+  const toggle = (on: boolean) => {
+    setOpen(on);
+    hold(on);
+  };
+  const xs = map.cells.map((c) => c.x),
+    ys = map.cells.map((c) => c.y),
+    x0 = Math.min(...xs),
+    y0 = Math.min(...ys),
+    cols = Math.max(...xs) - x0 + 1,
+    rows = Math.max(...ys) - y0 + 1;
+  const draw = (s: number, gap: number, names: boolean) => {
+    const step = s + gap,
+      mid = (v: number) => v * step + s / 2;
+    return (
+      <svg width={cols * step - gap + 4} height={rows * step - gap + 4} viewBox={`-2 -2 ${cols * step - gap + 4} ${rows * step - gap + 4}`} aria-hidden>
+        {map.cells.flatMap((c) =>
+          c.links
+            .filter((l) => l === 'e' || l === 's')
+            .map((l) => {
+              const x = c.x - x0,
+                y = c.y - y0;
+              return <line key={`${c.id}${l}`} x1={mid(x)} y1={mid(y)} x2={mid(x + (l === 'e' ? 1 : 0))} y2={mid(y + (l === 's' ? 1 : 0))} stroke="#64748b" strokeWidth={Math.max(2, s / 6)} />;
+            }),
+        )}
+        {map.cells.map((c) => {
+          const x = (c.x - x0) * step,
+            y = (c.y - y0) * step,
+            here = c.id === map.at,
+            { color } = MAP_LOOK[c.kind];
+          return (
+            <g key={c.id}>
+              <rect x={x} y={y} width={s} height={s} rx={s / 6} fill={here ? '#fde68a' : c.been ? '#334155' : '#0b0d14'} stroke={here ? '#fbbf24' : color} strokeWidth={c.been && !here ? 1 : 2} strokeDasharray={c.been || here ? undefined : `${s / 5} ${s / 8}`} />
+              {!names && c.been && !here && c.kind !== 'fight' && <rect x={x + s * 0.3} y={y + s * 0.3} width={s * 0.4} height={s * 0.4} fill={color} />}
+              {names && (
+                <text x={x + s / 2} y={y + s / 2 + 3} textAnchor="middle" fontSize={8} fill={here ? '#0b0d14' : color} fontFamily="monospace">
+                  {here ? 'You' : c.kind === 'warden' ? midName.split(' ').pop()!.slice(0, 7) : MAP_LOOK[c.kind].name}
+                </text>
+              )}
+            </g>
+          );
+        })}
+      </svg>
+    );
+  };
   return (
     <>
       <button
         type="button"
         onPointerDown={(e) => e.stopPropagation()}
-        onClick={() => setOpen((o) => !o)}
-        className="pointer-events-auto absolute left-1.5 top-16 flex flex-col items-center gap-[3px] rounded-lg bg-ink-950/50 px-1 py-1.5"
-        aria-label={`Floor ${floor} of ${floors}, ${mid ? `${midName.replace(/^The/, 'the')} on floor ${mid}, ` : ''}${boss} at the bottom. Tap for this floor's rooms.`}
+        onClick={() => toggle(!open)}
+        className="pointer-events-auto absolute right-1.5 top-16 rounded-lg bg-ink-950/60 p-1"
+        aria-label={`Map of floor ${floor}: ${map.cells.filter((c) => c.been).length} rooms explored. Tap to open it.`}
         aria-expanded={open}
       >
-        {Array.from({ length: floors }, (_, i) => {
-          const n = i + 1,
-            here = n === floor,
-            warden = n === mid;
-          return (
-            <div key={n} className="relative flex items-center">
-              <div className={`flex items-center gap-[2px] ${here ? 'rounded-sm bg-gold-400/20 px-[2px] py-[2px] ring-1 ring-gold-300' : ''}`}>
-                {here ? (
-                  Array.from({ length: rooms }, (_, r) => (
-                    <span
-                      key={r}
-                      className={`h-1.5 w-1.5 rounded-[1px] ${r + 1 < room ? 'bg-gold-300' : r + 1 === room ? 'animate-pulse bg-white' : (n === floors || warden) && r + 1 === rooms ? (warden ? 'bg-orange-500' : 'bg-red-500') : 'bg-ink-700'}`}
-                    />
-                  ))
-                ) : (
-                  <span className={`block h-1.5 w-4 rounded-[1px] ${n < floor ? 'bg-gold-400/70' : 'bg-ink-700/90'}`} />
-                )}
-              </div>
-              {warden && <Sprite id="markIcon" opts={{ name: 'warden' }} size={14} label={midName} className={`absolute -right-4 ${n < floor ? 'opacity-40' : ''}`} />}
-            </div>
-          );
-        })}
-        <Sprite id="markIcon" opts={{ name: 'boss' }} size={14} label="The boss" className={floor === floors ? 'animate-pulse' : 'opacity-70'} />
+        {draw(9, 4, false)}
       </button>
       {open && (
-        <div onPointerDown={(e) => e.stopPropagation()} onClick={() => setOpen(false)} className="pointer-events-auto absolute left-10 top-16 z-10 w-44 animate-fadein rounded-lg bg-ink-950/95 p-2 ring-1 ring-gold-400/40">
-          <p className="font-pixel text-[8px] text-gold-300">
-            Floor {floor} of {floors}
-          </p>
-          <ol className="mt-1.5 space-y-1">
-            {rows.map((r) => (
-              <li key={r.n} className="flex items-baseline gap-1.5 text-[11px] leading-tight">
-                <span className="w-3 shrink-0 font-mono text-[9px] text-slate-500">{r.n}</span>
-                <span className={r.tone}>{r.text}</span>
-              </li>
-            ))}
-          </ol>
+        <div onPointerDown={(e) => e.stopPropagation()} onClick={() => toggle(false)} className="pointer-events-auto absolute inset-0 z-10 flex animate-fadein items-center justify-center bg-ink-950/70">
+          <div className="max-h-full max-w-full overflow-auto rounded-xl bg-ink-950/95 p-3 ring-1 ring-gold-400/40">
+            <p className="font-pixel text-[9px] text-gold-300">Floor {floor}</p>
+            <div className="mt-2">{draw(44, 12, true)}</div>
+            <p className="mt-2 max-w-xs text-[11px] leading-snug text-slate-400">Filled: rooms you've been in. Dashed: rooms you've seen through a door. Find the stairs to go down. Tap to close.</p>
+          </div>
         </div>
       )}
     </>

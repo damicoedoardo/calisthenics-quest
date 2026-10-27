@@ -18,7 +18,7 @@ on the phone (Hero tab, Backup to save it).
 
 **Training earns, play spends.** A workout always "wins": it gives XP, raises the next targets,
 moves the story on and makes the hero really stronger. The Fog (the Play tab) is a short action
-game where you can lose, played with the phone held sideways; what you bring into it is what your
+game where you can lose, played with the phone held sideways, exploring a dungeon floor by floor; what you bring into it is what your
 training gave you. Losing a run costs nothing.
 
 ## The four tabs

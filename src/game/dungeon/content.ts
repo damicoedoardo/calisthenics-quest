@@ -20,7 +20,7 @@ export const SHRINE = { r: 18 };
 
 // ---------- paths and loot ----------
 
-/** What waits behind a door. After most rooms two doors open and you pick. */
+/** What a room of the floor holds. Its door says so before you walk in. */
 export type RoomKind = 'fight' | 'elite' | 'treasure' | 'rest';
 export const ROOM_KINDS: Record<RoomKind, { name: string; text: string }> = {
   fight: { name: 'Fight', text: 'Monsters.' },
@@ -28,15 +28,29 @@ export const ROOM_KINDS: Record<RoomKind, { name: string; text: string }> = {
   treasure: { name: 'Treasure', text: 'Monsters, and a chest at the end.' },
   rest: { name: 'Rest', text: 'No monsters: a shrine that heals you.' },
 };
-/** How often each kind is behind a door. */
-export const DOOR_ODDS: [RoomKind, number][] = [
-  ['fight', 3],
-  ['treasure', 2],
-  ['elite', 2],
-  ['rest', 1.3],
-];
-/** Doors on the left and right of the top wall, as a share of the room's width. */
-export const DOOR_AT = [0.27, 0.73];
+/** A room on the floor's map: one of the kinds above, or the floor's last room (the stairs down,
+    the mid-boss, or the boss). */
+export type CellKind = RoomKind | 'stairs' | 'warden' | 'boss';
+/** How often each kind is drawn: rooms on the way to the stairs, and rooms off to the side (a dead
+    end is most often a chest). */
+export const ROOM_ODDS: Record<'way' | 'side' | 'end', [RoomKind, number][]> = {
+  way: [
+    ['fight', 3],
+    ['elite', 1.5],
+    ['treasure', 1],
+  ],
+  side: [
+    ['fight', 2],
+    ['elite', 1.5],
+    ['treasure', 1],
+    ['rest', 1],
+  ],
+  end: [
+    ['treasure', 3],
+    ['rest', 1.6],
+    ['elite', 1],
+  ],
+};
 /** An elite monster: bigger, tougher, worth more. Elite rooms hold fewer of them. */
 export const ELITE = { hp: 2.4, dmg: 1.25, r: 1.25, xp: 1.5, crowd: 0.5 };
 
@@ -56,12 +70,15 @@ export const RELICS: Record<RelicId, { name: string; text: string }> = {
 /** The bot's order when it opens a chest. */
 export const RELIC_BOT: RelicId[] = ['whetstone', 'heart', 'iron', 'quick', 'charm', 'fang', 'hourglass', 'coal', 'boots'];
 
-/** How deep a dungeon goes: sized so a whole run down to the boss takes about 15 minutes. */
+/** How deep a dungeon goes: sized so a whole run down to the boss takes about 15 minutes. Each
+    floor is a map of rooms: `rooms` on the way from the first to the last (both counted), and
+    `side` more off to the side, for whoever explores. */
 export interface Layout {
   floors: number;
   rooms: number;
+  side?: number;
 }
-export const LAYOUT: Layout = { floors: 10, rooms: 5 };
+export const LAYOUT: Layout = { floors: 10, rooms: 5, side: 3 };
 
 /** The dials balance tests turn (scripts/fog-sim.mjs). */
 export const DIALS = {

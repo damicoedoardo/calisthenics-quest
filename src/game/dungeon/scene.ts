@@ -6,7 +6,7 @@ import { BOT_PICKS, type BossSheetKey, type SheetKey, type Sheets } from '../rul
 import type { FogBoss, FogLines } from '@/story/types';
 import { R } from '@/sprites/palette';
 import { botInput } from './bot';
-import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, type Prop } from './props';
+import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STAIRS, type Prop } from './props';
 import { THEMES, themeFor, type Theme } from './themes';
 import {
   ABILITIES,
@@ -21,6 +21,7 @@ import {
   MIDS,
   CREW,
   GALE,
+  cellOf,
   hardened,
   isWardenRoom,
   midBoss,
@@ -39,13 +40,15 @@ import {
   wardenFloor,
   winNow,
   type AbilityId,
+  type CellKind,
+  type Door,
   type Foe,
   type FreePick,
   type GameEvent,
   type MonsterKind,
   type RelicId,
-  type RoomKind,
   type Run,
+  type Side,
   type RunEnd as EngineEnd,
   type ShotStyle,
 } from './engine';
@@ -112,6 +115,22 @@ export interface RunSetup {
   fast?: boolean;
 }
 
+/** A room on the minimap: where it is on the floor (east is +x, south is +y), what it holds,
+    whether you've been in, and its doors to rooms you've seen. */
+export interface MiniCell {
+  id: number;
+  x: number;
+  y: number;
+  kind: CellKind;
+  been: boolean;
+  links: Side[];
+}
+export interface MiniMap {
+  /** The room you're in. */
+  at: number;
+  cells: MiniCell[];
+}
+
 export interface Hud {
   hp: number;
   maxHp: number;
@@ -122,18 +141,14 @@ export interface Hud {
   kills: number;
   /** The boss's bar, and what it says in place of HP when its fight isn't about HP. */
   boss: { hp: number; max: number; label?: string } | null;
-  /** This floor's rooms so far, by what was behind their doors (index = room). */
-  path: RoomKind[];
-  /** What the open doors offer, when there's a choice. */
-  doors: RoomKind[] | null;
+  /** The floor's map as far as you know it. */
+  map: MiniMap;
   /** The Warden of the Ashes, the mid-boss, while it stands. */
   warden: { hp: number; max: number; phase: number } | null;
   /** The floor (from 1) whose last room holds the Warden, or null. */
   wardenFloor: number | null;
   floor: number;
   floors: number;
-  room: number;
-  rooms: number;
   /** The class ability: 1 when ready. */
   ability: { id: AbilityId; ready: number };
   /** The dodge: 1 when ready. */
@@ -241,13 +256,19 @@ function bossStage(which: FogBoss, f: Foe): number {
   if (which === 'plateau') return f.phase <= 3 ? 0 : f.phase <= 6 ? 1 : 2;
   return 0;
 }
-/** What a door says about the room behind it. */
-const DOOR_LOOK: Record<RoomKind, { label: string; color: number }> = {
+/** What a door says about the room behind it (the mid-boss's door says its name). */
+const DOOR_LOOK: Record<Exclude<CellKind, 'warden'>, { label: string; color: number }> = {
   fight: { label: 'FIGHT', color: 0xe2e8f0 },
   elite: { label: 'ELITE', color: 0xf87171 },
   treasure: { label: 'CHEST', color: 0xfbbf24 },
   rest: { label: 'REST', color: 0x86efac },
+  stairs: { label: 'STAIRS', color: 0xfbbf24 },
+  boss: { label: 'BOSS', color: 0xa855f7 },
 };
+/** A door back to a room you've been in. */
+const BEEN = 0x94a3b8;
+/** Into the room from each wall (engine space). */
+const INWARD: Record<Side, [number, number]> = { e: [0, 1], w: [0, -1], n: [1, 0], s: [-1, 0] };
 /** Each kind of monster shot has its own color, so you learn what it will do. */
 const SHOT_TEX: Record<ShotStyle, string> = { plain: 'bullet', homing: 'bullet-homing', bounce: 'bullet-bounce', ramp: 'bullet-ramp', wiggle: 'bullet-page' };
 const hex = (c: string) => Phaser.Display.Color.HexStringToColor(c).color;
@@ -284,6 +305,7 @@ class DungeonScene extends Phaser.Scene {
   private theme: Theme;
   private mists: Phaser.GameObjects.Image[] = [];
   private chest: Phaser.GameObjects.Image | null = null;
+  private stairs: Phaser.GameObjects.Image | null = null;
   private fx!: Phaser.GameObjects.Graphics;
   private shadows!: Phaser.GameObjects.Graphics;
   /** Upright marks over the room (eyes in the fog, a bomb in the air, the ring on the monster you tapped). */
@@ -548,8 +570,10 @@ class DungeonScene extends Phaser.Scene {
     this.barrels.clear();
     this.shrine = null;
     this.chest = null;
+    this.stairs = null;
+    this.chestCall = null;
     this.turn();
-    this.floorTiles.setSize(w, h).setTilePosition(r.room * 23 + r.floor * 41, r.floor * 17);
+    this.floorTiles.setSize(w, h).setTilePosition(r.map.at * 23 + r.floor * 41, r.floor * 17);
     const n = Math.round((w * h) / 8000);
     for (let i = 0; i < n; i++) {
       const key = ['stone', 'tuft', 'bone', 'crack'][i % 4];
@@ -568,9 +592,12 @@ class DungeonScene extends Phaser.Scene {
       const [X, Y] = this.P(b.x, b.y);
       this.barrels.set(b.id, this.add.image(X, Y + 6, 'barrel').setOrigin(0.5, 1).setDepth(Y));
     }
-    // Torches along the long walls (on screen, the top and the bottom), each throwing a warm pool of light.
+    // Torches along the long walls (on screen, the top and the bottom), each throwing a warm pool
+    // of light: in pairs either side of the middle, where those walls have their doors.
     this.torches = [];
-    for (let y = 150; y < h - 100; y += 240)
+    const along: number[] = [];
+    for (let d = 120; d < h / 2 - 90; d += 240) along.push(h / 2 - d, h / 2 + d);
+    for (const y of along)
       for (const x of [ROOM.wall / 2, w - ROOM.wall / 2]) {
         const [X, Y] = this.P(x, y);
         this.torches.push({ x: X, y: Y });
@@ -597,6 +624,8 @@ class DungeonScene extends Phaser.Scene {
         .setDepth(1);
       this.summit.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.summit?.play(tex));
     }
+    // Back in a room you cleared: as you left it.
+    if (r.doorOpen) this.cleared(false);
     this.drawRoom();
     this.fitScreen();
     const [hx, hy] = this.P(r.hero.x, r.hero.y),
@@ -725,6 +754,7 @@ class DungeonScene extends Phaser.Scene {
       g.fillStyle(hex(R.gold[2]), 0.25).fillEllipse(15, 8, 30, 14);
     });
     prop('sconce', SCONCE);
+    prop('stairs', STAIRS);
     prop('hitspark', HIT_SPARK);
     g.destroy();
     this.themeTextures();
@@ -852,7 +882,6 @@ class DungeonScene extends Phaser.Scene {
       H = this.run.area.h,
       w = ROOM.wall,
       door = ROOM.door,
-      dl = (W - door) / 2,
       S = this.theme.stone.map(hex);
     // The wall's mass, then brick courses: 7px tall, staggered, a lit top edge on each brick.
     g.fillStyle(S[1]).fillRect(0, 0, W, w).fillRect(0, H - w, W, w).fillRect(0, 0, w, H).fillRect(W - w, 0, w, H);
@@ -880,33 +909,87 @@ class DungeonScene extends Phaser.Scene {
     g.fillStyle(S[3]).fillRect(w - 2, w, 2, H - 2 * w).fillRect(W - w, w, 2, H - 2 * w);
     g.fillStyle(0x000000, 0.28).fillRect(w, w, W - 2 * w, 10).fillRect(w, w, 6, H - 2 * w).fillRect(W - w - 6, w, 6, H - 2 * w);
     g.fillStyle(0x000000, 0.14).fillRect(w, w + 10, W - 2 * w, 8);
-    // The doorways: a stone frame either way.
-    const frame = (l: number) => {
+    // The doorways, one in each wall with a room behind it: drawn as if in the top wall, then
+    // turned to their own wall. A stone frame either side; open, steps down lit by what waits
+    // there; shut while monsters stand, a portcullis.
+    const r = this.run,
+      iron = R.iron.map(hex),
+      turnTo: Record<Side, [number, number, number]> = { e: [W / 2, 0, 0], w: [W / 2, H, Math.PI], n: [0, H / 2, -Math.PI / 2], s: [W, H / 2, Math.PI / 2] },
+      l = -door / 2;
+    const sides = r.doorOpen ? r.doors.map((d) => d.side) : r.climb !== null ? (['e'] as Side[]) : (Object.keys(cellOf(r).links) as Side[]);
+    for (const side of sides) {
+      const [tx, ty, a] = turnTo[side],
+        d = r.doors.find((o) => o.side === side);
+      g.save();
+      g.translateCanvas(tx, ty);
+      g.rotateCanvas(a);
+      if (r.doorOpen && d) {
+        g.fillStyle(0x07080d).fillRect(l, 0, door, w);
+        for (let k = 0; k < 3; k++) g.fillStyle(S[1 + k]).fillRect(l + 4 + (2 - k) * 4, 6 + k * 5, door - 8 - (2 - k) * 8, 2);
+        g.fillStyle(this.doorColor(d), 0.35).fillRect(l + 6, w - 4, door - 12, 4);
+      } else {
+        g.fillStyle(0x0b0d14).fillRect(l, 0, door, w);
+        for (let x = l + 5; x < l + door - 4; x += 10) {
+          g.fillStyle(iron[1]).fillRect(x, 0, 3, w - 3);
+          g.fillStyle(iron[2]).fillRect(x, 0, 1, w - 3);
+          g.fillStyle(iron[1]).fillRect(x + 1, w - 3, 1, 2);
+        }
+        g.fillStyle(iron[0]).fillRect(l, 5, door, 2).fillRect(l, 13, door, 2);
+      }
       g.fillStyle(S[4]).fillRect(l - 6, 0, 6, w).fillRect(l + door, 0, 6, w);
       g.fillStyle(S[5]).fillRect(l - 6, 0, 2, w).fillRect(l + door, 0, 2, w);
       for (let y = 5; y < w; y += 6) g.fillStyle(S[2]).fillRect(l - 6, y, 6, 1).fillRect(l + door, y, 6, 1);
-    };
-    if (this.run.doorOpen) {
-      for (const d of this.run.doors) {
-        const l = d.x - door / 2,
-          color = this.run.doors.length > 1 ? DOOR_LOOK[d.kind].color : 0xfbbf24;
-        g.fillStyle(0x07080d).fillRect(l, 0, door, w);
-        // stairs going down into the dark, lit from below by what waits there
-        for (let k = 0; k < 3; k++) g.fillStyle(S[1 + k]).fillRect(l + 4 + (2 - k) * 4, 6 + k * 5, door - 8 - (2 - k) * 8, 2);
-        g.fillStyle(color, 0.35).fillRect(l + 6, w - 4, door - 12, 4);
-        frame(l);
+      g.restore();
+    }
+  }
+
+  /** What a door says, and its color: dim once you've been behind it. */
+  private doorLook(d: Door) {
+    const look = d.kind === 'warden' ? { label: midBoss(this.setup.zone).name.split(' ').pop()!.toUpperCase(), color: 0xf97316 } : this.run.climb !== null ? { label: 'UP', color: 0xfbbf24 } : DOOR_LOOK[d.kind];
+    return d.been ? { label: '', color: BEEN } : look;
+  }
+  private doorColor(d: Door) {
+    return this.doorLook(d).color;
+  }
+
+  /** A room clear (or cleared before): the word over each door, the chest, the stairs down. */
+  private cleared(fresh: boolean) {
+    const r = this.run,
+      { w: W, h: H } = r.area,
+      m = ROOM.wall + 30;
+    // On screen the east door is in the right wall, so its word sits just left of it, and so on.
+    const at: Record<Side, [number, number, number, number]> = { e: [W / 2, m, 1, 0.5], w: [W / 2, H - m, 0, 0.5], n: [m, H / 2, 0.5, 0], s: [W - m, H / 2, 0.5, 1] };
+    for (const d of r.doors) {
+      const look = this.doorLook(d);
+      if (!look.label) continue;
+      const [x, y, ox, oy] = at[d.side];
+      this.roomBits.push(
+        this.add
+          .text(...this.P(x, y), look.label, { fontFamily: '"Press Start 2P", monospace', fontSize: '9px', color: `#${look.color.toString(16).padStart(6, '0')}`, stroke: '#0b0d14', strokeThickness: 3 })
+          .setOrigin(ox, oy)
+          .setDepth(96000),
+      );
+    }
+    if (r.stairs && !this.stairs) {
+      const [sx, sy] = this.P(r.stairs.x, r.stairs.y);
+      this.stairs = this.add.image(sx, sy, 'stairs').setDepth(-1.5).setAngle(90).setScale(1.5);
+      this.roomBits.push(this.stairs);
+      if (fresh) this.puffs.explode(10, sx, sy);
+    }
+    if (r.chest && !this.chest) {
+      const [cx, cy] = this.P(r.chest.x, r.chest.y);
+      this.chest = this.add.image(cx, cy + 10, r.chest.opened ? 'chest-open' : 'chest').setOrigin(0.5, 1).setDepth(cy);
+      this.roomBits.push(this.chest);
+      if (fresh) this.puffs.explode(10, cx, cy);
+      // The mid-boss's chest, called out over it until it's opened.
+      if (isWardenRoom(r) && !r.chest.opened) {
+        this.chestCall = this.add
+          .text(cx, cy - 34, 'CHEST', { fontFamily: '"Press Start 2P", monospace', fontSize: '9px', color: '#fde68a', backgroundColor: '#0b0d14cc', padding: { x: 5, y: 4 } })
+          .setOrigin(0.5, 1)
+          .setDepth(150500);
+        this.roomBits.push(this.chestCall);
+        this.tweens.add({ targets: this.chestCall, y: cy - 42, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
       }
-    } else {
-      // a portcullis: iron bars, two crossbars, points at the bottom
-      g.fillStyle(0x0b0d14).fillRect(dl, 0, door, w);
-      const iron = R.iron.map(hex);
-      for (let x = dl + 5; x < dl + door - 4; x += 10) {
-        g.fillStyle(iron[1]).fillRect(x, 0, 3, w - 3);
-        g.fillStyle(iron[2]).fillRect(x, 0, 1, w - 3);
-        g.fillStyle(iron[1]).fillRect(x + 1, w - 3, 1, 2);
-      }
-      g.fillStyle(iron[0]).fillRect(dl, 5, door, 2).fillRect(dl, 13, door, 2);
-      frame(dl);
     }
   }
 
@@ -978,13 +1061,16 @@ class DungeonScene extends Phaser.Scene {
     return BOT_PICKS.find((id) => choices.includes(id)) ?? choices[0];
   }
 
-  /** The rooms of this floor so far, for the depth ladder. */
-  private path: { floor: number; kinds: RoomKind[] } = { floor: -1, kinds: [] };
-  private trackPath(): RoomKind[] {
-    const r = this.run;
-    if (this.path.floor !== r.floor) this.path = { floor: r.floor, kinds: [] };
-    this.path.kinds[r.room] = r.kind;
-    return [...this.path.kinds];
+  /** The floor's map as far as you know it, for the minimap: the rooms you've been in, and the
+      ones you've seen through a door. Turned like the screen: east is to the right. */
+  private miniMap(): MiniMap {
+    const { cells, at } = this.run.map;
+    return {
+      at,
+      cells: cells
+        .filter((c) => c.seen)
+        .map((c) => ({ id: c.id, x: c.gx, y: c.gy, kind: c.kind, been: c.visited, links: (Object.entries(c.links) as [Side, number][]).filter(([, to]) => cells[to].seen).map(([s]) => s) })),
+    };
   }
 
   private stickInput() {
@@ -1134,14 +1220,11 @@ class DungeonScene extends Phaser.Scene {
       wardenFloor: wardenFloor(r.layout) >= 0 ? wardenFloor(r.layout) + 1 : null,
       floor: r.floor + 1,
       floors: r.layout.floors,
-      room: r.room + 1,
-      rooms: r.layout.rooms,
       ability: { id: r.ability, ready: Math.min(1, 1 - (r.abilityAt - r.t) / ABILITIES[r.ability].cd) },
       dodge: Math.min(1, 1 - (r.dodgeAt - r.t) / DODGE.cd),
       cleared: r.cleared,
       relics: { ...r.relics },
-      path: this.trackPath(),
-      doors: r.doorOpen && r.doors.length > 1 ? r.doors.map((d) => d.kind) : null,
+      map: this.miniMap(),
     };
   }
 
@@ -1746,38 +1829,12 @@ class DungeonScene extends Phaser.Scene {
         const r = this.run;
         this.drawRoom();
         this.sfx('nova', 0.7);
-        // What's behind each door, written over it.
-        const single = r.doors.length === 1,
-          last = r.floor === r.layout.floors - 1 && r.room === r.layout.rooms - 2,
-          warden = r.floor === wardenFloor(r.layout) && r.room === r.layout.rooms - 2;
-        for (const d of r.doors) {
-          const look = single ? (last ? { label: 'BOSS', color: 0xa855f7 } : warden ? { label: midBoss(this.setup.zone).name.split(' ').pop()!.toUpperCase(), color: 0xf97316 } : { label: 'STAIRS', color: 0xfbbf24 }) : DOOR_LOOK[d.kind];
-          // On screen the doors are in the right wall: the word sits just left of each.
-          this.roomBits.push(
-            this.add
-              .text(...this.P(d.x, ROOM.wall + 30), look.label, { fontFamily: '"Press Start 2P", monospace', fontSize: '9px', color: `#${look.color.toString(16).padStart(6, '0')}`, stroke: '#0b0d14', strokeThickness: 3 })
-              .setOrigin(1, 0.5)
-              .setDepth(96000),
-          );
-        }
-        if (r.chest) {
-          this.chest?.destroy();
-          const [cx, cy] = this.P(r.chest.x, r.chest.y);
-          this.chest = this.add.image(cx, cy + 10, 'chest').setOrigin(0.5, 1).setDepth(cy);
-          this.roomBits.push(this.chest);
-          this.puffs.explode(10, cx, cy);
-          // The mid-boss's chest, called out over it until it's opened.
-          if (isWardenRoom(r)) {
-            this.chestCall = this.add
-              .text(cx, cy - 34, 'CHEST', { fontFamily: '"Press Start 2P", monospace', fontSize: '9px', color: '#fde68a', backgroundColor: '#0b0d14cc', padding: { x: 5, y: 4 } })
-              .setOrigin(0.5, 1)
-              .setDepth(150500);
-            this.roomBits.push(this.chestCall);
-            this.tweens.add({ targets: this.chestCall, y: cy - 42, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-          }
-        }
+        this.cleared(true);
+        const big = r.doors.find((d) => !d.been && (d.kind === 'boss' || d.kind === 'warden'));
         if (r.chest && isWardenRoom(r)) this.bus.say(`${midBoss(this.setup.zone).name.replace(/^the/, 'The')} left a chest. Open it, then take the stairs.`);
-        else this.bus.say(single ? (last ? 'Room clear. The boss is through that door.' : warden ? `Room clear. ${midBoss(this.setup.zone).name.replace(/^the/, 'The')} waits through that door.` : 'Room clear. The stairs go down.') : r.chest ? 'Room clear. Open the chest, then pick a door.' : 'Room clear. Pick a door: each says what waits behind it.');
+        else if (r.stairs) this.bus.say('Room clear. The stairs go down, or look round the floor first.');
+        else if (big) this.bus.say(big.kind === 'boss' ? 'Room clear. The boss waits behind the door marked BOSS.' : `Room clear. ${midBoss(this.setup.zone).name.replace(/^the/, 'The')} waits behind one door.`);
+        else this.bus.say(r.chest ? 'Room clear. Open the chest.' : 'Room clear. Each door says what waits behind it.');
         break;
       }
       case 'chest':
@@ -2039,8 +2096,15 @@ class DungeonScene extends Phaser.Scene {
     // The way out, once open.
     if (r.doorOpen) {
       const p = (Math.sin(now / 200) + 1) / 2;
-      for (const d of r.doors) this.fx.fillStyle(r.doors.length > 1 ? DOOR_LOOK[d.kind].color : 0xfbbf24, 0.15 + 0.2 * p).fillTriangle(d.x - 10, ROOM.wall + 26, d.x + 10, ROOM.wall + 26, d.x, ROOM.wall + 12);
+      for (const d of r.doors) {
+        const [nx, ny] = INWARD[d.side],
+          [tx, ty] = [d.x + nx * (ROOM.wall + 12), d.y + ny * (ROOM.wall + 12)],
+          [bx, by] = [d.x + nx * (ROOM.wall + 26), d.y + ny * (ROOM.wall + 26)];
+        this.fx.fillStyle(this.doorColor(d), (d.been ? 0.08 : 0.15) + 0.2 * p).fillTriangle(bx - ny * 10, by + nx * 10, bx + ny * 10, by - nx * 10, tx, ty);
+      }
     }
+    // The stairs down: a gold ring pulsing round them.
+    if (r.stairs) this.fx.lineStyle(2, 0xfbbf24, 0.25 + 0.3 * ((Math.sin(now / 220) + 1) / 2)).strokeCircle(r.stairs.x, r.stairs.y, 32);
     // The ward, while it's up.
     if (relic(r, 'charm') && r.t >= r.wardAt) this.fx.lineStyle(2, 0x7dd3fc, 0.35 + 0.15 * Math.sin(now / 180)).strokeCircle(r.hero.x, r.hero.y, 24);
     // A ram's line before it charges.
@@ -2211,7 +2275,8 @@ class DungeonScene extends Phaser.Scene {
         this.pad.fillStyle(color, 0.85).fillTriangle(px + Math.cos(a) * k, py + Math.sin(a) * k, px + Math.cos(a + 2.4) * k * 0.7, py + Math.sin(a + 2.4) * k * 0.7, px + Math.cos(a - 2.4) * k * 0.7, py + Math.sin(a - 2.4) * k * 0.7);
       };
     for (const f of r.foes) if (f.alive) edge(...this.P(f.x, f.y), f === r.boss ? 0xa855f7 : 0xef4444, f === r.boss ? 14 : 8);
-    if (r.doorOpen) for (const d of r.doors) edge(...this.P(d.x, ROOM.wall), r.doors.length > 1 ? DOOR_LOOK[d.kind].color : 0xfbbf24, 14);
+    if (r.doorOpen) for (const d of r.doors) if (!d.been) edge(...this.P(d.x + INWARD[d.side][0] * ROOM.wall, d.y + INWARD[d.side][1] * ROOM.wall), this.doorColor(d), 14);
+    if (r.stairs) edge(...this.P(r.stairs.x, r.stairs.y), 0xfbbf24, 12);
     if (r.chest && !r.chest.opened) edge(...this.P(r.chest.x, r.chest.y), 0xfbbf24, 10);
     if (r.terrain.shrine && !r.terrain.shrine.used && r.hp < r.maxHp * 0.6) edge(...this.P(r.terrain.shrine.x, r.terrain.shrine.y), 0x86efac, 10);
     if (!this.stick) return;
