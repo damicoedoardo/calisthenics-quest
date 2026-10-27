@@ -56,6 +56,7 @@ until they are):
 | Drops and bag | `DROPS`, `BAG` in `src/game/dungeon/engine.ts` | elite luck in `kill` |
 | Classes | `CLASS_BODY`, `ABILITIES`, `DODGE` in `content.ts`; `ATTACK`, `HERO_HP`, `HERO_SPEED` in `src/game/rules.ts` | |
 | Run skills and run levels | `UPGRADES`, `xpToNext` in `src/lib/fog.ts` | the run-level curve |
+| Boss edge (boss weaker, free skills after a chapter's hearts are gone) | `EDGE` in `src/lib/fog.ts` | |
 | The flame's helpers | `FLAME_AT` in `fog.ts`; `FLAME`, `FIREBALL`, `FAIRY` in `rules.ts` | |
 | Dungeon dials and elites | `DIALS`, `ELITE`, `LAYOUT` in `content.ts` | |
 | Zone toughness (monster HP and damage per zone) | each chapter's `fog` block in `src/story/chapters/`; `pnpm fog:tune` prints new values | |
