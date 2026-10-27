@@ -1,8 +1,11 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Check, Flame, Heart, Lock, Play, Sparkles, Sword, Zap } from 'lucide-react';
 import { Ember } from './Characters';
 import { Hero } from './Hero';
+import { isDungeon } from './FogRun';
+import { warmRunSheets } from '@/game/sheets';
 import { gearOf, type GameState } from '@/lib/game';
 import { FLAME_AT, ZONES, nextGrowth, powerOf, zoneStatus, type Zone } from '@/lib/fog';
 import { flameMood } from '@/story/daily';
@@ -22,7 +25,32 @@ function isLight(hex: string): boolean {
   return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 160;
 }
 
+/**
+ * While the Play tab sits idle, get the newest open zone's run ready: download and load its game
+ * code and draw its sprite sheets (both are cached), so tapping Play goes straight to the run.
+ */
+function useWarmRun(state: GameState) {
+  const zone = [...ZONES].reverse().find((z) => zoneStatus(state, z).state !== 'locked');
+  const id = zone?.id;
+  useEffect(() => {
+    if (!zone) return;
+    // Give the tab a moment to settle first.
+    let stop = () => {};
+    const t = window.setTimeout(() => {
+      void (isDungeon(zone) ? import('@/game/dungeon/scene') : import('@/game/run')).catch(() => {});
+      stop = warmRunSheets(state, zone);
+    }, 600);
+    return () => {
+      window.clearTimeout(t);
+      stop();
+    };
+    // Once per zone: the sheets for a new look or gear are drawn when the run starts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+}
+
 export function PlayTab({ state, onPlay }: Props) {
+  useWarmRun(state);
   const now = new Date();
   const power = powerOf(state, now);
   const workouts = state.sessions.length;
