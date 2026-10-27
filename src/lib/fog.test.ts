@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { initialState, type GameState, type Session } from './game';
-import { UPGRADES, ZONES, powerOf, recordRun, recordsBroken, rollUpgrades, xpToNext, zoneStatus } from './fog';
+import { EDGE, NO_EDGE, UPGRADES, ZONES, edgeFor, powerOf, recordRun, recordsBroken, rollUpgrades, xpToNext, zoneStatus } from './fog';
 
 const day = (d: number) => new Date(2026, 9, d, 18);
 
@@ -27,6 +27,18 @@ describe('the Fog', () => {
     expect(zoneStatus({ ...cleared, sessions: sessions(12) }, ZONES[1]).state).toBe('open');
     const two: GameState = { ...s, sessions: sessions(23), fog: { cleared: 2, runs: 5, best: {} } };
     expect(zoneStatus(two, ZONES[2])).toEqual({ state: 'locked', why: 'Opens with chapter 3: 1 workout to go' });
+  });
+
+  it("weakens a boss once its chapter's hearts are gone, and adds a free skill per workout after", () => {
+    const s = initialState();
+    // Chapter 1 asks for 12 workouts.
+    expect(edgeFor({ ...s, sessions: sessions(11) }, ZONES[0])).toEqual(NO_EDGE);
+    expect(edgeFor({ ...s, sessions: sessions(12) }, ZONES[0])).toEqual({ bossHp: EDGE.bossHp, picks: 0 });
+    expect(edgeFor({ ...s, sessions: sessions(15) }, ZONES[0])).toEqual({ bossHp: EDGE.bossHp, picks: 3 });
+    expect(edgeFor({ ...s, sessions: sessions(40) }, ZONES[0]).picks).toBe(EDGE.picks);
+    // Chapter 2 runs from workout 12 to 24.
+    expect(edgeFor({ ...s, sessions: sessions(23) }, ZONES[1])).toEqual(NO_EDGE);
+    expect(edgeFor({ ...s, sessions: sessions(25) }, ZONES[1]).picks).toBe(1);
   });
 
   it('turns stat points and workouts into power, and only training raises it', () => {

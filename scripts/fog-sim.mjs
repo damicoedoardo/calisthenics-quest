@@ -9,7 +9,8 @@
 // Options (env): CLASSES=archer,mage (default: all four), ONLY=zone1-open,zone1-later picks
 // snapshots, SCALE='{"2":1.2}' plays zone 2 with its hp and dmg 1.2x, DIALS='{"fire":1.5}' turns the
 // engine's dials, TARGET=0.33,0.67 sets what the tuner aims for (wins when a zone opens, and later
-// on).
+// on), EDGE='{"bossHp":0.7,"picks":3}' plays every run as if the zone's chapter had run out of
+// hearts (a weaker boss and free skills at the start; edgeFor in src/lib/fog.ts).
 import { readdirSync, readFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { register } from 'node:module';
@@ -37,7 +38,8 @@ if (!isMainThread) {
   if (dials.attention !== undefined) ATTENTION.share = dials.attention;
   delete dials.attention;
   Object.assign(DIALS, dials);
-  const { ZONES, powerOf } = await import(`${root}src/lib/fog.ts`);
+  const { ZONES, powerOf, edgeFor } = await import(`${root}src/lib/fog.ts`);
+  const forced = process.env.EDGE ? JSON.parse(process.env.EDGE) : null;
   const { buildOf } = await import(`${root}src/lib/stats.ts`);
   const now = Date.now();
   parentPort.on('message', (job) => {
@@ -47,10 +49,11 @@ if (!isMainThread) {
     const build = buildOf(state);
     const z = ZONES[job.zone];
     const zone = { ...z, hp: z.hp * job.scale, dmg: z.dmg * job.scale };
+    const edge = forced ?? edgeFor(state, z);
     const out = [];
     for (let i = 0; i < job.runs; i++) {
       const seed = job.seed + i * 7919;
-      out.push({ ...playRun({ zone, power, classId: job.cls, seed, build }), seed });
+      out.push({ ...playRun({ zone, power, classId: job.cls, seed, build, edge }), seed });
     }
     parentPort.postMessage(out);
   });

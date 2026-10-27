@@ -5,7 +5,7 @@ import { Backpack, Pause, Smartphone } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { fill, storyWords } from '@/story/engine';
 import type { FogLines } from '@/story/types';
-import { getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
+import { edgeFor, getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
 import { zoneMusic } from '@/lib/music-zones';
 import { runSheets } from '@/game/sheets';
@@ -154,7 +154,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
     let jump = 0;
     Promise.all([game, calm]).then(([{ startRun }]) => {
       if (cancelled) return;
-      run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast', worn: wornFor(state), build: buildOf(state) }, {
+      run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast', worn: wornFor(state), build: buildOf(state), edge: edgeFor(state, zone) }, {
         hud: setHud,
         floor: (n: number) => {
           setFloorShown(n);
@@ -470,13 +470,15 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
 
       {offer && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/80 px-4">
-          <p className="font-pixel text-sm text-gold-300">{offer.free === 'fresh' ? 'Warmed up!' : offer.free === 'rested' ? 'Rested!' : 'Level up!'}</p>
+          <p className="font-pixel text-sm text-gold-300">{offer.free === 'fresh' ? 'Warmed up!' : offer.free === 'rested' ? 'Rested!' : offer.free === 'past' ? 'Kept at it!' : 'Level up!'}</p>
           <p className="mt-2 text-center text-xs text-slate-400">
             {offer.free === 'fresh'
               ? 'You trained in the last two days: take a free skill.'
               : offer.free === 'rested'
                 ? `You rested, and ${flameName ?? 'your flame'} burns brighter for it: take a free skill.`
-                : 'Pick a skill.'}
+                : offer.free === 'past'
+                  ? `You kept training after ${zone.bossName} ran out of hearts: take a free skill.`
+                  : 'Pick a skill.'}
           </p>
           <div className="mt-4 flex w-full max-w-3xl items-stretch justify-center gap-2">
             {offer.choices.map((id, i) => {

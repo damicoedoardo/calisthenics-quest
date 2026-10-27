@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import type { ClassId } from '@/lib/gear';
-import { xpToNext, type Power, type UpgradeId, type Zone } from '@/lib/fog';
+import { xpToNext, type Edge, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import { music, type SfxId } from '@/lib/music';
 import { BOT_PICKS, type BossSheetKey, type SheetKey, type Sheets } from '../rules';
 import type { FogBoss, FogLines } from '@/story/types';
@@ -133,6 +133,8 @@ export interface RunSetup {
   /** What you wear into the Fog (from the save), and your points, which items ask for. */
   worn?: Partial<Record<ItemSlot, Item>>;
   build?: Build;
+  /** The chapter's hearts are gone: a weaker boss and free skills at the start. */
+  edge?: Edge;
 }
 
 /** A room on the minimap: where it is on the floor (east is +x, south is +y), what it holds,
@@ -403,7 +405,7 @@ class DungeonScene extends Phaser.Scene {
   ) {
     super('dungeon');
     this.theme = themeFor(setup.zone.id);
-    this.run = createRun({ zone: setup.zone, power: setup.power, classId: setup.classId, seed: Math.floor(Math.random() * 2 ** 31), autoPick: setup.fast, worn: setup.worn, build: setup.build });
+    this.run = createRun({ zone: setup.zone, power: setup.power, classId: setup.classId, seed: Math.floor(Math.random() * 2 ** 31), autoPick: setup.fast, worn: setup.worn, build: setup.build, edge: setup.edge });
   }
 
   /** An engine point on the screen: the room on its side, its door on the right. */

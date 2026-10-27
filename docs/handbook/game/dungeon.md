@@ -37,6 +37,7 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change how a boss fights | its entry in `BOSSES` (`content.ts`) and its branch in `steerBoss` (`engine.ts`) |
 | Change a boss's art | `BOSS_ART` in `scene.ts`, and its sheets in `src/game/sheets.ts` |
 | Add a zone | the chapter's `fog` in `src/story/chapters/`, then an entry in `ZONE_DUNGEONS` and `MIDS` (`content.ts`), `THEMES` (`themes.ts`) and `ZONE_MUSIC` (`src/lib/music-zones.ts`) |
+| Change how much easier a boss gets once its chapter's hearts are gone | `EDGE` in `src/lib/fog.ts` (`edgeFor`); the engine reads `edge` (on `HeroSetup`) in `summonBoss` and `newHero` |
 | Balance | the `DIALS` in `content.ts`; measure with `pnpm sim`, then `pnpm fog:sim` |
 | Change how fast you cross a cleared room | `CLEAR_RUN` in `content.ts` (the engine multiplies the hero's speed by it once a room has no monsters; the scene quickens the steps and the dust) |
 | Change how much of the room the screen shows | `FIT` and `fitScreen` in `scene.ts` |
