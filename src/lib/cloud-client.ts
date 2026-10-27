@@ -153,6 +153,13 @@ export async function signInWithEmail(email: string): Promise<string | null> {
   return error?.message ?? null;
 }
 
+/** Sign in with the code from the email: the way in on an installed iPhone app, where the
+    email's link would open Safari instead. */
+export async function verifyEmailCode(email: string, code: string): Promise<string | null> {
+  const { error } = await (await supabase()).auth.verifyOtp({ email, token: code, type: 'email' });
+  return error?.message ?? null;
+}
+
 export async function signOut(): Promise<void> {
   await (await supabase()).auth.signOut();
 }

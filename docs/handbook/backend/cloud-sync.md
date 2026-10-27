@@ -1,15 +1,23 @@
 ---
 type: reference
 title: Cloud backup in the app
-description: The app side of login and save backup — optional sign-in (email link; Google behind a flag) in Hero > Settings, the sync hook that uploads the save a few seconds after each change, the plan() rules for phone vs cloud, and the which-save-to-keep question. Hidden until the NEXT_PUBLIC_ env vars are set.
+description: The app side of login and save backup — sign-in asked once after the opening (`SignInGate`: email link or code; Google behind a flag), the card in Hero > Settings, the sync hook that uploads the save a few seconds after each change, the plan() rules for phone vs cloud, and the which-save-to-keep question. Hidden until the NEXT_PUBLIC_ env vars are set.
 tags: [backend, app, sync, login, supabase]
 timestamp: 2026-10-27
 ---
 
 # Cloud backup in the app
 
-Sign-in is optional. The app stays offline-first: the save in `localStorage` is the real one, and
-the cloud keeps a copy so a new phone (or a wiped one) can get the hero back.
+Sign-in is asked for once, after the opening and the install step (`SignInGate`, Edoardo's call
+2026-10-27: an account backs the hero up from day one and is who you are to friends). The app
+still plays offline-first: the save in `localStorage` is the real one, and the cloud keeps a copy
+so a new phone (or a wiped one) can get the hero back.
+
+The gate shows when the backend is set up, this phone isn't signed in (`signInDue`), and not in
+the sandbox. On an installed iPhone app the email's link opens Safari, which has its own storage,
+so the gate also takes the **code from the email** (`verifyEmailCode`, Supabase `verifyOtp`); the
+email template must show `{{ .Token }}` (`supabase/templates/magic-link.html`, custom SMTP needed).
+Signing in on a fresh installed app takes the hero from the cloud (`plan()` → use-cloud).
 
 ## Files
 

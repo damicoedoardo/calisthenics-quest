@@ -19,6 +19,8 @@ import { Sprite } from '@/components/Sprite';
 import { LookProvider } from '@/components/Look';
 import { CloudChoice, useCloudSync } from '@/components/Cloud';
 import { useFriendsBeat } from '@/components/Friends';
+import { SignInGate, signInDue } from '@/components/SignInGate';
+import { useCloudStatus } from '@/lib/cloud-client';
 import { BringHero, InstallGate } from '@/components/InstallGate';
 import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { sawScene, scenesToPlay, storyState, type StoryState } from '@/story/engine';
@@ -71,6 +73,9 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const cloud = useCloudSync(state, update, !ready || inSandbox());
   // Shows you online to your friends while the app is open, and in the Fog during a run.
   useFriendsBeat(state, run?.name ?? null, !ready || inSandbox());
+  // After the install step, an account once (SignInGate); developer mode may play on without.
+  const { signedIn } = useCloudStatus();
+  const [skipSignIn, setSkipSignIn] = useState(false);
   useEffect(() => {
     if (!ready || jumped.current) return;
     jumped.current = true;
@@ -103,7 +108,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const inst = useInstall();
   const gated = inst.known && !inst.standalone && !inst.skipped && mustInstall(inst.platform) && (inst.forced || !inSandbox());
   // The menus' music, on the tabs only: the opening, story, workouts and runs have their own.
-  useMenuTrack(ready && state.profile.onboarded && !opening && !replaying && !busy && !gated);
+  const askSignIn = !gated && !skipSignIn && !inSandbox() && signInDue(signedIn);
+  useMenuTrack(ready && state.profile.onboarded && !opening && !replaying && !busy && !gated && !askSignIn);
   useEffect(() => {
     if (busy) setDevOpen(false);
   }, [busy]);
@@ -210,6 +216,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         onSkip={dev ? inst.skip : undefined}
       />
     );
+
+  if (askSignIn && !opening) return <SignInGate onSkip={dev ? () => setSkipSignIn(true) : undefined} />;
 
   return (
     // Held sideways (the `land` screen), the tab bar becomes a rail down the left and the column
