@@ -6,6 +6,9 @@ import { drawEmber, type FlameOpts } from './characters/ember';
 import { drawHero, heroAttack, heroLabel, type HeroOpts } from './characters/hero';
 import { drawKnight, drawKnightBoss, type KnightBossOpts } from './characters/knight';
 import { drawGlassHero, drawGlassShatter } from './characters/glass';
+import { drawPlateauBoss, type PlateauBossOpts } from './characters/monolith';
+import { drawHollowBoss, drawHollowFade } from './characters/hollowBoss';
+import { drawSummitSpirit } from './characters/summitSpirit';
 import { drawMira } from './characters/mira';
 import { drawMirror } from './characters/mirror';
 import { drawPixelArt, type PixelArt } from './characters/pixel';
@@ -137,6 +140,15 @@ export const SPRITES = {
     draw: drawKnightBoss,
     look: () => ({ shadow: true }),
   }),
+  plateauBoss: drawn<PlateauBossOpts>({
+    label: ({ stage }) => ['The Plateau', 'The Plateau, cracking', 'The Plateau, breaking'][stage],
+    defaults: { stage: 0 },
+    clips: () => ({ idle: 'hover', attack: 'lunge' }),
+    draw: drawPlateauBoss,
+  }),
+  hollowBoss: creature('The Hollow', drawHollowBoss, 'lunge'),
+  summitBoss: creature('The Summit, the mountain spirit', drawSummitSpirit, 'lunge'),
+  hollowBossFade: drawn<NoOpts>({ label: () => 'The Hollow, letting go', defaults: {}, clips: () => ({ idle: 'pop' }), draw: drawHollowFade }),
 };
 
 export type SpriteId = keyof typeof SPRITES;
