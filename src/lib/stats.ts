@@ -1,7 +1,7 @@
 import type { ClassId } from './gear';
 import type { GameState } from './game';
 import { weekKey, WEEKLY_GOAL } from './game';
-import { ARMOR_PER_POINT, CLASS_LEAN_POINTS, FALLOFF, MAX_ARMOR, POINT_WORTH, POINTS, STARTING_POINTS, STAT_BASE } from '@/balance';
+import { ARMOR_PER_POINT, CLASS_LEAN as BALANCE_LEAN, CLASS_LEAN_POINTS, SECOND_LEAN as BALANCE_SECOND, SECOND_LEAN_POINTS, FALLOFF, MAX_ARMOR, POINT_WORTH, POINTS, STARTING_POINTS, STAT_BASE } from '@/balance';
 
 /* Stat points: training earns them, the champion spends them. Every workout gives points whatever it
    was (gym, a run, a stretch day), so the reward never depends on what the plan asked for. The
@@ -44,7 +44,9 @@ export const getStat = (id: StatId) => STATS.find((s) => s.id === id)!;
 
 // Points, their worth, the falloff and the class lean live in src/balance/stats.ts.
 export { POINTS, STARTING_POINTS, CLASS_LEAN_POINTS };
-export const CLASS_LEAN: Record<ClassId, StatId> = { warrior: 'damage', archer: 'crit', monk: 'health', mage: 'speed' };
+export const CLASS_LEAN: Record<ClassId, StatId> = BALANCE_LEAN;
+/** A smaller lean to a second stat. */
+export const SECOND_LEAN: Record<ClassId, StatId> = BALANCE_SECOND;
 
 export type Build = Partial<Record<StatId, number>>;
 
@@ -134,8 +136,9 @@ export interface StatPower {
 }
 
 export function statPower(build: Build, classId?: ClassId): StatPower {
-  const lean = classId ? CLASS_LEAN[classId] : null;
-  const n = (id: StatId) => (build[id] ?? 0) + (lean === id ? CLASS_LEAN_POINTS : 0);
+  const lean = classId ? CLASS_LEAN[classId] : null,
+    second = classId ? SECOND_LEAN[classId] : null;
+  const n = (id: StatId) => (build[id] ?? 0) + (lean === id ? CLASS_LEAN_POINTS : 0) + (second === id ? SECOND_LEAN_POINTS : 0);
   const v = (id: StatId) => BASE[id] + statValue(getStat(id).per, n(id));
   return {
     health: v('health'),

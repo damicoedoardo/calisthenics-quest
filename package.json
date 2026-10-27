@@ -13,6 +13,7 @@
     "balance": "vitest run src/balance -u",
     "fog:balance": "node scripts/fog-balance.cjs",
     "fog:sim": "node --no-warnings scripts/fog-sim.mjs",
+    "fog:sheet": "SHEET=1 node --no-warnings scripts/fog-sim.mjs steady 48",
     "fog:tune": "node --no-warnings scripts/fog-sim.mjs tune",
     "exercises:db": "node --no-warnings scripts/export-exercises.mjs",
     "prepare": "git config core.hooksPath .githooks || true",

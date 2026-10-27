@@ -13,9 +13,9 @@ Each goal is written next to its numbers in `src/balance/`. The sheet measures i
 | One item +0 to +15 in about a year of training (embers; materials from co-op) | 62 weeks | on target |
 | 70 points a stat gives about +80% damage, +65% attack speed, +105 HP, 20% blocked, +25% walk speed, 20% crit | +79%, +64%, +103 HP, 21% blocked, +25% walk, 20% crit | on target |
 | A comeback after 14 days away earns a bonus | +50 XP | on target |
-| 40% of power growth from training (± 7%) | 38% (37%-41%) | on target |
+| 40% of power growth from training (± 7%) | 39% (38%-41%) | on target |
 | 40% of power growth from gear (± 7%) | 41% (38%-51%) | on target |
-| 20% of power growth from upgrades (± 7%) | 20% (12%-25%) | on target |
+| 20% of power growth from upgrades (± 7%) | 20% (12%-24%) | on target |
 
 ## Power by workouts
 
@@ -27,25 +27,25 @@ Model player: 3 full workouts a week, every week at the goal, points spread even
 | --- | --- | --- | --- | --- | --- |
 | 0 | 100 | - | - | - | - |
 | 6 | 126 | 33% | 61% | 6% | zone 1, floor 10 |
-| 12 | 146 | 37% | 51% | 12% | zone 2, floor 6 |
-| 18 | 163 | 41% | 46% | 13% | zone 2, floor 10 |
-| 24 | 185 | 38% | 44% | 18% | zone 3, floor 6 |
-| 30 | 203 | 41% | 42% | 18% | zone 3, floor 9 |
-| 37 | 234 | 38% | 40% | 22% | zone 4, floor 6 |
-| 43 | 253 | 39% | 38% | 23% | zone 4, floor 8 |
-| 50 | 288 | 37% | 39% | 25% | zone 5, floor 6 |
-| 56 | 307 | 38% | 38% | 24% | zone 5, floor 8 |
-| 64 | 348 | 37% | 38% | 25% | zone 6, floor 6 |
-| 70 | 363 | 37% | 38% | 25% | zone 6, floor 7 |
-| 100 | 452 | 41% | 35% | 24% | zone 6, floor 10 |
+| 12 | 145 | 38% | 51% | 12% | zone 2, floor 6 |
+| 18 | 162 | 41% | 46% | 12% | zone 2, floor 10 |
+| 24 | 183 | 39% | 44% | 17% | zone 3, floor 6 |
+| 30 | 200 | 41% | 42% | 17% | zone 3, floor 9 |
+| 37 | 230 | 38% | 40% | 22% | zone 4, floor 6 |
+| 43 | 249 | 40% | 38% | 22% | zone 4, floor 8 |
+| 50 | 282 | 38% | 38% | 24% | zone 5, floor 6 |
+| 56 | 300 | 39% | 38% | 24% | zone 5, floor 8 |
+| 64 | 338 | 38% | 38% | 24% | zone 6, floor 6 |
+| 70 | 351 | 38% | 38% | 24% | zone 6, floor 7 |
+| 100 | 433 | 43% | 34% | 23% | zone 6, floor 10 |
 
 Each class with the same model (and how far above or below the four's average). The simulator's win rates are the real check; this shows the gap before abilities:
 
 | Workouts | Warrior | Archer | Monk | Mage |
 | --- | --- | --- | --- | --- |
-| 0 | 118 (+26%) | 98 (+5%) | 83 (-11%) | 75 (-20%) |
-| 24 | 185 (+27%) | 152 (+4%) | 129 (-11%) | 116 (-20%) |
-| 64 | 348 (+30%) | 276 (+3%) | 239 (-11%) | 210 (-22%) |
+| 0 | 117 (+15%) | 114 (+11%) | 94 (-8%) | 85 (-17%) |
+| 24 | 183 (+15%) | 177 (+11%) | 146 (-8%) | 131 (-18%) |
+| 64 | 338 (+16%) | 321 (+10%) | 269 (-8%) | 236 (-19%) |
 
 ## Training over time
 
@@ -58,9 +58,9 @@ Played by the season simulator (`src/sim/players.ts`): `steady` trains 3 times a
 | steady | 91 | 39 | 14 | 185 | +45% / +51 HP | 390 | 11 |
 | steady | 182 | 78 | 28 | 366 | +72% / +92 HP | 780 | 19 |
 | twice-a-week | 7 | 2 | 1 | 12 | +14% / +4 HP | 20 | 4 |
-| twice-a-week | 30 | 9 | 2 | 40 | +20% / +12 HP | 90 | 5 |
-| twice-a-week | 91 | 26 | 6 | 108 | +32% / +31 HP | 260 | 9 |
-| twice-a-week | 182 | 52 | 11 | 211 | +49% / +58 HP | 520 | 14 |
+| twice-a-week | 30 | 9 | 2 | 40 | +22% / +12 HP | 90 | 5 |
+| twice-a-week | 91 | 26 | 6 | 108 | +34% / +31 HP | 260 | 9 |
+| twice-a-week | 182 | 52 | 11 | 211 | +51% / +58 HP | 520 | 14 |
 | eager | 7 | 5 | 2 | 26 | +44% / +0 HP | 50 | 5 |
 | eager | 30 | 22 | 7 | 99 | +104% / +0 HP | 220 | 8 |
 | eager | 91 | 65 | 21 | 289 | +202% / +0 HP | 650 | 17 |
@@ -119,7 +119,7 @@ Co-op materials: the chance each source drops one, for each hero in a party (sol
 | boss | 50.0% | 10.0% | 8.0% | - |
 | clear | - | - | - | 3.3% |
 
-Found by one hero in a co-op run of zone 1 (two bots, 3 runs, on average): 0.7 ember thread, 0.3 bond shard.
+Found by one hero in a co-op run of zone 1 (two bots, 3 runs, on average): 2.3 ember thread, 0.7 bond shard.
 
 ## Weapons
 

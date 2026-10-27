@@ -74,7 +74,7 @@ import {
   zoneDungeon,
 } from './content';
 import { seeded } from '@/lib/random';
-import { BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS } from '@/balance';
+import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS } from '@/balance';
 import type { Build } from '@/lib/stats';
 import { ITEM_SLOTS, itemScore, itemTotals, rollItem, rollRarity, shortOf, starterKit, type Item, type ItemSlot } from './items';
 
@@ -1247,32 +1247,32 @@ function useAbility(run: Run, h: Hero, input: Input) {
   dy /= d;
   const from = { x: h.x, y: h.y };
   if (a === 'charge') {
-    const speed = 620,
-      secs = 0.28;
+    const { speed, secs } = ABILITY.charge;
     h.charge = { until: now + secs, x: dx * speed, y: dy * speed, hit: new Set(), harm: true };
     h.ghostUntil = now + secs + 0.1;
     emit(run, { type: 'ability', id: a, x: from.x, y: from.y, toX: from.x + dx * speed * secs, toY: from.y + dy * speed * secs });
   } else if (a === 'volley') {
-    const dmg = pow(h, ATTACK.arrow.dmg * 1.5);
-    for (let i = 0; i < 16; i++) fire(run, h, 'arrow', Math.atan2(dy, dx) + (i / 16) * Math.PI * 2, 430, dmg, 2, null);
+    const v = ABILITY.volley,
+      dmg = pow(h, ATTACK.arrow.dmg * v.dmg);
+    for (let i = 0; i < v.arrows; i++) fire(run, h, 'arrow', Math.atan2(dy, dx) + (i / v.arrows) * Math.PI * 2, 430, dmg, v.pierce, null);
     emit(run, { type: 'ability', id: a, x: h.x, y: h.y, toX: h.x, toY: h.y });
   } else if (a === 'blink') {
-    h.x = clamp(h.x + dx * 150, ROOM.wall + HERO_R, run.area.w - ROOM.wall - HERO_R);
-    h.y = clamp(h.y + dy * 150, ROOM.wall + HERO_R, run.area.h - ROOM.wall - HERO_R);
+    h.x = clamp(h.x + dx * ABILITY.blink.reach, ROOM.wall + HERO_R, run.area.w - ROOM.wall - HERO_R);
+    h.y = clamp(h.y + dy * ABILITY.blink.reach, ROOM.wall + HERO_R, run.area.h - ROOM.wall - HERO_R);
     outOfPillars(run, h, HERO_R);
     h.ghostUntil = now + 0.3;
     clearBullets(run, h.x, h.y, 90);
-    burst(run, h, h.x, h.y, 80, pow(h, ATTACK.orb.dmg * 1.5), 'ability');
+    burst(run, h, h.x, h.y, ABILITY.blink.r, pow(h, ATTACK.orb.dmg * ABILITY.blink.dmg), 'ability');
     emit(run, { type: 'ability', id: a, x: from.x, y: from.y, toX: h.x, toY: h.y });
   } else if (a === 'shock') {
-    clearBullets(run, h.x, h.y, 110);
-    burst(run, h, h.x, h.y, 110, pow(h, ATTACK.slash.dmg * 1.6), 'ability', undefined, 300);
+    clearBullets(run, h.x, h.y, ABILITY.shock.r);
+    burst(run, h, h.x, h.y, ABILITY.shock.r, pow(h, ATTACK.slash.dmg * ABILITY.shock.dmg), 'ability', undefined, 300);
     emit(run, { type: 'ability', id: a, x: h.x, y: h.y, toX: h.x, toY: h.y });
   } else {
-    const heal = Math.round(h.maxHp * 0.15);
+    const heal = Math.round(h.maxHp * ABILITY.still.heal);
     h.hp = Math.min(h.maxHp, h.hp + heal);
-    clearBullets(run, h.x, h.y, 140);
-    burst(run, h, h.x, h.y, 140, pow(h, ATTACK.wave.dmg), 'ability', undefined, 260);
+    clearBullets(run, h.x, h.y, ABILITY.still.r);
+    burst(run, h, h.x, h.y, ABILITY.still.r, pow(h, ATTACK.wave.dmg * ABILITY.still.dmg), 'ability', undefined, 260);
     // Its own blast doesn't count toward the next one.
     h.calm = 0;
     emit(run, { type: 'ability', id: a, x: h.x, y: h.y, toX: h.x, toY: h.y });

@@ -2,7 +2,7 @@ import type { ClassId } from '@/lib/gear';
 import type { Zone } from '@/lib/fog';
 import type { FogBoss } from '@/story/types';
 import { clamp } from '../rules';
-import { DIALS, ELITE } from '@/balance';
+import { ABILITY, DIALS, ELITE } from '@/balance';
 
 /* What the dungeon is made of, as plain data: the ground, the doors and chest items, every monster
    and how it shoots, each zone's dungeon and mid-boss, the bosses, and the classes' abilities.
@@ -556,26 +556,17 @@ export const RAMP = { from: 0.25, over: 1.1 };
 export type AbilityId = 'charge' | 'volley' | 'blink' | 'still' | 'shock';
 
 export const ABILITIES: Record<AbilityId, { name: string; text: string; cd: number }> = {
-  charge: { name: 'Charge', text: 'Rush ahead, untouchable, hitting everything you pass and cutting the shots in your way.', cd: 6 },
-  volley: { name: 'Volley', text: 'Loose arrows all around you that pierce through.', cd: 7 },
-  blink: { name: 'Blink', text: 'Vanish and appear ahead, bursting where you land and wiping shots nearby.', cd: 8 },
-  still: { name: 'Stillness', text: 'Breathe: heal some HP and push everything away. It fills as you fight: hits you land and hits you take.', cd: 14 },
-  shock: { name: 'Shockwave', text: 'Knock back everything near you and wipe the shots around you.', cd: 7 },
+  charge: { name: 'Charge', text: 'Rush ahead, untouchable, hitting everything you pass and cutting the shots in your way.', cd: ABILITY.charge.cd },
+  volley: { name: 'Volley', text: 'Loose arrows all around you that pierce through.', cd: ABILITY.volley.cd },
+  blink: { name: 'Blink', text: 'Vanish and appear ahead, bursting where you land and wiping shots nearby.', cd: ABILITY.blink.cd },
+  still: { name: 'Stillness', text: 'Breathe: heal some HP and push everything away. It fills as you fight: hits you land and hits you take.', cd: ABILITY.still.cd },
+  shock: { name: 'Shockwave', text: 'Knock back everything near you and wipe the shots around you.', cd: ABILITY.shock.cd },
 };
 /** Every class can dodge: a short dash, untouchable for a moment, on its own short clock. */
 export const DODGE = { cd: 2.5, speed: 480, secs: 0.17, ghost: 0.27 };
 
-/**
- * Each class in the dungeon, against the others: HP, armor, damage (orbs and waves hit crowds, so
- * less each), move speed and attack speed. Up close you have to walk in and back out, so the sword
- * and open hands are quicker on their feet and swing faster.
- */
-export const CLASS_BODY: Record<'slash' | 'arrow' | 'orb' | 'wave', { hp: number; armor: number; dmg: number; move: number; haste: number }> = {
-  slash: { hp: 1.22, armor: 0.18, dmg: 1.08, move: 1.2, haste: 1.1 },
-  wave: { hp: 1.25, armor: 0.12, dmg: 1.03, move: 1.15, haste: 1.1 },
-  arrow: { hp: 1.05, armor: 0, dmg: 1.13, move: 1, haste: 1 },
-  orb: { hp: 0.9, armor: 0, dmg: 0.67, move: 1, haste: 1 },
-};
+/** Each class in the dungeon, against the others: HP, armor, damage, move and attack speed (src/balance/classes.ts). */
+export { CLASS_BODY } from '@/balance';
 
 export function abilityOf(cls: ClassId | undefined): AbilityId {
   return cls === 'warrior' ? 'charge' : cls === 'archer' ? 'volley' : cls === 'mage' ? 'blink' : cls === 'monk' ? 'still' : 'shock';

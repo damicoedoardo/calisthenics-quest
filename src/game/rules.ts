@@ -1,6 +1,7 @@
 import type { ClassId } from '@/lib/gear';
 import type { Power, UpgradeId } from '@/lib/fog';
 import type { Sheet } from '@/sprites/registry';
+import { ATTACK } from '@/balance';
 
 /* The Fog's shared numbers and sprite sheet names, as plain data and math with no Phaser: the dungeon engine
    (dungeon/engine.ts) and its scene read them. */
@@ -40,13 +41,8 @@ export const SLASH_REACH = 90;
 
 export type AttackKind = 'slash' | 'arrow' | 'orb' | 'wave';
 
-/** Base attack per class: how often it fires (s) and how hard it hits. */
-export const ATTACK: Record<AttackKind, { cd: number; dmg: number }> = {
-  slash: { cd: 0.9, dmg: 14 },
-  arrow: { cd: 0.6, dmg: 10 },
-  orb: { cd: 0.8, dmg: 15 },
-  wave: { cd: 1.3, dmg: 11 },
-};
+/** Base attack per class: how often it fires (s) and how hard it hits (src/balance/classes.ts). */
+export { ATTACK };
 
 export function attackOf(cls: ClassId | undefined): AttackKind {
   return cls === 'archer' ? 'arrow' : cls === 'mage' ? 'orb' : cls === 'monk' ? 'wave' : 'slash';
