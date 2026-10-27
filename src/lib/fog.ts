@@ -47,6 +47,27 @@ export interface FogProgress {
   cleared: number;
   runs: number;
   best: Record<number, RunBest>;
+  /** A dungeon zone's records, each kept on its own: deepest, most monsters, fastest win. */
+  records?: Record<number, RunRecord>;
+}
+
+export interface RunRecord {
+  /** How deep: floor * 10 + room, or 1000 for a win. */
+  depth: number;
+  kills: number;
+  /** The fastest win (s), once there is one. */
+  fastest: number | null;
+}
+
+const depthOf = (r: RunResult) => (r.won ? 1000 : (r.floor ?? 0) * 10 + (r.room ?? 0));
+
+/** Which of a zone's records this run beats (nothing on the first run, when there is no record yet). */
+export function recordsBroken(prev: RunRecord | undefined, r: RunResult) {
+  return {
+    depth: !!prev && depthOf(r) > prev.depth,
+    kills: !!prev && r.kills > prev.kills,
+    fastest: !!prev && r.won && (prev.fastest === null || r.seconds < prev.fastest),
+  };
 }
 
 export const NO_FOG: FogProgress = { cleared: 0, runs: 0, best: {} };
@@ -170,6 +191,15 @@ export function xpToNext(level: number): number {
 
 export interface RunResult extends RunBest {
   zone: number;
+  /** In a dungeon: the deepest floor and room reached, from 1. */
+  floor?: number;
+  room?: number;
+}
+
+function mergeRecord(prev: RunRecord | undefined, r: RunResult): RunRecord {
+  const fast = r.won ? r.seconds : null;
+  if (!prev) return { depth: depthOf(r), kills: r.kills, fastest: fast };
+  return { depth: Math.max(prev.depth, depthOf(r)), kills: Math.max(prev.kills, r.kills), fastest: fast === null ? prev.fastest : prev.fastest === null ? fast : Math.min(prev.fastest, fast) };
 }
 
 export function recordRun(state: GameState, r: RunResult): GameState {
@@ -182,6 +212,7 @@ export function recordRun(state: GameState, r: RunResult): GameState {
       cleared: r.won && r.zone === fog.cleared ? fog.cleared + 1 : fog.cleared,
       runs: fog.runs + 1,
       best: better ? { ...fog.best, [r.zone]: { seconds: r.seconds, kills: r.kills, level: r.level, won: r.won } } : fog.best,
+      ...(r.floor ? { records: { ...fog.records, [r.zone]: mergeRecord(fog.records?.[r.zone], r) } } : fog.records ? { records: fog.records } : {}),
     },
   };
 }

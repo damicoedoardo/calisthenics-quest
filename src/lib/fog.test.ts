@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { initialState, type GameState, type Session } from './game';
-import { UPGRADES, ZONES, powerOf, recordRun, rollUpgrades, xpToNext, zoneStatus } from './fog';
+import { UPGRADES, ZONES, powerOf, recordRun, recordsBroken, rollUpgrades, xpToNext, zoneStatus } from './fog';
 
 const day = (d: number) => new Date(2026, 9, d, 18);
 
@@ -70,5 +70,18 @@ describe('the Fog', () => {
     expect(s.fog?.best[0].won).toBe(true);
     // Beating a cleared zone again doesn't skip the next one.
     expect(recordRun(s, { zone: 0, won: true, seconds: 260, kills: 310, level: 13 }).fog?.cleared).toBe(1);
+  });
+
+  it('keeps a dungeon zone\'s records apart, and says which ones a run beats', () => {
+    let s = recordRun(initialState(), { zone: 0, won: false, seconds: 300, kills: 60, level: 5, floor: 3, room: 2 });
+    expect(s.fog?.records?.[0]).toEqual({ depth: 32, kills: 60, fastest: null });
+    const next = { zone: 0, won: false, seconds: 200, kills: 70, level: 5, floor: 2, room: 5 };
+    expect(recordsBroken(s.fog?.records?.[0], next)).toEqual({ depth: false, kills: true, fastest: false });
+    expect(recordsBroken(undefined, next)).toEqual({ depth: false, kills: false, fastest: false });
+    s = recordRun(s, next);
+    expect(s.fog?.records?.[0]).toEqual({ depth: 32, kills: 70, fastest: null });
+    const win = { zone: 0, won: true, seconds: 800, kills: 50, level: 9, floor: 10, room: 5 };
+    expect(recordsBroken(s.fog?.records?.[0], win)).toEqual({ depth: true, kills: false, fastest: true });
+    expect(recordRun(s, win).fog?.records?.[0]).toEqual({ depth: 1000, kills: 70, fastest: 800 });
   });
 });

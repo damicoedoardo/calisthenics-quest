@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { ChevronsRight, CircleDot, Copy, Crosshair, Droplet, Flame, FlameKindling, Footprints, Gauge, Heart, HeartPlus, HeartPulse, Hourglass, Magnet, Pause, Shield, ShieldCheck, ShieldHalf, Skull, Sparkles, Sword, Swords, Waves, Wind, Zap, type LucideIcon } from 'lucide-react';
 import { gearOf, type GameState } from '@/lib/game';
-import { getUpgrade, nextGrowth, powerOf, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
+import { getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
 import { sheetFor } from '@/sprites/registry';
 import { SoundToggle, useMusic } from './Sound';
@@ -110,6 +110,10 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
   const [auto, setAuto] = useState(bot !== null);
   const dungeon = isDungeon(zone);
   const [floorShown, setFloorShown] = useState<number | null>(null);
+  // The first-room tip: gone after the first move or a few seconds, whichever comes first.
+  const [tip, setTip] = useState(true);
+  /** Which of this zone's records the last run beat. */
+  const [broken, setBroken] = useState<ReturnType<typeof recordsBroken> | null>(null);
   const [chest, setChest] = useState<{ choices: RelicId[]; have: Partial<Record<RelicId, number>> } | null>(null);
 
   useMusic(end ? null : hud?.boss ? 'fogBoss' : 'fog');
@@ -147,6 +151,13 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
     setHud(null);
     setEnd(null);
     setBoss(false);
+    setTip(true);
+    setBroken(null);
+    const tipGone = setTimeout(() => setTip(false), 10000);
+    const moved = () => setTip(false);
+    window.addEventListener('keydown', moved, { once: true });
+    // A touch on the game itself (not on a skill card or a button over it).
+    el.addEventListener('pointerdown', moved, { once: true });
     (dungeon ? import('@/game/dungeon/scene') : import('@/game/run')).then(({ startRun }) => {
       if (cancelled) return;
       run.current = startRun(el, { zone, power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast' }, {
@@ -164,13 +175,18 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
         say: (text) => setSaid({ text, at: Date.now() }),
         end: (r) => {
           music.sting(r.won ? 'victory' : 'defeat');
+          const result: RunResult = { ...r, zone: zone.id };
+          if ('floor' in r && r.floor) setBroken(recordsBroken(state.fog?.records?.[zone.id], result));
           setEnd(r);
-          onEnd({ ...r, zone: zone.id });
+          onEnd(result);
         },
       });
     });
     return () => {
       cancelled = true;
+      clearTimeout(tipGone);
+      window.removeEventListener('keydown', moved);
+      el.removeEventListener('pointerdown', moved);
       run.current?.destroy();
       run.current = null;
     };
@@ -251,7 +267,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
 
       {!hud && !end && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
 
-      {hud && !end && hud.seconds < (dungeon ? 7 : 5) && (
+      {tip && hud && !end && hud.seconds < (dungeon ? 6 : 5) && (
         <p className={`pointer-events-none absolute inset-x-6 text-center text-sm text-slate-300 animate-pulse ${dungeon ? 'bottom-44' : 'bottom-28'}`}>
           {dungeon
             ? `Drag to move; you attack on your own. Dodge slips through shots. ${zone.bossName} waits ${hud.floors} floors down.`
@@ -420,7 +436,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
         </div>
       )}
 
-      {end && <Results state={state} zone={zone} end={end} onAgain={() => setAttempt((a) => a + 1)} onLeave={onLeave} />}
+      {end && <Results state={state} zone={zone} end={end} broken={broken} onAgain={() => setAttempt((a) => a + 1)} onLeave={onLeave} />}
     </div>
   );
 }
@@ -513,7 +529,54 @@ function AbilityButton({ id, ready, dodge, onUse, onDodge }: { id: AbilityId; re
   );
 }
 
-function Results({ state, zone, end, onAgain, onLeave }: { state: GameState; zone: Zone; end: RunEnd; onAgain: () => void; onLeave: () => void }) {
+/** A dungeon run on one card: how deep, how long, how many, the Warden, and what you picked up.
+    A record that fell gets a BEST tag. */
+function Recap({ end, broken }: { end: RunEnd; broken: ReturnType<typeof recordsBroken> | null }) {
+  const relics = Object.entries(end.relics ?? {}) as [RelicId, number][];
+  const tiles: [string, string, boolean][] = [
+    ['Deepest', end.won ? 'All' : `${end.floor}·${end.room}`, !!broken?.depth],
+    ['Time', clock(end.seconds), !!broken?.fastest],
+    ['Down', String(end.kills), !!broken?.kills],
+  ];
+  return (
+    <div className="mt-5 w-full max-w-xs rounded-xl bg-ink-900 p-3 ring-2 ring-ink-700 shadow-[0_4px_0_#0b0d14]">
+      <p className="text-left font-pixel text-[9px] text-gold-300">Run recap</p>
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        {tiles.map(([k, v, best]) => (
+          <div key={k} className={`relative rounded-lg py-2 ${best ? 'bg-gold-400/10 ring-1 ring-gold-300' : 'bg-ink-800'}`}>
+            {best && <span className="absolute -top-2 right-1 rounded-sm bg-gold-400 px-1 py-0.5 font-pixel text-[7px] text-ink-950">BEST</span>}
+            <p className="font-mono text-lg font-bold text-slate-100">{v}</p>
+            <p className="text-[10px] text-slate-500">{k}</p>
+          </div>
+        ))}
+      </div>
+      {end.warden !== null && end.warden !== undefined && (
+        <p className={`mt-3 flex items-center gap-2 text-left text-xs ${end.warden ? 'text-orange-300' : 'text-slate-500'}`}>
+          <FlameKindling size={14} />
+          {end.warden ? `${WARDEN_NAME} beaten` : `${WARDEN_NAME}: not yet`}
+        </p>
+      )}
+      <div className="mt-2 flex flex-wrap items-center gap-1 text-left">
+        {relics.length ? (
+          relics.map(([id, n]) => {
+            const Icon = RELIC_ICONS[id];
+            return (
+              <span key={id} className="flex items-center gap-1 rounded bg-ink-800 px-1.5 py-1 text-gold-300" title={RELICS[id].name}>
+                <Icon size={12} />
+                <span className="text-[10px] text-slate-300">{RELICS[id].name}</span>
+                {n > 1 && <span className="font-mono text-[9px] text-slate-400">x{n}</span>}
+              </span>
+            );
+          })
+        ) : (
+          <span className="text-xs text-slate-500">No chest items this run.</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Results({ state, zone, end, broken, onAgain, onLeave }: { state: GameState; zone: Zone; end: RunEnd; broken: ReturnType<typeof recordsBroken> | null; onAgain: () => void; onLeave: () => void }) {
   const hints = (['push', 'pull', 'core'] as const).map((p) => nextGrowth(state, p)).filter((h): h is string => !!h);
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/90 px-6 text-center">
@@ -525,18 +588,22 @@ function Results({ state, zone, end, onAgain, onLeave }: { state: GameState; zon
           <p className="mt-1 text-xs text-slate-400">{zone.keepsake.text}</p>
         </div>
       )}
-      <div className="mt-5 grid w-full max-w-xs grid-cols-3 gap-2">
-        {[
-          end.floor ? ['Floor', end.won ? 'All' : `${end.floor}·${end.room}`] : ['Level', String(end.level)],
-          ['Time', clock(end.seconds)],
-          ['Down', String(end.kills)],
-        ].map(([k, v]) => (
-          <div key={k} className="rounded-xl bg-ink-800 py-2">
-            <p className="font-mono text-lg font-bold text-slate-100">{v}</p>
-            <p className="text-[10px] text-slate-500">{k}</p>
-          </div>
-        ))}
-      </div>
+      {end.floor ? (
+        <Recap end={end} broken={broken} />
+      ) : (
+        <div className="mt-5 grid w-full max-w-xs grid-cols-3 gap-2">
+          {[
+            ['Level', String(end.level)],
+            ['Time', clock(end.seconds)],
+            ['Down', String(end.kills)],
+          ].map(([k, v]) => (
+            <div key={k} className="rounded-xl bg-ink-800 py-2">
+              <p className="font-mono text-lg font-bold text-slate-100">{v}</p>
+              <p className="text-[10px] text-slate-500">{k}</p>
+            </div>
+          ))}
+        </div>
+      )}
       {hints.length > 0 && (
         <div className="mt-5 w-full max-w-xs rounded-xl bg-ink-800 p-3 text-left">
           <p className="font-pixel text-[9px] text-gold-300">Train to grow</p>
