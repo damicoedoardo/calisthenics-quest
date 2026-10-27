@@ -11,7 +11,7 @@ import { runSheets } from '@/game/sheets';
 import { Sprite } from './Sprite';
 import { SoundToggle, useMusic } from './Sound';
 import type { FreePick, Hud, RunEnd, RunHandle } from '@/game/dungeon/scene';
-import { ABILITIES, DODGE, RELICS, ROOM_KINDS, WARDEN, type AbilityId, type RelicId, type RoomKind } from '@/game/dungeon/engine';
+import { ABILITIES, DODGE, RELICS, ROOM_KINDS, midBoss, type AbilityId, type RelicId, type RoomKind } from '@/game/dungeon/engine';
 
 interface Props {
   state: GameState;
@@ -26,8 +26,8 @@ interface Props {
 /* Every zone is a dungeon (src/game/dungeon), each with its own boss and ground. */
 
 
-/** The Warden's name at the start of a line. */
-const WARDEN_NAME = WARDEN.name.replace(/^the/, 'The');
+/** The zone's floor-5 mid-boss (the Warden of the Ashes, the Drowned Lantern...), at the start of a line. */
+const midName = (zone: Pick<Zone, 'id'>) => midBoss(zone).name.replace(/^the/, 'The');
 
 /** The boss's lines with the player's own words filled in; a line left empty (no words for it) is dropped. */
 function bossLines(zone: Zone, state: GameState): FogLines {
@@ -199,11 +199,11 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
               max={hud.boss.max}
             />
           )}
-          {hud.warden && <BossBar name={WARDEN_NAME} hp={hud.warden.hp} max={hud.warden.max} ember={hud.warden.phase === 2 ? 'hot' : 'warm'} />}
+          {hud.warden && <BossBar name={midName(zone)} hp={hud.warden.hp} max={hud.warden.max} ember={hud.warden.phase === 2 ? 'hot' : 'warm'} />}
         </div>
       )}
 
-      {hud?.floor && hud.floors && hud.rooms && !end && <DepthMap floor={hud.floor} floors={hud.floors} room={hud.room ?? 1} rooms={hud.rooms} boss={zone.bossName} mid={hud.wardenFloor ?? null} path={hud.path ?? []} doors={hud.doors ?? null} />}
+      {hud?.floor && hud.floors && hud.rooms && !end && <DepthMap floor={hud.floor} floors={hud.floors} room={hud.room ?? 1} rooms={hud.rooms} boss={zone.bossName} midName={midName(zone)} mid={hud.wardenFloor ?? null} path={hud.path ?? []} doors={hud.doors ?? null} />}
 
       {!hud && !end && !failed && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
       {failed && (
@@ -234,7 +234,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
             {floorShown === hud?.floors
               ? `${zone.bossName} is down here, in the last room.`
               : floorShown === hud?.wardenFloor
-                ? `Halfway down. ${WARDEN_NAME} guards this floor's last room.`
+                ? `Halfway down. ${midName(zone)} guards this floor's last room.`
                 : `${(hud?.floors ?? floorShown) - floorShown} more below, then ${zone.bossName}. A breath on the stairs: a little HP back.`}
           </p>
         </div>
@@ -344,7 +344,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
                 [
                   ['Skip to the boss', () => run.current?.skipToBoss()],
                   ['Next floor', () => run.current?.skipFloor()],
-                  ['To the Warden', () => run.current?.skipToWarden()],
+                  ['To the mid-boss', () => run.current?.skipToWarden()],
                   [`Theme${theme ? `: ${theme}` : ''}`, () => setTheme(run.current?.cycleTheme() ?? null)],
                   ['Win this run', () => run.current?.winNow()],
                   [
@@ -380,14 +380,14 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
 
 /** How deep you are: a ladder of floors down the left edge, filling as you go, the boss at the
     bottom. The floor you're on shows its rooms; an ember marks the Warden's floor. */
-function DepthMap({ floor, floors, room, rooms, boss, mid, path, doors }: { floor: number; floors: number; room: number; rooms: number; boss: string; mid: number | null; path: RoomKind[]; doors: RoomKind[] | null }) {
+function DepthMap({ floor, floors, room, rooms, boss, midName, mid, path, doors }: { floor: number; floors: number; room: number; rooms: number; boss: string; midName: string; mid: number | null; path: RoomKind[]; doors: RoomKind[] | null }) {
   const [open, setOpen] = useState(false);
   // What each room of this floor held, or what waits: the doors on offer, then the floor's last room.
   const rows = Array.from({ length: rooms }, (_, r) => {
     const n = r + 1;
     if (n < room) return { n, text: ROOM_KINDS[path[r] ?? 'fight'].name, tone: 'text-slate-400' };
     if (n === room) return { n, text: `${ROOM_KINDS[path[r] ?? 'fight'].name} (here)`, tone: 'text-gold-300' };
-    if (n === rooms) return floor === floors ? { n, text: boss, tone: 'text-red-400' } : floor === mid ? { n, text: WARDEN_NAME, tone: 'text-orange-300' } : { n, text: 'Stairs down', tone: 'text-slate-400' };
+    if (n === rooms) return floor === floors ? { n, text: boss, tone: 'text-red-400' } : floor === mid ? { n, text: midName, tone: 'text-orange-300' } : { n, text: 'Stairs down', tone: 'text-slate-400' };
     if (n === room + 1 && doors) return { n, text: doors.map((k) => ROOM_KINDS[k].name).join(' or '), tone: 'text-sky-300' };
     return { n, text: '?', tone: 'text-slate-500' };
   });
@@ -398,7 +398,7 @@ function DepthMap({ floor, floors, room, rooms, boss, mid, path, doors }: { floo
         onPointerDown={(e) => e.stopPropagation()}
         onClick={() => setOpen((o) => !o)}
         className="pointer-events-auto absolute left-1.5 top-24 flex flex-col items-center gap-[3px] rounded-lg bg-ink-950/50 px-1 py-1.5"
-        aria-label={`Floor ${floor} of ${floors}, ${mid ? `the Warden on floor ${mid}, ` : ''}${boss} at the bottom. Tap for this floor's rooms.`}
+        aria-label={`Floor ${floor} of ${floors}, ${mid ? `${midName.replace(/^The/, 'the')} on floor ${mid}, ` : ''}${boss} at the bottom. Tap for this floor's rooms.`}
         aria-expanded={open}
       >
         {Array.from({ length: floors }, (_, i) => {
@@ -419,7 +419,7 @@ function DepthMap({ floor, floors, room, rooms, boss, mid, path, doors }: { floo
                   <span className={`block h-1.5 w-4 rounded-[1px] ${n < floor ? 'bg-gold-400/70' : 'bg-ink-700/90'}`} />
                 )}
               </div>
-              {warden && <Sprite id="markIcon" opts={{ name: 'warden' }} size={14} label="The Warden" className={`absolute -right-4 ${n < floor ? 'opacity-40' : ''}`} />}
+              {warden && <Sprite id="markIcon" opts={{ name: 'warden' }} size={14} label={midName} className={`absolute -right-4 ${n < floor ? 'opacity-40' : ''}`} />}
             </div>
           );
         })}
@@ -498,7 +498,7 @@ function AbilityButton({ id, ready, dodge, onUse, onDodge }: { id: AbilityId; re
 
 /** A dungeon run on one card: how deep, how long, how many, the Warden, and what you picked up.
     A record that fell gets a BEST tag. */
-function Recap({ end, broken }: { end: RunEnd; broken: ReturnType<typeof recordsBroken> | null }) {
+function Recap({ end, broken, midName }: { end: RunEnd; broken: ReturnType<typeof recordsBroken> | null; midName: string }) {
   const relics = Object.entries(end.relics ?? {}) as [RelicId, number][];
   const tiles: [string, string, boolean][] = [
     ['Deepest', end.won ? 'All' : `${end.floor}·${end.room}`, !!broken?.depth],
@@ -520,7 +520,7 @@ function Recap({ end, broken }: { end: RunEnd; broken: ReturnType<typeof records
       {end.warden !== null && end.warden !== undefined && (
         <p className={`mt-3 flex items-center gap-2 text-left text-xs ${end.warden ? 'text-orange-300' : 'text-slate-500'}`}>
           <Sprite id="markIcon" opts={{ name: 'warden' }} size={14} label="" className={end.warden ? '' : 'opacity-40 grayscale'} />
-          {end.warden ? `${WARDEN_NAME} beaten` : `${WARDEN_NAME}: not yet`}
+          {end.warden ? `${midName} beaten` : `${midName}: not yet`}
         </p>
       )}
       <div className="mt-2 flex flex-wrap items-center gap-1 text-left">
@@ -556,7 +556,7 @@ function Results({ state, zone, end, broken, onAgain, onLeave }: { state: GameSt
         </div>
       )}
       {end.floor ? (
-        <Recap end={end} broken={broken} />
+        <Recap end={end} broken={broken} midName={midName(zone)} />
       ) : (
         <div className="mt-5 grid w-full max-w-xs grid-cols-3 gap-2">
           {[

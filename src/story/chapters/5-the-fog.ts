@@ -21,8 +21,8 @@ export const THE_FOG: Chapter = {
     hint: "It can't be beaten. When its light opens, stand in it, and take its hand.",
     after: 'Nobody destroys it. You walked up to it anyway.',
     keepsake: { name: 'The Voice Stone', text: "Your Hollow's line, carved small enough to carry." },
-    hp: 1.86,
-    dmg: 3.72,
+    hp: 1.92,
+    dmg: 3.83,
     ground: '#111a17',
     fog: '#1f3b33',
     // stages: [its light opens, its light goes dark]

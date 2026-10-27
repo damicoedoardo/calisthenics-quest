@@ -18,6 +18,11 @@ import {
   STEP,
   ELITE,
   LIGHT,
+  MIDS,
+  CREW,
+  GALE,
+  hardened,
+  midBoss,
   RELICS,
   zoneDungeon,
   createRun,
@@ -169,7 +174,20 @@ const DUNGEON_LOOKS: Record<Exclude<MonsterKind, keyof typeof FOE_LOOKS>, Look> 
   warden: { tex: 'warden', scale: 1.3, bits: [0x78716c, 0xf97316, 0xfde68a] },
   // The Mirror's images look exactly like it (the scene swaps in the Mirror's own art, BOSS_ART).
   image: { tex: BOSS_LOOKS.mirror.tex, scale: BOSS_LOOKS.mirror.scale, bits: BOSS_LOOKS.mirror.bits },
+  // The other zones' mid-bosses wear stand-ins until their own art is drawn: a drowned flame, the
+  // old knight in work bronze, the Plateau's golem in sand, a big wisp, a pale cloud of smoke.
+  lantern: { tex: 'ember', scale: 1.15, bits: [0x7dd3fc, 0x0e7490, 0xe0f2fe], tint: 0x9be7ff },
+  foreman: { tex: 'knight', scale: 1, bits: [0xd6a36b, 0x92400e, 0xfde68a], tint: 0xe0b07a },
+  sandGolem: { tex: 'golem', scale: 1.05, bits: [0xe8c48a, 0xb08850, 0x8f6b3d], tint: 0xf0d29a },
+  whisper: { tex: 'wisp', scale: 0.72, bits: [0xc4b5fd, 0x7c3aed, 0xffffff], tint: 0xd8ccff },
+  gale: { tex: 'smoke', scale: 1.25, bits: [0xe2e8f0, 0x94a3b8, 0xffffff], tint: 0xeef2f7 },
 };
+/** The mid-bosses' kinds, for the big pops and stomps. */
+const MID_KINDS = new Set<Foe['kind']>(MIDS.map((m) => m.kind));
+/** How far you see right now: the Fog's sight, or the Drowned Lantern's dark (null: all of it). */
+const sightNow = (r: Run) => zoneDungeon(r.setup.zone).sight ?? r.dim;
+/** The dark's texture is drawn for this sight, and stretched for any other. */
+const DARK_REF = 190;
 const looks = (kind: Foe['kind'], zone: Zone): Look =>
   kind === 'boss' ? BOSS_LOOKS[zone.boss] : kind in DUNGEON_LOOKS ? DUNGEON_LOOKS[kind as keyof typeof DUNGEON_LOOKS] : FOE_LOOKS[kind as keyof typeof FOE_LOOKS];
 /** Each zone boss's own art, in the stages of its fight (the Knight's plates falling, the
@@ -309,7 +327,7 @@ class DungeonScene extends Phaser.Scene {
     this.fx = this.add.graphics().setDepth(90000);
     // In the fog, shots, telegraphs and eyes in the dark stay drawn over it: a hit must never come
     // from nothing.
-    if (zoneDungeon(this.setup.zone).sight) this.fx.setDepth(145000);
+    if (zoneDungeon(this.setup.zone).sight || midBoss(this.setup.zone).kind === 'lantern') this.fx.setDepth(145000);
     const fogTint = hex(this.theme.fog);
     for (let i = 0; i < 14; i++) {
       const m = this.add
@@ -322,8 +340,8 @@ class DungeonScene extends Phaser.Scene {
       this.tweens.add({ targets: m, x: m.x + Phaser.Math.Between(-80, 80), duration: Phaser.Math.Between(9000, 16000), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
     // The Fog zone: you see only a little way around you.
-    const sight = zoneDungeon(this.setup.zone).sight;
-    if (sight) this.dark = this.add.image(0, 0, 'dark').setDisplaySize(3000, 3000).setDepth(140000).setAlpha(0.94);
+    // So does the Drowned Lantern's room at the lake.
+    if (zoneDungeon(this.setup.zone).sight || midBoss(this.setup.zone).kind === 'lantern') this.dark = this.add.image(0, 0, 'dark').setDisplaySize(3000, 3000).setDepth(140000).setAlpha(0.94).setVisible(false);
     this.hero = this.add.sprite(this.run.hero.x, this.run.hero.y, 'hero').play('hero').setScale(0.8);
     this.hero.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.hero.play('hero'));
     this.puffs = this.add.particles(0, 0, 'mist', {
@@ -503,8 +521,8 @@ class DungeonScene extends Phaser.Scene {
       vig.setFilter(Phaser.Textures.FilterMode.LINEAR);
     }
     // The fog's dark: clear around you, black past how far you see (drawn 3000 px wide).
-    const sight = zoneDungeon(zone).sight;
-    if (sight) {
+    if (zoneDungeon(zone).sight || midBoss(zone).kind === 'lantern') {
+      const sight = DARK_REF;
       if (this.textures.exists('dark')) this.textures.remove('dark');
       const dark = this.textures.createCanvas('dark', 512, 512);
       if (dark) {
@@ -1031,6 +1049,13 @@ class DungeonScene extends Phaser.Scene {
       // A ram glowing before its charge; a shade fading out before it lands.
       if (f.kind === 'ram' && !e.flash) s.setTint(r.t < f.windUntil && Math.floor(now / 90) % 2 ? 0xff4d4d : (looks('ram', this.setup.zone).tint ?? 0xffffff));
       if (f.kind === 'shade') s.setAlpha(r.t < f.windUntil ? 0.25 : 1);
+      // The Sand Golem grey as stone while it stands; the Whisper flickering white before it trades places.
+      if (f === r.warden && !e.flash && (f.kind === 'sandGolem' || f.kind === 'whisper')) {
+        const tint = looks(f.kind, this.setup.zone).tint;
+        if (hardened(r, f)) s.setTint(0x8b8680);
+        else if (f.kind === 'whisper' && r.t < f.windUntil && Math.floor(now / 90) % 2) s.setTint(0xffffff);
+        else if (tint) s.setTint(tint);
+      }
       if (f === r.boss && r.t < f.windUntil && !e.flash) s.setTint(0xff6b6b);
       else if (f === r.boss && !e.flash && f.kind === 'boss' && s.isTinted && r.t >= f.dashUntil) s.clearTint();
     }
@@ -1070,7 +1095,11 @@ class DungeonScene extends Phaser.Scene {
       const a = r.allies[i];
       s.setPosition(a.x, a.y).setDepth(a.y).setFlipX(r.hero.x < a.x);
     });
-    if (this.dark) this.dark.setPosition(r.hero.x, r.hero.y);
+    if (this.dark) {
+      const sight = sightNow(r);
+      this.dark.setVisible(sight !== null);
+      if (sight !== null) this.dark.setPosition(r.hero.x, r.hero.y).setDisplaySize((3000 * sight) / DARK_REF, (3000 * sight) / DARK_REF);
+    }
     // Your flame's fires, circling you.
     while (this.flames.length < r.flames) this.flames.push(this.add.sprite(r.hero.x, r.hero.y, 'ember').play('ember').setScale(0.42));
     this.flames.forEach((fl, i) => {
@@ -1160,14 +1189,18 @@ class DungeonScene extends Phaser.Scene {
         this.hitSpark(e.x, e.y - 6, e.dmg >= 30 ? 1.6 : 1.1);
         this.sfx(e.boss ? 'bossHit' : 'hit');
         // The Plateau never shows what a hit did.
-        if (!(e.boss && this.setup.zone.boss === 'plateau')) this.number(e.x, e.y - 18, e.dmg, undefined, e.id);
+        if (e.dmg === 0) {
+          // It glanced off (the Sand Golem as stone): a grey ring, no number.
+          const { x, y } = e;
+          this.fade(220, (g, p) => g.lineStyle(3 * (1 - p) + 1, 0xd6d3d1, 0.9 * (1 - p)).strokeCircle(x, y - 6, 10 + 16 * p));
+        } else if (!(e.boss && this.setup.zone.boss === 'plateau')) this.number(e.x, e.y - 18, e.dmg, undefined, e.id);
         if (e.dmg >= 30) this.hitStop(40, true);
         break;
       }
       case 'kill': {
         const look = looks(e.kind, this.setup.zone);
         const boss = e.kind === 'boss',
-          huge = boss || e.kind === 'warden',
+          huge = boss || MID_KINDS.has(e.kind),
           big = huge || e.kind === 'golem' || e.elite,
           R = 30 * look.scale * (e.elite ? ELITE.r : 1),
           x = e.x,
@@ -1202,7 +1235,7 @@ class DungeonScene extends Phaser.Scene {
         this.sfx('kill', big ? 0.6 : e.kind === 'wisp' ? 1.3 : 1);
         if (boss) this.bossLabel?.destroy();
         if (boss && this.setup.zone.boss === 'mirror') this.bossGone('mirrorBossShatter', x, y);
-        if (e.kind === 'warden') this.cameras.main.flash(300, 255, 180, 90);
+        if (MID_KINDS.has(e.kind)) this.cameras.main.flash(300, 255, 180, 90);
         break;
       }
       case 'hurt':
@@ -1386,7 +1419,7 @@ class DungeonScene extends Phaser.Scene {
         break;
       case 'spawn':
         this.puffs.explode(5, e.x, e.y + 20);
-        if (e.kind === 'golem' || e.kind === 'warden') {
+        if (e.kind === 'golem' || MID_KINDS.has(e.kind)) {
           this.sfx('stomp');
           this.cameras.main.shake(180, 0.004);
         }
@@ -1417,6 +1450,32 @@ class DungeonScene extends Phaser.Scene {
       case 'wind':
         this.sfx('stomp', 1.6);
         break;
+      case 'repair': {
+        const { x, y } = e;
+        this.sfx('nova', 1.3);
+        for (const f of this.run.foes)
+          if (f.alive && f !== this.run.warden) {
+            this.bits.particleTint = 0x86efac;
+            this.bits.explode(6, f.x, f.y);
+          }
+        this.fade(400, (g, p) => g.lineStyle(3, 0x86efac, 0.8 * (1 - p)).strokeCircle(x, y, 20 + 60 * p));
+        break;
+      }
+      case 'swap': {
+        const { x, y, toX, toY } = e;
+        this.sfx('dash', 1.3);
+        this.puffs.explode(4, x, y);
+        this.puffs.explode(4, toX, toY);
+        this.fade(300, (g, p) => g.lineStyle(3 * (1 - p) + 1, 0xc4b5fd, 0.7 * (1 - p)).lineBetween(x, y, toX, toY));
+        break;
+      }
+      case 'gust': {
+        const { x, y } = e;
+        this.sfx('wave', 0.7);
+        this.cameras.main.shake(300, 0.004);
+        this.fade(700, (g, p) => g.lineStyle(6 * (1 - p) + 1, 0xe2e8f0, 0.6 * (1 - p)).strokeCircle(x, y, 40 + 420 * p));
+        break;
+      }
       case 'shrine': {
         const { x, y } = e;
         this.sfx('nova', 1.4);
@@ -1433,7 +1492,7 @@ class DungeonScene extends Phaser.Scene {
           last = r.floor === r.layout.floors - 1 && r.room === r.layout.rooms - 2,
           warden = r.floor === wardenFloor(r.layout) && r.room === r.layout.rooms - 2;
         for (const d of r.doors) {
-          const look = single ? (last ? { label: 'BOSS', color: 0xa855f7 } : warden ? { label: 'WARDEN', color: 0xf97316 } : { label: 'STAIRS', color: 0xfbbf24 }) : DOOR_LOOK[d.kind];
+          const look = single ? (last ? { label: 'BOSS', color: 0xa855f7 } : warden ? { label: midBoss(this.setup.zone).name.split(' ').pop()!.toUpperCase(), color: 0xf97316 } : { label: 'STAIRS', color: 0xfbbf24 }) : DOOR_LOOK[d.kind];
           this.roomBits.push(
             this.add
               .text(d.x, ROOM.wall + 34, look.label, { fontFamily: '"Press Start 2P", monospace', fontSize: '9px', color: `#${look.color.toString(16).padStart(6, '0')}`, stroke: '#0b0d14', strokeThickness: 3 })
@@ -1447,7 +1506,7 @@ class DungeonScene extends Phaser.Scene {
           this.roomBits.push(this.chest);
           this.puffs.explode(10, r.chest.x, r.chest.y);
         }
-        this.bus.say(single ? (last ? 'Room clear. The boss is through that door.' : warden ? 'Room clear. The Warden of the Ashes waits through that door.' : 'Room clear. The stairs go down.') : r.chest ? 'Room clear. Open the chest, then pick a door.' : 'Room clear. Pick a door: each says what waits behind it.');
+        this.bus.say(single ? (last ? 'Room clear. The boss is through that door.' : warden ? `Room clear. ${midBoss(this.setup.zone).name.replace(/^the/, 'The')} waits through that door.` : 'Room clear. The stairs go down.') : r.chest ? 'Room clear. Open the chest, then pick a door.' : 'Room clear. Pick a door: each says what waits behind it.');
         break;
       }
       case 'chest':
@@ -1514,6 +1573,53 @@ class DungeonScene extends Phaser.Scene {
 
   /** A floating number. Quick hits on the same monster (`key`) add up in one number instead of
       piling up, and a new number steps above the ones already floating there. */
+  /** A mid-boss's tell, drawn over the room each frame. */
+  private drawMid(f: Foe, now: number) {
+    const r = this.run,
+      g = this.fx,
+      p = (Math.sin(now / 150) + 1) / 2;
+    switch (f.kind) {
+      case 'lantern':
+        // Its own light reaches through its dark: you always see where it is.
+        g.fillStyle(0x7dd3fc, 0.1 + 0.08 * p).fillCircle(f.x, f.y, 46);
+        g.lineStyle(2, 0xe0f2fe, 0.35 + 0.25 * p).strokeCircle(f.x, f.y, 30);
+        break;
+      case 'foreman': {
+        // Threads to its crew, brighter as it gets ready to mend; grey while a hit holds it off.
+        const guarded = r.t - f.hitAt < CREW.guard,
+          ready = Math.min(1, Math.max(0, 1 - (f.act - r.t) / CREW.every));
+        for (const o of r.foes) if (o.alive && o !== f) g.lineStyle(2, guarded ? 0x94a3b8 : 0x86efac, guarded ? 0.15 : 0.1 + 0.5 * ready).lineBetween(f.x, f.y, o.x, o.y);
+        if (guarded) g.lineStyle(3, 0xe2e8f0, 0.6).strokeCircle(f.x, f.y, f.def.r + 8);
+        break;
+      }
+      case 'sandGolem':
+        if (hardened(r, f)) g.lineStyle(3, 0xa8a29e, 0.5 + 0.3 * p).strokeCircle(f.x, f.y, f.def.r + 10);
+        else g.fillStyle(0xe8c48a, 0.14).fillEllipse(f.x, f.y + f.def.r, f.def.r * 2.6, f.def.r);
+        break;
+      case 'whisper':
+        if (r.t < f.windUntil) {
+          const w = r.foes.find((o) => o.id === f.dashX && o.alive);
+          for (const o of w ? [f, w] : [f]) g.lineStyle(2, 0xc4b5fd, 0.5 + 0.4 * p).strokeCircle(o.x, o.y, 22 - 6 * p);
+        }
+        break;
+      case 'gale': {
+        const winding = f.windUntil > 0 && r.t < f.windUntil,
+          blowing = f.windUntil > 0 && r.t >= f.windUntil && r.t < f.dashUntil;
+        if (!winding && !blowing) break;
+        // The drop at the room's edge, where the gust bites, and the wind streaming off the Gale.
+        const { w, h } = r.area,
+          e = ROOM.wall + GALE.edge;
+        g.lineStyle(3, 0xf87171, blowing ? 0.5 + 0.3 * p : 0.25).strokeRect(e, e, w - 2 * e, h - 2 * e);
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2 + now / 900,
+            d0 = 40 + ((now / (blowing ? 3 : 8) + i * 37) % 160);
+          g.lineStyle(2, 0xe2e8f0, blowing ? 0.5 : 0.2).lineBetween(f.x + Math.cos(a) * d0, f.y + Math.sin(a) * d0, f.x + Math.cos(a) * (d0 + 26), f.y + Math.sin(a) * (d0 + 26));
+        }
+        break;
+      }
+    }
+  }
+
   private number(x: number, y: number, n: number, color?: string, key?: number) {
     const now = this.time.now;
     if (key !== undefined)
@@ -1606,6 +1712,8 @@ class DungeonScene extends Phaser.Scene {
       this.fx.fillStyle(hot ? 0xef4444 : 0xf97316, 0.12 + 0.12 * p).fillEllipse(wd.x, wd.y + wd.def.r, wd.def.r * 3.4, wd.def.r * 1.3);
       this.fx.lineStyle(2, hot ? 0xef4444 : 0xfbbf24, 0.4 + 0.3 * p).strokeEllipse(wd.x, wd.y + wd.def.r, wd.def.r * 3.4, wd.def.r * 1.3);
     }
+    // The other mid-bosses' tells.
+    if (wd?.alive && wd.kind !== 'warden') this.drawMid(wd, now);
     // The Hollow's light: faint while it's dark, open and warm when it's lit, with how long you've
     // stood in it running round its edge.
     const hb = r.boss;
@@ -1644,14 +1752,14 @@ class DungeonScene extends Phaser.Scene {
       }
     }
     // In the fog: the eyes of what waits just past what you can see.
-    const sight = zoneDungeon(this.setup.zone).sight;
-    if (sight)
+    const sight = sightNow(r);
+    if (sight !== null)
       for (const f of r.foes) {
         const d = Math.hypot(f.x - r.hero.x, f.y - r.hero.y);
         if (!f.alive || d < sight * 0.75 || d > sight + 260) continue;
         const a = 0.75 * Math.min(1, (sight + 260 - d) / 160),
           blink = Math.floor((now + f.id * 397) / 140) % 23 === 0;
-        if (!blink) this.fx.fillStyle(f === r.boss ? 0xc084fc : 0xfca5a5, a).fillRect(f.x - 4, f.y - 6, 2, 2).fillRect(f.x + 2, f.y - 6, 2, 2);
+        if (!blink) this.fx.fillStyle(f === r.boss || f === r.warden ? 0xc084fc : 0xfca5a5, a).fillRect(f.x - 4, f.y - 6, 2, 2).fillRect(f.x + 2, f.y - 6, 2, 2);
       }
     // Your shots: arrows leave a short streak, orbs glow and pulse.
     for (const sh of r.shots) {
