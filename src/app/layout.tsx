@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Metadata, Viewport } from 'next';
 import { ServiceWorker } from '@/components/ServiceWorker';
+import { SPLASH } from './splash-sizes.json';
 import './globals.css';
 
 // Icons come from the app/ file conventions (icon.svg, apple-icon.png) and the
@@ -13,6 +14,11 @@ export const metadata: Metadata = {
     capable: true,
     title: 'FORMA',
     statusBarStyle: 'black-translucent',
+    // iOS launch screens (drawn by scripts/splash.cjs): one per iPhone screen size, portrait.
+    startupImage: SPLASH.map(({ w, h, dpr }) => ({
+      url: `/splash/${w * dpr}x${h * dpr}.png`,
+      media: `(device-width: ${w}px) and (device-height: ${h}px) and (-webkit-device-pixel-ratio: ${dpr}) and (orientation: portrait)`,
+    })),
   },
   formatDetection: { telephone: false },
 };
