@@ -21,7 +21,7 @@ pieces of screen state, and decides what is on screen:
    readers). Overlays opened from inside a tab use `useModal` for the same thing.
 4. Back on the tabs, the next due scene from `scenesToPlay` (`src/story/engine.ts`) plays.
 
-## Held sideways
+## Held sideways: the tabs
 
 The tabs work both ways up. Upright, everything is one `max-w-md` column with the bottom tab bar.
 On a phone held sideways (the `land:` variant in `tailwind.config.ts`: landscape and at most
@@ -61,11 +61,11 @@ changes only as `land:` classes.
 | `ServiceWorker` | Registers the offline worker, see [pwa.md](pwa.md) |
 | `useModal` | Focus trap and inert background for overlays inside a tab |
 
-## Held sideways (landscape phones)
+## Held sideways: the overlays
 
 Every full-screen overlay works with the phone held sideways too (a phone is about 844×390 CSS px
 then). Portrait keeps its own classes; the sideways layout is added on top with the Tailwind
-variant `[@media(orientation:landscape)_and_(max-height:600px)]:` (short and wide screens only, so
+variant `[@media(orientation:landscape)_and_(max-height:600px)]:` (the same query as the tabs' `land:`, short and wide screens only, so
 tablets and desktops keep the portrait layout). The usual trick: the portrait column's groups sit
 in wrappers that are `contents` in portrait (no change to the layout) and become the two columns
 sideways. `land-safe-x` (in its own block at the end of `src/app/globals.css`) keeps an overlay's
