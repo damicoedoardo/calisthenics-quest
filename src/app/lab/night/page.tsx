@@ -84,6 +84,7 @@ const MOMENTS: [string, string][] = [
   ['ch4-victory', 'The Plateau shatters'],
   ['ch5-gathering', 'The gathering'],
   ['ch5-victory', "The Hollow's hand"],
+  ['ch6-fall', 'The fall near the top'],
   ['finale', 'The finale'],
 ];
 
