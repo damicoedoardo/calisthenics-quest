@@ -22,6 +22,8 @@ export interface Theme {
   glow: string;
   /** Pools: the shade under the near rim, deep, base, then the light on the ripples. */
   water: string[];
+  /** How the floor is laid: flagstones (the default) or smooth sandstone slabs. */
+  floor?: 'flagstones' | 'sandstone';
   /** Pebbles (dark, light), tufts (dark, light) and bones on the floor; drawn from `stone` if left out. */
   litter?: string[];
 }
@@ -63,6 +65,7 @@ export const THEMES: Theme[] = [
   {
     // Sandstone, a dry gold flame, muddy shallow water.
     name: 'Plateau',
+    floor: 'sandstone',
     ground: '#1c1712',
     fog: '#4a3a26',
     stone: ['#21170c', '#3f2d19', '#5a4124', '#71532f', '#8f6b3d', '#ad8650', '#d9b47a'],

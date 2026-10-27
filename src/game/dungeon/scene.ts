@@ -3,10 +3,10 @@ import type { ClassId } from '@/lib/gear';
 import { xpToNext, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import { music, type SfxId } from '@/lib/music';
 import type { Sheet } from '@/sprites/registry';
-import { BOSSES as BOSS_LOOKS, FOES as FOE_LOOKS, type SheetKey, type Stats } from '../rules';
+import { BOSSES as BOSS_LOOKS, FOES as FOE_LOOKS, type SheetKey, type Sheets, type Stats } from '../rules';
 import { R } from '@/sprites/palette';
 import { botInput } from './bot';
-import { BARREL, CHEST, CHEST_OPEN, PILLAR, SCONCE, SHRINE as SHRINE_PROP, type Prop } from './props';
+import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, type Prop } from './props';
 import { THEMES, themeFor, type Theme } from './themes';
 import {
   ABILITIES,
@@ -51,7 +51,7 @@ export interface RunSetup {
   zone: Zone;
   power: Power;
   classId: ClassId | undefined;
-  sheets: Record<SheetKey, Sheet>;
+  sheets: Sheets;
   /** The bot plays (developer mode, balance tests). */
   autopilot?: boolean;
   /** Play the whole run at once without drawing it (balance tests). */
@@ -464,6 +464,7 @@ class DungeonScene extends Phaser.Scene {
       g.fillStyle(hex(R.gold[2]), 0.25).fillEllipse(15, 8, 30, 14);
     });
     prop('sconce', SCONCE);
+    prop('hitspark', HIT_SPARK);
     g.destroy();
     this.themeTextures();
   }
@@ -507,6 +508,27 @@ class DungeonScene extends Phaser.Scene {
       const mortar = base.clone().darken(4).color,
         lit = base.clone().lighten(3).color,
         shade = base.clone().darken(2).color;
+      if (t.floor === 'sandstone') {
+        // Sandstone: long smooth slabs worn round at the edges, sand-layer lines running across
+        // them, a few grains of sand; no chips, so it reads softer than the forges' flagstones.
+        g.fillStyle(mortar).fillRect(0, 0, 64, 64);
+        [
+          [0, 0, 40, 20],
+          [42, 0, 20, 20],
+          [0, 22, 18, 20],
+          [20, 22, 42, 20],
+          [0, 44, 30, 18],
+          [32, 44, 30, 18],
+        ].forEach(([x, y, w, h], i) => {
+          g.fillStyle(i % 3 ? base.color : shade).fillRect(x + 1, y, w - 2, h).fillRect(x, y + 1, w, h - 2);
+          g.fillStyle(lit).fillRect(x + 1, y, w - 2, 1);
+          g.fillStyle(shade).fillRect(x + 1, y + h - 1, w - 2, 1);
+          g.fillStyle(i % 3 ? shade : base.color).fillRect(x + 3, y + 6 + (i % 3) * 2, w - 8, 1).fillRect(x + 6, y + 13 - (i % 2) * 2, w - 14, 1);
+        });
+        const rnd = new Phaser.Math.RandomDataGenerator(['sand']);
+        for (let k = 0; k < 10; k++) g.fillStyle(lighter).fillRect(rnd.between(1, 62), rnd.between(1, 62), 1, 1);
+        return;
+      }
       g.fillStyle(mortar).fillRect(0, 0, 64, 64);
       const rnd = new Phaser.Math.RandomDataGenerator(['forma']);
       COURSES.forEach(([y, h, widths], row) => {
@@ -536,6 +558,19 @@ class DungeonScene extends Phaser.Scene {
     prop('pillar', PILLAR, () => g.fillStyle(0x000000, 0.3).fillEllipse(22, 58, 44, 12));
     prop('shrine', SHRINE_PROP, () => g.fillStyle(0x86efac, 0.18).fillCircle(18, 24, 18));
     g.destroy();
+  }
+
+  /** A hit spark from a small pool, so a storm of hits makes no garbage. */
+  private sparkPool: Phaser.GameObjects.Image[] = [];
+  private hitSpark(x: number, y: number, size: number) {
+    let im = this.sparkPool.find((s) => !s.visible);
+    if (!im) {
+      if (this.sparkPool.length >= 16) return;
+      im = this.add.image(0, 0, 'hitspark').setDepth(90003);
+      this.sparkPool.push(im);
+    }
+    im.setPosition(x, y).setVisible(true).setAlpha(1).setScale(size).setAngle(Math.random() < 0.5 ? 0 : 45);
+    this.tweens.add({ targets: im, scale: size * 0.3, alpha: 0, duration: 140, ease: 'Quad.easeIn', onComplete: () => im.setVisible(false) });
   }
 
   /** Developer mode: show the next zone's theme in this run, to preview every dungeon's look. */
@@ -879,14 +914,8 @@ class DungeonScene extends Phaser.Scene {
           ent.squash = now + 90;
         }
         this.sparks.explode(e.dmg >= 30 ? 6 : 2, e.x, e.y - 6);
-        // a white star where the blow lands
-        const hx = e.x,
-          hy = e.y - 6;
-        this.fade(110, (g, p) => {
-          const s = 10 * (1 - p) + 3;
-          g.fillStyle(0xffffff, 0.9 * (1 - p)).fillRect(hx - s, hy - 1, s * 2, 2).fillRect(hx - 1, hy - s, 2, s * 2);
-          g.fillStyle(0xfef3c7, 0.5 * (1 - p)).fillCircle(hx, hy, 5 * (1 - p) + 2);
-        });
+        // a pixel star where the blow lands: pops big, shrinks away
+        this.hitSpark(e.x, e.y - 6, e.dmg >= 30 ? 1.6 : 1.1);
         this.sfx(e.boss ? 'bossHit' : 'hit');
         this.number(e.x, e.y - 18, e.dmg, undefined, e.id);
         if (e.dmg >= 30) this.hitStop(40, true);

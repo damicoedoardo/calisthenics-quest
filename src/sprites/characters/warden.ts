@@ -11,17 +11,17 @@ import { paintRows, shifted } from './pixel';
 const ROWS = [
   '.......dd..............dd.......',
   '........dd............dd........',
-  '.........dddddddddddddd.........',
-  '...........dddddddddd...........',
-  '...........ccccccccbb...........',
-  '...........ccccccccbb...........',
-  '...........ciiiiiiiib...........',
-  '...........ciiiiiiiib...........',
-  '...........ccccccccbb...........',
-  '.....cccc..aaaaaaaaaa..bbbb.....',
-  '....cdddccc.aaaaaaaa.cbbbbbb....',
-  '...cddccccccbbbbbbbbbbbbbbbbb...',
-  '...cccccccccbbbbbbbbbbbaaaaaa...',
+  '.........dd..dddddd..dd.........',
+  '..........ddcccccccbdd..........',
+  '..........cccccccccbbb..........',
+  '..........cccccccccbbb..........',
+  '..........ciiiiiiiiiib..........',
+  '..........ciiiiiiiiiib..........',
+  '...cccc...cccccccccbbb...bbbb...',
+  '.ccddddcc.aaaaaaaaaaaa.cbbbbbbb.',
+  'ccddddccccaaaaaaaaaaaacbbbbbbbbb',
+  'cccccccccccbbbbbbbbbbbbbbbbbbbba',
+  '.cccccccccbbbbbbbbbbbbaaaaaaaaa.',
   '...cbbbb.ccbbbbbbbbbbbaa.aaaa...',
   '...cbbbb.ccbbbbbbbbbbbaa.aaaa...',
   '...cbebb.cbbbbbbbbbbbbaa.aeaa...',
@@ -89,7 +89,7 @@ export function drawWarden(_o: unknown, frame: ClipFrame, f: number): Grid {
   for (let x = fx + 2; x < fx + 13; x += 3) u.col(x, fy + 1, fy + 8, ASH.i);
   u.row(fy + 9, fx, fx + 13, ASH.c);
   // rivets on the pauldrons, spikes on the crown
-  [[10, 21], [16, 20], [46, 21], [52, 21]].forEach(([x, y]) => u.p(x + dx, y, ASH.d));
+  [[6, 20], [12, 19], [52, 20], [58, 21]].forEach(([x, y]) => u.p(x + dx, y, ASH.d));
   [26, 31, 36].forEach((x) => {
     u.col(x + dx, 3, 5, ASH.d);
     u.p(x + dx, 2, ASH.c);

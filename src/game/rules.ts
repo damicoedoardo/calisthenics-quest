@@ -1,6 +1,7 @@
 import type { ClassId } from '@/lib/gear';
 import type { Power, UpgradeId, Zone } from '@/lib/fog';
 import type { FogBoss } from '@/story/types';
+import type { Sheet } from '@/sprites/registry';
 
 /* The Fog's rules as plain data and math, with no Phaser: the game (run.ts) and the fast
    simulator (sim.ts) both read them, so a number changed here changes both. */
@@ -9,7 +10,18 @@ export type SheetKey = 'hero' | 'heroAttack' | 'ember' | 'hollow' | 'slime' | 'w
   // the dungeon's own monsters
   | 'ram' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade'
   // the Splitter splitting (played once), and the mid-boss
-  | 'splitterPop' | 'warden';
+  | 'splitterPop' | 'warden'
+  | BossSheetKey;
+/** The dungeon bosses: idle, attack (played once), stages for the Knight and the Plateau, and the
+    Mirror's and the Hollow's ends (played once). A run only builds its own zone's (FogRun.tsx). */
+export type BossSheetKey =
+  | 'mirrorBoss' | 'mirrorBossAttack' | 'mirrorBossShatter'
+  | 'knightBoss' | 'knightBossAttack' | 'knightBoss1' | 'knightBoss1Attack' | 'knightBoss2' | 'knightBoss2Attack'
+  | 'plateauBoss' | 'plateauBossAttack' | 'plateauBoss1' | 'plateauBoss1Attack' | 'plateauBoss2' | 'plateauBoss2Attack'
+  | 'hollowBoss' | 'hollowBossAttack' | 'hollowBossFade'
+  | 'summitBoss' | 'summitBossAttack';
+/** Every sheet a run gets: all of the regular ones, and only its own zone's boss sheets. */
+export type Sheets = Record<Exclude<SheetKey, BossSheetKey>, Sheet> & Partial<Record<BossSheetKey, Sheet>>;
 
 /** Skills the bot takes first. */
 export const BOT_PICKS: UpgradeId[] = ['multi', 'power', 'haste', 'vital', 'spark', 'flame', 'nova', 'guard', 'swift', 'magnet'];
