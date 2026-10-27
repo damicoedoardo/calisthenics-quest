@@ -3,7 +3,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pause } from 'lucide-react';
 import { gearOf, type GameState } from '@/lib/game';
-import { getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
+import { fill, storyWords } from '@/story/engine';
+import type { FogLines } from '@/story/types';
+import { getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, ZONES, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
 import { sheetFor } from '@/sprites/registry';
 import { Sprite } from './Sprite';
@@ -25,8 +27,8 @@ interface Props {
 }
 
 
-/* Zone 1 is a dungeon (src/game/dungeon); the other zones still play the survive-the-waves run
-   (src/game/run.ts) until their dungeons are built. Both report through the same HUD. */
+/* Every zone is a dungeon (src/game/dungeon), each with its own boss and ground. The old
+   survive-the-waves run (src/game/run.ts) is kept behind isDungeon; both report through the same HUD. */
 type Hud = SurviveHud & Partial<DungeonHud>;
 type RunEnd = SurviveEnd & Partial<DungeonEnd>;
 type RunHandle = SurviveHandle & { ability?: () => void; dodge?: () => void; skipFloor?: () => void; skipToWarden?: () => void; pickRelic?: (id: RelicId) => void; cycleTheme?: () => string };
@@ -35,7 +37,7 @@ type RunHandle = SurviveHandle & { ability?: () => void; dodge?: () => void; ski
 /** The Warden's name at the start of a line. */
 const WARDEN_NAME = WARDEN.name.replace(/^the/, 'The');
 
-export const isDungeon = (zone: Zone) => zone.id === 0;
+export const isDungeon = (zone: Zone) => zone.id < ZONES.length;
 
 /** The dungeon boss sheets for a zone (by id: 1 the Mirror, 2 the Knight, 3 the Plateau, 4 the
     Hollow, 5 the Summit). Only the run's own boss is drawn: they're big and there are many. */
@@ -61,8 +63,24 @@ function bossSheets(zoneId: number, hero: Pick<HeroOpts, 'gear' | 'classId' | 'l
       plateauBoss2Attack: sheetFor('plateauBoss', 'attack', { stage: 2 }),
     };
   if (zoneId === 4) return { hollowBoss: sheetFor('hollowBoss', 'idle'), hollowBossAttack: sheetFor('hollowBoss', 'attack'), hollowBossFade: sheetFor('hollowBossFade', 'idle') };
-  if (zoneId === 5) return { summitBoss: sheetFor('summitBoss', 'idle'), summitBossAttack: sheetFor('summitBoss', 'attack') };
+  if (zoneId === 5)
+    return {
+      summitBoss: sheetFor('summitBoss', 'idle'),
+      summitBossAttack: sheetFor('summitBoss', 'attack'),
+      wanderer: sheetFor('wanderer', 'idle'),
+      mira: sheetFor('mira', 'idle'),
+      vela: sheetFor('vela', 'idle'),
+    };
   return {};
+}
+
+/** The boss's lines with the player's own words filled in; a line left empty (no words for it) is dropped. */
+function bossLines(zone: Zone, state: GameState): FogLines {
+  const words = storyWords(state),
+    say = (t: string) => fill(t, words),
+    some = (t: string) => /[a-z]/i.test(t);
+  const { enter, stages, end, taunts } = zone.lines;
+  return { enter: say(enter), stages: stages.map(say), end: say(end), taunts: taunts.map(say).filter(some) };
 }
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -139,7 +157,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
     el.addEventListener('pointerdown', moved, { once: true });
     (dungeon ? import('@/game/dungeon/scene') : import('@/game/run')).then(({ startRun }) => {
       if (cancelled) return;
-      run.current = startRun(el, { zone, power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast' }, {
+      run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast' }, {
         hud: setHud,
         floor: (n: number) => {
           setFloorShown(n);
@@ -221,9 +239,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
             </div>
             <div className="w-16 text-right">
               <p className={`font-pixel text-[11px] ${hud.boss ? 'text-red-400' : 'text-slate-100'}`}>
-                {hud.boss ? 'BOSS' : hud.floor ? `${hud.floor}/${hud.floors}` : clock(left)}
+                {hud.climb != null ? 'CLIMB' : hud.boss ? 'BOSS' : hud.floor ? `${hud.floor}/${hud.floors}` : clock(left)}
               </p>
-              <p className="mt-1 font-mono text-[10px] text-slate-400">{hud.floor && !hud.boss ? `room ${hud.room}/${hud.rooms}` : `${hud.kills} down`}</p>
+              <p className="mt-1 font-mono text-[10px] text-slate-400">{hud.climb != null ? `ledge ${hud.climb + 1}` : hud.floor && !hud.boss ? `room ${hud.room}/${hud.rooms}` : `${hud.kills} down`}</p>
             </div>
             <button
               aria-label="Pause"
@@ -236,7 +254,13 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
               <Pause size={16} />
             </button>
           </div>
-          {hud.boss && <BossBar name={`${zone.bossName}${zone.boss === 'knight' ? ` · ${Math.ceil(hud.boss.hp)} plates` : ''}`} hp={hud.boss.hp} max={hud.boss.max} />}
+          {hud.boss && (
+            <BossBar
+              name={`${zone.bossName}${zone.boss === 'knight' ? ` · ${Math.ceil(hud.boss.hp)} plates` : hud.boss.label ? ` · ${hud.boss.label}` : ''}`}
+              hp={hud.boss.hp}
+              max={hud.boss.max}
+            />
+          )}
           {hud.warden && <BossBar name={WARDEN_NAME} hp={hud.warden.hp} max={hud.warden.max} ember={hud.warden.phase === 2 ? 'hot' : 'warm'} />}
         </div>
       )}
@@ -274,12 +298,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
 
       {boss && !offer && (
         <div className="pointer-events-none absolute inset-x-6 top-28 rounded-2xl bg-ink-950/85 p-4 text-center ring-1 ring-violet-500/50">
-          <p className="font-pixel text-xs leading-relaxed text-violet-300">{zone.bossName} walks out of the Fog</p>
-          {zone.boss === 'hollow' && state.profile.voice ? (
-            <p className="mt-2 text-sm italic text-slate-200">&ldquo;{state.profile.voice}&rdquo;</p>
-          ) : (
-            <p className="mt-2 text-sm text-slate-200">{zone.hint}</p>
-          )}
+          <p className="font-pixel text-xs leading-relaxed text-violet-300">{zone.boss === 'summit' ? 'The climb begins' : `${zone.bossName} walks out of the Fog`}</p>
+          {zone.boss === 'hollow' && state.profile.voice && <p className="mt-2 text-sm italic text-slate-200">&ldquo;{state.profile.voice}&rdquo;</p>}
+          <p className="mt-2 text-sm text-slate-200">{zone.hint}</p>
         </div>
       )}
 
@@ -586,6 +607,7 @@ function Results({ state, zone, end, broken, onAgain, onLeave }: { state: GameSt
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/90 px-6 text-center">
       <p className={`font-pixel text-sm ${end.won ? 'text-gold-300' : 'text-slate-300'}`}>{end.won ? `${zone.name} cleared!` : 'The Fog took you'}</p>
+      {end.height != null && <p className="mt-2 font-pixel text-[10px] text-sky-300">{end.height === 0 ? 'The first ledge waits for you.' : `You climbed ${end.height} ledge${end.height === 1 ? '' : 's'} high.`}</p>}
       <p className="mt-3 text-sm text-slate-300">{end.won ? <>The Wanderer: &ldquo;{zone.after}&rdquo;</> : end.floor ? 'The dungeon starts over from the top. Losing here costs nothing: come back stronger.' : 'Losing here costs nothing. Come back stronger.'}</p>
       {end.won && (
         <div className="mt-4 w-full max-w-xs rounded-xl bg-ink-800 p-3 text-left ring-1 ring-gold-400/30">

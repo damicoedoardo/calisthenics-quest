@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { powerOf, ZONES } from '@/lib/fog';
 import { initialState } from '@/lib/game';
 import { botInput, playRun } from './bot';
-import { createRun, DODGE, isBossRoom, isWardenRoom, pickRelic, skipToBoss, skipToWarden, stepRun, takeEvents, wardenFloor } from './engine';
+import { createRun, DODGE, isBossRoom, isWardenRoom, LIGHT, pickRelic, skipToBoss, skipToWarden, SPLIT, stepRun, takeEvents, wardenFloor } from './engine';
 
 describe('dungeon', () => {
   const power = powerOf(initialState(), new Date());
@@ -142,5 +142,82 @@ describe('dungeon', () => {
       run.events.length = 0;
     }
     expect(run.cleared).toBe(true);
+  });
+
+  const still = { x: 0, y: 0, ability: false };
+  const tough = { ...power, armor: 0.95, strike: 20 };
+
+  it('the Mirror splits into images that never shoot; hitting one hurts you and shatters it', () => {
+    const run = createRun({ ...setup, zone: ZONES[1], power: { ...power, armor: 0.95 }, seed: 4 });
+    skipToBoss(run);
+    while (run.t < 1.3 + SPLIT.first + 0.1) stepRun(run, still);
+    const images = run.foes.filter((f) => f.alive && f.kind === 'image');
+    expect(images).toHaveLength(2);
+    expect(images.every((f) => f.def.shoots.length === 0)).toBe(true);
+    // Stand right on an image: the attack aims at it, and it costs you.
+    const hp = run.hp,
+      im = images[0];
+    run.hero.x = im.x;
+    run.hero.y = im.y + 30;
+    for (let i = 0; i < 90 && im.alive; i++) stepRun(run, still);
+    expect(im.alive).toBe(false);
+    expect(takeEvents(run).some((e) => e.type === 'hurt' && e.by === 'image')).toBe(true);
+    expect(run.hp).toBeLessThan(hp);
+  });
+
+  it("the Hollow can't be hurt; standing in its open light long enough takes its hand", () => {
+    const run = createRun({ ...setup, zone: ZONES[4], power: tough, seed: 2 });
+    skipToBoss(run);
+    while (!run.boss) stepRun(run, still);
+    const b = run.boss;
+    // Dark: hits do nothing to it.
+    for (let i = 0; i < 120; i++) stepRun(run, still);
+    expect(b.hp).toBe(b.maxHp);
+    expect(b.phase).toBe(1);
+    // Lit: walk in and stay.
+    while (b.phase !== 2) stepRun(run, still);
+    for (let i = 0; i < (LIGHT.hold + 0.5) * 60 && !run.over; i++) {
+      run.hero.x = b.x;
+      run.hero.y = b.y + 20;
+      stepRun(run, still);
+    }
+    expect(run.over).toMatchObject({ won: true, why: 'boss' });
+  });
+
+  it('the Summit is a climb with no boss: a ledge climbed is a win, scored by height', () => {
+    const run = createRun({ ...setup, zone: ZONES[5], power: tough, seed: 6, autoPick: true });
+    skipToBoss(run);
+    expect(run.climb).toBe(0);
+    expect(run.boss).toBeNull();
+    expect(run.allies.map((a) => a.kind)).toEqual(['wanderer', 'mira', 'vela']);
+    run.hp = run.maxHp = 100000;
+    while (!run.over && (run.climb ?? 0) < 2) {
+      stepRun(run, botInput(run));
+      run.events.length = 0;
+    }
+    expect(run.climb).toBe(2);
+    run.hp = 0.1;
+    run.hurtUntil = 0;
+    run.ghostUntil = 0;
+    run.relics = {};
+    while (!run.over) {
+      stepRun(run, still);
+      run.events.length = 0;
+    }
+    expect(run.over).toMatchObject({ won: true, height: 2 });
+  });
+
+  it('the bot plays every boss', () => {
+    for (const z of [1, 2, 3, 4]) {
+      const run = createRun({ ...setup, zone: ZONES[z], classId: 'archer', power: tough, seed: 8, autoPick: true });
+      skipToBoss(run);
+      // Plenty of HP (but not on the lake, where hitting a copy costs a share of it).
+      if (z !== 1) run.hp = run.maxHp = 100000;
+      while (!run.over) {
+        stepRun(run, botInput(run));
+        run.events.length = 0;
+      }
+      expect(run.over, ZONES[z].boss).toMatchObject({ won: true, why: 'boss' });
+    }
   });
 });

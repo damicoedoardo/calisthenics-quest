@@ -1,5 +1,5 @@
 import { attackOf, clamp, RANGE } from '../rules';
-import { BARREL, CHARGE, createRun, inRect, spikeState, stepRun, TOMORROW_REACH, type Input, type Rect, type RoomKind, type Run, type RunEnd, type RunSetup } from './engine';
+import { BARREL, CHARGE, createRun, LIGHT, zoneDungeon, inRect, spikeState, stepRun, TOMORROW_REACH, type Input, type Rect, type RoomKind, type Run, type RunEnd, type RunSetup } from './engine';
 
 /* The bot: a steady, careful player, not a great one. It sidesteps shots on course to hit it,
    keeps its class's distance from monsters (a sword goes close, the rest stay back), plays each
@@ -66,13 +66,15 @@ export function botInput(run: Run): Input {
     // Something about to land that a step won't beat: worth the dodge.
     imminent = false;
 
-  // Shots on course to hit within SEE seconds: step off their line.
+  // Shots on course to hit within SEE seconds: step off their line. In the fog, only the ones
+  // close enough to see.
+  const see = Math.min(220, zoneDungeon(run.setup.zone).sight ?? 220);
   for (const b of run.bullets) {
     if (now - b.born < REACTION || !noticed(b.id)) continue;
     const rx = h.x - b.x,
       ry = h.y - b.y,
       v2 = b.vx * b.vx + b.vy * b.vy;
-    if (rx * rx + ry * ry > 220 * 220 || !v2) continue;
+    if (rx * rx + ry * ry > see * see || !v2) continue;
     const tc = (rx * b.vx + ry * b.vy) / v2;
     if (tc < 0 || tc > SEE) continue;
     const cx = b.x + b.vx * tc - h.x,
@@ -182,9 +184,12 @@ export function botInput(run: Run): Input {
         y += (my / md) * 1.5;
       }
     }
-    const touch = f.def.r + 10 + ((melee || stuck) && f.kind !== 'reflection' ? 6 : 40);
-    if (d < touch + 40) {
-      const w = ((f.kind === 'reflection' ? 3 : 1.5) * (touch + 40 - d)) / 40;
+    // Copies of you and of the Mirror: hitting one hurts you, so give them room. (The Hollow
+    // doesn't hurt to touch.)
+    const you = f.kind === 'reflection' || f.kind === 'image',
+      touch = f.def.r + 10 + ((melee || stuck) && !you ? 6 : 40);
+    if (d < touch + 40 && f.def.dmg > 0) {
+      const w = ((you ? 3 : 1.5) * (touch + 40 - d)) / 40;
       x += (dx / d) * w;
       y += (dy / d) * w;
     }
@@ -200,15 +205,22 @@ export function botInput(run: Run): Input {
     y += (dy / d) * 1.4;
   } else if (goal) {
     const rule = run.setup.zone.boss,
+      lit = !!b && rule === 'hollow' && b.phase === 2,
       want = b
-        ? melee || attackOf(run.setup.classId) === 'wave'
+        ? rule === 'hollow'
+          ? // Inside its light while it's open, near the middle; out of reach while it's dark.
+            lit
+            ? LIGHT.r * 0.45
+            : 160
+          : melee || attackOf(run.setup.classId) === 'wave'
           ? 60
           : rule === 'tomorrow'
             ? TOMORROW_REACH - 60
             : rule === 'knight'
               ? 110
               : rule === 'mirror'
-                ? 120
+                ? // Close enough that the real one, not an image, is the nearest to aim at.
+                  90
                 : 170
         : melee || stuck
           ? 40
@@ -218,7 +230,8 @@ export function botInput(run: Run): Input {
       dx = goal.x - h.x,
       dy = goal.y - h.y,
       d = Math.hypot(dx, dy) || 1,
-      pull = clamp((d - want) / 80, -1, 1) * (danger > 1 ? 0.3 : 1);
+      // The Hollow's light is the whole fight: stay in it even with shots around.
+      pull = lit ? clamp((d - want) / 30, -1, 1) * 1.6 : clamp((d - want) / 80, -1, 1) * (danger > 1 ? 0.3 : 1);
     // Close in or back off, and circle a little so shots aimed at you miss.
     x += (dx / d) * pull - (dy / d) * 0.35;
     y += (dy / d) * pull + (dx / d) * 0.35;

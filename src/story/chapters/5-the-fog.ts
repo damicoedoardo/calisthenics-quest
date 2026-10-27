@@ -18,11 +18,11 @@ export const THE_FOG: Chapter = {
   fog: {
     name: 'The Hollow Woods',
     boss: 'hollow',
-    hint: 'The Hollow walks out of the fog, speaking your own line.',
+    hint: "It can't be beaten. When its light opens, stand in it, and take its hand.",
     after: 'Nobody destroys it. You walked up to it anyway.',
     keepsake: { name: 'The Voice Stone', text: "Your Hollow's line, carved small enough to carry." },
-    hp: 6,
-    dmg: 2,
+    hp: 2.2,
+    dmg: 3.1,
     ground: '#111a17',
     fog: '#1f3b33',
     // stages: [its light opens, its light goes dark]
