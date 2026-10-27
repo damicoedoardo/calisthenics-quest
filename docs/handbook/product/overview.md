@@ -19,7 +19,7 @@ optional and shows only once FORMA's own server is set up.
 **Training earns, play spends.** A workout always "wins": it gives XP, raises the next targets,
 moves the story on and makes the hero really stronger. The Fog (the Play tab) is a short action
 game where you can lose, played with the phone held sideways, exploring a dungeon floor by floor; what you bring into it is what your
-training gave you. Gear comes from the dungeon and needs stat points to wear; dying in a run loses what you wore and carried, never points, level or story, and a vault at home keeps items safe. Between runs, on the Play tab, your flame keeps one item through a fall if you trained lately, and Mira's forge spends embers from workouts to upgrade and reroll what you found.
+training gave you. Gear comes from the dungeon, each item with its own art (legendaries glow), shows on your hero as you wear it, and needs stat points to wear; dying in a run loses what you wore and carried, never points, level or story, and a vault at home keeps items safe. Between runs, on the Play tab, your flame keeps one item through a fall if you trained lately, and Mira's forge spends embers from workouts to upgrade and reroll what you found.
 
 ## The four tabs
 

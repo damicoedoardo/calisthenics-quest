@@ -35,8 +35,12 @@ characters/pixel.ts   text-row art: paintRows (one character per pixel) and shif
 characters/icons.ts   app icons as text rows: the six keepsakes (Hero tab, sprite `keepsake`) and
                       what a day held in the Book of Days (sprite `dayIcon`), the dungeon's
                       relics (`relicIcon`), the ability and Dodge buttons (`abilityIcon`), the run's
-                      level-up skills (`skillIcon`), the floor track's Warden and boss (`markIcon`), and
-                      the Fog's items, by `ItemIcon` (`itemIcon`, also drawn on the floor by the scene)
+                      level-up skills (`skillIcon`), and the floor track's Warden and boss (`markIcon`)
+characters/items.ts   the Fog's items (sprite `item`, opts `ItemLook` { art, rarity, seed }): one 24x24
+                      text-row drawing per kind (`ITEM_ROWS`: sword, bow, staff, wand, heavy, light, robe,
+                      ring, amulet, token, band) and one of its own for each kind's legendary
+                      (`LEGEND_ROWS`), on a 32x32 frame; `itemColors` picks the colors from rarity
+                      and seed (also drawn on the floor by the scene, and worn by the hero)
 characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look, kit }): you
                       doing each exercise of the program (hand-posed), one rep per loop of the
                       16-frame `rep` clip, or one of the exercise library's movements from moves.ts
@@ -67,6 +71,10 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Change the classic face | `EYE_PATTERN` and `FACE` in `engine/figure.ts` |
 | Redraw a weapon | `parts/weapons.ts` |
 | Change armor tiers, capes, shields | `heroSpec` layers in `characters/hero.ts` |
+| Redraw a Fog item, or a legendary | its rows in `ITEM_ROWS` or `LEGEND_ROWS` (`characters/items.ts`); the letters are listed at the top of the file |
+| Change an item rarity's colors, the dyes and gems a seed picks, or the legendaries' looks | `METAL`, `LEATHER`, `CLOTH`, `GEMS`, `TRIM`, `ACCENTS`, `THEMES` and `itemColors` in `characters/items.ts` |
+| Change a rare's shine or a legendary's glow and sparkles | `drawItem` in `characters/items.ts` (the `hover` clip, 8 frames; frame 0 is the still) |
+| Change how the hero wears an item (plate, jerkin, robe, the charm, a legendary's mantle) | `itemOutfit` and `heroSpec` in `characters/hero.ts`; the weapon's trim, gem and legendary light are the `WeaponLook` in `parts/weapons.ts` |
 | Redraw Mira, Ember, the Book or a chapter enemy | its file in `characters/` (`mira.ts`, `ember.ts`, `book.ts`, `tomorrow.ts`, `mirror.ts`, `plateau.ts`, `summit.ts`) |
 | Change how Lia, Sol or Vela look once you've helped them | `LIA_AFTER`, `SOL_AFTER` in `characters/villagers.ts`, `VELA_AFTER` in `vela.ts`; drawn with `{ after: true }`, and in the story by the cast ids `lia-after`, `sol-after`, `vela-after` |
 | Redraw old Vela (hair, softer eyes, shawl, lamp, cane) | `characters/vela.ts`: her lamp raise is the `raise` clip in `clips.ts` |
@@ -116,6 +124,26 @@ steps, so the hero walks on the ground instead of floating.
 Creatures (Ember, the Book, the enemies) read the same frames their own way: `hover` is an
 eight-frame float where `bob` is the breath, and `lunge` is their attack, a wind-up
 (`right: 'up'`) and then the hit (`fx: 'impact'`).
+
+### Fog items
+
+Each item kind is one hand-drawn text-row drawing; the letters are roles, not colors (`D M L W` the
+material, `h H j` the grip, `t T U` trim, `g G E` gem, `a A B` accent, `f F X` glow, `k` dark).
+`itemColors` turns an `ItemLook` into colors: common is plain iron, wood and bronze with a grey
+stone; magic is blue steel and a sapphire; rare is bright steel and gold, with a gem, a dye (leather
+and cloth) and an accent picked by the seed; a legendary has its own drawing and one of five
+looks (`THEMES`: sunfire, frost, void, ember, verdant). The seed also picks a plate's chest emblem.
+Rares shine (a band of light sweeps across), legendaries glow, shine and sparkle. The seed is
+`seedOf(name)` (`src/game/dungeon/items.ts`, `looksOf`), so every item with one name looks the same.
+
+The hero wears them: a worn item's `Gear.item` (set by `gearOf`) makes `heroSpec` draw that
+item instead of the slot's tier look. Plate gets a breastplate, pauldrons, tassets and the emblem;
+a jerkin is laced with a strap and buckle; a robe has a cowl, a sash and a skirt to the ankles. Rare
+and legendary add trim; a legendary armor adds a mantle (a plate's pauldrons rise to points, a
+robe has twinkling stars), a legendary weapon burns along the blade (the bow's string, the staff's
+orb, the wand's star) and any legendary gives the hero an aura in its glow. The charm hangs on a cord
+at the chest and colors the shield's or orb's gem. Slots without an item draw as before, so the
+tier fingerprints don't move.
 
 The hero is drawn with the player's look (body, hair, hair color, skin), which `<LookProvider>`
 hands to every `<Hero />` on screen, so the Echo, the Best Self and the Hollow match the player.
