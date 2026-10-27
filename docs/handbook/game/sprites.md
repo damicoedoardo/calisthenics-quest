@@ -35,7 +35,8 @@ characters/pixel.ts   text-row art: paintRows (one character per pixel) and shif
 characters/icons.ts   app icons as text rows: the six keepsakes (Hero tab, sprite `keepsake`) and
                       what a day held in the Book of Days (sprite `dayIcon`), the dungeon's
                       relics (`relicIcon`), the ability and Dodge buttons (`abilityIcon`), the run's
-                      level-up skills (`skillIcon`) and the floor track's Warden and boss (`markIcon`)
+                      level-up skills (`skillIcon`), the floor track's Warden and boss (`markIcon`), and
+                      the Fog's items, by `ItemIcon` (`itemIcon`, also drawn on the floor by the scene)
 characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look, kit }): you
                       doing each exercise of the program (hand-posed), one rep per loop of the
                       16-frame `rep` clip, or one of the exercise library's movements from moves.ts
@@ -105,6 +106,10 @@ swing: { ms: 120, loop: false, frames: [{}, { right: 'up' }, { right: 'fwd', fx:
 Any number of frames works: the sheet is as wide as the clip, and the CSS animation's step count
 and duration come from the clip. Looping clips (idle) repeat; the others play once and fire
 `onEnd`.
+
+The hero's `walk` clip (played in a run while you move, sheet `heroWalk`) lifts one foot, then the
+other (`step`: the lifted leg is drawn shorter, its boot higher), with a one-pixel dip between
+steps, so the hero walks on the ground instead of floating.
 
 Creatures (Ember, the Book, the enemies) read the same frames their own way: `hover` is an
 eight-frame float where `bob` is the breath, and `lunge` is their attack, a wind-up

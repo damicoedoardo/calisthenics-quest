@@ -38,16 +38,19 @@ if (!isMainThread) {
   delete dials.attention;
   Object.assign(DIALS, dials);
   const { ZONES, powerOf } = await import(`${root}src/lib/fog.ts`);
+  const { buildOf } = await import(`${root}src/lib/stats.ts`);
   const now = Date.now();
   parentPort.on('message', (job) => {
     const state = JSON.parse(readFileSync(job.file, 'utf8'));
     const power = powerOf(shift(state, now), new Date(now));
+    // Every run starts in the starter kit (as after a death); the bot wears what drops if its points allow.
+    const build = buildOf(state);
     const z = ZONES[job.zone];
     const zone = { ...z, hp: z.hp * job.scale, dmg: z.dmg * job.scale };
     const out = [];
     for (let i = 0; i < job.runs; i++) {
       const seed = job.seed + i * 7919;
-      out.push({ ...playRun({ zone, power, classId: job.cls, seed }), seed });
+      out.push({ ...playRun({ zone, power, classId: job.cls, seed, build }), seed });
     }
     parentPort.postMessage(out);
   });

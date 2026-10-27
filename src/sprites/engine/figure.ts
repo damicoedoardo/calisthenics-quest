@@ -105,6 +105,8 @@ export interface Pose {
   fx: Fx | null;
   /** Upper-body drop in sprite pixels. */
   bob: number;
+  /** The foot off the ground mid-step (-1 left, 1 right), or 0. */
+  step: number;
   /** Where a drawn bow string ends (x), or null. */
   drawX: number | null;
   /** Arm rects and hand positions in sprite pixels, bob included. */
@@ -130,6 +132,7 @@ export function poseFor(frame: ClipFrame, stance: ClipFrame, look: Look, f: numb
     left,
     fx: fr.fx ?? null,
     bob: bob * 2,
+    step: fr.step ?? 0,
     drawX: draw != null ? (lhx + draw) * 2 : null,
     arms: { R: up2(RIGHT_ARM[right](RS, lhx + (draw ?? 0))), L: up2(LEFT_ARM[left](LS)) },
   };
@@ -190,14 +193,16 @@ function body32(P: Pose, look: Look, legsRamp: Ramp | undefined, withHead: boole
     L = legsRamp || R.navy,
     Bt = R.leather,
     { legs, boots } = BODY;
-  legs.x.forEach((x) => {
-    l.r(x, legs.y, legs.w, legs.h, L[1]);
-    l.r(x + legs.w - 1, legs.y, 1, legs.h, L[0]);
+  // Mid-step, the lifted leg's knee bends: it shows shorter and its boot rides 2 px up.
+  const up = (i: number) => (P.step === (i === 0 ? -1 : 1) ? 2 : 0);
+  legs.x.forEach((x, i) => {
+    l.r(x, legs.y, legs.w, legs.h - up(i), L[1]);
+    l.r(x + legs.w - 1, legs.y, 1, legs.h - up(i), L[0]);
   });
-  l.r(legs.x[0], legs.y, 1, legs.h, L[2]);
-  boots.x.forEach((x) => {
-    l.r(x, boots.y, boots.w, boots.h, Bt[1]);
-    l.row(boots.y, x, x + boots.w - 1, Bt[2]);
+  l.r(legs.x[0], legs.y, 1, legs.h - up(0), L[2]);
+  boots.x.forEach((x, i) => {
+    l.r(x, boots.y - up(i), boots.w, boots.h, Bt[1]);
+    l.row(boots.y - up(i), x, x + boots.w - 1, Bt[2]);
   });
   BODY.torso[look.sex].forEach(([x, y, w, h]) => u.r(x, y, w, h, R.cloth[1]));
   (['L', 'R'] as const).forEach((s) => {

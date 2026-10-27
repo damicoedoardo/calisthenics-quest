@@ -5,7 +5,7 @@ import type { Sheet } from '@/sprites/registry';
 /* The Fog's shared numbers and sprite sheet names, as plain data and math with no Phaser: the dungeon engine
    (dungeon/engine.ts) and its scene read them. */
 
-export type SheetKey = 'hero' | 'heroAttack' | 'ember' | 'hollow' | 'slime' | 'wisp' | 'mirror' | 'golem' | 'knight' | 'echo' | 'book' | 'summit'
+export type SheetKey = 'hero' | 'heroAttack' | 'heroWalk' | 'ember' | 'hollow' | 'slime' | 'wisp' | 'mirror' | 'golem' | 'knight' | 'echo' | 'book' | 'summit'
   // the dungeon's own monsters
   | 'ram' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade'
   // the Splitter splitting (played once), and the mid-boss

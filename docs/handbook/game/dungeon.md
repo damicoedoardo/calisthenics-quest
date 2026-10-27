@@ -11,6 +11,8 @@ Code: `src/game/dungeon/`. File names below without a folder are in it. The rule
 (zones opening, power from training, records) are in [fog.md](fog.md).
 
 ```
+items.ts            the things you wear, as data: slots, rarity, bonuses, class weapons and armor,
+                    names, requirements, and the pure rolls (rollRarity, rollItem)
 content.ts          what a dungeon is made of, as data: ground, rooms, chest items, monsters and how they
                     shoot, each zone's dungeon and mid-boss, the bosses, the classes' abilities
 engine.ts           plays it: a pure step function (60 a second, seeded), no Phaser
@@ -39,6 +41,10 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change how a floor is laid out (how many rooms, branches, shortcuts) | `LAYOUT` and `ROOM_ODDS` in `content.ts`, `makeFloor` in `engine.ts` |
 | Change the minimap | `FloorMap` in `src/components/FogRun.tsx` (it reads `Hud.map`, built by `miniMap` in `scene.ts`) |
 | Change where the bot goes on a floor | `route` in `bot.ts` |
+| Tune items (how strong, how much they ask, how rare) | `RARITY`, `RARITY_ODDS`, `BONUSES` and the base numbers in `rollItem` (`items.ts`) |
+| Change how often things drop, or the bag's size | `DROPS` and `BAG` in `engine.ts` (`kill`, `openChest`) |
+| Add an item kind or a class's weapon | `WEAPONS`, `ARMORS`, `ItemIcon` in `items.ts`; its icon in `ITEM_ICONS` (`src/sprites/characters/icons.ts`) |
+| Change the bag panel, the pickup note or the stairs card | `BagPanel` and the `stairs` card in `src/components/FogRun.tsx` |
 
 ## Floors and the map
 
@@ -54,10 +60,30 @@ A room's doors are in the middle of its walls, one for each room it joins (`Side
 for the map; the engine's top wall is east, its left wall north). They're shut while monsters
 stand. Walking back into a room you cleared finds it as you left it (`Cell.kept`), doors open and
 nothing to fight. Clearing the last room puts the stairs down in it (`run.stairs`); walking onto
-them goes down (`downStairs`). Cells are `seen` once you've stood next door to them, which is what
+them asks (`run.stairsAsk`, the run holds still): go deeper (`downStairs`, HP full), leave with
+what you carry (`takeStairs(run, 'leave')` ends the run with `why: 'left'`), or not yet. The bot
+always goes deeper. Cells are `seen` once you've stood next door to them, which is what
 the minimap shows. The bot explores (`route`): the nearest room it hasn't been in, a shrine when
 hurt, and the stairs once it has been in most of the floor.
 
+
+## Items and the bag
+
+Monsters (elites and golems more often), chests, the mid-boss and the boss drop items (`dropItem`,
+odds in `DROPS`): rolled by `newItem` for the zone, the floor and your class, rarer deeper down and
+from bigger foes. They lie on the floor (`run.loot`, kept with the room in `Cell.kept`); the scene
+draws each with its icon, its name in its rarity's color, and a beam over rare ones
+(`syncLoot`). Walking over one puts it in the bag (`run.gear.bag`, `BAG` slots), unless it's full.
+
+You wear three things: a weapon and armor made for your class, and a charm. A run starts in what
+the save says you wear (`RunSetup.worn`), the starter kit (`starterKit`) filling an empty weapon or
+armor slot. An item asks for stat points (`need`, checked against `RunSetup.build` by `shortOf`):
+weapons the class's own stat, armor Health, charms nothing. `wear`, `takeOff` and `dropFromBag`
+change gear mid-run (the page pauses while the bag is open); `applyGear` puts what you wear on top
+of your power from training (`run.base`). The run's end (`RunEnd.gear`) lists what you wore and
+carried, never the starter kit; `src/lib/fog-gear.ts` settles it into the save
+(see [fog.md](fog.md)). The bot wears what it picks up when it's better (`botWear`) and picks up
+loot once a room is clear.
 
 ## Sideways on screen
 

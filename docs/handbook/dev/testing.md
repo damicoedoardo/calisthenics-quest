@@ -31,7 +31,8 @@ Accept intended snapshot changes with `pnpm test -u`, and say in the PR why they
   TypeScript through `scripts/ts-hooks.mjs`, which also lets it import JSON the bundler way). `pnpm fog:tune steady 60` finds each zone's HP and damage for the target win rates. It fits
   the S curve of win rate against the zone's scale (a straight line in logit of the rate against
   ln of the scale) and usually lands in two or three measurements per zone, with all zones
-  searched at once. Every measurement plays the same seeds, so two scales compare fairly.
+  searched at once. Every measurement plays the same seeds, so two scales compare fairly. Each run
+  starts in the starter kit with the snapshot's points (`build`), so items the bot finds can be worn.
 - **Keeping the sims fast**: a run is ~20 game minutes at 60 steps a second, so the engine's
   per-step loops are the cost. Distance checks go through `closer` / `farther` in `engine.ts`
   (a box test, then the exact `Math.hypot`), and lists are only rebuilt when something leaves.

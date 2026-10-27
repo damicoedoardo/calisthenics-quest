@@ -3,6 +3,7 @@ import { equippedGear, type ClassId, type Gear } from './gear';
 import type { Build } from './stats';
 import type { Look } from '@/sprites/engine/figure';
 import type { FogProgress } from './fog';
+import type { FogGear } from './fog-gear';
 import type { AnswerId } from '@/story/types';
 
 export const XP_FULL_SESSION = 100;
@@ -111,6 +112,8 @@ export interface GameState {
   sceneMark?: { at: string; count: number };
   /** Runs in the Fog: zones cleared and best results. */
   fog?: FogProgress;
+  /** What you wear into the Fog, and the vault that keeps items safe (src/lib/fog-gear.ts). */
+  fogGear?: FogGear;
   /** What the player answered in the story: heart moments, villager stories. */
   answers?: Partial<Record<AnswerId, string>>;
   /** The Book of Days, oldest first. */

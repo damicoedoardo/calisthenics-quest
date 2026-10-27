@@ -60,6 +60,7 @@ function jobs(state: GameState, zone: Zone): Job[] {
   return [
     ['hero', () => sheetFor('hero', 'idle', hero)],
     ['heroAttack', () => sheetFor('hero', 'attack', hero)],
+    ['heroWalk', () => sheetFor('hero', 'walk', hero)],
     ['hollow', () => sheetFor('hero', 'idle', { ...hero, variant: 'hollow' })],
     ['echo', () => sheetFor('hero', 'idle', { ...hero, variant: 'echo' })],
     ...plain.map((id): Job => [id, () => sheetFor(id, 'idle')]),

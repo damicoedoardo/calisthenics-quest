@@ -194,6 +194,8 @@ exports[`sprite registry > art fingerprints 1`] = `
   "hollowBoss idle": "86151c3b50ed",
   "hollowBossFade attack": "0300312b43bc",
   "hollowBossFade idle": "0300312b43bc",
+  "itemIcon attack": "cb857f422c33",
+  "itemIcon idle": "cb857f422c33",
   "keepsake attack": "38807c1450be",
   "keepsake idle": "38807c1450be",
   "kid attack": "9e22ea3ce07d",

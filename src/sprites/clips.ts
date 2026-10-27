@@ -17,6 +17,8 @@ export interface ClipFrame {
   left?: ArmLeft;
   /** How far a bow string is drawn back, in body pixels. */
   draw?: number;
+  /** A foot off the ground mid-step: -1 the left, 1 the right. */
+  step?: -1 | 1;
   fx?: Fx;
 }
 
@@ -31,6 +33,8 @@ export interface Clip {
 export const CLIPS = {
   /** Breathing: the upper body dips for two frames. */
   idle: { ms: 200, loop: true, frames: [{}, {}, { bob: 1 }, { bob: 1 }] },
+  /** Walking: a foot lifts, it lands (the body sinks onto it), the other foot lifts, it lands. */
+  walk: { ms: 120, loop: true, frames: [{ step: 1 }, { bob: 1 }, { step: -1 }, { bob: 1 }] },
   /** Raise, cut forward with a slash arc, recover. */
   swing: { ms: 120, loop: false, frames: [{}, { right: 'up' }, { right: 'fwd', fx: 'slash' }, {}] },
   /** Draw the bow string back in three steps, release. */
@@ -75,6 +79,6 @@ export const CLIPS = {
 export type ClipId = keyof typeof CLIPS;
 
 /** What a sprite is doing. Each sprite maps these to its own clips (a warrior's attack is a swing). */
-export type SpriteAction = 'idle' | 'attack';
+export type SpriteAction = 'idle' | 'attack' | 'walk';
 
 export const clip = (id: ClipId): Clip => CLIPS[id];

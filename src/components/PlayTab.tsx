@@ -9,12 +9,14 @@ import { gearOf, type GameState } from '@/lib/game';
 import { FLAME_AT, ZONES, nextGrowth, powerOf, zoneStatus, type Zone } from '@/lib/fog';
 import { STATS, pointsFree } from '@/lib/stats';
 import { STAT_ICON } from './StatPoints';
+import { FogGearCard } from './FogGearCard';
 import { flameMood } from '@/story/daily';
 import { FLAME_STAGES, flameStage } from '@/story/flame';
 
 interface Props {
   state: GameState;
   onPlay: (zone: Zone) => void;
+  update: (fn: (s: GameState) => GameState) => void;
 }
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -48,7 +50,7 @@ function useWarmRun(state: GameState) {
   }, [id]);
 }
 
-export function PlayTab({ state, onPlay }: Props) {
+export function PlayTab({ state, onPlay, update }: Props) {
   useWarmRun(state);
   const now = new Date();
   const power = powerOf(state, now);
@@ -84,7 +86,7 @@ export function PlayTab({ state, onPlay }: Props) {
           <Ember size={stage.id === 'spark' ? 64 : 44} stage={stage.id} mood={flameMood(state, now)} />
           <div className="min-w-0 flex-1">
             <p className="font-pixel text-xs text-gold-300">The Fog</p>
-            <p className="mt-1 text-xs text-slate-400">Short runs between workouts. Losing costs nothing. Training makes you stronger and opens the road.</p>
+            <p className="mt-1 text-xs text-slate-400">Dungeon runs between workouts. Find gear down there; training lets you wear it, makes you stronger and opens the road.</p>
           </div>
         </div>
       </section>
@@ -119,6 +121,8 @@ export function PlayTab({ state, onPlay }: Props) {
             : 'Rest days count too: after a full day off, or a minute by the fire, runs start with one more free skill.'}
         </p>
       </section>
+
+      <FogGearCard state={state} update={update} />
 
       <section className="space-y-2">
         <p className="font-pixel text-[10px] text-slate-400">The road through the Fog</p>
