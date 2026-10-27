@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Pause } from 'lucide-react';
 import { gearOf, type GameState } from '@/lib/game';
+import { fill, storyWords } from '@/story/engine';
+import type { FogLines } from '@/story/types';
 import { getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, ZONES, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
 import { sheetFor } from '@/sprites/registry';
@@ -70,6 +72,15 @@ function bossSheets(zoneId: number, hero: Pick<HeroOpts, 'gear' | 'classId' | 'l
       vela: sheetFor('vela', 'idle'),
     };
   return {};
+}
+
+/** The boss's lines with the player's own words filled in; a line left empty (no words for it) is dropped. */
+function bossLines(zone: Zone, state: GameState): FogLines {
+  const words = storyWords(state),
+    say = (t: string) => fill(t, words),
+    some = (t: string) => /[a-z]/i.test(t);
+  const { enter, stages, end, taunts } = zone.lines;
+  return { enter: say(enter), stages: stages.map(say), end: say(end), taunts: taunts.map(say).filter(some) };
 }
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -146,7 +157,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
     el.addEventListener('pointerdown', moved, { once: true });
     (dungeon ? import('@/game/dungeon/scene') : import('@/game/run')).then(({ startRun }) => {
       if (cancelled) return;
-      run.current = startRun(el, { zone, power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast' }, {
+      run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast' }, {
         hud: setHud,
         floor: (n: number) => {
           setFloorShown(n);

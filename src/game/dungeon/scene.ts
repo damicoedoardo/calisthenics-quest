@@ -4,7 +4,7 @@ import { xpToNext, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import { music, type SfxId } from '@/lib/music';
 import type { Sheet } from '@/sprites/registry';
 import { BOSSES as BOSS_LOOKS, FOES as FOE_LOOKS, type BossSheetKey, type SheetKey, type Sheets, type Stats } from '../rules';
-import type { FogBoss } from '@/story/types';
+import type { FogBoss, FogLines } from '@/story/types';
 import { R } from '@/sprites/palette';
 import { botInput } from './bot';
 import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, type Prop } from './props';
@@ -77,6 +77,8 @@ function buzz(pattern: number | number[]) {
 
 export interface RunSetup {
   zone: Zone;
+  /** What the boss says (its chapter's lines, the player's words already filled in). */
+  lines?: FogLines;
   power: Power;
   classId: ClassId | undefined;
   sheets: Sheets;
@@ -192,6 +194,8 @@ const DOOR_LOOK: Record<RoomKind, { label: string; color: number }> = {
 /** Each kind of monster shot has its own color, so you learn what it will do. */
 const SHOT_TEX: Record<ShotStyle, string> = { plain: 'bullet', homing: 'bullet-homing', bounce: 'bullet-bounce', ramp: 'bullet-ramp', wiggle: 'bullet-page' };
 const hex = (c: string) => Phaser.Display.Color.HexStringToColor(c).color;
+/** A bubble's middle, kept far enough in from the walls that it fits. */
+const clampX = (x: number, w: number) => Math.min(w - 105, Math.max(105, x));
 
 class DungeonScene extends Phaser.Scene {
   run: Run;
@@ -231,6 +235,13 @@ class DungeonScene extends Phaser.Scene {
   private puffs!: Phaser.GameObjects.Particles.ParticleEmitter;
   private numbers: Phaser.GameObjects.Text[] = [];
   private bossLabel: Phaser.GameObjects.Text | null = null;
+  /** The boss's speech bubble, until `speechUntil`; the next taunt comes at `tauntAt`. */
+  private speech!: Phaser.GameObjects.Text;
+  private speechUntil = 0;
+  private tauntAt = 0;
+  private taunt = 0;
+  /** The boss's stage of its art, for its stage lines. */
+  private stage = 0;
   private keys: Record<'up' | 'down' | 'left' | 'right' | 'w' | 'a' | 's' | 'd' | 'space' | 'shift', Phaser.Input.Keyboard.Key> | null = null;
   private stick: { id: number; x: number; y: number; dx: number; dy: number } | null = null;
   private fading: { draw: (g: Phaser.GameObjects.Graphics, p: number) => void; start: number; ms: number }[] = [];
@@ -331,6 +342,11 @@ class DungeonScene extends Phaser.Scene {
           .setVisible(false),
       );
     }
+    this.speech = this.add
+      .text(0, 0, '', { fontFamily: '"Press Start 2P", monospace', fontSize: '8px', color: '#fef2f2', backgroundColor: '#0b0d14d9', padding: { x: 6, y: 5 }, align: 'center', wordWrap: { width: 190 }, lineSpacing: 4 })
+      .setOrigin(0.5, 1)
+      .setDepth(160000)
+      .setVisible(false);
     this.pad = this.add.graphics().setScrollFactor(0).setDepth(300000);
     this.vignette = this.add.image(0, 0, 'vignette').setScrollFactor(0).setDepth(250000).setVisible(false);
     this.cameras.main.startFollow(this.hero, true, 0.14, 0.14);
@@ -794,6 +810,11 @@ class DungeonScene extends Phaser.Scene {
     }
     if (run.over && !this.ended) {
       this.ended = true;
+      // The boss's last words: beaten, at peace, or the mountain still above you.
+      if (run.over.won || run.climb !== null) {
+        this.speak(this.setup.lines?.end, 3000);
+        this.syncSpeech();
+      }
       this.bus.hud(this.hud());
       if (run.over.won) this.cameras.main.flash(600, 255, 240, 200);
       else this.hero.setTint(0x6b7280);
@@ -819,6 +840,32 @@ class DungeonScene extends Phaser.Scene {
       y = (k.down.isDown || k.s.isDown ? 1 : 0) - (k.up.isDown || k.w.isDown ? 1 : 0);
     }
     return { x, y };
+  }
+
+  /** The boss says something: a bubble over it for a few seconds. Empty lines are skipped. */
+  private speak(text: string | undefined, ms = 2800) {
+    if (!text?.trim()) return;
+    this.speech.setText(text).setVisible(true);
+    this.speechUntil = this.time.now + ms;
+    this.tauntAt = Math.max(this.tauntAt, this.time.now + ms + 9000);
+  }
+
+  /** Keeps the bubble over whoever speaks, and lets the boss taunt now and then mid-fight. */
+  private syncSpeech() {
+    const r = this.run,
+      now = this.time.now,
+      who = r.boss?.alive ? r.boss : r.climb !== null && this.summit ? this.summit : null;
+    if (who && now >= this.tauntAt && !r.over && this.setup.lines?.taunts.length) {
+      const t = this.setup.lines.taunts;
+      this.speak(t[this.taunt++ % t.length]);
+      this.tauntAt = now + 13000;
+    }
+    if (now >= this.speechUntil || !who) {
+      if (now >= this.speechUntil) this.speech.setVisible(false);
+      if (!who) return;
+    }
+    const top = who === this.summit ? this.summit.y + 80 : who.y - 32 * (this.foes.get(r.boss?.id ?? -1)?.base ?? 1) - 6;
+    this.speech.setPosition(clampX(who.x, this.run.area.w), Math.max(ROOM.wall + 24, top));
   }
 
   /** A boss's look right now (or a Mirror image's, which looks just like it): its zone's art in the
@@ -929,6 +976,11 @@ class DungeonScene extends Phaser.Scene {
       // A boss changes as its fight goes: the Knight's plates fall, the Plateau cracks.
       if (f === r.boss) {
         const look = this.bossLook(f);
+        const stage = bossStage(this.setup.zone.boss, f);
+        if (stage > this.stage) {
+          this.stage = stage;
+          this.speak(this.setup.lines?.stages[stage - 1]);
+        }
         if (look.tex !== e.tex) {
           e.tex = look.tex;
           e.base = look.scale;
@@ -965,6 +1017,7 @@ class DungeonScene extends Phaser.Scene {
         e.s.destroy();
         this.foes.delete(id);
       }
+    this.syncSpeech();
     if (this.bossLabel && r.boss) {
       this.bossLabel.setPosition(r.boss.x, r.boss.y - 34 * BOSS_LOOKS[this.setup.zone.boss].scale);
       if (this.setup.zone.boss === 'tomorrow') {
@@ -1146,6 +1199,9 @@ class DungeonScene extends Phaser.Scene {
         this.sparks.explode(e.boss ? 3 : 1, e.x, e.y);
         if (e.boss && this.run.boss && e.x === this.run.boss.x && e.y === this.run.boss.y) this.bossAttack();
         break;
+      case 'split':
+        this.speak(this.setup.lines?.stages[0]);
+        break;
       case 'crack': {
         // The Plateau cracks: stone chips and a dull knock, and nothing else changes.
         const { x, y } = e;
@@ -1168,6 +1224,7 @@ class DungeonScene extends Phaser.Scene {
       }
       case 'light': {
         const { x, y } = e;
+        this.speak(this.setup.lines?.stages[e.on ? 0 : 1]);
         if (e.on) {
           this.sfx('nova', 0.8);
           this.bossAttack();
@@ -1185,10 +1242,13 @@ class DungeonScene extends Phaser.Scene {
         });
         break;
       }
-      case 'ledge':
+      case 'ledge': {
+        const st = this.setup.lines?.stages ?? [];
+        this.speak(st[Math.min(e.height - 1, st.length - 1)]);
         this.bus.say(e.height === 1 ? 'Higher. That counts already: any height is a win.' : 'Higher.');
         this.summit?.play(this.anims.exists('summitBossAttack') ? 'summitBossAttack' : 'summitBoss');
         break;
+      }
       case 'help': {
         const { x, y, toX, toY } = e;
         if (e.kind === 'vela') {
@@ -1385,8 +1445,11 @@ class DungeonScene extends Phaser.Scene {
           this.cameras.main.flash(400, 200, 210, 230);
           this.sfx('roar', 0.8);
           this.bus.boss();
+          this.time.delayedCall(4600, () => this.speak(this.setup.lines?.enter, 3200));
           break;
         }
+        // Its first words once the boss card has gone.
+        this.time.delayedCall(4600, () => this.speak(this.setup.lines?.enter, 3200));
         this.bossLabel = this.add
           .text(b.x, b.y, '', { fontFamily: '"Press Start 2P", monospace', fontSize: '8px', color: '#fecaca', stroke: '#0b0d14', strokeThickness: 3, align: 'center' })
           .setOrigin(0.5, 1)

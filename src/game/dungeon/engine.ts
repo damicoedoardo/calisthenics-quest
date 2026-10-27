@@ -650,6 +650,8 @@ export type GameEvent =
   | { type: 'relic'; id: RelicId }
   | { type: 'ward'; x: number; y: number }
   | { type: 'crack'; x: number; y: number; n: number }
+  /** Tomorrow splits, or the Mirror splits into its images. */
+  | { type: 'split' }
   | { type: 'shatter'; x: number; y: number }
   | { type: 'hand'; x: number; y: number }
   | { type: 'light'; on: boolean; x: number; y: number }
@@ -1658,6 +1660,7 @@ function splitMirror(run: Run, b: Foe, n: number) {
     f.act = run.t + SPLIT.last;
   }
   emit(run, { type: 'blink', x: from.x, y: from.y, toX: b.x, toY: b.y });
+  emit(run, { type: 'split' });
   if (!run.met.has('image')) {
     run.met.add('image');
     emit(run, { type: 'say', text: 'The lake shows many Mirrors. Only the real one shoots: go to it.' });
@@ -1684,6 +1687,7 @@ function steerBoss(run: Run, b: Foe) {
         addFoe(run, 'slime', b.x + Math.cos(a) * 50, b.y + Math.sin(a) * 50);
       }
       emit(run, { type: 'say', text: 'Tomorrow splits while you wait' });
+      emit(run, { type: 'split' });
     }
     return;
   }
