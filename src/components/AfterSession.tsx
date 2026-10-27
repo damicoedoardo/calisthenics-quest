@@ -121,7 +121,7 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
           +{points} stat point{points === 1 ? '' : 's'} <span className="text-slate-400">for your champion, on the Hero tab</span>
         </p>
         <p className="mt-1 text-sm text-slate-200">
-          +{EMBERS[session.kind]} embers <span className="text-slate-400">for Mira&apos;s forge, at the camp</span>
+          +{EMBERS[session.kind]} embers <span className="text-slate-400">for Mira&apos;s forge, on the Play tab</span>
         </p>
         {session.better && <p className="mt-1 text-xs text-emerald-300">Better than last time.</p>}
         {!!session.heavier?.length && <p className="mt-1 text-xs text-sky-300">Too easy now: next time add a little weight to {session.heavier.map((id) => planExercises().find((x) => x.id === id)?.name ?? id).join(', ')}.</p>}

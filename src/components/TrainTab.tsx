@@ -87,7 +87,7 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
       </section>
 
       <p className="rounded-xl bg-ink-900 px-3 py-2 text-xs text-slate-400">
-        Each workout earns <span className="text-slate-200">{EMBERS.full} embers</span> ({EMBERS.mini} for the minimum quest) for Mira&apos;s forge at the camp. You have <span className="text-gold-300">{embersOf(state)}</span>.
+        Each workout earns <span className="text-slate-200">{EMBERS.full} embers</span> ({EMBERS.mini} for the minimum quest) for Mira&apos;s forge on the Play tab. You have <span className="text-gold-300">{embersOf(state)}</span>.
       </p>
 
       <p className="text-center text-xs text-slate-500">Soon: tell your coach what you feel like, and it builds the workout from the library.</p>
