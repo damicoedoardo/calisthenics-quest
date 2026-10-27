@@ -14,7 +14,7 @@ and works offline.
 
 - **Pattern syntax**: one token per step. `A4` plays a note, `-` holds it, `.` is silence, `x` a
   drum hit or heartbeat thump. Every voice of a track has the same length.
-- **Tracks**: `TRACKS` in `music.ts` (the opening's memory, the Hollow, camp, the Fog and its boss, and the level-up, defeat, victory and app-opening stings: `opening`, and `openingEnd` for a late tap) and `ZONE_TRACKS` in
+- **Tracks**: `TRACKS` in `music.ts` (the opening's memory, the Hollow, camp, the Fog and its boss, and the level-up, defeat, victory and app-opening sting `opening`) and `ZONE_TRACKS` in
   `music-zones.ts` (each Fog zone's run theme and boss theme, the Warden's theme, the zone-end
   stings). `ZONE_MUSIC` / `zoneMusic` pick a zone's tracks.
 - **Sound effects**: `SfxId` and `SFX_IDS` in `music.ts`; the Fog scene turns game events into them.
