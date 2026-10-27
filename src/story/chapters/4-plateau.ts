@@ -242,9 +242,8 @@ export const PLATEAU: Chapter = {
       lines: [
         { who: 'narrator', show: 'flame', text: 'A rest day on the flat road. {flame} lies in the dust and watches the clouds go nowhere.', shot: { pan: 'up', seconds: 2 } },
         { who: 'flame', mood: 'sleepy', text: 'People think nothing happens on rest days. Everything happens. Just quietly.' },
-        { who: 'flame', mood: 'soft', text: 'Can I tell you something odd? Sometimes I remember things I shouldn\'t.' },
-        { who: 'flame', mood: 'soft', text: 'Grass stains. Being called in when it got dark, and pretending not to hear.' },
-        { who: 'flame', mood: 'sleepy', text: "I've never had knees. Why do I remember scraped knees?" },
+        { who: 'flame', mood: 'soft', text: 'Can I tell you something? I kept every time you almost believed in yourself. Every "maybe I could". There\'s a whole pile of them.' },
+        { who: 'flame', mood: 'sleepy', text: "The pile's been getting smaller lately. The maybes keep turning into yeses." },
       ],
     },
     {

@@ -1,4 +1,5 @@
 import type { FlameStage as FlameStageId } from '@/sprites/characters/ember';
+import type { HeroVariant } from '@/sprites/characters/hero';
 
 /* Your flame: it grows with your workouts. Each stage changes how it looks (src/sprites/characters/ember.ts
    draws every stage) and what it does for you. */
@@ -30,3 +31,9 @@ export function flameStage(workouts: number): FlameStage {
 }
 
 export const stageIndex = (id: FlameStageId) => FLAME_STAGES.findIndex((s) => s.id === id);
+
+/** In the finale your flame fuses with you: from then on your hero burns with it. */
+export const fused = (seenScenes: string[]) => seenScenes.includes('finale');
+
+/** How your hero is drawn outside story scenes: on fire, once the flame lives in you. */
+export const heroVariant = (state: { seenScenes: string[] }): HeroVariant => (fused(state.seenScenes) ? 'kindled' : 'normal');

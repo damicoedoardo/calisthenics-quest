@@ -21,6 +21,7 @@ import { CloudChoice, useCloudSync } from '@/components/Cloud';
 import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { sawScene, scenesToPlay, storyState, type StoryState } from '@/story/engine';
 import { withTodayPage } from '@/story/daily';
+import { heroVariant } from '@/story/flame';
 import type { Scene } from '@/story/types';
 import { inSandbox, useGameState } from '@/lib/store';
 import { recordRun, ZONES, type Zone } from '@/lib/fog';
@@ -201,7 +202,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         )}
         <div className="flex items-center gap-3">
           <div className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800 land:hidden">
-            <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} />
+            <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} variant={heroVariant(state)} />
           </div>
           <div className="min-w-0 flex-1 land:flex land:items-center land:gap-4">
             <div className="flex items-baseline justify-between land:shrink-0 land:items-center land:gap-4">
@@ -245,7 +246,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       <nav className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-ink-700 bg-ink-900/95 backdrop-blur land:right-auto land:top-0 land:flex land:w-[calc(4.5rem+env(safe-area-inset-left))] land:flex-col land:items-center land:justify-center land:gap-3 land:border-r land:border-t-0 land:pl-[env(safe-area-inset-left)]">
         {/* Sideways, the hero from the header sits at the top of the rail. */}
         <div aria-hidden className="hidden h-11 w-11 place-items-center rounded-xl bg-ink-800 land:grid">
-          <Hero gear={gear} classId={state.profile.classId} size={38} bounce={false} />
+          <Hero gear={gear} classId={state.profile.classId} size={38} bounce={false} variant={heroVariant(state)} />
         </div>
         <div className="mx-auto grid max-w-md grid-cols-4 land:mx-0 land:w-full land:grid-cols-1">
           {TABS.map(({ id, label, icon }) => (

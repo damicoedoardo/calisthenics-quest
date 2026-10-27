@@ -60,6 +60,12 @@ function geared(idle = 0): GameState {
   return { ...s, fogGear: { worn: { weapon: find('weapon', 'magic', 1), charm: find('charm', 'magic', 2) }, vault: [find('armor', 'rare', 2), find('charm', 'magic', 3), find('weapon', 'legendary', 9)], guard: 'weapon' } };
 }
 
+/** A player past the finale: the flame lives in them now. */
+function fused(): GameState {
+  const s = veteran(80, 6);
+  return s.seenScenes.includes('finale') ? s : { ...s, seenScenes: [...s.seenScenes, 'finale'] };
+}
+
 /** Write the sandbox save and open the app on it at `query`. */
 function open(state: GameState, query: string) {
   try {
@@ -179,6 +185,8 @@ export default function NightLab() {
           <Row key={id} icon={<Film size={16} />} label={label} note={id} href={`/lab/story?play=${id}&back`} />
         ))}
         <Row icon={<Play size={16} />} label="The opening" note="A new player on the sandbox: title, the fall, the letter" onClick={() => open(initialState(), '')} />
+        <Row icon={<Sparkles size={16} />} label="After the finale: you burn with your flame" note="Hero tab: the flame has fused with you, red fire all around your hero" onClick={() => open(fused(), 'tab=hero')} />
+        <Row icon={<Swords size={16} />} label="After the finale, in the Fog" note="The same fire on your hero in a run" onClick={() => open(fused(), 'run=5')} />
       </Panel>
 
       <Panel title="STORY: BETTER THAN LAST TIME" note="Scenes for beating last time, once and then again and again.">

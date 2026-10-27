@@ -51,7 +51,7 @@ export const ASHLANDS: Chapter = {
       when: { workouts: 1 },
       lines: [
         { who: 'flame', mood: 'soft', text: 'Hey. Can I ask you something?' },
-        { who: 'flame', mood: 'soft', text: "Nobody ever gave me a name. I've been a spark in the ash for so long." },
+        { who: 'flame', mood: 'soft', text: "You never gave me a name. You didn't know I was still here." },
         { who: 'flame', mood: 'soft', text: 'Would you give me one?' },
       ],
       ask: {
@@ -141,6 +141,7 @@ export const ASHLANDS: Chapter = {
         { who: 'flame', mood: 'happy', text: 'Okay, a candle. A brave candle.' },
         { who: 'flame', text: 'In the Fog I can circle you twice now. Two flames. Watch.' },
         { who: 'flame', mood: 'soft', text: "I didn't grow because you were amazing, by the way. I grew because you were there. That's all it takes with me." },
+        { who: 'flame', mood: 'soft', text: "Every promise you keep to yourself, I believe in you a little harder. Then you do too, a little. That's how I grow." },
       ],
     },
     {

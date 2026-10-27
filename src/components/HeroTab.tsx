@@ -16,6 +16,7 @@ import { gearOf, type GameState } from '@/lib/game';
 import { planExercises } from '@/lib/program';
 import { exportState, inSandbox, parseImport } from '@/lib/store';
 import { storyState } from '@/story/engine';
+import { heroVariant } from '@/story/flame';
 import { ZONES } from '@/lib/fog';
 
 interface Props {
@@ -69,7 +70,7 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
       <div className="space-y-5">
       <section className="flex flex-col items-center rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 pb-4 pt-5">
         <p className="font-pixel text-[10px] text-slate-400">{cls ? cls.name : 'Adventurer'}</p>
-        <Hero gear={gear} classId={state.profile.classId} size={180} />
+        <Hero gear={gear} classId={state.profile.classId} size={180} variant={heroVariant(state)} />
         <div className="mt-3 grid w-full grid-cols-3 gap-2 px-3 text-center text-xs">
           {(['weapon', 'armor', 'shield'] as const).map((slot) => (
             <div key={slot} className="rounded-lg bg-ink-900/70 px-2 py-2">

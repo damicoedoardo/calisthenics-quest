@@ -20,7 +20,8 @@ cast.ts               everyone who speaks: name, portrait (sprite), name color
 places.ts             where scenes happen: painted backdrops (src/sprites/places.ts draws them)
 chapters/1-6          one file per month: the chapter, its Fog zone, its scenes
 anytime.ts            scenes that can happen in any chapter (beating last time, coming back)
-flame.ts              the flame's stages (spark to fire fairy) and the default name
+flame.ts              the flame's stages (spark to fire fairy), the default name, and heroVariant:
+                      after the finale the flame has fused with you and your hero burns red
 opening.ts            the opening, before the first workout
 daily/flame-lines.ts  what the flame says on Today, by kind of day, and its face
 daily/quotes.ts       words for the road, by chapter
@@ -96,6 +97,7 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
 | Change how a Fog boss fights | its entry in `BOSSES` (`src/game/dungeon/content.ts`) and its branch in `steerBoss` (`engine.ts`) |
 | Change when the flame grows, or what it gives | `flame.ts` (its art: `src/sprites/characters/ember.ts`) |
 | Add daily lines or quotes | `daily/flame-lines.ts`, `daily/quotes.ts` (keep quote authors real) |
+| Change the fire around your hero after the finale | the `kindled` branch of `drawHero` (`src/sprites/characters/hero.ts`); who gets it: `heroVariant` in `flame.ts` |
 
 Held sideways, `Dialogue` puts whoever is on screen on the left and the text box beside them, and
 the question card puts the question beside its answers (see
@@ -108,3 +110,6 @@ Run `pnpm test` after a change: `story.test.ts` catches a misspelled speaker, pl
 - General: no sport-specific advice, no numbers about the body, no body talk.
 - The player's own words make it personal: the letter, the Hollow's line, the heart moments.
 - Nothing is taken away for missing days. Villager stories are opt-in.
+- The flame is the part of you that never stopped believing in you (it says so in the opening).
+  It grows as you believe in yourself, and in the finale it fuses with you. It never turns into a
+  person or a child.

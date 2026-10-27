@@ -250,10 +250,10 @@ describe('the months 4 to 6 rules', () => {
   });
 
   it('reads a stand-in line when the heart answer is missing, and the answer when it is there', () => {
-    const finale = ALL_SCENES.find((p) => p.scene.id === 'finale')!.scene;
-    const flame = (heart1: string) => renderLines(finale.lines, { ...storyWords(initialState()), heart1 }).filter((l) => l.text.startsWith('I remember now'));
-    expect(flame('').map((l) => l.text)).toEqual(["I remember now. I'm the part of you that loved moving, back before anyone counted anything."]);
-    expect(flame('feeling free').map((l) => l.text)).toEqual(["I remember now. I'm the part of you that loved feeling free."]);
+    const scene = ALL_SCENES.find((p) => p.scene.id === 'ch6-remembering')!.scene;
+    const flame = (heart1: string) => renderLines(scene.lines, { ...storyWords(initialState()), heart1 }).filter((l) => l.text.startsWith('It used to be like that'));
+    expect(flame('').map((l) => l.text)).toEqual(['It used to be like that all the time, when you were small. Nobody had to tell you that you could.']);
+    expect(flame('feeling free').map((l) => l.text)).toEqual(['It used to be like that all the time. When you were small and loved feeling free, nobody had to tell you that you could.']);
   });
 });
 

@@ -101,8 +101,8 @@ export const SEALED: Line[] = [
   { who: 'wanderer', text: "This one is empty. Every time you train, a page gets written. Rest days get a page too. Nothing in here is ever torn out." },
   { who: 'narrator', text: 'Something flickers in the ash at your feet. A spark, no bigger than a fingernail.', pause: 1.2 },
   { who: 'flame', text: "...hi. Sorry. I'm small right now. I used to be bigger." },
-  { who: 'flame', text: "I don't know where I came from. I just remember being warm, a long time ago." },
-  { who: 'flame', mood: 'soft', text: "I waited a long time. I'm not upset. I'm just really, really glad you got up.", pace: 'slow' },
+  { who: 'flame', text: "I'm the part of you that never stopped believing in you. Even when you did." },
+  { who: 'flame', mood: 'soft', text: "I got really small. But I never went out. I'm just really, really glad you got up.", pace: 'slow' },
 ];
 
 export const FIRST_QUEST: Line[] = [
