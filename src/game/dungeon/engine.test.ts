@@ -15,7 +15,7 @@ describe('mid-bosses', () => {
 
   it('each zone has its own, and it guards the middle floor', () => {
     expect(new Set(MIDS.map((m) => m.kind)).size).toBe(ZONES.length);
-    ZONES.forEach((z, i) => expect(midRun(i).warden?.kind).toBe(MIDS[i].kind));
+    ZONES.forEach((_, i) => expect(midRun(i).warden?.kind).toBe(MIDS[i].kind));
   });
 
   it('the Drowned Lantern dims the room, and the dark lifts when it falls', () => {
@@ -270,5 +270,16 @@ describe('dungeon', () => {
       }
       expect(run.over, ZONES[z].boss).toMatchObject({ won: true, why: 'boss' });
     }
+  });
+});
+
+describe('replays', () => {
+  // A whole bot run in every zone, fingerprinted. A cleanup that changes nothing keeps these as
+  // they are; a balance change moves them on purpose (refresh with `pnpm test -u`).
+  const power = { ...powerOf(initialState(), new Date()), strike: 1.2, reach: 0.4, armor: 0.25, hold: 180 };
+  const classes = ['warrior', 'archer', 'mage', 'monk'] as const;
+  it('every zone plays the same run as before', () => {
+    const ends = ZONES.map((zone, i) => playRun({ zone, power, classId: classes[i % classes.length], seed: 11 + i }));
+    expect(ends).toMatchSnapshot();
   });
 });

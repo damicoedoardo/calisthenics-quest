@@ -1,9 +1,10 @@
 import { finishSession, initialState, levelInfo, logMaxTest, todaysQuest, totalXp, type Checkin, type GameState, type Letter, type Rir } from '@/lib/game';
 import { recordRun, zoneStatus, ZONES } from '@/lib/fog';
 import { dayKey, daysApart, isRestDay } from '@/lib/days';
+import { seeded } from '@/lib/random';
 import { MAX_SCENES_AT_ONCE, sawScene, sceneMoment, scenesToPlay, renderLines, speakerName, storyState, storyWords } from '@/story/engine';
 import { CALLBACKS } from '@/story/daily/flame-lines';
-import { runKind, runLine, afterWorkoutLine, canSitByFire, dayQuote, fireLine, marginNote, restTruth, todayMoment, todayPage, updateTodayPage, withTodayPage } from '@/story/daily';
+import { runKind, runLine, afterWorkoutLine, canSitByFire, fireLine, marginNote, restTruth, todayMoment, todayPage, updateTodayPage, withTodayPage } from '@/story/daily';
 import { DEFAULT_FLAME_NAME, flameStage } from '@/story/flame';
 import { STARTER_LOOKS } from '@/sprites/characters/hero';
 import type { ClassId } from '@/lib/gear';
@@ -71,18 +72,6 @@ export interface Season {
 export const laterBy = (zone: number) => (zone >= 4 ? 18 : 6);
 
 const FULL_LETTER: Letter = { why: 'I want to feel strong again', want: 'do ten pull-ups', forWho: 'my little brother', remind: 'I already did this once.' };
-
-/** A random number generator that plays the same way every time. */
-export function seeded(seed: number): () => number {
-  let s = seed >>> 0;
-  return () => {
-    s = (s + 0x6d2b79f5) >>> 0;
-    let t = s;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 /** Text a player sees with a {word} still in it, or a name that came out empty. */
 function broken(text: string): boolean {

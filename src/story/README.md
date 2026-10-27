@@ -83,7 +83,7 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
 | Add or repaint a place | `places.ts` (sky colors, kind of land, props, weather) |
 | Change chapter length or max tests | `workouts` and `tests` in the chapter file |
 | Change a Fog boss's words, keepsake or toughness | the chapter's `fog` |
-| Change how a Fog boss fights | its entry in `BOSSES` and its branch in `stepBoss` in `src/game/dungeon/engine.ts` |
+| Change how a Fog boss fights | its entry in `BOSSES` (`src/game/dungeon/content.ts`) and its branch in `steerBoss` (`engine.ts`) |
 | Change when the flame grows, or what it gives | `flame.ts` (its art: `src/sprites/characters/ember.ts`) |
 | Add daily lines or quotes | `daily/flame-lines.ts`, `daily/quotes.ts` (keep quote authors real) |
 

@@ -22,7 +22,7 @@ import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
 import { daysSinceTraining, isRestDay, trainedToday } from '@/lib/days';
 import { storyState, storyWords } from '@/story/engine';
 import { flameStage } from '@/story/flame';
-import { fireLine, flameLine, flameMood, isRested, restTruth, todayPage, updateTodayPage } from '@/story/daily';
+import { fireLine, flameLine, flameMood, restTruth, todayPage, updateTodayPage } from '@/story/daily';
 
 interface Props {
   state: GameState;
