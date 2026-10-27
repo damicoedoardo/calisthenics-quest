@@ -129,8 +129,8 @@ exports[`sprite registry > art fingerprints 1`] = `
   "summitBoss idle": "696bedf70767",
   "wanderer attack": "4e5bc73edf92",
   "wanderer idle": "6a669f27f52d",
-  "warden attack": "2a93f778f45a",
-  "warden idle": "a4a5ac8f952f",
+  "warden attack": "bd5e04b0d8e2",
+  "warden idle": "822ab7fde39c",
   "wisp attack": "9be9dc985cf6",
   "wisp idle": "8c6748791565",
 }

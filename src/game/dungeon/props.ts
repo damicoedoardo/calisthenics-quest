@@ -156,3 +156,19 @@ export const SCONCE: Prop = {
   ],
   palette: { w: R.wood[1], W: R.wood[2], i: R.iron[1] },
 };
+
+/** The spark where a blow lands: a little four-point star, white-hot in the middle. */
+export const HIT_SPARK: Prop = {
+  rows: [
+    '....o....',
+    '....y....',
+    '...oyo...',
+    '..oyWyo..',
+    'oyyWWWyyo',
+    '..oyWyo..',
+    '...oyo...',
+    '....y....',
+    '....o....',
+  ],
+  palette: { W: '#ffffff', y: '#fef3c7', o: '#fbbf24' },
+};
