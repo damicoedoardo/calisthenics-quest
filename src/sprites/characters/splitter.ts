@@ -136,3 +136,51 @@ export function drawSplitling(_o: unknown, frame: ClipFrame, f: number): Grid {
   if (!hit && k >= 2 && k <= 4) u.r(36, 36 - k * 2, 2, 2, GOO.c);
   return pic;
 }
+
+/** The Splitter splitting, played once where it dies: it swells, light cracks through the seams
+    between its lobes, then it bursts into three blobs (the Splitlings) and a splash of goo. */
+export function drawSplitterPop(_o: unknown, frame: ClipFrame, f: number): Grid {
+  if (f < 2) {
+    const g = grid(32);
+    paintRows(painter(g), BIG, GOO);
+    // swelling: stretched up instead of squashed down
+    const sq = -2 - f,
+      pic = squash(outline(autoshade(scale2x(g))), sq),
+      u = painter(pic);
+    // each core's eye, moved the way squash moved the core
+    [[17, 34], [32, 23], [47, 34]].forEach(([x, y]) => eye(u, Math.round(32 + (x - 32) * (1 + sq * 0.05)), Math.round(60 - (60 - y) / (1 + sq * 0.08)), false, true));
+    if (f === 1) {
+      // light breaking through the seams
+      u.line(22, 16, 26, 34, '#f7fee7');
+      u.line(41, 16, 37, 34, '#f7fee7');
+      u.line(23, 16, 27, 34, GOO.c);
+      u.line(40, 16, 36, 34, GOO.c);
+      u.line(26, 34, 37, 34, '#f7fee7');
+    }
+    return pic;
+  }
+  // the burst: three Splitlings flying apart, droplets spraying out
+  const out = grid(64),
+    u = painter(out),
+    t = f - 1;
+  if (frame.fx === 'burst')
+    [[18, 30], [32, 20], [46, 30]].forEach(([x, y], i) => {
+      const dx = (i - 1) * 6,
+        dy = i === 1 ? -4 : 0;
+      u.ellipse(x + dx, y + dy, 8, 7, GOO.b);
+      u.ellipse(x + dx - 2, y + dy - 3, 2.5, 1.5, GOO.c);
+      u.ellipse(x + dx, y + dy + 1, 3.5, 3, GOO.d);
+    });
+  // a ring of droplets, and a puddle on the floor
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2,
+      r = 14 + t * 9;
+    u.r(32 + Math.cos(a) * r, 36 + Math.sin(a) * r * 0.75, t > 1 ? 2 : 3, t > 1 ? 2 : 3, i % 3 ? GOO.b : GOO.c);
+  }
+  u.ellipse(32, 58, 18 + t * 4, 3, GOO.a);
+  u.ellipse(32, 57, 12 + t * 3, 1.5, GOO.b);
+  const pic = outline(out),
+    v = painter(pic);
+  if (frame.fx === 'burst') [[12, 29], [32, 15], [52, 29]].forEach(([x, y]) => eye(v, x, y, false, true));
+  return pic;
+}

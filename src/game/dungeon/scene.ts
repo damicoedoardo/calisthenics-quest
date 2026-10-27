@@ -6,7 +6,8 @@ import type { Sheet } from '@/sprites/registry';
 import { BOSSES as BOSS_LOOKS, FOES as FOE_LOOKS, type SheetKey, type Stats } from '../rules';
 import { R } from '@/sprites/palette';
 import { botInput } from './bot';
-import { BARREL, CHEST, CHEST_OPEN, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STONE, type Prop } from './props';
+import { BARREL, CHEST, CHEST_OPEN, PILLAR, SCONCE, SHRINE as SHRINE_PROP, type Prop } from './props';
+import { THEMES, themeFor, type Theme } from './themes';
 import {
   ABILITIES,
   DODGE,
@@ -103,6 +104,8 @@ export interface RunHandle {
   skipToBoss: () => void;
   skipFloor: () => void;
   skipToWarden: () => void;
+  /** Developer mode: show the next zone's dungeon theme; returns its name. */
+  cycleTheme: () => string;
   pickRelic: (id: RelicId) => void;
   winNow: () => void;
   autopilot: (on: boolean) => void;
@@ -124,7 +127,7 @@ const DUNGEON_LOOKS: Record<Exclude<MonsterKind, keyof typeof FOE_LOOKS>, Look> 
   splitling: { tex: 'splitling', scale: 0.5, bits: [0x86efac, 0x15803d] },
   shade: { tex: 'shade', scale: 0.65, bits: [0xa78bfa, 0x6b21a8, 0x1e1b4b] },
   // The Warden of the Ashes: the golem, much bigger, the grey of cold ash, embers glowing under it.
-  warden: { tex: 'golem', scale: 1.45, tint: 0xd6c3b0, bits: [0x78716c, 0xf97316, 0xfde68a] },
+  warden: { tex: 'warden', scale: 1.3, bits: [0x78716c, 0xf97316, 0xfde68a] },
 };
 const looks = (kind: Foe['kind'], zone: Zone): Look =>
   kind === 'boss' ? BOSS_LOOKS[zone.boss] : kind in DUNGEON_LOOKS ? DUNGEON_LOOKS[kind as keyof typeof DUNGEON_LOOKS] : FOE_LOOKS[kind as keyof typeof FOE_LOOKS];
@@ -159,6 +162,9 @@ class DungeonScene extends Phaser.Scene {
   /** Torches on the side walls; their flames are drawn each frame on `torchFire`. */
   private torches: { x: number; y: number }[] = [];
   private torchFire!: Phaser.GameObjects.Graphics;
+  /** The look of this zone's dungeon (themes.ts). Developer mode can cycle it. */
+  private theme: Theme;
+  private mists: Phaser.GameObjects.Image[] = [];
   private chest: Phaser.GameObjects.Image | null = null;
   private fx!: Phaser.GameObjects.Graphics;
   private shadows!: Phaser.GameObjects.Graphics;
@@ -193,6 +199,7 @@ class DungeonScene extends Phaser.Scene {
     private bus: RunEvents,
   ) {
     super('dungeon');
+    this.theme = themeFor(setup.zone.id);
     this.run = createRun({ zone: setup.zone, power: setup.power, classId: setup.classId, seed: Math.floor(Math.random() * 2 ** 31), autoPick: setup.fast });
   }
 
@@ -225,7 +232,7 @@ class DungeonScene extends Phaser.Scene {
     this.torchFire = this.add.graphics().setDepth(-0.5);
     this.shadows = this.add.graphics().setDepth(0.5);
     this.fx = this.add.graphics().setDepth(90000);
-    const fogTint = hex(zone.fog);
+    const fogTint = hex(this.theme.fog);
     for (let i = 0; i < 14; i++) {
       const m = this.add
         .image(Phaser.Math.Between(0, ROOM.w + 100), Phaser.Math.Between(0, ROOM.h + 400), 'mist')
@@ -233,6 +240,7 @@ class DungeonScene extends Phaser.Scene {
         .setAlpha(0.12)
         .setScale(Phaser.Math.FloatBetween(2.5, 4.5))
         .setDepth(150000);
+      this.mists.push(m);
       this.tweens.add({ targets: m, x: m.x + Phaser.Math.Between(-80, 80), duration: Phaser.Math.Between(9000, 16000), yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
     this.hero = this.add.sprite(this.run.hero.x, this.run.hero.y, 'hero').play('hero').setScale(0.8);
@@ -244,7 +252,7 @@ class DungeonScene extends Phaser.Scene {
       lifespan: { min: 380, max: 560 },
       alpha: { start: 0.45, end: 0 },
       scale: { start: 0.1, end: 0.26 },
-      tint: Phaser.Display.Color.HexStringToColor(zone.fog).lighten(25).color,
+      tint: Phaser.Display.Color.HexStringToColor(this.theme.fog).lighten(25).color,
     });
     this.puffs.setDepth(2);
     this.bits = this.add.particles(0, 0, 'dot', { emitting: false, speed: { min: 50, max: 170 }, gravityY: 220, lifespan: { min: 280, max: 520 }, alpha: { start: 1, end: 0 }, scale: { start: 1.3, end: 0.4 } });
@@ -343,8 +351,8 @@ class DungeonScene extends Phaser.Scene {
       for (const x of [ROOM.wall / 2, w - ROOM.wall / 2]) {
         this.torches.push({ x, y });
         this.roomBits.push(this.add.image(x, y, 'sconce').setDepth(-0.6));
-        const glow = this.add.image(x, y - 8, 'mist').setTint(0xf08a3a).setAlpha(0.22).setScale(2.2).setDepth(-0.7);
-        this.tweens.add({ targets: glow, alpha: 0.32, scale: 2.4, duration: 180 + (y % 7) * 30, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        const glow = this.add.image(x, y - 8, 'mist').setTint(hex(this.theme.glow)).setAlpha(0.22).setScale(2.6).setDepth(-0.7);
+        this.tweens.add({ targets: glow, alpha: 0.32, scale: 2.8, duration: 180 + (y % 7) * 30, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         this.roomBits.push(glow);
       }
     if (T.shrine) {
@@ -367,45 +375,6 @@ class DungeonScene extends Phaser.Scene {
       draw();
       g.generateTexture(key, w, h);
     };
-    const base = Phaser.Display.Color.HexStringToColor(zone.ground);
-    const lighter = base.clone().lighten(8).color,
-      darker = base.clone().darken(5).color;
-    // Flagstones: two courses of big slabs, laid so the tile repeats seamlessly. Soft edges (light
-    // top-left, shade bottom-right) and thin mortar, so the floor stays quiet under the fight.
-    const COURSES: [number, number, number[]][] = [
-      [0, 30, [30, 30]],
-      [32, 30, [14, 30, 14]],
-    ];
-    tex('ground', 64, 64, () => {
-      const mortar = base.clone().darken(4).color,
-        lit = base.clone().lighten(3).color,
-        shade = base.clone().darken(2).color;
-      g.fillStyle(mortar).fillRect(0, 0, 64, 64);
-      const rnd = new Phaser.Math.RandomDataGenerator(['forma']);
-      COURSES.forEach(([y, h, widths], row) => {
-        let x = 0;
-        widths.forEach((w, i) => {
-          g.fillStyle((row + i) % 2 ? shade : base.color).fillRect(x, y, w, h);
-          g.fillStyle(lit).fillRect(x, y, w - 1, 1).fillRect(x, y, 1, h - 1);
-          g.fillStyle(mortar).fillRect(x + 1, y + h - 1, w - 1, 1).fillRect(x + w - 1, y + 1, 1, h - 1);
-          // wear: a few chips and specks
-          for (let k = 0; k < 3; k++) g.fillStyle(k % 2 ? lighter : darker).fillRect(x + rnd.between(3, w - 5), y + rnd.between(3, h - 4), rnd.between(1, 2), 1);
-          x += w + 2;
-        });
-      });
-      // one slab cracked across
-      g.fillStyle(mortar).fillRect(36, 8, 5, 1).fillRect(40, 9, 4, 1).fillRect(43, 10, 4, 1).fillRect(46, 9, 3, 1);
-    });
-    tex('stone', 10, 7, () => {
-      g.fillStyle(0x3f3a4d).fillRect(1, 2, 8, 5).fillRect(2, 1, 6, 1);
-      g.fillStyle(0x5b5570).fillRect(2, 2, 4, 2);
-    });
-    tex('tuft', 9, 7, () => {
-      g.fillStyle(0x3a3346).fillRect(1, 3, 1, 4).fillRect(4, 1, 1, 6).fillRect(7, 2, 1, 5);
-      g.fillStyle(0x4c4459).fillRect(3, 4, 1, 3).fillRect(5, 3, 1, 4);
-    });
-    tex('bone', 10, 4, () => g.fillStyle(0x6b6478).fillRect(1, 1, 8, 2).fillRect(0, 0, 2, 4).fillRect(8, 0, 2, 4));
-    tex('crack', 14, 6, () => g.fillStyle(darker).fillRect(0, 2, 5, 1).fillRect(4, 3, 4, 1).fillRect(7, 1, 4, 1).fillRect(10, 4, 4, 1));
     tex('dot', 3, 3, () => g.fillStyle(0xffffff).fillRect(0, 0, 3, 3));
     if (this.textures.exists('mist')) this.textures.remove('mist');
     const mist = this.textures.createCanvas('mist', 64, 64);
@@ -488,16 +457,95 @@ class DungeonScene extends Phaser.Scene {
           }),
         );
       });
-    prop('pillar', PILLAR, () => g.fillStyle(0x000000, 0.3).fillEllipse(22, 58, 44, 12));
     prop('barrel', BARREL, () => g.fillStyle(0x000000, 0.3).fillEllipse(12, 25, 24, 6));
     prop('chest', CHEST, () => g.fillStyle(0x000000, 0.3).fillEllipse(15, 24, 30, 6));
     prop('chest-open', CHEST_OPEN, () => {
       g.fillStyle(0x000000, 0.3).fillEllipse(15, 24, 30, 6);
       g.fillStyle(hex(R.gold[2]), 0.25).fillEllipse(15, 8, 30, 14);
     });
-    prop('shrine', SHRINE_PROP, () => g.fillStyle(0x86efac, 0.18).fillCircle(18, 24, 18));
     prop('sconce', SCONCE);
     g.destroy();
+    this.themeTextures();
+  }
+
+  /** The textures that follow the zone's theme: the floor, its litter, the pillars, the shrine. */
+  private themeTextures() {
+    const t = this.theme,
+      g = this.make.graphics({ x: 0, y: 0 }, false),
+      // pebbles (dark, light), grass tufts (dark, light) and bones on the floor
+      litter = t.litter ?? [t.stone[2], t.stone[4], t.stone[2], t.stone[3], t.stone[5]];
+    const tex = (key: string, w: number, h: number, draw: () => void) => {
+      if (this.textures.exists(key)) this.textures.remove(key);
+      g.clear();
+      draw();
+      g.generateTexture(key, w, h);
+    };
+    // The stone in the props' rows ('1' darkest to '7' lightest) and their moss, in this theme.
+    const prop = (key: string, { rows, palette }: Prop, under?: () => void) => {
+      const pal: Record<string, string> = { ...palette, m: t.moss };
+      t.stone.forEach((c, i) => (pal[String(i + 1)] = c));
+      tex(key, rows[0].length * 2, rows.length * 2, () => {
+        under?.();
+        rows.forEach((row, y) =>
+          [...row].forEach((ch, x) => {
+            const c = pal[ch];
+            if (c) g.fillStyle(hex(c)).fillRect(x * 2, y * 2, 2, 2);
+          }),
+        );
+      });
+    };
+    const base = Phaser.Display.Color.HexStringToColor(t.ground);
+    const lighter = base.clone().lighten(8).color,
+      darker = base.clone().darken(5).color;
+    // Flagstones: two courses of big slabs, laid so the tile repeats seamlessly. Soft edges (light
+    // top-left, shade bottom-right) and thin mortar, so the floor stays quiet under the fight.
+    const COURSES: [number, number, number[]][] = [
+      [0, 30, [30, 30]],
+      [32, 30, [14, 30, 14]],
+    ];
+    tex('ground', 64, 64, () => {
+      const mortar = base.clone().darken(4).color,
+        lit = base.clone().lighten(3).color,
+        shade = base.clone().darken(2).color;
+      g.fillStyle(mortar).fillRect(0, 0, 64, 64);
+      const rnd = new Phaser.Math.RandomDataGenerator(['forma']);
+      COURSES.forEach(([y, h, widths], row) => {
+        let x = 0;
+        widths.forEach((w, i) => {
+          g.fillStyle((row + i) % 2 ? shade : base.color).fillRect(x, y, w, h);
+          g.fillStyle(lit).fillRect(x, y, w - 1, 1).fillRect(x, y, 1, h - 1);
+          g.fillStyle(mortar).fillRect(x + 1, y + h - 1, w - 1, 1).fillRect(x + w - 1, y + 1, 1, h - 1);
+          // wear: a few chips and specks
+          for (let k = 0; k < 3; k++) g.fillStyle(k % 2 ? lighter : darker).fillRect(x + rnd.between(3, w - 5), y + rnd.between(3, h - 4), rnd.between(1, 2), 1);
+          x += w + 2;
+        });
+      });
+      // one slab cracked across
+      g.fillStyle(mortar).fillRect(36, 8, 5, 1).fillRect(40, 9, 4, 1).fillRect(43, 10, 4, 1).fillRect(46, 9, 3, 1);
+    });
+    tex('stone', 10, 7, () => {
+      g.fillStyle(hex(litter[0])).fillRect(1, 2, 8, 5).fillRect(2, 1, 6, 1);
+      g.fillStyle(hex(litter[1])).fillRect(2, 2, 4, 2);
+    });
+    tex('tuft', 9, 7, () => {
+      g.fillStyle(hex(litter[2])).fillRect(1, 3, 1, 4).fillRect(4, 1, 1, 6).fillRect(7, 2, 1, 5);
+      g.fillStyle(hex(litter[3])).fillRect(3, 4, 1, 3).fillRect(5, 3, 1, 4);
+    });
+    tex('bone', 10, 4, () => g.fillStyle(hex(litter[4])).fillRect(1, 1, 8, 2).fillRect(0, 0, 2, 4).fillRect(8, 0, 2, 4));
+    tex('crack', 14, 6, () => g.fillStyle(darker).fillRect(0, 2, 5, 1).fillRect(4, 3, 4, 1).fillRect(7, 1, 4, 1).fillRect(10, 4, 4, 1));
+    prop('pillar', PILLAR, () => g.fillStyle(0x000000, 0.3).fillEllipse(22, 58, 44, 12));
+    prop('shrine', SHRINE_PROP, () => g.fillStyle(0x86efac, 0.18).fillCircle(18, 24, 18));
+    g.destroy();
+  }
+
+  /** Developer mode: show the next zone's theme in this run, to preview every dungeon's look. */
+  cycleTheme(): string {
+    this.theme = THEMES[(THEMES.indexOf(this.theme) + 1) % THEMES.length];
+    this.themeTextures();
+    this.floorTiles.setTexture('ground');
+    for (const m of this.mists) m.setTint(hex(this.theme.fog));
+    this.newRoom();
+    return this.theme.name;
   }
 
   /** Walls, and the door at the top: barred until the room is clear, then open and glowing. */
@@ -508,7 +556,7 @@ class DungeonScene extends Phaser.Scene {
       w = ROOM.wall,
       door = ROOM.door,
       dl = (W - door) / 2,
-      S = STONE.map(hex);
+      S = this.theme.stone.map(hex);
     // The wall's mass, then brick courses: 7px tall, staggered, a lit top edge on each brick.
     g.fillStyle(S[1]).fillRect(0, 0, W, w).fillRect(0, H - w, W, w).fillRect(0, 0, w, H).fillRect(W - w, 0, w, H);
     // A brick, cut to the wall it sits in (x0..x1) so none hangs over the edge.
@@ -800,10 +848,24 @@ class DungeonScene extends Phaser.Scene {
             y = e.y;
           for (let i = 0; i < e.n; i++) {
             const a = e.angle + (i * Math.PI * 2) / e.n;
-            this.fade(160, (g, p) => {
-              g.lineStyle(7 * (1 - p) + 1, 0xfef3c7, 0.9 * (1 - p)).beginPath();
-              g.arc(x, y, R * (0.75 + 0.25 * p), a - 1.2, a + 1.2);
-              g.strokePath();
+            // A crescent: a thick bright edge with fainter bands inside it, sweeping open, and a
+            // glint riding its leading tip.
+            this.fade(190, (g, p) => {
+              const q = 1 - p,
+                sweep = 1.2 * Math.min(1, p * 3),
+                r0 = R * (0.75 + 0.25 * p);
+              [
+                [0, 9, 0xfffbeb, 0.95],
+                [7, 6, 0xfde68a, 0.6],
+                [13, 4, 0xfbbf24, 0.35],
+              ].forEach(([off, w, c, al]) => {
+                g.lineStyle(w * q + 1, c, al * q).beginPath();
+                g.arc(x, y, r0 - off, a - sweep, a + sweep);
+                g.strokePath();
+              });
+              const tx = x + Math.cos(a + sweep) * r0,
+                ty = y + Math.sin(a + sweep) * r0;
+              g.fillStyle(0xffffff, q).fillRect(tx - 1, ty - 4, 2, 8).fillRect(tx - 4, ty - 1, 8, 2);
             });
           }
         }
@@ -817,6 +879,14 @@ class DungeonScene extends Phaser.Scene {
           ent.squash = now + 90;
         }
         this.sparks.explode(e.dmg >= 30 ? 6 : 2, e.x, e.y - 6);
+        // a white star where the blow lands
+        const hx = e.x,
+          hy = e.y - 6;
+        this.fade(110, (g, p) => {
+          const s = 10 * (1 - p) + 3;
+          g.fillStyle(0xffffff, 0.9 * (1 - p)).fillRect(hx - s, hy - 1, s * 2, 2).fillRect(hx - 1, hy - s, 2, s * 2);
+          g.fillStyle(0xfef3c7, 0.5 * (1 - p)).fillCircle(hx, hy, 5 * (1 - p) + 2);
+        });
         this.sfx(e.boss ? 'bossHit' : 'hit');
         this.number(e.x, e.y - 18, e.dmg, undefined, e.id);
         if (e.dmg >= 30) this.hitStop(40, true);
@@ -847,6 +917,11 @@ class DungeonScene extends Phaser.Scene {
           g.lineStyle(4 * (1 - p) + 1, 0xffffff, 0.9 * (1 - p)).strokeCircle(x, y, R * (0.6 + 1.4 * p));
           if (big) g.lineStyle(2, look.bits[0], 0.7 * (1 - p)).strokeCircle(x, y, R * (0.8 + 2.4 * p));
         });
+        // the Splitter bursts into its three Splitlings
+        if (e.kind === 'splitter') {
+          const pop = this.add.sprite(x, y, 'splitterPop').setScale(look.scale).setDepth(y).play('splitterPop');
+          pop.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => pop.destroy());
+        }
         if (big) {
           this.cameras.main.shake(huge ? 320 : 160, huge ? 0.01 : 0.006);
           this.hitStop(huge ? 70 : 60);
@@ -879,6 +954,14 @@ class DungeonScene extends Phaser.Scene {
           g.lineStyle(5 * (1 - p) + 1, color, 0.8 * (1 - p)).strokeCircle(x, y, R * (0.3 + 0.7 * p));
           g.fillStyle(color, 0.12 * (1 - p)).fillCircle(x, y, R * (0.3 + 0.7 * p));
         });
+        if (e.color === 'wave') {
+          // the monk's wave hits the floor: a second, white shock ring and dust kicked out
+          this.fade(320, (g, p) => {
+            const q = Math.max(0, p * 1.3 - 0.3);
+            g.lineStyle(3 * (1 - p) + 1, 0xfffbeb, 0.9 * (1 - p)).strokeCircle(x, y, R * (0.15 + 0.85 * q));
+          });
+          this.puffs.explode(8, x, y + 8);
+        }
         break;
       }
       case 'chain': {
@@ -1177,6 +1260,20 @@ class DungeonScene extends Phaser.Scene {
         this.fx.fillStyle(0x6b21a8, 0.2 + 0.3 * p).fillCircle(f.dashX, f.dashY, 16);
       }
     }
+    // Your shots: arrows leave a short streak, orbs glow and pulse.
+    for (const sh of r.shots) {
+      const sp = Math.hypot(sh.vx, sh.vy) || 1;
+      if (sh.kind === 'arrow') {
+        const tx = sh.x - (sh.vx / sp) * 28,
+          ty = sh.y - (sh.vy / sp) * 28;
+        this.fx.lineStyle(3, 0xfde68a, 0.4).lineBetween(tx, ty, sh.x, sh.y);
+        this.fx.lineStyle(1, 0xffffff, 0.6).lineBetween((tx + sh.x) / 2, (ty + sh.y) / 2, sh.x, sh.y);
+      } else if (sh.kind === 'orb') {
+        const pulse = 1 + 0.2 * Math.sin(now / 60 + sh.id);
+        this.fx.fillStyle(0xa78bfa, 0.18).fillCircle(sh.x, sh.y, 12 * pulse);
+        this.fx.fillStyle(0xc4b5fd, 0.25).fillCircle(sh.x - (sh.vx / sp) * 8, sh.y - (sh.vy / sp) * 8, 5);
+      }
+    }
     // Smoke bombs: in the air, then a circle filling up until it bursts.
     for (const m of r.mines) {
       if (r.t < m.lands) {
@@ -1199,45 +1296,75 @@ class DungeonScene extends Phaser.Scene {
       g = this.ground.clear(),
       now = this.time.now;
     // Pools: a stone rim, deep water darkest under the near edge, light dancing on the surface.
-    const water = R.water.map(hex);
+    const T = this.theme,
+      water = T.water.map(hex),
+      S = T.stone.map(hex);
     for (const q of r.terrain.water) {
-      g.fillStyle(hex(STONE[3])).fillRect(q.x - 3, q.y - 3, q.w + 6, q.h + 6);
-      g.fillStyle(hex(STONE[5])).fillRect(q.x - 3, q.y + q.h, q.w + 6, 2);
-      g.fillStyle(water[0]).fillRect(q.x, q.y, q.w, q.h);
-      g.fillStyle(0x0b2547).fillRect(q.x, q.y, q.w, 6);
-      g.fillStyle(water[1], 0.45).fillRect(q.x, q.y + q.h - 6, q.w, 6);
+      g.fillStyle(S[3]).fillRect(q.x - 3, q.y - 3, q.w + 6, q.h + 6);
+      g.fillStyle(S[5]).fillRect(q.x - 3, q.y + q.h, q.w + 6, 2);
+      g.fillStyle(water[1]).fillRect(q.x, q.y, q.w, q.h);
+      g.fillStyle(water[0]).fillRect(q.x, q.y, q.w, 6);
+      g.fillStyle(water[2], 0.45).fillRect(q.x, q.y + q.h - 6, q.w, 6);
       for (let i = 0; i < 6; i++) {
         const y = q.y + 10 + ((i + 0.5) * (q.h - 16)) / 6,
           x = q.x + 6 + ((now / 30 + i * 37) % (q.w - 28)),
           len = 8 + (i % 3) * 4;
-        g.fillStyle(water[2], 0.55).fillRect(x, y, len, 2);
-        g.fillStyle(water[1], 0.6).fillRect(x + 3, y + 2, len - 4, 1);
+        g.fillStyle(water[3], 0.55).fillRect(x, y, len, 2);
+        g.fillStyle(water[2], 0.6).fillRect(x + 3, y + 2, len - 4, 1);
       }
       // a glint that comes and goes
       const k = Math.floor(now / 220) % 9;
       if (k < 3) g.fillStyle(0xffffff, 0.8 - k * 0.25).fillRect(q.x + ((q.w * 0.3 + q.x) % (q.w - 10)) + 4, q.y + q.h * 0.4, 2, 2);
     }
+    // Spike plates, set into the floor. Down: dark sockets, the tips just showing. Warning: the
+    // sockets glow red, the plate's edge pulses and the tips start to rise. Up: tall steel spikes.
+    const steel = R.silver.map(hex),
+      iron = R.iron.map(hex),
+      pulse = 0.5 + 0.5 * Math.sin(now / 55);
     for (const q of r.terrain.spikes) {
       const st = spikeState(q, r.t);
-      g.fillStyle(st === 'warn' ? 0x7f1d1d : 0x1c1917, 0.85).fillRect(q.x, q.y, q.w, q.h);
+      g.fillStyle(S[0]).fillRect(q.x, q.y, q.w, q.h);
+      g.fillStyle(S[2]).fillRect(q.x + 2, q.y + 2, q.w - 4, q.h - 4);
+      g.fillStyle(S[3]).fillRect(q.x + 2, q.y + 2, q.w - 4, 1).fillRect(q.x + 2, q.y + 2, 1, q.h - 4);
+      if (st === 'warn') {
+        g.fillStyle(0x7f1d1d, 0.25 + 0.2 * pulse).fillRect(q.x + 2, q.y + 2, q.w - 4, q.h - 4);
+        g.lineStyle(2, 0xef4444, 0.45 + 0.45 * pulse).strokeRect(q.x + 1, q.y + 1, q.w - 2, q.h - 2);
+      }
       for (let x = q.x + 12; x < q.x + q.w; x += 24)
-        for (let y = q.y + 12; y < q.y + q.h; y += 24) {
-          if (st === 'up') {
-            g.fillStyle(0xe7e5e4).fillTriangle(x - 7, y + 7, x + 7, y + 7, x, y - 9);
-            g.fillStyle(0x78716c).fillTriangle(x, y + 7, x + 7, y + 7, x, y - 9);
-          } else g.fillStyle(st === 'warn' ? 0xef4444 : 0x44403c).fillCircle(x, y, 3);
-        }
+        for (let y = q.y + 12; y < q.y + q.h; y += 24)
+          for (const cx of [x - 6, x, x + 6]) {
+            const base = y + 6 - (cx === x ? 3 : 0);
+            // the socket
+            g.fillStyle(st === 'warn' ? 0xef4444 : S[0], st === 'warn' ? 0.6 + 0.4 * pulse : 1).fillRect(cx - 2, base - 1, 5, 3);
+            if (st === 'up') {
+              // a spike: stacked 2px rows widening to the base, lit on the left, shade on the right
+              g.fillStyle(0x000000, 0.3).fillRect(cx + 1, base, 5, 2);
+              [1, 1, 2, 2, 2, 3, 3].forEach((half, k) => {
+                const yy = base - 14 + k * 2;
+                g.fillStyle(steel[1]).fillRect(cx - half + 1, yy, half * 2 - 1, 2);
+                g.fillStyle(steel[2]).fillRect(cx - half + 1, yy, 1, 2);
+                g.fillStyle(steel[0]).fillRect(cx + half - 1, yy, 1, 2);
+              });
+            } else if (st === 'warn') g.fillStyle(iron[2]).fillRect(cx, base - 4, 1, 3).fillRect(cx - 1, base - 2, 3, 1);
+            else g.fillStyle(iron[1]).fillRect(cx, base - 1, 1, 1);
+          }
     }
-    // Torch flames: a few pixels of fire that never sit still.
+    // Torch flames: a tongue of fire that never sits still, in the theme's color.
     const l = this.torchFire.clear(),
-      fire = R.fire.map(hex);
+      fire = T.fire.map(hex);
     this.torches.forEach((t, i) => {
       const k = Math.floor(now / 110 + i * 3) % 4,
-        sway = k === 1 ? -1 : k === 3 ? 1 : 0;
-      l.fillStyle(fire[1]).fillRect(t.x - 3, t.y - 14, 6, 6);
-      l.fillStyle(fire[1]).fillRect(t.x - 2 + sway, t.y - 18 - (k % 2), 4, 4);
-      l.fillStyle(fire[2]).fillRect(t.x - 2, t.y - 13, 4, 4);
-      l.fillStyle(hex(R.light[2])).fillRect(t.x - 1 + sway, t.y - 12, 2, 2);
+        sway = k === 1 ? -1 : k === 3 ? 1 : 0,
+        lick = k % 2;
+      l.fillStyle(fire[0]).fillRect(t.x - 5, t.y - 12, 10, 6);
+      l.fillStyle(fire[1]).fillRect(t.x - 4, t.y - 17, 8, 10);
+      l.fillStyle(fire[1]).fillRect(t.x - 3 + sway, t.y - 22 - lick, 6, 6);
+      l.fillStyle(fire[1]).fillRect(t.x - 1 + sway * 2, t.y - 26 - lick, 2, 4);
+      l.fillStyle(fire[2]).fillRect(t.x - 3, t.y - 15, 6, 7);
+      l.fillStyle(fire[2]).fillRect(t.x - 2 + sway, t.y - 19 - lick, 4, 4);
+      l.fillStyle(fire[3]).fillRect(t.x - 2, t.y - 13, 4, 4);
+      // an ember drifting up now and then
+      if ((Math.floor(now / 160) + i) % 5 === 0) l.fillStyle(fire[2]).fillRect(t.x + sway * 3, t.y - 30 - ((now / 20) % 6), 1, 1);
     });
     if (r.terrain.shrine && !r.terrain.shrine.used) {
       const { x, y } = r.terrain.shrine;
@@ -1356,6 +1483,7 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
     skipToBoss: () => scene.skipToBoss(),
     skipFloor: () => scene.skipFloor(),
     skipToWarden: () => scene.skipToWarden(),
+    cycleTheme: () => scene.cycleTheme(),
     pickRelic: (id) => scene.pickRelic(id),
     winNow: () => scene.winNow(),
     autopilot: (on) => (scene.bot = on),

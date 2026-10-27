@@ -56,6 +56,8 @@ export const CLIPS = {
   hover: { ms: 150, loop: true, frames: [{}, {}, { bob: 1 }, { bob: 1 }, { bob: 1 }, { bob: 1 }, {}, {}] },
   /** Creatures: wind up (right: 'up'), then lunge at the hero with an impact. */
   lunge: { ms: 110, loop: false, frames: [{}, { right: 'up' }, { fx: 'impact' }, {}] },
+  /** Creatures: a one-shot death, swell, crack, burst, splash (the Splitter splitting). */
+  pop: { ms: 70, loop: false, frames: [{ bob: 1 }, { right: 'up' }, { fx: 'burst' }, { fx: 'impact' }] },
   /** A single still frame, for sprites that don't move. */
   still: { ms: 1000, loop: false, frames: [{}] },
 } satisfies Record<string, Clip>;

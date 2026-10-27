@@ -17,8 +17,9 @@ import { drawWisp } from './characters/wisp';
 import { drawRam } from './characters/ram';
 import { drawSmoke } from './characters/smoke';
 import { drawSeeker } from './characters/seeker';
-import { drawSplitling, drawSplitter } from './characters/splitter';
+import { drawSplitling, drawSplitter, drawSplitterPop } from './characters/splitter';
 import { drawShade } from './characters/shade';
+import { drawWarden } from './characters/warden';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
    art for a character is a change here, never in a component. Two kinds:
@@ -116,7 +117,9 @@ export const SPRITES = {
   seeker: creature('Seeker', drawSeeker, 'lunge'),
   splitter: creature('Splitter', drawSplitter, 'lunge'),
   splitling: creature('Splitling', drawSplitling, 'lunge'),
+  splitterPop: drawn<NoOpts>({ label: () => 'The Splitter splitting', defaults: {}, clips: () => ({ idle: 'pop' }), draw: drawSplitterPop }),
   shade: creature('Shade', drawShade, 'lunge'),
+  warden: creature('The Warden of the Ashes', drawWarden, 'lunge'),
 };
 
 export type SpriteId = keyof typeof SPRITES;
