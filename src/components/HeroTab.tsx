@@ -10,12 +10,14 @@ import { LookEditor } from './LookEditor';
 import { useModal } from './useModal';
 import { StatPoints } from './StatPoints';
 import { CloudSave } from './Cloud';
+import { useLand } from './useLand';
 import { getClass, tierText } from '@/lib/gear';
 import { gearOf, type GameState } from '@/lib/game';
 import { planExercises } from '@/lib/program';
 import { exportState, inSandbox, parseImport } from '@/lib/store';
 import { storyState } from '@/story/engine';
 import { ZONES } from '@/lib/fog';
+import { pointsFree } from '@/lib/stats';
 
 interface Props {
   state: GameState;
@@ -35,6 +37,9 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
   const [backupMsg, setBackupMsg] = useState('');
   const [letterOpen, setLetterOpen] = useState(false);
   const [editingLook, setEditingLook] = useState(false);
+  // Sideways: which section of the right-hand panel is open.
+  const [part, setPart] = useState<'champion' | 'log' | 'keepsakes' | 'settings'>('champion');
+  const land = useLand();
   const look = useLook();
   const letter = state.profile.letter;
   const hasLetter = !!(letter.why || letter.want || letter.forWho || letter.remind);
@@ -60,11 +65,184 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
     setBackupMsg('Backup restored.');
   };
 
+  const lookEditor = editingLook && (
+    <Overlay label="Your look" onClose={() => setEditingLook(false)}>
+      <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6 pt-4 land:min-h-0 land:max-w-3xl land:pl-[max(env(safe-area-inset-left),1rem)] land:pr-[max(env(safe-area-inset-right),1rem)] land:pb-4 land:pt-2">
+        <h2 className="mb-4 font-pixel text-xs text-gold-300">Your look</h2>
+        <div className="flex-1">
+          <LookEditor
+            look={look}
+            onChange={(l) => update((s) => ({ ...s, profile: { ...s.profile, look: l } }))}
+            gear={gear}
+            classId={state.profile.classId}
+          />
+        </div>
+        <button
+          onClick={() => setEditingLook(false)}
+          className="mt-5 w-full rounded-2xl land:mt-3 land:py-3 bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
+        >
+          Done
+        </button>
+      </div>
+    </Overlay>
+  );
+
+  const letterCard = hasLetter && (
+    <section className={land ? 'rounded-xl bg-ink-900 p-2.5' : 'rounded-2xl bg-ink-800 p-4'}>
+      <button onClick={() => setLetterOpen(!letterOpen)} className={`flex w-full items-center gap-2 font-pixel text-gold-300 ${land ? 'text-left text-[9px] leading-relaxed' : 'text-[10px]'}`}>
+        <Mail size={14} /> Your letter {letterOpen ? '' : '(tap to read)'}
+      </button>
+      {letterOpen && (
+        <div className="mt-3 space-y-2 rounded-xl bg-[#f5ecd7] p-4 text-sm text-[#3b2a1a]">
+          {letter.why && <p>Dear future me, I&apos;m starting again because {letter.why}</p>}
+          {letter.want && <p>One day I want to be able to {letter.want}</p>}
+          {letter.forWho && <p>I&apos;m doing this for {letter.forWho}</p>}
+          {letter.remind && <p>When I want to quit, remind me that {letter.remind}</p>}
+        </div>
+      )}
+    </section>
+  );
+
+  const stats = (
+    <section className={land ? 'grid grid-cols-3 gap-2' : 'grid grid-cols-3 gap-2'}>
+      <Stat label="Quests" value={state.sessions.length} land={land} />
+      <Stat label="Beat last time" value={state.sessions.filter((s) => s.better).length} land={land} />
+      <Stat label="Chapter" value={story.finished ? 'Done' : story.index + 1} land={land} />
+    </section>
+  );
+
+  const questLog = state.sessions.length > 0 && (
+    <section className={land ? '' : 'rounded-2xl bg-ink-800 p-4'}>
+      <h2 className="font-pixel text-[10px] text-gold-300">Quest log</h2>
+      <ul className={`divide-y divide-ink-700 text-sm ${land ? 'mt-1' : 'mt-3'}`}>
+        {[...state.sessions]
+          .reverse()
+          .slice(0, 12)
+          .map((s) => (
+            <li key={s.id} className="py-2">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-300">
+                  {fmtDate(s.date)} · {s.kind === 'full' ? `Day ${s.day}` : 'Minimum'}
+                </span>
+                <span className="font-mono font-semibold text-gold-300">+{s.xp}</span>
+              </div>
+              {s.better && <p className="text-xs text-emerald-400">Better than last time</p>}
+              {!!s.heavier?.length && <p className="text-xs text-sky-300">Next time a little heavier: {s.heavier.map(exerciseName).join(', ')}</p>}
+            </li>
+          ))}
+      </ul>
+    </section>
+  );
+
+  const settings = (
+    <section className={land ? '' : 'rounded-2xl bg-ink-800 p-4'}>
+      <div className="flex items-center justify-between">
+        <h2 className="font-pixel text-[10px] text-gold-300">Settings</h2>
+        <span className="flex items-center gap-1 text-xs text-slate-400">
+          Music <SoundToggle />
+        </span>
+      </div>
+      <button onClick={onReplayOpening} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold">
+        <Film size={16} /> Replay the opening
+      </button>
+      <p className="mt-4 text-xs text-slate-400">Your progress lives on this phone. Back it up now and then.</p>
+      <div className="mt-2 grid grid-cols-2 gap-2">
+        <button onClick={download} className="flex items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold">
+          <Download size={16} /> Backup
+        </button>
+        <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold">
+          <Upload size={16} /> Restore
+          <input
+            type="file"
+            accept=".json,application/json"
+            className="hidden"
+            onChange={(e) => {
+              restore(e.target.files?.[0]);
+              // Lets the same file be picked again.
+              e.target.value = '';
+            }}
+          />
+        </label>
+      </div>
+      {backupMsg && <p className="mt-2 text-center text-xs text-gold-300">{backupMsg}</p>}
+      <CloudSave sandbox={inSandbox()} />
+    </section>
+  );
+
+  // Sideways, one screen of two panels as tall as the screen: you on a stage, and a panel with
+  // tabs, your champion's points first, then your record and quest log, keepsakes, settings.
+  if (land) {
+    const PARTS = [
+      { id: 'champion', label: 'Champion', dot: pointsFree(state) > 0 },
+      { id: 'log', label: 'Log', dot: false },
+      { id: 'keepsakes', label: 'Keepsakes', dot: false },
+      { id: 'settings', label: 'Settings', dot: false },
+    ] as const;
+    return (
+      <div className="flex h-full gap-3">
+        <section className="flex w-48 shrink-0 flex-col items-center overflow-y-auto rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 px-2.5 pb-2.5 pt-3 min-[800px]:w-56">
+          <p className="font-pixel text-[9px] text-slate-400">{cls ? cls.name : 'Adventurer'}</p>
+          <div className="grid min-h-0 flex-1 place-items-center">
+            <Hero gear={gear} classId={state.profile.classId} size={112} />
+          </div>
+          <ul className="w-full space-y-1 text-[11px]">
+            {(['weapon', 'armor', 'shield'] as const).map((slot) => (
+              <li key={slot} className="flex items-baseline justify-between gap-2 rounded-lg bg-ink-900/70 px-2 py-1">
+                <span className="uppercase tracking-wider text-slate-500">{slot}</span>
+                <span className="truncate font-semibold" style={{ color: tierText(gear[slot].tier) }}>
+                  {gear[slot].name}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-1.5 grid w-full grid-cols-2 gap-1.5">
+            <button onClick={onChangeClass} className="rounded-lg bg-ink-900/70 px-1 py-2 text-[11px] font-semibold text-slate-300">
+              {cls ? 'Change class' : 'Choose a class'}
+            </button>
+            <button onClick={() => setEditingLook(true)} className="flex items-center justify-center gap-1 whitespace-nowrap rounded-lg bg-ink-900/70 px-1 py-2 text-[11px] font-semibold text-slate-300">
+              <Palette size={12} className="shrink-0" /> Change look
+            </button>
+          </div>
+        </section>
+
+        <section className="flex min-w-0 flex-1 flex-col rounded-2xl bg-ink-800">
+          <div role="tablist" aria-label="Your hero" className="m-2 mb-0 grid shrink-0 grid-cols-4 gap-1 rounded-xl bg-ink-900 p-1">
+            {PARTS.map((t) => (
+              <button
+                key={t.id}
+                role="tab"
+                aria-selected={part === t.id}
+                onClick={() => setPart(t.id)}
+                className={`relative rounded-lg py-1.5 text-xs font-semibold transition active:scale-95 ${part === t.id ? 'bg-gold-400 text-ink-950' : 'text-slate-300'}`}
+              >
+                {t.label}
+                {t.dot && <span aria-hidden className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-gold-300 ring-2 ring-ink-900" />}
+              </button>
+            ))}
+          </div>
+          <div role="tabpanel" className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
+            {part === 'champion' ? (
+              <StatPoints state={state} update={update} land />
+            ) : part === 'log' ? (
+              <>
+                {stats}
+                {letterCard}
+                {questLog || <p className="text-xs text-slate-500">Your quests land here.</p>}
+              </>
+            ) : part === 'keepsakes' ? (
+              <Keepsakes cleared={state.fog?.cleared ?? 0} land />
+            ) : (
+              settings
+            )}
+          </div>
+        </section>
+        {lookEditor}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
-      {/* Sideways: you and your champion on the left, the rest on the right. */}
-      <div className="space-y-5 land:grid land:grid-cols-2 land:items-start land:gap-4 land:space-y-0">
-      <div className="space-y-5">
       <section className="flex flex-col items-center rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 pb-4 pt-5">
         <p className="font-pixel text-[10px] text-slate-400">{cls ? cls.name : 'Adventurer'}</p>
         <Hero gear={gear} classId={state.profile.classId} size={180} />
@@ -90,124 +268,30 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
 
       <StatPoints state={state} update={update} />
 
-      {editingLook && (
-        <Overlay label="Your look" onClose={() => setEditingLook(false)}>
-          <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6 pt-4 land:min-h-0 land:max-w-3xl land:pl-[max(env(safe-area-inset-left),1rem)] land:pr-[max(env(safe-area-inset-right),1rem)] land:pb-4 land:pt-2">
-            <h2 className="mb-4 font-pixel text-xs text-gold-300">Your look</h2>
-            <div className="flex-1">
-              <LookEditor
-                look={look}
-                onChange={(l) => update((s) => ({ ...s, profile: { ...s.profile, look: l } }))}
-                gear={gear}
-                classId={state.profile.classId}
-              />
-            </div>
-            <button
-              onClick={() => setEditingLook(false)}
-              className="mt-5 w-full rounded-2xl land:mt-3 land:py-3 bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
-            >
-              Done
-            </button>
-          </div>
-        </Overlay>
-      )}
-      </div>
+      {lookEditor}
 
-      <div className="space-y-5">
-      {hasLetter && (
-        <section className="rounded-2xl bg-ink-800 p-4">
-          <button onClick={() => setLetterOpen(!letterOpen)} className="flex w-full items-center gap-2 font-pixel text-[10px] text-gold-300">
-            <Mail size={14} /> Your letter {letterOpen ? '' : '(tap to read)'}
-          </button>
-          {letterOpen && (
-            <div className="mt-3 space-y-2 rounded-xl bg-[#f5ecd7] p-4 text-sm text-[#3b2a1a]">
-              {letter.why && <p>Dear future me, I&apos;m starting again because {letter.why}</p>}
-              {letter.want && <p>One day I want to be able to {letter.want}</p>}
-              {letter.forWho && <p>I&apos;m doing this for {letter.forWho}</p>}
-              {letter.remind && <p>When I want to quit, remind me that {letter.remind}</p>}
-            </div>
-          )}
-        </section>
-      )}
+      {letterCard}
 
-      <section className="grid grid-cols-3 gap-2">
-        <Stat label="Quests" value={state.sessions.length} />
-        <Stat label="Beat last time" value={state.sessions.filter((s) => s.better).length} />
-        <Stat label="Chapter" value={story.finished ? 'Done' : story.index + 1} />
-      </section>
+      {stats}
 
       <Keepsakes cleared={state.fog?.cleared ?? 0} />
 
-      {state.sessions.length > 0 && (
-        <section className="rounded-2xl bg-ink-800 p-4">
-          <h2 className="font-pixel text-[10px] text-gold-300">Quest log</h2>
-          <ul className="mt-3 divide-y divide-ink-700 text-sm">
-            {[...state.sessions]
-              .reverse()
-              .slice(0, 12)
-              .map((s) => (
-                <li key={s.id} className="py-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-slate-300">
-                      {fmtDate(s.date)} · {s.kind === 'full' ? `Day ${s.day}` : 'Minimum'}
-                    </span>
-                    <span className="font-mono font-semibold text-gold-300">+{s.xp}</span>
-                  </div>
-                  {s.better && <p className="text-xs text-emerald-400">Better than last time</p>}
-                  {!!s.heavier?.length && <p className="text-xs text-sky-300">Next time a little heavier: {s.heavier.map(exerciseName).join(', ')}</p>}
-                </li>
-              ))}
-          </ul>
-        </section>
-      )}
+      {questLog}
 
-      <section className="rounded-2xl bg-ink-800 p-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-pixel text-[10px] text-gold-300">Settings</h2>
-          <span className="flex items-center gap-1 text-xs text-slate-400">
-            Music <SoundToggle />
-          </span>
-        </div>
-        <button onClick={onReplayOpening} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold">
-          <Film size={16} /> Replay the opening
-        </button>
-        <p className="mt-4 text-xs text-slate-400">Your progress lives on this phone. Back it up now and then.</p>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <button onClick={download} className="flex items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold">
-            <Download size={16} /> Backup
-          </button>
-          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold">
-            <Upload size={16} /> Restore
-            <input
-              type="file"
-              accept=".json,application/json"
-              className="hidden"
-              onChange={(e) => {
-                restore(e.target.files?.[0]);
-                // Lets the same file be picked again.
-                e.target.value = '';
-              }}
-            />
-          </label>
-        </div>
-        {backupMsg && <p className="mt-2 text-center text-xs text-gold-300">{backupMsg}</p>}
-        <CloudSave sandbox={inSandbox()} />
-      </section>
-      </div>
-      </div>
+      {settings}
     </div>
   );
 }
 
 /** What you won in the Fog: one keepsake per boss. */
-function Keepsakes({ cleared }: { cleared: number }) {
+function Keepsakes({ cleared, land }: { cleared: number; land?: boolean }) {
   return (
-    <section className="rounded-2xl bg-ink-800 p-4">
+    <section className={land ? '' : 'rounded-2xl bg-ink-800 p-4'}>
       <h2 className="flex items-center gap-2 font-pixel text-[10px] text-gold-300">
         <Gem size={14} /> Keepsakes
       </h2>
       <p className="mt-1 text-xs text-slate-500">One for every boss you beat in the Fog, on the Play tab.</p>
-      <ul className="mt-3 grid grid-cols-2 gap-2">
+      <ul className={`mt-3 grid gap-2 ${land ? 'grid-cols-3' : 'grid-cols-2'}`}>
         {ZONES.map((z) => {
           const won = z.id < cleared;
           return (
@@ -238,11 +322,11 @@ function Keepsakes({ cleared }: { cleared: number }) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: number | string }) {
+function Stat({ label, value, land }: { label: string; value: number | string; land?: boolean }) {
   return (
-    <div className="rounded-2xl bg-ink-800 p-3">
-      <p className="text-[11px] uppercase tracking-wider text-slate-400">{label}</p>
-      <p className="mt-1 font-mono text-2xl font-semibold">{value}</p>
+    <div className={land ? 'flex flex-col justify-between rounded-xl bg-ink-900 p-2' : 'rounded-2xl bg-ink-800 p-3'}>
+      <p className={`uppercase tracking-wider text-slate-400 ${land ? 'text-[9px] leading-tight' : 'text-[11px]'}`}>{label}</p>
+      <p className={`mt-1 font-mono font-semibold ${land ? 'text-lg' : 'text-2xl'}`}>{value}</p>
     </div>
   );
 }

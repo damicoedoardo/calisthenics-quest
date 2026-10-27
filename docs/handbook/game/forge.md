@@ -9,7 +9,7 @@ timestamp: 2026-10-27
 # Mira's forge and the flame
 
 Between runs your gear lives on the Play tab's gear card (`src/components/FogGearCard.tsx`): the
-three slots you wear, the vault, and, for the item you tap, what you can do with it. (A walkable
+three slots you wear, the vault, and, for the item you tap, what you can do with it. Held sideways it is the Play tab's Gear view: the three as columns side by side. (A walkable
 camp was tried for this and dropped: Edoardo wanted it on the normal screens.)
 
 ## Rules

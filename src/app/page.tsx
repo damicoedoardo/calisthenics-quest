@@ -98,6 +98,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   // While a screen is open over the tabs, the tabs underneath are out of reach: no keyboard focus
   // and nothing for a screen reader to wander into. (React 18 has no inert prop, so it's set here.)
   const root = useRef<HTMLDivElement>(null);
+  // Sideways the tab scrolls inside main (when it scrolls at all), not the page.
+  const main = useRef<HTMLElement>(null);
   const covered = busy || opening || (dev && devOpen);
   // Only on a change, so it never undoes the inert an overlay inside a tab set (useModal).
   const applied = useRef(false);
@@ -184,19 +186,22 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   }
 
   return (
-    // Held sideways (the `land` screen), the tab bar becomes a rail down the left and the column
-    // takes the rest of the width; the header shrinks to one line.
-    <div ref={root} className="mx-auto flex min-h-dvh max-w-md flex-col land:ml-[calc(4.5rem+env(safe-area-inset-left))] land:mr-0 land:max-w-none land:pr-[env(safe-area-inset-right)]">
-      <header className="safe-top sticky top-0 z-20 bg-ink-950/90 px-4 pb-3 backdrop-blur land:!pt-2 land:pb-2">
+    // Held sideways (the `land` screen), the tab bar becomes a rail down the left, the header shrinks
+    // to one line, and the tab fills exactly the rest of the screen (each tab lays out a screen of
+    // its own then, see useLand).
+    <div ref={root} className="mx-auto flex min-h-dvh max-w-md flex-col land:ml-[calc(4.5rem+env(safe-area-inset-left))] land:mr-0 land:h-dvh land:min-h-0 land:max-w-none land:pr-[env(safe-area-inset-right)]">
+      <header className="safe-top sticky top-0 z-20 bg-ink-950/90 px-4 pb-3 backdrop-blur land:flex land:items-center land:gap-3 land:!pt-2 land:pb-2">
         {sandbox && (
-          <div className="mb-2 flex land:mb-1.5 land:py-1 items-center justify-between gap-2 rounded-lg border border-dashed border-sky-400/60 px-3 py-1.5 text-[11px] text-sky-300">
-            <span>Sandbox: your real save is untouched</span>
+          // Sideways it is a small tag at the end of the header line.
+          <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-dashed border-sky-400/60 px-3 py-1.5 text-[11px] text-sky-300 land:order-last land:mb-0 land:shrink-0 land:px-2 land:py-1">
+            <span className="land:hidden">Sandbox: your real save is untouched</span>
+            <span className="hidden land:inline">Sandbox</span>
             <a href="/lab/night" className="shrink-0 underline">
               Back to tonight
             </a>
           </div>
         )}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 land:min-w-0 land:flex-1">
           <div className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800 land:hidden">
             <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} />
           </div>
@@ -222,7 +227,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         </div>
       </header>
 
-      <main className="flex-1 px-4 pb-28 pt-2 land:pb-6">
+      <main ref={main} className="flex-1 px-4 pb-28 pt-2 land:min-h-0 land:overflow-y-auto land:pb-3">
         {tab === 'today' ? (
           <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook} />
         ) : tab === 'train' ? (
@@ -244,7 +249,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         <div aria-hidden className="hidden h-11 w-11 place-items-center rounded-xl bg-ink-800 land:grid">
           <Hero gear={gear} classId={state.profile.classId} size={38} bounce={false} />
         </div>
-        <div className="mx-auto grid max-w-md grid-cols-4 land:mx-0 land:w-full land:grid-cols-1">
+        <div className="mx-auto grid max-w-md grid-cols-4 land:mx-0 land:w-full land:grid-cols-1 land:gap-1">
           {TABS.map(({ id, label, icon }) => (
             <button
               key={id}
@@ -252,8 +257,9 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
               onClick={() => {
                 setTab(id);
                 window.scrollTo({ top: 0 });
+                main.current?.scrollTo({ top: 0 });
               }}
-              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium land:py-2 ${tab === id ? 'text-gold-400' : 'text-slate-500'}`}
+              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium land:mx-2 land:rounded-xl land:py-2 ${tab === id ? 'text-gold-400 land:bg-ink-800 land:ring-1 land:ring-gold-400/30' : 'text-slate-500'}`}
             >
               {/* Full color on the open tab; faded and grey on the others. */}
               <span className="grid h-[22px] place-items-center">
