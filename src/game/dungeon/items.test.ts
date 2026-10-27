@@ -4,7 +4,7 @@ import { initialState } from '@/lib/game';
 import { seeded } from '@/lib/random';
 import { playRun } from './bot';
 import { BAG, createRun, dropFromBag, rollItem, rollRarity, starterKit, stepRun, takeEvents, takeOff, takeStairs, wear, type Item, type Run } from './engine';
-import { itemScore, shortOf } from './items';
+import { betterBy, foundAt, itemScore, shortOf } from './items';
 
 const at = { zone: 2, workouts: 20, floor: 5, cls: 'warrior' as const };
 const many = (n: number, rarity: Item['rarity'] = 'magic') => {
@@ -143,5 +143,18 @@ describe('items in a run', () => {
     const carried = [...Object.values(end.gear.worn), ...end.gear.bag];
     expect(carried.length).toBeGreaterThan(0);
     expect(carried.some((i) => i?.starter)).toBe(false);
+  });
+});
+
+describe('item cards', () => {
+  it('says where an item was found, and the starter kit was found nowhere', () => {
+    const it = rollItem(seeded(7), { zone: 1, workouts: 12, floor: 9, cls: 'warrior' }, 'rare');
+    expect(foundAt(it)).toEqual({ level: 20, zone: 2, floor: 10 });
+    expect(foundAt(starterKit('warrior').weapon)).toBeNull();
+  });
+  it('a found item beats the starter kit, and an item is never compared with itself', () => {
+    const deep = rollItem(seeded(3), { zone: 1, workouts: 12, floor: 9, cls: 'warrior' }, 'rare');
+    expect(betterBy(deep, undefined)).toBeGreaterThan(0);
+    expect(betterBy(deep, deep)).toBeNull();
   });
 });

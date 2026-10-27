@@ -1116,7 +1116,7 @@ function BagPanel({ gear, build, risk, flame, onWear, onTakeOff, onDrop, onClose
                   const it = gear.bag[i];
                   return it ? (
                     <button key={it.id} data-bag-item="" onClick={() => setPick({ from: 'bag', id: it.id })} className={`grid place-items-center rounded-lg p-1 ${pick?.id === it.id ? 'bg-ink-800' : ''}`} aria-label={nameOf(it)}>
-                      <ItemTile item={it} size={36} dim={shortOf(it, build) > 0} />
+                      <ItemTile item={it} size={36} dim={shortOf(it, build) > 0} than={gear.worn[it.slot] ?? 'none'} />
                     </button>
                   ) : (
                     <span key={i} className="mx-auto my-1 h-9 w-9 rounded-lg border border-dashed border-ink-800" />
@@ -1135,7 +1135,7 @@ function BagPanel({ gear, build, risk, flame, onWear, onTakeOff, onDrop, onClose
         <div className="w-56 shrink-0">
           {item ? (
             <>
-              <ItemCard item={item} build={build}>
+              <ItemCard item={item} build={build} than={gear.worn[item.slot] ?? 'none'}>
                 {wornNow ? (
                   !item.starter && (
                     <button onClick={() => onTakeOff(item.slot)} disabled={gear.bag.length >= BAG} className="flex-1 rounded-lg bg-ink-700 py-2 text-xs text-slate-200 disabled:opacity-40">
