@@ -47,7 +47,8 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change where the bot goes on a floor | `route` in `bot.ts` |
 | Tune items (how strong, how much they ask, how rare) | `ITEM_POWER` (all finds next to the starter kit), `RARITY`, `RARITY_ODDS`, `BONUSES` and the base numbers in `rollItem` (`items.ts`), then `pnpm fog:tune` |
 | Change how often things drop, or the bag's size | `DROPS` and `BAG` in `engine.ts` (`kill`, `openChest`) |
-| Add an item kind or a class's weapon | `WEAPONS`, `ARMORS`, `ItemIcon` in `items.ts`; its icon in `ITEM_ICONS` (`src/sprites/characters/icons.ts`) |
+| Add an item kind or a class's weapon | `WEAPONS`, `ARMORS`, `ItemIcon` (and `ItemArt`, `looksOf`) in `items.ts`; its art in `ITEM_ROWS` and `LEGEND_ROWS` (`src/sprites/characters/items.ts`), and how the hero wears it in `heroSpec` (`src/sprites/characters/hero.ts`), see [sprites.md](sprites.md) |
+| Change how an item looks (its kind, the seed that picks its colors) | `looksOf` and `seedOf` in `items.ts` (the seed comes from the name, so one name always looks the same) |
 | Change the bag panel, the pickup note or the stairs card | `BagPanel` and the `stairs` card in `src/components/FogRun.tsx` |
 
 ## Floors and the map
@@ -77,8 +78,9 @@ hurt, and the stairs once it has been in most of the floor.
 Monsters (elites and golems more often), chests, the mid-boss and the boss drop items (`dropItem`,
 odds in `DROPS`): rolled by `newItem` for the zone, the floor and your class, rarer deeper down and
 from bigger foes. They lie on the floor (`run.loot`, kept with the room in `Cell.kept`); the scene
-draws each with its icon, its name in its rarity's color, and a beam over rare ones
-(`syncLoot`). Walking over one puts it in the bag (`run.gear.bag`, `BAG` slots), unless it's full.
+draws each with its own art (`itemTexture`: the item's drawing from
+`src/sprites/characters/items.ts`, made into a texture once), its name in its rarity's color, and a
+beam over rare ones (`syncLoot`). Walking over one puts it in the bag (`run.gear.bag`, `BAG` slots), unless it's full.
 
 You wear three things: a weapon and armor made for your class, and a charm. A run starts in what
 the save says you wear (`RunSetup.worn`), the starter kit (`starterKit`) filling an empty weapon or

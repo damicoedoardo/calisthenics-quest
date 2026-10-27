@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { uniformGear, type ClassId, type Tier } from '@/lib/gear';
+import { makeGear, uniformGear, type ClassId, type Gear, type GearSlot, type Tier } from '@/lib/gear';
+import { seedOf, type ItemArt, type ItemLook, type Rarity } from '@/game/dungeon/items';
 import { CLIPS, type SpriteAction } from './clips';
 import { DEFAULT_LOOK, STARTER_LOOKS, normalizeLook } from './characters/hero';
 import { HAIRSTYLES, SIZE, type HairStyle } from './engine/figure';
@@ -14,6 +15,19 @@ const painted = (g: Grid) => g.flat().filter(Boolean).length;
 const hash = (frames: Grid[]) => createHash('sha1').update(JSON.stringify(frames)).digest('hex').slice(0, 12);
 const ids = Object.keys(SPRITES) as SpriteId[];
 const actions: SpriteAction[] = ['idle', 'attack'];
+const ARTS: ItemArt[] = ['sword', 'bow', 'staff', 'wand', 'heavy', 'light', 'robe', 'ring', 'amulet', 'token', 'band', 'charm'];
+const RARITIES: Rarity[] = ['common', 'magic', 'rare', 'legendary'];
+const WEAPON_ART: Record<ClassId, ItemArt> = { warrior: 'sword', archer: 'bow', monk: 'staff', mage: 'wand' };
+const ARMOR_ART: Record<ClassId, ItemArt> = { warrior: 'heavy', archer: 'light', monk: 'light', mage: 'robe' };
+/** A hero dressed in a whole set of Fog items of one rarity. */
+const itemGear = (cls: ClassId, rarity: Rarity, seed = 7): Record<GearSlot, Gear> => {
+  const look = (art: ItemArt, k: number): ItemLook => ({ art, rarity, seed: seed * 31 + k });
+  return {
+    weapon: { ...makeGear('weapon', 3, cls), item: look(WEAPON_ART[cls], 1) },
+    armor: { ...makeGear('armor', 3, cls), item: look(ARMOR_ART[cls], 2) },
+    shield: { ...makeGear('shield', 3, cls), item: look('amulet', 3) },
+  };
+};
 const ZONED = ['slime', 'wisp', 'ram', 'smoke', 'seeker', 'splitter', 'splitling', 'shade'] as const;
 
 describe('clips', () => {
@@ -127,6 +141,35 @@ describe('sprite registry', () => {
     expect(imageSheet({ ...png, clips: { idle: png.clips.idle } }, 'attack')).toMatchObject({ row: 0, frames: 4, loop: true });
   });
 
+  it('every item kind draws at every rarity, and the seed and rarity change how it looks', () => {
+    for (const art of ARTS) {
+      const seen = new Set<string>();
+      for (const rarity of RARITIES) {
+        const frames = framesFor('item', 'idle', { art, rarity, seed: 1 });
+        frames.forEach((g) => {
+          expect(g, `${art} ${rarity}`).toHaveLength(32);
+          expect(painted(g), `${art} ${rarity}`).toBeGreaterThan(60);
+        });
+        seen.add(hash(frames));
+        // rares shine and legendaries sparkle: their frames move
+        if (rarity === 'rare' || rarity === 'legendary') expect(new Set(frames.map((g) => hash([g]))).size, `${art} ${rarity}`).toBeGreaterThan(1);
+      }
+      expect(seen.size, art).toBe(4);
+    }
+    const seeds = new Set(['Ember Fang', 'Grave Song', 'Storm Oath', 'Dusk Thorn'].map((n) => hash(framesFor('item', 'idle', { art: 'heavy', rarity: 'rare', seed: seedOf(n) }))));
+    expect(seeds.size).toBeGreaterThan(1);
+  });
+
+  it('the hero wears its items: each rarity and armor kind looks different', () => {
+    for (const cls of ['warrior', 'archer', 'monk', 'mage'] as ClassId[]) {
+      const looks = RARITIES.map((r) => hash(framesFor('hero', 'idle', { gear: itemGear(cls, r), classId: cls })));
+      expect(new Set(looks).size, cls).toBe(4);
+      // the same tiers without the items keep the old look
+      expect(looks[0]).not.toBe(hash(framesFor('hero', 'idle', { gear: uniformGear(cls, 3), classId: cls })));
+    }
+    expect(hash(framesFor('hero', 'idle', { gear: itemGear('warrior', 'rare', 1), classId: 'warrior' }))).not.toBe(hash(framesFor('hero', 'idle', { gear: itemGear('warrior', 'rare', 2), classId: 'warrior' })));
+  });
+
   // A fingerprint of every sprite's pixels. If this fails after an art change you meant to make,
   // update it with `pnpm test -- -u`; if you didn't mean to change any art, something broke.
   it('art fingerprints', () => {
@@ -145,6 +188,10 @@ describe('sprite registry', () => {
     for (const id of ['lia', 'sol', 'vela'] as const) prints[`${id} after`] = hash(framesFor(id, 'idle', { after: true }));
     for (const id of ZONED) for (const zone of [1, 2, 3, 4, 5]) prints[`${id} zone ${zone}`] = hash([...framesFor(id, 'idle', { zone }), ...framesFor(id, 'attack', { zone })]);
     for (const exercise of EXERCISES) prints[`exercise ${exercise}`] = hash(framesFor('exercise', 'idle', { exercise }));
+    for (const art of ARTS) for (const rarity of RARITIES) prints[`item ${art} ${rarity}`] = hash(framesFor('item', 'idle', { art, rarity, seed: 1 }));
+    for (const cls of ['warrior', 'archer', 'monk', 'mage'] as ClassId[])
+      for (const rarity of RARITIES)
+        for (const action of actions) prints[`hero ${cls} items ${rarity} ${action}`] = hash(framesFor('hero', action, { gear: itemGear(cls, rarity), classId: cls }));
     prints['kindled long hair'] = hash(framesFor('kindled', 'idle', { hair: 'long' }));
     expect(prints).toMatchSnapshot();
   });

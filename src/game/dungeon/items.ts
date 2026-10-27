@@ -89,6 +89,32 @@ export const ARMORS: Record<ClassId, { noun: string; icon: ItemIcon }> = {
 export type ItemIcon = 'sword' | 'bow' | 'staff' | 'wand' | 'heavy' | 'light' | 'robe' | 'charm';
 export const iconOf = (it: Item): ItemIcon => (it.slot === 'charm' ? 'charm' : it.slot === 'weapon' ? WEAPONS[it.cls ?? 'warrior'].icon : ARMORS[it.cls ?? 'warrior'].icon);
 
+/** What an item's art is: its weapon or armor kind, or the kind of charm. */
+export type ItemArt = Exclude<ItemIcon, 'charm'> | 'ring' | 'amulet' | 'token' | 'band' | 'charm';
+/** How an item looks, for its art and for the hero who wears it: kind, rarity, and a seed from its
+    name, so two items of one kind and rarity still look different (and one name always looks the same). */
+export interface ItemLook {
+  art: ItemArt;
+  rarity: Rarity;
+  seed: number;
+}
+const CHARM_ART = ['ring', 'amulet', 'token', 'band'] as const;
+/** A number from a name (FNV-1a), the same everywhere. */
+export function seedOf(name: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < name.length; i++) h = Math.imul(h ^ name.charCodeAt(i), 16777619);
+  return h >>> 0;
+}
+export function looksOf(it: Item): ItemLook {
+  const seed = seedOf(it.name),
+    icon = iconOf(it);
+  if (icon !== 'charm') return { art: icon, rarity: it.rarity, seed };
+  // A legendary charm has art of its own; the rest show the noun in their name, or one from the seed.
+  const words = it.name.toLowerCase().split(/[^a-z]+/),
+    noun = CHARM_ART.find((n) => words.includes(n));
+  return { art: it.rarity === 'legendary' ? 'charm' : (noun ?? CHARM_ART[seed % CHARM_ART.length]), rarity: it.rarity, seed };
+}
+
 /** The material in a name, by zone. */
 const MATERIAL = ['Ashen', 'Drowned', 'Builder\'s', 'Sunworn', 'Hollow', 'Summit'];
 const CHARMS = ['ring', 'amulet', 'token', 'band'];

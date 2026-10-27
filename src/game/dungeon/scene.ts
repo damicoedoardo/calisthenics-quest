@@ -6,7 +6,7 @@ import { BOT_PICKS, type BossSheetKey, type SheetKey, type Sheets } from '../rul
 import type { FogBoss, FogLines } from '@/story/types';
 import { R } from '@/sprites/palette';
 import { botInput } from './bot';
-import { ITEM_ICONS } from '@/sprites/characters/icons';
+import { drawItem } from '@/sprites/characters/items';
 import type { Build } from '@/lib/stats';
 import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STAIRS, type Prop } from './props';
 import { THEMES, themeFor, type Theme } from './themes';
@@ -31,7 +31,7 @@ import {
   zoneDungeon,
   createRun,
   dropFromBag,
-  iconOf,
+  looksOf,
   nameOf,
   RARITY,
   takeOff,
@@ -795,7 +795,6 @@ class DungeonScene extends Phaser.Scene {
     prop('sconce', SCONCE);
     prop('stairs', STAIRS);
     prop('hitspark', HIT_SPARK);
-    for (const [k, art] of Object.entries(ITEM_ICONS)) prop(`item-${k}`, art);
     g.destroy();
     this.themeTextures();
   }
@@ -994,6 +993,26 @@ class DungeonScene extends Phaser.Scene {
 
   /** Items on the floor: each one's icon with its name in its rarity's color over it, and a
       beam of light over rare and legendary ones, so they're seen from across the room. */
+  /** The texture of an item on the floor: its own art (src/sprites/characters/items.ts), drawn once. */
+  private itemTexture(item: Item): string {
+    const look = looksOf(item),
+      key = `item-${look.art}-${look.rarity}-${look.seed}`;
+    if (this.textures.exists(key)) return key;
+    const g = drawItem(look),
+      cv = this.textures.createCanvas(key, g[0].length, g.length);
+    const ctx = cv?.getContext();
+    if (!cv || !ctx) return key;
+    g.forEach((row, y) =>
+      row.forEach((c, x) => {
+        if (!c) return;
+        ctx.fillStyle = c;
+        ctx.fillRect(x, y, 1, 1);
+      }),
+    );
+    cv.refresh();
+    return key;
+  }
+
   private syncLoot() {
     const r = this.run,
       now = this.time.now,
@@ -1012,7 +1031,7 @@ class DungeonScene extends Phaser.Scene {
         const big = l.item.rarity === 'rare' || l.item.rarity === 'legendary';
         v = {
           beam: big ? this.add.rectangle(X, Y - 60, 10, 120, c, 0.18).setDepth(-1.1) : null,
-          icon: this.add.image(X, Y, `item-${iconOf(l.item)}`).setDepth(-1),
+          icon: this.add.image(X, Y, this.itemTexture(l.item)).setDepth(-1).setScale(0.9),
           name: this.add
             .text(X, Y - 18, nameOf(l.item), { fontFamily: '"Press Start 2P", monospace', fontSize: '7px', color, stroke: '#0b0d14', strokeThickness: 3 })
             .setOrigin(0.5, 1)
