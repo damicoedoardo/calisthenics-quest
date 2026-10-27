@@ -112,8 +112,8 @@ export function savedId(scene: Scene, state: GameState): string {
 
 /**
  * Scenes whose moment has come and that the player has not seen yet, in story order. Once a
- * chapter is behind you, its leftover scenes are skipped (except the one that ends it), so a
- * returning player isn't buried in old scenes.
+ * chapter is behind you, its leftover scenes are skipped (except the one that ends it, and the
+ * finale), so a returning player isn't buried in old scenes.
  */
 export function pendingScenes(state: GameState, now: Date): Scene[] {
   const st = storyState(state);
@@ -121,7 +121,8 @@ export function pendingScenes(state: GameState, now: Date): Scene[] {
   const current = st.index + 1;
   const due = ALL_SCENES.filter(({ scene, chapter }) => {
     if (seen.has(savedId(scene, state))) return false;
-    if (chapter > 0 && chapter < current && scene.when.beaten !== chapter) return false;
+    // The finale lives in the last chapter's file but plays after it, so it's never "left behind".
+    if (chapter > 0 && chapter < current && scene.when.beaten !== chapter && !scene.when.finished) return false;
     return holds(scene.when, state, st, now);
   }).map(({ scene }) => (scene.when.away ? { ...scene, id: savedId(scene, state) } : scene));
   // Coming back after a long time goes first.
