@@ -9,6 +9,7 @@ import { FogRun, type RunStart } from '@/components/FogRun';
 import { Hero } from '@/components/Hero';
 import { Prologue } from '@/components/Prologue';
 import { Opening, openingDue } from '@/components/Opening';
+import { useMenuTrack } from '@/components/Sound';
 import { Workout } from '@/components/Workout';
 import { AfterSession } from '@/components/AfterSession';
 import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
@@ -94,14 +95,16 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   }, [ready]);
   // Anything that takes the screen (a scene, a run, a workout) closes the panel for good.
   const busy = !!(run || training || after || scene || picker);
-  useEffect(() => {
-    if (busy) setDevOpen(false);
-  }, [busy]);
-  const { dev, live, toggle: setDev } = useDevMode();
   // After the prologue, a phone in a browser tab installs FORMA before playing on. Never in the
   // sandbox (unless ?gate= asks for the screen), never once installed or on a computer.
   const inst = useInstall();
   const gated = inst.known && !inst.standalone && !inst.skipped && mustInstall(inst.platform) && (inst.forced || !inSandbox());
+  // The menus' music, on the tabs only: the opening, story, workouts and runs have their own.
+  useMenuTrack(ready && state.profile.onboarded && !opening && !replaying && !busy && !gated);
+  useEffect(() => {
+    if (busy) setDevOpen(false);
+  }, [busy]);
+  const { dev, live, toggle: setDev } = useDevMode();
   // While a screen is open over the tabs, the tabs underneath are out of reach: no keyboard focus
   // and nothing for a screen reader to wander into. (React 18 has no inert prop, so it's set here.)
   const root = useRef<HTMLDivElement>(null);

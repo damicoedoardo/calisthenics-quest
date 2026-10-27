@@ -2,7 +2,8 @@
 
 import { useState, type ReactNode } from 'react';
 import { Download, Film, Gem, Lock, Mail, Palette, Upload } from 'lucide-react';
-import { SoundToggle } from './Sound';
+import { SoundToggle, useMenuMusic } from './Sound';
+import { music } from '@/lib/music';
 import { Hero } from './Hero';
 import { Sprite } from './Sprite';
 import { useLook } from './Look';
@@ -29,6 +30,7 @@ const exerciseName = (id: string) => planExercises().find((x) => x.id === id)?.n
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
 export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props) {
+  const menuMusic = useMenuMusic();
   const gear = gearOf(state);
   const cls = getClass(state.profile.classId);
   const story = storyState(state);
@@ -168,6 +170,10 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
             Music <SoundToggle />
           </span>
         </div>
+        <label className="mt-1 flex min-h-[44px] items-center justify-between text-sm text-slate-300">
+          Music in the menus
+          <input type="checkbox" checked={menuMusic} onChange={(e) => music.setMenuMusic(e.target.checked)} className="h-5 w-5 accent-gold-400" />
+        </label>
         <button onClick={onReplayOpening} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold">
           <Film size={16} /> Replay the opening
         </button>
