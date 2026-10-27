@@ -2614,6 +2614,15 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
     input: { activePointers: 2 },
     scene: [scene],
   });
+  // Phaser misses some screen changes: a run started with the phone upright (behind the "turn your
+  // phone" card) kept its upright size once turned, and showed a corner of it, zoomed in. Whenever
+  // the box the run sits in changes size, the game takes the new size.
+  const sized = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => {
+    const w = parent.clientWidth,
+      h = parent.clientHeight;
+    if (w && h && (w !== game.scale.width || h !== game.scale.height)) game.scale.resize(w, h);
+  });
+  sized?.observe(parent);
   return {
     pick: (id) => scene.pick(id),
     ability: () => scene.ability(),
@@ -2632,6 +2641,9 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
     stairs: (choice) => scene.stairsChoice(choice),
     winNow: () => scene.winNow(),
     autopilot: (on) => (scene.bot = on),
-    destroy: () => game.destroy(true),
+    destroy: () => {
+      sized?.disconnect();
+      game.destroy(true);
+    },
   };
 }

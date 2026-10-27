@@ -159,7 +159,9 @@ and a small flame while one is held; the bag panel and the stairs card show the 
 
 The phone is held sideways in a run, and the room fills the whole screen, no black bands: the
 camera zooms until the room covers it both ways and follows you inside it, up and down as well as
-along (`fitScreen`). `FIT.see` keeps it readable on a short screen (at least that much of the
+along (`fitScreen`). `startRun` watches the box the run sits in (`ResizeObserver`) and hands
+Phaser each new size: on its own it missed the phone turning, so a run started upright stayed
+upright-sized once turned and showed a zoomed-in corner. `FIT.see` keeps it readable on a short screen (at least that much of the
 room's height shows), and `FIT.hud` leaves a strip above the top wall for the HUD. What's off the
 screen gets a mark on its edge (`drawPad`). The HUD over it (`FogRun.tsx`) stays small and in the
 corners, clear of the notch: HP and level top left, the floor and its depth row top middle (with
