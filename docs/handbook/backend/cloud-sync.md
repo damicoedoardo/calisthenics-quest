@@ -28,6 +28,12 @@ the card is not drawn and no Supabase code is loaded. It is always off in `?sand
 Sign-in is by email link. The Google button shows only with `NEXT_PUBLIC_GOOGLE_SIGNIN=1`, set
 once the Google provider is turned on in the Supabase `forma` project (it isn't yet).
 
+The Link button turns into a spinner with "Sending" until Supabase answers. The FORMA look for the
+email is `supabase/templates/magic-link.html`, pasted by hand into Supabase > Authentication >
+Emails > Magic link. It shows the link and the 6-digit code (`{{ .Token }}`), because on iPhone the link opens
+in Safari, not the installed app, so the app also takes the code. Supabase only lets you edit templates once custom SMTP is set up; until then
+the email is Supabase's plain default.
+
 ## How a sync goes
 
 1. Supabase loads only if this phone may be signed in (a token in `localStorage` or a sign-in
