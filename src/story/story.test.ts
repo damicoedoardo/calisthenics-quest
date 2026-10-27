@@ -3,6 +3,8 @@ import { initialState, type GameState, type Session } from '@/lib/game';
 import { TRACKS } from '@/lib/music';
 import { SPRITES } from '@/sprites/registry';
 import { CAST } from './cast';
+import { recordRun } from '@/lib/fog';
+import { FIRST_CLEAR, RUN_LINES } from './daily/fog-lines';
 import { CHAPTERS } from './chapters';
 import { ALL_SCENES, MAX_SCENES_AT_ONCE, VILLAGERS, chapterStart, fill, pendingScenes, renderLines, sawScene, scenesToPlay, storyWords } from './engine';
 import { FLAME_STAGES } from './flame';
@@ -11,7 +13,7 @@ import { CALLBACKS, FLAME_LINES } from './daily/flame-lines';
 import { AFTER_LINES, MARGIN_NOTES } from './daily/after';
 import { QUOTES } from './daily/quotes';
 import { FIRE_LINES, REST_TRUTHS } from './daily/rest';
-import { afterWorkoutLine, dayQuote, flameLine, flameMood, todayMoment, withTodayPage } from './daily';
+import { afterWorkoutLine, runKind, runLine, dayQuote, flameLine, flameMood, todayMoment, withTodayPage } from './daily';
 import type { Line, WordKey } from './types';
 
 /* Checks every reference in the story files, so a typo in a speaker, a place, a song or a {word}
@@ -329,6 +331,45 @@ describe('the Fog bosses', () => {
       // A taunt may be the player's own line, but the ones always said must be enough.
       expect(l.taunts.filter((t) => !tokens(t).length).length, c.fog.name).toBeGreaterThanOrEqual(3);
       expect(tokens(l.enter).length + tokens(l.end).length, c.fog.name).toBe(0);
+    }
+  });
+});
+
+describe('the flame on the last Fog run', () => {
+  const day = (i: number) => new Date(2026, 0, 1 + i, 18);
+  // Trained yesterday: a rest day, so no workout is due yet.
+  const base = (): GameState => ({ ...initialState(), sessions: [workout(day(0)), workout(day(2)), workout(day(4))] });
+  const at = day(5);
+  const run = (s: GameState, won: boolean, floor = 2, zone = 0) => recordRun(s, { zone, won, seconds: 200, kills: 50, level: 5, floor, room: 2 }, at);
+
+  it('reacts to a first clear, a win, a record, the mid-boss and a loss, only on the day of the run', () => {
+    let s = run(base(), true, 10);
+    expect(runKind(s, at)).toBe('firstClear');
+    expect(flameLine(s, at)).toBe(FIRST_CLEAR[0]);
+    s = run(s, true, 10);
+    expect(runKind(s, at)).toBe('won');
+    expect(RUN_LINES.won.map((l) => l.text)).toContain(runLine(s, at));
+    s = run(s, false, 3, 1);
+    expect(runKind(s, at)).toBe('lost');
+    s = run(s, false, 7, 1);
+    expect(runKind(s, at)).toBe('record');
+    s = run(s, false, 7, 1);
+    expect(runKind(s, at)).toBe('mid');
+    expect(runLine(s, day(6))).toBeUndefined();
+  });
+
+  it('nudges toward training, gently, when a workout is due', () => {
+    const later = day(7);
+    const s = recordRun(base(), { zone: 0, won: false, seconds: 100, kills: 20, level: 3, floor: 2, room: 1 }, later);
+    expect(runKind(s, later)).toBe('due');
+    expect(RUN_LINES.due.map((l) => l.text)).toContain(flameLine(s, later));
+  });
+
+  it('has a first-clear line for every zone, and keeps every line short and general', () => {
+    expect(FIRST_CLEAR).toHaveLength(CHAPTERS.length);
+    for (const t of [...FIRST_CLEAR, ...Object.values(RUN_LINES).flat().map((l) => l.text)]) {
+      expect(t.length, t).toBeLessThanOrEqual(80);
+      expect(t, t).not.toMatch(/\d/);
     }
   });
 });

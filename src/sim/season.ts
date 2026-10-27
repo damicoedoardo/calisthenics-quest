@@ -3,7 +3,7 @@ import { recordRun, zoneStatus, ZONES } from '@/lib/fog';
 import { dayKey, daysApart, isRestDay } from '@/lib/days';
 import { MAX_SCENES_AT_ONCE, sawScene, sceneMoment, scenesToPlay, renderLines, speakerName, storyState, storyWords } from '@/story/engine';
 import { CALLBACKS } from '@/story/daily/flame-lines';
-import { afterWorkoutLine, canSitByFire, dayQuote, fireLine, marginNote, restTruth, todayMoment, todayPage, updateTodayPage, withTodayPage } from '@/story/daily';
+import { runKind, runLine, afterWorkoutLine, canSitByFire, dayQuote, fireLine, marginNote, restTruth, todayMoment, todayPage, updateTodayPage, withTodayPage } from '@/story/daily';
 import { DEFAULT_FLAME_NAME, flameStage } from '@/story/flame';
 import { STARTER_LOOKS } from '@/sprites/characters/hero';
 import type { ClassId } from '@/lib/gear';
@@ -223,7 +223,11 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
     if (!zone) return;
     tries[zone.id] = (tries[zone.id] ?? 0) + 1;
     const won = tries[zone.id] >= kind.bossOnTry;
-    state = recordRun(state, { zone: zone.id, won, seconds: won ? 260 : 120, kills: 80, level: 8 });
+    state = recordRun(state, { zone: zone.id, won, seconds: won ? 260 : 120, kills: 80, level: 8, floor: won ? 10 : 3 + (tries[zone.id] % 5), room: 2 }, now);
+    // Back on Today, the flame talks about the run.
+    const said = runLine(state, now);
+    check('flame line after a run', said ?? '');
+    note('day', `after the run (${runKind(state, now)}): "${said}"`);
     if (won) note('boss', `beats ${zone.bossName} in ${zone.name} (try ${tries[zone.id]})`);
   };
 

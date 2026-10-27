@@ -119,7 +119,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   useEffect(() => {
     if (!ready || !state.profile.onboarded || training) return;
     update((s) => withTodayPage(closeStaleDraft(s, new Date()), new Date()));
-  }, [ready, state.profile.onboarded, state.sessions.length, today, training, update]);
+  // After a Fog run too, so the page keeps what the flame said about it.
+  }, [ready, state.profile.onboarded, state.sessions.length, state.fog?.runs, today, training, update]);
 
   const endScene = useCallback(
     (r: SceneResult) => {

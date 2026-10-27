@@ -6,6 +6,7 @@ import { CALLBACKS, FLAME_LINES, MOMENT_MOOD } from './flame-lines';
 import { QUOTES } from './quotes';
 import { FIRE_LINES, REST_TRUTHS } from './rest';
 import { AFTER_LINES, MARGIN_NOTES, type AfterKind, type MarginKind } from './after';
+import { FIRST_CLEAR, RUN_LINES, type RunKind } from './fog-lines';
 
 /* Every day: the flame's line, the day's words for the road and the rest card, and the Book of
    Days page that keeps them. All picks are fixed for the day and change the next. */
@@ -116,10 +117,36 @@ export function callbackLine(state: GameState, now: Date): string | undefined {
   return due?.text;
 }
 
+/** What kind of thing the flame says about today's Fog run, if you played one today. */
+export function runKind(state: GameState, now: Date): RunKind | 'firstClear' | undefined {
+  const last = state.fog?.last;
+  if (!last || last.day !== dayKey(now)) return undefined;
+  if (last.firstClear) return 'firstClear';
+  // A workout is due (not trained today, and rested enough): a gentle nudge before anything else.
+  const since = daysSinceTraining(state, now);
+  if (since === null || since >= 2) return 'due';
+  if (last.record) return 'record';
+  if (last.won) return 'won';
+  return last.pastMid ? 'mid' : 'lost';
+}
+
+/** The flame on today's Fog run, if you played one: a first win, a record, a win, a loss... */
+export function runLine(state: GameState, now: Date): string | undefined {
+  const kind = runKind(state, now);
+  if (!kind) return undefined;
+  if (kind === 'firstClear') return FIRST_CLEAR[state.fog!.last!.zone] ?? FIRST_CLEAR[0];
+  const said = new Set(recentPages(state, now).map((d) => d.line));
+  const all = usableLines(RUN_LINES[kind], state);
+  const fresh = all.filter((t) => !said.has(t));
+  return pick(fresh.length ? fresh : all, daySeed(now) + (state.fog?.runs ?? 0), 7);
+}
+
 /** Today's line from the flame, with your words filled in. */
 export function flameLine(state: GameState, now: Date): string {
   const callback = callbackLine(state, now);
   if (callback) return callback;
+  const run = runLine(state, now);
+  if (run) return run;
   const said = new Set(recentPages(state, now).map((d) => d.line));
   const all = usableLines(FLAME_LINES[todayMoment(state, now)], state);
   const fresh = all.filter((t) => !said.has(t));
