@@ -20,6 +20,8 @@ export interface Look {
   /** Head drawing: 'classic' (designed at 32, doubled) or 'manga' (drawn at 64, see manga.ts).
       A hairstyle without a manga version falls back to classic. */
   head?: 'classic' | 'manga';
+  /** 'soft': the manga head's rounder, NosTale-like eyes with blush (see `SOFT_FACE` in manga.ts). */
+  face?: 'soft';
 }
 
 // ---------- the body, in body pixels (32 grid) ----------

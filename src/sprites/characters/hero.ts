@@ -20,6 +20,8 @@ export interface HeroOpts {
   look?: Look;
   /** The hand-drawn body (engine/drawn.ts) by default; 'block' is the old body, kept for the Lab. */
   body?: 'block' | 'drawn';
+  /** 'nostale': an option tried in the Lab: the soft face, class headgear, brighter colors. */
+  style?: 'nostale';
 }
 
 export const DEFAULT_LOOK: Look = { sex: 'm', style: 'spiky', hair: 'brown', skin: 'light', head: 'manga' };
@@ -59,7 +61,7 @@ const WRAP: Ramp = ['#8c7a5e', '#cbbb9a', '#ece2cc'];
 const SASH: Ramp = ['#7a1f18', '#c0392b', '#e8604c'];
 const ramp3 = (r: string[]): Ramp => [r[0], r[1], r[2]];
 
-export function heroSpec({ gear, classId, variant, body }: HeroOpts): FigureSpec {
+export function heroSpec({ gear, classId, variant, body, style }: HeroOpts): FigureSpec {
   const drawn = body !== 'block';
   const cape = variant === 'best';
   const armorTier = gear.armor.tier;
@@ -282,6 +284,9 @@ export function heroSpec({ gear, classId, variant, body }: HeroOpts): FigureSpec
           u.p(31, 35, cc.gem[2]);
           if (ic?.rarity === 'legendary' && cc.glow) c.fxu.p(P.f % 2 ? 30 : 33, 34, P.f % 4 < 2 ? '#ffffff' : cc.glow[1]);
         }
+      },
+      head(c) {
+        if (style === 'nostale' && variant !== 'hollow') headgear(c, classId, gear.weapon.tier === 0 ? undefined : T);
       },
       off(c) {
         if (off === 'warrior') {
@@ -507,6 +512,77 @@ function itemOutfit(c: Ctx, dress: 'heavy' | 'light' | 'robe', A: Ramp, T: Ramp,
   }
 }
 
+/** Each class's headgear, for the NosTale-like style: the warrior's winged brow guard, the
+    archer's cap with a feather, the monk's headband with tails, the mage's tall pointed hat. */
+function headgear(c: Ctx, classId: ClassId | undefined, trim: Ramp | undefined) {
+  const { u, P } = c,
+    T = trim ?? R.gold,
+    sw = P.f % 2;
+  if (classId === 'warrior') {
+    const M = R.silver;
+    u.r(18, 9, 29, 3, M[1]);
+    u.row(9, 18, 46, M[2]);
+    u.row(11, 18, 46, M[0]);
+    u.r(31, 8, 3, 4, T[1]);
+    u.p(32, 9, '#e8604c');
+    // little wings at the temples
+    u.poly([[18, 9], [12, 3], [14, 8], [10, 6], [16, 11]], M[2]);
+    u.poly([[46, 9], [52, 3], [50, 8], [54, 6], [48, 11]], M[2]);
+    return;
+  }
+  if (classId === 'archer') {
+    const G = ['#1f5130', '#2f7d4a', '#5fb877'];
+    u.ellipse(31, 7, 14, 6, G[1]);
+    u.poly([[18, 7], [44, 7], [47, 10], [16, 10]], G[0]);
+    u.row(10, 16, 47, G[0]);
+    u.ellipse(27, 4, 6, 2, G[2]);
+    // a feather that sways a little
+    u.line(42, 6, 50 + sw, -1, '#e8604c');
+    u.line(43, 6, 51 + sw, 0, '#f6b26b');
+    return;
+  }
+  if (classId === 'monk') {
+    const B = ['#7a1f18', '#c0392b', '#e8604c'];
+    u.r(17, 9, 31, 3, B[1]);
+    u.row(9, 17, 47, B[2]);
+    u.row(11, 17, 47, B[0]);
+    u.poly([[46, 10], [51, 10], [56 + sw, 19], [53 + sw, 20]], B[1]);
+    u.poly([[46, 11], [49, 12], [51, 22 - sw], [48, 22 - sw]], B[0]);
+    return;
+  }
+  if (classId === 'mage') {
+    const H = ['#2a1a55', '#4b2f8f', '#7b5cc9'];
+    // a tall hat, its tip bent over, on a wide brim
+    u.poly([[20, 9], [44, 9], [39, 1], [32, 0], [26, 2]], H[1]);
+    u.poly([[37, 1], [40, 0], [51, 3], [49, 5], [40, 4]], H[1]);
+    u.poly([[38, 2], [44, 9], [40, 9]], H[0]);
+    u.line(27, 3, 23, 8, H[2]);
+    u.p(50, 4, '#fde68a');
+    u.ellipse(32, 9, 18, 2.5, H[0]);
+    u.row(9, 16, 48, H[1]);
+    u.row(7, 23, 41, T[1]);
+    u.p(32, 4, '#fde68a');
+    return;
+  }
+  // no class yet: a plain cloth band
+  u.r(18, 9, 29, 2, '#c9b48a');
+  u.row(9, 18, 46, '#e6d6b0');
+}
+
+/** Brighter, more saturated colors, the way NosTale paints: every color pushed a quarter of the
+    way from its grey toward full color, and lifted a touch. */
+function vivid(g: Grid): Grid {
+  return g.map((row) =>
+    row.map((c) => {
+      if (!c || !c.startsWith('#') || c.length !== 7) return c;
+      const n = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)),
+        grey = (n[0] + n[1] + n[2]) / 3,
+        out = n.map((v) => Math.max(0, Math.min(255, Math.round(grey + (v - grey) * 1.35 + 6))));
+      return `#${out.map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+    }),
+  );
+}
+
 /** The Hollow's red eyes, painted over the tinted face. */
 function hollowEyes(g: Grid, frame: ClipFrame, look: Look): Grid {
   const p = painter(g),
@@ -522,8 +598,10 @@ function hollowEyes(g: Grid, frame: ClipFrame, look: Look): Grid {
 
 /** One frame of the hero, variant effects included. */
 export function drawHero(o: HeroOpts, frame: ClipFrame, f: number): Grid {
-  const { gear, variant = 'normal', look = DEFAULT_LOOK } = o;
-  const gr = drawFigure(heroSpec(o), look, frame, f);
+  const { gear, variant = 'normal' } = o,
+    look = o.style === 'nostale' ? { ...(o.look ?? DEFAULT_LOOK), face: 'soft' as const } : (o.look ?? DEFAULT_LOOK);
+  const drawnGrid = drawFigure(heroSpec(o), look, frame, f),
+    gr = o.style === 'nostale' ? vivid(drawnGrid) : drawnGrid;
   if (variant === 'echo') return tint(gr, GOLD_GHOST);
   if (variant === 'hollow') return hollowEyes(tint(gr, SHADOW), frame, look);
   if (variant === 'best') return aura(gr, CAPE, '#fde68a', 5, f);

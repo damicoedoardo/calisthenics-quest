@@ -25,7 +25,7 @@ Helpers are pure functions on `GameState` and tested in `src/lib/dev.test.ts`.
 
 | Page | What |
 |---|---|
-| `/lab` | Sprite Lab: every sprite and animation, with class, gear tier, variant and look controls; every Fog item kind at every rarity (two seeds), the hero of each class in a whole set of items of each rarity, and "The hand-drawn body": the old block body beside the hero's hand-drawn one, standing and walking. Check art changes here on a phone |
+| `/lab` | Sprite Lab: every sprite and animation, with class, gear tier, variant and look controls; every Fog item kind at every rarity (two seeds), the hero of each class in a whole set of items of each rarity, and "NosTale-like look (option)": the hero beside the soft-faced, hatted, brighter option, standing and attacking; "The hand-drawn body": the old block body beside the hero's hand-drawn one, standing and walking. Check art changes here on a phone |
 | `/lab/story` | Story Lab: play any scene with any flame name and letter, every place (held sideways, drawn wide as in a scene), every look of the flame. `?play=<scene id>&back` plays one scene and returns |
 | `/lab/music` | Music Lab: every theme and sting |
 | `/lab/worlds` | The Play tab's world picker (`WorldPicker`) on made-up saves: a fresh hero, mid-way (one boss down, two worlds open), waiting on training (the next world opens with a later chapter), all open. Play only shows what it would start; nothing is saved. Linked from the Sprite Lab header |

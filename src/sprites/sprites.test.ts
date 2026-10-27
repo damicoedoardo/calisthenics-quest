@@ -71,6 +71,15 @@ describe('sprite registry', () => {
       }
   });
 
+  it('the NosTale-like option changes every class and keeps the 64x64 frame', () => {
+    for (const classId of ['warrior', 'archer', 'monk', 'mage'] as ClassId[]) {
+      const o = { gear: itemGear(classId, 'rare'), classId },
+        ns = framesFor('hero', 'idle', { ...o, style: 'nostale' });
+      ns.forEach((g) => expect(g.length).toBe(SIZE));
+      expect(hash(ns), classId).not.toBe(hash(framesFor('hero', 'idle', o)));
+    }
+  });
+
   it('each class attacks with its own clip', () => {
     const gear = (c: ClassId) => uniformGear(c, 2);
     expect(clipFor('hero', 'attack', { gear: gear('warrior'), classId: 'warrior' })).toBe('swing');

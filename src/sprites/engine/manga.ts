@@ -53,6 +53,35 @@ export const MANGA_FACE = {
   ] as Pt[],
 };
 
+/** The soft face: the same head, with round eyes that carry two shines, short soft brows,
+    blush on the cheeks (R) and a small mouth. Same letters as `MANGA_FACE`. */
+export const SOFT_FACE: string[] = [
+  '......SSSSSSSSSSSSSSSS......',
+  '....SSSSSSSSSSSSSSSSSSSS....',
+  '..SSSSSSSSSSSSSSSSSSSSSSSS..',
+  '.SSSSSSSSSSSSSSSSSSSSSSSSSS.',
+  'SSSSSSSSSSSSSSSSSSSSSSSSSSSs',
+  'SSSSSSSSSSSSSSSSSSSSSSSSSSSs',
+  'SSSSSSSSSSSSSSSSSSSSSSSSSSSs',
+  'SSSSbbbSSSSSSSSSSSSSSbbbSSSs',
+  'SSSSSSSSSSSSSSSSSSSSSSSSSSSs',
+  'SSSSSLLLLSSSSSSSSSSLLLLSSSSs',
+  'SSSSLLddmLSSSSSSSSLLddmLSSSs',
+  'SSSSdWWddmSSSSSSSSdWWddmSSSs',
+  'SSSSdWWpdmSSSSSSSSdWWpdmSSSs',
+  'SSSSdmppdmSSSSSSSSdmppdmSSSs',
+  'SSSSmmplWmSSSSSSSSmmplWmSSSs',
+  'SSSSSmllmSSSSSSSSSSmllmSSSSs',
+  'SSSSSSmmSSSSSSSSSSSSmmSSSSSs',
+  'SSSRRRSSSSSSSSSSSSSSSSRRRSSs',
+  '.SSSSSSSSSSSSsSSSSSSSSSSSSs.',
+  '.SSSSSSSSSSSSSSSSSSSSSSSSSs.',
+  '..SSSSSSSSSSSrrSSSSSSSSSSs..',
+  '....SSSSSSSSSSSSSSSSSSSs....',
+  '......SSSSSSSSSSSSSSSs......',
+  '.........SSSSSSSSSs.........',
+];
+
 /** A shape and its color: a hair tone (0 dark, 1 base, 2 light) or a hex color. */
 type Shape = [Pt[], number | string];
 
@@ -221,8 +250,9 @@ export function mangaHead(g: Grid, P: Pose, look: Look, hair?: Grid) {
       l: F.iris[2],
       p: F.pupil,
       r: F.mouth,
+      R: '#f2a0a0',
     };
-  F.art.forEach((row, j) => [...row].forEach((ch, i) => ink[ch] && u.p(F.at[0] + i, F.at[1] + j, ink[ch])));
+  (look.face === 'soft' ? SOFT_FACE : F.art).forEach((row, j) => [...row].forEach((ch, i) => ink[ch] && u.p(F.at[0] + i, F.at[1] + j, ink[ch])));
   if (look.sex === 'f') F.lashes.forEach(([x, y]) => u.p(x, y, EYES.line));
   if (!hair) return;
   for (let y = 0; y < g.length - 2; y++)
