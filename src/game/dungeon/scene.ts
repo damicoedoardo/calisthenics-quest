@@ -64,11 +64,20 @@ function recap(run: Run): RunEnd {
   return { ...over, relics: { ...run.relics }, warden };
 }
 
+/** The system asks for less motion: no hit-stop and no buzz. */
+function reducedMotion(): boolean {
+  try {
+    return !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  } catch {
+    return false;
+  }
+}
+
 /** A light buzz on phones, for the moments you should feel: never with reduced motion or the sound off. */
 function buzz(pattern: number | number[]) {
   try {
     if (typeof navigator === 'undefined' || !('vibrate' in navigator) || music.muted) return;
-    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    if (reducedMotion()) return;
     navigator.vibrate(pattern);
   } catch {
     // Some browsers refuse vibrate outside a tap: it's only a nicety.
@@ -1551,7 +1560,7 @@ class DungeonScene extends Phaser.Scene {
   /** Hold the world still for a moment. `minor` stops don't come back-to-back. */
   private hitStop(ms: number, minor = false) {
     const now = this.time.now;
-    if (minor && now < this.stopCool) return;
+    if (reducedMotion() || (minor && now < this.stopCool)) return;
     if (now - this.stopSpent.from >= 1000) this.stopSpent = { from: now, ms: 0 };
     // Only the part that reaches past a stop already running costs anything.
     const add = Math.min(Math.max(0, now + ms - Math.max(now, this.stopUntil)), STOP_BUDGET - this.stopSpent.ms);
