@@ -104,7 +104,7 @@ export interface When {
   daysInRow?: number;
   /** Some week had all three workouts. */
   perfectWeek?: boolean;
-  /** Beat a skill: this path's level is past this number (pull past 3 = the first pull-up). */
+  /** Beat a skill: this path's level is past this number (pull past 2 = negatives beaten, the first strict pull-up). */
   skill?: { path: PathId; past: number };
   /** No class picked yet. */
   noClass?: boolean;
