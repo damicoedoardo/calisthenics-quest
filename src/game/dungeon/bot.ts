@@ -44,21 +44,26 @@ function pickDoor(run: Run): number {
 const STALL = 20;
 const progress = new WeakMap<Run, { room: string; hp: number; at: number }>();
 
-function stalled(run: Run): boolean {
+/** Seconds in this room since anything got hurt (or since the room cleared). */
+function idle(run: Run): number {
   const room = `${run.floor}.${run.room}`,
     hp = run.foes.reduce((n, f) => n + (f.alive ? f.hp : 0), 0) + run.kills * 1e4,
     p = progress.get(run);
   if (!p || p.room !== room || p.hp !== hp) {
     progress.set(run, { room, hp, at: run.t });
-    return false;
+    return 0;
   }
-  return !run.cleared && run.t - p.at > STALL;
+  return run.t - p.at;
 }
 
 export function botInput(run: Run): Input {
   const h = run.hero,
     melee = attackOf(run.setup.classId) === 'slash',
-    stuck = stalled(run),
+    still = idle(run) > STALL,
+    stuck = still && !run.cleared,
+    // Lingering in a cleared room: stop waiting for spikes to drop and just walk through, as a
+    // person would (two patches out of step can keep a careful walker waiting forever).
+    linger = still && run.cleared,
     now = run.t;
   let x = 0,
     y = 0,
@@ -118,7 +123,7 @@ export function botInput(run: Run): Input {
       y += oy * 0.7;
     }
   for (const q of T.spikes) {
-    if (!inRect(q, h.x, h.y, 18)) continue;
+    if (linger || !inRect(q, h.x, h.y, 18)) continue;
     const soon = spikeState(q, now + 0.5) !== 'down' || spikeState(q, now) !== 'down';
     if (!soon) continue;
     const [ox, oy] = outOf(q, h.x, h.y);
