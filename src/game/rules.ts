@@ -7,7 +7,9 @@ import type { FogBoss } from '@/story/types';
 
 export type SheetKey = 'hero' | 'heroAttack' | 'ember' | 'hollow' | 'slime' | 'wisp' | 'mirror' | 'golem' | 'knight' | 'echo' | 'book' | 'summit'
   // the dungeon's own monsters
-  | 'ram' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade';
+  | 'ram' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade'
+  // the Splitter splitting (played once), and the mid-boss
+  | 'splitterPop' | 'warden';
 
 /** Skills the bot takes first. */
 export const BOT_PICKS: UpgradeId[] = ['multi', 'power', 'haste', 'vital', 'spark', 'flame', 'nova', 'guard', 'swift', 'magnet'];

@@ -51,12 +51,14 @@ export function drawSmoke(_o: unknown, frame: ClipFrame, f: number): Grid {
     bob = frame.bob ?? 0,
     g = grid(32),
     p = painter(g);
-  // the body sways as it floats; the bomb rides a little behind its hand
+  // the body sways as it floats; the bomb rides a little behind its hand. Winding up, it cocks the
+  // bomb right back over its shoulder, its arm stretched out behind it.
   paintRows(p, ROWS, SMOKE);
-  if (!hit) paintRows(p, ROWS, BOMB, wind ? 2 : 0, wind ? 1 : bob ? 1 : 0);
-  const pic = shifted(outline(autoshade(scale2x(g))), hit ? -4 : 0, bob),
-    u = painter(pic, bob),
-    dx = hit ? -4 : 0;
+  if (wind) p.r(24, 9, 4, 3, SMOKE.b);
+  if (!hit) paintRows(p, ROWS, BOMB, wind ? 3 : 0, wind ? 5 : bob ? 1 : 0);
+  const dx = hit ? -4 : wind ? 2 : 0,
+    pic = shifted(outline(autoshade(scale2x(g))), dx, bob),
+    u = painter(pic, bob);
   // seams between the puffs
   u.line(12 + dx, 40, 22 + dx, 44, SMOKE.a);
   u.line(38 + dx, 44, 50 + dx, 40, SMOKE.a);
@@ -64,12 +66,24 @@ export function drawSmoke(_o: unknown, frame: ClipFrame, f: number): Grid {
   // face: wide crescent eyes and a grin, a gasp of effort as it throws
   const ex = 20 + dx,
     ey = 32;
-  [ex, ex + 12].forEach((x) => {
-    u.r(x, ey, 4, 4, '#ffffff');
-    u.r(x + (hit ? 0 : 1), ey + 1, 2, 3, FACE);
-    u.row(ey - 2, x - 1, x + 3, FACE);
-  });
-  if (hit) u.r(ex + 6, ey + 7, 4, 4, FACE);
+  if (wind)
+    // squeezed shut with effort: > <
+    [ex, ex + 12].forEach((x, i) => {
+      u.line(x, ey + (i ? 3 : 0), x + 3, ey + 1.5, FACE);
+      u.line(x, ey + (i ? 0 : 3), x + 3, ey + 1.5, FACE);
+    });
+  else
+    [ex, ex + 12].forEach((x) => {
+      u.r(x, ey, 4, 4, '#ffffff');
+      u.r(x + (hit ? 0 : 1), ey + 1, 2, 3, FACE);
+      u.row(ey - 2, x - 1, x + 3, FACE);
+    });
+  if (wind) {
+    u.r(ex + 5, ey + 7, 6, 2, FACE);
+    // swoosh lines where the bomb swung back
+    u.line(44 + dx, 2, 50 + dx, 0, SMOKE.c);
+    u.line(42 + dx, 7, 47 + dx, 5, SMOKE.c);
+  } else if (hit) u.r(ex + 6, ey + 7, 4, 4, FACE);
   else {
     u.row(ey + 8, ex + 3, ex + 11, FACE);
     u.p(ex + 2, ey + 7, FACE);
@@ -78,12 +92,14 @@ export function drawSmoke(_o: unknown, frame: ClipFrame, f: number): Grid {
   }
   // the fuse spark sputters
   if (!hit) {
-    const sx = 54 + (wind ? 4 : 0),
-      sy = (wind ? 2 : bob ? 2 : 0) + 0,
+    const sx = 54 - dx + (wind ? 6 : 0),
+      sy = wind ? 10 : bob ? 2 : 0,
       k = f % 3;
     u.p(sx, sy, SPARK[k]);
     u.p(sx + 1 - k, sy + 1, SPARK[(k + 1) % 3]);
     u.p(sx + 2, sy - (k === 1 ? 1 : 0), SPARK[0]);
+    // it fizzes harder just before the throw
+    if (wind) [[-2, -2], [3, -3], [-3, 2]].forEach(([x, y], i) => u.p(sx + x, sy + y, SPARK[i % 2]));
   }
   // after the throw: a puff where the bomb was, flying off to the left
   if (hit)

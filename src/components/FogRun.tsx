@@ -38,7 +38,7 @@ const ICONS: Record<UpgradeId, LucideIcon> = {
    (src/game/run.ts) until their dungeons are built. Both report through the same HUD. */
 type Hud = SurviveHud & Partial<DungeonHud>;
 type RunEnd = SurviveEnd & Partial<DungeonEnd>;
-type RunHandle = SurviveHandle & { ability?: () => void; skipFloor?: () => void; pickRelic?: (id: RelicId) => void };
+type RunHandle = SurviveHandle & { ability?: () => void; skipFloor?: () => void; pickRelic?: (id: RelicId) => void; cycleTheme?: () => string };
 
 const RELIC_ICONS: Record<RelicId, LucideIcon> = {
   whetstone: Swords,
@@ -68,6 +68,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
   // Unnamed until after the first workout.
   const flameName = state.profile.flame;
   const [paused, setPaused] = useState(false);
+  // Developer mode: which dungeon theme the run is showing (the pause menu cycles through them).
+  const [theme, setTheme] = useState<string | null>(null);
   const [boss, setBoss] = useState(false);
   const [end, setEnd] = useState<RunEnd | null>(null);
   const [attempt, setAttempt] = useState(0);
@@ -106,6 +108,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
       splitter: sheetFor('splitter', 'idle'),
       splitling: sheetFor('splitling', 'idle'),
       shade: sheetFor('shade', 'idle'),
+      splitterPop: sheetFor('splitterPop', 'idle'),
+      warden: sheetFor('warden', 'idle'),
     };
     setHud(null);
     setEnd(null);
@@ -357,6 +361,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
                 [
                   ['Skip to the boss', () => run.current?.skipToBoss()],
                   ...(dungeon ? ([['Next floor', () => run.current?.skipFloor?.()]] as const) : []),
+                  ...(dungeon ? ([[`Theme${theme ? `: ${theme}` : ''}`, () => setTheme(run.current?.cycleTheme?.() ?? null)]] as const) : []),
                   ['Win this run', () => run.current?.winNow()],
                   [
                     auto ? 'Take the controls' : 'Let the bot play',
