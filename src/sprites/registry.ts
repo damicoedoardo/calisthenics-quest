@@ -36,6 +36,7 @@ import { drawWhisperMid } from './characters/whisperMid';
 import { drawGaleMid } from './characters/galeMid';
 import { drawExercise, type ExerciseOpts } from './characters/exercise';
 import { ZONE_PLACE, dress, edged } from './characters/zoned';
+import { FOG_BANK, WORLD_LOCK } from './characters/worlds';
 import { ABILITY_ICONS, DAY_ICONS, ITEM_ICONS, KEEPSAKE_ICONS, MARK_ICONS, RELIC_ICONS, SKILL_ICONS, UI_ICONS, ZONE_ICONS, type DayKind } from './characters/icons';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
@@ -208,6 +209,9 @@ export const SPRITES = {
   uiIcon: icon<UiIconOpts>((o) => o.name, { name: 'heart' }, (o) => UI_ICONS[o.name]),
   zoneIcon: icon<ZoneIconOpts>((o) => `zone ${o.zone}`, { zone: 0 }, (o) => ZONE_ICONS[Math.max(0, Math.min(ZONE_ICONS.length - 1, o.zone))]),
   markIcon: icon<MarkIconOpts>((o) => o.name, { name: 'boss' }, (o) => MARK_ICONS[o.name]),
+  // the Play tab's world picker: the big padlock on a shut world, and the fog that drifts over it
+  worldLock: icon<NoOpts>(() => 'Locked', {}, () => WORLD_LOCK),
+  fogBank: icon<NoOpts>(() => 'Fog', {}, () => FOG_BANK),
   // you, doing an exercise of the program (the workout screen's demo)
   exercise: drawn<ExerciseOpts>({
     label: (o) => `How to do it: ${o.exercise}`,
