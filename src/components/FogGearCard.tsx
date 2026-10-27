@@ -5,8 +5,9 @@ import { Flame } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { buildOf } from '@/lib/stats';
 import { flameGuards, NO_GEAR, type FogGear, salvageValue, setGuard, takeOffToVault, vaultSize, wearFromVault } from '@/lib/fog-gear';
-import { embersOf, REROLL_COST, reroll, salvage, upgrade, upgradeCost } from '@/lib/forge';
-import { BONUSES, ITEM_SLOTS, MAX_PLUS, nameOf, PLUS_STEP, SLOT_NAME, shortOf, starterKit, type Item } from '@/game/dungeon/items';
+import { canUpgrade, embersOf, findItem, matsOf, matsShort, REROLL_COST, reroll, rested, salvage, tryUpgrade, upgradeCost, upgradeMats, upgradeOdds, type Forged } from '@/lib/forge';
+import { bandOf, boostAt, BONUSES, ITEM_SLOTS, MAX_PLUS, nameOf, safeFloor, SLOT_NAME, shortOf, starterKit, type Item } from '@/game/dungeon/items';
+import { BANDS, FORGE_RISK, MAT_IDS, MATS, SAFE_POINTS, type MatId } from '@/balance';
 import { ItemCard, ItemTile } from './ItemCard';
 import { Sprite } from './Sprite';
 
@@ -109,6 +110,7 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
           </ItemCard>
           <Forge
             item={item}
+            state={state}
             embers={embers}
             update={update}
             sure={sure}
@@ -157,44 +159,109 @@ function FallLine({ gear, flame, fresh, guarded }: { gear: FogGear; flame: strin
   );
 }
 
-/** Mira's forge for one item: the next upgrade with what it changes, a reroll per bonus, melting down. */
-function Forge({ item, embers, update, sure, onMelt }: { item: Item; embers: number; update: Update; sure: boolean; onMelt: () => void }) {
+/** The co-op materials you have, in a row (only once you have any). */
+function Mats({ have }: { have: Partial<Record<MatId, number>> }) {
+  if (!MAT_IDS.some((id) => have[id])) return null;
+  return (
+    <p className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[10px]">
+      {MAT_IDS.map((id) => (
+        <span key={id} className="flex items-center gap-1" style={{ color: MATS[id].color }}>
+          <span className="h-2 w-2 rotate-45 rounded-[1px]" style={{ background: MATS[id].color }} aria-hidden />
+          {MATS[id].name} {have[id] ?? 0}
+        </span>
+      ))}
+    </p>
+  );
+}
+
+/** What Mira says after a try. */
+const SAID: Record<Forged, (plus: number) => string> = {
+  held: (p) => (p >= 15 ? 'Ember-born. I have never made anything like it.' : `It held. +${p}.`),
+  missed: () => 'It didn\'t take this time. The item is as it was. Again?',
+  slipped: (p) => `It slipped to +${p}. It won't go lower than its last safe mark.`,
+};
+
+/** Mira's forge for one item: the next upgrade with what it asks and what it changes, the chance it
+    holds from +7, a reroll per bonus, melting down. */
+function Forge({ item, state, embers, update, sure, onMelt }: { item: Item; state: GameState; embers: number; update: Update; sure: boolean; onMelt: () => void }) {
+  const [said, setSaid] = useState<{ id: string; text: string } | null>(null);
   if (item.starter) return null;
-  const plus = item.plus ?? 0,
+  const now = new Date(),
+    plus = item.plus ?? 0,
     top = plus >= MAX_PLUS,
-    cost = upgradeCost(item);
+    cost = upgradeCost(item),
+    need = upgradeMats(item),
+    short = matsShort(state, item),
+    odds = upgradeOdds(state, item, now),
+    ok = canUpgrade(state, item),
+    warm = rested(state, now),
+    band = bandOf(plus);
+  const go = () =>
+    update((s) => {
+      const r = tryUpgrade(s, item.id, now);
+      if (r.forged) setSaid({ id: item.id, text: SAID[r.forged](findItem(r.state, item.id)?.plus ?? 0) });
+      return r.state;
+    });
+  const needs = (Object.entries(need) as [MatId, number][]).map(([id, n]) => `${n} ${MATS[id].name.toLowerCase()}`);
   return (
     <div className="rounded-xl bg-ink-900 p-3 ring-1 ring-gold-400/30">
       <div className="flex items-center gap-2">
         <Sprite id="mira" size={40} label="Mira" />
         <div className="min-w-0 flex-1">
           <p className="font-pixel text-[9px] text-gold-300">Mira&apos;s forge</p>
-          <p className="text-[11px] text-slate-400">{top ? 'As good as I can make it.' : `"Give me ${cost} embers and I'll make it +${plus + 1}."`}</p>
+          <p className="text-[11px] text-slate-400">
+            {said?.id === item.id
+              ? `"${said.text}"`
+              : top
+                ? 'As good as anything can be made.'
+                : `"Give me ${cost} embers${needs.length ? ` and ${needs.join(', ')}` : ''}, and I'll try for +${plus + 1}."`}
+          </p>
         </div>
       </div>
-      {/* +1..+5 as pips, so you see how far it can go. */}
-      <div className="mt-2 flex gap-1" aria-label={`+${plus} of +${MAX_PLUS}`}>
-        {Array.from({ length: MAX_PLUS }, (_, i) => (
-          <span key={i} className={`h-1.5 flex-1 rounded-full ${i < plus ? 'bg-gold-400' : 'bg-ink-700'}`} />
-        ))}
+      {/* +1..+15 as pips: the safe marks a little taller, each band in its own light. */}
+      <div className="mt-2 flex items-end gap-0.5" aria-label={`+${plus} of +${MAX_PLUS}, ${BANDS[band].name}`}>
+        {Array.from({ length: MAX_PLUS }, (_, i) => {
+          const safe = (SAFE_POINTS as readonly number[]).includes(i + 1),
+            lit = i < plus,
+            b = BANDS[bandOf(i + 1)];
+          return <span key={i} className={`flex-1 rounded-full ${safe ? 'h-2.5' : 'h-1.5'} ${lit ? '' : 'bg-ink-700'}`} style={lit ? { background: b.glow && b.glow !== 'rarity' ? b.glow : '#fbbf24' } : undefined} />;
+        })}
       </div>
+      <p className="mt-1 flex justify-between text-[9px] text-slate-500">
+        <span>{BANDS[band].name}</span>
+        <span>Safe marks: +{SAFE_POINTS.join(', +')}</span>
+      </p>
+      <Mats have={matsOf(state)} />
       {!top && (
         <ul className="mt-2 space-y-0.5 text-xs">
           {[...item.base, ...item.bonuses].map((b, i) => {
             const show = BONUSES[b.id].show;
             return (
               <li key={i} className="flex items-center justify-between gap-2">
-                <span className="text-slate-400">{show(b.v * (1 + PLUS_STEP * plus))}</span>
-                <span className="text-emerald-300">→ {show(b.v * (1 + PLUS_STEP * (plus + 1)))}</span>
+                <span className="text-slate-400">{show(b.v * boostAt(plus))}</span>
+                <span className="text-emerald-300">→ {show(b.v * boostAt(plus + 1))}</span>
               </li>
             );
           })}
         </ul>
       )}
+      {!top && odds < 1 && (
+        <p className="mt-2 text-[11px] leading-snug text-slate-400">
+          <span className="font-semibold text-gold-300">{Math.round(odds * 100)}% it holds.</span>{' '}
+          {item.misses ? `+${Math.round(item.misses * FORGE_RISK.pity * 100)}% from ${item.misses === 1 ? 'the last miss' : `${item.misses} misses`}. ` : ''}
+          {warm ? `+${Math.round(FORGE_RISK.rested * 100)}% for training lately. ` : `Train and it's +${Math.round(FORGE_RISK.rested * 100)}% for ${FORGE_RISK.restedDays} days. `}
+          A miss spends what went in{plus > safeFloor(plus) ? ` and may slip it to +${plus - 1}` : ''}; it never breaks.
+        </p>
+      )}
+      {!top && Object.keys(short).length > 0 && (
+        <p className="mt-2 rounded-lg bg-ink-800 px-2 py-1.5 text-[11px] leading-snug text-slate-400">
+          Still needs {(Object.entries(short) as [MatId, number][]).map(([id, n]) => `${n} ${MATS[id].name.toLowerCase()}`).join(', ')}. These only drop when you play with friends ({(Object.keys(short) as MatId[]).map((id) => MATS[id].from).join('; ')}).
+        </p>
+      )}
       <div className="mt-3 space-y-2">
         {!top && (
-          <button onClick={() => update((s) => upgrade(s, item.id))} disabled={embers < cost} className="w-full rounded-lg bg-gold-400 py-2 text-xs font-semibold text-ink-950 disabled:bg-ink-700 disabled:text-slate-500">
-            {embers < cost ? `Upgrade to +${plus + 1} · ${cost - embers} more embers (a workout is 10)` : `Upgrade to +${plus + 1} · ${cost} embers`}
+          <button onClick={go} disabled={!ok} className="w-full rounded-lg bg-gold-400 py-2 text-xs font-semibold text-ink-950 disabled:bg-ink-700 disabled:text-slate-500">
+            {embers < cost ? `+${plus + 1} · ${cost - embers} more embers (a workout is 10)` : odds < 1 ? `Try for +${plus + 1} · ${Math.round(odds * 100)}% · ${cost} embers` : `Upgrade to +${plus + 1} · ${cost} embers`}
           </button>
         )}
         {item.bonuses.map((b, i) => (

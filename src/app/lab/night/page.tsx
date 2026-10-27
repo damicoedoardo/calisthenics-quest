@@ -60,6 +60,24 @@ function geared(idle = 0): GameState {
   return { ...s, fogGear: { worn: { weapon: find('weapon', 'magic', 1), charm: find('charm', 'magic', 2) }, vault: [find('armor', 'rare', 2), find('charm', 'magic', 3), find('weapon', 'legendary', 9)], guard: 'weapon' } };
 }
 
+/** The geared player with embers to spare (as if melted down), co-op materials, and gear forged to
+    `plus`: the sword worn, and one of each look band in the vault. */
+function forged(plus: number): GameState {
+  const s = geared(),
+    g = s.fogGear!,
+    at = (it: Item, p: number): Item => ({ ...it, plus: p });
+  return {
+    ...s,
+    fogGear: {
+      ...g,
+      worn: { ...g.worn, weapon: at(g.worn.weapon!, plus), charm: at(g.worn.charm!, Math.min(plus, 7)) },
+      vault: [at(g.vault[0], 4), at(g.vault[1], 10), at(g.vault[2], 13)],
+      mats: { thread: 120, shard: 30, coal: 8, heart: 2 },
+      embers: { found: 3000, spent: 0 },
+    },
+  };
+}
+
 /** A player past the finale: the flame lives in them now. */
 function fused(): GameState {
   const s = veteran(80, 6);
@@ -183,7 +201,26 @@ export default function NightLab() {
         })}
         <Row icon={<Swords size={16} />} label="The Play tab" note="Power from training with pixel icons, all six zones open" onClick={() => open(veteran(78, 6), 'tab=play')} />
         <Row icon={<Swords size={16} />} label="The Fog, sideways" note="Hold the phone across: rooms run left to right, tap a monster to aim at it" onClick={() => open(veteran(14, 1), 'run=0')} />
+        <Row icon={<Swords size={16} />} label="A party run (practice)" note="You with two friends, Ana the archer and Ben the mage, played by the bot: names over their heads, XP for all, drops each their own" onClick={() => open(veteran(14, 1), 'run=0&party')} />
         <Row icon={<Gem size={16} />} label="Loot: your gear and the vault" note="Play tab: what you wear into the Fog, the vault, an item you can't wear yet" onClick={() => open(geared(), 'tab=play')} />
+        <div className="rounded-xl bg-ink-950 px-3 py-2.5">
+          <p className="text-sm text-slate-200">Mira&apos;s forge, +1 to +15</p>
+          <p className="text-[11px] text-slate-500">Your sword forged this far, co-op materials to spend, a new look every few pluses (vault: +4, +10, +13). Tap the sword, then try for the next plus.</p>
+          <div className="mt-2 grid grid-cols-6 gap-1">
+            {[3, 6, 9, 12, 14, 15].map((p) => (
+              <button key={p} className={chip} onClick={() => open(forged(p), 'tab=play')}>
+                +{p}
+              </button>
+            ))}
+          </div>
+          <div className="mt-1 grid grid-cols-6 gap-1">
+            {[3, 6, 9, 12, 14, 15].map((p) => (
+              <button key={p} className={chip} onClick={() => open(forged(p), 'run=1')}>
+                Run
+              </button>
+            ))}
+          </div>
+        </div>
         <Row icon={<Gem size={16} />} label="Loot in a run" note="Monsters and chests drop gear; the bag button top right; the stairs ask: deeper or leave with it" onClick={() => open(geared(), 'run=1')} />
         <Row icon={<Gem size={16} />} label="Loot in a run, the flame gone cold" note="No workout in 4 days: the bag says training would let the flame hold your sword" onClick={() => open(geared(4), 'run=1')} />
         <Row icon={<Swords size={16} />} label="A boss with no hearts left" note="Play tab: 15 workouts in, Tomorrow still standing. It fights weaker, and runs start with 3 free skills" onClick={() => open(veteran(15, 0), 'tab=play')} />

@@ -20,11 +20,11 @@ import { renderLines, storyWords } from '@/story/engine';
 import { STARTER_LOOKS } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
 
-type Step = 'title' | 'cold' | 'fading' | 'voice' | 'hollow' | 'fight' | 'fallen' | 'meet' | 'letter' | 'sealed' | 'kit' | 'quest' | 'look';
+type Step = 'title' | 'cold' | 'fading' | 'voice' | 'hollow' | 'fight' | 'fallen' | 'meet' | 'letter' | 'sealed' | 'kit' | 'quest' | 'look' | 'name';
 
 interface Props {
   state: GameState;
-  onFinish: (patch: { letter: Letter; voice: string; kit?: Kit }) => void;
+  onFinish: (patch: { letter: Letter; voice: string; kit?: Kit; name?: string }) => void;
   /** Saves the player's look right away (the boy/girl pick, then the editor after the story). */
   onLook: (look: Look) => void;
   /** Shown on the title screen when the opening is replayed. */
@@ -84,6 +84,7 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, bring }: Props
   const [voice, setVoice] = useState(state.profile.voice);
   const [custom, setCustom] = useState(!!state.profile.voice && !VOICES.includes(state.profile.voice));
   const [kit, setKit] = useState<Kit>(state.profile.kit ?? 'gym');
+  const [name, setName] = useState(state.profile.name ?? '');
   const gear = equippedGear(undefined, state.sessions.length);
   // A dull, cracked blade for the first fight.
   const fightGear: Record<GearSlot, Gear> = { ...gear, weapon: { ...gear.weapon, tier: 1, color: '#6b7280', glow: undefined } };
@@ -93,7 +94,7 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, bring }: Props
   const words = { ...storyWords(state), ...letter, voice: voice.trim() || "You're not enough.", flame: state.profile.flame ?? '' };
   const go = useCallback((s: Step) => () => setStep(s), []);
 
-  const finish = () => onFinish({ letter, voice: voice.trim(), kit: asksKit ? kit : undefined });
+  const finish = () => onFinish({ letter, voice: voice.trim(), kit: asksKit ? kit : undefined, name: name.trim() || undefined });
   const begin = () => {
     music.unlock();
     setStep('cold');
@@ -237,8 +238,44 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, bring }: Props
     case 'kit':
       return <KitPick kit={kit} setKit={setKit} onDone={go('quest')} />;
     case 'look':
-      return <MakeItYours look={look} setLook={onLook} gear={gear} onDone={finish} />;
+      return <MakeItYours look={look} setLook={onLook} gear={gear} onDone={go('name')} />;
+    case 'name':
+      return <NameIt name={name} setName={setName} onDone={finish} />;
   }
+}
+
+/** After the look: the hero's name, asked once. It's what friends will see. */
+function NameIt({ name, setName, onDone }: { name: string; setName: (n: string) => void; onDone: () => void }) {
+  useMusic('rise');
+  const ok = name.trim().length > 0;
+  return (
+    <div className="safe-top safe-bottom mx-auto flex min-h-dvh max-w-md flex-col justify-center px-4 pb-6">
+      <div className="flex items-center gap-3">
+        <Ember size={64} stage="spark" />
+        <p className="flex-1 text-sm text-slate-300">&ldquo;And what should I call you? It&apos;s the name your friends will see, if you bring any along.&rdquo;</p>
+      </div>
+      <form
+        className="mt-6 space-y-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (ok) onDone();
+        }}
+      >
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          maxLength={24}
+          autoFocus
+          placeholder="Your name"
+          aria-label="Your hero's name"
+          className="w-full rounded-2xl bg-ink-900 px-4 py-4 text-center text-lg text-slate-100 placeholder:text-slate-500"
+        />
+        <button type="submit" disabled={!ok} className={goldButton}>
+          That&apos;s me
+        </button>
+      </form>
+    </div>
+  );
 }
 
 function MakeItYours({ look, setLook, gear, onDone }: { look: Look; setLook: (l: Look) => void; gear: Record<GearSlot, Gear>; onDone: () => void }) {

@@ -1,17 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { EMBERS, FORGE, MELT, STARTING_POINTS, WEEKLY_GOAL, XP } from '@/balance';
-import { levelInfo, totalXp } from '@/lib/game';
+import { EMBERS, FORGE, FORGE_RISK, MAT_DROPS, MAT_IDS, MATS, MELT, SAFE_POINTS, STARTING_POINTS, STEPS, WEEKLY_GOAL, XP, type MatId } from '@/balance';
+import { initialState, levelInfo, totalXp } from '@/lib/game';
 import { embersEarned, upgradeCost } from '@/lib/forge';
 import { salvageValue, vaultSize } from '@/lib/fog-gear';
 import { pointsEarned, statPower, STATS } from '@/lib/stats';
 import { MAX_PLUS, rollItem, rollRarity, RARITY, starterKit, type Item, type Rarity } from '@/game/dungeon/items';
 import { DROP_LUCK, DROPS, NEED } from '@/balance';
-import { ZONES, xpToNext } from '@/lib/fog';
+import { powerOf, ZONES, xpToNext } from '@/lib/fog';
 import { seeded } from '@/lib/random';
 import { powerScore } from '@/game/power';
 import { CLASSES, type ClassId } from '@/lib/gear';
 import { POINTS, POWER_SPLIT, POWER_SPLIT_SLACK } from '@/balance';
 import type { Build } from '@/lib/stats';
+import { createRun, stepRun } from '@/game/dungeon/engine';
+import { botInput } from '@/game/dungeon/bot';
 import { playSeason } from '@/sim/season';
 import { PLAYERS } from '@/sim/players';
 
@@ -66,22 +68,66 @@ function points(): string {
   ].join('\n');
 }
 
+/** Tries until an upgrade at `odds` holds, on average, with each miss adding FORGE_RISK.pity
+    (no training bonus, slips left out). */
+function triesFor(odds: number): number {
+  let left = 1,
+    sum = 0;
+  for (let k = 0; k < 100 && left > 1e-9; k++) {
+    const p = Math.min(1, odds + k * FORGE_RISK.pity);
+    sum += (k + 1) * left * p;
+    left *= 1 - p;
+  }
+  return sum;
+}
+
+const matsText = (m: Partial<Record<MatId, number>>) => (MAT_IDS.filter((id) => m[id]).map((id) => `${m[id]} ${MATS[id].name.toLowerCase()}`).join(', ') || '-');
+
+/** Co-op materials one hero finds in a run of the first zone, two bots playing it together, on average. */
+function coopRun(): Partial<Record<MatId, number>> {
+  const power = { ...powerOf(initialState(), new Date(2026, 0, 1)), damage: 1.2, speed: 0.4, reach: 0.15, armor: 0.25, health: 180 },
+    seeds = [21, 22, 23],
+    sum: Partial<Record<MatId, number>> = {};
+  for (const seed of seeds) {
+    const run = createRun({ zone: ZONES[0], power, classId: 'warrior', seed, autoPick: true, friends: [{ power, classId: 'archer' }] });
+    for (let i = 0; i < 60 * 60 * 30 && !run.over; i++) {
+      stepRun(run, run.party.map((h) => botInput(run, h)));
+      run.events.length = 0;
+    }
+    for (const id of MAT_IDS) sum[id] = (sum[id] ?? 0) + (run.hero.mats[id] ?? 0) / seeds.length;
+  }
+  return sum;
+}
+
 function forge(): string {
   const item = (rarity: Rarity, plus = 0) => ({ rarity, plus }) as Item;
-  let total = 0;
+  let total = 0,
+    boost = 1;
   const steps = Array.from({ length: MAX_PLUS }, (_, i) => {
-    total += upgradeCost(item('rare', i));
-    return [`+${i} → +${i + 1}`, upgradeCost(item('rare', i)), total, weeksFor(total, WEEKLY_GOAL).toFixed(1)];
+    const s = STEPS[i],
+      tries = triesFor(s.odds),
+      cost = upgradeCost(item('rare', i));
+    total += cost * tries;
+    boost += s.boost;
+    return [`+${i} → +${i + 1}`, cost, matsText(s.mats), pct(s.odds), tries.toFixed(2), Math.round(total), weeksFor(total, WEEKLY_GOAL).toFixed(1), `x${boost.toFixed(2)}`];
   });
   const melt = (['common', 'magic', 'rare', 'legendary'] as Rarity[]).map((r) => [r, salvageValue(item(r)), salvageValue(item(r, MAX_PLUS))]);
+  const found = coopRun();
+  const drops = (Object.entries(MAT_DROPS) as [string, Partial<Record<MatId, number>>][]).map(([from, odds]) => [from, ...MAT_IDS.map((id) => (odds[id] ? pct1(odds[id]!) : '-'))]);
   return [
     '## Forge and embers',
     '',
-    `A full workout earns ${EMBERS.full} embers, a short one ${EMBERS.mini}; a reroll costs ${FORGE.reroll}. Weeks below are at ${WEEKLY_GOAL} full workouts a week, no melting.`,
+    `A full workout earns ${EMBERS.full} embers, a short one ${EMBERS.mini}; a reroll costs ${FORGE.reroll}. From +6 a step also asks for co-op materials; from +7 it can miss (each miss +${pct(FORGE_RISK.pity)} on the next try, +${pct(FORGE_RISK.rested)} after training in the last ${FORGE_RISK.restedDays} days, a miss slips one plus ${pct(FORGE_RISK.drop)} of the time but never under +${SAFE_POINTS.join(', +')}). Embers below count the tries on average, at ${WEEKLY_GOAL} full workouts a week, no melting.`,
     '',
-    table(['Upgrade', 'Cost', 'Total so far', 'Weeks of training'], steps),
+    table(['Upgrade', 'Embers a try', 'Materials a try', 'Holds', 'Tries', 'Embers so far', 'Weeks of training', 'Item strength'], steps),
     '',
     table(['Melt down', 'At +0', `At +${MAX_PLUS}`], melt),
+    '',
+    'Co-op materials: the chance each source drops one, for each hero in a party (solo runs drop none):',
+    '',
+    table(['Source', ...MAT_IDS.map((id) => MATS[id].name)], drops),
+    '',
+    `Found by one hero in a co-op run of zone 1 (two bots, 3 runs, on average): ${matsText(Object.fromEntries(Object.entries(found).map(([k, v]) => [k, Number(v.toFixed(1))])))}.`,
   ].join('\n');
 }
 
@@ -152,7 +198,8 @@ function runLevels(): string {
 }
 
 /* The model player for the power curve: 3 full workouts a week, every week at the goal, points
-   spread evenly, embers all spent on upgrades (weapon first, then armor, then charm). Gear: middle
+   spread evenly, embers all spent on upgrades (weapon first, then armor, then charm), solo, so only the steps that
+   need no co-op materials (+1..+5). Gear: middle
    rolls, rare, from the deepest floor of the newest open zone whose weapon the build can wear. */
 type Worn = Partial<Record<'weapon' | 'armor' | 'charm', Item>>;
 const modelPoints = (w: number) => STARTING_POINTS + w * POINTS.full + Math.floor(w / WEEKLY_GOAL) * POINTS.week;
@@ -177,7 +224,7 @@ function upgraded(gear: Worn, embers: number): Worn {
   const out = { ...gear };
   for (const slot of ['weapon', 'armor', 'charm'] as const) {
     let it = out[slot];
-    while (it && (it.plus ?? 0) < MAX_PLUS && upgradeCost(it) <= embers) {
+    while (it && (it.plus ?? 0) < MAX_PLUS && !Object.keys(STEPS[it.plus ?? 0].mats).length && upgradeCost(it) <= embers) {
       embers -= upgradeCost(it);
       it = { ...it, plus: (it.plus ?? 0) + 1 };
     }
@@ -222,7 +269,7 @@ function power(): string {
     '',
     'One number for how strong a hero is (`powerScore` in `src/game/power.ts`): damage a second times what you can take, square-rooted, with a warrior with no points in the starter kit at 100. It leaves out run skills, chest items, the flame, abilities and hits on many foes.',
     '',
-    `Model player: ${WEEKLY_GOAL} full workouts a week, every week at the goal, points spread evenly, embers all spent on upgrades, wearing middle-roll rares from the deepest floor it can wear in the newest open zone. A warrior, with the share of the gain since 0 workouts that comes from each source:`,
+    `Model player: ${WEEKLY_GOAL} full workouts a week, every week at the goal, points spread evenly, embers all spent on upgrades (solo: +1 to +5, the steps with no co-op materials), wearing middle-roll rares from the deepest floor it can wear in the newest open zone. A warrior, with the share of the gain since 0 workouts that comes from each source:`,
     '',
     table(['Workouts', 'Power', 'From training', 'From gear', 'From upgrades', 'Gear from'], rows),
     '',
@@ -235,7 +282,8 @@ function power(): string {
 function goals(): string {
   const steady = playSeason(PLAYERS.find((p) => p.id === 'steady')!, 182).state;
   const perLevel = steady.sessions.length / (levelInfo(totalXp(steady)).level - 1);
-  const toFive = Array.from({ length: MAX_PLUS }, (_, i) => upgradeCost({ plus: i } as Item)).reduce((a, b) => a + b, 0);
+  const toFive = Array.from({ length: 5 }, (_, i) => upgradeCost({ plus: i } as Item)).reduce((a, b) => a + b, 0),
+    toTop = STEPS.reduce((n, st) => n + st.embers * triesFor(st.odds), 0);
   const weeks = weeksFor(toFive, WEEKLY_GOAL);
   const spread = statPower({ health: 100, damage: 100, reach: 100, speed: 100 }, undefined);
   const check = (ok: boolean) => (ok ? 'on target' : '**off target**');
@@ -250,6 +298,7 @@ function goals(): string {
       [
         ['How often a steady player levels up (6 months)', `${perLevel.toFixed(1)} workouts a level`, open],
         ['One item +0 to +5 in about 5 weeks of training', `${weeks.toFixed(1)} weeks`, check(weeks >= 4 && weeks <= 6)],
+        ['One item +0 to +15 in about a year of training (embers; materials from co-op)', `${weeksFor(toTop, WEEKLY_GOAL).toFixed(0)} weeks`, check(weeksFor(toTop, WEEKLY_GOAL) >= 40 && weeksFor(toTop, WEEKLY_GOAL) <= 70)],
         ['100 points a stat gives about +80% damage, +65% attack speed, +105 HP', `+${pct(spread.damage)}, +${pct(spread.speed)}, +${Math.round(spread.health)} HP`, check(Math.abs(spread.damage - 0.8) < 0.08 && Math.abs(spread.speed - 0.65) < 0.08 && Math.abs(spread.health - 105) < 10)],
         [`A comeback after ${XP.comebackDays} days away earns a bonus`, `+${XP.comeback} XP`, check(XP.comeback > 0)],
         ...(['training', 'gear', 'upgrades'] as const).map((k) => {

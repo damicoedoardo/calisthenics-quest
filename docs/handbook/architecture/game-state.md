@@ -14,11 +14,11 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 | Field | What |
 |---|---|
 | `version` | 3. Older saves go through `migrate()`; version 3 dropped the calisthenics skill tree and max tests (a v2 save keeps its sessions, story, Fog and Book of Days) |
-| `profile` | `onboarded`, the `letter` (why, want, forWho, remind), the Hollow's `voice`, `classId`, `look`, the flame's name, `kit` (gym or home) |
+| `profile` | `onboarded`, the `letter` (why, want, forWho, remind), the Hollow's `voice`, `classId`, `look`, the flame's name, `kit` (gym or home), the hero's `name` (asked after the look; what friends see) |
 | `reps` | Current per-set target by exercise id |
 | `sessions` | Every finished workout: entries, sets with reps in reserve, XP breakdown, raises, `heavier`, `better` |
 | `build` | Stat points spent on the champion, per stat (earned points are counted from `sessions`) |
-| `fogGear` | Optional. What you wear into the Fog and the vault at home (`src/lib/fog-gear.ts`, see [../game/fog.md](../game/fog.md)); embers found and spent, the slot the flame holds (`guard`), `deaths`, and the starter kit's look (`kit`, set by `migrate()` from the old forge) ([../game/forge.md](../game/forge.md)) |
+| `fogGear` | Optional. What you wear into the Fog and the vault at home (`src/lib/fog-gear.ts`, see [../game/fog.md](../game/fog.md)); embers found and spent, co-op materials for the forge (`mats`), the slot the flame holds (`guard`), `deaths`, and the starter kit's look (`kit`, set by `migrate()` from the old forge) ([../game/forge.md](../game/forge.md)) |
 | `draft` | The workout in progress, or null. A draft left from an earlier day is closed onto that day (`closeStaleDraft`) |
 | `seenScenes`, `sceneMark` | Story scenes already played, and how many played at the last story moment |
 | `answers` | What the player chose in the story (heart moments, villager stories) |

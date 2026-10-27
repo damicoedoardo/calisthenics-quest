@@ -1,5 +1,6 @@
 import * as Phaser from 'phaser';
 import type { ClassId } from '@/lib/gear';
+import type { Sheet } from '@/sprites/registry';
 import { xpToNext, type Edge, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import { music, type SfxId } from '@/lib/music';
 import { BOT_PICKS, type BossSheetKey, type SheetKey, type Sheets } from '../rules';
@@ -10,6 +11,8 @@ import { drawItem } from '@/sprites/characters/items';
 import type { Build } from '@/lib/stats';
 import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STAIRS, type Prop } from './props';
 import { THEMES, themeFor, type Theme } from './themes';
+import { bandOf, glowOf } from './items';
+import { BANDS, MATS } from '@/balance';
 import {
   ABILITIES,
   DODGE,
@@ -135,6 +138,11 @@ export interface RunSetup {
   build?: Build;
   /** The chapter's hearts are gone: a weaker boss and free skills at the start. */
   edge?: Edge;
+  /** A party's run: the seed every phone shares. */
+  seed?: number;
+  /** Friends in the run (a practice run: bots play them), each with their own sheets
+      (`friend<i>`, `friend<i>Walk`) and their name over their head. */
+  friends?: { name: string; classId: ClassId | undefined; idle: Sheet; walk: Sheet }[];
 }
 
 /** A room on the minimap: where it is on the floor (east is +x, south is +y), what it holds,
@@ -314,6 +322,8 @@ class DungeonScene extends Phaser.Scene {
   run: Run;
   bot = false;
   private hero!: Phaser.GameObjects.Sprite;
+  /** The light of the hero's best-forged item (a new look every few pluses, BANDS): a glow, then sparks, then flames. */
+  private plusLook: { band: number; aura: Phaser.GameObjects.Image | null; fx: Phaser.GameObjects.Particles.ParticleEmitter[] } = { band: 0, aura: null, fx: [] };
   private foes = new Map<number, { s: Phaser.GameObjects.Sprite; base: number; born: number; squash: number; flash: number; tex: string; attackAt: number }>();
   /** Friends on the Summit's climb. */
   private allies: Phaser.GameObjects.Sprite[] = [];
@@ -398,6 +408,8 @@ class DungeonScene extends Phaser.Scene {
   private hudAt = 0;
   private trailAt = 0;
   private paused = false;
+  /** Friends' heroes on screen, in party order after you. */
+  private friends: { sprite: Phaser.GameObjects.Sprite; name: Phaser.GameObjects.Text; key: string }[] = [];
 
   constructor(
     private setup: RunSetup,
@@ -405,7 +417,18 @@ class DungeonScene extends Phaser.Scene {
   ) {
     super('dungeon');
     this.theme = themeFor(setup.zone.id);
-    this.run = createRun({ zone: setup.zone, power: setup.power, classId: setup.classId, seed: Math.floor(Math.random() * 2 ** 31), autoPick: setup.fast, worn: setup.worn, build: setup.build, edge: setup.edge });
+    this.run = createRun({
+      zone: setup.zone,
+      power: setup.power,
+      classId: setup.classId,
+      seed: setup.seed ?? Math.floor(Math.random() * 2 ** 31),
+      autoPick: setup.fast,
+      worn: setup.worn,
+      build: setup.build,
+      edge: setup.edge,
+      // A practice run: friends come with your strength in their own class and starter kit.
+      friends: setup.friends?.map((f) => ({ power: setup.power, classId: f.classId })),
+    });
   }
 
   /** An engine point on the screen: the room on its side, its door on the right. */
@@ -442,8 +465,13 @@ class DungeonScene extends Phaser.Scene {
     return best;
   }
 
+  /** Every sheet the run loads: the run's own and each friend's. */
+  private allSheets(): [string, Sheet][] {
+    return [...Object.entries(this.setup.sheets), ...(this.setup.friends ?? []).flatMap((f, i): [string, Sheet][] => [[`friend${i}`, f.idle], [`friend${i}Walk`, f.walk]])];
+  }
+
   preload() {
-    for (const [key, s] of Object.entries(this.setup.sheets)) this.load.spritesheet(key, s.src, { frameWidth: s.w, frameHeight: s.h });
+    for (const [key, s] of this.allSheets()) this.load.spritesheet(key, s.src, { frameWidth: s.w, frameHeight: s.h });
   }
 
   create() {
@@ -460,7 +488,7 @@ class DungeonScene extends Phaser.Scene {
       return;
     }
     this.makeTextures();
-    for (const [key, s] of Object.entries(this.setup.sheets)) {
+    for (const [key, s] of this.allSheets()) {
       this.anims.create({ key, frames: this.anims.generateFrameNumbers(key, { start: 0, end: s.frames - 1 }), frameRate: 1000 / s.ms, repeat: s.loop ? -1 : 0 });
     }
     this.cameras.main.setBackgroundColor('#07080d').setRoundPixels(true);
@@ -495,6 +523,15 @@ class DungeonScene extends Phaser.Scene {
     if (zoneDungeon(this.setup.zone).sight || midBoss(this.setup.zone).kind === 'lantern') this.dark = this.add.image(0, 0, 'dark').setDisplaySize(3000, 3000).setDepth(140000).setAlpha(0.94).setVisible(false);
     this.hero = this.add.sprite(...this.P(this.run.hero.x, this.run.hero.y), 'hero').play('hero').setScale(0.8);
     this.hero.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.hero.play('hero'));
+    // Friends: their hero and their name over it.
+    this.friends = (this.setup.friends ?? []).map((f, i) => {
+      const h = this.run.party[i + 1];
+      const sprite = this.add.sprite(...this.P(h.x, h.y), `friend${i}`).play(`friend${i}`).setScale(0.8);
+      const name = this.add
+        .text(0, 0, f.name || 'Friend', { fontFamily: 'monospace', fontSize: '11px', color: '#fde68a', stroke: '#07080d', strokeThickness: 3 })
+        .setOrigin(0.5, 1);
+      return { sprite, name, key: `friend${i}` };
+    });
     this.puffs = this.add.particles(0, 0, 'mist', {
       emitting: false,
       speed: { min: 6, max: 26 },
@@ -527,6 +564,7 @@ class DungeonScene extends Phaser.Scene {
     this.pad = this.add.graphics().setScrollFactor(0).setDepth(300000);
     this.vignette = this.add.image(0, 0, 'vignette').setScrollFactor(0).setDepth(250000).setVisible(false);
     this.cameras.main.startFollow(this.hero, true, 0.14, 0.14);
+    this.wearLook();
     this.newRoom();
     this.scale.on(Phaser.Scale.Events.RESIZE, () => this.fitScreen());
 
@@ -1112,12 +1150,19 @@ class DungeonScene extends Phaser.Scene {
     while (this.acc >= STEP * 1000 && steps < 6) {
       this.acc -= STEP * 1000;
       steps++;
-      const input = this.bot ? botInput(run) : { ...this.stickInput(), ability: this.wantAbility, dodge: this.wantDodge, lock: this.wantLock };
+      const mine = this.bot ? botInput(run) : { ...this.stickInput(), ability: this.wantAbility, dodge: this.wantDodge, lock: this.wantLock };
+      // Friends in a practice run are played by the bot.
+      const input = run.party.length > 1 ? [mine, ...run.party.slice(1).map((h) => botInput(run, h))] : mine;
       this.wantAbility = false;
       this.wantDodge = false;
       this.wantLock = undefined;
       stepRun(run, input);
       for (const e of takeEvents(run)) this.react(e);
+      // Friends' picks are the bot's, so the run never waits on them.
+      for (const h of run.party.slice(1)) {
+        if (h.offer) pick(run, this.botPick(h.offer.choices), h);
+        if (h.relicOffer) pickRelic(run, h.relicOffer[0], h);
+      }
       if (run.hero.offer || run.over || run.stairsAsk || this.time.now < this.stopUntil) break;
     }
     if (run.stairsAsk && !this.asked) {
@@ -1337,6 +1382,37 @@ class DungeonScene extends Phaser.Scene {
     };
   }
 
+  /** The hero's light for the best-forged thing they wear: none below +4, a glow, an aura in the
+      item's rarity color, sparks from +10, flames from +13. Still with reduced motion. */
+  private wearLook() {
+    const worn = Object.values(this.run.hero.gear.worn).filter((x): x is Item => !!x),
+      top = worn.reduce<Item | null>((b, x) => ((x.plus ?? 0) > (b?.plus ?? 0) ? x : b), null),
+      band = top ? bandOf(top.plus ?? 0) : 0;
+    if (band === this.plusLook.band && (band === 0 || this.plusLook.aura)) return;
+    this.plusLook.aura?.destroy();
+    for (const e of this.plusLook.fx) e.destroy();
+    this.plusLook = { band, aura: null, fx: [] };
+    const color = top && glowOf(top);
+    if (!top || !color) return;
+    const b = BANDS[band],
+      tint = hex(color),
+      still = reducedMotion();
+    const aura = this.add.image(this.hero.x, this.hero.y, 'mist').setTint(tint).setAlpha(0.18 + 0.06 * band).setScale(1.4 + 0.25 * band).setBlendMode(Phaser.BlendModes.ADD);
+    if (!still) this.tweens.add({ targets: aura, alpha: aura.alpha * 0.55, scale: aura.scale * 1.08, duration: 1100 - 120 * band, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.plusLook.aura = aura;
+    if (still) return;
+    if (b.sparks) {
+      const e = this.add.particles(0, 0, 'dot', { speed: { min: 10, max: 40 }, lifespan: 600, frequency: band >= 4 ? 70 : 140, alpha: { start: 0.9, end: 0 }, scale: { start: 0.9, end: 0.2 }, tint: [tint, 0xffffff], emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, 16) } as Phaser.Types.GameObjects.Particles.EmitZoneData, maxAliveParticles: 24 });
+      e.startFollow(this.hero).setDepth(90000);
+      this.plusLook.fx.push(e);
+    }
+    if (b.blaze) {
+      const e = this.add.particles(0, 0, 'mist', { speedY: { min: -60, max: -30 }, speedX: { min: -8, max: 8 }, lifespan: 520, frequency: band >= 5 ? 45 : 80, alpha: { start: 0.5, end: 0 }, scale: { start: 0.22, end: 0.04 }, tint: band >= 5 ? [0xef4444, 0xfbbf24] : [0xfb923c, 0xfde68a], blendMode: Phaser.BlendModes.ADD, emitZone: { type: 'random', source: new Phaser.Geom.Rectangle(-10, -6, 20, 16) } as Phaser.Types.GameObjects.Particles.EmitZoneData, maxAliveParticles: 30 });
+      e.startFollow(this.hero).setDepth(90000);
+      this.plusLook.fx.push(e);
+    }
+  }
+
   /** Every sprite to where the engine says its thing is. */
   private sync() {
     const r = this.run,
@@ -1350,6 +1426,7 @@ class DungeonScene extends Phaser.Scene {
       across = -r.hero.vy,
       playing = h.anims.currentAnim?.key;
     h.setPosition(hx, hy).setDepth(hy);
+    this.plusLook.aura?.setPosition(hx, hy + 4).setDepth(hy - 1);
     if (moving) {
       if (Math.abs(across) > 5) h.setFlipX(across < 0);
       h.setAngle(Math.sign(across) * 3);
@@ -1367,6 +1444,19 @@ class DungeonScene extends Phaser.Scene {
     }
     const blink = r.t < r.hero.hurtUntil || r.t < r.hero.ghostUntil;
     h.setAlpha(blink ? (Math.floor(now / 80) % 2 ? 0.35 : 1) : 1);
+    // Friends: where they are, walking or still; grey and faded while down.
+    this.friends.forEach((f, i) => {
+      const o = r.party[i + 1],
+        [fx, fy] = this.P(o.x, o.y),
+        walking = Math.hypot(o.vx, o.vy) > 5,
+        want = walking && this.anims.exists(`${f.key}Walk`) ? `${f.key}Walk` : f.key;
+      f.sprite.setPosition(fx, fy).setDepth(fy);
+      if (Math.abs(o.vy) > 5) f.sprite.setFlipX(-o.vy < 0);
+      if (f.sprite.anims.currentAnim?.key !== want) f.sprite.play(want);
+      if (o.hp <= 0) f.sprite.setTint(0x6b7280).setAlpha(0.5).setAngle(90);
+      else f.sprite.clearTint().setAlpha(r.t < o.hurtUntil ? (Math.floor(now / 80) % 2 ? 0.35 : 1) : 1).setAngle(0);
+      f.name.setPosition(fx, fy - 46).setDepth(fy + 1);
+    });
 
     // Monsters.
     const seen = new Set<number>();
@@ -1960,6 +2050,11 @@ class DungeonScene extends Phaser.Scene {
         if (big) this.sfx('gem', e.item.rarity === 'legendary' ? 0.5 : 0.8);
         break;
       }
+      case 'mat':
+        this.burst(this.sparks, e.mat === 'thread' ? 6 : 18, e.x, e.y, -6);
+        this.sfx('gem', e.mat === 'thread' ? 1.5 : 0.7);
+        if (e.mat !== 'thread') this.bus.say(`${MATS[e.mat].name}! Mira can use this.`);
+        break;
       case 'loot':
         this.sfx('gem', 1.3);
         this.bus.loot(e.item);
@@ -2464,6 +2559,7 @@ class DungeonScene extends Phaser.Scene {
   /** The bag panel's buttons: the page pauses the run while it's open. */
   gear(fn: () => void) {
     fn();
+    this.wearLook();
     for (const e of takeEvents(this.run)) this.react(e);
     this.syncLoot();
     this.bus.hud(this.hud());

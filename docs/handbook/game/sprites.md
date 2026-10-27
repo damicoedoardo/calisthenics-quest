@@ -160,6 +160,9 @@ The hero is drawn with the player's look (body, hair, hair color, skin), which `
 hands to every `<Hero />` on screen, so the Echo, the Best Self and the Hollow match the player.
 The `kindled` variant is the hero once the flame has fused with them in the finale: a red and
 orange fire aura that flickers (it stands in for the top-tier gear glow).
+A worn item forged to +4 or more also lights the hero from behind (`Hero.tsx` wraps the sprite in
+`PlusGlow`, from `Gear.plus`); that light is drawn in CSS, not in the sprite, so the sprite's
+fingerprints don't change ([forge.md](forge.md)).
 
 Long lists show stills, not sheets: `stillFor(id, action, opts, frame)` (`registry.ts`) draws a
 single frame once and caches it (the exercise library's rows draw one as each row scrolls in).
