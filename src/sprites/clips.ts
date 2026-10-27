@@ -58,6 +58,12 @@ export const CLIPS = {
   lunge: { ms: 110, loop: false, frames: [{}, { right: 'up' }, { fx: 'impact' }, {}] },
   /** Creatures: a one-shot death, swell, crack, burst, splash (the Splitter splitting). */
   pop: { ms: 70, loop: false, frames: [{ bob: 1 }, { right: 'up' }, { fx: 'burst' }, { fx: 'impact' }] },
+  /** Lift the off hand high, hold it while a light flares, and lower it (Vela raising her lamp). */
+  raise: {
+    ms: 150,
+    loop: false,
+    frames: [{}, { left: 'up' }, { left: 'up', fx: 'charge' }, { left: 'up', fx: 'burst' }, { left: 'up', fx: 'burst' }, { left: 'up', fx: 'charge' }, { left: 'up' }, {}],
+  },
   /** A single still frame, for sprites that don't move. */
   still: { ms: 1000, loop: false, frames: [{}] },
 } satisfies Record<string, Clip>;

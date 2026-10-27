@@ -66,6 +66,16 @@ export const PLACES = {
     props: ['rocks'],
     weather: 'none',
   },
+  'lamp-road': {
+    name: "Vela's lamp",
+    sky: ['#17131a', '#3a2e2a', '#7a5e3e'],
+    land: 'flat',
+    far: '#3a3123',
+    near: '#2a2319',
+    ground: '#2a2319',
+    props: ['road', 'rocks', 'lamp-tower'],
+    weather: 'none',
+  },
   'hollow-woods': {
     name: 'The Hollow Woods',
     sky: ['#06090a', '#0f1a17', '#1f3b33'],

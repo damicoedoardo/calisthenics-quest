@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Hero } from './Hero';
-import { Ember, Hollow } from './Characters';
+import { Ember, Hollow, Kindled } from './Characters';
 import { PlaceBackdrop } from './Place';
 import { SoundToggle, useMusic } from './Sound';
 import { Sprite } from './Sprite';
@@ -81,6 +81,8 @@ function Portrait({ line, gear, classId, flame }: { line: Line; gear: Record<Gea
     case 'flame':
       // A spark is a speck in its frame: show it bigger so its face reads.
       return <Ember size={flame === 'spark' ? Math.round(p.size * 1.7) : p.size} stage={flame} mood={line.mood} />;
+    case 'kindled':
+      return <Kindled size={p.size} />;
     default:
       return null;
   }

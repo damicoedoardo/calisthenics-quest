@@ -13,7 +13,8 @@ engine/grid.ts        pixel grids and drawing tools (painter, outline, shading, 
 engine/figure.ts      the base 64x64 humanoid: body, face, hair, arms, layer order
 engine/manga.ts       the manga head (the hero's default): face as text art, hair as shapes
 parts/weapons.ts      sword, stick, staff, wand, bow
-characters/*.ts       one file per character: hero, wanderer, mira, ember, book, and the chapter
+characters/*.ts       one file per character: hero, wanderer, mira, ember, book, vela (old Vela),
+                      kindled (the flame's true form), villagers (Lia, Sol, the kid), and the chapter
                       enemies tomorrow, mirror, plateau, summit, and the Fog's wisp, plus the
                       dungeon's monsters: ram, smoke (the Smoker), seeker, splitter (the
                       Splitling, and splitterPop, its one-shot death), shade, and the mid-boss
@@ -38,6 +39,9 @@ characters/pixel.ts   text-row art: paintRows (one character per pixel) and shif
 | Redraw a weapon | `parts/weapons.ts` |
 | Change armor tiers, capes, shields | `heroSpec` layers in `characters/hero.ts` |
 | Redraw Mira, Ember, the Book or a chapter enemy | its file in `characters/` (`mira.ts`, `ember.ts`, `book.ts`, `tomorrow.ts`, `mirror.ts`, `plateau.ts`, `summit.ts`) |
+| Redraw old Vela (hair, softer eyes, shawl, lamp, cane) | `characters/vela.ts`: her lamp raise is the `raise` clip in `clips.ts` |
+| Redraw the flame's true form (the finale's fire kid) | the `ROWS` and `TIPS` text art in `characters/kindled.ts` (`LOCKS` is the long hair a long or pony look gets) |
+| Change a story backdrop's props (Vela's lamp tower, the road, a campfire) | its function in `places.ts` (`lampTower`, `road`...); which place has which props is in `src/story/places.ts` |
 | Change the looks a player starts with (boy, girl) | `STARTER_LOOKS` in `characters/hero.ts`; the editor's options are in `src/components/LookEditor.tsx` |
 | Redraw a dungeon monster | the `ROWS` text art in its file (`ram.ts`, `smoke.ts`, `seeker.ts`, `splitter.ts`, `shade.ts`); its palette sits under the rows |
 | Change which sprite a dungeon monster uses, or its size | `DUNGEON_LOOKS` in `src/game/dungeon/scene.ts` (a new sheet also needs a `SheetKey` in `src/game/rules.ts` and a line in `sheets` in `FogRun.tsx`) |
@@ -53,7 +57,7 @@ light/shadow edges automatically.
 
 ### Text-row art
 
-The dungeon's monsters are hand-drawn as text: 32 rows of 32 characters, each character a color
+The dungeon's monsters and the flame's true form are hand-drawn as text: 32 rows of 32 characters, each character a color
 from the sprite's palette (`'.'` is empty). `paintRows` puts them on a 32x32 grid, Scale2x doubles it
 to 64x64, then `autoshade` and `outline` run as for every sprite. Eyes, sparks and other fine
 details go on top at 64x64 with the painter, and the animation moves whole layers (`shifted`) or

@@ -13,6 +13,8 @@ import { drawSummit } from './characters/summit';
 import { drawTomorrow } from './characters/tomorrow';
 import { drawWanderer } from './characters/wanderer';
 import { drawKid, drawLia, drawSol } from './characters/villagers';
+import { drawVela } from './characters/vela';
+import { drawKindled, type KindledOpts } from './characters/kindled';
 import { drawWisp } from './characters/wisp';
 import { drawRam } from './characters/ram';
 import { drawSmoke } from './characters/smoke';
@@ -106,6 +108,14 @@ export const SPRITES = {
   kid: drawn<NoOpts>({ label: () => 'The kid inside the armor', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawKid, look: () => ({ shadow: true }) }),
   lia: drawn<NoOpts>({ label: () => 'Lia the dancer', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawLia, look: () => ({ shadow: true }) }),
   sol: drawn<NoOpts>({ label: () => 'Sol the runner', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawSol, look: () => ({ shadow: true }) }),
+  vela: drawn<NoOpts>({ label: () => 'Old Vela', defaults: {}, clips: () => ({ idle: 'idle', attack: 'raise' }), draw: drawVela, look: () => ({ shadow: true }) }),
+  kindled: drawn<KindledOpts>({
+    label: () => "Your flame's true form",
+    defaults: { hair: 'short' },
+    clips: () => ({ idle: 'hover' }),
+    draw: drawKindled,
+    look: () => ({ filter: 'drop-shadow(0 0 10px rgba(251,146,60,.6))' }),
+  }),
   book: creature('The Book of Days', drawBook, 'hover'),
   slime: creature('Tomorrow', drawTomorrow, 'lunge'),
   mirror: creature('The Mirror', drawMirror, 'lunge'),

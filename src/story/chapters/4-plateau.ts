@@ -50,6 +50,7 @@ export const PLATEAU: Chapter = {
     {
       id: 'ch4-vela',
       when: { workouts: 41, chapter: 4 },
+      place: 'lamp-road',
       shots: [{ pan: 'up', seconds: 1.8 }],
       lines: [
         { who: 'narrator', show: 'vela', text: 'At the edge of the flat road stands a thin stone tower with a lamp at the top. An old woman sits under it, writing a letter.' },
@@ -122,6 +123,7 @@ export const PLATEAU: Chapter = {
     {
       id: 'ch4-vela-letter',
       when: { workouts: 44, chapter: 4, answer: { id: 'vela', is: 'yes' } },
+      place: 'lamp-road',
       lines: [
         { who: 'narrator', show: 'vela', text: 'Vela is writing again. A whole box of letters sits beside her. None of them has a stamp.' },
         { who: 'vela', text: 'Letters home. I never send them.' },

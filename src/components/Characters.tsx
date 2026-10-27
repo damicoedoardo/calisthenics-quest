@@ -1,5 +1,6 @@
 import { Hero } from './Hero';
 import { Sprite } from './Sprite';
+import { useLook } from './Look';
 import { equippedGear, makeGear, type ClassId, type Gear, type GearSlot } from '@/lib/gear';
 import type { FlameFace, FlameStage } from '@/sprites/characters/ember';
 
@@ -20,6 +21,12 @@ interface EmberProps {
 /** Your flame: it grows with your workouts and shows how it feels. */
 export function Ember({ size = 48, dim = false, stage = 'candle', mood = 'happy' }: EmberProps) {
   return <Sprite id="ember" size={size} opts={{ stage, mood }} className={`animate-flicker ${dim ? 'opacity-50' : ''}`} />;
+}
+
+/** The flame's true form: a kid made of fire, with the player's hair as flame. */
+export function Kindled({ size = 64 }: { size?: number }) {
+  const { style } = useLook();
+  return <Sprite id="kindled" size={size} opts={{ hair: style === 'long' || style === 'pony' ? 'long' : 'short' }} />;
 }
 
 const SHADOW_GEAR = { ...equippedGear(undefined, { push: 0, pull: 0, core: 0 }), weapon: makeGear('weapon', 1, undefined) };

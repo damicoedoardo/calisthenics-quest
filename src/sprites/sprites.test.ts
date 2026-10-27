@@ -52,6 +52,8 @@ describe('sprite registry', () => {
     // Chapter enemies lunge; sprites without an attack fall back to their idle clip.
     for (const id of ['slime', 'mirror', 'golem', 'wisp', 'ram', 'smoke', 'seeker', 'splitter', 'splitling', 'shade', 'warden'] as const) expect(clipFor(id, 'attack')).toBe('lunge');
     expect(clipFor('ember', 'attack')).toBe(clipFor('ember', 'idle'));
+    // Vela raises her lamp.
+    expect(clipFor('vela', 'attack')).toBe('raise');
   });
 
   it('the idle loop bobs and the attack moves', () => {
@@ -115,6 +117,7 @@ describe('sprite registry', () => {
     prints['hero girl'] = hash(framesFor('hero', 'idle', { look: STARTER_LOOKS.f }));
     for (const stage of ['spark', 'candle', 'torch', 'bonfire', 'fairy'] as const)
       for (const mood of ['happy', 'bright', 'soft', 'sleepy', 'smoky', 'scared', 'dim'] as const) prints[`flame ${stage} ${mood}`] = hash(framesFor('ember', 'idle', { stage, mood }));
+    prints['kindled long hair'] = hash(framesFor('kindled', 'idle', { hair: 'long' }));
     expect(prints).toMatchSnapshot();
   });
 });

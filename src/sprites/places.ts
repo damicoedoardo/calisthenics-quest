@@ -10,7 +10,7 @@ export const PLACE_H = 160;
 const HORIZON = 98;
 
 export type Land = 'dunes' | 'hills' | 'peaks' | 'flat' | 'village' | 'forest';
-export type Prop = 'dead-trees' | 'stars' | 'moon' | 'campfire' | 'lake' | 'reeds' | 'chimneys' | 'windows' | 'rocks';
+export type Prop = 'dead-trees' | 'stars' | 'moon' | 'campfire' | 'lake' | 'reeds' | 'chimneys' | 'windows' | 'rocks' | 'road' | 'lamp-tower';
 export type PlaceWeather = 'none' | 'ash' | 'rain' | 'embers' | 'fog' | 'snow';
 
 export interface PlaceSpec {
@@ -171,8 +171,71 @@ function deadTree(p: Painter, x: number, base: number, h: number, c: string) {
   p.line(x + 5, base - h + 3, x + 7, base - h - 1, c);
 }
 
+/** A dirt road running straight to the horizon, narrowing as it goes. */
+function road(p: Painter, s: PlaceSpec) {
+  const top = HORIZON + 10,
+    c = mix(s.ground, '#ffffff', 0.1),
+    rut = mix(s.ground, '#000000', 0.18);
+  for (let y = top; y < PLACE_H; y++) {
+    const k = (y - top) / (PLACE_H - top),
+      half = 2 + k * 30,
+      x0 = Math.round(45 - half),
+      x1 = Math.round(45 + half);
+    p.row(y, x0, x1, c);
+    // two wheel ruts, and a ragged edge
+    p.p(Math.round(45 - half * 0.45), y, rut);
+    p.p(Math.round(45 + half * 0.45), y, rut);
+    if (y % 3 === 0) p.p(x0 - 1, y, c);
+    if (y % 4 === 1) p.p(x1 + 1, y, c);
+  }
+}
+
+/** Vela's tower: a thin stone tower beside the road, with her lamp lit at the top. Off to the
+    right, so the person speaking stands clear of it. */
+function lampTower(p: Painter, s: PlaceSpec) {
+  const cx = 70,
+    base = HORIZON + 16,
+    top = base - 40,
+    stone = mix(s.far, '#d6c8a8', 0.45),
+    light = mix(stone, '#ffffff', 0.25),
+    dark = mix(stone, '#000000', 0.35);
+  glow(p, cx, top - 6, 9, '#fbbf24', false);
+  // the shaft, wider at the foot, with a lit edge, a shaded edge and courses of stone
+  for (let y = top; y <= base; y++) {
+    const half = 2 + Math.round(((y - top) / (base - top)) * 2.4),
+      x0 = cx - half,
+      x1 = cx + half;
+    p.row(y, x0, x1, stone);
+    p.p(x0, y, light);
+    p.p(x1, y, dark);
+    if ((y - top) % 5 === 0) p.row(y, x0 + 1, x1 - 1, dark);
+    else if ((y - top) % 5 === 2) p.p(cx + ((y - top) % 10 === 2 ? -1 : 1), y, dark);
+  }
+  // a door at the foot and a slit window halfway up
+  p.r(cx - 1, base - 5, 3, 5, '#1a140e');
+  p.p(cx, base - 6, '#1a140e');
+  p.r(cx, top + 15, 1, 3, '#3a2a10');
+  // the gallery, the lamp room and its cap
+  p.row(top - 1, cx - 4, cx + 4, dark);
+  p.row(top - 2, cx - 4, cx + 4, light);
+  p.r(cx - 2, top - 7, 5, 5, '#fde68a');
+  p.r(cx - 1, top - 6, 3, 3, '#fff7d6');
+  p.col(cx - 3, top - 7, top - 3, '#2a2420');
+  p.col(cx + 3, top - 7, top - 3, '#2a2420');
+  p.row(top - 8, cx - 3, cx + 3, '#2a2420');
+  p.row(top - 9, cx - 2, cx + 2, '#2a2420');
+  p.p(cx, top - 10, '#2a2420');
+  p.p(cx, top - 11, '#2a2420');
+  // a bench and the box of letters at the foot
+  p.row(base + 2, cx - 9, cx - 5, '#5b3a24');
+  p.p(cx - 9, base + 3, '#3b2414');
+  p.p(cx - 5, base + 3, '#3b2414');
+  p.r(cx + 5, base + 1, 3, 2, '#e8dcc0');
+}
+
 function props(p: Painter, s: PlaceSpec, rnd: () => number) {
   const has = (q: Prop) => s.props.includes(q);
+  if (has('road')) road(p, s);
   if (has('stars'))
     for (let i = 0; i < 46; i++) {
       const x = Math.floor(rnd() * PLACE_W),
@@ -208,6 +271,7 @@ function props(p: Painter, s: PlaceSpec, rnd: () => number) {
       p.col(x, 136 - h, 137, mix(s.near, '#000000', 0.2));
       p.p(x, 136 - h - 1, '#5b4a3a');
     }
+  if (has('lamp-tower')) lampTower(p, s);
   if (has('campfire')) {
     // Off to the left, where the text box doesn't cover it and nobody stands in front of it.
     const cx = 22,
