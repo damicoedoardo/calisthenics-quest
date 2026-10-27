@@ -76,7 +76,9 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Redraw a Fog item, or a legendary | its rows in `ITEM_ROWS` or `LEGEND_ROWS` (`characters/items.ts`); the letters are listed at the top of the file |
 | Change an item rarity's colors, the dyes and gems a seed picks, or the legendaries' looks | `METAL`, `LEATHER`, `CLOTH`, `GEMS`, `TRIM`, `ACCENTS`, `THEMES` and `itemColors` in `characters/items.ts` |
 | Change a rare's shine or a legendary's glow and sparkles | `drawItem` in `characters/items.ts` (the `hover` clip, 8 frames; frame 0 is the still) |
-| Change how the hero wears an item (plate, jerkin, robe, the charm, a legendary's mantle) | `itemOutfit` and `heroSpec` in `characters/hero.ts`; the weapon's trim, gem and legendary light are the `WeaponLook` in `parts/weapons.ts` |
+| Change the hero's clothes under any item (the shirt's cel shading and folds, the starter's wrapped top and red sash, wrist wraps, trousers and boots) | `tailor`, `trousers` and the sleeve loop in `characters/hero.ts`; the colors are `WRAP` and `SASH` there |
+| Change how the manga hair is shaded (dark far side, dark lock tips, lines between locks) | `shadeHair` and each style's `strands` in `engine/manga.ts` |
+| Change how the hero wears an item (plate and its tabard, jerkin, robe and its folds, the charm, a legendary's mantle) | `itemOutfit` and `heroSpec` in `characters/hero.ts`; the weapon's trim, gem and legendary light are the `WeaponLook` in `parts/weapons.ts` |
 | Redraw Mira, Ember, the Book or a chapter enemy | its file in `characters/` (`mira.ts`, `ember.ts`, `book.ts`, `tomorrow.ts`, `mirror.ts`, `plateau.ts`, `summit.ts`) |
 | Change how Lia, Sol or Vela look once you've helped them | `LIA_AFTER`, `SOL_AFTER` in `characters/villagers.ts`, `VELA_AFTER` in `vela.ts`; drawn with `{ after: true }`, and in the story by the cast ids `lia-after`, `sol-after`, `vela-after` |
 | Redraw old Vela (hair, softer eyes, shawl, lamp, cane) | `characters/vela.ts`: her lamp raise is the `raise` clip in `clips.ts` |

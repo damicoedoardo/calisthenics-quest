@@ -49,6 +49,10 @@ export function heroAttack(gear: Record<GearSlot, Gear>, classId?: ClassId): Cli
 
 /** What a worn item gives its weapon: trim, gem, and a legendary's light. */
 const weaponLook = (c: ItemColors | null, legend: boolean): WeaponLook | undefined => (c ? { trim: c.trim, gem: c.gem, shine: legend && c.glow ? c.glow[1] : undefined } : undefined);
+/** Cloth wraps on the wrists, dark to light. */
+const WRAP: Ramp = ['#8c7a5e', '#cbbb9a', '#ece2cc'];
+/** The starter's cloth sash. */
+const SASH: Ramp = ['#7a1f18', '#c0392b', '#e8604c'];
 const ramp3 = (r: string[]): Ramp => [r[0], r[1], r[2]];
 
 export function heroSpec({ gear, classId, variant }: HeroOpts): FigureSpec {
@@ -147,13 +151,24 @@ export function heroSpec({ gear, classId, variant }: HeroOpts): FigureSpec {
         }
         u.row(47, 21, 42, A[0]);
         [23, 28, 33, 38].forEach((x) => u.p(x, 47, A[0]));
+        tailor(c, A, dress);
+        if (dress !== 'robe') trousers(c, legs);
         u.r(30, 30, 4, 4, c.skin[1]);
         u.row(30, 30, 33, c.skin[0]); // the chin's shadow on the neck
         u.p(29, 30, A[0]);
         u.p(34, 30, A[0]);
         const [b0, b1] = c.torsoRange(42);
         if (dress) itemOutfit(c, dress, A, T, acc, trimmed, armorLegend, ac, ia?.seed ?? 0);
-        else {
+        else if (armorTier === 0) {
+          // the starter's training top: one side wrapped over the other, tied with a cloth sash
+          u.line(26, 31, 33, 41, A[0]);
+          u.line(27, 31, 34, 41, A[2]);
+          u.row(42, b0, b1, SASH[1]);
+          u.row(43, b0, b1, SASH[0]);
+          u.r(27, 42, 3, 2, SASH[2]);
+          u.line(27, 44, 26, 47, SASH[1]);
+          u.line(29, 44, 29, 47, SASH[0]);
+        } else {
           u.row(42, b0, b1, R.leather[0]);
           u.row(43, b0, b1, R.leather[1]);
           u.r(30, 42, 4, 2, armorTier >= 4 ? R.gold[2] : R.bronze[2]);
@@ -169,16 +184,38 @@ export function heroSpec({ gear, classId, variant }: HeroOpts): FigureSpec {
             u.row(46, 21, 42, R.gold[1]);
           }
         }
+        if (!dress) {
+          // a pouch on the belt, over the far hip
+          u.r(37, 43, 4, 4, R.leather[1]);
+          u.row(43, 37, 40, R.leather[2]);
+          u.p(38, 44, R.gold[1]);
+        }
         if (cape) {
           u.r(23, 30, 3, 3, R.gold[2]);
           u.r(38, 30, 3, 3, R.gold[2]);
         }
         (['L', 'R'] as const).forEach((s) => {
-          const [x, y, ww, hh] = P.arms[s].rect;
-          // a robe's sleeves reach the wrists
-          w.r(x, y, ww, dress === 'robe' ? Math.max(4, hh - 2) : Math.min(4, hh), A[1]);
+          const [x, y, ww, hh] = P.arms[s].rect,
+            tall = hh > ww,
+            // a robe's sleeves reach the wrists; other sleeves stop above the elbow
+            sh = dress === 'robe' ? Math.max(4, hh - 2) : tall ? Math.min(6, hh) : Math.min(4, hh);
+          w.r(x, y, ww, sh, A[1]);
           w.row(y, x, x + ww - 1, A[2]);
-          if (dress === 'robe' && trimmed) w.row(y + Math.max(4, hh - 2) - 1, x, x + ww - 1, T[1]);
+          if (tall) {
+            // the sleeve's far side in shadow, a cuff, and the forearm shaded the same way
+            w.col(x + ww - 1, y + 1, y + sh - 1, A[0]);
+            w.row(y + sh - 1, x, x + ww - 1, dress === 'robe' && trimmed ? T[1] : A[0]);
+            if (sh < hh) {
+              w.r(x, y + sh, ww, hh - sh, c.skin[1]);
+              w.col(x + ww - 1, y + sh, y + hh - 1, c.skin[0]);
+              // a fighter's cloth wraps round the wrists
+              if (dress !== 'heavy')
+                for (let j = y + sh + 2; j < y + hh; j++) {
+                  w.row(j, x, x + ww - 1, j % 2 ? WRAP[1] : WRAP[2]);
+                  w.p(x + ww - 1, j, WRAP[0]);
+                }
+            }
+          } else w.row(y + sh - 1, x, x + ww - 1, dress === 'robe' && trimmed ? T[1] : A[0]);
         });
         if (dress === 'heavy' || (!dress && armorTier >= 2)) {
           // pauldrons
@@ -188,6 +225,9 @@ export function heroSpec({ gear, classId, variant }: HeroOpts): FigureSpec {
             u.r(x, 29, 7, 5, A[1]);
             u.row(29, x, x + 6, A[2]);
             u.row(33, x + 1, x + 6, dress && trimmed ? T[1] : A[0]);
+            // rivets
+            u.p(x + 1, 31, mix(A[2], '#ffffff', 0.5));
+            u.p(x + 5, 31, A[0]);
             if (dress && armorLegend) {
               // a legendary plate's pauldrons rise to points
               u.r(x + (x < 30 ? 0 : 5), 26, 2, 3, T[1]);
@@ -245,6 +285,77 @@ export function heroSpec({ gear, classId, variant }: HeroOpts): FigureSpec {
   };
 }
 
+/** Folds and light on the shirt under any armor: sloped shoulders, a collar, shadow down the far
+    side and under the chest, and the cloth pulled in where the belt holds it. */
+function tailor(c: Ctx, A: Ramp, dress: 'heavy' | 'light' | 'robe' | null) {
+  const { u, P } = c,
+    soft = mix(A[1], A[0], 0.45),
+    lit = mix(A[1], A[2], 0.5),
+    [x0, x1] = c.torsoRange(31);
+  u.erase(x0, 30);
+  u.erase(x1, 30);
+  for (let y = 31; y <= 41; y++) {
+    const [a0, b0] = c.torsoRange(y),
+      // the chest is broad and the waist narrows above the belt
+      pinch = P.fem ? 0 : y >= 38 ? 2 : y === 37 ? 1 : 0,
+      a = a0 + pinch,
+      b = b0 - pinch;
+    for (let k = 0; k < pinch; k++) {
+      u.erase(a0 + k, y);
+      u.erase(b0 - k, y);
+    }
+    // cel shading: a band of shadow down the far side that widens toward the waist
+    const band = 2 + Math.floor((y - 31) / 4);
+    u.row(y, b - band, b - 1, soft);
+    u.p(b, y, A[0]);
+    u.p(b - band - 1, y, y % 2 ? soft : A[1]);
+    if (y <= 37) u.p(a + 1, y, lit);
+    u.p(a, y, A[2]);
+  }
+  u.row(41, x0 + 4, x1 - 6, soft);
+  [
+    [27, 40],
+    [28, 41],
+    [35, 40],
+    [34, 41],
+  ].forEach(([x, y]) => u.p(x, y, A[0]));
+  if (dress === 'heavy' || dress === 'robe') return;
+  // a V collar: two lit flaps, and the neck showing down to the chest
+  u.p(28, 30, A[2]);
+  u.p(29, 31, A[2]);
+  u.p(35, 30, A[2]);
+  u.p(34, 31, A[2]);
+  u.row(34, 31, 32, c.skin[0]);
+  u.p(30, 34, A[0]);
+  u.p(33, 34, A[0]);
+}
+
+/** Trousers and boots with their folds: a lit knee, a crease, a cuff over the boot, and boots with a
+    turned-down top, a shine on the toe and a dark sole. The lifted foot rides up mid-step. */
+function trousers(c: Ctx, L: Ramp) {
+  const { l, P } = c,
+    lit = mix(L[1], L[2], 0.5),
+    Bt = R.leather,
+    sole = mix(Bt[0], NIGHT, 0.4);
+  [24, 34].forEach((x, i) => {
+    const up = P.step === (i === 0 ? -1 : 1) ? 4 : 0,
+      end = 57 - up;
+    l.r(x, 48, 6, end - 47, L[1]);
+    l.col(x + 5, 48, end, L[0]);
+    l.col(x, 48, end, i === 0 ? L[2] : L[1]);
+    l.r(x + 1, 51 - up / 2, 2, 2, lit);
+    l.p(x + 3, 54 - up / 2, L[0]);
+    l.row(end, x, x + 5, L[0]);
+    const bx = x - 2 + i * 2,
+      by = 58 - up;
+    l.r(bx, by, 8, 4, Bt[1]);
+    l.row(by, bx, bx + 7, Bt[2]);
+    l.row(by + 1, bx, bx + 7, Bt[0]);
+    l.p(i === 0 ? bx + 1 : bx + 6, by + 2, Bt[2]);
+    l.row(by + 3, bx, bx + 7, sole);
+  });
+}
+
 /** The torso of a worn Fog armor: plate, a laced jerkin, or a robe with its skirt over the legs. */
 function itemOutfit(c: Ctx, dress: 'heavy' | 'light' | 'robe', A: Ramp, T: Ramp, acc: Ramp, trimmed: boolean, legend: boolean, ac: ItemColors | null, seed: number) {
   const { u, l, P } = c,
@@ -262,6 +373,13 @@ function itemOutfit(c: Ctx, dress: 'heavy' | 'light' | 'robe', A: Ramp, T: Ramp,
     u.row(43, b0, b1, R.leather[1]);
     u.r(30, 42, 4, 2, T[2]);
     for (let y = 44; y <= 47; y++) u.row(y, 22, 41, y % 2 ? A[0] : A[1]);
+    // a cloth tabard in the accent color hangs from the belt over the legs
+    u.r(29, 44, 6, 4, acc[1]);
+    l.r(29, 48, 6, 5, acc[1]);
+    l.col(34, 44, 52, acc[0]);
+    l.row(52, 29, 34, trimmed ? T[1] : acc[0]);
+    l.p(31, 53, acc[0]);
+    l.p(32, 53, acc[0]);
     if (trimmed) {
       u.row(30, 24, 39, T[2]);
       u.row(47, 21, 42, T[1]);
@@ -298,6 +416,8 @@ function itemOutfit(c: Ctx, dress: 'heavy' | 'light' | 'robe', A: Ramp, T: Ramp,
     }
     u.line(24, 31, 39, 41, R.leather[0]);
     u.line(25, 31, 40, 41, R.leather[1]);
+    // studs down the strap
+    [27, 30, 33, 36].forEach((x) => u.p(x, 31 + Math.round(((x - 24) * 10) / 15), T[1]));
     u.row(42, b0, b1, R.leather[0]);
     u.row(43, b0, b1, R.leather[1]);
     u.r(30, 42, 4, 2, T[2]);
@@ -333,6 +453,10 @@ function itemOutfit(c: Ctx, dress: 'heavy' | 'light' | 'robe', A: Ramp, T: Ramp,
     l.p(32, y, A[0]);
   }
   l.row(57, 18, 45, trimmed ? T[1] : A[0]);
+  // the skirt falls in folds
+  l.line(27, 47, 24, 56, A[0]);
+  l.line(37, 47, 40, 56, A[0]);
+  l.line(26, 48, 23, 55, A[2]);
   if (trimmed) {
     u.col(32, 32, 41, T[1]);
     l.col(32, 46, 56, T[1]);
