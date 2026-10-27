@@ -447,7 +447,8 @@ class Engine {
       // Storage can be blocked; music just starts unmuted.
     }
     // Browsers only allow sound after a tap, so every tap tries to wake the audio.
-    window.addEventListener('pointerdown', () => this.unlock(), { passive: true });
+    // On phones a touch only counts once the finger lifts, so listen for the end of the tap too.
+    for (const ev of ['pointerdown', 'pointerup', 'touchend', 'click']) window.addEventListener(ev, () => this.unlock(), { passive: true });
     document.addEventListener('visibilitychange', () => {
       if (!this.ctx) return;
       const live = this.ctx as AudioContext;

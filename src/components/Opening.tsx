@@ -79,7 +79,8 @@ export function Opening({ state, onDone }: { state: GameState; onDone: () => voi
   }, []);
 
   // A tap wakes the sound (the only way on an iPhone): it jumps to the end and plays the last chord.
-  // A tap once the sound has played, or on the end, leaves.
+  // A tap once the sound has played, or on the end, leaves. On click, not pointerdown: a phone only
+  // lets a touch start sound once the finger lifts.
   const tap = () => {
     if (phase === 'out') return;
     if (sounded.current || phase === 'end' || music.muted) return leave();
@@ -99,10 +100,10 @@ export function Opening({ state, onDone }: { state: GameState; onDone: () => voi
   return (
     <div
       role="presentation"
-      onPointerDown={tap}
+      onClick={tap}
       className={`fixed inset-0 z-50 flex select-none flex-col items-center justify-center bg-ink-950 transition-opacity duration-300 ${phase === 'out' ? 'pointer-events-none opacity-0' : ''}`}
     >
-      <div className="safe-top absolute right-2 top-2" onPointerDown={(e) => e.stopPropagation()}>
+      <div className="safe-top absolute right-2 top-2">
         <SoundToggle />
       </div>
       {go && (
