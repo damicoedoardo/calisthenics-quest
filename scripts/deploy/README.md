@@ -32,12 +32,12 @@ mkdir -p ~/.docker/cli-plugins
 cp scripts/deploy/vendor/docker-rollout ~/.docker/cli-plugins/docker-rollout
 chmod +x ~/.docker/cli-plugins/docker-rollout
 
-# 2. GHCR read access (the image is private). A CLASSIC token with only read:packages;
-#    GHCR doesn't take fine-grained tokens.
-echo "$GHCR_PAT" | docker login ghcr.io -u damicoedoardo --password-stdin
+# 2. GHCR: the image is public, so no login is needed. If it is ever made private again, log in
+#    with a CLASSIC token with only read:packages (GHCR doesn't take fine-grained tokens):
+#    echo "$GHCR_PAT" | docker login ghcr.io -u damicoedoardo --password-stdin
 
 # 3. Settings
-cp .env.example .env    # then fill in DOMAIN, POSTGRES_PASSWORD, the Supabase URLs
+cp .env.example .env    # then fill in DOMAIN (api.formaquest.app), POSTGRES_PASSWORD, the Supabase URLs
 
 # 4. The deploy timer
 cp scripts/deploy/forma-deploy.service scripts/deploy/forma-deploy.timer /etc/systemd/system/
