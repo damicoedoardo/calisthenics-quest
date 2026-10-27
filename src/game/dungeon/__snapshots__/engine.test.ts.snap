@@ -762,79 +762,27 @@ exports[`replays > every zone plays the same run as before 1`] = `
   },
   {
     "bossAt": null,
-    "floor": 6,
+    "floor": 8,
     "gear": {
       "bag": [
         {
           "base": [
             {
               "id": "health",
-              "v": 34.48621639490686,
+              "v": 31.496857174509202,
             },
             {
               "id": "armor",
-              "v": 0.031965475602777675,
-            },
-          ],
-          "bonuses": [
-            {
-              "id": "move",
-              "v": 0.06812790075176395,
-            },
-          ],
-          "cls": "monk",
-          "id": "1mgl1vka8xj0",
-          "level": 30,
-          "name": "Sunworn wraps of Wind",
-          "need": {
-            "n": 12,
-            "stat": "armor",
-          },
-          "rarity": "magic",
-          "slot": "armor",
-        },
-        {
-          "base": [
-            {
-              "id": "damage",
-              "v": 0.1465040677955221,
-            },
-          ],
-          "bonuses": [
-            {
-              "id": "move",
-              "v": 0.06903318513781839,
-            },
-          ],
-          "cls": "monk",
-          "id": "ulsd7w108hjzi",
-          "level": 31,
-          "name": "Sunworn staff of Wind",
-          "need": {
-            "n": 13,
-            "stat": "health",
-          },
-          "rarity": "magic",
-          "slot": "weapon",
-        },
-        {
-          "base": [
-            {
-              "id": "health",
-              "v": 25.896434813593515,
-            },
-            {
-              "id": "armor",
-              "v": 0.03749165045449138,
+              "v": 0.03954245548039675,
             },
           ],
           "bonuses": [],
           "cls": "monk",
-          "id": "fmyq1ex9pl0s",
-          "level": 31,
+          "id": "1d1solv1f9weeb",
+          "level": 33,
           "name": "Sunworn wraps",
           "need": {
-            "n": 12,
+            "n": 15,
             "stat": "armor",
           },
           "rarity": "common",
@@ -844,21 +792,21 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "base": [
             {
               "id": "damage",
-              "v": 0.17434931903652998,
+              "v": 0.12997462611617838,
             },
           ],
           "bonuses": [
             {
-              "id": "armor",
-              "v": 0.028423498833565413,
+              "id": "pickup",
+              "v": 0.24829181549216064,
             },
           ],
           "cls": "monk",
-          "id": "bmvmro1jh5c3c",
-          "level": 34,
-          "name": "Sunworn staff of Stone",
+          "id": "1qmjc2m1ezvim1",
+          "level": 33,
+          "name": "Sunworn staff of Pull",
           "need": {
-            "n": 18,
+            "n": 17,
             "stat": "health",
           },
           "rarity": "magic",
@@ -868,33 +816,109 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "base": [
             {
               "id": "health",
-              "v": 41.332616917777344,
+              "v": 31.033281414820816,
             },
             {
               "id": "armor",
-              "v": 0.04560076504396275,
+              "v": 0.03527802439744623,
             },
           ],
           "bonuses": [
             {
-              "id": "damage",
-              "v": 0.11868052366592458,
-            },
-            {
-              "id": "pickup",
-              "v": 0.3011641190180322,
+              "id": "heal",
+              "v": 1.5002777307072654,
             },
           ],
           "cls": "monk",
-          "id": "14yrc1kf7cu3s",
+          "id": "7zovwf1q6titt",
           "level": 34,
-          "name": "Dusk Spark",
+          "name": "Sunworn wraps of Embers",
           "need": {
-            "n": 21,
+            "n": 18,
             "stat": "armor",
           },
-          "rarity": "rare",
+          "rarity": "magic",
           "slot": "armor",
+        },
+        {
+          "base": [],
+          "bonuses": [
+            {
+              "id": "pickup",
+              "v": 0.26847875816679095,
+            },
+            {
+              "id": "health",
+              "v": 27.76730655367114,
+            },
+          ],
+          "cls": null,
+          "id": "1n1ybfv1a94na5",
+          "level": 35,
+          "name": "Sunworn band of Pull",
+          "need": null,
+          "rarity": "magic",
+          "slot": "charm",
+        },
+        {
+          "base": [
+            {
+              "id": "damage",
+              "v": 0.13891509423505516,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "heal",
+              "v": 1.6868778153378519,
+            },
+          ],
+          "cls": "monk",
+          "id": "1rp4jum11raavi",
+          "level": 35,
+          "name": "Sunworn staff of Embers",
+          "need": {
+            "n": 20,
+            "stat": "health",
+          },
+          "rarity": "magic",
+          "slot": "weapon",
+        },
+        {
+          "base": [],
+          "bonuses": [
+            {
+              "id": "armor",
+              "v": 0.03232905932005718,
+            },
+            {
+              "id": "cooldown",
+              "v": 0.12731735697737484,
+            },
+          ],
+          "cls": null,
+          "id": "1hum5i4187ycdw",
+          "level": 36,
+          "name": "Sunworn band of Stone",
+          "need": null,
+          "rarity": "magic",
+          "slot": "charm",
+        },
+        {
+          "base": [],
+          "bonuses": [
+            {
+              "id": "damage",
+              "v": 0.08219956202309578,
+            },
+          ],
+          "cls": null,
+          "id": "1cdjrf21r0qs9h",
+          "level": 37,
+          "name": "Sunworn band",
+          "need": null,
+          "rarity": "common",
+          "slot": "charm",
         },
       ],
       "worn": {
@@ -902,18 +926,18 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "base": [],
           "bonuses": [
             {
-              "id": "move",
-              "v": 0.06738854365745485,
+              "id": "armor",
+              "v": 0.02899584546360299,
             },
             {
-              "id": "armor",
-              "v": 0.028502944651289285,
+              "id": "damage",
+              "v": 0.08916940454616679,
             },
           ],
           "cls": null,
-          "id": "xqsihv8g60jx",
-          "level": 34,
-          "name": "Sunworn ring of Wind",
+          "id": "1iq4qx91wj5tts",
+          "level": 33,
+          "name": "Sunworn band of Stone",
           "need": null,
           "rarity": "magic",
           "slot": "charm",
@@ -922,11 +946,11 @@ exports[`replays > every zone plays the same run as before 1`] = `
     },
     "height": null,
     "hp": 0,
-    "kills": 225,
-    "level": 10,
-    "maxHp": 448,
-    "room": 4,
-    "seconds": 582,
+    "kills": 322,
+    "level": 13,
+    "maxHp": 428,
+    "room": 3,
+    "seconds": 663,
     "why": "hp",
     "won": false,
   },

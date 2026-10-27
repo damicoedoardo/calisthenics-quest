@@ -47,6 +47,7 @@ kept there as aliases, so callers didn't change).
 | `src/balance/power.ts` | the target split of power growth (training / gear / upgrades) and its slack | the balance sheet |
 | `src/balance/dungeon.ts` | `DIALS`, elites, run levels | `src/game/dungeon/content.ts`, `src/lib/fog.ts` |
 | `src/balance/upgrades.ts` | Mira's forge +1 to +15 (`STEPS`: embers, materials, odds, strength), misses (`FORGE_RISK`), safe marks, what a fall leaves of forged gear, co-op material drops and gifts, the look bands | `src/lib/forge.ts`, `src/lib/fog-gear.ts`, `src/game/dungeon/items.ts`, `engine.ts`, `PlusGlow.tsx` |
+| `src/balance/classes.ts` | the classes, moving in one at a time: so far the monk's calm (`CALM`: what fills Stillness) | `src/game/dungeon/engine.ts` |
 | `src/balance/index.ts` | exports them all | |
 
 The move is staged so it doesn't collide with work in flight. **Not moved yet** (find them here
@@ -54,7 +55,7 @@ until they are):
 
 | Area | Where it lives now | Hidden in formulas |
 |---|---|---|
-| Classes | `CLASS_BODY`, `ABILITIES`, `DODGE` in `content.ts`; `ATTACK`, `HERO_HP`, `HERO_SPEED` in `src/game/rules.ts` | |
+| Classes (the rest; `CALM` has moved) | `CLASS_BODY`, `ABILITIES`, `DODGE` in `content.ts`; `ATTACK`, `HERO_HP`, `HERO_SPEED` in `src/game/rules.ts` | the abilities' sizes in `useAbility` (`engine.ts`) |
 | Run skills | `UPGRADES` in `src/lib/fog.ts` (names); what each does, in `engine.ts` | each skill's size per level |
 | Boss edge (boss weaker, free skills after a chapter's hearts are gone) | `EDGE` in `src/lib/fog.ts` | |
 | The flame's helpers | `FLAME_AT` in `fog.ts`; `FLAME`, `FIREBALL`, `FAIRY` in `rules.ts` | |
@@ -114,6 +115,7 @@ not milliseconds).
 | Change embers, reroll price, melt values, the vault | `src/balance/economy.ts`, then `pnpm balance` |
 | Change the forge's steps, odds, safe marks, co-op materials | `src/balance/upgrades.ts`, then `pnpm balance` |
 | Change how strong, rare or demanding items are, or how often they drop | `src/balance/items.ts`, then `pnpm balance` and `pnpm fog:tune` |
+| Change a class (so far: how fast the monk's Stillness fills) | `src/balance/classes.ts`, then `CLASSES=monk pnpm fog:sim` |
 | Change the dungeon's dials, elites, run levels | `src/balance/dungeon.ts`, then `pnpm sim` and `pnpm fog:sim` |
 | Add a feature with numbers | a file (or entry) in `src/balance/`, export it from `index.ts`, a goal row in `sheet.test.ts` |
 | Change something not moved yet | where the table above says, and move it into `src/balance/` if you're there anyway |

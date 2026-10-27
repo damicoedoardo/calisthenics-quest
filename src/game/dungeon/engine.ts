@@ -74,7 +74,7 @@ import {
   zoneDungeon,
 } from './content';
 import { seeded } from '@/lib/random';
-import { BAG, CRIT_HIT, DROP_LUCK, DROPS } from '@/balance';
+import { BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS } from '@/balance';
 import type { Build } from '@/lib/stats';
 import { ITEM_SLOTS, itemScore, itemTotals, rollItem, rollRarity, shortOf, starterKit, type Item, type ItemSlot } from './items';
 
@@ -398,6 +398,8 @@ export interface Hero {
   shove: { until: number; x: number; y: number };
   ability: AbilityId;
   abilityAt: number;
+  /** The monk's calm: Stillness is ready when it reaches CALM.full (it fills by fighting). */
+  calm: number;
   cd: { attack: number; spark: number; nova: number; fireball: number };
   ups: Partial<Record<UpgradeId, number>>;
   flames: number;
@@ -567,6 +569,7 @@ function newHero(hs: HeroSetup, id: number): Hero {
     shove: { until: 0, x: 0, y: 0 },
     ability: abilityOf(hs.classId),
     abilityAt: 0,
+    calm: 0,
     cd: { attack: 0.5, spark: 2, nova: 3, fireball: 2.5 },
     ups: {},
     flames: power.flames,
@@ -1216,9 +1219,20 @@ function dodge(run: Run, h: Hero, input: Input) {
   emit(run, { type: 'dodge', x: h.x, y: h.y, toX: h.x + dx * DODGE.speed * DODGE.secs, toY: h.y + dy * DODGE.speed * DODGE.secs });
 }
 
+/** How ready the hero's ability is, 0 to 1 (1 = ready). Stillness fills by fighting, the rest by time. */
+export function abilityReady(run: Run, h: Hero): number {
+  if (h.ability === 'still') return Math.min(1, h.calm / CALM.full);
+  return Math.min(1, 1 - (h.abilityAt - run.t) / ABILITIES[h.ability].cd);
+}
+
+/** The monk grows calm in a fight: hits landed and hits taken, quicker with the hourglass and cooldown gear. */
+function calmer(h: Hero, n: number) {
+  if (h.ability === 'still') h.calm = Math.min(CALM.full, h.calm + n * (1 + 0.25 * relic(h, 'hourglass') + h.gearFx.cooldown));
+}
+
 function useAbility(run: Run, h: Hero, input: Input) {
   const now = run.t;
-  if (now < h.abilityAt) return;
+  if (abilityReady(run, h) < 1) return;
   const a = h.ability;
   h.abilityAt = now + ABILITIES[a].cd / (1 + 0.25 * relic(h, 'hourglass') + h.gearFx.cooldown);
   let dx = input.x,
@@ -1259,6 +1273,8 @@ function useAbility(run: Run, h: Hero, input: Input) {
     h.hp = Math.min(h.maxHp, h.hp + heal);
     clearBullets(run, h.x, h.y, 140);
     burst(run, h, h.x, h.y, 140, pow(h, ATTACK.wave.dmg), 'ability', undefined, 260);
+    // Its own blast doesn't count toward the next one.
+    h.calm = 0;
     emit(run, { type: 'ability', id: a, x: h.x, y: h.y, toX: h.x, toY: h.y });
     emit(run, { type: 'heal', x: h.x, y: h.y, n: heal });
   }
@@ -1907,6 +1923,7 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
     return kill(run, f, by);
   }
   f.hp -= dmg;
+  calmer(by, CALM.hit);
   emit(run, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg, boss, crit });
   // The Plateau cracks, a little at a time, and shows nothing else.
   if (boss && run.setup.zone.boss === 'plateau') {
@@ -2446,6 +2463,7 @@ function hurt(run: Run, h: Hero, dmg: number, by: 'shot' | 'touch') {
   const taken = dmg * (1 - armorOf(h.power, h.ups)) / (1 + DIALS.relic * 0.14 * relic(h, 'iron'));
   h.hp -= taken;
   h.hurtUntil = now + INVULNERABLE;
+  calmer(h, CALM.taken);
   emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: Math.round(taken), by });
   if (h.hp <= 0) fall(run, h);
 }
