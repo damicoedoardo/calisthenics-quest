@@ -106,6 +106,8 @@ export interface When {
   perfectWeek?: boolean;
   /** Beat a skill: this path's level is past this number (pull past 2 = negatives beaten, the first strict pull-up). */
   skill?: { path: PathId; past: number };
+  /** A skill level beaten in a workout: a session unlocked past this node id (not a level you started past). */
+  unlocked?: string;
   /** No class picked yet. */
   noClass?: boolean;
   /** The player gave this answer (or any answer when `is` is left out). */
