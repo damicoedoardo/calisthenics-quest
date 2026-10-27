@@ -4,7 +4,8 @@ import { toSheet, type Grid } from './engine/grid';
 import { drawBook } from './characters/book';
 import { drawEmber, type FlameOpts } from './characters/ember';
 import { drawHero, heroAttack, heroLabel, type HeroOpts } from './characters/hero';
-import { drawKnight } from './characters/knight';
+import { drawKnight, drawKnightBoss, type KnightBossOpts } from './characters/knight';
+import { drawGlassHero, drawGlassShatter } from './characters/glass';
 import { drawMira } from './characters/mira';
 import { drawMirror } from './characters/mirror';
 import { drawPixelArt, type PixelArt } from './characters/pixel';
@@ -120,6 +121,22 @@ export const SPRITES = {
   splitterPop: drawn<NoOpts>({ label: () => 'The Splitter splitting', defaults: {}, clips: () => ({ idle: 'pop' }), draw: drawSplitterPop }),
   shade: creature('Shade', drawShade, 'lunge'),
   warden: creature('The Warden of the Ashes', drawWarden, 'lunge'),
+  // The dungeon bosses. The Mirror is you in glass (pass the player's look and gear, like the hero).
+  mirrorBoss: drawn<HeroOpts>({
+    label: () => 'The Mirror, you in glass',
+    defaults: { gear: STARTER_GEAR },
+    clips: (o) => ({ idle: 'idle', attack: heroAttack(o.gear, o.classId) }),
+    draw: drawGlassHero,
+    look: () => ({ shadow: true, filter: 'drop-shadow(0 0 6px rgba(125,211,252,.6))' }),
+  }),
+  mirrorBossShatter: drawn<HeroOpts>({ label: () => 'The Mirror shattering', defaults: { gear: STARTER_GEAR }, clips: () => ({ idle: 'pop' }), draw: drawGlassShatter }),
+  knightBoss: drawn<KnightBossOpts>({
+    label: ({ stage }) => ['The Perfect Knight', 'The Perfect Knight, plates falling', 'The Perfect Knight, helm off'][stage],
+    defaults: { stage: 0 },
+    clips: () => ({ idle: 'idle', attack: 'swing' }),
+    draw: drawKnightBoss,
+    look: () => ({ shadow: true }),
+  }),
 };
 
 export type SpriteId = keyof typeof SPRITES;
