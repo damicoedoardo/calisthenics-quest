@@ -1,0 +1,13 @@
+#!/bin/sh
+# Every push keeps the handbook true (docs/handbook/dev/handbook.md). Turned on by `pnpm install`
+# (git config core.hooksPath .githooks).
+cd "$(git rev-parse --show-toplevel)" || exit 1
+
+node scripts/handbook.mjs lint || {
+  printf "\n%s\n" "Push stopped: fix the handbook problems above (skill: .claude/skills/updating-handbook)."
+  exit 1
+}
+node scripts/handbook.mjs check || {
+  printf "\n%s\n" "Push stopped: update the handbook pages above first."
+  exit 1
+}

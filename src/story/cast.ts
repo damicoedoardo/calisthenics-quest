@@ -1,7 +1,7 @@
 import type { CastMember } from './types';
 
-/* Everyone who can speak in the story. To add a character: draw them in src/sprites (see its
-   README), then add them here. Their id is what story lines use in `who`. */
+/* Everyone who can speak in the story. To add a character: draw them in src/sprites (see
+   docs/handbook/game/sprites.md), then add them here. Their id is what story lines use in `who`. */
 
 export const CAST = {
   narrator: { name: '', portrait: { kind: 'none' } },
