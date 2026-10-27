@@ -98,12 +98,13 @@ export function rememberRev(user: string, rev: number | null) {
 
 export class Offline extends Error {}
 
-async function call(method: 'GET' | 'PUT' | 'DELETE', body?: unknown): Promise<Response> {
+/** A signed-in call to FORMA's api; no connection throws Offline. */
+export async function api(method: 'GET' | 'PUT' | 'POST' | 'DELETE', path: string, body?: unknown): Promise<Response> {
   const { data } = await (await supabase()).auth.getSession();
   const token = data.session?.access_token;
   if (!token) throw new Error('Not signed in');
   try {
-    return await fetch(`${API_URL}/save`, {
+    return await fetch(`${API_URL}${path}`, {
       method,
       headers: { Authorization: `Bearer ${token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
       body: body ? JSON.stringify(body) : undefined,
@@ -112,6 +113,8 @@ async function call(method: 'GET' | 'PUT' | 'DELETE', body?: unknown): Promise<R
     throw new Offline('No connection');
   }
 }
+
+const call = (method: 'GET' | 'PUT' | 'DELETE', body?: unknown) => api(method, '/save', body);
 
 /** The cloud copy, or null when there is none yet. */
 export async function getCloud(): Promise<CloudCopy | null> {
@@ -147,6 +150,13 @@ export async function signInWithGoogle(): Promise<string | null> {
 
 export async function signInWithEmail(email: string): Promise<string | null> {
   const { error } = await (await supabase()).auth.signInWithOtp({ email, options: { emailRedirectTo: back() } });
+  return error?.message ?? null;
+}
+
+/** Sign in with the code from the email: the way in on an installed iPhone app, where the
+    email's link would open Safari instead. */
+export async function verifyEmailCode(email: string, code: string): Promise<string | null> {
+  const { error } = await (await supabase()).auth.verifyOtp({ email, token: code, type: 'email' });
   return error?.message ?? null;
 }
 

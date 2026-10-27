@@ -18,6 +18,9 @@ import { DevButton, DevPanel } from '@/components/DevPanel';
 import { Sprite } from '@/components/Sprite';
 import { LookProvider } from '@/components/Look';
 import { CloudChoice, useCloudSync } from '@/components/Cloud';
+import { useFriendsBeat } from '@/components/Friends';
+import { SignInGate, signInDue } from '@/components/SignInGate';
+import { useCloudStatus } from '@/lib/cloud-client';
 import { BringHero, InstallGate } from '@/components/InstallGate';
 import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { sawScene, scenesToPlay, storyState, type StoryState } from '@/story/engine';
@@ -69,6 +72,11 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const jumped = useRef(false);
   // The cloud backup, when signed in. Never before the save has loaded, never in the sandbox.
   const cloud = useCloudSync(state, update, !ready || inSandbox());
+  // Shows you online to your friends while the app is open, and in the Fog during a run.
+  useFriendsBeat(state, run?.name ?? null, !ready || inSandbox());
+  // After the install step, an account once (SignInGate); developer mode may play on without.
+  const { signedIn } = useCloudStatus();
+  const [skipSignIn, setSkipSignIn] = useState(false);
   useEffect(() => {
     if (!ready || jumped.current) return;
     jumped.current = true;
@@ -101,7 +109,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const inst = useInstall();
   const gated = inst.known && !inst.standalone && !inst.skipped && mustInstall(inst.platform) && (inst.forced || !inSandbox());
   // The menus' music, on the tabs only: the opening, story, workouts and runs have their own.
-  useMenuTrack(ready && state.profile.onboarded && !opening && !replaying && !busy && !gated);
+  const askSignIn = !gated && !skipSignIn && !inSandbox() && signInDue(signedIn);
+  useMenuTrack(ready && state.profile.onboarded && !opening && !replaying && !busy && !gated && !askSignIn);
   useEffect(() => {
     if (busy) setDevOpen(false);
   }, [busy]);
@@ -109,6 +118,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   // While a screen is open over the tabs, the tabs underneath are out of reach: no keyboard focus
   // and nothing for a screen reader to wander into. (React 18 has no inert prop, so it's set here.)
   const root = useRef<HTMLDivElement>(null);
+  // Sideways the tab scrolls inside main (when it scrolls at all), not the page.
+  const main = useRef<HTMLElement>(null);
   const covered = busy || opening || (dev && devOpen);
   // Only on a change, so it never undoes the inert an overlay inside a tab set (useModal).
   const applied = useRef(false);
@@ -209,21 +220,26 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       />
     );
 
+  if (askSignIn && !opening) return <SignInGate onSkip={dev ? () => setSkipSignIn(true) : undefined} />;
+
   return (
-    // Held sideways (the `land` screen), the tab bar becomes a rail down the left and the column
-    // takes the rest of the width; the header shrinks to one line. On a computer (`desk`) the rail is
-    // wider, with the tab names beside their icons, and the column sits in the middle of the rest.
-    <div ref={root} className="mx-auto flex min-h-dvh max-w-md flex-col land:ml-[calc(4.5rem+env(safe-area-inset-left))] land:mr-0 land:max-w-none land:pr-[env(safe-area-inset-right)] desk:ml-56 desk:mr-0 desk:max-w-none">
-      <header className="safe-top sticky top-0 z-20 bg-ink-950/90 px-4 pb-3 backdrop-blur land:!pt-2 land:pb-2 desk:mx-auto desk:w-full desk:max-w-2xl desk:px-6 desk:pt-5">
+    // Held sideways (the `land` screen), the tab bar becomes a rail down the left, the header shrinks
+    // to one line, and the tab fills exactly the rest of the screen (each tab lays out a screen of
+    // its own then, see useLand). On a computer (`desk`) the rail is wider, with the tab names beside
+    // their icons, and the column sits in the middle of the rest.
+    <div ref={root} className="mx-auto flex min-h-dvh max-w-md flex-col land:ml-[calc(4.5rem+env(safe-area-inset-left))] land:mr-0 land:h-dvh land:min-h-0 land:max-w-none land:pr-[env(safe-area-inset-right)] desk:ml-56 desk:mr-0 desk:max-w-none">
+      <header className="safe-top sticky top-0 z-20 bg-ink-950/90 px-4 pb-3 backdrop-blur land:flex land:items-center land:gap-3 land:!pt-2 land:pb-2 desk:mx-auto desk:w-full desk:max-w-2xl desk:px-6 desk:pt-5">
         {sandbox && (
-          <div className="mb-2 flex land:mb-1.5 land:py-1 items-center justify-between gap-2 rounded-lg border border-dashed border-sky-400/60 px-3 py-1.5 text-[11px] text-sky-300">
-            <span>Sandbox: your real save is untouched</span>
+          // Sideways it is a small tag at the end of the header line.
+          <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-dashed border-sky-400/60 px-3 py-1.5 text-[11px] text-sky-300 land:order-last land:mb-0 land:shrink-0 land:px-2 land:py-1">
+            <span className="land:hidden">Sandbox: your real save is untouched</span>
+            <span className="hidden land:inline">Sandbox</span>
             <a href="/lab/night" className="shrink-0 underline">
               Back to tonight
             </a>
           </div>
         )}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 land:min-w-0 land:flex-1">
           <div className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800 land:hidden desk:hidden">
             <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} variant={heroVariant(state)} />
           </div>
@@ -249,7 +265,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         </div>
       </header>
 
-      <main className="flex-1 px-4 pb-28 pt-2 land:pb-6 desk:mx-auto desk:w-full desk:max-w-2xl desk:px-6 desk:pb-12">
+      <main ref={main} className="flex-1 px-4 pb-28 pt-2 land:min-h-0 land:overflow-y-auto land:pb-3 desk:mx-auto desk:w-full desk:max-w-2xl desk:px-6 desk:pb-12">
         {tab === 'today' ? (
           <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook} />
         ) : tab === 'train' ? (
@@ -276,7 +292,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
             <Hero gear={gear} classId={state.profile.classId} size={96} bounce={false} variant={heroVariant(state)} />
           </span>
         </div>
-        <div className="mx-auto grid max-w-md grid-cols-4 land:mx-0 land:w-full land:grid-cols-1 desk:mx-0 desk:w-full desk:grid-cols-1 desk:gap-1">
+        <div className="mx-auto grid max-w-md grid-cols-4 land:mx-0 land:w-full land:grid-cols-1 land:gap-1 desk:mx-0 desk:w-full desk:grid-cols-1 desk:gap-1">
           {TABS.map(({ id, label, icon }) => (
             <button
               key={id}
@@ -284,8 +300,9 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
               onClick={() => {
                 setTab(id);
                 window.scrollTo({ top: 0 });
+                main.current?.scrollTo({ top: 0 });
               }}
-              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium land:py-2 desk:flex-row desk:gap-3 desk:rounded-xl desk:px-4 desk:py-3 desk:text-sm desk:hover:bg-ink-800/60 ${tab === id ? 'text-gold-400 desk:bg-ink-800 desk:ring-1 desk:ring-gold-400/30' : 'text-slate-500 desk:hover:text-slate-300'}`}
+              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium land:mx-2 land:rounded-xl land:py-2 desk:flex-row desk:gap-3 desk:rounded-xl desk:px-4 desk:py-3 desk:text-sm desk:hover:bg-ink-800/60 ${tab === id ? 'text-gold-400 land:bg-ink-800 land:ring-1 land:ring-gold-400/30 desk:bg-ink-800 desk:ring-1 desk:ring-gold-400/30' : 'text-slate-500 desk:hover:text-slate-300'}`}
             >
               {/* Full color on the open tab; faded and grey on the others. */}
               <span className="grid h-[22px] place-items-center">

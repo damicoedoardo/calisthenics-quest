@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Flame } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { buildOf } from '@/lib/stats';
@@ -13,8 +13,10 @@ import { Sprite } from './Sprite';
 type Update = (fn: (s: GameState) => GameState) => void;
 
 /** Your gear for the Fog, on one card: the three slots you wear (the flame's mark on the one it
-    keeps if you fall), the vault at home, and Mira's forge for the item you tap. */
-export function FogGearCard({ state, update }: { state: GameState; update: Update }) {
+    keeps if you fall), the vault at home, and Mira's forge for the item you tap. `land`: the Play tab
+    held sideways, where the card fills the height it is given, what you have on the left and the
+    tapped item with the forge on the right. */
+export function FogGearCard({ state, update, land = false }: { state: GameState; update: Update; land?: boolean }) {
   const gear = state.fogGear ?? NO_GEAR,
     build = buildOf(state),
     size = vaultSize(state.sessions.length),
@@ -32,8 +34,9 @@ export function FogGearCard({ state, update }: { state: GameState; update: Updat
     setPick(id === pick ? null : id);
     setSure(false);
   };
+  const hint = <p className={`text-[11px] text-slate-500 ${land ? 'text-center' : 'mt-3'}`}>Tap an item to wear it, give it to {flame === 'Your flame' ? 'your flame' : flame}, or take it to Mira&apos;s forge.</p>;
   return (
-    <section className="rounded-2xl bg-ink-800 p-4">
+    <section className={`rounded-2xl bg-ink-800 ${land ? 'flex h-full flex-col p-3' : 'p-4'}`}>
       <div className="flex items-baseline justify-between">
         <p className="font-pixel text-[10px] text-slate-400">Your gear for the Fog</p>
         <p className="flex items-center gap-1 font-mono text-[11px] text-orange-300">
@@ -41,7 +44,10 @@ export function FogGearCard({ state, update }: { state: GameState; update: Updat
         </p>
       </div>
 
-      <div className="mt-3 flex gap-3">
+      {/* Sideways: three columns as tall as the card, what you wear, the vault, and the tapped item. */}
+      <Side on={land} className="mt-2.5 flex min-h-0 flex-1 gap-3">
+      <Side on={land} className="w-[10.75rem] shrink-0 overflow-y-auto">
+      <div className={land ? 'flex justify-between' : 'mt-3 flex gap-3'}>
         {ITEM_SLOTS.map((slot) => {
           const it = gear.worn[slot],
             short = it ? shortOf(it, build) : 0,
@@ -60,8 +66,10 @@ export function FogGearCard({ state, update }: { state: GameState; update: Updat
         })}
       </div>
       <FallLine gear={gear} flame={flame} fresh={fresh} guarded={guarded} />
+      </Side>
 
-      <p className="mt-4 flex items-baseline justify-between font-pixel text-[9px] text-gold-300">
+      <Side on={land} className="w-[9.5rem] shrink-0 overflow-y-auto rounded-xl bg-ink-900/60 p-2.5 min-[800px]:w-[11.5rem]">
+      <p className={`flex items-baseline justify-between font-pixel text-[9px] text-gold-300 ${land ? '' : 'mt-4'}`}>
         <span>Vault</span>
         <span className="font-mono text-[10px] text-slate-400">
           {gear.vault.length}/{size}
@@ -78,9 +86,11 @@ export function FogGearCard({ state, update }: { state: GameState; update: Updat
       ) : (
         <p className="mt-1 text-xs text-slate-500">Empty. Items you bring home land here, safe from the Fog. One more slot every 5 workouts.</p>
       )}
+      </Side>
 
+      <Side on={land} className={`flex min-w-0 flex-1 flex-col overflow-y-auto rounded-xl ${item ? '' : 'items-center justify-center gap-2 bg-ink-900/60 p-4'}`}>
       {item ? (
-        <div className="mt-3 space-y-2">
+        <div className={land ? 'space-y-2' : 'mt-3 space-y-2'}>
           <ItemCard item={item} build={build}>
             {worn ? (
               <>
@@ -110,11 +120,25 @@ export function FogGearCard({ state, update }: { state: GameState; update: Updat
             }}
           />
         </div>
+      ) : land ? (
+        // Nothing tapped yet: Mira waits at her forge.
+        <>
+          <Sprite id="mira" size={56} label="Mira" />
+          <p className="font-pixel text-[9px] text-gold-300">Mira&apos;s forge</p>
+          {all.length > 0 && hint}
+        </>
       ) : (
-        all.length > 0 && <p className="mt-3 text-[11px] text-slate-500">Tap an item to wear it, give it to {flame === 'Your flame' ? 'your flame' : flame}, or take it to Mira&apos;s forge.</p>
+        all.length > 0 && hint
       )}
+      </Side>
+      </Side>
     </section>
   );
+}
+
+/** A column of the card held sideways; upright it adds nothing, so the card stays as it was. */
+function Side({ on, className, children }: { on: boolean; className: string; children: ReactNode }) {
+  return on ? <div className={className}>{children}</div> : <>{children}</>;
 }
 
 /** What a fall would cost, in one line: what you'd lose and what the flame keeps. */

@@ -4,7 +4,8 @@ import { useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Pause, Play, Swords } from 'lucide-react';
 import { Sprite, useSheet } from '@/components/Sprite';
-import { uniformGear, type ClassId, type Tier } from '@/lib/gear';
+import { makeGear, uniformGear, type ClassId, type Gear, type GearSlot, type Tier } from '@/lib/gear';
+import { RARITY, seedOf, type ItemArt, type ItemLook, type Rarity } from '@/game/dungeon/items';
 import { CLIPS, type SpriteAction } from '@/sprites/clips';
 import { DEFAULT_LOOK, type HeroVariant } from '@/sprites/characters/hero';
 import { HAIRSTYLES, type Look } from '@/sprites/engine/figure';
@@ -23,6 +24,21 @@ const CLASSES: { id: ClassId | undefined; label: string }[] = [
 ];
 const VARIANTS: HeroVariant[] = ['normal', 'echo', 'best', 'hollow'];
 const SIZES = [64, 128, 192, 256];
+const ARTS: ItemArt[] = ['sword', 'bow', 'staff', 'wand', 'heavy', 'light', 'robe', 'ring', 'amulet', 'token', 'band'];
+const RARITIES: Rarity[] = ['common', 'magic', 'rare', 'legendary'];
+const WEAPON_ART: Record<ClassId, ItemArt> = { warrior: 'sword', archer: 'bow', monk: 'staff', mage: 'wand' };
+const ARMOR_ART: Record<ClassId, ItemArt> = { warrior: 'heavy', archer: 'light', monk: 'light', mage: 'robe' };
+
+/** The hero in a whole set of Fog items of one rarity (the names only seed the colors). */
+function itemGear(cls: ClassId, rarity: Rarity, name: string): Record<GearSlot, Gear> {
+  const look = (art: ItemArt, slot: string): ItemLook => ({ art, rarity, seed: seedOf(`${name} ${slot}`) }),
+    tier = (rarity === 'legendary' ? 5 : rarity === 'rare' ? 3 : 2) as Tier;
+  return {
+    weapon: { ...makeGear('weapon', tier, cls), item: look(WEAPON_ART[cls], 'weapon') },
+    armor: { ...makeGear('armor', tier, cls), item: look(ARMOR_ART[cls], 'armor') },
+    shield: { ...makeGear('shield', tier, cls), item: look('amulet', 'charm') },
+  };
+}
 
 function Chips<T>({ label, options, value, onChange, name = String }: { label: string; options: T[]; value: T; onChange: (v: T) => void; name?: (v: T) => string }) {
   return (
@@ -155,6 +171,60 @@ export default function Lab() {
           </div>
         ))}
         <p className="text-xs text-slate-500">Change frames and timing in src/sprites/clips.ts.</p>
+      </Panel>
+
+      <Panel title="Fog items">
+        <p className="mb-3 text-xs text-slate-500">Every kind at every rarity; the seed (from the name) picks colors and the plate's emblem. Art in src/sprites/characters/items.ts.</p>
+        {[0, 1].map((n) => (
+          <div key={n} className="mb-3 grid grid-cols-4 gap-1.5">
+            {RARITIES.map((r) => (
+              <p key={r} className="text-center font-pixel text-[8px]" style={{ color: RARITY[r].color }}>
+                {RARITY[r].name}
+              </p>
+            ))}
+            {ARTS.flatMap((art) =>
+              RARITIES.map((rarity) => (
+                <div key={`${art}${rarity}`} className="flex flex-col items-center rounded-lg bg-ink-950 py-1">
+                  <Sprite id="item" opts={{ art, rarity, seed: seedOf(`${art} ${n}`) }} size={64} />
+                  <p className="font-mono text-[8px] text-slate-500">{art}</p>
+                </div>
+              )),
+            )}
+          </div>
+        ))}
+      </Panel>
+
+      <Panel title="A hand-drawn body (option)">
+        <p className="mb-3 text-xs text-slate-500">The same head and gear on a body drawn by hand: rounded shoulders, arms bent a little away from the body, a waist, weight on one leg, feet turned out, hands with a thumb. Left of each pair is today&apos;s hero, right is the option.</p>
+        <div className="grid grid-cols-2 gap-1.5">
+          {(['none', 'warrior', 'archer', 'monk', 'mage'] as const).flatMap((cls) =>
+            (['idle', 'walk'] as const).map((action) => {
+              const o = cls === 'none' ? { look } : { gear: itemGear(cls, 'rare', cls), classId: cls, look };
+              return (
+                <div key={`${cls}${action}`} className="flex items-end justify-center gap-1 rounded-lg bg-ink-950 py-1">
+                  <Sprite id="hero" action={action} opts={o} size={80} />
+                  <Sprite id="hero" action={action} opts={{ ...o, body: 'drawn' }} size={80} />
+                </div>
+              );
+            }),
+          )}
+        </div>
+      </Panel>
+
+      <Panel title="The hero in Fog items">
+        <p className="mb-3 text-xs text-slate-500">Worn items dress the hero: plate, jerkin or robe, the item's colors, its charm on a cord, a legendary's glow.</p>
+        <div className="grid grid-cols-4 gap-1.5">
+          {(['warrior', 'archer', 'monk', 'mage'] as ClassId[]).flatMap((cls) =>
+            RARITIES.map((rarity) => (
+              <div key={`${cls}${rarity}`} className="flex flex-col items-center rounded-lg bg-ink-950 py-1">
+                <Sprite id="hero" opts={{ gear: itemGear(cls, rarity, cls), classId: cls, look }} size={80} />
+                <p className="font-mono text-[8px]" style={{ color: RARITY[rarity].color }}>
+                  {cls}
+                </p>
+              </div>
+            )),
+          )}
+        </div>
       </Panel>
 
       <Panel title="Everyone">

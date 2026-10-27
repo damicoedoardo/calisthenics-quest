@@ -25,8 +25,8 @@ Helpers are pure functions on `GameState` and tested in `src/lib/dev.test.ts`.
 
 | Page | What |
 |---|---|
-| `/lab` | Sprite Lab: every sprite and animation, with class, gear tier, variant and look controls. Check art changes here on a phone |
-| `/lab/story` | Story Lab: play any scene with any flame name and letter, every place, every look of the flame. `?play=<scene id>&back` plays one scene and returns |
+| `/lab` | Sprite Lab: every sprite and animation, with class, gear tier, variant and look controls; every Fog item kind at every rarity (two seeds), the hero of each class in a whole set of items of each rarity, and "A hand-drawn body (option)": today's hero beside the hand-drawn body, standing and walking. Check art changes here on a phone |
+| `/lab/story` | Story Lab: play any scene with any flame name and letter, every place (held sideways, drawn wide as in a scene), every look of the flame. `?play=<scene id>&back` plays one scene and returns |
 | `/lab/music` | Music Lab: every theme and sting |
 | `/lab/worlds` | The Play tab's world picker (`WorldPicker`) on made-up saves: a fresh hero, mid-way (one boss down, two worlds open), waiting on training (the next world opens with a later chapter), all open. Play only shows what it would start; nothing is saved. Linked from the Sprite Lab header |
 | `/lab/night` | One tap to try each recent change ("Install the app" opens each install guide with `?gate=<platform>`, and the installed iPhone app's first screen): writes a sandbox save for that moment (see [../architecture/game-state.md](../architecture/game-state.md)) and opens the app with `?sandbox` and `?tab=`, `?run=<zone>&at=mid\|boss\|win`, `?workout` or `?book`. "Exercise library" opens the Train tab to try the library; "The Fog, sideways" starts a zone 1 run; the "Loot" jumps open a geared save (`geared`: a sword the flame guards and a charm on) on the Play tab or in a zone 2 run, and in a run with the flame gone cold (`geared(4)`, no workout in 4 days); "After the finale" opens a save past the finale (`fused`), with the hero on fire on the Hero tab or in a Summit run |

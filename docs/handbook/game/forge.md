@@ -9,7 +9,7 @@ timestamp: 2026-10-27
 # Mira's forge and the flame
 
 Between runs your gear lives on the Play tab's gear card (`src/components/FogGearCard.tsx`): the
-three slots you wear, the vault, and, for the item you tap, what you can do with it. (A walkable
+three slots you wear, the vault, and, for the item you tap, what you can do with it. Held sideways it is the Play tab's Gear view: the three as columns side by side. (A walkable
 camp was tried for this and dropped: Edoardo wanted it on the normal screens.)
 
 ## Rules
@@ -33,7 +33,9 @@ camp was tried for this and dropped: Edoardo wanted it on the normal screens.)
   `FogRun.tsx`).
 - **The old forge is gone**: gear no longer forges itself every few workouts. `migrate()` froze
   what it had made as `fogGear.kit`, and `gearOf` (`src/lib/game.ts`) shows the finer of that
-  look and the item you wear (`tierOf`). See [training.md](training.md).
+  look and the item you wear (`tierOf`). A worn item also dresses the hero as that very item
+  (`Gear.item`, from `looksOf`): its kind, rarity and colors, see [sprites.md](sprites.md).
+  See [training.md](training.md).
 
 Tested in `src/lib/forge.test.ts`, `src/lib/fog-gear.test.ts` and `src/lib/game.test.ts`.
 

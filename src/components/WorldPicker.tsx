@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Sprite } from './Sprite';
 import { Enemy } from './Characters';
@@ -32,7 +32,9 @@ function useCalm() {
   return calm;
 }
 
-export function WorldPicker({ state, onPlay }: { state: GameState; onPlay: (zone: Zone) => void }) {
+/** `land`: the Play tab held sideways. The picker fills the height it is given and each world is a
+    wide card, its picture on the left and its words and Play on the right. */
+export function WorldPicker({ state, onPlay, land = false }: { state: GameState; onPlay: (zone: Zone) => void; land?: boolean }) {
   const calm = useCalm();
   const statuses = ZONES.map((z) => zoneStatus(state, z));
   // The newest world you can play: where the row opens.
@@ -109,18 +111,21 @@ export function WorldPicker({ state, onPlay }: { state: GameState; onPlay: (zone
     e.preventDefault();
   };
 
+  const title = <p className="font-pixel text-[10px] text-slate-400">The road through the Fog</p>;
+  // The gap before the first card and after the last, so they too can sit in the middle.
+  const edge = land ? 'calc(9% - 0.75rem)' : 'calc(14% - 0.75rem)';
   return (
-    <section className="space-y-2" aria-roledescription="carousel" aria-label="The road through the Fog">
-      <p className="font-pixel text-[10px] text-slate-400">The road through the Fog</p>
+    <section className={land ? 'flex h-full flex-col' : 'space-y-2'} aria-roledescription="carousel" aria-label="The road through the Fog">
+      {!land && title}
 
       <div
         ref={box}
         onScroll={onScroll}
         onKeyDown={onKey}
         tabIndex={0}
-        className="relative -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain py-3 outline-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className={`relative -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain outline-none [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${land ? 'min-h-0 flex-1 py-1' : 'py-3'}`}
       >
-        <div aria-hidden className="shrink-0" style={{ width: 'calc(14% - 0.75rem)' }} />
+        <div aria-hidden className="shrink-0" style={{ width: edge }} />
         {ZONES.map((z, i) => (
           <WorldCard
             key={z.id}
@@ -132,11 +137,15 @@ export function WorldPicker({ state, onPlay }: { state: GameState; onPlay: (zone
             artRef={(el) => (arts.current[i] = el)}
             onPick={() => go(i)}
             onPlay={() => onPlay(z)}
+            land={land}
           />
         ))}
-        <div aria-hidden className="shrink-0" style={{ width: 'calc(14% - 0.75rem)' }} />
+        <div aria-hidden className="shrink-0" style={{ width: edge }} />
       </div>
 
+      {/* Sideways the title sits on the left of the arrows and dots. */}
+      <Wrap on={land} className="mt-1.5 flex shrink-0 items-center justify-between gap-3">
+      {land && title}
       <div className="flex items-center justify-center gap-3">
         <button
           onClick={() => go(active - 1)}
@@ -169,6 +178,7 @@ export function WorldPicker({ state, onPlay }: { state: GameState; onPlay: (zone
           <ChevronRight size={18} />
         </button>
       </div>
+      </Wrap>
     </section>
   );
 }
@@ -182,9 +192,10 @@ interface CardProps {
   artRef: (el: HTMLDivElement | null) => void;
   onPick: () => void;
   onPlay: () => void;
+  land: boolean;
 }
 
-function WorldCard({ zone: z, index, state, active, cardRef, artRef, onPick, onPlay }: CardProps) {
+function WorldCard({ zone: z, index, state, active, cardRef, artRef, onPick, onPlay, land }: CardProps) {
   const st = zoneStatus(state, z);
   const best = state.fog?.best[z.id];
   const locked = st.state === 'locked',
@@ -197,10 +208,10 @@ function WorldCard({ zone: z, index, state, active, cardRef, artRef, onPick, onP
       onClick={active ? undefined : onPick}
       aria-roledescription="slide"
       aria-label={`World ${index + 1} of ${ZONES.length}: ${z.name}`}
-      className={`flex w-[72%] shrink-0 snap-center snap-always flex-col overflow-hidden rounded-2xl pixel-border will-change-transform ${locked ? 'bg-ink-900' : 'bg-ink-800'} ${active ? '' : 'cursor-pointer'}`}
+      className={`flex shrink-0 snap-center snap-always overflow-hidden ${land ? 'w-[82%] flex-row' : 'w-[72%] flex-col'} rounded-2xl pixel-border will-change-transform ${locked ? 'bg-ink-900' : 'bg-ink-800'} ${active ? '' : 'cursor-pointer'}`}
     >
       {/* The world itself: its place, its boss in front; fog, dark and a padlock while it is shut. */}
-      <div className="relative h-52 overflow-hidden">
+      <div className={`relative overflow-hidden ${land ? 'w-[54%] shrink-0' : 'h-52'}`}>
         <div ref={artRef} className="absolute inset-0" style={{ transform: 'scale(1.15)' }}>
           <PlaceBackdrop id={chapter.place} className={`h-full w-full ${locked ? 'brightness-[.5] grayscale-[.5]' : ''}`} />
         </div>
@@ -228,7 +239,10 @@ function WorldCard({ zone: z, index, state, active, cardRef, artRef, onPick, onP
             </div>
           </>
         )}
-        <div aria-hidden className={`absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t ${locked ? 'from-ink-900' : 'from-ink-800'} to-transparent`} />
+        <div
+          aria-hidden
+          className={`absolute ${land ? 'inset-y-0 right-0 w-10 bg-gradient-to-l' : 'inset-x-0 bottom-0 h-12 bg-gradient-to-t'} ${locked ? 'from-ink-900' : 'from-ink-800'} to-transparent`}
+        />
 
         {locked && (
           <div className="absolute inset-x-0 top-6 flex justify-center">
@@ -247,7 +261,9 @@ function WorldCard({ zone: z, index, state, active, cardRef, artRef, onPick, onP
         <span className="absolute left-2 top-2 rounded-lg bg-ink-950/80 px-2 py-1 font-pixel text-[8px] text-slate-300">World {index + 1}</span>
       </div>
 
-      <div className="flex flex-1 flex-col px-4 pb-4 pt-1">
+      <div className={`flex flex-1 flex-col ${land ? 'min-w-0 py-3 pl-2 pr-3' : 'px-4 pb-4 pt-1'}`}>
+        {/* Sideways the words scroll if they must; Play stays at the bottom, always in sight. */}
+        <Wrap on={land} className="min-h-0 flex-1 overflow-y-auto">
         <div className="flex items-center gap-2">
           <Sprite id="zoneIcon" opts={{ zone: z.id }} size={24} label="" className={`shrink-0 ${locked ? 'opacity-50 brightness-50 grayscale' : ''}`} />
           <div className="min-w-0">
@@ -265,8 +281,9 @@ function WorldCard({ zone: z, index, state, active, cardRef, artRef, onPick, onP
         )}
         {st.state === 'open' && !best && z.firstTry && <p className="mt-1 text-[11px] text-gold-300">{z.firstTry}</p>}
         {st.state === 'open' && !best?.won && <p className="mt-1 text-[11px] text-sky-300">{z.hint}</p>}
+        </Wrap>
 
-        <div className="mt-auto pt-3">
+        <div className={land ? 'shrink-0 pt-2' : 'mt-auto pt-3'}>
           {locked ? (
             <div className="flex items-center gap-2 rounded-xl bg-ink-950 px-3 py-2.5 text-xs text-slate-300">
               <Sprite id="uiIcon" opts={{ name: 'lock' }} size={16} label="Locked" className="shrink-0" />
@@ -276,7 +293,7 @@ function WorldCard({ zone: z, index, state, active, cardRef, artRef, onPick, onP
             <button
               onClick={active ? onPlay : undefined}
               tabIndex={active ? 0 : -1}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gold-400 py-3 font-pixel text-[10px] text-ink-950 active:scale-95"
+              className={`flex w-full items-center justify-center gap-2 rounded-xl bg-gold-400 font-pixel text-[10px] text-ink-950 active:scale-95 ${land ? 'py-2.5' : 'py-3'}`}
             >
               <Sprite id="uiIcon" opts={{ name: 'play' }} size={14} label="" />
               {cleared ? 'Again' : 'Play'}
@@ -286,4 +303,9 @@ function WorldCard({ zone: z, index, state, active, cardRef, artRef, onPick, onP
       </div>
     </div>
   );
+}
+
+/** A box only when `on`; otherwise its children as they are, so the upright layout is untouched. */
+function Wrap({ on, className, children }: { on: boolean; className: string; children: ReactNode }) {
+  return on ? <div className={className}>{children}</div> : <>{children}</>;
 }

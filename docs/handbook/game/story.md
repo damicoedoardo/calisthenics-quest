@@ -102,7 +102,15 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
 
 Held sideways, `Dialogue` puts whoever is on screen on the left and the text box beside them, and
 the question card puts the question beside its answers (see
-[../app/screens.md](../app/screens.md)); nothing in a scene needs to change for it.
+[../app/screens.md](../app/screens.md)); nothing in a scene needs to change for it. The backdrop
+is not cropped from the tall upright picture then: `PlaceBackdrop` (`src/components/Place.tsx`),
+given a `stage`, measures its box, picks a whole-number scale (about 125 rows of the picture fill
+the box's height, row 100, just above the horizon, in the middle) and has `drawPlace` paint the
+place that much wider (`PlaceCanvas` in `src/sprites/places.ts`). The land, sky, road, stars and
+rocks fill the full width; the props (campfire, towers, moon, dead trees, a sky glow) keep their
+upright layout on a 90-pixel stage placed around `stage`, where the person speaking stands
+(a quarter of the way across the screen in `Dialogue`). Upright the picture is pixel for pixel
+the same 90×160 one. To change the framing, edit `ROWS_SIDEWAYS` and `MIDDLE_ROW` in `Place.tsx`.
 
 Run `pnpm test` after a change: `story.test.ts` catches a misspelled speaker, place, song or word.
 

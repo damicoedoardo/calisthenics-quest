@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { powerOf, ZONES } from '@/lib/fog';
 import { initialState } from '@/lib/game';
 import { botInput, playRun } from './bot';
-import { ACROSS, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, makeFloor, MIDS, pickRelic, SAND, skipToBoss, skipToWarden, SPLIT, stepRun, takeEvents, wardenFloor, type Side } from './engine';
+import { ACROSS, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, makeFloor, MIDS, mine, pickRelic, SAND, skipToBoss, skipToWarden, SPLIT, stepRun, takeEvents, wardenFloor, type Side } from './engine';
 
 describe('mid-bosses', () => {
   const power = powerOf(initialState(), new Date());
@@ -352,5 +352,69 @@ describe('replays', () => {
   it('every zone plays the same run as before', () => {
     const ends = ZONES.map((zone, i) => playRun({ zone, power, classId: classes[i % classes.length], seed: 11 + i }));
     expect(ends).toMatchSnapshot();
+  });
+});
+
+describe('a party (co-op)', () => {
+  const power = { ...powerOf(initialState(), new Date()), damage: 1.2, speed: 0.4, reach: 0.15, armor: 0.25, health: 180 };
+  const party = (seed: number) => {
+    const run = createRun({ zone: ZONES[0], power, classId: 'warrior', seed, autoPick: true, friends: [{ power, classId: 'archer' }] });
+    let steps = 0;
+    while (!run.over && steps++ < 60 * 60 * 30) {
+      stepRun(run, run.party.map((h) => botInput(run, h)));
+      run.events.length = 0;
+    }
+    return run;
+  };
+
+  it('walks in together, each with their own class and gear', () => {
+    const run = createRun({ zone: ZONES[0], power, classId: 'warrior', seed: 3, friends: [{ power, classId: 'mage' }] });
+    const [me, friend] = run.party;
+    expect(run.hero).toBe(me);
+    expect(friend.classId).toBe('mage');
+    expect(friend.gear.worn.weapon?.id).not.toBe(me.gear.worn.weapon?.id);
+    expect(Math.hypot(me.x - friend.x, me.y - friend.y)).toBeGreaterThan(20);
+  });
+
+  it('two bots play a whole run, both fighting, the same way every time', () => {
+    const run = party(21);
+    const [me, friend] = run.party;
+    expect(run.over).not.toBeNull();
+    expect(me.kills).toBeGreaterThan(0);
+    expect(friend.kills).toBeGreaterThan(0);
+    const again = party(21);
+    expect(again.over).toEqual(run.over);
+    expect(again.party.map((h) => [h.kills, h.level, h.xp])).toEqual(run.party.map((h) => [h.kills, h.level, h.xp]));
+  });
+
+  it('shares XP: every standing hero gets every bit of light', () => {
+    const [me, friend] = party(21).party;
+    expect(friend.level).toBe(me.level);
+  });
+
+  it('drops are personal: each hero gets their own item and takes only theirs', () => {
+    const run = createRun({ zone: ZONES[0], power, classId: 'warrior', seed: 21, autoPick: true, friends: [{ power, classId: 'archer' }] });
+    const [me, friend] = run.party;
+    for (let i = 0; i < 60 * 60 * 30 && !run.over; i++) {
+      stepRun(run, run.party.map((h) => botInput(run, h)));
+      run.events.length = 0;
+      if (run.loot.some((l) => l.for === me.id) && run.loot.some((l) => l.for === friend.id)) break;
+    }
+    const theirs = run.loot.find((l) => l.for === friend.id)!;
+    expect(mine(theirs, me)).toBe(false);
+    expect(mine(theirs, friend)).toBe(true);
+  });
+
+  it('a fallen hero is down, and the run goes on while a friend stands', () => {
+    const run = createRun({ zone: ZONES[0], power, classId: 'warrior', seed: 4, friends: [{ power, classId: 'archer' }] });
+    run.party[1].hp = 1;
+    run.party[1].hurtUntil = run.party[1].ghostUntil = 0;
+    // Monsters only go for the friend: stand them on top of it until it falls.
+    for (let i = 0; i < 60 * 30 && run.party[1].hp > 0; i++) {
+      for (const f of run.foes) if (f.alive) [f.x, f.y] = [run.party[1].x, run.party[1].y];
+      stepRun(run, [{ x: 0, y: 0, ability: false }]);
+    }
+    expect(run.party[1].hp).toBe(0);
+    expect(run.over).toBeNull();
   });
 });
