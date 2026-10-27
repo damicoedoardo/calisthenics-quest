@@ -64,6 +64,8 @@ export const CLIPS = {
     loop: false,
     frames: [{}, { left: 'up' }, { left: 'up', fx: 'charge' }, { left: 'up', fx: 'burst' }, { left: 'up', fx: 'burst' }, { left: 'up', fx: 'charge' }, { left: 'up' }, {}],
   },
+  /** A wave that keeps going while it's on screen: the hand swings out and back (the true form's "see you Monday"). */
+  wave: { ms: 160, loop: true, frames: [{ right: 'up' }, { right: 'up', fx: 'charge' }, { right: 'up' }, { right: 'up', fx: 'charge' }, { right: 'up' }, { right: 'up', fx: 'charge' }, { right: 'up' }, { right: 'up', fx: 'charge' }] },
   /** A single still frame, for sprites that don't move. */
   still: { ms: 1000, loop: false, frames: [{}] },
 } satisfies Record<string, Clip>;

@@ -24,9 +24,9 @@ export function Ember({ size = 48, dim = false, stage = 'candle', mood = 'happy'
 }
 
 /** The flame's true form: a kid made of fire, with the player's hair as flame. */
-export function Kindled({ size = 64 }: { size?: number }) {
+export function Kindled({ size = 64, wave = false }: { size?: number; wave?: boolean }) {
   const { style } = useLook();
-  return <Sprite id="kindled" size={size} opts={{ hair: style === 'long' || style === 'pony' ? 'long' : 'short' }} />;
+  return <Sprite id="kindled" size={size} action={wave ? 'attack' : 'idle'} opts={{ hair: style === 'long' || style === 'pony' ? 'long' : 'short' }} />;
 }
 
 const SHADOW_GEAR = { ...equippedGear(undefined, { push: 0, pull: 0, core: 0 }), weapon: makeGear('weapon', 1, undefined) };

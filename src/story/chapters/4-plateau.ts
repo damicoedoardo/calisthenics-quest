@@ -30,7 +30,7 @@ export const PLATEAU: Chapter = {
       when: { chapter: 4 },
       shots: [{ title: 'Chapter 4: The Plateau', seconds: 2.4 }, { pan: 'right', seconds: 2.2 }],
       lines: [
-        { who: 'narrator', text: 'The road stops climbing. Same rocks, same sky, for days. A stone giant sits across the road, so still it looks like part of the land.' },
+        { who: 'narrator', show: 'plateau', text: 'The road stops climbing. Same rocks, same sky, for days. A stone giant sits across the road, so still it looks like part of the land.' },
         { who: 'hollow', text: "See? Nothing's changing.", shot: { pan: 'center' } },
         { who: 'flame', mood: 'soft', text: "Something is. I can feel it, I just can't see it yet." },
         { who: 'wanderer', text: 'Hills are easy. You can see yourself getting higher. This is the hard part of the map.' },
@@ -212,7 +212,7 @@ export const PLATEAU: Chapter = {
         { who: 'plateau', text: '...Same. ...As...' },
         { who: 'narrator', text: 'The Plateau shatters, all at once. It had been breaking for weeks.', shot: { shake: 'big' } },
         { who: 'wanderer', text: 'It looked like nothing was happening. Everything was happening.' },
-        { who: 'narrator', show: 'vela', text: 'Behind you, the lamp on Vela\'s tower flashes twice. She saw.', answer: { id: 'vela', is: 'yes' } },
+        { who: 'narrator', text: 'Behind you, the lamp on Vela\'s tower flashes twice. She saw.', answer: { id: 'vela', is: 'yes' } },
         { who: 'flame', mood: 'happy', text: 'Do you know who gets this far? Everyone who doesn\'t stop. That\'s the whole list.' },
         { who: 'narrator', text: 'Past the broken stone the road starts climbing again, into the trees. Into the fog.', shot: { pan: 'right', seconds: 2 } },
       ],

@@ -72,6 +72,32 @@ const LOCKS = Array.from({ length: 16 }, (_, j) => {
   return `${'.'.repeat(3)}${l}${'.'.repeat(18)}${r}${'.'.repeat(3)}`;
 });
 
+/** The waving arm, up and out past the head (cols 22-31, rows 13-21); on 'charge' it swings higher. */
+const WAVE = [
+  [
+    '..........',
+    '..........',
+    '......yy..',
+    '.....ryyr.',
+    '....roo...',
+    '...roo....',
+    '..roo.....',
+    '.roo......',
+    'roo.......',
+  ],
+  [
+    '.......yy.',
+    '......ryyr',
+    '......roo.',
+    '.....roo..',
+    '....roo...',
+    '...roo....',
+    '..roo.....',
+    '.roo......',
+    'roo.......',
+  ],
+];
+
 const PAL: Record<string, string> = {
   r: FLAME.red[1],
   o: FLAME.orange[1],
@@ -123,13 +149,18 @@ function sparks(p: Painter, f: number) {
   });
 }
 
-export function drawKindled(o: Partial<KindledOpts>, _frame: ClipFrame, f: number): Grid {
+export function drawKindled(o: Partial<KindledOpts>, frame: ClipFrame, f: number): Grid {
   const g = grid(32),
     p = painter(g);
   if (o.hair === 'long') paintRows(p, LOCKS, PAL, 0, 7);
   paintRows(p, TIPS[Math.floor(f / 2) % 2], PAL);
   paintRows(p, ROWS, PAL, 0, 6);
   paintRows(p, [FEET[f % 2]], PAL, 0, 30);
+  if (frame.right === 'up') {
+    // the right arm leaves its side and waves
+    for (let y = 22; y <= 26; y++) for (let x = 20; x <= 23; x++) p.erase(x, y);
+    paintRows(p, WAVE[frame.fx === 'charge' ? 1 : 0], PAL, 22, 13);
+  }
   const art = outline(autoshade(scale2x(g)));
   face(painter(art), f);
   const out = shifted(art, 0, FLOAT[f % FLOAT.length]),

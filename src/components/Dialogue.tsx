@@ -89,7 +89,7 @@ function Portrait({ line, gear, classId, flame }: { line: Line; gear: Record<Gea
       // A spark is a speck in its frame: show it bigger so its face reads.
       return <Ember size={flame === 'spark' ? Math.round(p.size * 1.7) : p.size} stage={flame} mood={line.mood} />;
     case 'kindled':
-      return <Kindled size={p.size} />;
+      return <Kindled size={p.size} wave={p.wave} />;
     default:
       return null;
   }

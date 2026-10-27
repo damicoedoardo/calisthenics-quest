@@ -54,6 +54,8 @@ describe('sprite registry', () => {
     expect(clipFor('ember', 'attack')).toBe(clipFor('ember', 'idle'));
     // Vela raises her lamp.
     expect(clipFor('vela', 'attack')).toBe('raise');
+    // The true form waves (the finale's last line).
+    expect(clipFor('kindled', 'attack')).toBe('wave');
   });
 
   it('the idle loop bobs and the attack moves', () => {

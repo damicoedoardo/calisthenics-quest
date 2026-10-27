@@ -1,4 +1,5 @@
 import { grid, mix, painter, toSheet, type Grid, type Painter } from './engine/grid';
+import { paintRows } from './characters/pixel';
 
 /* Story backdrops, painted in code from a short description (the places themselves are listed in
    src/story/places.ts). A backdrop is a tall pixel picture: sky, two layers of land, the ground,
@@ -10,7 +11,7 @@ export const PLACE_H = 160;
 const HORIZON = 98;
 
 export type Land = 'dunes' | 'hills' | 'peaks' | 'flat' | 'village' | 'forest';
-export type Prop = 'dead-trees' | 'stars' | 'moon' | 'campfire' | 'lake' | 'reeds' | 'chimneys' | 'windows' | 'rocks' | 'road' | 'lamp-tower';
+export type Prop = 'dead-trees' | 'stars' | 'moon' | 'campfire' | 'lake' | 'reeds' | 'chimneys' | 'windows' | 'rocks' | 'road' | 'lamp-tower' | 'far-tower';
 export type PlaceWeather = 'none' | 'ash' | 'rain' | 'embers' | 'fog' | 'snow';
 
 export interface PlaceSpec {
@@ -190,50 +191,96 @@ function road(p: Painter, s: PlaceSpec) {
   }
 }
 
-/** Vela's tower: a thin stone tower beside the road, with her lamp lit at the top. Off to the
-    right, so the person speaking stands clear of it. */
+/** Vela's tower, as text rows (one character per pixel): a thin stone tower beside the road with her
+    lamp lit at the top, her bench and her box of letters at the foot. L lit stone, s stone, m mortar,
+    d shaded stone, g stone warmed by the lamp, k iron, y/w the lamp, D a dark opening, b bench, o the
+    box of letters. */
+const TOWER = [
+  '.........k.........',
+  '........kkk........',
+  '.......kkkkk.......',
+  '......kkkkkkk......',
+  '......kywwwyk......',
+  '......kywwwyk......',
+  '......kyywyyk......',
+  '......kkkkkkk......',
+  '.....gLLLLLLLm.....',
+  '.....mmmmmmmmm.....',
+  '.......gsssd.......',
+  '.......Lsmsd.......',
+  '.......Lsssd.......',
+  '.......Lmmmd.......',
+  '.......Lsssd.......',
+  '.......LsDsd.......',
+  '.......LsDsd.......',
+  '.......Lmsmd.......',
+  '.......Lsssd.......',
+  '.......Lsssd.......',
+  '.......Lmmmd.......',
+  '......LLLLLLm......',
+  '......Lsssssd......',
+  '......Lssmssd......',
+  '......Lsssssd......',
+  '......Lmmsmmd......',
+  '......Lsssssd......',
+  '......LssDssd......',
+  '......LssDssd......',
+  '......Lmsmmsd......',
+  '......Lsssssd......',
+  '......Lsssssd......',
+  '......Lmmmsmd......',
+  '.....LLLLLLLLm.....',
+  '.....Lsssssssd.....',
+  '.....Lssmsssmd.....',
+  '.....Lsssssssd.....',
+  '.....Lmmsmmmsd.....',
+  '.....Lsssssssd.....',
+  '.....LssDDDssd.....',
+  '.....LsDDDDDsd.....',
+  '.....LsDDDDDsd.....',
+  '.....LmDDDDDmd.....',
+  '.....LsDDDDDsd.....',
+  '.....LsDDDDDsd.....',
+  '....mmmmmmmmmmm....',
+  '.bbbbb.........oo..',
+  '.b...b.........oo..',
+];
+
+/** Off to the right, so the person speaking stands clear of it. */
 function lampTower(p: Painter, s: PlaceSpec) {
-  const cx = 70,
-    base = HORIZON + 16,
-    top = base - 40,
-    stone = mix(s.far, '#d6c8a8', 0.45),
-    light = mix(stone, '#ffffff', 0.25),
-    dark = mix(stone, '#000000', 0.35);
-  glow(p, cx, top - 6, 9, '#fbbf24', false);
-  // the shaft, wider at the foot, with a lit edge, a shaded edge and courses of stone
-  for (let y = top; y <= base; y++) {
-    const half = 2 + Math.round(((y - top) / (base - top)) * 2.4),
-      x0 = cx - half,
-      x1 = cx + half;
-    p.row(y, x0, x1, stone);
-    p.p(x0, y, light);
-    p.p(x1, y, dark);
-    if ((y - top) % 5 === 0) p.row(y, x0 + 1, x1 - 1, dark);
-    else if ((y - top) % 5 === 2) p.p(cx + ((y - top) % 10 === 2 ? -1 : 1), y, dark);
-  }
-  // a door at the foot and a slit window halfway up
-  p.r(cx - 1, base - 5, 3, 5, '#1a140e');
-  p.p(cx, base - 6, '#1a140e');
-  p.r(cx, top + 15, 1, 3, '#3a2a10');
-  // the gallery, the lamp room and its cap
-  p.row(top - 1, cx - 4, cx + 4, dark);
-  p.row(top - 2, cx - 4, cx + 4, light);
-  p.r(cx - 2, top - 7, 5, 5, '#fde68a');
-  p.r(cx - 1, top - 6, 3, 3, '#fff7d6');
-  p.col(cx - 3, top - 7, top - 3, '#2a2420');
-  p.col(cx + 3, top - 7, top - 3, '#2a2420');
-  p.row(top - 8, cx - 3, cx + 3, '#2a2420');
-  p.row(top - 9, cx - 2, cx + 2, '#2a2420');
-  p.p(cx, top - 10, '#2a2420');
-  p.p(cx, top - 11, '#2a2420');
-  // a bench and the box of letters at the foot
-  p.row(base + 2, cx - 9, cx - 5, '#5b3a24');
-  p.p(cx - 9, base + 3, '#3b2414');
-  p.p(cx - 5, base + 3, '#3b2414');
-  p.r(cx + 5, base + 1, 3, 2, '#e8dcc0');
+  const stone = mix(s.far, '#d6c8a8', 0.45),
+    x = 55,
+    y = HORIZON + 18 - TOWER.length;
+  glow(p, x + 9, y + 5, 9, '#fbbf24', false);
+  paintRows(p, TOWER, {
+    L: mix(stone, '#ffffff', 0.25),
+    s: stone,
+    m: mix(stone, '#000000', 0.2),
+    d: mix(stone, '#000000', 0.38),
+    g: mix(stone, '#fbbf24', 0.35),
+    k: '#2a2420',
+    y: '#fde68a',
+    w: '#fff7d6',
+    D: '#1a140e',
+    b: '#5b3a24',
+    o: '#e8dcc0',
+  }, x, y);
 }
 
-function props(p: Painter, s: PlaceSpec, rnd: () => number) {
+/** Vela's tower far off across the flat, a few pixels tall. Its lamp is drawn lit only in the lit
+    copy of the backdrop, which the Place component flashes over the unlit one. */
+const FAR_TOWER = ['.k.', 'kyk', 'kyk', 'mmm', '.s.', '.s.', '.s.', '.s.', '.d.', '.s.', '.s.', '.s.', '.s.', '.d.', '.s.', '.s.', '.s.', '.s.', '.d.', '.s.', '.s.', '.s.', '.s.', '.d.', '.s.', '.s.', '.s.', '.s.', '.d.', 'sss'];
+
+function farTower(p: Painter, s: PlaceSpec, lit: boolean) {
+  const stone = mix(s.far, '#d6c8a8', 0.45),
+    // tall and to the right, so its lamp clears the narration box that sits over the horizon
+    x = 64,
+    y = HORIZON - FAR_TOWER.length + 1;
+  if (lit) glow(p, x + 1, y + 1.5, 5, '#fbbf24', false);
+  paintRows(p, FAR_TOWER, { k: '#1e1a16', y: lit ? '#fff3c4' : '#6b5326', m: mix(stone, '#000000', 0.25), s: stone, d: mix(stone, '#000000', 0.3) }, x, y);
+}
+
+function props(p: Painter, s: PlaceSpec, rnd: () => number, lit: boolean) {
   const has = (q: Prop) => s.props.includes(q);
   if (has('road')) road(p, s);
   if (has('stars'))
@@ -272,6 +319,7 @@ function props(p: Painter, s: PlaceSpec, rnd: () => number) {
       p.p(x, 136 - h - 1, '#5b4a3a');
     }
   if (has('lamp-tower')) lampTower(p, s);
+  if (has('far-tower')) farTower(p, s, lit);
   if (has('campfire')) {
     // Off to the left, where the text box doesn't cover it and nobody stands in front of it.
     const cx = 22,
@@ -284,24 +332,29 @@ function props(p: Painter, s: PlaceSpec, rnd: () => number) {
   }
 }
 
-export function drawPlace(s: PlaceSpec): Grid {
+/** Whether the backdrop has a light that flashes (drawn twice: unlit, and lit on top). */
+export const placeBlinks = (s: PlaceSpec) => s.props.includes('far-tower');
+
+/** Draws a backdrop; `lit` turns on the lights that flash. */
+export function drawPlace(s: PlaceSpec, lit = false): Grid {
   const g = grid(PLACE_W, PLACE_H),
     p = painter(g),
     rnd = seeded(s.name);
   sky(p, s);
   land(p, s, rnd, s.props.includes('lake'));
   if (s.land === 'village') village(p, s, rnd);
-  props(p, s, rnd);
+  props(p, s, rnd, lit);
   return g;
 }
 
 const cache = new Map<string, string>();
 
 /** The backdrop as an image URL, drawn once (browser only). */
-export function placeImage(s: PlaceSpec): string {
-  const hit = cache.get(s.name);
+export function placeImage(s: PlaceSpec, lit = false): string {
+  const key = `${s.name}|${lit}`,
+    hit = cache.get(key);
   if (hit) return hit;
-  const url = toSheet([drawPlace(s)]);
-  cache.set(s.name, url);
+  const url = toSheet([drawPlace(s, lit)]);
+  cache.set(key, url);
   return url;
 }

@@ -63,7 +63,8 @@ export const PLACES = {
     far: '#3a3123',
     near: '#2a2319',
     ground: '#2a2319',
-    props: ['rocks'],
+    // Vela's tower, far off: its lamp flashes twice now and then.
+    props: ['rocks', 'far-tower'],
     weather: 'none',
   },
   'lamp-road': {
