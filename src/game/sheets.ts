@@ -1,7 +1,9 @@
 import { gearOf, type GameState } from '@/lib/game';
 import type { Zone } from '@/lib/fog';
 import { sheetFor, type Sheet } from '@/sprites/registry';
-import type { HeroOpts } from '@/sprites/characters/hero';
+import { normalizeLook, type HeroOpts } from '@/sprites/characters/hero';
+import type { Look } from '@/sprites/engine/figure';
+import { makeGear, type ClassId, type Gear, type GearSlot, type Tier } from '@/lib/gear';
 import { heroVariant } from '@/story/flame';
 import type { BossSheetKey, Sheets } from './rules';
 
@@ -92,4 +94,11 @@ export function warmRunSheets(state: GameState, zone: Zone): () => void {
   };
   handle = idle(next);
   return () => cancel(handle);
+}
+
+/** A friend's hero for a party run: their class, look and worn tiers (from their friend card). */
+export function friendSheets(f: { classId: ClassId | undefined; look?: object | null; tiers?: Partial<Record<GearSlot, Tier>> }): { idle: Sheet; walk: Sheet } {
+  const gear = Object.fromEntries((['weapon', 'armor', 'shield'] as GearSlot[]).map((s) => [s, makeGear(s, f.tiers?.[s] ?? (s === 'shield' ? 0 : 1), f.classId)])) as Record<GearSlot, Gear>;
+  const hero = { gear, classId: f.classId, look: normalizeLook((f.look ?? undefined) as Partial<Look> | undefined) };
+  return { idle: sheetFor('hero', 'idle', hero), walk: sheetFor('hero', 'walk', hero) };
 }

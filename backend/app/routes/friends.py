@@ -41,7 +41,7 @@ class AddFriend(BaseModel):
     code: str = Field(max_length=16)
 
 
-def _card(p: Profile, now: datetime) -> dict[str, Any]:
+def card_json(p: Profile, now: datetime) -> dict[str, Any]:
     return {
         "id": p.user_id,
         "name": p.name,
@@ -91,7 +91,7 @@ async def get_friends(
         if not p:
             continue
         key = "friends" if link.accepted else "asks_out" if link.mine else "asks_in"
-        out[key].append(_card(p, now))
+        out[key].append(card_json(p, now))
     # Who is playing first, then who is online, then by name.
     out["friends"].sort(key=lambda c: (not c["playing"], not c["online"], c["name"].lower()))
     return out

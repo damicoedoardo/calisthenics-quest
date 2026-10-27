@@ -36,6 +36,31 @@ CREATE TABLE IF NOT EXISTS friends (
 );
 CREATE INDEX IF NOT EXISTS friends_b ON friends (b);
 
+-- Parties (app/party.py): friends who go into the Fog together. Also created by the api on start.
+CREATE TABLE IF NOT EXISTS parties (
+    id          uuid PRIMARY KEY,
+    leader      uuid NOT NULL,
+    zone        integer NOT NULL DEFAULT 0,
+    seed        integer,
+    started_at  timestamptz,
+    created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS party_members (
+    party_id    uuid NOT NULL REFERENCES parties (id) ON DELETE CASCADE,
+    user_id     uuid NOT NULL UNIQUE,
+    ready       boolean NOT NULL DEFAULT false,
+    joined_at   timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (party_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS party_invites (
+    party_id    uuid NOT NULL REFERENCES parties (id) ON DELETE CASCADE,
+    to_id       uuid NOT NULL,
+    from_id     uuid NOT NULL,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (party_id, to_id)
+);
+CREATE INDEX IF NOT EXISTS party_invites_to ON party_invites (to_id);
+
 -- Forge materials one friend gives another, waiting until claimed (app/gifts.py).
 CREATE TABLE IF NOT EXISTS gifts (
     id          uuid PRIMARY KEY,

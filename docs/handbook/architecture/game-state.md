@@ -14,7 +14,7 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 | Field | What |
 |---|---|
 | `version` | 3. Older saves go through `migrate()`; version 3 dropped the calisthenics skill tree and max tests (a v2 save keeps its sessions, story, Fog and Book of Days) |
-| `profile` | `onboarded`, the `letter` (why, want, forWho, remind), the Hollow's `voice`, `classId`, `look`, the flame's name, `kit` (gym or home) |
+| `profile` | `onboarded`, the `letter` (why, want, forWho, remind), the Hollow's `voice`, `classId`, `look`, the flame's name, `kit` (gym or home), the hero's `name` (asked after the look; what friends see) |
 | `reps` | Current per-set target by exercise id |
 | `sessions` | Every finished workout: entries, sets with reps in reserve, XP breakdown, raises, `heavier`, `better` |
 | `build` | Stat points spent on the champion, per stat (earned points are counted from `sessions`) |

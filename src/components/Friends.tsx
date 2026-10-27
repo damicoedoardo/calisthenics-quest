@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, Flame, Gift as GiftIcon, Share2, UserPlus, Users, X } from 'lucide-react';
+import { Check, Flame, Gift as GiftIcon, Share2, Swords, UserPlus, Users, X } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { getClass, makeGear, type GearSlot } from '@/lib/gear';
 import { codeInUrl, friendTrainedToday, inviteLink, myCard, showCode, statusOf, type FriendCard, type FriendsList } from '@/lib/friends';
 import { acceptFriend, addFriend, claimGifts, getFriends, giveGift, removeFriend, sendCard } from '@/lib/friends-client';
+import { inviteToParty, setLobbyOpen } from '@/lib/party-client';
 import { giveMats, matsOf, takeGifts } from '@/lib/forge';
 import { GIFTS, MAT_IDS, MATS, type MatId } from '@/balance';
 import { cloudConfigured, useCloudStatus } from '@/lib/cloud-client';
@@ -71,14 +72,14 @@ function takeInvite(): string | null {
 }
 
 /** A friend's hero, small, in their own look and gear. */
-function FriendHero({ f, size = 44 }: { f: FriendCard; size?: number }) {
+export function FriendHero({ f, size = 44 }: { f: FriendCard; size?: number }) {
   const cls = f.class_id ?? undefined;
   const tiers = f.look?.gear ?? {};
   const gear = Object.fromEntries((['weapon', 'armor', 'shield'] as GearSlot[]).map((s) => [s, makeGear(s, tiers[s] ?? (s === 'shield' ? 0 : 1), cls)])) as Record<GearSlot, ReturnType<typeof makeGear>>;
   return <Hero gear={gear} classId={cls} size={size} bounce={false} look={normalizeLook((f.look ?? undefined) as Partial<Look> | undefined)} />;
 }
 
-function Row({ f, now, children, as: Tag = 'li' }: { f: FriendCard; now: Date; children?: React.ReactNode; as?: 'li' | 'div' }) {
+export function Row({ f, now, children, as: Tag = 'li' }: { f: FriendCard; now: Date; children?: React.ReactNode; as?: 'li' | 'div' }) {
   const cls = getClass(f.class_id ?? undefined);
   const dot = f.playing ? 'bg-gold-300' : f.online ? 'bg-emerald-400' : 'bg-slate-600';
   return (
@@ -149,8 +150,8 @@ function GiveMats({ f, state, update, done }: { f: FriendCard; state: GameState;
 }
 
 /** Hero tab: your friend code, adding friends, and who is online, in the Fog, or trained today.
-    With the save (`state`, `update`), friends can also give each other forge materials. */
-export function FriendsCard({ sandbox, state, update }: { sandbox: boolean; state?: GameState; update?: Update }) {
+    Friends can invite each other to a party and give each other forge materials. */
+export function FriendsCard({ state, update, sandbox }: { state: GameState; update: Update; sandbox: boolean }) {
   const [giving, setGiving] = useState<string | null>(null);
   const { signedIn } = useCloudStatus();
   const [list, setList] = useState<FriendsList | null>(null);
@@ -165,7 +166,7 @@ export function FriendsCard({ sandbox, state, update }: { sandbox: boolean; stat
       setList(await getFriends());
       setNow(new Date());
       // What friends gave you comes home with each refresh.
-      if (update) {
+      {
         const { gifts } = await claimGifts();
         if (gifts.length) {
           update((s) => takeGifts(s, gifts));
@@ -214,13 +215,15 @@ export function FriendsCard({ sandbox, state, update }: { sandbox: boolean; stat
         <p className="mt-2 text-xs text-slate-500">Loading…</p>
       ) : (
         <div className="mt-3 space-y-3">
-          {!list.me.name && (
+          {/* Heroes from before the name step: asked here once, kept in the save. */}
+          {!state.profile.name && (
             <form
               className="space-y-2 rounded-xl bg-ink-900/60 p-3"
               onSubmit={async (e) => {
                 e.preventDefault();
                 const n = name.trim();
                 if (!n) return;
+                update((s) => ({ ...s, profile: { ...s.profile, name: n } }));
                 try {
                   await sendCard({ name: n });
                   await refresh();
@@ -316,13 +319,25 @@ export function FriendsCard({ sandbox, state, update }: { sandbox: boolean; stat
               {list.friends.map((f) => (
                 <li key={f.id}>
                   <Row as="div" f={f} now={now}>
-                    {state && update && (
-                      <button aria-label={`Give ${f.name || 'them'} forge materials`} onClick={() => setGiving(giving === f.id ? null : f.id)} className={`rounded-lg p-2 ${giving === f.id ? 'bg-gold-400 text-ink-950' : 'bg-ink-600 text-gold-200'}`}>
-                        <GiftIcon size={16} />
-                      </button>
-                    )}
+                    <button
+                      aria-label={`Invite ${f.name || 'them'} to your party`}
+                      onClick={async () => {
+                        try {
+                          await inviteToParty(f.id);
+                          setLobbyOpen(true);
+                        } catch (e) {
+                          setMsg(e instanceof Error ? e.message : "Couldn't invite them right now.");
+                        }
+                      }}
+                      className="flex items-center gap-1 rounded-lg bg-ink-600 px-2.5 py-2 text-xs font-semibold"
+                    >
+                      <Swords size={14} /> Party
+                    </button>
+                    <button aria-label={`Give ${f.name || 'them'} forge materials`} onClick={() => setGiving(giving === f.id ? null : f.id)} className={`rounded-lg p-2 ${giving === f.id ? 'bg-gold-400 text-ink-950' : 'bg-ink-600 text-gold-200'}`}>
+                      <GiftIcon size={16} />
+                    </button>
                   </Row>
-                  {giving === f.id && state && update && (
+                  {giving === f.id && (
                     <GiveMats
                       f={f}
                       state={state}
