@@ -37,6 +37,7 @@ no row: give a new folder its row (and a page if no page fits).
 | `src/lib/store.ts` | `architecture/game-state.md` |
 | `src/lib/fog*.ts`, `src/game/*.ts`, `src/components/FogRun.tsx`, `src/components/PlayTab.tsx` | `game/fog.md` |
 | `src/game/dungeon/**` | `game/dungeon.md` |
+| `src/game/camp/**`, `src/lib/forge*.ts`, `src/components/Camp.tsx` | `game/camp.md` |
 | `src/story/**`, `src/components/{ScenePlayer,Dialogue,Place,Weather,BookOfDays,SitByFire}.tsx` | `game/story.md` |
 | `src/sprites/**`, `src/components/{Sprite,Hero,Characters,Look,LookEditor}.tsx` | `game/sprites.md` |
 | `src/exercises/**`, `scripts/import-exercises.mjs`, `scripts/export-exercises.mjs`, `src/components/ExerciseLibrary.tsx` | `game/exercise-library.md` |

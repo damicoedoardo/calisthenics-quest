@@ -90,3 +90,14 @@ export function warmRunSheets(state: GameState, zone: Zone): () => void {
   handle = idle(next);
   return () => cancel(handle);
 }
+
+/** The camp's sheets: you, walking or standing, your flame, and Mira at her forge. */
+export function campSheets(state: GameState): Record<'hero' | 'heroWalk' | 'ember' | 'mira', Sheet> {
+  const hero = { gear: gearOf(state), classId: state.profile.classId, look: state.profile.look };
+  return {
+    hero: sheetFor('hero', 'idle', hero),
+    heroWalk: sheetFor('hero', 'walk', hero),
+    ember: sheetFor('ember', 'idle'),
+    mira: sheetFor('mira', 'idle'),
+  };
+}

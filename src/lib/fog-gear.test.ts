@@ -48,6 +48,33 @@ describe('Fog gear between runs', () => {
     expect(state.fogGear?.vault).toEqual([kept]);
   });
 
+  it('the flame holds one worn item through a fall, if you trained in the last 2 days', () => {
+    const sword = item('weapon'),
+      plate = item('armor'),
+      now = new Date(2026, 9, 27, 12),
+      trained = (daysAgo: number): GameState => ({
+        ...strong(initialState()),
+        sessions: [{ id: 'a', date: new Date(now.getTime() - daysAgo * 864e5).toISOString(), kind: 'full', day: 'A', xp: 100, breakdown: [], entries: [] }],
+        fogGear: { worn: { weapon: sword, armor: plate }, vault: [], guard: 'weapon' },
+      });
+    const fall = { won: false, why: 'hp', gear: { worn: { weapon: sword, armor: plate }, bag: [] } };
+    const fresh = settleGear(trained(1), fall, now);
+    expect(fresh.out.held).toBe(sword);
+    expect(fresh.out.lost).toEqual([plate]);
+    expect(fresh.state.fogGear?.worn).toEqual({ weapon: sword });
+    expect(fresh.state.fogGear?.deaths).toBe(1);
+    const stale = settleGear(trained(4), fall, now);
+    expect(stale.out.held).toBeUndefined();
+    expect(stale.state.fogGear?.worn).toEqual({});
+  });
+
+  it('what the full vault leaves behind, Mira melts into embers', () => {
+    const bag = Array.from({ length: 6 }, () => item('charm'));
+    const { state, out } = settleGear(initialState(), { won: true, why: 'boss', gear: { worn: {}, bag } });
+    expect(out.embers).toBe(2 * 6);
+    expect(state.fogGear?.embers?.found).toBe(12);
+  });
+
   it("what your points can't wear yet stays home, safe from the Fog", () => {
     const sword = item('weapon');
     const s: GameState = { ...initialState(), fogGear: { worn: { weapon: sword }, vault: [] } };

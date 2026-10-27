@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import type { GameState } from '@/lib/game';
 import { buildOf } from '@/lib/stats';
-import { discardItem, NO_GEAR, takeOffToVault, vaultSize, wearFromVault } from '@/lib/fog-gear';
-import { ITEM_SLOTS, SLOT_NAME, shortOf, starterKit, type Item } from '@/game/dungeon/items';
+import { NO_GEAR, salvageValue, takeOffToVault, vaultSize, wearFromVault } from '@/lib/fog-gear';
+import { salvage } from '@/lib/forge';
+import { ITEM_SLOTS, nameOf, SLOT_NAME, shortOf, starterKit, type Item } from '@/game/dungeon/items';
 import { ItemCard, ItemTile } from './ItemCard';
 
 /** What you take into the Fog: the three slots you wear, and the vault at home, which keeps items
@@ -31,7 +32,7 @@ export function FogGearCard({ state, update }: { state: GameState; update: (fn: 
           const it = gear.worn[slot],
             short = it ? shortOf(it, build) : 0;
           return (
-            <button key={slot} onClick={() => it && choose(it.id)} className={`flex flex-col items-center gap-1 rounded-lg p-1 ${it && it.id === pick ? 'bg-ink-900' : ''}`} aria-label={it ? it.name : `${SLOT_NAME[slot]}: ${slot === 'charm' ? 'none' : kit[slot].name}`}>
+            <button key={slot} onClick={() => it && choose(it.id)} className={`flex flex-col items-center gap-1 rounded-lg p-1 ${it && it.id === pick ? 'bg-ink-900' : ''}`} aria-label={it ? nameOf(it) : `${SLOT_NAME[slot]}: ${slot === 'charm' ? 'none' : kit[slot].name}`}>
               {it ? <ItemTile item={it} size={44} dim={short > 0} /> : <span className="grid h-11 w-11 place-items-center rounded-lg border border-dashed border-ink-700 px-1 text-center text-[8px] leading-tight text-slate-500">{slot === 'charm' ? 'none' : kit[slot].name}</span>}
               <span className="text-[9px] text-slate-500">{SLOT_NAME[slot]}</span>
             </button>
@@ -47,7 +48,7 @@ export function FogGearCard({ state, update }: { state: GameState; update: (fn: 
       {gear.vault.length ? (
         <div className="mt-2 flex flex-wrap gap-2">
           {gear.vault.map((it) => (
-            <button key={it.id} onClick={() => choose(it.id)} className={`rounded-lg p-1 ${it.id === pick ? 'bg-ink-900' : ''}`} aria-label={it.name}>
+            <button key={it.id} onClick={() => choose(it.id)} className={`rounded-lg p-1 ${it.id === pick ? 'bg-ink-900' : ''}`} aria-label={nameOf(it)}>
               <ItemTile item={it} size={38} dim={shortOf(it, build) > 0} />
             </button>
           ))}
@@ -70,13 +71,13 @@ export function FogGearCard({ state, update }: { state: GameState; update: (fn: 
             <button
               onClick={() => {
                 if (!sure) return setSure(true);
-                update((s) => discardItem(s, item.id));
+                update((s) => salvage(s, item.id));
                 setPick(null);
                 setSure(false);
               }}
               className={`flex-1 rounded-lg py-2 text-xs ${sure ? 'bg-red-500 text-white' : 'bg-ink-700 text-slate-300'}`}
             >
-              {sure ? 'Sure? Gone for good' : 'Throw away'}
+              {sure ? `Sure? +${salvageValue(item)} embers` : 'Melt down'}
             </button>
           </ItemCard>
         </div>

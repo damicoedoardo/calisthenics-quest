@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   closeStaleDraft,
+  gearOf,
   dayType,
   finishSession,
   initialState,
@@ -17,6 +18,8 @@ import {
 import { equippedGear, nextForge, tiersAt } from './gear';
 import { pendingScenes, renderLines, storyState, storyWords } from '@/story/engine';
 import { noteFreq, parsePattern } from './music';
+import { seeded } from './random';
+import { rollItem, tierOf } from '@/game/dungeon/items';
 
 const monday = new Date(2026, 9, 26, 18);
 
@@ -163,10 +166,10 @@ describe('finishSession', () => {
     expect(res.session.breakdown.some((l) => l.label === 'Perfect week')).toBe(true);
   });
 
-  it('forges gear every few workouts', () => {
+  it("no longer forges gear by itself: finer gear comes from the Fog", () => {
     const state = { ...initialState(), sessions: fakeSessions(3) };
     const res = finishSession(withSets(state, { rdl: all(3, 8) }), monday)!;
-    expect(res.newGear.map((g) => g.name)).toEqual(['Wooden shield']);
+    expect(res.newGear).toEqual([]);
   });
 
   it('returns null with nothing logged', () => {
@@ -286,5 +289,22 @@ describe('levels, migration', () => {
     expect(s.profile).toMatchObject({ onboarded: true, classId: 'monk', flame: 'Pip' });
     expect(s.seenScenes).toEqual(['first-quest']);
     expect(s.fog?.cleared).toBe(1);
+  });
+
+  it("keeps the gear the old forge had made as the hero's look", () => {
+    const old = { ...initialState(), sessions: fakeSessions(12) };
+    const s = migrate(old);
+    expect(s.fogGear?.kit).toEqual(tiersAt(12));
+    expect(gearOf(s).weapon.tier).toBe(2);
+    // once frozen, more workouts don't change it
+    expect(migrate({ ...s, sessions: fakeSessions(40) }).fogGear?.kit).toEqual(tiersAt(12));
+  });
+
+  it('the look follows a finer item you wear into the Fog', () => {
+    const blade = rollItem(seeded(3), { zone: 3, workouts: 30, floor: 8, cls: 'warrior' }, 'legendary');
+    const s: GameState = { ...initialState(), fogGear: { worn: { [blade.slot]: blade }, vault: [], kit: { weapon: 1, armor: 1, shield: 0 } } };
+    const slot = blade.slot === 'charm' ? 'shield' : blade.slot;
+    expect(gearOf(s)[slot].tier).toBe(tierOf(blade));
+    expect(gearOf(initialState()).weapon.tier).toBe(1);
   });
 });

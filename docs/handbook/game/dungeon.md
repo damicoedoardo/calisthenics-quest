@@ -12,7 +12,8 @@ Code: `src/game/dungeon/`. File names below without a folder are in it. The rule
 
 ```
 items.ts            the things you wear, as data: slots, rarity, bonuses, class weapons and armor,
-                    names, requirements, and the pure rolls (rollRarity, rollItem)
+                    names, requirements, the pure rolls (rollRarity, rollItem), and the forge's
+                    plus and reroll (boostOf, nameOf, rerollBonus; see camp.md)
 content.ts          what a dungeon is made of, as data: ground, rooms, chest items, monsters and how they
                     shoot, each zone's dungeon and mid-boss, the bosses, the classes' abilities
 engine.ts           plays it: a pure step function (60 a second, seeded), no Phaser

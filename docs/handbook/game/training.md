@@ -77,9 +77,11 @@ the sessions; only what was spent is saved (`state.build`).
 
 Warrior (sword), Archer (bow), Monk (staff), Mage (wand). A class only changes how you fight in
 the Fog: its attack style there, and a small lean to one stat (`CLASS_LEAN` in `stats.ts`, as if
-it had `CLASS_LEAN_POINTS` more there). Gear has a weapon, armor and shield slot; one slot goes up
-a tier every `GEAR_EVERY` workouts, in turn (`tiersAt`, `nextForge`), up to tier 6. The art for
-each tier is in [sprites.md](sprites.md).
+it had `CLASS_LEAN_POINTS` more there). Gear has a weapon, armor and shield slot. Mira's forge used to raise one slot a tier
+every `GEAR_EVERY` workouts (`tiersAt`, `nextForge`); it doesn't any more. `migrate()` froze what
+it had made as the hero's look (`fogGear.kit`), and `gearOf` shows the finer of that and the
+item you wear from the Fog. Workouts now earn embers for the forge at the camp
+([camp.md](camp.md)). The art for each tier is in [sprites.md](sprites.md).
 
 ## How to change things
 
@@ -89,4 +91,4 @@ each tier is in [sprites.md](sprites.md).
 | Change how fast targets go up | `finishSession` and `MAX_RAISES_PER_WEEK` in `src/lib/game.ts` |
 | Change how many points a workout gives | `POINTS`, `STARTING_POINTS` in `src/lib/stats.ts` |
 | Change what a point is worth | `STATS[].per`, `BASE`, `FALLOFF` in `src/lib/stats.ts`, then `pnpm sim` and `pnpm fog:sim` |
-| Change how often gear is forged | `GEAR_EVERY` in `src/lib/gear.ts` |
+| Change embers per workout | `EMBERS` in `src/lib/forge.ts` ([camp.md](camp.md)) |

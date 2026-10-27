@@ -1,5 +1,6 @@
 import { PLAN, cueOf, type DayType, type Kit, type Slot, type SlotRole } from './program';
-import { equippedGear, type ClassId, type Gear } from './gear';
+import { makeGear, tiersAt, type ClassId, type Gear, type GearSlot, type Tier } from './gear';
+import { tierOf } from '@/game/dungeon/items';
 import type { Build } from './stats';
 import type { Look } from '@/sprites/engine/figure';
 import type { FogProgress } from './fog';
@@ -214,9 +215,21 @@ export function repsFor(state: GameState, slot: Slot): number {
   return state.reps[slot.id] ?? slot.low;
 }
 
-export function gearOf(state: GameState) {
-  return equippedGear(state.profile.classId, state.sessions.length);
+/** What the hero looks like they wear: the starter kit's look (`fogGear.kit`, the gear Mira's old
+    forge had made by the time it closed), or what you wear into the Fog when that looks finer. The
+    charm shows as the shield slot's piece. */
+export function gearOf(state: GameState): Record<GearSlot, Gear> {
+  const kit = state.fogGear?.kit ?? KIT_LOOK,
+    worn = state.fogGear?.worn ?? {},
+    tier = (slot: GearSlot): Tier => {
+      const it = worn[slot === 'shield' ? 'charm' : slot];
+      return Math.max(kit[slot], it ? tierOf(it) : 0) as Tier;
+    };
+  return { weapon: makeGear('weapon', tier('weapon'), state.profile.classId), armor: makeGear('armor', tier('armor'), state.profile.classId), shield: makeGear('shield', tier('shield'), state.profile.classId) };
 }
+
+/** A new hero's look: a plain weapon and armor, no shield. */
+const KIT_LOOK: Record<GearSlot, Tier> = { weapon: 1, armor: 1, shield: 0 };
 
 /** Sessions alternate between the plan's two days. */
 export function dayType(state: GameState): DayType {
@@ -386,7 +399,10 @@ export function migrate(raw: unknown): GameState {
   const profileOf = (p: Partial<Profile> | undefined): Profile => ({ ...fresh.profile, ...p, letter: { ...fresh.profile.letter, ...p?.letter } });
   if (r.version === 3) {
     const s = r as unknown as GameState;
-    return { ...fresh, ...s, profile: profileOf(s.profile) };
+    // Mira's forge used to make new gear every few workouts. It doesn't any more: the gear it had
+    // made by then stays as the hero's look (the starter kit), and finer gear comes from the Fog.
+    const fogGear = s.fogGear?.kit ? s.fogGear : { worn: {}, vault: [], ...s.fogGear, kit: tiersAt((s.sessions ?? []).length) };
+    return { ...fresh, ...s, profile: profileOf(s.profile), fogGear };
   }
   if (r.version === 2) {
     const { progress: _progress, tests: _tests, reps: _reps, ...s } = r as unknown as GameState & { progress?: unknown; tests?: unknown };
