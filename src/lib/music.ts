@@ -11,7 +11,7 @@
 import { ZONE_TRACKS, type ZoneStingId, type ZoneTrackId } from './music-zones';
 
 export type TrackId = 'memory' | 'hollow' | 'heartbeat' | 'rise' | 'camp' | 'fog' | 'fogBoss' | ZoneTrackId;
-export type StingId = 'victory' | 'levelup' | 'defeat' | 'opening' | 'openingEnd' | ZoneStingId;
+export type StingId = 'victory' | 'levelup' | 'defeat' | 'opening' | ZoneStingId;
 
 /** "thump" is a kick drum; "hat" and "snare" are noise drums. Drum tokens are just "x".
     "anvil" and "glass" are struck, pitched sounds that ring out (see PINGS). */
@@ -318,17 +318,6 @@ export const TRACKS: Record<TrackId | StingId, Track> = {
       { wave: 'square', gain: 0.05, cutoff: 3000, pattern: '. . . G4 C5 E5 G5 C6 - - - - - - - - - .' },
       { wave: 'square', gain: 0.03, cutoff: 2400, pattern: '. . . . . . . . . . E5 - - - - - - .' },
       { wave: 'triangle', gain: 0.12, pattern: '. . . C3 - - - - - G3 C4 - - - - - - .' },
-    ],
-  },
-  // Just the opening's last chord, for when sound only wakes on a tap near the end.
-  openingEnd: {
-    bpm: 100,
-    stepsPerBeat: 4,
-    voices: [
-      { wave: 'glass', gain: 0.08, pattern: '. E6 - - - - - .' },
-      { wave: 'square', gain: 0.05, cutoff: 3000, pattern: 'G5 C6 - - - - - .' },
-      { wave: 'square', gain: 0.03, cutoff: 2400, pattern: '. E5 - - - - - .' },
-      { wave: 'triangle', gain: 0.12, pattern: '. C4 - - - - - .' },
     ],
   },
   // A short fanfare for a hit that lands.
@@ -1028,7 +1017,7 @@ export async function renderSfx(id: SfxId, pitch = 1, seconds = 1.6, sampleRate 
   return (await ctx.startRendering()).getChannelData(0);
 }
 
-const STING_IDS: Record<StingId, true> = { victory: true, levelup: true, defeat: true, opening: true, openingEnd: true, shatter: true, warmth: true };
+const STING_IDS: Record<StingId, true> = { victory: true, levelup: true, defeat: true, opening: true, shatter: true, warmth: true };
 
 /** Renders `seconds` of a track (or a whole sting) to samples, mono, exactly as the app mixes it.
     Browser only. Used to measure loudness and to save tracks as audio files. */

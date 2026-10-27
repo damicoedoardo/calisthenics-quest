@@ -30,7 +30,7 @@ training gave you. Gear comes from the dungeon and needs stat points to wear; dy
 | Play | The Fog: your power from training, the zones, a run | `src/components/PlayTab.tsx`, `FogRun.tsx` |
 | Hero | Gear, class, look, the champion's stat points, keepsakes, backup | `src/components/HeroTab.tsx` |
 
-Every time the app opens, a three-second splash: the flame catches, FORMA lands one letter per note, and the day's number in the Book of Days (`Opening`). Over the tabs: the opening story (first run only), the workout logger, the after-session fight and
+Every time the app opens, a three-second splash: the flame catches, FORMA lands one letter per note, and the day's number in the Book of Days (`Opening`; on an iPhone it starts with "Tap to start", since sound needs a tap). Over the tabs: the opening story (first run only), the workout logger, the after-session fight and
 loot, story scenes, the class picker. See [../app/screens.md](../app/screens.md).
 
 ## The story
