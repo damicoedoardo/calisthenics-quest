@@ -6,7 +6,7 @@ import { BOT_PICKS, type BossSheetKey, type SheetKey, type Sheets } from '../rul
 import type { FogBoss, FogLines } from '@/story/types';
 import { R } from '@/sprites/palette';
 import { botInput } from './bot';
-import { ITEM_ICONS } from '@/sprites/characters/icons';
+import { drawItem } from '@/sprites/characters/items';
 import type { Build } from '@/lib/stats';
 import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STAIRS, type Prop } from './props';
 import { THEMES, themeFor, type Theme } from './themes';
@@ -31,7 +31,7 @@ import {
   zoneDungeon,
   createRun,
   dropFromBag,
-  iconOf,
+  looksOf,
   nameOf,
   RARITY,
   takeOff,
@@ -42,6 +42,7 @@ import {
   pickRelic,
   relic,
   spikeState,
+  mine,
   pick,
   skipFloor,
   skipToBoss,
@@ -797,7 +798,6 @@ class DungeonScene extends Phaser.Scene {
     prop('sconce', SCONCE);
     prop('stairs', STAIRS);
     prop('hitspark', HIT_SPARK);
-    for (const [k, art] of Object.entries(ITEM_ICONS)) prop(`item-${k}`, art);
     g.destroy();
     this.themeTextures();
   }
@@ -996,16 +996,37 @@ class DungeonScene extends Phaser.Scene {
 
   /** Items on the floor: each one's icon with its name in its rarity's color over it, and a
       beam of light over rare and legendary ones, so they're seen from across the room. */
+  /** The texture of an item on the floor: its own art (src/sprites/characters/items.ts), drawn once. */
+  private itemTexture(item: Item): string {
+    const look = looksOf(item),
+      key = `item-${look.art}-${look.rarity}-${look.seed}`;
+    if (this.textures.exists(key)) return key;
+    const g = drawItem(look),
+      cv = this.textures.createCanvas(key, g[0].length, g.length);
+    const ctx = cv?.getContext();
+    if (!cv || !ctx) return key;
+    g.forEach((row, y) =>
+      row.forEach((c, x) => {
+        if (!c) return;
+        ctx.fillStyle = c;
+        ctx.fillRect(x, y, 1, 1);
+      }),
+    );
+    cv.refresh();
+    return key;
+  }
+
   private syncLoot() {
     const r = this.run,
       now = this.time.now,
-      here = new Set(r.loot.map((l) => l.id));
+      seen = r.loot.filter((l) => mine(l, r.hero)),
+      here = new Set(seen.map((l) => l.id));
     for (const [id, l] of this.loot)
       if (!here.has(id)) {
         [l.icon, l.name, l.beam].forEach((o) => o?.destroy());
         this.loot.delete(id);
       }
-    for (const l of r.loot) {
+    for (const l of seen) {
       let v = this.loot.get(l.id);
       const [X, Y] = this.P(l.x, l.y),
         color = RARITY[l.item.rarity].color,
@@ -1014,7 +1035,7 @@ class DungeonScene extends Phaser.Scene {
         const big = l.item.rarity === 'rare' || l.item.rarity === 'legendary';
         v = {
           beam: big ? this.add.rectangle(X, Y - 60, 10, 120, c, 0.18).setDepth(-1.1) : null,
-          icon: this.add.image(X, Y, `item-${iconOf(l.item)}`).setDepth(-1),
+          icon: this.add.image(X, Y, this.itemTexture(l.item)).setDepth(-1).setScale(0.9),
           name: this.add
             .text(X, Y - 18, nameOf(l.item), { fontFamily: '"Press Start 2P", monospace', fontSize: '7px', color, stroke: '#0b0d14', strokeThickness: 3 })
             .setOrigin(0.5, 1)
@@ -1328,13 +1349,16 @@ class DungeonScene extends Phaser.Scene {
       if (Math.abs(across) > 5) h.setFlipX(across < 0);
       h.setAngle(Math.sign(across) * 3);
       if (playing === 'hero' && this.anims.exists('heroWalk')) h.play('heroWalk');
+      // Running through a cleared room: quicker steps and a thicker trail of dust.
+      h.anims.timeScale = r.cleared ? 1.8 : 1;
       if (now >= this.trailAt) {
-        this.trailAt = now + 240;
+        this.trailAt = now + (r.cleared ? 90 : 240);
         this.puffs.explode(1, hx, hy + 24);
       }
     } else {
       h.setAngle(0);
       if (playing === 'heroWalk') h.play('hero');
+      h.anims.timeScale = 1;
     }
     const blink = r.t < r.hero.hurtUntil || r.t < r.hero.ghostUntil;
     h.setAlpha(blink ? (Math.floor(now / 80) % 2 ? 0.35 : 1) : 1);
@@ -2204,7 +2228,7 @@ class DungeonScene extends Phaser.Scene {
     // The stairs down: a gold ring pulsing round them.
     if (r.stairs) this.fx.lineStyle(2, 0xfbbf24, 0.25 + 0.3 * ((Math.sin(now / 220) + 1) / 2)).strokeCircle(r.stairs.x, r.stairs.y, 32);
     // The ward, while it's up.
-    if (relic(r, 'charm') && r.t >= r.hero.wardAt) this.fx.lineStyle(2, 0x7dd3fc, 0.35 + 0.15 * Math.sin(now / 180)).strokeCircle(r.hero.x, r.hero.y, 24);
+    if (relic(r.hero, 'charm') && r.t >= r.hero.wardAt) this.fx.lineStyle(2, 0x7dd3fc, 0.35 + 0.15 * Math.sin(now / 180)).strokeCircle(r.hero.x, r.hero.y, 24);
     // A ram's line before it charges.
     for (const f of r.foes) {
       if (!f.alive) continue;

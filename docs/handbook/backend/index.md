@@ -10,4 +10,5 @@ timestamp: 2026-10-27
 
 - [API](api.md): the FastAPI app in `backend/`, the login check, the save routes and their rules
 - [Cloud backup in the app](cloud-sync.md): sign-in, the sync hook, phone vs cloud, which save to keep
+- [Friends](friends.md): friend codes, asks, who is online, in the Fog or trained today
 - [Server and deploys](server.md): the Hetzner box, the compose stack, Caddy, the GHCR auto-deploy

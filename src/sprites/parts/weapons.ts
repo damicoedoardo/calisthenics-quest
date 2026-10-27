@@ -5,15 +5,25 @@ import { R } from '../palette';
 /* Weapons, drawn per frame from the hand positions in the pose. Each one reads the arm
    position (P.right / P.left) and the frame's effect (P.fx). */
 
+/** What a worn Fog item adds to its weapon (src/sprites/characters/items.ts colors): the trim for
+    the hilt and fittings, the gem, and for a legendary the light that runs along it. Left out, a
+    weapon is drawn as the forge's tiers always were. */
+export interface WeaponLook {
+  trim: Ramp;
+  gem: Ramp;
+  /** A legendary's glow: the blade's core, the bow's string, the orb's and star's light. */
+  shine?: string;
+}
+
 /** A sword drawn by sampling a rotated frame: grip in the hand at (gx, gy), blade along (dx, dy). */
-function sword(c: Ctx, gx: number, gy: number, dx: number, dy: number, len: number, M: Ramp) {
+function sword(c: Ctx, gx: number, gy: number, dx: number, dy: number, len: number, M: Ramp, look?: WeaponLook) {
   const al = Math.hypot(dx, dy),
     ax = dx / al,
     ay = dy / al,
     nx = ay,
     ny = -ax,
     lit = -nx - ny > 0 ? 1 : -1,
-    hilt = R.gold;
+    hilt = look?.trim ?? R.gold;
   for (let y = 0; y < S; y++)
     for (let x = 0; x < S; x++) {
       const ox = x - gx,
@@ -23,10 +33,12 @@ function sword(c: Ctx, gx: number, gy: number, dx: number, dy: number, len: numb
         side = t * lit;
       if (s >= -6 && s < -3.5 && Math.abs(t) <= 1.6) c.w.p(x, y, hilt[2]);
       else if (s >= -3.5 && s < 3 && Math.abs(t) <= 1.1) c.w.p(x, y, R.leather[Math.round(s) % 2 ? 1 : 2]);
-      else if (s >= 3 && s <= 5 && Math.abs(t) <= 5) c.w.p(x, y, Math.abs(t) < 1.2 ? hilt[2] : hilt[1]);
+      else if (s >= 3 && s <= 5 && Math.abs(t) <= 5) c.w.p(x, y, Math.abs(t) < 1.2 ? (look ? look.gem[1] : hilt[2]) : hilt[1]);
       else if (s > 5 && s <= len) {
         const hw = 1.8 * Math.min(1, (len - s) / 4) + 0.3;
         if (Math.abs(t) <= hw) c.w.p(x, y, side > 0.6 ? M[2] : side < -0.6 ? M[0] : M[1]);
+        // a legendary's blade burns down its middle, a spark running up it
+        if (look?.shine && Math.abs(t) < 0.6 && s > 7 && s < len - 1) c.fx.p(x, y, (Math.round(s) + c.P.f * 3) % 7 === 0 ? '#ffffff' : look.shine);
       }
     }
 }
@@ -39,13 +51,13 @@ function slashArc(c: Ctx, glow: string) {
   }
 }
 
-export function drawSword(c: Ctx, M: Ramp, glow: string) {
+export function drawSword(c: Ctx, M: Ramp, glow: string, x?: WeaponLook) {
   const [hx, hy] = c.P.arms.R.hand,
     gx = hx + 1.5,
     gy = hy + 1.5;
-  if (c.P.right === 'up') sword(c, gx, gy, 0.8, -0.6, 20, M);
-  else if (c.P.right === 'fwd') sword(c, gx, gy, 0.2, 1, 20, M);
-  else sword(c, gx, gy, 0.25, -1, 26, M);
+  if (c.P.right === 'up') sword(c, gx, gy, 0.8, -0.6, 20, M, x);
+  else if (c.P.right === 'fwd') sword(c, gx, gy, 0.2, 1, 20, M, x);
+  else sword(c, gx, gy, 0.25, -1, 26, M, x);
   if (c.P.fx === 'slash') slashArc(c, glow);
 }
 
@@ -73,7 +85,7 @@ export function drawStick(c: Ctx, glow: string) {
 }
 
 /** A monk's long staff with metal caps in the gear's color. */
-export function drawStaff(c: Ctx, M: Ramp, glow: string) {
+export function drawStaff(c: Ctx, M: Ramp, glow: string, x?: WeaponLook) {
   const { w, P } = c,
     Wd = R.wood,
     [hx, hy] = P.arms.R.hand;
@@ -96,20 +108,41 @@ export function drawStaff(c: Ctx, M: Ramp, glow: string) {
     w.r(wx - 1, hy - 31, 5, 4, M[1]);
     w.row(hy - 31, wx - 1, wx + 3, M[2]);
     w.r(wx, hy + 13, 3, 3, M[1]);
+    if (x) {
+      // the item's gem set in the head, prongs of trim around it
+      w.ellipse(wx + 1, hy - 34, 2.6, 2.6, x.gem[1]);
+      w.r(wx, hy - 35, 1, 1, x.gem[2]);
+      w.p(wx - 2, hy - 33, M[1]);
+      w.p(wx + 4, hy - 33, M[1]);
+      if (x.shine) {
+        const on = P.f % 2 ? x.shine : '#ffffff';
+        [[wx + 1, hy - 39], [wx - 3, hy - 35], [wx + 5, hy - 35]].forEach(([a, b]) => c.fx.p(a, b, on));
+        c.fx.p(wx, hy - 35, '#ffffff');
+      }
+    }
   }
   if (P.fx === 'slash') slashArc(c, glow);
 }
 
 /** A mage's wand with a star tip; the left hand casts. */
-export function drawWand(c: Ctx, M: Ramp, glow: string) {
+export function drawWand(c: Ctx, M: Ramp, glow: string, x?: WeaponLook) {
   const { w, fx, P } = c,
     [hx, hy] = P.arms.R.hand,
     tx = hx + 10,
     ty = hy - 9;
   w.thick(hx + 2, hy + 1, tx, ty, 2, R.wood[1]);
   w.line(hx + 2, hy, tx, ty - 1, R.wood[2]);
+  if (x) {
+    w.r(tx - 2, ty + 1, 3, 2, x.trim[1]);
+    w.p(tx - 2, ty + 1, x.trim[2]);
+  }
   w.r(tx - 1, ty - 2, 4, 4, M[1]);
   w.p(tx, ty - 2, M[2]);
+  if (x?.shine) {
+    // a legendary wand's star
+    const k = P.f % 2 ? 3 : 4;
+    for (let i = 2; i <= k; i++) [[tx + 1, ty - 2 - i], [tx + 1, ty + 1 + i], [tx - 1 - i, ty], [tx + 2 + i, ty]].forEach(([a, b]) => fx.p(a, b, i === k ? x.shine! : '#ffffff'));
+  }
   fx.p(tx + 1, ty - 4, '#ffffff');
   fx.p(tx + 1, ty + 3, glow);
   fx.p(tx - 2, ty, glow);
@@ -133,12 +166,12 @@ export function drawWand(c: Ctx, M: Ramp, glow: string) {
 }
 
 /** A recurve bow in the left hand; the right hand draws the string. */
-export function drawBow(c: Ctx, M: Ramp, glow: string) {
+export function drawBow(c: Ctx, M: Ramp, glow: string, x?: WeaponLook) {
   const { w, fx, P } = c,
     [hx, hy] = P.arms.L.hand,
     gx = hx - 1,
     cy = hy + 2,
-    STRING = '#d8dde4';
+    STRING = x?.shine ?? '#d8dde4';
   const off = (t: number) => {
     const a = Math.abs(t);
     if (a > 16) return 5 - (a - 16);
@@ -151,6 +184,12 @@ export function drawBow(c: Ctx, M: Ramp, glow: string) {
     for (let i = 0; i < wd; i++) w.p(x + i, y, i === 0 ? M[2] : i === wd - 1 ? M[0] : M[1]);
   }
   for (let y = cy - 4; y <= cy + 4; y++) w.row(y, gx, gx + 2, y % 2 ? R.leather[1] : R.leather[2]);
+  if (x) {
+    // trim on the tips and a gem in the grip
+    [-18, -17, 17, 18].forEach((t) => w.row(cy + t, gx + off(t), gx + off(t) + 1, x.trim[Math.abs(t) === 18 ? 2 : 1]));
+    w.r(gx, cy - 1, 3, 2, x.gem[1]);
+    w.p(gx, cy - 1, x.gem[2]);
+  }
   const sx = gx + 7,
     st = cy - 16,
     sb = cy + 16;

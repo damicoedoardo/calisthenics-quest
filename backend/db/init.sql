@@ -13,3 +13,25 @@ CREATE TABLE IF NOT EXISTS saves (
     rev         integer NOT NULL DEFAULT 1,
     updated_at  timestamptz NOT NULL DEFAULT now()
 );
+
+-- Friends (app/friends.py): each player's public card and who is friends with whom. The api
+-- also creates these on start (friends.SCHEMA), so a server that predates them gets them on deploy.
+CREATE TABLE IF NOT EXISTS profiles (
+    user_id     uuid PRIMARY KEY,
+    code        text NOT NULL UNIQUE,
+    name        text NOT NULL DEFAULT '',
+    class_id    text,
+    level       integer NOT NULL DEFAULT 1,
+    look        jsonb,
+    trained_at  timestamptz,
+    playing     text,
+    seen_at     timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS friends (
+    a           uuid NOT NULL,
+    b           uuid NOT NULL,
+    accepted    boolean NOT NULL DEFAULT false,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (a, b)
+);
+CREATE INDEX IF NOT EXISTS friends_b ON friends (b);

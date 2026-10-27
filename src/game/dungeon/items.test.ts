@@ -70,20 +70,20 @@ describe('items in a run', () => {
     wear(weak, sword.id);
     expect(weak.hero.gear.worn.weapon?.starter).toBe(true);
     const run = fresh({ damage: 99, health: 99 }),
-      { damage } = run.setup.power,
+      { damage } = run.hero.power,
       hp = run.hero.maxHp;
     give(run, sword);
     give(run, armor);
     wear(run, sword.id);
     wear(run, armor.id);
-    expect(run.setup.power.damage).toBeGreaterThan(damage);
+    expect(run.hero.power.damage).toBeGreaterThan(damage);
     expect(run.hero.maxHp).toBeGreaterThan(hp);
     // The starter kit just goes; taking off brings it back.
     expect(run.hero.gear.bag).toHaveLength(0);
     takeOff(run, 'weapon');
     expect(run.hero.gear.worn.weapon?.starter).toBe(true);
     expect(run.hero.gear.bag).toEqual([sword]);
-    expect(run.setup.power.damage).toBeCloseTo(damage);
+    expect(run.hero.power.damage).toBeCloseTo(damage);
   });
 
   it('a dropped item lies on the floor until you walk over it again', () => {
