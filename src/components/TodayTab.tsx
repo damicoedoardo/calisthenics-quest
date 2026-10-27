@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bookmark, BookOpen, ChevronRight, Flame, Heart, Play, X } from 'lucide-react';
 import { BookOfDays } from './BookOfDays';
 import { Ember, Enemy, Hollow } from './Characters';
 import { SitByFire } from './SitByFire';
+import { Sprite } from './Sprite';
+import { useLook } from './Look';
 import {
   WEEKLY_GOAL,
   dayType,
+  gearOf,
   previewXp,
   sessionsThisWeek,
   todaysQuest,
@@ -16,6 +18,7 @@ import {
   type GameState,
 } from '@/lib/game';
 import { getPath } from '@/lib/skills';
+import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
 import { daysSinceTraining, isRestDay, trainedToday } from '@/lib/days';
 import { storyState, storyWords } from '@/story/engine';
 import { flameStage } from '@/story/flame';
@@ -53,6 +56,9 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
   const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
   // After today's workout the quest below is the next one, not one still owed today.
   const doneToday = !inProgress && trainedToday(state, now);
+  // You, in your gear and look, for the exercise stills in the quest list.
+  const look = useLook();
+  const hero = { gear: gearOf(state), classId: state.profile.classId, look };
 
   return (
     <div className="space-y-4">
@@ -80,9 +86,9 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
               <p className="text-sm text-slate-300">
                 vs <span className="font-semibold text-slate-100">{story.chapter.enemy}</span>
               </p>
-              <div className="mt-1.5 flex flex-wrap gap-1">
+              <div className="mt-1.5 flex flex-wrap">
                 {Array.from({ length: story.hearts }).map((_, i) => (
-                  <Heart key={i} size={14} className={i < story.heartsLeft ? 'fill-red-500 text-red-500' : 'text-ink-600'} />
+                  <Sprite key={i} id="uiIcon" opts={{ name: i < story.heartsLeft ? 'heart' : 'heartEmpty' }} size={18} label="" />
                 ))}
               </div>
               <p className="mt-1.5 text-xs text-slate-400">
@@ -137,11 +143,19 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
             const path = getPath(q.path);
             const done = state.draft?.sets[q.id]?.length ?? 0;
             return (
-              <li key={q.id} className="flex items-center gap-3 rounded-xl bg-ink-900 px-3 py-2.5">
-                <span className="w-16 shrink-0 text-[10px] font-bold uppercase tracking-wider" style={{ color: path.color }}>
-                  {ROLE_LABEL[q.role]}
+              <li key={q.id} className="flex items-center gap-3 rounded-xl bg-ink-900 py-1.5 pl-1.5 pr-3">
+                {/* A still of you doing it: the demo's first frame, at 1:1 so it stays crisp. */}
+                {(EXERCISES as string[]).includes(q.node.id) ? (
+                  <Sprite id="exercise" opts={{ exercise: q.node.id as ExerciseId, ...hero }} size={64} playing={false} label={`${q.name}, demo`} className="shrink-0 rounded-lg bg-ink-950" />
+                ) : (
+                  <span className="h-16 w-16 shrink-0" />
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider" style={{ color: path.color }}>
+                    {ROLE_LABEL[q.role]}
+                  </span>
+                  <span className="mt-0.5 block text-sm leading-snug text-slate-100">{q.name}</span>
                 </span>
-                <span className="min-w-0 flex-1 text-sm leading-snug text-slate-100">{q.name}</span>
                 <span className="shrink-0 font-mono text-sm text-slate-300">
                   {inProgress ? `${Math.min(done, q.sets)}/${q.sets}` : `${q.sets}×${q.reps}${q.unit === 'sec' ? 's' : ''}`}
                 </span>
@@ -155,7 +169,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
         onClick={() => onStart(inProgress ? state.draft!.checkin : checkin)}
         className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] transition active:translate-y-1 active:shadow-none"
       >
-        <Play size={16} className="fill-ink-950" />
+        <Sprite id="uiIcon" opts={{ name: 'play' }} size={14} label="" />
         {inProgress ? 'Continue quest' : doneToday ? 'Start the next quest' : 'Start quest'}
       </button>
 
@@ -203,7 +217,7 @@ function FlameCard({ state, now, week, streak }: { state: GameState; now: Date; 
       </div>
       <div className="mt-3 flex gap-1.5">
         {Array.from({ length: WEEKLY_GOAL }).map((_, i) => (
-          <div key={i} className={`h-2.5 flex-1 rounded-sm ${i < week ? 'bg-gold-400' : 'bg-ink-600'}`} />
+          <div key={i} className={`pixel-notch h-3 flex-1 ${i < week ? 'bg-gold-400 shadow-[inset_0_-3px_0_#b45309]' : 'bg-ink-600 shadow-[inset_0_-3px_0_#1c2033]'}`} />
         ))}
       </div>
       <p className="mt-1 text-xs text-slate-500">
@@ -226,7 +240,7 @@ function RestCard({ state, now, onSit }: { state: GameState; now: Date; onSit: (
       ) : (
         <>
           <button onClick={onSit} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-ink-800 py-3 text-sm text-orange-200 ring-1 ring-orange-300/25 active:scale-[.98]">
-            <Flame size={16} /> Sit by the fire · 1 minute
+            <Sprite id="uiIcon" opts={{ name: 'flame' }} size={18} label="" /> Sit by the fire · 1 minute
           </button>
           <p className="mt-2 text-xs text-slate-500">
             {fullDayOff ? 'A full day of air: your Fog runs today start Rested.' : 'It counts as rest: your Fog runs today start Rested.'}
@@ -253,13 +267,13 @@ function QuoteCard({ state, now, update, onOpenBook }: { state: GameState; now: 
           aria-pressed={!!page.kept}
           className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs ${page.kept ? 'bg-gold-400/15 text-gold-300' : 'bg-ink-800 text-slate-300'}`}
         >
-          <Bookmark size={13} className={page.kept ? 'fill-gold-400 text-gold-400' : ''} /> {page.kept ? 'Kept' : 'Keep'}
+          <Sprite id="uiIcon" opts={{ name: page.kept ? 'bookmarkKept' : 'bookmark' }} size={14} label="" /> {page.kept ? 'Kept' : 'Keep'}
         </button>
       </div>
       <button onClick={onOpenBook} className="mt-3 flex w-full items-center gap-2 border-t border-ink-700 pt-3 text-left text-xs text-slate-400">
-        <BookOpen size={14} />
+        <Sprite id="uiIcon" opts={{ name: 'book' }} size={22} label="" />
         <span className="flex-1">Book of Days · {pages} {pages === 1 ? 'page' : 'pages'}</span>
-        <ChevronRight size={14} />
+        <Sprite id="uiIcon" opts={{ name: 'chevron' }} size={12} label="" />
       </button>
     </section>
   );
@@ -296,7 +310,7 @@ function InstallHint() {
         }}
         className="-m-2 p-2 text-sky-300"
       >
-        <X size={18} />
+        <Sprite id="uiIcon" opts={{ name: 'close' }} size={18} label="" />
       </button>
     </div>
   );

@@ -714,3 +714,248 @@ export const MARK_ICONS: Record<'warden' | 'boss', PixelArt> = {
     palette: KIT,
   },
 };
+
+/** The zones of the Fog, 16x16 framed views, in the order of ZONES (the Play tab's road). */
+export const ZONE_ICONS: PixelArt[] = [
+  // The Ashen Edge: an ember sun going down over a cliff of ash
+  {
+    rows: [
+      'kkkkkkkkkkkkkkkk',
+      'kppppppppppppppk',
+      'kppppppppppppppk',
+      'kpppppqqqqpppppk',
+      'kpppqqqooqqqpppk',
+      'kppqqqoyyoqqqppk',
+      'kpqqqqoyyoqqqqqk',
+      'kqqqqqqooqqqqqqk',
+      'kqqqqqqqqqqqAAAk',
+      'kqqqqqqqqqqAaaak',
+      'kqqqqqqqqqAaaaak',
+      'kAAqqqqqqAaaeaak',
+      'kaaAAqqqAaaaaaak',
+      'kaaaaAAAaaeaaaak',
+      'kaeaaaaaaaaaaaak',
+      'kkkkkkkkkkkkkkkk',
+    ],
+    palette: { k: '#0b0d14', p: '#2a1a24', q: '#5c2a24', o: '#f97316', y: '#fde68a', a: '#3f3f46', A: '#6b6b75', e: '#fb923c' },
+  },
+  // Mirror Lake: the moon, and the moon again in the water
+  {
+    rows: [
+      'kkkkkkkkkkkkkkkk',
+      'knnnnnnnnnnnnnnk',
+      'knnnnnnnnnmmnnnk',
+      'knnMnnnnnmmmmnnk',
+      'knnnnnnnnmmmmnnk',
+      'kNNNNNNNNNmmNNNk',
+      'kNNNNNMNNNNNNNNk',
+      'ksssNNNNNNNNsssk',
+      'kwwwwwwwwwwwwwwk',
+      'kwWwwwwwwwMMwwwk',
+      'kwwwwwwwwMmmMwwk',
+      'kwwwWwwwwwMMwwwk',
+      'kwwwwwwwwwwwwWwk',
+      'kwWwwwwwwwMwwwwk',
+      'kwwwwwwwwwwwwwwk',
+      'kkkkkkkkkkkkkkkk',
+    ],
+    palette: { k: '#0b0d14', n: '#0f1a33', N: '#1e2f57', m: '#f2fdff', M: '#8fc4e8', w: '#16405e', W: '#2b78ad', s: '#14241c' },
+  },
+  // The Cold Forges: an anvil over the forge's glow
+  {
+    rows: [
+      'kkkkkkkkkkkkkkkk',
+      'kddddddddddddddk',
+      'kddyddddddddoddk',
+      'kdddddoddddddddk',
+      'kddddddddydddddk',
+      'kddddddddddddddk',
+      'kdIIIIIIIIIIdddk',
+      'kdiIIIIIIIIIIIdk',
+      'kddiiiiiiiiiiddk',
+      'kdddddiiiiddDddk',
+      'kddDddiiiiddddDk',
+      'kdddddiiiiddDddk',
+      'kddddiiiiiiddddk',
+      'koooooooooooooDk',
+      'kOOOOOOOOOOOOOOk',
+      'kkkkkkkkkkkkkkkk',
+    ],
+    palette: { k: '#0b0d14', d: '#1e1b1c', D: '#3a3433', i: '#46403c', I: '#8a8078', o: '#c2410c', O: '#f97316', y: '#fde68a' },
+  },
+  // The Flat Road: a mesa under a pale sun, the road running to it
+  {
+    rows: [
+      'kkkkkkkkkkkkkkkk',
+      'kssssssssssssssk',
+      'ksssssssssyysssk',
+      'kssssssssyYYyssk',
+      'ksssssssssyysssk',
+      'kSSSSSSSSSSSSSSk',
+      'kSSggggggSSSSSSk',
+      'kSSMMMMMMSSSSSSk',
+      'kSMMMMMMMmSSSSSk',
+      'kSMMMmMMMmmSSSSk',
+      'kMMMMMMMmmmmSSSk',
+      'kttttttrrttttttk',
+      'ktttttrrrrtttttk',
+      'kttttrrrrrrttttk',
+      'ktttrrrrrrrrtttk',
+      'kkkkkkkkkkkkkkkk',
+    ],
+    palette: { k: '#0b0d14', s: '#f2d6a2', S: '#e3b77e', y: '#fde68a', Y: '#ffffff', g: '#4d7c0f', M: '#c08a52', m: '#8f6338', t: '#a8834f', r: '#78716c' },
+  },
+  // The Hollow Woods: bare trees in the mist, and eyes between them
+  {
+    rows: [
+      'kkkkkkkkkkkkkkkk',
+      'kbbbbbbbbbbbbbbk',
+      'kbtbbbbbbbbbtbbk',
+      'kbtbbbtbbbbbtbbk',
+      'kbttbtbbbbbbttbk',
+      'kbbtttbbbtbtbbbk',
+      'kbbbtbbbbbttbbbk',
+      'kbbbtbbbbbbtbbbk',
+      'kGbbtbbbbbbtbbGk',
+      'kGGbtbbebebtbGGk',
+      'klGGtGbbbbGtGGlk',
+      'kllGtGGGGGGtGllk',
+      'kGllllGGGGlllGGk',
+      'kGGGllllllllGGGk',
+      'kgGgGGgGGgGGgGgk',
+      'kkkkkkkkkkkkkkkk',
+    ],
+    palette: { k: '#0b0d14', b: '#10201c', t: '#050b09', G: '#2f5f52', l: '#79bea6', g: '#1d4038', e: '#c084fc' },
+  },
+  // The Summit: a peak in the snow
+  {
+    rows: [
+      'kkkkkkkkkkkkkkkk',
+      'kbbbbbbbbbbbbbbk',
+      'kbbbbbbwbbbbbbbk',
+      'kbbbbbbwwbbbbbbk',
+      'kbbbbbwwWwbbbbbk',
+      'kbbbbwwWRRwbbbbk',
+      'kbbbbwWRRRrbbbbk',
+      'kbbbwWRRRrrrbbbk',
+      'kbbwWRRRRrrrrbbk',
+      'kbwWRRRrRRrrrrbk',
+      'kwWRRRRRRRRrrrrk',
+      'kRRRRRrRRRRRrrrk',
+      'kRRRRRRRRRRrrrrk',
+      'kwWwwWwwwWwwwWwk',
+      'kWwwwwwwwwwwwwwk',
+      'kkkkkkkkkkkkkkkk',
+    ],
+    palette: { k: '#0b0d14', b: '#a9c6e8', w: '#ffffff', W: '#d5e3f2', R: '#7c8aa0', r: '#526075' },
+  },
+];
+
+/** Small marks for the screens around the game: a heart (full or spent), a check, a padlock, a
+    bookmark (kept or not), the Book of Days, an arrow on, a little flame (no face: that's Ember's),
+    play, and close; the tab bar's four (crossed swords, a skill tree, a game pad, a shield) and the
+    developer's wrench. */
+export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookmark' | 'bookmarkKept' | 'book' | 'chevron' | 'flame' | 'play' | 'close' | 'tabToday' | 'tabSkills' | 'tabPlay' | 'tabHero' | 'wrench', PixelArt> = {
+  heart: {
+    rows: [
+      '.rr.rr.',
+      'rWrrrrr',
+      'rrrrrrd',
+      'rrrrrrd',
+      '.rrrrd.',
+      '..rrd..',
+      '...d...',
+    ],
+    palette: { r: '#ef4444', d: '#b91c1c', W: '#fecaca' },
+  },
+  heartEmpty: {
+    rows: [
+      '.ee.ee.',
+      'eFFeFFe',
+      'eFFFFFe',
+      'eFFFFFe',
+      '.eFFFe.',
+      '..eFe..',
+      '...e...',
+    ],
+    palette: { e: '#3a4060', F: '#1c2033' },
+  },
+  check: {
+    rows: [
+      'kkkkkkkkkk',
+      'kGGGGGGGgk',
+      'kGGGGGGWgk',
+      'kGGGGGWWgk',
+      'kGWGGWWGgk',
+      'kGWWWWGGgk',
+      'kGGWWGGGgk',
+      'kGGGGGGGgk',
+      'kggggggggk',
+      'kkkkkkkkkk',
+    ],
+    palette: { k: K, G: '#10b981', g: '#047857', W: '#ecfdf5' },
+  },
+  lock: {
+    rows: [
+      '..kkkkk..',
+      '.ksSSSsk.',
+      '.ks...sk.',
+      '.ks...sk.',
+      'kkkkkkkkk',
+      'kYYYYYYyk',
+      'kYyykyyyk',
+      'kYyykyyyk',
+      'kyyyyyyyk',
+      'kkkkkkkkk',
+    ],
+    palette: { k: K, s: '#64748b', S: '#cbd5e1', Y: '#fde68a', y: '#d4a017' },
+  },
+  bookmark: {
+    rows: ['sssss', 's...s', 's...s', 's...s', 's...s', 'ss.ss', 's...s'],
+    palette: { s: '#94a3b8' },
+  },
+  bookmarkKept: {
+    rows: ['YYYYY', 'YyyyY', 'YyWyY', 'YyyyY', 'YyyyY', 'YY.YY', 'Y...Y'],
+    palette: { Y: '#d4a017', y: '#fbbf24', W: '#fde68a' },
+  },
+  book: {
+    rows: ['kkkkkkkk.', 'kbbbbbbwk', 'kbYYYYbwk', 'kbbbbbbwk', 'kbbYYbbwk', 'kbbbbbbwk', 'kBBBBBBwk', 'kkkkkkkk.'],
+    palette: { k: '#1c1917', b: '#9a3412', B: '#7c2d12', Y: '#fbbf24', w: '#e7e5e4' },
+  },
+  chevron: {
+    rows: ['s...', 'ss..', '.ss.', '..ss', '.ss.', 'ss..', 's...'],
+    palette: { s: '#94a3b8' },
+  },
+  flame: {
+    rows: ['...o...', '...oo..', '..ooo..', '.ooyoo.', '.oyyyo.', 'ooyWyoo', 'ooyWyoo', '.ooyoo.', '..ooo..'],
+    palette: { o: '#f97316', y: '#fde68a', W: '#ffffff' },
+  },
+  play: {
+    rows: ['k....', 'kk...', 'kkk..', 'kkkk.', 'kkkkk', 'kkkk.', 'kkk..', 'kk...', 'k....'],
+    palette: { k: K },
+  },
+  close: {
+    rows: ['x.....x', 'xx...xx', '.xx.xx.', '..xxx..', '.xx.xx.', 'xx...xx', 'x.....x'],
+    palette: { x: '#7dd3fc' },
+  },
+  tabToday: {
+    rows: ['W.......W', 'sW.....Ws', '.sW...Ws.', '..sW.Ws..', '...sWs...', '..hs.sh..', '.bh...hb.', 'bb.....bb', 'b.......b'],
+    palette: { W: '#f1f5f9', s: '#94a3b8', h: '#fbbf24', b: '#92400e' },
+  },
+  tabSkills: {
+    rows: ['...ggg...', '...gWg...', '...ggg...', '....s....', '..sssss..', '..s...s..', '.ggg.ggg.', '.gWg.gWg.', '.ggg.ggg.'],
+    palette: { g: '#34d399', W: '#ecfdf5', s: '#94a3b8' },
+  },
+  tabPlay: {
+    rows: ['.kkkkkkk.', 'kgggggggk', 'kgWgggrgk', 'kWWWgrgrk', 'kgWgggrgk', 'kggkkkggk', '.kk...kk.'],
+    palette: { k: '#94a3b8', g: '#475569', W: '#f1f5f9', r: '#ef4444' },
+  },
+  tabHero: {
+    rows: ['kkkkkkkkk', 'kBbbbYbbk', 'kBbbbYbbk', 'kYYYYYYYk', 'kbbbbYbbk', '.kbbbYbk.', '.kbbbYbk.', '..kbbYk..', '...kkk...'],
+    palette: { k: '#cbd5e1', B: '#8ea2ef', b: '#4a5fc0', Y: '#fbbf24' },
+  },
+  wrench: {
+    rows: ['.....xx..', '....x..x.', '....x...x', '.....x.x.', '....xxx..', '...xxx...', '..xxx....', '.xxx.....', '.xx......'],
+    palette: { x: '#7dd3fc' },
+  },
+};

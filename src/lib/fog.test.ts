@@ -62,7 +62,7 @@ describe('the Fog', () => {
 
   it('clears a zone when its boss falls, and keeps the best run', () => {
     let s = recordRun(initialState(), { zone: 0, won: false, seconds: 130, kills: 80, level: 6 });
-    expect(s.fog).toEqual({ cleared: 0, runs: 1, best: { 0: { won: false, seconds: 130, kills: 80, level: 6 } } });
+    expect(s.fog).toMatchObject({ cleared: 0, runs: 1, best: { 0: { won: false, seconds: 130, kills: 80, level: 6 } } });
     s = recordRun(s, { zone: 0, won: false, seconds: 90, kills: 40, level: 4 });
     expect(s.fog?.best[0].seconds).toBe(130);
     s = recordRun(s, { zone: 0, won: true, seconds: 270, kills: 300, level: 12 });

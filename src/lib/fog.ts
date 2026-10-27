@@ -1,4 +1,5 @@
 import { daysSinceLastSession, type GameState } from './game';
+import { dayKey } from './days';
 import { getPath, type PathId } from './skills';
 import { CHAPTERS } from '@/story/chapters';
 import { chapterStart, storyState } from '@/story/engine';
@@ -49,7 +50,26 @@ export interface FogProgress {
   best: Record<number, RunBest>;
   /** A dungeon zone's records, each kept on its own: deepest, most monsters, fastest win. */
   records?: Record<number, RunRecord>;
+  /** The last run, for the flame to talk about on Today. */
+  last?: LastRun;
 }
+
+/** What the flame remembers about the last run. */
+export interface LastRun {
+  zone: number;
+  won: boolean;
+  /** The day it was played (dayKey). */
+  day: string;
+  /** It beat one of the zone's records. */
+  record: boolean;
+  /** The zone's boss fell for the first time. */
+  firstClear: boolean;
+  /** It got past the mid-boss (or won). */
+  pastMid: boolean;
+}
+
+/** The floor the mid-boss guards, from 1 (the dungeon's wardenFloor(LAYOUT), counted from 0, plus one). */
+export const MID_FLOOR = 5;
 
 export interface RunRecord {
   /** How deep: floor * 10 + room, or 1000 for a win. */
@@ -202,9 +222,18 @@ function mergeRecord(prev: RunRecord | undefined, r: RunResult): RunRecord {
   return { depth: Math.max(prev.depth, depthOf(r)), kills: Math.max(prev.kills, r.kills), fastest: fast === null ? prev.fastest : prev.fastest === null ? fast : Math.min(prev.fastest, fast) };
 }
 
-export function recordRun(state: GameState, r: RunResult): GameState {
+export function recordRun(state: GameState, r: RunResult, now: Date = new Date()): GameState {
   const fog = state.fog ?? NO_FOG;
   const prev = fog.best[r.zone];
+  const broken = recordsBroken(fog.records?.[r.zone], r);
+  const last: LastRun = {
+    zone: r.zone,
+    won: r.won,
+    day: dayKey(now),
+    record: r.floor ? broken.depth || broken.kills || broken.fastest : false,
+    firstClear: r.won && r.zone === fog.cleared,
+    pastMid: r.won || (r.floor ?? 0) > MID_FLOOR,
+  };
   const better = !prev || (r.won && !prev.won) || (r.won === prev.won && (r.won ? r.seconds < prev.seconds : r.seconds > prev.seconds));
   return {
     ...state,
@@ -213,6 +242,7 @@ export function recordRun(state: GameState, r: RunResult): GameState {
       runs: fog.runs + 1,
       best: better ? { ...fog.best, [r.zone]: { seconds: r.seconds, kills: r.kills, level: r.level, won: r.won } } : fog.best,
       ...(r.floor ? { records: { ...fog.records, [r.zone]: mergeRecord(fog.records?.[r.zone], r) } } : fog.records ? { records: fog.records } : {}),
+      last,
     },
   };
 }

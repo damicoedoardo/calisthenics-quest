@@ -6,7 +6,7 @@ export const ANYTIME: Scene[] = [
   {
     // The first strict pull-up: the negatives are behind you and the bar is yours.
     id: 'first-pullup',
-    when: { skill: { path: 'pull', past: 2 }, chapter: 2 },
+    when: { unlocked: 'negatives', chapter: 2 },
     music: 'memory',
     lines: [
       { who: 'narrator', text: "The bar. You've hung from it, jumped up to it, lowered yourself from it more slow times than you can remember.", film: true },
@@ -19,20 +19,21 @@ export const ANYTIME: Scene[] = [
     ],
   },
   {
-    // Off the bench: the first push-ups from the floor.
+    // Floor push-ups, set after set, and they've stopped being hard.
     id: 'skill-floor',
-    when: { skill: { path: 'push', past: 0 } },
+    when: { unlocked: 'pushup' },
     lines: [
-      { who: 'narrator', text: 'No bench today. Just the floor, your two hands, and the long straight line of you.' },
-      { who: 'narrator', text: "Down. Up. It isn't pretty. It's yours.", pause: 1, film: true },
+      { who: 'narrator', text: "Push-ups, set after set, and your arms don't shake any more." },
+      { who: 'narrator', text: "When did that happen? You couldn't say. It just did.", pause: 1, film: true },
       { who: 'you', text: '...I used to do these without thinking.', pause: 0.6 },
-      { who: 'flame', mood: 'soft', text: "Now you do them while thinking. That's harder. I'm counting it extra." },
+      { who: 'flame', mood: 'soft', text: 'Now you do them without thinking again. But this time you know what it took.' },
     ],
   },
+
   {
     // The first full L-sit: both legs straight, off the ground.
     id: 'skill-lsit',
-    when: { skill: { path: 'core', past: 2 } },
+    when: { unlocked: 'one-leg-lsit' },
     lines: [
       { who: 'narrator', text: 'You press down, lift, and for a moment both legs float out straight in front of you.' },
       { who: 'narrator', text: "You're holding yourself up. Off the ground. On purpose.", pace: 'slow', pause: 1, film: true },
@@ -44,7 +45,7 @@ export const ANYTIME: Scene[] = [
   {
     // The end of the push path.
     id: 'skill-top-push',
-    when: { skill: { path: 'push', past: 4 }, beaten: 3 },
+    when: { unlocked: 'archer-pushup', beaten: 3 },
     place: 'lit-forges',
     lines: [
       { who: 'narrator', show: 'mira', text: 'Word travels. Mira finds you at the forge, wiping her hands on her apron.' },
@@ -57,7 +58,7 @@ export const ANYTIME: Scene[] = [
   {
     // The end of the pull path.
     id: 'skill-top-pull',
-    when: { skill: { path: 'pull', past: 5 }, chapter: 3 },
+    when: { unlocked: 'lsit-pullup', chapter: 3 },
     lines: [
       { who: 'narrator', text: 'The pull path ends here. Out of habit you look for the next step, and there is not one.', pause: 0.8, film: true },
       { who: 'flame', mood: 'soft', text: "So we just... get to enjoy it now? Is that allowed?" },
@@ -68,7 +69,7 @@ export const ANYTIME: Scene[] = [
   {
     // The end of the core path.
     id: 'skill-top-core',
-    when: { skill: { path: 'core', past: 4 }, beaten: 3 },
+    when: { unlocked: 'toes-to-bar', beaten: 3 },
     lines: [
       { who: 'narrator', show: 'kid', text: 'Toes to the bar, slow on the way down. The kid from the armor has been watching the whole time, mouth open.' },
       { who: 'kid', text: 'Can you teach me that?', shot: { enter: 'below' } },

@@ -24,7 +24,7 @@ export const AFTER_LINES: Record<AfterKind, DailyLine[]> = {
     { text: 'Remember this one, for the next time the Hollow says nothing changes.' },
     { text: 'That was {heart1} again, a bit. I knew it was still in there.', needs: 'heart1' },
     { text: 'New. Brand new. I want to frame it.' },
-    { text: "A month ago that wasn't possible. Don't let anyone, especially you, skip past that." },
+    { text: "Not long ago, that wasn't possible. Stop for a second. Let it be big." },
   ],
   short: [
     { text: 'Small still counts. Your week is alive.' },
@@ -44,7 +44,7 @@ export const AFTER_LINES: Record<AfterKind, DailyLine[]> = {
     { text: 'Warm all the way through. That one was good.' },
     { text: 'Another stone for the line by the fire.', fromChapter: 2 },
     { text: "You didn't feel like it at the start, did you? Look at you now." },
-    { text: "That's you keeping a promise to you. It's becoming a habit. A good one." },
+    { text: "Another promise to yourself, kept. I've stopped being surprised. I haven't stopped being proud." },
     { text: 'You lost {heart2}, once. A little more of it came back today.', needs: 'heart2' },
     { text: 'You wrote: "I\'m doing this for {forWho}." Today you did.', needs: 'forWho' },
     { text: 'You wrote: "One day I want to be able to {want}." Closer. Honestly closer.', needs: 'want' },

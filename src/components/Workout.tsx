@@ -7,6 +7,8 @@ import { rewardFor, tierText } from '@/lib/gear';
 import { getPath } from '@/lib/skills';
 import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
 import { useLook } from './Look';
+import { Ember } from './Characters';
+import { flameStage } from '@/story/flame';
 import { Sprite } from './Sprite';
 
 interface Props {
@@ -130,8 +132,12 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
           {Array.from({ length: q.sets }).map((_, i) => (
             <div
               key={i}
-              className={`grid h-12 w-12 place-items-center rounded-lg font-mono text-sm font-bold ${
-                i < logged.length ? 'bg-gold-400 text-ink-950' : i === logged.length ? 'bg-ink-700 text-slate-100 ring-2 ring-gold-400' : 'bg-ink-800 text-slate-500'
+              className={`pixel-notch grid h-12 w-12 place-items-center font-mono text-sm font-bold ${
+                i < logged.length
+                  ? 'bg-gold-400 text-ink-950 shadow-[inset_0_-4px_0_#b45309,inset_0_3px_0_#fde68a]'
+                  : i === logged.length
+                    ? 'bg-ink-700 text-slate-100 shadow-[inset_0_0_0_3px_#fbbf24]'
+                    : 'bg-ink-800 text-slate-500 shadow-[inset_0_-4px_0_#0b0d14]'
               }`}
             >
               {i < logged.length ? logged[i].reps : i + 1}
@@ -205,7 +211,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         )}
       </footer>
 
-      {restUntil && <Rest until={restUntil} next={exerciseDone ? null : `Set ${logged.length + 1} of ${q.name}`} onDone={() => setRestUntil(null)} />}
+      {restUntil && <Rest stage={flameStage(state.sessions.length).id} until={restUntil} next={exerciseDone ? null : `Set ${logged.length + 1} of ${q.name}`} onDone={() => setRestUntil(null)} />}
     </div>
   );
 }
@@ -224,9 +230,22 @@ function Demo({ state, exercise, name, cue }: { state: GameState; exercise: stri
       {big && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ink-950/95 px-6 text-center" onClick={() => setBig(false)}>
           <p className="font-pixel text-xs text-gold-300">{name}</p>
-          <div className="mt-4 rounded-2xl bg-ink-900 p-2 ring-1 ring-ink-700">
-            <Sprite id="exercise" opts={opts} size={320} label={`${name}, demo`} />
-          </div>
+          {exercise === 'diamond-pushup' ? (
+            // From the side the diamond can't be seen, so this one also shows the front.
+            <div className="mt-4 space-y-2">
+              <div className="mx-auto w-fit rounded-2xl bg-ink-900 p-2 ring-1 ring-ink-700">
+                <Sprite id="exercise" opts={opts} size={192} label={`${name}, from the side`} />
+              </div>
+              <div className="mx-auto w-fit rounded-2xl bg-ink-900 p-2 ring-1 ring-ink-700">
+                <Sprite id="exercise" opts={{ ...opts, view: 'front' }} size={192} label={`${name}, from the front`} />
+              </div>
+              <p className="max-w-xs text-xs text-slate-400">From the front: hands together under your chest, thumbs and fingers touching.</p>
+            </div>
+          ) : (
+            <div className="mt-4 rounded-2xl bg-ink-900 p-2 ring-1 ring-ink-700">
+              <Sprite id="exercise" opts={opts} size={320} label={`${name}, demo`} />
+            </div>
+          )}
           <p className="mt-4 max-w-xs text-sm text-slate-300">{cue}</p>
           <p className="mt-6 text-xs text-slate-500">Tap to close</p>
         </div>
@@ -235,7 +254,10 @@ function Demo({ state, exercise, name, cue }: { state: GameState; exercise: stri
   );
 }
 
-function Rest({ until, next, onDone }: { until: number; next: string | null; onDone: () => void }) {
+/** The rest bar's cells: one lights every few seconds. */
+const REST_CELLS = 10;
+
+function Rest({ stage, until, next, onDone }: { stage: ReturnType<typeof flameStage>['id']; until: number; next: string | null; onDone: () => void }) {
   const [now, setNow] = useState(Date.now());
   const left = Math.max(0, Math.ceil((until - now) / 1000));
 
@@ -254,12 +276,16 @@ function Rest({ until, next, onDone }: { until: number; next: string | null; onD
   const pct = 1 - left / REST_SECONDS;
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ink-950/95 px-6 text-center" onClick={onDone}>
-      <p className="font-pixel text-[10px] text-slate-400">Rest</p>
+      {/* Your flame keeps you company while you rest. */}
+      <Ember size={stage === 'spark' ? 120 : 88} stage={stage} mood="happy" />
+      <p className="mt-2 font-pixel text-[10px] text-slate-400">Rest</p>
       <p className="mt-3 font-mono text-7xl font-bold text-slate-50">
         {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
       </p>
-      <div className="mt-5 h-3 w-56 overflow-hidden rounded-sm bg-ink-700">
-        <div className="h-full bg-gold-400 transition-all" style={{ width: `${pct * 100}%` }} />
+      <div className="mt-5 flex w-64 gap-1.5" aria-hidden>
+        {Array.from({ length: REST_CELLS }).map((_, i) => (
+          <div key={i} className={`pixel-notch h-5 flex-1 ${i < Math.floor(pct * REST_CELLS + 0.001) ? 'bg-gold-400 shadow-[inset_0_-3px_0_#b45309]' : 'bg-ink-700 shadow-[inset_0_-3px_0_#1c2033]'}`} />
+        ))}
       </div>
       <p className="mt-5 text-sm text-slate-400">{next ? `Next: ${next}` : 'Next exercise is ready.'}</p>
       <p className="mt-1 text-xs text-slate-500">Breathe. Shake out your arms.</p>

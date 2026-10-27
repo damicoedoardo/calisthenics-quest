@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect } from 'react';
-import { Check, Lock, Play } from 'lucide-react';
 import { Sprite } from './Sprite';
 import { Ember } from './Characters';
 import { Hero } from './Hero';
@@ -19,11 +18,6 @@ interface Props {
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 /** The game between workouts: your power from training, and the zones of the Fog. */
-/** A pale zone color (the Summit's) needs a dark icon on it. */
-function isLight(hex: string): boolean {
-  const n = parseInt(hex.slice(1), 16);
-  return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 160;
-}
 
 /**
  * While the Play tab sits idle, get the newest open zone's run ready: download and load the game
@@ -133,11 +127,14 @@ export function PlayTab({ state, onPlay }: Props) {
           const open = st.state !== 'locked';
           return (
             <div key={z.id} className={`flex items-center gap-3 rounded-2xl p-3 ${open ? 'bg-ink-800' : 'bg-ink-900 opacity-80'}`}>
-              <span
-                className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl font-pixel text-[10px] ${isLight(z.fog) ? 'text-ink-900' : 'text-slate-200'}`}
-                style={{ background: z.fog }}
-              >
-                {st.state === 'cleared' ? <Check size={18} /> : st.state === 'locked' ? <Lock size={16} /> : z.id + 1}
+              {/* The zone's view, dim and grey until it opens; a check once its boss is beaten. */}
+              <span className="relative grid h-10 w-10 shrink-0 place-items-center">
+                <Sprite id="zoneIcon" opts={{ zone: z.id }} size={36} label="" className={st.state === 'locked' ? 'opacity-50 brightness-50 grayscale' : ''} />
+                {st.state !== 'open' && (
+                  <span className="absolute -bottom-2 -right-2">
+                    <Sprite id="uiIcon" opts={{ name: st.state === 'cleared' ? 'check' : 'lock' }} size={st.state === 'cleared' ? 24 : 22} label={st.state === 'cleared' ? 'Cleared' : 'Locked'} />
+                  </span>
+                )}
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-slate-100">{z.name}</p>
@@ -148,14 +145,14 @@ export function PlayTab({ state, onPlay }: Props) {
                       ? best.won
                         ? `Cleared in ${clock(best.seconds)}`
                         : `Best: ${clock(best.seconds)}, level ${best.level}`
-                      : `Survive the waves, then face ${z.bossName}.`}
+                      : `Ten floors down, then ${z.bossName}.`}
                 </p>
                 {st.state === 'open' && !best && z.firstTry && <p className="mt-0.5 text-[11px] text-gold-300">{z.firstTry}</p>}
                 {st.state === 'open' && !best?.won && <p className="mt-0.5 text-[11px] text-sky-300">{z.hint}</p>}
               </div>
               {open && (
                 <button onClick={() => onPlay(z)} className="flex items-center gap-1.5 rounded-xl bg-gold-400 px-3 py-2 font-pixel text-[9px] text-ink-950 active:scale-95">
-                  <Play size={12} className="fill-ink-950" />
+                  <Sprite id="uiIcon" opts={{ name: 'play' }} size={14} label="" />
                   {st.state === 'cleared' ? 'Again' : 'Play'}
                 </button>
               )}

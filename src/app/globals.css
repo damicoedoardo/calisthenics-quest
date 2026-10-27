@@ -38,6 +38,12 @@ body {
     0 0 0 4px #30375a;
 }
 
+/* A box with its corners notched off a step, like the dungeon's frames: the set boxes, the rest
+   bar's cells, the week's pips. Inset shadows on it draw a bevel or an outline. */
+.pixel-notch {
+  clip-path: polygon(0 3px, 3px 3px, 3px 0, calc(100% - 3px) 0, calc(100% - 3px) 3px, 100% 3px, 100% calc(100% - 3px), calc(100% - 3px) calc(100% - 3px), calc(100% - 3px) 100%, 3px 100%, 3px calc(100% - 3px), 0 calc(100% - 3px));
+}
+
 /* Sprite sheets (src/components/Sprite.tsx): steps through --n frames of width --fw on the row at
    --y. Duration, step count and looping come from the clip, set inline. */
 @keyframes sprite {
