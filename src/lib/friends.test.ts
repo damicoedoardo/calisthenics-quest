@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ago, codeInUrl, friendTrainedToday, inviteLink, myCard, showCode, statusOf, type FriendCard } from './friends';
 import { initialState } from './game';
+import { canStart, startToJoin, type Party, type PartyMember } from './party';
 
 const card = (p: Partial<FriendCard> = {}): FriendCard => ({
   id: 'x',
@@ -49,5 +50,24 @@ describe('friends', () => {
     expect(c.trained_at).toBeNull();
     expect(c.playing).toBe('The Ember Road');
     expect(c.look.gear?.weapon).toBeDefined();
+  });
+});
+
+describe('parties', () => {
+  const now = new Date('2026-10-27T12:00:00Z');
+  const member = (id: string, p: Partial<PartyMember> = {}): PartyMember => ({ ...card({ id }), ready: false, leader: false, ...p });
+  const party = (p: Partial<Party> = {}): Party => ({ id: 'p', leader: 'a', zone: 0, seed: 7, started_at: '2026-10-27T11:59:00Z', members: [member('a', { leader: true }), member('b')], invited: [], ...p });
+
+  it('walks into a fresh start once', () => {
+    expect(startToJoin(party(), null, now)).toEqual({ zone: 0, seed: 7, at: '2026-10-27T11:59:00Z' });
+    expect(startToJoin(party(), '2026-10-27T11:59:00Z', now)).toBeNull();
+    expect(startToJoin(party({ started_at: '2026-10-27T11:00:00Z' }), null, now)).toBeNull();
+    expect(startToJoin(party({ started_at: null }), null, now)).toBeNull();
+  });
+
+  it('starts when a friend is in and everyone else is ready', () => {
+    expect(canStart(party())).toBe(false);
+    expect(canStart(party({ members: [member('a', { leader: true }), member('b', { ready: true })] }))).toBe(true);
+    expect(canStart(party({ members: [member('a', { leader: true })] }))).toBe(false);
   });
 });

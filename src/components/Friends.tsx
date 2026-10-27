@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, Flame, Share2, UserPlus, Users, X } from 'lucide-react';
+import { Check, Flame, Share2, Swords, UserPlus, Users, X } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { getClass, makeGear, type GearSlot } from '@/lib/gear';
 import { codeInUrl, friendTrainedToday, inviteLink, myCard, showCode, statusOf, type FriendCard, type FriendsList } from '@/lib/friends';
 import { acceptFriend, addFriend, getFriends, removeFriend, sendCard } from '@/lib/friends-client';
+import { inviteToParty, setLobbyOpen } from '@/lib/party-client';
 import { cloudConfigured, useCloudStatus } from '@/lib/cloud-client';
 import { normalizeLook } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
@@ -69,14 +70,14 @@ function takeInvite(): string | null {
 }
 
 /** A friend's hero, small, in their own look and gear. */
-function FriendHero({ f, size = 44 }: { f: FriendCard; size?: number }) {
+export function FriendHero({ f, size = 44 }: { f: FriendCard; size?: number }) {
   const cls = f.class_id ?? undefined;
   const tiers = f.look?.gear ?? {};
   const gear = Object.fromEntries((['weapon', 'armor', 'shield'] as GearSlot[]).map((s) => [s, makeGear(s, tiers[s] ?? (s === 'shield' ? 0 : 1), cls)])) as Record<GearSlot, ReturnType<typeof makeGear>>;
   return <Hero gear={gear} classId={cls} size={size} bounce={false} look={normalizeLook((f.look ?? undefined) as Partial<Look> | undefined)} />;
 }
 
-function Row({ f, now, children }: { f: FriendCard; now: Date; children?: React.ReactNode }) {
+export function Row({ f, now, children }: { f: FriendCard; now: Date; children?: React.ReactNode }) {
   const cls = getClass(f.class_id ?? undefined);
   const dot = f.playing ? 'bg-gold-300' : f.online ? 'bg-emerald-400' : 'bg-slate-600';
   return (
@@ -104,7 +105,7 @@ function Row({ f, now, children }: { f: FriendCard; now: Date; children?: React.
 }
 
 /** Hero tab: your friend code, adding friends, and who is online, in the Fog, or trained today. */
-export function FriendsCard({ sandbox }: { sandbox: boolean }) {
+export function FriendsCard({ state, update, sandbox }: { state: GameState; update: (fn: (s: GameState) => GameState) => void; sandbox: boolean }) {
   const { signedIn } = useCloudStatus();
   const [list, setList] = useState<FriendsList | null>(null);
   const [code, setCode] = useState('');
@@ -158,13 +159,15 @@ export function FriendsCard({ sandbox }: { sandbox: boolean }) {
         <p className="mt-2 text-xs text-slate-500">Loading…</p>
       ) : (
         <div className="mt-3 space-y-3">
-          {!list.me.name && (
+          {/* Heroes from before the name step: asked here once, kept in the save. */}
+          {!state.profile.name && (
             <form
               className="space-y-2 rounded-xl bg-ink-900/60 p-3"
               onSubmit={async (e) => {
                 e.preventDefault();
                 const n = name.trim();
                 if (!n) return;
+                update((s) => ({ ...s, profile: { ...s.profile, name: n } }));
                 try {
                   await sendCard({ name: n });
                   await refresh();
@@ -258,7 +261,22 @@ export function FriendsCard({ sandbox }: { sandbox: boolean }) {
           {list.friends.length > 0 ? (
             <ul className="divide-y divide-ink-700">
               {list.friends.map((f) => (
-                <Row key={f.id} f={f} now={now} />
+                <Row key={f.id} f={f} now={now}>
+                  <button
+                    aria-label={`Invite ${f.name || 'them'} to your party`}
+                    onClick={async () => {
+                      try {
+                        await inviteToParty(f.id);
+                        setLobbyOpen(true);
+                      } catch (e) {
+                        setMsg(e instanceof Error ? e.message : "Couldn't invite them right now.");
+                      }
+                    }}
+                    className="flex items-center gap-1 rounded-lg bg-ink-600 px-2.5 py-2 text-xs font-semibold"
+                  >
+                    <Swords size={14} /> Party
+                  </button>
+                </Row>
               ))}
             </ul>
           ) : (
