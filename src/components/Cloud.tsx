@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Cloud, CloudOff, LogOut, Mail, Trash2 } from 'lucide-react';
+import { Cloud, CloudOff, Loader2, LogOut, Mail, Trash2 } from 'lucide-react';
 import { useModal } from './useModal';
 import type { GameState } from '@/lib/game';
 import { cloudState, describe, plan, type CloudCopy } from '@/lib/cloud';
@@ -209,6 +209,7 @@ export function CloudSave({ sandbox }: { sandbox: boolean }) {
   const st = useCloudStatus();
   const [email, setEmail] = useState('');
   const [msg, setMsg] = useState('');
+  const [sending, setSending] = useState(false);
   if (!cloudConfigured) return null;
   if (sandbox) return <p className="mt-4 text-xs text-slate-500">Cloud backup is off in the sandbox.</p>;
 
@@ -234,10 +235,19 @@ export function CloudSave({ sandbox }: { sandbox: boolean }) {
           className="flex gap-2"
           onSubmit={async (e) => {
             e.preventDefault();
+            if (sending) return;
             if (!email.includes('@')) return setMsg('That email looks off.');
             begin();
-            const err = await signInWithEmail(email.trim());
-            setMsg(err ?? 'Check your email for the sign-in link.');
+            setSending(true);
+            setMsg('');
+            try {
+              const err = await signInWithEmail(email.trim());
+              setMsg(err ?? 'Check your email for the sign-in link.');
+            } catch {
+              setMsg("Couldn't send the link. Check your connection and try again.");
+            } finally {
+              setSending(false);
+            }
           }}
         >
           <input
@@ -248,8 +258,14 @@ export function CloudSave({ sandbox }: { sandbox: boolean }) {
             aria-label="Email for a sign-in link"
             className="min-w-0 flex-1 rounded-xl bg-ink-900 px-3 text-sm text-slate-100 placeholder:text-slate-500"
           />
-          <button type="submit" className="flex items-center gap-1 rounded-xl bg-ink-600 px-3 py-3 text-sm font-semibold">
-            <Mail size={16} /> Link
+          <button
+            type="submit"
+            disabled={sending}
+            aria-busy={sending}
+            className="flex items-center gap-1 rounded-xl bg-ink-600 px-3 py-3 text-sm font-semibold disabled:opacity-70"
+          >
+            {sending ? <Loader2 size={16} className="animate-spin motion-reduce:animate-none" /> : <Mail size={16} />}
+            {sending ? 'Sending' : 'Link'}
           </button>
         </form>
         {msg && <p className="text-xs text-sky-300">{msg}</p>}
