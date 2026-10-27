@@ -21,6 +21,19 @@ pieces of screen state, and decides what is on screen:
    readers). Overlays opened from inside a tab use `useModal` for the same thing.
 4. Back on the tabs, the next due scene from `scenesToPlay` (`src/story/engine.ts`) plays.
 
+## Held sideways
+
+The tabs work both ways up. Upright, everything is one `max-w-md` column with the bottom tab bar.
+On a phone held sideways (the `land:` variant in `tailwind.config.ts`: landscape and at most
+600px tall; tablets and desktops keep the upright layout) `page.tsx` turns the tab bar into a rail
+down the left with the hero at its top, shrinks the header to one line (FORMA, level, XP bar),
+and lets the column take the full width, clear of the notch (`env(safe-area-inset-left/right)`).
+Each tab then splits into two columns of independent cards: Today (story and flame | check-in,
+quest, Start), Train (library, kit, embers | the plan, placed by grid so the upright order stays),
+Play (the Fog and the worlds | gear and power), Hero (hero and stat points | the rest); the look
+editor puts its preview beside the choices. Upright must look exactly as before: add sideways
+changes only as `land:` classes.
+
 ## Components (`src/components/`)
 
 | Component | Job |

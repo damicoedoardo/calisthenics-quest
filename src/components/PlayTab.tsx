@@ -78,7 +78,9 @@ export function PlayTab({ state, onPlay, update }: Props) {
   ];
 
   return (
-    <div className="space-y-4">
+    // Sideways: the worlds on the left, your gear and power on the right.
+    <div className="space-y-4 land:grid land:grid-cols-2 land:items-start land:gap-4 land:space-y-0">
+      <div className="space-y-4">
       <section className="rounded-2xl bg-ink-800 p-4 pixel-border">
         <div className="flex items-center gap-3">
           <Hero gear={gearOf(state)} classId={state.profile.classId} size={72} />
@@ -91,7 +93,9 @@ export function PlayTab({ state, onPlay, update }: Props) {
       </section>
 
       <WorldPicker state={state} onPlay={onPlay} />
+      </div>
 
+      <div className="space-y-4">
       <FogGearCard state={state} update={update} />
 
       <section className="rounded-2xl bg-ink-800 p-4">
@@ -124,8 +128,7 @@ export function PlayTab({ state, onPlay, update }: Props) {
             : 'Rest days count too: after a full day off, or a minute by the fire, runs start with one more free skill.'}
         </p>
       </section>
-
-
+      </div>
     </div>
   );
 }

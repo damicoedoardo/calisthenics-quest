@@ -184,10 +184,12 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   }
 
   return (
-    <div ref={root} className="mx-auto flex min-h-dvh max-w-md flex-col">
-      <header className="safe-top sticky top-0 z-20 bg-ink-950/90 px-4 pb-3 backdrop-blur">
+    // Held sideways (the `land` screen), the tab bar becomes a rail down the left and the column
+    // takes the rest of the width; the header shrinks to one line.
+    <div ref={root} className="mx-auto flex min-h-dvh max-w-md flex-col land:ml-[calc(4.5rem+env(safe-area-inset-left))] land:mr-0 land:max-w-none land:pr-[env(safe-area-inset-right)]">
+      <header className="safe-top sticky top-0 z-20 bg-ink-950/90 px-4 pb-3 backdrop-blur land:!pt-2 land:pb-2">
         {sandbox && (
-          <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-dashed border-sky-400/60 px-3 py-1.5 text-[11px] text-sky-300">
+          <div className="mb-2 flex land:mb-1.5 land:py-1 items-center justify-between gap-2 rounded-lg border border-dashed border-sky-400/60 px-3 py-1.5 text-[11px] text-sky-300">
             <span>Sandbox: your real save is untouched</span>
             <a href="/lab/night" className="shrink-0 underline">
               Back to tonight
@@ -195,11 +197,11 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           </div>
         )}
         <div className="flex items-center gap-3">
-          <div className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800">
+          <div className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800 land:hidden">
             <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} />
           </div>
-          <div className="min-w-0 flex-1">
-            <div className="flex items-baseline justify-between">
+          <div className="min-w-0 flex-1 land:flex land:items-center land:gap-4">
+            <div className="flex items-baseline justify-between land:shrink-0 land:items-center land:gap-4">
               <div className="flex items-center gap-2">
                 <p onClick={tapName} className="font-pixel text-sm tracking-widest text-gold-400">
                   FORMA
@@ -210,17 +212,17 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
                 Lv {lvl.level} · <span className="text-slate-200">{lvl.title}</span>
               </p>
             </div>
-            <div className="mt-1.5 h-2.5 overflow-hidden rounded-sm bg-ink-700">
+            <div className="mt-1.5 h-2.5 overflow-hidden rounded-sm bg-ink-700 land:mt-0 land:flex-1">
               <div className="h-full bg-gradient-to-r from-gold-500 to-gold-300 transition-all duration-700" style={{ width: `${lvl.pct * 100}%` }} />
             </div>
-            <p className="mt-1 text-right font-mono text-[11px] text-slate-500">
+            <p className="mt-1 text-right font-mono text-[11px] text-slate-500 land:mt-0 land:shrink-0">
               {lvl.into} / {lvl.needed} XP
             </p>
           </div>
         </div>
       </header>
 
-      <main className="flex-1 px-4 pb-28 pt-2">
+      <main className="flex-1 px-4 pb-28 pt-2 land:pb-6">
         {tab === 'today' ? (
           <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook} />
         ) : tab === 'train' ? (
@@ -237,8 +239,12 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         )}
       </main>
 
-      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-ink-700 bg-ink-900/95 backdrop-blur">
-        <div className="mx-auto grid max-w-md grid-cols-4">
+      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-ink-700 bg-ink-900/95 backdrop-blur land:right-auto land:top-0 land:flex land:w-[calc(4.5rem+env(safe-area-inset-left))] land:flex-col land:items-center land:justify-center land:gap-3 land:border-r land:border-t-0 land:pl-[env(safe-area-inset-left)]">
+        {/* Sideways, the hero from the header sits at the top of the rail. */}
+        <div aria-hidden className="hidden h-11 w-11 place-items-center rounded-xl bg-ink-800 land:grid">
+          <Hero gear={gear} classId={state.profile.classId} size={38} bounce={false} />
+        </div>
+        <div className="mx-auto grid max-w-md grid-cols-4 land:mx-0 land:w-full land:grid-cols-1">
           {TABS.map(({ id, label, icon }) => (
             <button
               key={id}
@@ -247,7 +253,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
                 setTab(id);
                 window.scrollTo({ top: 0 });
               }}
-              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium ${tab === id ? 'text-gold-400' : 'text-slate-500'}`}
+              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium land:py-2 ${tab === id ? 'text-gold-400' : 'text-slate-500'}`}
             >
               {/* Full color on the open tab; faded and grey on the others. */}
               <span className="grid h-[22px] place-items-center">

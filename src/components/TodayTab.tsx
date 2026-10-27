@@ -61,6 +61,9 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
 
   return (
     <div className="space-y-4">
+      {/* Sideways: the story and the flame on the left, today's quest on the right. */}
+      <div className="space-y-4 land:grid land:grid-cols-2 land:items-start land:gap-4 land:space-y-0">
+      <div className="space-y-4">
       <InstallHint />
 
       {!state.profile.voice && (
@@ -108,6 +111,9 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
       {isRestDay(state, now) && <RestCard state={state} now={now} onSit={() => setOverlay('fire')} />}
 
       <QuoteCard state={state} now={now} update={update} onOpenBook={() => setOverlay('book')} />
+      </div>
+
+      <div className="space-y-4">
 
       {!inProgress && (
         <section>
@@ -168,6 +174,8 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
         <Sprite id="uiIcon" opts={{ name: 'play' }} size={14} label="" />
         {inProgress ? 'Continue quest' : doneToday ? 'Start the next quest' : 'Start quest'}
       </button>
+      </div>
+      </div>
 
       {overlay === 'fire' && (
         <SitByFire
