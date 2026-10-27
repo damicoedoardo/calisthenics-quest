@@ -50,6 +50,7 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change where the bot goes on a floor | `route` in `bot.ts` |
 | Tune items (how strong, how much they ask, how rare) | `src/balance/items.ts`: `ITEM_POWER` (all finds next to the starter kit), `ITEM_BASE`, `BONUS_SIZE`, `RARITY_SIZE`, `RARITY_WEIGHTS`, `RARITY_LEAN`, `NEED`; then `pnpm balance` and `pnpm fog:tune` |
 | Change how often things drop, or the bag's size | `DROPS`, `DROP_LUCK` and `BAG` in `src/balance/items.ts` (read by `kill`, `openChest` in `engine.ts`) |
+| Change how often co-op runs drop forge materials | `MAT_DROPS` in `src/balance/upgrades.ts` (`findMats` in `engine.ts`; see [forge.md](forge.md)) |
 | Add an item kind or a class's weapon | `WEAPONS`, `ARMORS`, `ItemIcon` (and `ItemArt`, `looksOf`) in `items.ts`; its art in `ITEM_ROWS` and `LEGEND_ROWS` (`src/sprites/characters/items.ts`), and how the hero wears it in `heroSpec` (`src/sprites/characters/hero.ts`), see [sprites.md](sprites.md) |
 | Change how an item looks (its kind, the seed that picks its colors) | `looksOf` and `seedOf` in `items.ts` (the seed comes from the name, so one name always looks the same) |
 | Add something each hero has (a cooldown, a count, a buff for the run) | `Hero` in `engine.ts` and its start in `newHero` (see "The hero, and the party") |
@@ -78,10 +79,20 @@ party order. The rules treat every hero the same:
 - Drops are personal (`dropEach`): each standing hero gets their own item, rolled for their class
   and tagged with their id (`loot[].for`, set only in a party). Only that hero sees and takes it
   (`mine`, used by the pick-up, the bot and the scene). The boss's drop goes into every bag.
+- Co-op materials for Mira's forge (`findMats`): only in a party, each standing hero rolls their
+  own on kills, chests, the mid-boss, the boss and a clear with nobody down, counted on
+  `Hero.mats` (a `mat` event for you) and handed home in `RunEnd.mats`. A solo run never calls
+  the rng for them, so solo replays are unchanged ([forge.md](forge.md)).
 - A hero at 0 HP is down (`fall`) and stops acting; the run ends when the whole party is down.
   `RunEnd` is still yours.
 - A pick (skill or chest item) by anyone still holds the whole run (`choosing`), and the stairs ask
   once for everyone: changing that is the next co-op step. The Summit's friends walk beside you.
+
+**A practice party run** (until the game server exists): the scene takes `RunSetup.friends`
+(name, class and their own hero sheets from `friendSheets` in `src/game/sheets.ts`) and `seed`,
+gives each friend your strength in their own class, steps them with `botInput`, takes their picks
+for them, and draws them with their name over their head (grey while down). Started from a
+party's lobby, or `/lab/night` "A party run (practice)" (`?run=0&party`).
 
 The plan is in the "FORMA co-op Fog" doc (project thread "Explore multiplayer dungeon runs with
 friends"). `engine.test.ts` ("a party") plays a two-bot run to the end.

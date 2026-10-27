@@ -1,7 +1,8 @@
 /* Stat points: earned by training, spent on the Hero tab, used by the Fog (src/lib/stats.ts).
-   Goal: a player who spreads their points ends six months (about 70 points in each of six stats)
-   where 100 points in each of the old four ended: +60% damage, +48% attack speed, +75 HP, a fifth
-   of each hit blocked; and on top, about +25% walk speed and one hit in five a crit. */
+   Goal: points are about 40% of a player's power growth (POWER_SPLIT in power.ts); a player who
+   spreads their points ends six months (about 70 points in each of six stats) at about +80%
+   damage, +65% attack speed, +105 HP, a fifth of each hit blocked, about +25% walk speed and one
+   hit in five a crit. */
 
 /** Points for each thing done. */
 export const POINTS = {
@@ -21,7 +22,7 @@ export const STARTING_POINTS = 6;
 /** What the first point in each stat is worth (health in HP, the rest as a share: 0.0065 = +0.65%).
     speed is attack speed (shown as Haste), move is walk speed (shown as Speed), crit the chance of
     a hit doing double. Armor's is `ARMOR_PER_POINT`. */
-export const POINT_WORTH = { health: 1.33, damage: 0.0087, speed: 0.0072, move: 0.0044, crit: 0.0026 } as const;
+export const POINT_WORTH = { health: 1.8, damage: 0.0117, speed: 0.00972, move: 0.0044, crit: 0.0026 } as const;
 
 /** What every champion has before any point. */
 export const STAT_BASE = { health: 0, armor: 0, damage: 0.12, speed: 0.08, move: 0, crit: 0.05 } as const;

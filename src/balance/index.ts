@@ -7,3 +7,5 @@ export * from './stats';
 export * from './economy';
 export * from './items';
 export * from './dungeon';
+export * from './upgrades';
+export * from './power';

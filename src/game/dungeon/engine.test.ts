@@ -405,6 +405,21 @@ describe('a party (co-op)', () => {
     expect(mine(theirs, friend)).toBe(true);
   });
 
+  it('drops co-op materials for the forge, each hero their own, and a solo run none', () => {
+    const run = party(25);
+    const [me, friend] = run.party;
+    expect(me.mats.thread ?? 0).toBeGreaterThan(0);
+    expect(friend.mats.thread ?? 0).toBeGreaterThan(0);
+    expect(run.over!.mats).toEqual(me.mats);
+    const solo = createRun({ zone: ZONES[0], power, classId: 'warrior', seed: 21, autoPick: true });
+    for (let i = 0; i < 60 * 60 * 30 && !solo.over; i++) {
+      stepRun(solo, botInput(solo, solo.hero));
+      solo.events.length = 0;
+    }
+    expect(solo.hero.mats).toEqual({});
+    expect(solo.over!.mats).toBeUndefined();
+  });
+
   it('a fallen hero is down, and the run goes on while a friend stands', () => {
     const run = createRun({ zone: ZONES[0], power, classId: 'warrior', seed: 4, friends: [{ power, classId: 'archer' }] });
     run.party[1].hp = 1;

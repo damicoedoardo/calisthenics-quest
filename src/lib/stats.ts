@@ -26,7 +26,8 @@ export interface Stat {
 
 const pct = (what: string) => (v: number) => `+${Math.round(v * 100)}% ${what}`;
 
-/* Sized in src/balance/stats.ts (its goal: what six months of points spread evenly add up to). */
+/* What a point is worth per stat is in src/balance/stats.ts (POINT_WORTH), sized so points are about
+   40% of a player's power growth (POWER_SPLIT). */
 export const STATS: Stat[] = [
   { id: 'health', name: 'Health', text: 'More HP', per: POINT_WORTH.health, show: (v) => `+${Math.round(v)} HP` },
   { id: 'armor', name: 'Armor', text: 'Every hit on you does less', per: ARMOR_PER_POINT, show: (v) => `${Math.round(v * 100)}% blocked` },

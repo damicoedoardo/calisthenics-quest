@@ -43,7 +43,7 @@ level or story.
   walk in with: only what your points let you wear today; the rest stays home, safe.
   `settleGear` runs after `recordRun`: a win or a walk out by the stairs keeps what you wore and
   puts the bag in the vault (the best first, the rest left behind if it's full); dying loses all
-  of it, except the one item your flame holds (see [forge.md](forge.md)). Mid-run, `atRisk` says
+  of it, except the one item your flame holds and gear forged to +10 or more, which comes home a few pluses lower (see [forge.md](forge.md)). Mid-run, `atRisk` says
   the same thing ahead of time (what a fall would take, what the flame would hold, or would hold
   if you trained), for the HUD's bag, the bag panel and the stairs card. What a full vault can't take
   is melted into embers. `wearFromVault` and `takeOffToVault` are the vault's buttons
@@ -81,6 +81,8 @@ runs again at the end. Each button shows its key (`Key`), the pause menu lists t
 ## Balance
 
 The rule for every balance number, and the changelog, are in [balance.md](balance.md).
+`src/game/power.ts` scores a hero's points, class and gear on one scale (`powerScore`, see
+[balance.md](balance.md)).
 `pnpm sim` writes snapshots of simulated players (see [../dev/testing.md](../dev/testing.md)), then
 `pnpm fog:sim` plays hundreds of bot runs on them per zone and class. `DIALS` in
 `src/balance/dungeon.ts` are the main knobs. The sim starts every run in the starter kit with

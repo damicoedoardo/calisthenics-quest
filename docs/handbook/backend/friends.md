@@ -1,7 +1,7 @@
 ---
 type: conceptual
 title: Friends
-description: Friend codes, asks and accepts, and who is online, in the Fog or trained today — the profiles and friends tables, the /me and /friends routes, the heartbeat and the Friends card on the Hero tab.
+description: Friend codes, asks and accepts, who is online, in the Fog or trained today, and parties (invite, lobby, ready, start, practice run) — the tables, the /me, /friends and /party routes, and the screens.
 tags: [backend, friends, social, co-op]
 timestamp: 2026-10-27
 ---
@@ -14,7 +14,7 @@ itself never does.
 
 ## What a friend sees
 
-Each player has a public **card** on the server: a name (asked the first time), class, level,
+Each player has a public **card** on the server: the hero's name (from the save, asked after the look in the opening; older saves are asked on the Friends card), class, level,
 look and worn gear tiers, when they last trained, and whether the app is open (`online`) or in a
 run (`playing`, the zone's name). Nothing else of the save is shared. A friend shows as:
 
@@ -48,6 +48,41 @@ waits until the other side accepts; adding back someone who asked you is a yes.
 - An invite link opened before sign-in keeps the code in `localStorage` and adds the friend once
   you're signed in.
 
+## Parties
+
+Up to 4 friends (`MAX_PARTY`) go into the Fog together. The **leader** invites friends (the
+Party button on a friend's row, or Invite in the lobby), picks the zone among the ones open to
+them, and starts once everyone else taps ready. A **start** is a seed and a time on the party:
+every phone sees it on its next look and walks in (`startToJoin` in `src/lib/party.ts`, run from
+`page.tsx`, played once per phone, `forma-party-played-v1`); then the party is back in its lobby
+with the ready flags cleared. Until the game server exists each phone plays a **practice run**:
+you, with bots playing your friends' heroes (see [../game/dungeon.md](../game/dungeon.md)). A
+party run in a zone you haven't opened keeps its loot but not the clear.
+
+| File | What |
+|---|---|
+| `backend/app/party.py` | Tables `parties`, `party_members`, `party_invites` (made on start), `PgStore`, `MemoryStore` |
+| `backend/app/routes/party.py` | `GET /party`, `POST /party/invite`, `/join`, `/decline`, `/leave`, `/start`, `PUT /party/ready`, `/zone` |
+| `backend/tests/test_party.py` | Invite, join, ready, start; only friends; only the leader; leaving |
+| `src/lib/party.ts`, `party-client.ts` | Types, `startToJoin`, `canStart`; the calls and the shared party view (`usePartyView`), the lobby's open flag |
+| `src/components/Party.tsx` | `usePartyPoll` (every 4 s in a party, 30 s otherwise), `PartyInviteCard`, `PartyButton`, `PartyLobby` |
+
+## Gifts of forge materials
+
+Friends can give each other co-op materials for Mira's forge ([../game/forge.md](../game/forge.md)).
+On the Friends card each friend has a gift button: pick a material you have and how many, and
+**Give**. The server keeps the gift in `gifts` (`backend/app/gifts.py`, `routes/gifts.py`) and only
+then does your phone take the materials out of your save (`giveMats`). Your friend's card claims
+what waits on each refresh (`POST /gifts/claim`, each gift handed out once) into their save
+(`takeGifts`) and says who gave what.
+
+- Only to an accepted friend, only the four materials, and at most 10 a day from one friend to
+  another (`GIFTS.perDay` in `src/balance/upgrades.ts`; the server's copy is `PER_DAY` in
+  `routes/gifts.py`, keep the two the same). Over it, the server says how many are left (429).
+- The save is on the phone, so the server can't check you really had what you give; it only
+  makes sure a gift arrives once. There is no market and no trading back.
+- Tested in `backend/tests/test_gifts.py`; the save side in `src/lib/forge.test.ts`.
+
 ## How to change things
 
 | I want to... | Edit |
@@ -55,3 +90,6 @@ waits until the other side accepts; adding back someone who asked you is a yes.
 | Share something new on the card | `Card` in `routes/friends.py`, a column in `SCHEMA` + `init.sql` (`ALTER TABLE ... ADD COLUMN IF NOT EXISTS` in `SCHEMA` for live servers), `MyCard`/`myCard` in `friends.ts` |
 | Change how a friend looks in the list | `Row` / `FriendHero` in `Friends.tsx` |
 | Change when someone counts as online | `ONLINE_FOR` (server) and `BEAT_MS` (app) |
+| Change the party size | `MAX_PARTY` in `backend/app/party.py` and `src/lib/party.ts` |
+| Change how much can be given a day | `GIFTS.perDay` in `src/balance/upgrades.ts` and `PER_DAY` in `backend/app/routes/gifts.py` |
+| Change the gift picker | `GiveMats` in `Friends.tsx` |

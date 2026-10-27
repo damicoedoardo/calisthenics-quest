@@ -34,6 +34,8 @@ export interface Gear {
   /** The Fog item worn in this slot (the shield slot shows the charm): its kind, rarity and seed,
       so the hero wears that very item, not just its tier. Left out for the forge's old looks. */
   item?: ItemLook;
+  /** That item's upgrades at Mira's forge: from +4 the hero shines with it (src/components/PlusGlow.tsx). */
+  plus?: number;
 }
 
 export const TIER_COLORS: Record<Tier, string> = {

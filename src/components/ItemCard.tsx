@@ -2,7 +2,9 @@
 
 import { useSyncExternalStore } from 'react';
 import { getStat, type Build } from '@/lib/stats';
-import { itemLines, looksOf, nameOf, RARITY, SLOT_NAME, shortOf, type Item, type Rarity } from '@/game/dungeon/items';
+import { bandOf, itemLines, looksOf, nameOf, RARITY, SLOT_NAME, shortOf, type Item, type Rarity } from '@/game/dungeon/items';
+import { BANDS } from '@/balance';
+import { PlusGlow } from './PlusGlow';
 import { Sprite } from './Sprite';
 
 /* An item's art in a frame of its rarity's color, and its card. The art is the item's own
@@ -40,9 +42,11 @@ export function ItemTile({ item, size = 40, dim = false }: { item: Item; size?: 
   return (
     <span className={`relative grid shrink-0 place-items-center rounded-lg ${dim ? 'opacity-50 grayscale' : ''}`} style={{ width: size, height: size, background: f.back, boxShadow: `0 0 0 2px ${f.edge}${f.glow ? `, ${f.glow}` : ''}` }}>
       {item.rarity === 'legendary' && <span aria-hidden className="absolute inset-0 rounded-lg motion-safe:animate-pulse" style={{ boxShadow: 'inset 0 0 10px rgba(253,186,116,.55)' }} />}
+      <PlusGlow item={item} />
       <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
         <Sprite id="item" opts={looksOf(item)} size={art} playing={!still} label="" />
       </span>
+      {item.plus ? <span className="absolute -bottom-1 -right-1 rounded bg-ink-950/90 px-0.5 font-mono text-[8px] leading-tight text-gold-300">+{item.plus}</span> : null}
     </span>
   );
 }
@@ -74,11 +78,17 @@ export function ItemCard({ item, build, children }: { item: Item; build: Build; 
             style={{ background: 'repeating-conic-gradient(rgba(253,186,116,.35) 0deg 10deg, transparent 10deg 30deg)', maskImage: 'radial-gradient(circle, #000 20%, transparent 65%)', WebkitMaskImage: 'radial-gradient(circle, #000 20%, transparent 65%)' }}
           />
         )}
+        <PlusGlow item={item} round="rounded-none" />
         <Sprite id="item" opts={looksOf(item)} size={128} playing={!still} label={`${RARITY[item.rarity].name} ${SLOT_NAME[item.slot].toLowerCase()}`} className="relative" />
         <span className="absolute left-2 top-2 rounded px-1.5 py-0.5 font-pixel text-[7px] uppercase tracking-wide text-ink-950" style={{ background: item.rarity === 'common' ? '#94a3b8' : color }}>
           {RARITY[item.rarity].name}
         </span>
-        {item.plus ? <span className="absolute right-2 top-2 rounded bg-ink-950/80 px-1.5 py-0.5 font-mono text-[10px] text-gold-300">+{item.plus}</span> : null}
+        {item.plus ? (
+          <span className="absolute right-2 top-2 rounded bg-ink-950/80 px-1.5 py-0.5 text-right font-mono text-[10px] text-gold-300">
+            +{item.plus}
+            {bandOf(item.plus) > 0 && <span className="block font-pixel text-[6px] uppercase tracking-wide text-orange-200">{BANDS[bandOf(item.plus)].name}</span>}
+          </span>
+        ) : null}
       </div>
       <div className="p-3">
         <p className={`font-semibold leading-tight ${legend ? 'text-base' : 'text-sm'}`} style={{ color, textShadow: legend ? '0 0 8px rgba(251,146,60,.6)' : item.rarity === 'rare' ? '0 0 6px rgba(250,204,21,.35)' : undefined }}>

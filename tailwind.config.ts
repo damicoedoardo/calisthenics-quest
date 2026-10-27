@@ -47,10 +47,13 @@ export default {
         bigshake: { '0%,100%': { transform: 'translate(0,0)' }, '15%': { transform: 'translate(-10px,4px)' }, '30%': { transform: 'translate(9px,-5px)' }, '45%': { transform: 'translate(-7px,3px)' }, '60%': { transform: 'translate(6px,-2px)' }, '80%': { transform: 'translate(-3px,1px)' } },
         breathe: { '0%,100%': { transform: 'scale(.86)' }, '50%': { transform: 'scale(1.14)' } },
         ignite: { '0%': { transform: 'scale(.2)', opacity: '0' }, '40%': { transform: 'scale(1.1)', opacity: '1' }, '100%': { transform: 'scale(1)', opacity: '.6' } },
+        // A forged item's sparks: up from the bottom and out (src/components/PlusGlow.tsx).
+        spark: { '0%': { transform: 'translateY(0) scale(1)', opacity: '0' }, '20%': { opacity: '1' }, '100%': { transform: 'translateY(-140%) scale(.3)', opacity: '0' } },
         turn: { '0%,20%': { transform: 'rotate(0)' }, '55%,85%': { transform: 'rotate(90deg)' }, '100%': { transform: 'rotate(0)' } },
       },
       animation: {
         pop: 'pop .45s ease-out both',
+        spark: 'spark 1.6s ease-out infinite',
         float: 'float 2.4s ease-in-out infinite',
         fall: 'fall linear forwards',
         flicker: 'flicker 1.6s ease-in-out infinite',

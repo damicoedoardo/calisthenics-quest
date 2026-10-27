@@ -3,8 +3,8 @@
    change: `pnpm balance`, then `pnpm fog:tune` (items shift the win rates). */
 
 /** How much the dungeon's finds give next to the starter kit. Higher = items matter more.
-    Goal: a mid-dungeon weapon is worth about one run skill, so a good weapon is worth training for. */
-export const ITEM_POWER = 2.2;
+    Goal: gear is about 40% of a player's power growth (POWER_SPLIT in power.ts). */
+export const ITEM_POWER = 1.76;
 
 /** What an item gives just for wearing it, before rarity and the roll: at level 0, and more per level. */
 export const ITEM_BASE = {

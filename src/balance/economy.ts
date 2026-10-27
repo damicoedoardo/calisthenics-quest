@@ -10,9 +10,8 @@ export const EMBERS = {
   mini: 4,
 } as const;
 
-/** Mira's forge. An upgrade costs `upgradeStep` times the plus it goes to (10, 20, 30, 40, 50). */
+/** Mira's forge. What each upgrade costs, +1 to +15, is STEPS in upgrades.ts. */
 export const FORGE = {
-  upgradeStep: 10,
   /** Roll one bonus again. */
   reroll: 15,
 } as const;

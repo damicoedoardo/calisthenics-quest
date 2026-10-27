@@ -260,7 +260,7 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
               <>
                 {stats}
                 {letterCard}
-                <FriendsCard sandbox={inSandbox()} />
+                <FriendsCard state={state} update={update} sandbox={inSandbox()} />
                 {questLog || <p className="text-xs text-slate-500">Your quests land here.</p>}
               </>
             ) : part === 'keepsakes' ? (
@@ -303,7 +303,7 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
 
       <Keepsakes cleared={state.fog?.cleared ?? 0} />
 
-      <FriendsCard sandbox={inSandbox()} />
+      <FriendsCard state={state} update={update} sandbox={inSandbox()} />
 
       {questLog}
 
