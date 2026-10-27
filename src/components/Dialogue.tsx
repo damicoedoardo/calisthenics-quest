@@ -90,6 +90,8 @@ function Portrait({ line, gear, classId, flame }: { line: Line; gear: Record<Gea
       return <Ember size={flame === 'spark' ? Math.round(p.size * 1.7) : p.size} stage={flame} mood={line.mood} />;
     case 'kindled':
       return <Kindled size={p.size} wave={p.wave} />;
+    case 'villager':
+      return <Sprite id={p.sprite} size={p.size} opts={{ after: true }} />;
     default:
       return null;
   }

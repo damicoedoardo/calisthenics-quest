@@ -206,6 +206,8 @@ export type Portrait =
   | { kind: 'flame'; size: number }
   /** The flame's true form (the finale), with the player's hair. */
   | { kind: 'kindled'; size: number; wave?: boolean }
+  /** A villager as they look once you've helped them (dancing, running, the letter sealed). */
+  | { kind: 'villager'; sprite: 'lia' | 'sol' | 'vela'; size: number }
   | { kind: 'none' };
 
 export interface CastMember {

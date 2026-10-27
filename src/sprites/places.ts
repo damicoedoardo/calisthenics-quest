@@ -269,15 +269,47 @@ function lampTower(p: Painter, s: PlaceSpec) {
 
 /** Vela's tower far off across the flat, a few pixels tall. Its lamp is drawn lit only in the lit
     copy of the backdrop, which the Place component flashes over the unlit one. */
-const FAR_TOWER = ['.k.', 'kyk', 'kyk', 'mmm', '.s.', '.s.', '.s.', '.s.', '.d.', '.s.', '.s.', '.s.', '.s.', '.d.', '.s.', '.s.', '.s.', '.s.', '.d.', '.s.', '.s.', '.s.', '.s.', '.d.', '.s.', '.s.', '.s.', '.s.', '.d.', 'sss'];
+/** L lit stone, s stone, d shade, m mortar and ledges, k the iron cap, y the lamp. */
+const FAR_TOWER = [
+  '..k..',
+  '.kkk.',
+  'kkkkk',
+  '.kyk.',
+  '.kyk.',
+  'mmmmm',
+  '.LLm.',
+  '.Lsd.',
+  '.Lsd.',
+  '.Lsd.',
+  '.Lsd.',
+  '.Lsd.',
+  '.mmm.',
+  '.Lsd.',
+  '.Lsd.',
+  '.Lsd.',
+  '.Lsd.',
+  '.Lsd.',
+  '.mmm.',
+  '.Lsd.',
+  '.Lsd.',
+  '.Lsd.',
+  '.Lsd.',
+  'LLsdd',
+  '.mmm.',
+  'LLsdd',
+  'LLsdd',
+  'LLsdd',
+  'LLsdd',
+  'mmmmm',
+];
 
 function farTower(p: Painter, s: PlaceSpec, lit: boolean) {
   const stone = mix(s.far, '#d6c8a8', 0.45),
     // tall and to the right, so its lamp clears the narration box that sits over the horizon
-    x = 64,
+    x = 63,
     y = HORIZON - FAR_TOWER.length + 1;
-  if (lit) glow(p, x + 1, y + 1.5, 5, '#fbbf24', false);
-  paintRows(p, FAR_TOWER, { k: '#1e1a16', y: lit ? '#fff3c4' : '#6b5326', m: mix(stone, '#000000', 0.25), s: stone, d: mix(stone, '#000000', 0.3) }, x, y);
+  if (lit) glow(p, x + 2, y + 4, 6, '#fbbf24', false);
+  paintRows(p, FAR_TOWER, { k: '#1e1a16', y: lit ? '#fff3c4' : '#6b5326', L: mix(stone, '#ffffff', 0.2), m: mix(stone, '#000000', 0.25), s: stone, d: mix(stone, '#000000', 0.35) }, x, y);
 }
 
 function props(p: Painter, s: PlaceSpec, rnd: () => number, lit: boolean) {

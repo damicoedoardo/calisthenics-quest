@@ -83,7 +83,7 @@ export const FORMA: Chapter = {
     {
       id: 'ch6-book',
       when: { workouts: 72, chapter: 6 },
-      place: 'ashlands-camp',
+      place: 'mountain-camp',
       music: 'camp',
       lines: [
         { who: 'narrator', show: 'wanderer', text: 'At the fire, the Wanderer hands back the book from the ash. It is thick now. Every page written.' },

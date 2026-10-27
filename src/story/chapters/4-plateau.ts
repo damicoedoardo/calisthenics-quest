@@ -88,6 +88,7 @@ export const PLATEAU: Chapter = {
       // The Plateau doubt: the month's hardest moment. The stones from month one come back.
       id: 'ch4-heart',
       when: { workouts: 43, chapter: 4 },
+      place: 'flat-road-night',
       music: 'memory',
       shots: [{ fade: 'in', seconds: 1.6 }],
       lines: [

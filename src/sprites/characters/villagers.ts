@@ -46,6 +46,35 @@ const LIA: FigureSpec = {
   },
 };
 
+/** After you help her: dancing again. One arm held out, a brighter leotard, a flower in her hair. */
+const LEOTARD_BRIGHT: Ramp = ['#17605a', '#2aa394', '#86e6d2'];
+const LIA_AFTER: FigureSpec = {
+  ...LIA,
+  stance: { left: 'out' },
+  a: LEOTARD_BRIGHT,
+  layers: {
+    outfit(c) {
+      top(c, LEOTARD_BRIGHT, 41);
+      for (let y = 42; y <= 50; y++) {
+        const k = (y - 42) / 8,
+          sway = y > 46 ? (c.P.f % 4 < 2 ? 1 : 0) : 0;
+        c.l.row(y, Math.round(22 - 4 * k) + sway, Math.round(41 + 4 * k) + sway, y % 3 === 0 ? LEOTARD_BRIGHT[2] : LEOTARD_BRIGHT[1]);
+      }
+      c.u.row(41, 22, 41, LEOTARD_BRIGHT[0]);
+    },
+    head(c) {
+      // a flower tucked behind her ear
+      const { u, fxu, P } = c;
+      u.r(44, 11, 4, 4, '#f472b6');
+      u.p(45, 12, '#fde047');
+      u.p(46, 13, '#fde047');
+      // a sparkle or two, on and off
+      if (P.f % 2) fxu.p(14, 10, '#f0fdfa');
+      else fxu.p(50, 20, '#f0fdfa');
+    },
+  },
+};
+
 const SOL_LOOK: Look = { sex: 'f', style: 'pony', hair: 'blonde', skin: 'tan', head: 'manga' };
 const JERSEY = R.orange;
 
@@ -73,6 +102,31 @@ const SOL: FigureSpec = {
   },
 };
 
+/** After you help her: running again, in new running shoes, the jersey bright and clean. */
+const JERSEY_BRIGHT: Ramp = ['#9a4a0c', '#f08a1c', '#ffc46a'];
+const SOL_AFTER: FigureSpec = {
+  ...SOL,
+  a: JERSEY_BRIGHT,
+  layers: {
+    ...SOL.layers,
+    outfit(c) {
+      top(c, JERSEY_BRIGHT);
+      c.u.row(36, 22, 41, '#f8fafc');
+      c.u.r(28, 38, 8, 5, '#f8fafc');
+      c.u.row(40, 30, 33, '#111827');
+      // a little wind behind her, on and off
+      [44, 49, 54].forEach((y, i) => (c.P.f + i) % 2 && c.fx.row(y, 8 + i, 13 + i, '#e2e8f0'));
+      // the shoes off the nail: white, with an orange stripe
+      [22, 34].forEach((x) => {
+        c.l.r(x, 58, 8, 4, '#f8fafc');
+        c.l.row(58, x, x + 7, '#ffffff');
+        c.l.line(x + 1, 61, x + 6, 59, JERSEY_BRIGHT[1]);
+        c.l.row(61, x, x + 7, '#94a3b8');
+      });
+    },
+  },
+};
+
 const KID_LOOK: Look = { sex: 'm', style: 'short', hair: 'brown', skin: 'light', head: 'manga' };
 const TUNIC: Ramp = ['#3b3f5c', '#5b6185', '#8a90b4'];
 
@@ -90,6 +144,11 @@ const KID: FigureSpec = {
   },
 };
 
-export const drawLia = (_o: unknown, frame: ClipFrame, f: number): Grid => drawFigure(LIA, LIA_LOOK, frame, f);
-export const drawSol = (_o: unknown, frame: ClipFrame, f: number): Grid => drawFigure(SOL, SOL_LOOK, frame, f);
+/** Villagers can be drawn as they are when you meet them, or `after` you helped them. */
+export interface VillagerOpts {
+  after: boolean;
+}
+
+export const drawLia = (o: Partial<VillagerOpts>, frame: ClipFrame, f: number): Grid => drawFigure(o.after ? LIA_AFTER : LIA, LIA_LOOK, frame, f);
+export const drawSol = (o: Partial<VillagerOpts>, frame: ClipFrame, f: number): Grid => drawFigure(o.after ? SOL_AFTER : SOL, SOL_LOOK, frame, f);
 export const drawKid = (_o: unknown, frame: ClipFrame, f: number): Grid => drawFigure(KID, KID_LOOK, frame, f);

@@ -149,7 +149,7 @@ export const MIRROR_LAKE: Chapter = {
     {
       id: 'ch2-friend',
       when: { workouts: 21, chapter: 2 },
-      place: 'ashlands-camp',
+      place: 'lake-camp',
       music: 'camp',
       lines: [
         { who: 'narrator', show: 'wanderer', text: 'At the fire, the Wanderer pokes the coals and asks you something odd.' },
