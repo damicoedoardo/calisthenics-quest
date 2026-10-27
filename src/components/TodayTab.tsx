@@ -5,9 +5,11 @@ import { BookOfDays } from './BookOfDays';
 import { Ember, Enemy, Hollow } from './Characters';
 import { SitByFire } from './SitByFire';
 import { Sprite } from './Sprite';
+import { useLook } from './Look';
 import {
   WEEKLY_GOAL,
   dayType,
+  gearOf,
   previewXp,
   sessionsThisWeek,
   todaysQuest,
@@ -16,6 +18,7 @@ import {
   type GameState,
 } from '@/lib/game';
 import { getPath } from '@/lib/skills';
+import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
 import { daysSinceTraining, isRestDay, trainedToday } from '@/lib/days';
 import { storyState, storyWords } from '@/story/engine';
 import { flameStage } from '@/story/flame';
@@ -53,6 +56,9 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
   const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
   // After today's workout the quest below is the next one, not one still owed today.
   const doneToday = !inProgress && trainedToday(state, now);
+  // You, in your gear and look, for the exercise stills in the quest list.
+  const look = useLook();
+  const hero = { gear: gearOf(state), classId: state.profile.classId, look };
 
   return (
     <div className="space-y-4">
@@ -137,11 +143,19 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
             const path = getPath(q.path);
             const done = state.draft?.sets[q.id]?.length ?? 0;
             return (
-              <li key={q.id} className="flex items-center gap-3 rounded-xl bg-ink-900 px-3 py-2.5">
-                <span className="w-16 shrink-0 text-[10px] font-bold uppercase tracking-wider" style={{ color: path.color }}>
-                  {ROLE_LABEL[q.role]}
+              <li key={q.id} className="flex items-center gap-3 rounded-xl bg-ink-900 py-1.5 pl-1.5 pr-3">
+                {/* A still of you doing it: the demo's first frame, at 1:1 so it stays crisp. */}
+                {(EXERCISES as string[]).includes(q.node.id) ? (
+                  <Sprite id="exercise" opts={{ exercise: q.node.id as ExerciseId, ...hero }} size={64} playing={false} label={`${q.name}, demo`} className="shrink-0 rounded-lg bg-ink-950" />
+                ) : (
+                  <span className="h-16 w-16 shrink-0" />
+                )}
+                <span className="min-w-0 flex-1">
+                  <span className="block text-[10px] font-bold uppercase tracking-wider" style={{ color: path.color }}>
+                    {ROLE_LABEL[q.role]}
+                  </span>
+                  <span className="mt-0.5 block text-sm leading-snug text-slate-100">{q.name}</span>
                 </span>
-                <span className="min-w-0 flex-1 text-sm leading-snug text-slate-100">{q.name}</span>
                 <span className="shrink-0 font-mono text-sm text-slate-300">
                   {inProgress ? `${Math.min(done, q.sets)}/${q.sets}` : `${q.sets}×${q.reps}${q.unit === 'sec' ? 's' : ''}`}
                 </span>
