@@ -2,6 +2,7 @@ import { finishSession, initialState, levelInfo, logMaxTest, todaysQuest, totalX
 import { recordRun, zoneStatus, ZONES } from '@/lib/fog';
 import { dayKey, daysApart, isRestDay } from '@/lib/days';
 import { pendingScenes, renderLines, speakerName, storyState, storyWords } from '@/story/engine';
+import { CALLBACKS } from '@/story/daily/flame-lines';
 import { afterWorkoutLine, canSitByFire, dayQuote, fireLine, marginNote, restTruth, todayMoment, todayPage, updateTodayPage, withTodayPage } from '@/story/daily';
 import { DEFAULT_FLAME_NAME, flameStage } from '@/story/flame';
 import { STARTER_LOOKS } from '@/sprites/characters/hero';
@@ -187,7 +188,11 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
     check('flame line on Today', page.line);
     check('quote author', page.quote.by);
     if (fresh && quotesBefore.includes(page.quote.text)) note('problem', `quote "${page.quote.text}" came back within 3 weeks`);
-    if (['back', 'missed', 'smoky', 'best', 'rough'].includes(moment)) note('day', `Today: ${moment} ("${page.line}")`);
+    const callback = CALLBACKS.find((c) => c.text === page.line);
+    if (callback && fresh) {
+      if ((state.days ?? []).some((p) => p.day !== dayKey(now) && p.line === callback.text)) note('problem', `follow-up after ${callback.after} said twice`);
+      note('day', `Today: follow-up to ${callback.after} ("${page.line}")`);
+    } else if (['back', 'missed', 'smoky', 'best', 'rough'].includes(moment)) note('day', `Today: ${moment} ("${page.line}")`);
     if (isRestDay(state, now)) {
       check('rest card', restTruth(now));
       if (kind.sitsByFire && canSitByFire(state, now) && !page.fire) {

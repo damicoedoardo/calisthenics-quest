@@ -162,7 +162,8 @@ export function pendingScenes(state: GameState, now: Date): Scene[] {
 }
 
 export function sceneById(id: string): Placed | undefined {
-  return ALL_SCENES.find((p) => p.scene.id === id || id.startsWith(`${p.scene.id}-`));
+  // Exact first: `ch4-vela-down` is its own scene, not a repeat of `ch4-vela`.
+  return ALL_SCENES.find((p) => p.scene.id === id) ?? ALL_SCENES.find((p) => p.scene.when.away && id.startsWith(`${p.scene.id}-`));
 }
 
 /** Where a scene happens: its own place, else its chapter's, else the chapter you're in. */

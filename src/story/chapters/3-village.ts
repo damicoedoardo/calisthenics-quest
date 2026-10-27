@@ -170,10 +170,11 @@ export const VILLAGE: Chapter = {
       when: { workouts: 35, answer: { id: 'sol', is: 'yes' } },
       place: 'lit-forges',
       lines: [
-        { who: 'narrator', show: 'sol', text: 'Sol starts running before she opens her work. Then she rests, a whole day, on purpose. Her forge lights, and this time it stays lit.' },
-        { who: 'sol', text: 'Nothing fell over. Can you believe it? I took the time, and the world held on without me.' },
-        { who: 'sol', text: "Rest isn't the prize for the work. It's part of the work." },
-        { who: 'flame', mood: 'happy', text: "I've been SAYING that." },
+        { who: 'narrator', show: 'sol-after', text: 'Sol starts running before she opens her work. Then she rests, a whole day, on purpose. Her forge lights, and this time it stays lit.' },
+        { who: 'sol-after', text: "New shoes. Bright ones. The old pair had too many excuses in them." },
+        { who: 'sol-after', text: 'Nothing fell over. Can you believe it? I took the time, and the world held on without me.' },
+        { who: 'sol-after', text: 'I slept all afternoon. Felt guilty for a bit. Then less. Less every time, I think.' },
+        { who: 'flame', mood: 'happy', text: "Less every time. I've been SAYING that. Well. Not in those words. But I was thinking it very loudly." },
       ],
     },
     {
