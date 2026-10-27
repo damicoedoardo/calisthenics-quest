@@ -11,7 +11,6 @@ export const VILLAGE: Chapter = {
   enemy: 'The Perfect Knight',
   enemySprite: 'knight',
   workouts: 13,
-  tests: 1,
   place: 'cold-forges',
   fog: {
     name: 'The Cold Forges',

@@ -1,7 +1,7 @@
 import { Hero } from './Hero';
 import { Sprite } from './Sprite';
 import { useLook } from './Look';
-import { equippedGear, makeGear, type ClassId, type Gear, type GearSlot } from '@/lib/gear';
+import { makeGear, uniformGear, type ClassId, type Gear, type GearSlot } from '@/lib/gear';
 import type { FlameFace, FlameStage } from '@/sprites/characters/ember';
 
 /* The story's cast as components. The art for each lives in src/sprites. */
@@ -29,7 +29,7 @@ export function Kindled({ size = 64, wave = false }: { size?: number; wave?: boo
   return <Sprite id="kindled" size={size} action={wave ? 'attack' : 'idle'} opts={{ hair: style === 'long' || style === 'pony' ? 'long' : 'short' }} />;
 }
 
-const SHADOW_GEAR = { ...equippedGear(undefined, { push: 0, pull: 0, core: 0 }), weapon: makeGear('weapon', 1, undefined) };
+const SHADOW_GEAR = { ...uniformGear(undefined, 0), weapon: makeGear('weapon', 1, undefined) };
 
 interface HollowProps {
   size?: number;

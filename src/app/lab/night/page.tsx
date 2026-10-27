@@ -62,13 +62,10 @@ const MOMENTS: [string, string][] = [
   ['finale', 'The finale'],
 ];
 
-const SKILLS: [string, string][] = [
-  ['skill-floor', 'Off the bench: push-ups from the floor'],
-  ['first-pullup', 'The first strict pull-up'],
-  ['skill-lsit', 'The first full L-sit'],
-  ['skill-top-push', 'The end of the push path'],
-  ['skill-top-pull', 'The end of the pull path'],
-  ['skill-top-core', 'The end of the core path'],
+const BETTER: [string, string][] = [
+  ['first-better', 'The first time a set beats last time'],
+  ['teach-me', 'The kid asks you to teach them'],
+  ['good-steel', 'Mira: "Good steel."'],
 ];
 
 function Panel({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
@@ -151,7 +148,7 @@ export default function NightLab() {
           );
         })}
         <Row icon={<Swords size={16} />} label="The Play tab" note="Power from training with pixel icons, all six zones open" onClick={() => open(veteran(78, 6), 'tab=play')} />
-        <Row icon={<Swords size={16} />} label="Exercise library" note="Skills tab, top button: 870+ exercises, pixel demos for boy and girl" onClick={() => open(veteran(10, 1), 'tab=skills')} />
+        <Row icon={<Swords size={16} />} label="Exercise library" note="Train tab, top button: 870+ exercises, pixel demos for boy and girl" onClick={() => open(veteran(10, 1), 'tab=train')} />
       </Panel>
 
       <Panel title="STORY: THE BIG MOMENTS" note="Played in the Story Lab with a sample letter and answers; nothing is saved. It comes back here when the scene ends.">
@@ -161,13 +158,15 @@ export default function NightLab() {
         <Row icon={<Play size={16} />} label="The opening" note="A new player on the sandbox: title, the fall, the letter" onClick={() => open(initialState(), '')} />
       </Panel>
 
-      <Panel title="STORY: SKILL MILESTONES" note="A scene when you pass a skill that matters.">
-        {SKILLS.map(([id, label]) => (
+      <Panel title="STORY: BETTER THAN LAST TIME" note="Scenes for beating last time, once and then again and again.">
+        {BETTER.map(([id, label]) => (
           <Row key={id} icon={<Sparkles size={16} />} label={label} note={id} href={`/lab/story?play=${id}&back`} />
         ))}
       </Panel>
 
       <Panel title="TRAINING AND DAYS">
+        <Row icon={<Dumbbell size={16} />} label="The Train tab" note="Exercise library, gym or home, the plan's two days, the next gear" onClick={() => open(veteran(14, 1), 'tab=train')} />
+        <Row icon={<Sparkles size={16} />} label="Stat points" note="Hero tab: 30 workouts of points to put into Health, Damage, Reach, Speed" onClick={() => open(veteran(30, 2), 'tab=hero')} />
         <Row icon={<Dumbbell size={16} />} label="Exercise demos" note="Your hero doing each exercise on the set logger; tap it to enlarge" onClick={() => open(veteran(14, 1), 'workout')} />
         <Row icon={<BookOpen size={16} />} label="Book of Days" note="Two weeks of pages, day icons and margin notes" onClick={() => open(veteran(30, 2), 'book')} />
         <Row icon={<Gem size={16} />} label="Keepsakes" note="Three won, the rest still in the fog" onClick={() => open(veteran(40, 3), 'tab=hero')} />

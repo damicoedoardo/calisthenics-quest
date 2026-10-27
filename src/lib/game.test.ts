@@ -5,9 +5,7 @@ import {
   finishSession,
   initialState,
   levelInfo,
-  logMaxTest,
   migrate,
-  placement,
   todaysQuest,
   weekKey,
   weekStreak,
@@ -16,7 +14,7 @@ import {
   type Rir,
   type Session,
 } from './game';
-import { equippedGear, rewardFor } from './gear';
+import { equippedGear, nextForge, tiersAt } from './gear';
 import { pendingScenes, renderLines, storyState, storyWords } from '@/story/engine';
 import { noteFreq, parsePattern } from './music';
 
@@ -36,7 +34,6 @@ function fakeSessions(n: number, start = new Date(2026, 8, 1)): Session[] {
     xp: 100,
     breakdown: [],
     entries: [],
-    unlocked: [],
   }));
 }
 
@@ -51,35 +48,45 @@ describe('weekKey', () => {
 });
 
 describe('todaysQuest', () => {
-  it('leads with Push on day A and Pull on day B, with core and support', () => {
+  it('opens with a warm-up, ends with a stretch, and alternates the two days', () => {
     const a = todaysQuest(initialState());
-    expect(a.map((q) => [q.role, q.path])).toEqual([
-      ['main', 'push'],
-      ['core', 'core'],
-      ['support', 'pull'],
+    expect(a.map((q) => [q.role, q.id])).toEqual([
+      ['warmup', 'circles'],
+      ['main', 'barbell-squat'],
+      ['main', 'bench-press'],
+      ['main', 'lat-pulldown'],
+      ['core', 'plank'],
+      ['stretch', 'quad-stretch'],
     ]);
     const b = todaysQuest({ ...initialState(), sessions: fakeSessions(1) });
-    expect(b[0].path).toBe('pull');
+    expect(b[1].id).toBe('rdl');
+    expect(b[b.length - 1].role).toBe('stretch');
   });
 
-  it('shrinks to the main exercise on a rough day', () => {
+  it('trains at home with no kit when the player says so', () => {
+    const home = { ...initialState(), profile: { ...initialState().profile, kit: 'home' as const } };
+    expect(todaysQuest(home).map((q) => q.id)).toEqual(['circles', 'squat', 'pushup', 'inverted-row', 'plank', 'quad-stretch']);
+  });
+
+  it('keeps the warm-up and the stretch on a rough day, around one exercise of 3 sets', () => {
     const q = todaysQuest(initialState(), 'rough');
-    expect(q).toHaveLength(1);
-    expect(q[0].sets).toBe(3);
+    expect(q.map((x) => x.role)).toEqual(['warmup', 'main', 'stretch']);
+    expect(q[1].sets).toBe(3);
   });
 });
 
 describe('finishSession', () => {
   it('awards a full session and raises targets done cleanly', () => {
-    const res = finishSession(withSets(initialState(), { pushup: all(5, 8), 'knee-raise': all(3, 8) }), monday)!;
+    const res = finishSession(withSets(initialState(), { circles: all(1, 90), 'barbell-squat': all(3, 8), 'bench-press': all(3, 8) }), monday)!;
     expect(res.session.kind).toBe('full');
     expect(res.session.xp).toBe(100);
-    expect(res.state.reps.pushup).toBe(9);
+    expect(res.state.reps['barbell-squat']).toBe(9);
+    expect(res.state.reps.circles).toBeUndefined();
     expect(res.state.draft).toBeNull();
   });
 
   it('saves a workout left open on an earlier day on that day', () => {
-    const open = withSets(initialState(), { pushup: all(2, 8) });
+    const open = withSets(initialState(), { 'barbell-squat': all(2, 8) });
     // Same evening, or past midnight in the same workout: left alone.
     expect(closeStaleDraft(open, new Date(2026, 9, 26, 22))).toBe(open);
     expect(closeStaleDraft(open, new Date(2026, 9, 27, 1))).toBe(open);
@@ -93,61 +100,73 @@ describe('finishSession', () => {
   });
 
   it('holds the target when a set was very hard', () => {
-    const sets = all(4, 8);
+    const sets = all(2, 8);
     sets.push([8, '0-1']);
-    const res = finishSession(withSets(initialState(), { pushup: sets }), monday)!;
-    expect(res.state.reps.pushup).toBeUndefined();
+    const res = finishSession(withSets(initialState(), { 'bench-press': sets }), monday)!;
+    expect(res.state.reps['bench-press']).toBeUndefined();
   });
 
   it('counts a rough day as a minimum session that still earns XP', () => {
-    const res = finishSession(withSets(initialState(), { pushup: all(3, 8) }, 'rough'), monday)!;
+    const res = finishSession(withSets(initialState(), { 'barbell-squat': all(3, 8) }, 'rough'), monday)!;
     expect(res.session.kind).toBe('mini');
     expect(res.session.xp).toBe(30);
   });
 
+  it('is not a workout with only the warm-up done', () => {
+    expect(finishSession(withSets(initialState(), { circles: all(1, 90) }), monday)).toBeNull();
+  });
+
   it('raises a goal at most twice a week', () => {
     const day = (d: number) => new Date(2026, 9, 26 + d, 18);
+    // Every other session is day A, so the squat comes up on sessions 1, 3 and 5.
     let s = initialState();
-    for (const d of [0, 2, 4]) s = finishSession(withSets(s, { 'knee-raise': all(3, s.reps['knee-raise'] ?? 8) }), day(d))!.state;
-    expect(s.reps['knee-raise']).toBe(10);
-    s = finishSession(withSets(s, { 'knee-raise': all(3, 10) }), day(7))!.state;
-    expect(s.reps['knee-raise']).toBe(11);
-  });
-
-  it('raises a hold by a second every other time', () => {
-    const day = (d: number) => new Date(2026, 9, 26 + d, 18);
-    let s: GameState = { ...initialState(), progress: { push: 1, pull: 1, core: 1 } };
-    const held: number[] = [];
-    for (const d of [0, 2, 7, 9]) {
-      s = finishSession(withSets(s, { 'tuck-lsit': all(3, s.reps['tuck-lsit'] ?? 8) }), day(d))!.state;
-      held.push(s.reps['tuck-lsit'] ?? 8);
+    const squat = () => s.reps['barbell-squat'] ?? 8;
+    for (const d of [0, 1, 2, 3, 4]) {
+      const sets: Record<string, [number, Rir][]> = dayType(s) === 'A' ? { 'barbell-squat': all(3, squat()) } : { rdl: all(3, 8) };
+      s = finishSession(withSets(s, sets), day(d))!.state;
     }
-    expect(held).toEqual([9, 9, 10, 10]);
+    expect(s.reps['barbell-squat']).toBe(10);
   });
 
-  it('beats the node and forges gear when the unlock target is hit', () => {
-    const res = finishSession(withSets(initialState(), { pushup: all(3, 20) }), monday)!;
-    expect(res.state.progress.push).toBe(2);
-    expect(res.newGear.map((g) => g.name)).toEqual(['Iron sword']);
-    expect(res.session.breakdown.find((l) => l.label === 'Push-up beaten')?.xp).toBe(250);
+  it('raises a hold by 5 seconds every other time', () => {
+    const day = (d: number) => new Date(2026, 9, 26 + d, 18);
+    let s = initialState();
+    const held: number[] = [];
+    for (const d of [0, 7, 14, 21]) {
+      // keep it on day A, where the plank is
+      s = { ...s, sessions: s.sessions.length % 2 ? [...s.sessions, ...fakeSessions(1, day(d - 1))] : s.sessions };
+      s = finishSession(withSets(s, { plank: all(3, s.reps.plank ?? 20) }), day(d))!.state;
+      held.push(s.reps.plank ?? 20);
+    }
+    expect(held).toEqual([25, 25, 30, 30]);
   });
 
-  it('never unlocks from the support block', () => {
-    const state = { ...initialState(), progress: { push: 1, pull: 2, core: 0 } };
-    const res = finishSession(withSets(state, { 'assisted-pullup': all(4, 12) }), monday)!;
-    expect(res.state.progress.pull).toBe(2);
+  it('asks for a little more weight at the top of the range', () => {
+    const state = { ...initialState(), reps: { 'barbell-squat': 12 } };
+    const res = finishSession(withSets(state, { 'barbell-squat': all(3, 12) }), monday)!;
+    expect(res.session.heavier).toEqual(['barbell-squat']);
+    expect(res.state.reps['barbell-squat']).toBe(8);
+  });
+
+  it('notes a set that beat the same exercise last time', () => {
+    const first = finishSession(withSets(initialState(), { 'barbell-squat': all(3, 8) }), monday)!.state;
+    expect(first.sessions[0].better).toBe(false);
+    // day B in between, then the squat again with one more rep
+    const b = finishSession(withSets(first, { rdl: all(3, 8) }), new Date(2026, 9, 28, 18))!.state;
+    const again = finishSession(withSets(b, { 'barbell-squat': all(3, 9) }), new Date(2026, 9, 30, 18))!;
+    expect(again.session.better).toBe(true);
   });
 
   it('adds the perfect week bonus on the third session of a week', () => {
     const state = { ...initialState(), sessions: fakeSessions(2, new Date(2026, 9, 26, 8)).map((s, i) => ({ ...s, date: new Date(2026, 9, 26, 8 + i).toISOString() })) };
-    const res = finishSession(withSets(state, { pushup: all(2, 8) }), monday)!;
+    const res = finishSession(withSets(state, { 'barbell-squat': all(2, 8) }), monday)!;
     expect(res.session.breakdown.some((l) => l.label === 'Perfect week')).toBe(true);
   });
 
-  it('gives the class bonus when the lead exercise is on the class path', () => {
-    const state = { ...initialState(), profile: { ...initialState().profile, classId: 'warrior' as const } };
-    const res = finishSession(withSets(state, { pushup: all(2, 8) }), monday)!;
-    expect(res.session.breakdown.some((l) => l.label === 'Class bonus')).toBe(true);
+  it('forges gear every few workouts', () => {
+    const state = { ...initialState(), sessions: fakeSessions(3) };
+    const res = finishSession(withSets(state, { rdl: all(3, 8) }), monday)!;
+    expect(res.newGear.map((g) => g.name)).toEqual(['Wooden shield']);
   });
 
   it('returns null with nothing logged', () => {
@@ -156,25 +175,22 @@ describe('finishSession', () => {
 });
 
 describe('gear and classes', () => {
-  it('forges the weapon from the class path', () => {
-    const progress = { push: 1, pull: 3, core: 0 };
-    expect(equippedGear('warrior', progress).weapon.name).toBe('Wooden sword');
-    expect(equippedGear('archer', progress).weapon.name).toBe('Steel bow');
-    expect(equippedGear('archer', progress).armor.name).toBe('Leather armor');
-    expect(rewardFor('monk', progress, 'core', 0).name).toBe('Wooden staff');
+  it('starts with a weapon and armor, and forges one slot a tier every 4 workouts', () => {
+    expect(tiersAt(0)).toEqual({ weapon: 1, armor: 1, shield: 0 });
+    expect(tiersAt(4)).toEqual({ weapon: 1, armor: 1, shield: 1 });
+    expect(tiersAt(12)).toEqual({ weapon: 2, armor: 2, shield: 1 });
+    expect(tiersAt(1000)).toEqual({ weapon: 6, armor: 6, shield: 6 });
+    expect(equippedGear('archer', 8).weapon.name).toBe('Iron bow');
+    expect(nextForge(5, 'monk')).toMatchObject({ in: 3, gear: { name: 'Iron staff' } });
+    expect(nextForge(1000, 'monk')).toBeNull();
   });
 });
 
 describe('story', () => {
-  it('opens chapters with sessions and waits for the max test where needed', () => {
+  it('opens chapters with workouts', () => {
     expect(storyState({ ...initialState(), sessions: fakeSessions(11) }).index).toBe(0);
     expect(storyState({ ...initialState(), sessions: fakeSessions(12) }).index).toBe(1);
-    expect(storyState({ ...initialState(), sessions: fakeSessions(15) }).awaitingTest).toBe(false);
-    const waiting = storyState({ ...initialState(), sessions: fakeSessions(24) });
-    expect(waiting.index).toBe(1);
-    expect(waiting.awaitingTest).toBe(true);
-    const tested = logMaxTest({ ...initialState(), sessions: fakeSessions(24) }, { pushups: 20, pullups: 4, lsitSec: 5 }, monday).state;
-    expect(storyState(tested).index).toBe(2);
+    expect(storyState({ ...initialState(), sessions: fakeSessions(24) }).index).toBe(2);
   });
 
   it('asks for the flame name first, then the class after the third session', () => {
@@ -209,12 +225,9 @@ describe('story', () => {
   });
 
   it('makes the Hollow the enemy of chapter 5', () => {
-    const sessions = fakeSessions(50);
-    // Chapter 2's test taken during chapter 2, chapter 4's during chapter 4.
-    const test = { id: 't1', date: sessions[20].date, pushups: 20, pullups: 3, lsitSec: 5, xp: 200 };
-    const tested = { ...initialState(), sessions, tests: [test, { ...test, id: 't2', date: sessions[45].date }] };
-    expect(storyState(tested).index).toBe(4);
-    expect(storyState(tested).chapter?.enemySprite).toBe('hollow');
+    const state = { ...initialState(), sessions: fakeSessions(50) };
+    expect(storyState(state).index).toBe(4);
+    expect(storyState(state).chapter?.enemySprite).toBe('hollow');
   });
 });
 
@@ -236,11 +249,7 @@ describe('music', () => {
   });
 });
 
-describe('placement, levels, migration', () => {
-  it('places a returning athlete one step low', () => {
-    expect(placement(18, 3, 10)).toEqual({ push: 1, pull: 1, core: 0 });
-  });
-
+describe('levels, migration', () => {
   it('levels up every 500 XP with spec titles', () => {
     expect(levelInfo(0)).toMatchObject({ level: 1, title: 'Rookie' });
     expect(levelInfo(2000)).toMatchObject({ level: 5, title: 'Squire' });
@@ -249,10 +258,33 @@ describe('placement, levels, migration', () => {
   it('migrates a v1 save', () => {
     const v1 = { version: 1, progress: { push: 2, pull: 1, core: 0 }, reps: {}, sessions: [{ id: 'a', date: monday.toISOString(), kind: 'full', xp: 100, entries: [{ exerciseId: 'pushup', setsDone: 3, reps: 9 }], unlocked: [] }], tests: [] };
     const s = migrate(v1);
-    expect(s.version).toBe(2);
+    expect(s.version).toBe(3);
     expect(s.profile.onboarded).toBe(false);
     expect(s.sessions[0].entries[0].sets).toHaveLength(3);
     expect(dayType(s)).toBe('B');
     expect(weekStreak(s, monday)).toBe(0);
+  });
+
+  it('carries a v2 save over without the skill tree and the max tests', () => {
+    const v2 = {
+      version: 2,
+      profile: { onboarded: true, letter: { why: 'x', want: '', forWho: '', remind: '' }, voice: 'Quit.', classId: 'monk', flame: 'Pip' },
+      progress: { push: 3, pull: 2, core: 1 },
+      reps: { pushup: 12 },
+      sessions: [{ id: 'a', date: monday.toISOString(), kind: 'full', day: 'A', xp: 100, breakdown: [], entries: [], unlocked: ['pushup'] }],
+      tests: [{ id: 't', date: monday.toISOString(), pushups: 20, pullups: 3, lsitSec: 5, xp: 200 }],
+      draft: null,
+      seenScenes: ['first-quest'],
+      fog: { cleared: 1, runs: 4, best: {} },
+    };
+    const s = migrate(v2) as GameState & Record<string, unknown>;
+    expect(s.version).toBe(3);
+    expect(s.progress).toBeUndefined();
+    expect(s.tests).toBeUndefined();
+    expect(s.reps).toEqual({});
+    expect(s.sessions[0]).not.toHaveProperty('unlocked');
+    expect(s.profile).toMatchObject({ onboarded: true, classId: 'monk', flame: 'Pip' });
+    expect(s.seenScenes).toEqual(['first-quest']);
+    expect(s.fog?.cleared).toBe(1);
   });
 });

@@ -19,7 +19,7 @@ types.ts              the shapes: Scene, Line, Shot, When, Ask, Chapter, FogZone
 cast.ts               everyone who speaks: name, portrait (sprite), name color
 places.ts             where scenes happen: painted backdrops (src/sprites/places.ts draws them)
 chapters/1-6          one file per month: the chapter, its Fog zone, its scenes
-anytime.ts            scenes that can happen in any chapter (first pull-up, coming back)
+anytime.ts            scenes that can happen in any chapter (beating last time, coming back)
 flame.ts              the flame's stages (spark to fire fairy) and the default name
 opening.ts            the opening, before the first workout
 daily/flame-lines.ts  what the flame says on Today, by kind of day, and its face
@@ -70,9 +70,10 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
 ## When scenes play
 
 - A scene plays once, when its `when` holds; scenes due together play in file order.
-- Give every workout-tied scene of a later month `chapter: N` too, so it waits while the month
-  before is still waiting for its max test.
-- A scene tied only to a workout count stops being due a few workouts (`TEST_GRACE`) after its
+- Give every workout-tied scene of a later month `chapter: N` too, so it never plays before its
+  month starts. `better: N` waits for N workouts where a set beat last time (see
+  [training.md](training.md)); there are no max tests and no skill tree to wait for any more.
+- A scene tied only to a workout count stops being due a few workouts (`CATCH_UP`) after its
   moment, so a scene added later doesn't ambush players who already passed it. Scenes that also wait
   for something else (a rest day, a short day, a class pick) never go stale.
 - `helped: true/false`: whether the player joined any villager's story (Lia, Sol, Vela). Month five's
@@ -90,7 +91,7 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
 | Add a character | an entry in `cast.ts` (and a sprite in `src/sprites/registry.ts` if it's new art) |
 | Change a portrait's size or name color | its entry in `cast.ts` |
 | Add or repaint a place | `places.ts` (sky colors, kind of land, props, weather) |
-| Change chapter length or max tests | `workouts` and `tests` in the chapter file |
+| Change chapter length | `workouts` in the chapter file |
 | Change a Fog boss's words, keepsake or toughness | the chapter's `fog` |
 | Change how a Fog boss fights | its entry in `BOSSES` (`src/game/dungeon/content.ts`) and its branch in `steerBoss` (`engine.ts`) |
 | Change when the flame grows, or what it gives | `flame.ts` (its art: `src/sprites/characters/ember.ts`) |

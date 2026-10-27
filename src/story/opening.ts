@@ -87,7 +87,7 @@ export const MEET: Line[] = [
 
 export const LETTER_PROMPTS: { key: keyof Letter; label: string; placeholder: string }[] = [
   { key: 'why', label: "Dear future me, I'm starting again because...", placeholder: 'I miss feeling strong in my own body' },
-  { key: 'want', label: 'One day I want to be able to...', placeholder: 'do 15 pull-ups again, and hold an L-sit' },
+  { key: 'want', label: 'One day I want to be able to...', placeholder: 'run 5 km without stopping, and feel strong again' },
   { key: 'forWho', label: "I'm doing this for...", placeholder: 'me, and the people who need me at my best' },
   { key: 'remind', label: 'When I want to quit, remind me that...', placeholder: 'every rep counts, even on bad days' },
 ];

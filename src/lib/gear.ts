@@ -1,24 +1,22 @@
-import { PATHS, type PathId } from './skills';
-
 export type ClassId = 'warrior' | 'archer' | 'monk' | 'mage';
 export type GearSlot = 'weapon' | 'armor' | 'shield';
-/** 0 = nothing yet, 1..6 = one tier per beaten skill. */
+/** 0 = nothing yet, 1..6: one slot goes up a tier every few workouts. */
 export type Tier = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface HeroClass {
   id: ClassId;
   name: string;
-  /** Path that earns +10% XP and forges the weapon. Mage uses whichever path is furthest behind. */
-  path: PathId | 'balance';
+  /** The stat it leans to in the Fog (src/lib/stats.ts CLASS_LEAN). */
+  lean: string;
   weapon: string;
   pitch: string;
 }
 
 export const CLASSES: HeroClass[] = [
-  { id: 'warrior', name: 'Warrior', path: 'push', weapon: 'sword', pitch: 'Every push-up is a strike.' },
-  { id: 'archer', name: 'Archer', path: 'pull', weapon: 'bow', pitch: 'Pulling up is drawing the bow.' },
-  { id: 'monk', name: 'Monk', path: 'core', weapon: 'staff', pitch: 'Holding still is a kind of power.' },
-  { id: 'mage', name: 'Mage', path: 'balance', weapon: 'wand', pitch: 'Power comes from balance.' },
+  { id: 'warrior', name: 'Warrior', lean: 'Damage', weapon: 'sword', pitch: 'Up close, every blow counts.' },
+  { id: 'archer', name: 'Archer', lean: 'Reach', weapon: 'bow', pitch: 'Keep your distance, gather the light.' },
+  { id: 'monk', name: 'Monk', lean: 'Health', weapon: 'staff', pitch: 'Holding steady is a kind of power.' },
+  { id: 'mage', name: 'Mage', lean: 'Speed', weapon: 'wand', pitch: 'Quick hands, many sparks.' },
 ];
 
 export function getClass(id: ClassId | undefined): HeroClass | null {
@@ -58,42 +56,34 @@ const MATERIALS: Record<GearSlot, string[]> = {
 
 const SHIELD_NAME: Record<ClassId, string> = { warrior: 'shield', archer: 'quiver', monk: 'bracers', mage: 'orb' };
 
-/** Which path feeds each gear slot. The class path always forges the weapon. */
-export function slotPaths(cls: ClassId | undefined, progress: Record<PathId, number>): Record<GearSlot, PathId> {
-  switch (cls) {
-    case 'archer':
-      return { weapon: 'pull', armor: 'push', shield: 'core' };
-    case 'monk':
-      return { weapon: 'core', armor: 'pull', shield: 'push' };
-    case 'mage': {
-      const lowest = lowestPath(progress);
-      const rest = (['pull', 'push', 'core'] as PathId[]).filter((p) => p !== lowest);
-      return { weapon: lowest, armor: rest[0], shield: rest[1] };
-    }
-    default:
-      return { weapon: 'push', armor: 'pull', shield: 'core' };
+/** A slot goes up a tier every this many workouts. */
+export const GEAR_EVERY = 4;
+/** Which slot the next tier goes to, in turn. The weapon and armor start at tier 1. */
+const FORGE_ORDER: GearSlot[] = ['shield', 'weapon', 'armor'];
+const START: Record<GearSlot, number> = { weapon: 1, armor: 1, shield: 0 };
+
+/** Gear tiers after this many workouts. */
+export function tiersAt(workouts: number): Record<GearSlot, Tier> {
+  const tiers = { ...START };
+  const steps = Math.floor(workouts / GEAR_EVERY);
+  for (let i = 0; i < steps; i++) {
+    const open = FORGE_ORDER.filter((s) => tiers[s] < 6);
+    if (open.length === 0) break;
+    // the next slot in turn, skipping any that are already at the top
+    const slot = FORGE_ORDER[i % FORGE_ORDER.length];
+    tiers[tiers[slot] < 6 ? slot : open[0]] += 1;
   }
+  return tiers as Record<GearSlot, Tier>;
 }
 
-/** The path with the smallest share of its tree beaten (ties: push, pull, core). */
-export function lowestPath(progress: Record<PathId, number>): PathId {
-  let best: PathId = 'push';
-  let bestShare = Infinity;
-  for (const p of PATHS) {
-    const share = progress[p.id] / p.nodes.length;
-    if (share < bestShare) {
-      best = p.id;
-      bestShare = share;
-    }
-  }
-  return best;
-}
-
-/** XP bonus path for a class (Mage follows whichever path is furthest behind). */
-export function classPath(cls: ClassId | undefined, progress: Record<PathId, number>): PathId | null {
-  const c = getClass(cls);
-  if (!c) return null;
-  return c.path === 'balance' ? lowestPath(progress) : c.path;
+/** Workouts until the next tier, and what it forges; null once everything is at the top. */
+export function nextForge(workouts: number, cls: ClassId | undefined): { in: number; gear: Gear } | null {
+  const now = tiersAt(workouts);
+  const at = (Math.floor(workouts / GEAR_EVERY) + 1) * GEAR_EVERY;
+  const then = tiersAt(at);
+  const slot = (Object.keys(now) as GearSlot[]).find((s) => then[s] > now[s]);
+  if (!slot) return null;
+  return { in: at - workouts, gear: makeGear(slot, then[slot], cls) };
 }
 
 export function gearName(slot: GearSlot, tier: Tier, cls: ClassId | undefined): string {
@@ -108,19 +98,16 @@ export function makeGear(slot: GearSlot, tier: Tier, cls: ClassId | undefined): 
   return { slot, tier, name: gearName(slot, tier, cls), color: TIER_COLORS[tier], glow: GLOWS[tier] };
 }
 
-export function equippedGear(cls: ClassId | undefined, progress: Record<PathId, number>): Record<GearSlot, Gear> {
-  const map = slotPaths(cls, progress);
-  const tierOf = (p: PathId) => Math.min(progress[p], 6) as Tier;
+export function equippedGear(cls: ClassId | undefined, workouts: number): Record<GearSlot, Gear> {
+  const tiers = tiersAt(workouts);
   return {
-    weapon: makeGear('weapon', tierOf(map.weapon), cls),
-    armor: makeGear('armor', tierOf(map.armor), cls),
-    shield: makeGear('shield', tierOf(map.shield), cls),
+    weapon: makeGear('weapon', tiers.weapon, cls),
+    armor: makeGear('armor', tiers.armor, cls),
+    shield: makeGear('shield', tiers.shield, cls),
   };
 }
 
-/** Gear that a node unlock on `path` would forge, for the skill tree preview. */
-export function rewardFor(cls: ClassId | undefined, progress: Record<PathId, number>, path: PathId, nodeIndex: number): Gear {
-  const map = slotPaths(cls, progress);
-  const slot = (Object.keys(map) as GearSlot[]).find((s) => map[s] === path) ?? 'weapon';
-  return makeGear(slot, Math.min(nodeIndex + 1, 6) as Tier, cls);
+/** Every slot at one tier (the art's previews and fingerprints). */
+export function uniformGear(cls: ClassId | undefined, tier: Tier): Record<GearSlot, Gear> {
+  return { weapon: makeGear('weapon', tier, cls), armor: makeGear('armor', tier, cls), shield: makeGear('shield', tier, cls) };
 }

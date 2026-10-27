@@ -40,9 +40,9 @@ describe('season simulator', () => {
     for (const s of seasons.filter((x) => x.played.includes('ch6-intro'))) expect(s.played, s.player.id).toContain('finale');
   });
 
-  it('a story that waits for a max test moves on after a few workouts', () => {
-    const never = seasons.find((s) => s.player.id === 'never-tests')!;
-    expect(never.state.tests).toHaveLength(0);
+  it('points nobody spends wait, and the story goes on without them', () => {
+    const never = seasons.find((s) => s.player.id === 'never-spends')!;
+    expect(never.state.build ?? {}).toEqual({});
     expect(never.played).toContain('ch3-intro');
   });
 });

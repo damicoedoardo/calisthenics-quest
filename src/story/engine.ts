@@ -16,50 +16,32 @@ export interface StoryState {
   chapter: Chapter | null;
   hearts: number;
   heartsLeft: number;
-  /** All workouts done, but the chapter's max test is still missing. */
-  awaitingTest: boolean;
+  /** Every chapter is behind you. */
   finished: boolean;
 }
 
-/**
- * Workouts a chapter waits for its max test before it moves on anyway. The test is worth taking,
- * but someone who never takes one shouldn't be stuck in the same month forever.
- */
-export const TEST_GRACE = 3;
+/** Workouts a scene tied to a workout count can still play late, while a chapter catches up. */
+export const CATCH_UP = 3;
 
 /** Workouts done before chapter `n` starts. */
 export function chapterStart(n: number): number {
   return CHAPTERS.slice(0, n - 1).reduce((a, c) => a + c.workouts, 0);
 }
 
-/**
- * Chapters move with workouts, not strength: every workout takes one heart off the enemy. A chapter
- * that ends with a max test waits for one taken during the chapter (a first test on day one doesn't
- * count for month two), for at most TEST_GRACE more workouts.
- */
+/** Chapters move with workouts, not strength: every workout takes one heart off the enemy. */
 export function storyState(state: GameState): StoryState {
   const done = state.sessions.length;
   let start = 0;
   for (let i = 0; i < CHAPTERS.length; i++) {
     const ch = CHAPTERS[i];
     const end = start + ch.workouts;
-    const wantsTest = ch.tests > (CHAPTERS[i - 1]?.tests ?? 0);
-    const began = start > 0 ? state.sessions[start - 1]?.date : undefined;
-    const tested = !wantsTest || state.tests.some((t) => !began || t.date >= began);
-    if (done >= end && (tested || done >= end + TEST_GRACE)) {
+    if (done >= end) {
       start = end;
       continue;
     }
-    return {
-      index: i,
-      chapter: ch,
-      hearts: ch.workouts,
-      heartsLeft: Math.max(0, end - done),
-      awaitingTest: done >= end,
-      finished: false,
-    };
+    return { index: i, chapter: ch, hearts: ch.workouts, heartsLeft: end - done, finished: false };
   }
-  return { index: CHAPTERS.length, chapter: null, hearts: 0, heartsLeft: 0, awaitingTest: false, finished: true };
+  return { index: CHAPTERS.length, chapter: null, hearts: 0, heartsLeft: 0, finished: true };
 }
 
 /** The villagers whose stories you can join. Saying yes to one of them is "helping" them. */
@@ -90,14 +72,12 @@ export function holds(w: When, state: GameState, st: StoryState, now: Date): boo
     [w.workouts, () => n >= w.workouts!],
     [w.chapter, () => current >= w.chapter!],
     [w.beaten, () => st.index >= w.beaten!],
-    [w.awaitingTest, () => current === w.awaitingTest && st.awaitingTest],
     [w.inChapter, () => current === w.inChapter],
     [w.restDay, () => isRestDay(state, now) === w.restDay],
     [w.shortSession, () => (state.sessions[n - 1]?.kind === 'mini') === w.shortSession],
     [w.daysInRow, () => daysInRow(state, now) >= w.daysInRow!],
     [w.perfectWeek, () => hadPerfectWeek(state) === w.perfectWeek],
-    [w.skill, () => state.progress[w.skill!.path] > w.skill!.past],
-    [w.unlocked, () => state.sessions.some((x) => x.unlocked.includes(w.unlocked!))],
+    [w.better, () => state.sessions.filter((x) => x.better).length >= w.better!],
     [w.noClass, () => !state.profile.classId === w.noClass],
     [w.answer, () => gave(state, w.answer!)],
     [w.needs, () => !!words[w.needs!].trim()],
@@ -124,7 +104,7 @@ export function savedId(scene: Scene, state: GameState): string {
 }
 
 /** `when` fields that wait for something to happen (a rest day, a class...), not for a workout count. */
-const WAITS_FOR: (keyof When)[] = ['restDay', 'shortSession', 'roughRun', 'daysInRow', 'perfectWeek', 'skill', 'unlocked', 'noClass', 'away', 'awaitingTest', 'beaten', 'finished'];
+const WAITS_FOR: (keyof When)[] = ['restDay', 'shortSession', 'roughRun', 'daysInRow', 'perfectWeek', 'better', 'noClass', 'away', 'beaten', 'finished'];
 
 /**
  * A story beat tied to a workout plays then, or a few workouts later while a chapter catches up.
@@ -133,7 +113,7 @@ const WAITS_FOR: (keyof When)[] = ['restDay', 'shortSession', 'roughRun', 'daysI
  */
 function longGone(w: When, state: GameState): boolean {
   if (w.workouts === undefined || WAITS_FOR.some((k) => w[k] !== undefined)) return false;
-  return state.sessions.length - w.workouts > TEST_GRACE;
+  return state.sessions.length - w.workouts > CATCH_UP;
 }
 
 /** A scene as this player gets it: lines that wait for an answer they didn't give are left out. */
@@ -165,14 +145,14 @@ export function pendingScenes(state: GameState, now: Date): Scene[] {
 /** At most this many scenes play at one moment; the rest wait for the next one. */
 export const MAX_SCENES_AT_ONCE = 2;
 
-/** One story moment: today, after this many workouts and max tests. A new workout or test starts a new one. */
+/** One story moment: today, after this many workouts. A new workout starts a new one. */
 export function sceneMoment(state: GameState, now: Date): string {
-  return `${dayKey(now)}|${state.sessions.length}|${state.tests.length}`;
+  return `${dayKey(now)}|${state.sessions.length}`;
 }
 
 /**
  * The scenes to play now: the due ones, but never more than MAX_SCENES_AT_ONCE at one moment.
- * Extras (skill beats come last in story order) wait for the next workout, test or day.
+ * Extras wait for the next workout or day.
  */
 export function scenesToPlay(state: GameState, now: Date): Scene[] {
   const at = sceneMoment(state, now);

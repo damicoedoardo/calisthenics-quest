@@ -1,12 +1,12 @@
 import { createHash } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { equippedGear, type ClassId } from '@/lib/gear';
+import { uniformGear, type ClassId, type Tier } from '@/lib/gear';
 import { CLIPS, type SpriteAction } from './clips';
 import { DEFAULT_LOOK, STARTER_LOOKS, normalizeLook } from './characters/hero';
 import { HAIRSTYLES, SIZE, type HairStyle } from './engine/figure';
 import { MANGA_HAIR } from './engine/manga';
 import { tint, type Grid } from './engine/grid';
-import { PATHS } from '@/lib/skills';
+import { planExercises } from '@/lib/program';
 import { EXERCISES, type ExerciseId } from './characters/exercise';
 import { SPRITES, clipFor, framesFor, imageSheet, type SpriteId } from './registry';
 
@@ -40,7 +40,7 @@ describe('sprite registry', () => {
     for (const classId of [undefined, 'warrior', 'archer', 'monk', 'mage'] as (ClassId | undefined)[])
       for (const t of [0, 3, 6])
         for (const action of actions)
-          for (const g of framesFor('hero', action, { gear: equippedGear(classId, { push: t, pull: t, core: t }), classId })) {
+          for (const g of framesFor('hero', action, { gear: uniformGear(classId, t as Tier), classId })) {
             expect(g).toHaveLength(SIZE);
             expect(g.every((row) => row.length === SIZE)).toBe(true);
             expect(painted(g)).toBeGreaterThan(600);
@@ -48,7 +48,7 @@ describe('sprite registry', () => {
   });
 
   it('each class attacks with its own clip', () => {
-    const gear = (c: ClassId) => equippedGear(c, { push: 2, pull: 2, core: 2 });
+    const gear = (c: ClassId) => uniformGear(c, 2);
     expect(clipFor('hero', 'attack', { gear: gear('warrior'), classId: 'warrior' })).toBe('swing');
     expect(clipFor('hero', 'attack', { gear: gear('archer'), classId: 'archer' })).toBe('shoot');
     expect(clipFor('hero', 'attack', { gear: gear('mage'), classId: 'mage' })).toBe('cast');
@@ -62,7 +62,7 @@ describe('sprite registry', () => {
   });
 
   it('the idle loop bobs and the attack moves', () => {
-    const o = { gear: equippedGear('warrior', { push: 2, pull: 2, core: 2 }), classId: 'warrior' as const };
+    const o = { gear: uniformGear('warrior', 2), classId: 'warrior' as const };
     const idle = framesFor('hero', 'idle', o),
       attack = framesFor('hero', 'attack', o);
     expect(hash([idle[0]])).not.toBe(hash([idle[2]]));
@@ -104,14 +104,13 @@ describe('sprite registry', () => {
       }
   });
 
-  it('every exercise in the program has a demo, and every demo moves', () => {
-    for (const path of PATHS)
-      for (const node of path.nodes) {
-        expect(EXERCISES, node.id).toContain(node.id);
-        const frames = framesFor('exercise', 'idle', { exercise: node.id as ExerciseId });
-        expect(frames, node.id).toHaveLength(16);
-        expect(new Set(frames.map((g) => hash([g]))).size, node.id).toBeGreaterThan(1);
-      }
+  it('every exercise in the built-in plan has a demo, and every demo moves', () => {
+    for (const { id } of planExercises()) {
+      expect(EXERCISES, id).toContain(id);
+      const frames = framesFor('exercise', 'idle', { exercise: id as ExerciseId });
+      expect(frames, id).toHaveLength(16);
+      expect(new Set(frames.map((g) => hash([g]))).size, id).toBeGreaterThan(1);
+    }
   });
 
   it('PNG sheets pick their row and fall back to idle', () => {
@@ -136,7 +135,7 @@ describe('sprite registry', () => {
     for (const classId of ['warrior', 'archer', 'monk', 'mage'] as ClassId[])
       for (const t of [1, 4, 6])
         for (const action of actions)
-          prints[`hero ${classId} t${t} ${action}`] = hash(framesFor('hero', action, { gear: equippedGear(classId, { push: t, pull: t, core: t }), classId }));
+          prints[`hero ${classId} t${t} ${action}`] = hash(framesFor('hero', action, { gear: uniformGear(classId, t as Tier), classId }));
     for (const variant of ['echo', 'best', 'hollow'] as const) prints[`hero ${variant}`] = hash(framesFor('hero', 'idle', { variant }));
     for (const style of Object.keys(HAIRSTYLES) as HairStyle[])
       for (const head of ['classic', 'manga'] as const) prints[`hero ${head} ${style}`] = hash(framesFor('hero', 'idle', { look: { ...DEFAULT_LOOK, style, head } }));

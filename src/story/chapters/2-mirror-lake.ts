@@ -11,7 +11,6 @@ export const MIRROR_LAKE: Chapter = {
   enemy: 'The Mirror',
   enemySprite: 'mirror',
   workouts: 12,
-  tests: 1,
   place: 'mirror-lake',
   fog: {
     name: 'Mirror Lake',
@@ -218,15 +217,6 @@ export const MIRROR_LAKE: Chapter = {
         { who: 'narrator', text: 'You sit down on the shore. Nobody tells you to get up.', pause: 1.8, film: true },
         { who: 'narrator', show: 'flame', text: '{flame} settles against your knee and stays there. It says nothing, which for {flame} is a very big thing to do.', pause: 1.2, music: 'memory' },
         { who: 'echo', text: "...For what it's worth. I was only ever the best photos. You're the whole film.", pause: 1 },
-      ],
-    },
-    {
-      id: 'ch2-await-test',
-      when: { awaitingTest: 2 },
-      lines: [
-        { who: 'wanderer', text: "The Mirror only shows what you lost. Let's show it what you have." },
-        { who: 'wanderer', text: 'Take your max test on the Hero tab. Fresh, after a warm-up. We compare you to week one. Not to the Echo.' },
-        { who: 'flame', mood: 'soft', text: "Whatever it says, it's a starting line, not a grade. I'll be right there." },
       ],
     },
     {

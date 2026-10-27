@@ -34,7 +34,7 @@ export function todayMoment(state: GameState, now: Date): Moment {
   if (since >= MISSED_AFTER) return 'missed';
   if (Math.max(daysInRow(state, now), daysInRow(state, now, 'yesterday')) >= SMOKY_AFTER) return 'smoky';
   const last = recent(state, now);
-  if (last?.unlocked.length) return 'best';
+  if (last?.better) return 'best';
   if (last?.kind === 'mini') return 'rough';
   if (since === 0) return 'trained';
   if (since === 1) return 'rest';
@@ -180,7 +180,7 @@ export function afterKind(state: GameState): AfterKind {
   const before = state.sessions[n - 2];
   if (n <= 1) return 'first';
   if (before && daysApart(new Date(before.date), new Date(last.date)) >= MISSED_AFTER) return 'back';
-  if (last.unlocked.length) return 'best';
+  if (last.better) return 'best';
   return last.kind === 'mini' ? 'short' : 'full';
 }
 
@@ -215,7 +215,7 @@ export function marginKind(state: GameState, page: DayPage): MarginKind {
     const that = state.sessions.filter((s) => dayKey(new Date(s.date)) === page.day);
     const before = state.sessions[i - 1];
     if (before && daysApart(new Date(before.date), new Date(state.sessions[i].date)) >= MISSED_AFTER) return 'back';
-    if (that.some((s) => s.unlocked.length)) return 'best';
+    if (that.some((s) => s.better)) return 'best';
     return that.every((s) => s.kind === 'mini') ? 'short' : 'full';
   }
   if (page.fire) return 'fire';

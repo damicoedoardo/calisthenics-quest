@@ -1,5 +1,4 @@
 import type { TrackId } from '@/lib/music';
-import type { PathId } from '@/lib/skills';
 import type { SpriteId } from '@/sprites/registry';
 import type { EnemyId } from '@/components/Characters';
 import type { HeroVariant } from '@/sprites/characters/hero';
@@ -92,8 +91,6 @@ export interface When {
   chapter?: number;
   /** This chapter's enemy is beaten. */
   beaten?: number;
-  /** This chapter has all its workouts and only waits for a max test. */
-  awaitingTest?: number;
   /** Only while this chapter is the current one. */
   inChapter?: number;
   /** Today is a rest day. */
@@ -104,10 +101,8 @@ export interface When {
   daysInRow?: number;
   /** Some week had all three workouts. */
   perfectWeek?: boolean;
-  /** Beat a skill: this path's level is past this number (pull past 2 = negatives beaten, the first strict pull-up). */
-  skill?: { path: PathId; past: number };
-  /** A skill level beaten in a workout: a session unlocked past this node id (not a level you started past). */
-  unlocked?: string;
+  /** A set beat the same exercise's best set last time, in at least this many workouts. */
+  better?: number;
   /** No class picked yet. */
   noClass?: boolean;
   /** The player gave this answer (or any answer when `is` is left out). */
@@ -208,8 +203,6 @@ export interface Chapter {
   enemySprite: EnemyId;
   /** Workouts in this chapter. */
   workouts: number;
-  /** Max tests needed in total before the chapter can end. */
-  tests: number;
   place: PlaceId;
   fog: FogZone;
   scenes: Scene[];

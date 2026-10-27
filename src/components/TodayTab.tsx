@@ -17,7 +17,7 @@ import {
   type Checkin,
   type GameState,
 } from '@/lib/game';
-import { getPath } from '@/lib/skills';
+import { ROLE_COLOR, ROLE_LABEL } from '@/lib/program';
 import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
 import { daysSinceTraining, isRestDay, trainedToday } from '@/lib/days';
 import { storyState, storyWords } from '@/story/engine';
@@ -39,7 +39,6 @@ const CHECKINS: { id: Checkin; label: string; note: string }[] = [
   { id: 'strong', label: 'Strong', note: 'Full quest. If the last set flies, add a rep.' },
 ];
 
-const ROLE_LABEL = { main: 'Main', core: 'Core', support: 'Support' } as const;
 
 export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: Props) {
   const now = new Date();
@@ -92,9 +91,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
                 ))}
               </div>
               <p className="mt-1.5 text-xs text-slate-400">
-                {story.awaitingTest
-                  ? 'Take your max test on the Hero tab to finish this chapter.'
-                  : `Every session takes a heart. ${story.heartsLeft} to go.`}
+                {`Every session takes a heart. ${story.heartsLeft} to go.`}
               </p>
             </div>
           </div>
@@ -102,7 +99,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
       ) : (
         <section className="rounded-2xl bg-ink-800 p-4 text-center pixel-border">
           <p className="font-pixel text-xs text-gold-300">The road is yours</p>
-          <p className="mt-2 text-sm text-slate-300">You reached the Summit. Keep training: your gear and skills keep growing.</p>
+          <p className="mt-2 text-sm text-slate-300">You reached the Summit. Keep training: your gear and your champion keep growing.</p>
         </section>
       )}
 
@@ -140,24 +137,23 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
         </div>
         <ul className="mt-3 space-y-2">
           {(inProgress ? todaysQuest(state) : quest).map((q) => {
-            const path = getPath(q.path);
             const done = state.draft?.sets[q.id]?.length ?? 0;
             return (
               <li key={q.id} className="flex items-center gap-3 rounded-xl bg-ink-900 py-1.5 pl-1.5 pr-3">
                 {/* A still of you doing it: the demo's first frame, at 1:1 so it stays crisp. */}
-                {(EXERCISES as string[]).includes(q.node.id) ? (
-                  <Sprite id="exercise" opts={{ exercise: q.node.id as ExerciseId, ...hero }} size={64} playing={false} label={`${q.name}, demo`} className="shrink-0 rounded-lg bg-ink-950" />
+                {(EXERCISES as string[]).includes(q.id) ? (
+                  <Sprite id="exercise" opts={{ exercise: q.id as ExerciseId, ...hero }} size={64} playing={false} label={`${q.name}, demo`} className="shrink-0 rounded-lg bg-ink-950" />
                 ) : (
                   <span className="h-16 w-16 shrink-0" />
                 )}
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[10px] font-bold uppercase tracking-wider" style={{ color: path.color }}>
+                  <span className="block text-[10px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[q.role] }}>
                     {ROLE_LABEL[q.role]}
                   </span>
                   <span className="mt-0.5 block text-sm leading-snug text-slate-100">{q.name}</span>
                 </span>
                 <span className="shrink-0 font-mono text-sm text-slate-300">
-                  {inProgress ? `${Math.min(done, q.sets)}/${q.sets}` : `${q.sets}×${q.reps}${q.unit === 'sec' ? 's' : ''}`}
+                  {inProgress ? `${Math.min(done, q.sets)}/${q.sets}` : `${q.sets > 1 ? `${q.sets}×` : ''}${q.reps}${q.unit === 'sec' ? 's' : ''}`}
                 </span>
               </li>
             );

@@ -6,7 +6,7 @@ import { Minus, Plus, X } from 'lucide-react';
 import { Sprite } from './Sprite';
 import { initialState, type GameState } from '@/lib/game';
 import { CLASSES } from '@/lib/gear';
-import { PATHS } from '@/lib/skills';
+import { pointsEarned, pointsFree, resetBuild, spendEvenly } from '@/lib/stats';
 import { ZONES } from '@/lib/fog';
 import { addFakeWorkouts, clearNextZone, lastWorkoutAgo, newDayPage, resetFog, trainDaysInRow } from '@/lib/dev';
 import { ALL_SCENES } from '@/story/engine';
@@ -156,24 +156,18 @@ export function DevPanel({ state, update, onPlayScene, onTurnOff, onClose }: Pro
           </div>
         </section>
 
-        <section className="mt-5 space-y-2">
-          <p className="text-xs text-slate-400">Skill tree</p>
-          {PATHS.map((path) => {
-            const lv = state.progress[path.id];
-            const set = (v: number) => update((s) => ({ ...s, progress: { ...s.progress, [path.id]: Math.max(0, Math.min(path.nodes.length, v)) } }));
-            return (
-              <div key={path.id} className="flex items-center gap-2">
-                <span className="w-12 text-sm text-slate-300">{path.name}</span>
-                <button aria-label={`Lower ${path.name}`} onClick={() => set(lv - 1)} className="grid h-9 w-9 place-items-center rounded-lg bg-ink-700">
-                  <Minus size={14} />
-                </button>
-                <span className="min-w-0 flex-1 truncate text-center text-xs text-slate-200">{path.nodes[lv]?.name ?? 'All beaten'}</span>
-                <button aria-label={`Raise ${path.name}`} onClick={() => set(lv + 1)} className="grid h-9 w-9 place-items-center rounded-lg bg-ink-700">
-                  <Plus size={14} />
-                </button>
-              </div>
-            );
-          })}
+        <section className="mt-5">
+          <p className="text-xs text-slate-400">
+            Stat points: {pointsFree(state)} free of {pointsEarned(state).total} (fake workouts earn more)
+          </p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button onClick={() => update(spendEvenly)} disabled={pointsFree(state) === 0} className={`${chip} disabled:opacity-40`}>
+              Spread them evenly
+            </button>
+            <button onClick={() => update(resetBuild)} className={chip}>
+              Take all back
+            </button>
+          </div>
         </section>
 
         <section className="mt-5">

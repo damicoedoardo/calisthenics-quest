@@ -23,15 +23,15 @@ pieces of screen state, and decides what is on screen:
 
 | Component | Job |
 |---|---|
-| `Prologue` | First run: boy or girl pick, the story opens, the first fight (`FirstFight`) you can't win, `RiseUp` (hold to stand), the letter, then the `LookEditor` |
+| `Prologue` | First run: boy or girl pick, the story opens, the first fight (`FirstFight`) you can't win, `RiseUp` (hold to stand), the letter, gym or home, then the `LookEditor` |
 | `TodayTab` | The flame card and its line, today's quest list with exercise stills, the rest-day card and `SitByFire`, the quote of the day, the Book of Days, the install nudge |
-| `Workout` | The set logger: one exercise at a time, one tap per set (reps in reserve), rest timer, Undo, the exercise demo |
-| `AfterSession` | After a workout: a short battle against the chapter enemy, then the loot (XP, level, gear, the flame's word) |
-| `SkillsTab` | The three paths and their nodes; the "Exercise library" button on top |
-| `ExerciseLibrary` | The whole exercise library over the Skills tab: search, equipment, kind and movement filters, list rows with a demo still; an exercise shows the boy and girl demo, steps, tips and common mistakes. Loaded on demand. See [../game/exercise-library.md](../game/exercise-library.md) |
+| `Workout` | The set logger: one exercise at a time, one tap per set (reps in reserve), rest timer, Undo, the exercise demo; the warm-up and the stretch are one "Done" tap |
+| `AfterSession` | After a workout: a short battle against the chapter enemy, then the loot (XP, stat points, better than last time, level, gear, the flame's word) |
+| `TrainTab` | The "Exercise library" button, gym or home, the plan's two days with today's targets, when the next gear is forged |
+| `ExerciseLibrary` | The whole exercise library over the Train tab: search, equipment, kind and movement filters, list rows with a demo still; an exercise shows the boy and girl demo, steps, tips and common mistakes. Loaded on demand. See [../game/exercise-library.md](../game/exercise-library.md) |
 | `PlayTab` | Power from training, the zones, warms up the Fog's code and sprite sheets while idle |
 | `FogRun` | A run: loads the Phaser scene on demand, the HUD, pause menu, skill picks, the recap |
-| `HeroTab` | Level, gear, class, look editor, keepsakes, max test, Backup and Restore |
+| `HeroTab` | Gear, class, look editor, the champion's stat points (`StatPoints`: spend, take back), keepsakes, quest log, Backup and Restore |
 | `ScenePlayer`, `Dialogue` | Play a story scene: lines, camera shots, the question, the answer lines |
 | `ClassPicker` | Four weapons in the ash: pick the class |
 | `BookOfDays` | Every day the app was opened, newest first |

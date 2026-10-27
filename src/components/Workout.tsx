@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Minus, Plus, Undo2, X } from 'lucide-react';
-import { REST_SECONDS, gearOf, todaysQuest, type GameState, type Rir } from '@/lib/game';
-import { rewardFor, tierText } from '@/lib/gear';
-import { getPath } from '@/lib/skills';
+import { REST_SECONDS, gearOf, isTap, todaysQuest, type GameState, type Rir } from '@/lib/game';
+import { ROLE_COLOR, ROLE_LABEL } from '@/lib/program';
 import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
 import { useLook } from './Look';
 import { Ember } from './Characters';
@@ -37,12 +36,12 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   const q = quest[Math.min(index, quest.length - 1)];
   const logged = sets[q.id] ?? [];
   const [reps, setReps] = useState(q.reps);
-  const totalLogged = quest.reduce((a, e) => a + Math.min(sets[e.id]?.length ?? 0, e.sets), 0);
+  // The warm-up alone isn't a workout yet: it counts once a real set is logged.
+  const totalLogged = quest.filter((e) => !isTap(e)).reduce((a, e) => a + Math.min(sets[e.id]?.length ?? 0, e.sets), 0);
   const allDone = quest.every((e) => (sets[e.id]?.length ?? 0) >= e.sets);
   const exerciseDone = logged.length >= q.sets;
-  const path = getPath(q.path);
   const unit = q.unit === 'sec' ? 's' : '';
-  const reward = q.canUnlock ? rewardFor(state.profile.classId, state.progress, q.path, state.progress[q.path]) : null;
+  const tap = isTap(q);
 
   useEffect(() => {
     setReps(q.reps);
@@ -58,7 +57,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
     navigator.vibrate?.(30);
     const finishedExercise = logged.length + 1 >= q.sets;
     const lastOfAll = finishedExercise && quest.every((e) => e.id === q.id || (sets[e.id]?.length ?? 0) >= e.sets);
-    if (!lastOfAll) setRestUntil(Date.now() + REST_SECONDS * 1000);
+    if (!lastOfAll && !tap) setRestUntil(Date.now() + REST_SECONDS * 1000);
     if (finishedExercise && !lastOfAll) {
       const next = quest.findIndex((e, i) => i !== index && (sets[e.id]?.length ?? 0) < e.sets);
       if (next !== -1) setIndex(next);
@@ -110,8 +109,8 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
             <ChevronLeft />
           </button>
           <div className="text-center">
-            <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: path.color }}>
-              {path.name} · {q.role}
+            <p className="text-[11px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[q.role] }}>
+              {ROLE_LABEL[q.role]}
             </p>
             <h2 className="mt-1 text-2xl font-bold text-slate-50">{q.name}</h2>
           </div>
@@ -126,9 +125,9 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         </div>
         <p className="mt-1 text-center text-sm text-slate-400">{q.cue}</p>
 
-        <Demo state={state} exercise={q.node.id} name={q.name} cue={q.cue} />
+        <Demo state={state} exercise={q.id} name={q.name} cue={q.cue} />
 
-        <div className="mt-5 flex justify-center gap-2">
+        <div className={`mt-5 flex justify-center gap-2 ${tap ? 'hidden' : ''}`}>
           {Array.from({ length: q.sets }).map((_, i) => (
             <div
               key={i}
@@ -148,7 +147,22 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         {exerciseDone ? (
           <div className="mt-8 flex flex-1 flex-col items-center justify-center text-center">
             <p className="font-pixel text-xs text-emerald-400">{q.name} done</p>
-            <p className="mt-2 text-sm text-slate-400">{logged.reduce((a, s) => a + s.reps, 0)}{unit ? ' seconds' : ' reps'} total. Clean work.</p>
+            <p className="mt-2 text-sm text-slate-400">
+              {tap ? (q.role === 'warmup' ? 'Warm and ready.' : 'Good. Your body thanks you.') : `${logged.reduce((a, s) => a + s.reps, 0)}${unit ? ' seconds' : ' reps'} total. Clean work.`}
+            </p>
+          </div>
+        ) : tap ? (
+          <div className="mt-6 text-center">
+            <p className="font-mono text-5xl font-bold text-slate-50">
+              {q.reps >= 60 ? `${Math.floor(q.reps / 60)}:${String(q.reps % 60).padStart(2, '0')}` : `${q.reps}s`}
+            </p>
+            <p className="mt-2 text-sm text-slate-400">{q.role === 'warmup' ? 'Easy and slow: get everything moving before the work.' : 'Breathe out and let it go a little further. Never into pain.'}</p>
+            <button
+              onClick={() => log('4+')}
+              className="mt-6 w-full rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
+            >
+              Done
+            </button>
           </div>
         ) : (
           <>
@@ -167,7 +181,10 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
                 <Plus />
               </button>
             </div>
-            <p className="mt-1 text-center text-xs text-slate-500">Target {q.reps}{unit}. Stop with two in the tank.</p>
+            <p className="mt-1 text-center text-xs text-slate-500">
+              Target {q.reps}
+              {unit}. Stop with two in the tank.{q.slot.weighted ? ' Pick a weight you could lift about two more times.' : ''}
+            </p>
 
             <p className="mt-6 text-center text-sm font-semibold text-slate-200">Done? How many {unit ? 'seconds' : 'reps'} were left in the tank?</p>
             <div className="mt-3 grid grid-cols-3 gap-2">
@@ -183,13 +200,6 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
               ))}
             </div>
           </>
-        )}
-
-        {reward && (
-          <p className="mt-6 text-center text-xs text-slate-400">
-            Beat it at {q.node.unlockSets}×{q.node.unlockReps}
-            {unit} to forge <span style={{ color: tierText(reward.tier) }}>{reward.name}</span>
-          </p>
         )}
 
         {undoExercise && (

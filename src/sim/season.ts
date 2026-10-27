@@ -1,4 +1,4 @@
-import { finishSession, initialState, levelInfo, logMaxTest, todaysQuest, totalXp, type Checkin, type GameState, type Letter, type Rir } from '@/lib/game';
+import { finishSession, initialState, levelInfo, todaysQuest, totalXp, type Checkin, type GameState, type Letter, type Rir } from '@/lib/game';
 import { recordRun, zoneStatus, ZONES } from '@/lib/fog';
 import { dayKey, daysApart, isRestDay } from '@/lib/days';
 import { seeded } from '@/lib/random';
@@ -8,6 +8,7 @@ import { runKind, runLine, afterWorkoutLine, canSitByFire, fireLine, marginNote,
 import { DEFAULT_FLAME_NAME, flameStage } from '@/story/flame';
 import { STARTER_LOOKS } from '@/sprites/characters/hero';
 import type { ClassId } from '@/lib/gear';
+import { pointsFree, spendEvenly, spendPoint } from '@/lib/stats';
 import type { Line, Moment, Scene } from '@/story/types';
 
 /* The season simulator: months of FORMA in a second, with no screen. A kind of player trains on
@@ -33,8 +34,8 @@ export interface PlayerKind {
   sitsByFire?: boolean;
   /** Plays the Fog, and beats each boss on this try (0 never plays). */
   bossOnTry?: number;
-  /** Takes a max test when a chapter asks for one (and a first one on day one when 'early'). */
-  tests?: 'never' | 'when-asked' | 'early';
+  /** How they spend stat points after each workout: spread over the four (the default), all on Damage, or never. */
+  spends?: 'even' | 'damage' | 'never';
   /** Names the flame (empty skips and keeps the default). */
   flame?: string;
   /** Which choice they pick in heart moments: 'first', 'write', or 'skip'. */
@@ -42,7 +43,7 @@ export interface PlayerKind {
   class?: ClassId;
 }
 
-export type EventKind = 'start' | 'workout' | 'scene' | 'ask' | 'flame' | 'chapter' | 'zone' | 'boss' | 'test' | 'level' | 'skill' | 'day' | 'rest' | 'problem';
+export type EventKind = 'start' | 'workout' | 'scene' | 'ask' | 'flame' | 'chapter' | 'zone' | 'boss' | 'level' | 'better' | 'day' | 'rest' | 'problem';
 
 export interface SimEvent {
   day: number;
@@ -66,12 +67,12 @@ export interface Season {
 
 /**
  * How many workouts after a zone opens its "later" snapshot is taken. The last two zones open when
- * stats grow slowly (a path step every dozen workouts or so), so six workouts there changes almost
- * nothing; about six weeks of steady training does.
+ * each stat point is worth less (points fall off as a stat fills), so six workouts there changes
+ * little; about six weeks of steady training does.
  */
 export const laterBy = (zone: number) => (zone >= 4 ? 18 : 6);
 
-const FULL_LETTER: Letter = { why: 'I want to feel strong again', want: 'do ten pull-ups', forWho: 'my little brother', remind: 'I already did this once.' };
+const FULL_LETTER: Letter = { why: 'I want to feel strong again', want: 'run a whole 10 km', forWho: 'my little brother', remind: 'I already did this once.' };
 
 /** Text a player sees with a {word} still in it, or a name that came out empty. */
 function broken(text: string): boolean {
@@ -227,16 +228,18 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
     open: ZONES.filter((z) => zoneStatus(state, z).state === 'open').map((z) => z.id),
   });
 
+  /** Stat points go where this kind of player puts them. */
+  const spend = () => {
+    if (kind.spends === 'never') return;
+    state = kind.spends === 'damage' ? spendPoint(state, 'damage', pointsFree(state)) : spendEvenly(state);
+  };
+
   note('start', `${kind.about}. Starts after the opening.`);
-  if (kind.tests === 'early') {
-    state = logMaxTest(state, { pushups: 15, pullups: 2, lsitSec: 5 }, now).state;
-    note('test', 'takes a first max test right away');
-  }
+  spend();
 
   // The first zone is open from the start.
   openedAt[0] = 0;
   snapshots.push({ label: 'zone0-open', state });
-  let waitingSince: number | null = null;
   for (day = 0; day < days; day++) {
     now = new Date(start.getFullYear(), start.getMonth(), start.getDate() + day, kind.hour ?? 18, 30);
     const before = snapshot();
@@ -256,25 +259,13 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
         const says = afterWorkoutLine(state);
         check('after-workout line', says);
         note('day', `after the workout: "${says}"`);
-        for (const id of s.unlocked) note('skill', `beats ${id}`);
+        if (s.better) note('better', 'a set beat last time');
+        spend();
         // About 40 minutes later, back on Today.
         now = new Date(now.getTime() + 40 * 60_000);
         open();
         playScenes('after the workout');
       }
-    }
-    const st = storyState(state);
-    if (st.awaitingTest) {
-      waitingSince ??= day;
-      if (kind.tests && kind.tests !== 'never') {
-        state = logMaxTest(state, { pushups: 15 + day / 10, pullups: 2 + Math.floor(day / 40), lsitSec: 5 + day / 10 }, now).state;
-        note('test', `takes the max test chapter ${st.chapter?.n} asks for`);
-        playScenes('after the max test');
-      }
-    }
-    if (!storyState(state).awaitingTest && waitingSince !== null) {
-      if (day - waitingSince > 7) note('problem', `the story waited ${day - waitingSince} days for a max test`);
-      waitingSince = null;
     }
     const after = snapshot();
     if (after.chapter.index !== before.chapter.index) note('chapter', after.chapter.chapter ? `chapter ${after.chapter.chapter.n}: ${after.chapter.chapter.name}` : 'the story is finished');
@@ -289,7 +280,6 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
       if (state.sessions.length >= n + laterBy(Number(id)) && !snapshots.some((x) => x.label === `zone${id}-later`)) snapshots.push({ label: `zone${id}-later`, state });
     }
   }
-  if (waitingSince !== null) note('problem', `still waiting for a max test since day ${waitingSince}`);
   for (const page of state.days ?? []) {
     const m = marginNote(state, page);
     if (m) check(`margin note on ${page.day}`, m);
@@ -313,8 +303,8 @@ export function formatSeason(s: Season): string {
   out.push(
     '',
     '## End',
-    `- ${s.state.sessions.length} workouts, ${s.state.tests.length} max tests, level ${levelInfo(totalXp(s.state)).level}`,
-    `- story: ${st.finished ? 'finished' : `chapter ${st.chapter?.n}${st.awaitingTest ? ' (waiting for a max test)' : ''}`}, ${s.played.length} scenes`,
+    `- ${s.state.sessions.length} workouts, level ${levelInfo(totalXp(s.state)).level}, ${pointsFree(s.state)} stat points unspent`,
+    `- story: ${st.finished ? 'finished' : `chapter ${st.chapter?.n}`}, ${s.played.length} scenes`,
     `- Fog bosses beaten: ${s.state.fog?.cleared ?? 0}`,
     `- days on Today: ${Object.entries(s.moments)
       .map(([k, v]) => `${k} ${v}`)

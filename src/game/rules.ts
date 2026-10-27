@@ -58,12 +58,12 @@ type Ups = Partial<Record<UpgradeId, number>>;
 
 // ---------- the hero ----------
 
-export const heroMaxHp = (power: Power) => HERO_HP + power.hold;
+export const heroMaxHp = (power: Power) => HERO_HP + power.health;
 export const heroSpeed = (ups: Ups) => HERO_SPEED * (1 + 0.12 * (ups.swift ?? 0));
-export const heroDamage = (base: number, power: Power, ups: Ups) => base * (1 + power.strike) * (1 + 0.25 * (ups.power ?? 0));
-export const attackCooldown = (kind: AttackKind, power: Power, ups: Ups) => ATTACK[kind].cd / ((1 + power.reach) * (1 + 0.18 * (ups.haste ?? 0)));
+export const heroDamage = (base: number, power: Power, ups: Ups) => base * (1 + power.damage) * (1 + 0.25 * (ups.power ?? 0));
+export const attackCooldown = (kind: AttackKind, power: Power, ups: Ups) => ATTACK[kind].cd / ((1 + power.speed) * (1 + 0.18 * (ups.haste ?? 0)));
 export const armorOf = (power: Power, ups: Ups) => Math.min(0.6, power.armor + 0.1 * (ups.guard ?? 0));
-export const gemReach = (power: Power, ups: Ups) => 60 * (1 + 0.15 * power.levels.pull + 0.5 * (ups.magnet ?? 0));
+export const gemReach = (power: Power, ups: Ups) => 60 * (1 + power.reach + 0.5 * (ups.magnet ?? 0));
 
 /** Skills on a timer, per level. */
 export const sparkHit = (lv: number) => ({ jumps: 2 + lv, dmg: 14 + 6 * (lv - 1) });

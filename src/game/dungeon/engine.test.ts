@@ -43,7 +43,7 @@ describe('mid-bosses', () => {
   });
 
   it('the bot beats each of them', () => {
-    const strong = { ...power, strike: 6, armor: 0.95, hold: 2000 };
+    const strong = { ...power, damage: 6, armor: 0.95, health: 2000 };
     MIDS.forEach((_, z) => {
       const run = createRun({ zone: ZONES[z], power: strong, classId: 'archer', seed: 9, autoPick: true });
       skipToWarden(run);
@@ -194,7 +194,7 @@ describe('dungeon', () => {
   });
 
   const still = { x: 0, y: 0, ability: false };
-  const tough = { ...power, armor: 0.95, strike: 20 };
+  const tough = { ...power, armor: 0.95, damage: 20 };
 
   it('the Mirror splits into images that never shoot; hitting one hurts you and shatters it', () => {
     const run = createRun({ ...setup, zone: ZONES[1], power: { ...power, armor: 0.95 }, seed: 4 });
@@ -276,7 +276,7 @@ describe('dungeon', () => {
 describe('replays', () => {
   // A whole bot run in every zone, fingerprinted. A cleanup that changes nothing keeps these as
   // they are; a balance change moves them on purpose (refresh with `pnpm test -u`).
-  const power = { ...powerOf(initialState(), new Date()), strike: 1.2, reach: 0.4, armor: 0.25, hold: 180 };
+  const power = { ...powerOf(initialState(), new Date()), damage: 1.2, speed: 0.4, reach: 0.15, armor: 0.25, health: 180 };
   const classes = ['warrior', 'archer', 'mage', 'monk'] as const;
   it('every zone plays the same run as before', () => {
     const ends = ZONES.map((zone, i) => playRun({ zone, power, classId: classes[i % classes.length], seed: 11 + i }));

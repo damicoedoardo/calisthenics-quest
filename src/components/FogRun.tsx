@@ -564,7 +564,7 @@ function Recap({ end, broken, midName }: { end: RunEnd; broken: ReturnType<typeo
 }
 
 function Results({ state, zone, end, broken, onAgain, onLeave }: { state: GameState; zone: Zone; end: RunEnd; broken: ReturnType<typeof recordsBroken> | null; onAgain: () => void; onLeave: () => void }) {
-  const hints = (['push', 'pull', 'core'] as const).map((p) => nextGrowth(state, p)).filter((h): h is string => !!h);
+  const hints = [nextGrowth(state)];
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/90 px-6 text-center">
       <p className={`font-pixel text-sm ${end.won ? 'text-gold-300' : 'text-slate-300'}`}>{end.won ? `${zone.name} cleared!` : 'The Fog took you'}</p>

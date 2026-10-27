@@ -11,7 +11,6 @@ export const ASHLANDS: Chapter = {
   enemy: 'Tomorrow',
   enemySprite: 'slime',
   workouts: 12,
-  tests: 0,
   place: 'ashlands',
   fog: {
     name: 'The Ashen Edge',

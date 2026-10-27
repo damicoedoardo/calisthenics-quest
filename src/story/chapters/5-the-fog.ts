@@ -13,7 +13,6 @@ export const THE_FOG: Chapter = {
   enemy: 'The Hollow',
   enemySprite: 'hollow',
   workouts: 14,
-  tests: 2,
   place: 'hollow-woods',
   fog: {
     name: 'The Hollow Woods',

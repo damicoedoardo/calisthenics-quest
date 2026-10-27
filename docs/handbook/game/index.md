@@ -8,7 +8,7 @@ timestamp: 2026-10-27
 
 # Game
 
-- [Training rules](training.md): skill paths, today's quest, logging, progression, XP, classes and gear
+- [Training rules](training.md): the built-in plan, today's quest, logging, progression, XP, stat points, classes and gear
 - [Story](story.md): the six chapters as data, scene format, daily lines, rules for the words
 - [The Fog](fog.md): the rules around a run, zones, power from training, records, balance
 - [The Fog's dungeon](dungeon.md): content, the pure engine, the bot, the Phaser scene, how to change each

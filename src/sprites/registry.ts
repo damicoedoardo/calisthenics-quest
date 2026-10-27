@@ -1,4 +1,4 @@
-import { equippedGear } from '@/lib/gear';
+import { uniformGear } from '@/lib/gear';
 import type { AbilityId, RelicId } from '@/game/dungeon/engine';
 import type { UpgradeId } from '@/lib/fog';
 import { CLIPS, type ClipFrame, type ClipId, type SpriteAction } from './clips';
@@ -136,7 +136,7 @@ export interface DayIconOpts {
   kind: DayKind;
 }
 
-const STARTER_GEAR = equippedGear(undefined, { push: 0, pull: 0, core: 0 });
+const STARTER_GEAR = uniformGear(undefined, 0);
 
 export const SPRITES = {
   hero: drawn<HeroOpts>({
