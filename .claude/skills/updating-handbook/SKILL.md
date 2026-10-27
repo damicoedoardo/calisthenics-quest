@@ -27,7 +27,7 @@ if every change that makes a page false also fixes the page, in the same branch,
 
 Paths are globs from the repo root; pages are under `docs/handbook/`. The check reads this table,
 so keep every path and page in backticks, one row per line. `pnpm handbook:lint` fails when a
-file in `src/`, `scripts/`, `public/`, `.github/`, `.githooks/`, `.claude/` or a root config has
+file in `src/`, `scripts/`, `public/`, `backend/`, `caddy/`, `.github/`, `.githooks/`, `.claude/` or a root config has
 no row: give a new folder its row (and a page if no page fits).
 
 | You touched | Check / update |
@@ -47,6 +47,9 @@ no row: give a new folder its row (and a page if no page fits).
 | `package.json`, `tsconfig.json`, `vercel.json`, `.github/**` | `dev/workflow.md` |
 | `scripts/handbook.mjs`, `.githooks/**`, `.claude/**`, `.github/workflows/handbook.yml` | `dev/handbook.md` |
 | `README.md` | `product/overview.md` |
+| `backend/**`, `.github/workflows/backend.yml` | `backend/api.md` |
+| `src/lib/cloud*.ts`, `src/components/Cloud.tsx` | `backend/cloud-sync.md` |
+| `docker-compose*.yml`, `caddy/**`, `.env.example`, `scripts/deploy/**`, `.github/workflows/deploy-backend.yml` | `backend/server.md` |
 
 Also update `product/overview.md` for any change a player would notice (a new tab, a new feature,
 a change of direction), and `architecture/system-map.md` for a new top-level folder or a new

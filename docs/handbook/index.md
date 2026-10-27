@@ -31,6 +31,7 @@ than the code.
 - [Architecture](architecture/index.md): the layers, the save, the rules between them
 - [App](app/index.md): the screens and how they hand off, the installable offline app, developer mode and the labs
 - [Game](game/index.md): training rules, story, the Fog, sprites, music
+- [Backend](backend/index.md): FORMA's own server, the login check and save backup, deploys
 - [Dev](dev/index.md): workflow, tests and simulators, keeping this handbook true
 
 ## Conventions

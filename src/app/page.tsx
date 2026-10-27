@@ -15,6 +15,7 @@ import { ClassPicker } from '@/components/ClassPicker';
 import { DevButton, DevPanel } from '@/components/DevPanel';
 import { Sprite } from '@/components/Sprite';
 import { LookProvider } from '@/components/Look';
+import { CloudChoice, useCloudSync } from '@/components/Cloud';
 import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { sawScene, scenesToPlay, storyState, type StoryState } from '@/story/engine';
 import { withTodayPage } from '@/story/daily';
@@ -57,6 +58,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const [runStart, setRunStart] = useState<RunStart | undefined>();
   const [openBook, setOpenBook] = useState(false);
   const jumped = useRef(false);
+  // The cloud backup, when signed in. Never before the save has loaded, never in the sandbox.
+  const cloud = useCloudSync(state, update, !ready || inSandbox());
   useEffect(() => {
     if (!ready || jumped.current) return;
     jumped.current = true;
@@ -277,6 +280,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           onCancel={() => setPicker(null)}
         />
       )}
+      <CloudChoice phone={state} onChoose={cloud.choose} />
     </div>
   );
 }

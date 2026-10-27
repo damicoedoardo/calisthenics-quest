@@ -1,0 +1,8 @@
+# Local only: `docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build` also
+# publishes the api on localhost:8000, so the app on localhost:3000 can call it directly.
+services:
+  api:
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      - FORMA_ENV=development

@@ -6,3 +6,6 @@ out
 next-env.d.ts
 .env*.local
 sim-out
+
+# Server settings (docker-compose.yml); the template is .env.example
+.env
