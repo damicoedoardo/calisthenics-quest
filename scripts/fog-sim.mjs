@@ -169,8 +169,9 @@ if (!isMainThread) {
           .map((t) => {
             const opens = t.snap.label.endsWith('open'),
               all = t.rates.reduce((a, b) => a + b, 0) / t.rates.length,
-              ok = Math.abs(all - (opens ? ZONE_WINS.open : ZONE_WINS.later)) <= ZONE_WINS.slack;
-            return row([String(t.snap.zone + 1), opens ? 'opens' : `+${laterBy(t.snap.zone)} workouts`, ...t.rates.map((r) => pct(r).trim()), pct(all).trim(), ok ? 'on target' : '**off**']);
+              first = opens && t.snap.zone === 0,
+              ok = first ? all <= ZONE_WINS.open + ZONE_WINS.slack : Math.abs(all - (opens ? ZONE_WINS.open : ZONE_WINS.later)) <= ZONE_WINS.slack;
+            return row([String(t.snap.zone + 1), first ? 'opens (the first run, meant to be lost)' : opens ? 'opens' : `+${laterBy(t.snap.zone)} workouts`, ...t.rates.map((r) => pct(r).trim()), pct(all).trim(), ok ? 'on target' : '**off**']);
           }),
         '',
       ].join('\n');

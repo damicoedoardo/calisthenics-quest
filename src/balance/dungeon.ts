@@ -5,7 +5,8 @@
 
 /** What the bot should win in a zone: the day it opens, and later on (6 workouts on; 18 for the last
     two zones, laterBy in src/sim/season.ts). `pnpm fog:tune` aims at these; `pnpm fog:sheet` flags a
-    zone more than `slack` off. Harder = lower. */
+    zone more than `slack` off. Harder = lower. The first zone's opening day is the very first run, at 0
+    workouts: losing it is meant (the story's first lesson), so there it only must not be easier. */
 export const ZONE_WINS = { open: 0.33, later: 0.67, slack: 0.15 } as const;
 
 export const DIALS = {
