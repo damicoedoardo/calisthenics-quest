@@ -192,7 +192,7 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
               aria-label={label}
               value={test[key]}
               onChange={(e) => setTest({ ...test, [key]: e.target.value.replace(/\D/g, '') })}
-              className="w-full rounded-lg bg-ink-900 px-3 py-2.5 text-center text-sm outline-none ring-1 ring-ink-600 focus:ring-gold-400"
+              className="w-full rounded-lg bg-ink-900 px-1 py-2.5 text-center text-sm outline-none ring-1 ring-ink-600 focus:ring-gold-400"
             />
           ))}
         </div>

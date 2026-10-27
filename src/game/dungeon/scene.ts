@@ -1550,6 +1550,7 @@ class DungeonScene extends Phaser.Scene {
 
   /** Hold the world still for a moment. `minor` stops don't come back-to-back. */
   private hitStop(ms: number, minor = false) {
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return; // no freezes for players who asked for less motion
     const now = this.time.now;
     if (minor && now < this.stopCool) return;
     if (now - this.stopSpent.from >= 1000) this.stopSpent = { from: now, ms: 0 };

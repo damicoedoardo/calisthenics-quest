@@ -26,7 +26,7 @@ export function ServiceWorker() {
     // once it is ready, again the moment it takes over the page (from then on it sees every
     // request itself), and once more a little later for anything that was mid-flight.
     const sendFiles = () => {
-      void sw.ready.then((r) => r.active?.postMessage({ type: 'cache', urls: loadedFiles() })).catch(() => {});
+      void sw.ready.then((r) => r.active?.postMessage({ type: 'cache', urls: loadedFiles(), build: process.env.NEXT_PUBLIC_BUILD_ID })).catch(() => {});
     };
     sendFiles();
     if (!hadWorker) sw.addEventListener('controllerchange', sendFiles, { once: true });
@@ -62,6 +62,8 @@ export function ServiceWorker() {
     };
     const onVisible = () => {
       if (document.visibilityState === 'hidden') {
+        // Report what this visit loaded (a run's code, say), so the worker counts it as this build's.
+        sendFiles();
         // Out of sight is the safe moment to switch to the new version.
         if (updateWaiting) window.location.reload();
         return;
