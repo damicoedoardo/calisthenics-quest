@@ -53,7 +53,7 @@ changes only as `land:` classes.
 | `PlayTab` | Power from training, your gear for the Fog (`FogGearCard`: worn gear with the flame's mark, the vault, Mira's forge for the tapped item, see [../game/forge.md](../game/forge.md)), the zones, warms up the Fog's code and sprite sheets while idle |
 | `FogRun` | A run, held sideways: loads the Phaser scene on demand, the HUD in the corners (`Vitals`: HP and level; the floor and its depth row, `DepthMap`; `BagButton` with a red count of what a fall would cost; pause; the floor's minimap, `FloorMap`, tap for it big), the bag (`BagPanel`) and the stairs card (deeper or leave), both showing what is at risk and the flame's kept item (`RiskLine`, `Guarded`), the pickup note, pause menu, skill picks (three cards side by side), the recap with what came home or was lost (`GearRecap`), the "turn your phone" card |
 | `ItemCard` | An item's tile and card (name in its rarity's color, what it gives, what it needs), shared by the run's bag and the Play tab |
-| `HeroTab` | Gear, class, look editor, the champion's stat points (`StatPoints`: spend, take back), keepsakes, quest log, Settings (sound, music in the menus), Backup and Restore, cloud backup sign-in (`CloudSave`) |
+| `HeroTab` | Gear, class, look editor, the champion's stat points (`StatPoints`: spend, take back), keepsakes, quest log, Settings (sound, music in the menus), Backup and Restore, cloud backup sign-in (`CloudSave`), the Friends card (`FriendsCard`, [../backend/friends.md](../backend/friends.md)) |
 | `ScenePlayer`, `Dialogue` | Play a story scene: lines, camera shots, the question, the answer lines |
 | `ClassPicker` | Four weapons in the ash: pick the class |
 | `BookOfDays` | Every day the app was opened, newest first |

@@ -11,6 +11,7 @@ import { LookEditor } from './LookEditor';
 import { useModal } from './useModal';
 import { StatPoints } from './StatPoints';
 import { CloudSave } from './Cloud';
+import { FriendsCard } from './Friends';
 import { getClass, tierText } from '@/lib/gear';
 import { gearOf, type GameState } from '@/lib/game';
 import { planExercises } from '@/lib/program';
@@ -139,6 +140,8 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
       </section>
 
       <Keepsakes cleared={state.fog?.cleared ?? 0} />
+
+      <FriendsCard sandbox={inSandbox()} />
 
       {state.sessions.length > 0 && (
         <section className="rounded-2xl bg-ink-800 p-4">

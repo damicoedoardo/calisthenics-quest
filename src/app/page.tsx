@@ -18,6 +18,7 @@ import { DevButton, DevPanel } from '@/components/DevPanel';
 import { Sprite } from '@/components/Sprite';
 import { LookProvider } from '@/components/Look';
 import { CloudChoice, useCloudSync } from '@/components/Cloud';
+import { useFriendsBeat } from '@/components/Friends';
 import { BringHero, InstallGate } from '@/components/InstallGate';
 import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { sawScene, scenesToPlay, storyState, type StoryState } from '@/story/engine';
@@ -68,6 +69,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const jumped = useRef(false);
   // The cloud backup, when signed in. Never before the save has loaded, never in the sandbox.
   const cloud = useCloudSync(state, update, !ready || inSandbox());
+  // Shows you online to your friends while the app is open, and in the Fog during a run.
+  useFriendsBeat(state, run?.name ?? null, !ready || inSandbox());
   useEffect(() => {
     if (!ready || jumped.current) return;
     jumped.current = true;

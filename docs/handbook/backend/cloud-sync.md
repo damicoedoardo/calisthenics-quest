@@ -16,7 +16,7 @@ the cloud keeps a copy so a new phone (or a wiped one) can get the hero back.
 | File | What it holds |
 |---|---|
 | `src/lib/cloud.ts` | Pure rules: `plan(local, cloud, lastRev)` decides upload, use the cloud copy, or ask; `cloudState` migrates a cloud copy; `describe` writes "12 workouts, 27 Oct". Tests in `cloud.test.ts` |
-| `src/lib/cloud-client.ts` | The browser side: `cloudConfigured`, the lazy Supabase client, sign-in and sign-out, the api calls (`getCloud`, `putCloud`, `deleteCloud`), the last rev seen per user, and the status store (`useCloudStatus`) |
+| `src/lib/cloud-client.ts` | The browser side: `cloudConfigured`, the lazy Supabase client, sign-in and sign-out, the api calls (`api()` for any signed-in call; `getCloud`, `putCloud`, `deleteCloud`), the last rev seen per user, and the status store (`useCloudStatus`) |
 | `src/components/Cloud.tsx` | `useCloudSync` (run from `page.tsx`), `CloudChoice` (the which-save modal), `CloudSave` (the card in Hero > Settings) |
 
 ## Turning it on
