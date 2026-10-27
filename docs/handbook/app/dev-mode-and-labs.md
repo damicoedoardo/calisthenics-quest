@@ -27,6 +27,7 @@ Helpers are pure functions on `GameState` and tested in `src/lib/dev.test.ts`.
 | `/lab` | Sprite Lab: every sprite and animation, with class, gear tier, variant and look controls. Check art changes here on a phone |
 | `/lab/story` | Story Lab: play any scene with any flame name and letter, every place, every look of the flame. `?play=<scene id>&back` plays one scene and returns |
 | `/lab/music` | Music Lab: every theme and sting |
+| `/lab/worlds` | The Play tab's world picker (`WorldPicker`) on made-up saves: a fresh hero, mid-way (one boss down, two worlds open), waiting on training (the next world opens with a later chapter), all open. Play only shows what it would start; nothing is saved. Linked from the Sprite Lab header |
 | `/lab/night` | One tap to try each recent change: writes a sandbox save for that moment (see [../architecture/game-state.md](../architecture/game-state.md)) and opens the app with `?sandbox` and `?tab=`, `?run=<zone>&at=mid\|boss\|win`, `?workout` or `?book`. "Exercise library" opens the Train tab to try the library; "The Fog, sideways" starts a zone 1 run; the two "Loot" jumps open a geared save (`geared`) on the Play tab or in a zone 2 run; "The camp" opens that save in the camp (`?camp`) |
 
 When you build something Edoardo should try, add a jump to `/lab/night` and send the Vercel
