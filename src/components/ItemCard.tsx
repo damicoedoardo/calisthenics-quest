@@ -1,7 +1,7 @@
 'use client';
 
 import { getStat, type Build } from '@/lib/stats';
-import { iconOf, itemLines, RARITY, SLOT_NAME, shortOf, type Item } from '@/game/dungeon/items';
+import { iconOf, itemLines, nameOf, RARITY, SLOT_NAME, shortOf, type Item } from '@/game/dungeon/items';
 import { Sprite } from './Sprite';
 
 /** An item's icon in a tile edged in its rarity's color. */
@@ -30,7 +30,7 @@ export function ItemCard({ item, build, children }: { item: Item; build: Build; 
         <ItemTile item={item} dim={!!need && !need.ok} />
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold" style={{ color: RARITY[item.rarity].color }}>
-            {item.name}
+            {nameOf(item)}
           </p>
           <p className="text-[10px] text-slate-500">
             {RARITY[item.rarity].name} {SLOT_NAME[item.slot].toLowerCase()}

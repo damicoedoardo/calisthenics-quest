@@ -58,7 +58,19 @@ export interface Item {
   need: { stat: StatId; n: number } | null;
   /** The free starter kit: never lost, never kept in the vault. */
   starter?: boolean;
+  /** Upgrades at Mira's forge, 0 to MAX_PLUS: each makes everything on it stronger. */
+  plus?: number;
+  /** Bonuses rerolled at the forge so far (each reroll rolls from its own seed). */
+  rerolls?: number;
 }
+
+/** The forge's highest upgrade, and how much stronger each one makes an item. */
+export const MAX_PLUS = 5;
+export const PLUS_STEP = 0.1;
+/** How much stronger an item is for its upgrades. */
+export const boostOf = (it: Item) => 1 + PLUS_STEP * (it.plus ?? 0);
+/** An item's name with its upgrades: "Ashen sword +2". */
+export const nameOf = (it: Item) => (it.plus ? `${it.name} +${it.plus}` : it.name);
 
 /** Each class's weapon and the stat it asks for (the class's own stat, CLASS_LEAN). */
 export const WEAPONS: Record<ClassId, { noun: string; stat: StatId; icon: ItemIcon }> = {
@@ -186,7 +198,7 @@ export function shortOf(item: Item, build: Build): number {
 /** Everything an item gives, summed by bonus. */
 export function itemTotals(items: (Item | undefined)[]): Partial<Record<BonusId, number>> {
   const out: Partial<Record<BonusId, number>> = {};
-  for (const it of items) if (it) for (const b of [...it.base, ...it.bonuses]) out[b.id] = (out[b.id] ?? 0) + b.v;
+  for (const it of items) if (it) for (const b of [...it.base, ...it.bonuses]) out[b.id] = (out[b.id] ?? 0) + b.v * boostOf(it);
   return out;
 }
 
@@ -194,10 +206,26 @@ export function itemTotals(items: (Item | undefined)[]): Partial<Record<BonusId,
 const WORTH: Record<BonusId, number> = { damage: 1 / 0.09, speed: 1 / 0.075, health: 1 / 28, armor: 1 / 0.03, move: 0.6 / 0.06, heal: 0.7 / 1.8, cooldown: 0.6 / 0.1, pickup: 0.3 / 0.2 };
 export function itemScore(it: Item | undefined): number {
   if (!it) return 0;
-  return [...it.base, ...it.bonuses].reduce((n, b) => n + b.v * WORTH[b.id], 0);
+  return [...it.base, ...it.bonuses].reduce((n, b) => n + b.v * WORTH[b.id], 0) * boostOf(it);
 }
 
 /** Each line of an item's card. */
 export function itemLines(it: Item): string[] {
-  return [...it.base, ...it.bonuses].map((b) => BONUSES[b.id].show(b.v));
+  return [...it.base, ...it.bonuses].map((b) => BONUSES[b.id].show(b.v * boostOf(it)));
+}
+
+/** The item with bonus `i` rolled again: a different bonus, sized for the item's level and rarity. */
+export function rerollBonus(it: Item, i: number, rnd: () => number): Item {
+  if (!it.bonuses[i]) return it;
+  const pool = BONUS_IDS.filter((id) => !it.base.some((b) => b.id === id) && !it.bonuses.some((b) => b.id === id)),
+    id = pool[Math.floor(rnd() * pool.length)];
+  if (!id) return it;
+  const v = sizeOf(id, it.level) * RARITY[it.rarity].power * (0.75 + rnd() * 0.25);
+  return { ...it, bonuses: it.bonuses.map((b, k) => (k === i ? { id, v } : b)), rerolls: (it.rerolls ?? 0) + 1 };
+}
+
+/** The hero's look for an item: a gear tier (1-6) from how deep it was found and how rare it is. */
+export function tierOf(it: Item): number {
+  const bump = it.rarity === 'legendary' ? 2 : it.rarity === 'rare' ? 1 : 0;
+  return Math.max(1, Math.min(6, 1 + Math.floor(it.level / 10) + bump));
 }

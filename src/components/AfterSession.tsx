@@ -5,6 +5,7 @@ import { Hero } from './Hero';
 import { Enemy } from './Characters';
 import { Sprite } from './Sprite';
 import { music } from '@/lib/music';
+import { EMBERS } from '@/lib/forge';
 import { gearOf, levelInfo, totalXp, type FinishResult } from '@/lib/game';
 import { tierText } from '@/lib/gear';
 import { planExercises } from '@/lib/program';
@@ -118,6 +119,9 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
         <p className="mt-3 border-t border-ink-600 pt-3 text-4xl font-bold text-gold-400">+{session.xp} XP</p>
         <p className="mt-1 text-sm text-slate-200">
           +{points} stat point{points === 1 ? '' : 's'} <span className="text-slate-400">for your champion, on the Hero tab</span>
+        </p>
+        <p className="mt-1 text-sm text-slate-200">
+          +{EMBERS[session.kind]} embers <span className="text-slate-400">for Mira&apos;s forge, at the camp</span>
         </p>
         {session.better && <p className="mt-1 text-xs text-emerald-300">Better than last time.</p>}
         {!!session.heavier?.length && <p className="mt-1 text-xs text-sky-300">Too easy now: next time add a little weight to {session.heavier.map((id) => planExercises().find((x) => x.id === id)?.name ?? id).join(', ')}.</p>}

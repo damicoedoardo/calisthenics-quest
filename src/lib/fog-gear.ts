@@ -1,4 +1,5 @@
-import type { GameState } from './game';
+import { daysSinceLastSession, type GameState } from './game';
+import type { GearSlot, Tier } from './gear';
 import { buildOf } from './stats';
 import { itemScore, shortOf, type Item, type ItemSlot } from '@/game/dungeon/items';
 
@@ -9,6 +10,14 @@ import { itemScore, shortOf, type Item, type ItemSlot } from '@/game/dungeon/ite
 export interface FogGear {
   worn: Partial<Record<ItemSlot, Item>>;
   vault: Item[];
+  /** Embers found (salvage) and spent at Mira's forge; workouts earn the rest (see forge.ts). */
+  embers?: { found: number; spent: number };
+  /** The worn item the flame holds if you fall, while you've trained in the last 2 days. */
+  guard?: ItemSlot;
+  /** Runs the Fog took everything from (Mira says her line after the first). */
+  deaths?: number;
+  /** How the starter kit looks on the hero: the gear Mira's old forge had made, kept as it was. */
+  kit?: Record<GearSlot, Tier>;
 }
 
 export const NO_GEAR: FogGear = { worn: {}, vault: [] };
@@ -18,9 +27,19 @@ export const vaultSize = (workouts: number) => Math.min(20, 4 + Math.floor(worko
 
 const gearOf = (s: GameState): FogGear => s.fogGear ?? NO_GEAR;
 
+/** Trained in the last 2 days: the flame holds your guarded item if you fall. */
+export function flameGuards(state: GameState, now: Date): boolean {
+  const gap = daysSinceLastSession(state, now);
+  return gap !== null && gap <= 2;
+}
+
 /** How a run ended for what you carried: what came home (and what didn't fit in the vault), or what the Fog took. */
 export interface GearOutcome {
   kept: boolean;
+  /** The item the flame held through a fall. */
+  held?: Item;
+  /** Embers Mira made from what didn't fit in the vault. */
+  embers?: number;
   /** Into the vault. */
   stored: Item[];
   /** No room in the vault: left at the door. */
@@ -37,7 +56,7 @@ export function wornFor(state: GameState): FogGear['worn'] {
 }
 
 /** After a run: keep it all on a win or a walk out by the stairs, lose it all otherwise. */
-export function settleGear(state: GameState, end: { won: boolean; why?: string; gear?: { worn: FogGear['worn']; bag: Item[] } }): { state: GameState; out: GearOutcome } {
+export function settleGear(state: GameState, end: { won: boolean; why?: string; gear?: { worn: FogGear['worn']; bag: Item[] } }, now: Date = new Date()): { state: GameState; out: GearOutcome } {
   const g = gearOf(state),
     run = end.gear ?? null;
   if (!run) return { state, out: { kept: true, stored: [], left: [], lost: [] } };
@@ -46,8 +65,10 @@ export function settleGear(state: GameState, end: { won: boolean; why?: string; 
     taken = wornFor(state),
     benched = Object.fromEntries(Object.entries(g.worn).filter(([slot, it]) => it && taken[slot as ItemSlot]?.id !== it.id)) as FogGear['worn'];
   if (!kept) {
-    const lost = [...Object.values(run.worn).filter((x): x is Item => !!x), ...run.bag];
-    return { state: { ...state, fogGear: { worn: benched, vault: g.vault } }, out: { kept, stored: [], left: [], lost } };
+    const held = g.guard && flameGuards(state, now) ? run.worn[g.guard] : undefined,
+      lost = [...Object.values(run.worn).filter((x): x is Item => !!x && x !== held), ...run.bag],
+      worn = held ? { ...benched, [held.slot]: held } : benched;
+    return { state: { ...state, fogGear: { ...g, worn, deaths: (g.deaths ?? 0) + (lost.length ? 1 : 0) } }, out: { kept, stored: [], left: [], lost, held } };
   }
   // A benched item whose slot you now fill goes home with the bag.
   const worn = { ...benched, ...run.worn },
@@ -56,7 +77,9 @@ export function settleGear(state: GameState, end: { won: boolean; why?: string; 
     best = [...home].sort((a, b) => itemScore(b) - itemScore(a)),
     stored = best.slice(0, Math.max(0, room)),
     left = best.slice(Math.max(0, room));
-  return { state: { ...state, fogGear: { worn, vault: [...g.vault, ...stored] } }, out: { kept, stored, left, lost: [] } };
+  // What didn't fit, Mira melts down into embers.
+  const embers = left.reduce((n, it) => n + salvageValue(it), 0);
+  return { state: { ...state, fogGear: { ...g, worn, vault: [...g.vault, ...stored], embers: { found: (g.embers?.found ?? 0) + embers, spent: g.embers?.spent ?? 0 } } }, out: { kept, stored, left, lost: [], embers } };
 }
 
 /** Wear an item from the vault (what you wore goes back in its place). Nothing happens if you can't wear it yet. */
@@ -66,7 +89,7 @@ export function wearFromVault(state: GameState, id: string): GameState {
   if (!it || shortOf(it, buildOf(state)) > 0) return state;
   const old = g.worn[it.slot],
     vault = g.vault.filter((x) => x !== it);
-  return { ...state, fogGear: { worn: { ...g.worn, [it.slot]: it }, vault: old ? [...vault, old] : vault } };
+  return { ...state, fogGear: { ...g, worn: { ...g.worn, [it.slot]: it }, vault: old ? [...vault, old] : vault } };
 }
 
 /** Take a worn item off into the vault, if there's room. */
@@ -76,11 +99,24 @@ export function takeOffToVault(state: GameState, slot: ItemSlot): GameState {
   if (!it || g.vault.length >= vaultSize(state.sessions.length)) return state;
   const worn = { ...g.worn };
   delete worn[slot];
-  return { ...state, fogGear: { worn, vault: [...g.vault, it] } };
+  return { ...state, fogGear: { ...g, worn, vault: [...g.vault, it] } };
 }
 
 /** Throw an item away for good. */
 export function discardItem(state: GameState, id: string): GameState {
   const g = gearOf(state);
-  return { ...state, fogGear: { worn: Object.fromEntries(Object.entries(g.worn).filter(([, x]) => x?.id !== id)), vault: g.vault.filter((x) => x.id !== id) } };
+  return { ...state, fogGear: { ...g, worn: Object.fromEntries(Object.entries(g.worn).filter(([, x]) => x?.id !== id)), vault: g.vault.filter((x) => x.id !== id) } };
+}
+
+/** Embers an item melts down into at the forge: more for rarer and upgraded ones. */
+export function salvageValue(it: Item): number {
+  const base = { common: 3, magic: 6, rare: 12, legendary: 30 }[it.rarity];
+  return Math.round(base * (1 + 0.5 * (it.plus ?? 0)));
+}
+
+/** Choose the worn item the flame holds (null: none). */
+export function setGuard(state: GameState, slot: ItemSlot | null): GameState {
+  const g = gearOf(state),
+    { guard: _old, ...rest } = g;
+  return { ...state, fogGear: slot ? { ...rest, guard: slot } : rest };
 }

@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import { BookOpen, ChevronRight } from 'lucide-react';
 import { dayType, repsFor, type GameState } from '@/lib/game';
 import { PLAN, ROLE_LABEL, type DayType, type Kit } from '@/lib/program';
-import { nextForge } from '@/lib/gear';
+import { EMBERS, embersOf } from '@/lib/forge';
 
 // The library carries the whole exercise catalog, so it loads only when opened.
 const ExerciseLibrary = dynamic(() => import('./ExerciseLibrary').then((m) => m.ExerciseLibrary), { ssr: false });
@@ -20,7 +20,6 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
   const [library, setLibrary] = useState(false);
   const kit = state.profile.kit ?? 'gym';
   const next = dayType(state);
-  const forge = nextForge(state.sessions.length, state.profile.classId);
   return (
     <div className="space-y-6">
       <button onClick={() => setLibrary(true)} className="flex w-full items-center gap-3 rounded-xl bg-ink-800 p-3 text-left ring-1 ring-ink-700 active:bg-ink-700">
@@ -87,11 +86,9 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
         ))}
       </section>
 
-      {forge && (
-        <p className="rounded-xl bg-ink-900 px-3 py-2 text-xs text-slate-400">
-          {forge.in === 1 ? 'Next workout' : `In ${forge.in} workouts`} Mira forges your <span className="text-slate-200">{forge.gear.name}</span>.
-        </p>
-      )}
+      <p className="rounded-xl bg-ink-900 px-3 py-2 text-xs text-slate-400">
+        Each workout earns <span className="text-slate-200">{EMBERS.full} embers</span> ({EMBERS.mini} for the minimum quest) for Mira&apos;s forge at the camp. You have <span className="text-gold-300">{embersOf(state)}</span>.
+      </p>
 
       <p className="text-center text-xs text-slate-500">Soon: tell your coach what you feel like, and it builds the workout from the library.</p>
     </div>

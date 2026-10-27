@@ -2,7 +2,7 @@
 
 import type { ReactNode } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BookOpen, Dumbbell, Film, Gem, Music, Play, Sparkles, Swords } from 'lucide-react';
+import { ArrowLeft, BookOpen, Dumbbell, Film, Flame, Gem, Music, Play, Sparkles, Swords } from 'lucide-react';
 import { addFakeWorkouts, clearNextZone, skipDueScenes, skipIntro } from '@/lib/dev';
 import { initialState, type GameState } from '@/lib/game';
 import { ZONES } from '@/lib/fog';
@@ -166,6 +166,7 @@ export default function NightLab() {
         })}
         <Row icon={<Swords size={16} />} label="The Play tab" note="Power from training with pixel icons, all six zones open" onClick={() => open(veteran(78, 6), 'tab=play')} />
         <Row icon={<Swords size={16} />} label="The Fog, sideways" note="Hold the phone across: rooms run left to right, tap a monster to aim at it" onClick={() => open(veteran(14, 1), 'run=0')} />
+        <Row icon={<Flame size={16} />} label="The camp" note="Held sideways: walk to the fire (the flame holds one item), the vault, Mira's forge (upgrade, reroll, melt down) and the gates" onClick={() => open(geared(), 'camp')} />
         <Row icon={<Gem size={16} />} label="Loot: your gear and the vault" note="Play tab: what you wear into the Fog, the vault, an item you can't wear yet" onClick={() => open(geared(), 'tab=play')} />
         <Row icon={<Gem size={16} />} label="Loot in a run" note="Monsters and chests drop gear; the bag button top right; the stairs ask: deeper or leave with it" onClick={() => open(geared(), 'run=1')} />
         <Row icon={<Swords size={16} />} label="Exercise library" note="Train tab, top button: 870+ exercises, pixel demos for boy and girl" onClick={() => open(veteran(10, 1), 'tab=train')} />

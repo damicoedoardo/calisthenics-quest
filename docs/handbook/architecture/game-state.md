@@ -18,7 +18,7 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 | `reps` | Current per-set target by exercise id |
 | `sessions` | Every finished workout: entries, sets with reps in reserve, XP breakdown, raises, `heavier`, `better` |
 | `build` | Stat points spent on the champion, per stat (earned points are counted from `sessions`) |
-| `fogGear` | Optional. What you wear into the Fog and the vault at home (`src/lib/fog-gear.ts`, see [../game/fog.md](../game/fog.md)) |
+| `fogGear` | Optional. What you wear into the Fog and the vault at home (`src/lib/fog-gear.ts`, see [../game/fog.md](../game/fog.md)); the camp's embers found and spent, the slot the flame holds (`guard`), `deaths`, and the starter kit's look (`kit`, set by `migrate()` from the old forge) ([../game/camp.md](../game/camp.md)) |
 | `draft` | The workout in progress, or null. A draft left from an earlier day is closed onto that day (`closeStaleDraft`) |
 | `seenScenes`, `sceneMark` | Story scenes already played, and how many played at the last story moment |
 | `answers` | What the player chose in the story (heart moments, villager stories) |

@@ -17,6 +17,7 @@ interface Props {
   state: GameState;
   onPlay: (zone: Zone) => void;
   update: (fn: (s: GameState) => GameState) => void;
+  onCamp: () => void;
 }
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
@@ -50,7 +51,7 @@ function useWarmRun(state: GameState) {
   }, [id]);
 }
 
-export function PlayTab({ state, onPlay, update }: Props) {
+export function PlayTab({ state, onPlay, update, onCamp }: Props) {
   useWarmRun(state);
   const now = new Date();
   const power = powerOf(state, now);
@@ -121,6 +122,14 @@ export function PlayTab({ state, onPlay, update }: Props) {
             : 'Rest days count too: after a full day off, or a minute by the fire, runs start with one more free skill.'}
         </p>
       </section>
+
+      <button onClick={onCamp} className="flex w-full items-center gap-3 rounded-2xl bg-gold-400 p-4 text-left text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
+        <Sprite id="uiIcon" opts={{ name: 'play' }} size={20} label="" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-pixel text-[11px]">To the camp</span>
+          <span className="mt-1 block text-xs text-ink-900">The fire, your vault, Mira&apos;s forge, and the gates into the Fog. Played sideways.</span>
+        </span>
+      </button>
 
       <FogGearCard state={state} update={update} />
 

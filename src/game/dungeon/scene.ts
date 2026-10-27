@@ -32,6 +32,7 @@ import {
   createRun,
   dropFromBag,
   iconOf,
+  nameOf,
   RARITY,
   takeOff,
   takeStairs,
@@ -1005,7 +1006,7 @@ class DungeonScene extends Phaser.Scene {
           beam: big ? this.add.rectangle(X, Y - 60, 10, 120, c, 0.18).setDepth(-1.1) : null,
           icon: this.add.image(X, Y, `item-${iconOf(l.item)}`).setDepth(-1),
           name: this.add
-            .text(X, Y - 18, l.item.name, { fontFamily: '"Press Start 2P", monospace', fontSize: '7px', color, stroke: '#0b0d14', strokeThickness: 3 })
+            .text(X, Y - 18, nameOf(l.item), { fontFamily: '"Press Start 2P", monospace', fontSize: '7px', color, stroke: '#0b0d14', strokeThickness: 3 })
             .setOrigin(0.5, 1)
             .setDepth(95000),
         };

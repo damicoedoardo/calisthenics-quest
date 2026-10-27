@@ -11,7 +11,7 @@ import { zoneMusic } from '@/lib/music-zones';
 import { runSheets } from '@/game/sheets';
 import { buildOf } from '@/lib/stats';
 import { settleGear, vaultSize, wornFor, type GearOutcome } from '@/lib/fog-gear';
-import { ITEM_SLOTS, RARITY, SLOT_NAME, shortOf, type Item, type ItemSlot } from '@/game/dungeon/items';
+import { ITEM_SLOTS, nameOf, RARITY, SLOT_NAME, shortOf, type Item, type ItemSlot } from '@/game/dungeon/items';
 import { ItemCard, ItemTile } from './ItemCard';
 import { Sprite } from './Sprite';
 import { SoundToggle, useMusic } from './Sound';
@@ -27,6 +27,8 @@ interface Props {
   onLeave: () => void;
   /** Developer mode (/lab/night): start the first attempt at the mid-boss, at the boss, or won (the recap). */
   startAt?: RunStart;
+  /** Started at a camp gate: the way out says so. */
+  fromCamp?: boolean;
 }
 
 export type RunStart = 'mid' | 'boss' | 'win';
@@ -50,7 +52,7 @@ function bossLines(zone: Zone, state: GameState): FogLines {
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 /** Whether the screen is taller than wide: the Fog is played with the phone held sideways. */
-function usePortrait(): boolean {
+export function usePortrait(): boolean {
   const [portrait, setPortrait] = useState(false);
   useEffect(() => {
     const q = window.matchMedia('(orientation: portrait)'),
@@ -65,7 +67,7 @@ function usePortrait(): boolean {
 /** Where the browser lets a page turn the screen itself (Android, installed): sideways for the run,
     back to the app's upright when it ends. iPhones can't, so the run asks you to turn the phone. */
 type Turnable = { lock?: (o: string) => Promise<void>; unlock?: () => void };
-function useSideways() {
+export function useSideways() {
   useEffect(() => {
     const o = (typeof screen !== 'undefined' ? screen.orientation : undefined) as Turnable | undefined;
     o?.lock?.('landscape').catch(() => {});
@@ -80,7 +82,7 @@ function useSideways() {
 }
 
 /** A run in the Fog: the Phaser canvas, with the HUD, skill picks and results drawn over it. */
-export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
+export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, fromCamp }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const run = useRef<RunHandle | null>(null);
   const [hud, setHud] = useState<Hud | null>(null);
@@ -110,7 +112,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
   // On the stairs: go deeper, or leave with what you carry.
   const [stairs, setStairs] = useState(false);
   // What came home from the run, or what the Fog took.
-  const [gearOut, setGearOut] = useState<GearOutcome | null>(null);
+  const [gearOut, setGearOut] = useState<(GearOutcome & { first: boolean }) | null>(null);
   // The game code couldn't be fetched (offline before the Play tab ever loaded it).
   const [failed, setFailed] = useState(false);
   // Held upright, the run waits behind a "turn your phone" card.
@@ -172,7 +174,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
           setBroken(recordsBroken(state.fog?.records?.[zone.id], result));
           setBag(false);
           setStairs(false);
-          setGearOut(settleGear(state, r).out);
+          setGearOut({ ...settleGear(state, r).out, first: !(state.fogGear?.deaths ?? 0) });
           setEnd(r);
           onEnd(result);
         },
@@ -359,7 +361,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
             <ItemTile item={found.item} size={28} />
             <div className="text-left">
               <p className="text-xs font-semibold" style={{ color: RARITY[found.item.rarity].color }}>
-                {found.item.name}
+                {nameOf(found.item)}
               </p>
               <p className="text-[10px] text-slate-400">{shortOf(found.item, buildOf(state)) > 0 ? 'Into the bag. Train to wear it.' : 'Into the bag. Open it to wear.'}</p>
             </div>
@@ -533,7 +535,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
         </div>
       )}
 
-      {end && <Results state={state} zone={zone} end={end} broken={broken} gear={gearOut} onAgain={() => setAttempt((a) => a + 1)} onLeave={onLeave} />}
+      {end && <Results state={state} zone={zone} end={end} broken={broken} gear={gearOut} back={fromCamp ? 'Back to the camp' : 'Back'} onAgain={() => setAttempt((a) => a + 1)} onLeave={onLeave} />}
 
       {portrait && !failed && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-5 bg-ink-950 px-8 text-center">
@@ -756,7 +758,7 @@ function Recap({ end, broken, midName }: { end: RunEnd; broken: ReturnType<typeo
   );
 }
 
-function Results({ state, zone, end, broken, gear, onAgain, onLeave }: { state: GameState; zone: Zone; end: RunEnd; broken: ReturnType<typeof recordsBroken> | null; gear: GearOutcome | null; onAgain: () => void; onLeave: () => void }) {
+function Results({ state, zone, end, broken, gear, back, onAgain, onLeave }: { back: string; state: GameState; zone: Zone; end: RunEnd; broken: ReturnType<typeof recordsBroken> | null; gear: (GearOutcome & { first: boolean }) | null; onAgain: () => void; onLeave: () => void }) {
   const hints = [nextGrowth(state)],
     left = end.why === 'left';
   return (
@@ -771,7 +773,7 @@ function Results({ state, zone, end, broken, gear, onAgain, onLeave }: { state: 
           'The Fog takes what you carried, not who you are. Your points, your level and your story stay.'
         )}
       </p>
-      {gear && <GearRecap out={gear} vault={vaultSize(state.sessions.length)} />}
+      {gear && <GearRecap out={gear} vault={vaultSize(state.sessions.length)} first={gear.first} flame={state.profile.flame} />}
       {end.won && (
         <div className="mt-4 w-full max-w-xs rounded-xl bg-ink-800 p-3 text-left ring-1 ring-gold-400/30">
           <p className="font-pixel text-[9px] text-gold-300">You keep: {zone.keepsake.name}</p>
@@ -808,7 +810,7 @@ function Results({ state, zone, end, broken, gear, onAgain, onLeave }: { state: 
         Run again
       </button>
       <button onClick={onLeave} className="mb-auto mt-2 w-full max-w-xs py-3 text-sm text-slate-400">
-        Back
+        {back}
       </button>
     </div>
   );
@@ -830,7 +832,7 @@ function BagPanel({ gear, build, onWear, onTakeOff, onDrop, onClose }: { gear: H
             {ITEM_SLOTS.map((slot) => {
               const it = gear.worn[slot];
               return (
-                <button key={slot} onClick={() => it && setPick({ from: 'worn', id: it.id })} className={`flex flex-col items-center gap-1 rounded-lg p-1 ${pick?.id === it?.id && it ? 'bg-ink-800' : ''}`} aria-label={it ? it.name : `${SLOT_NAME[slot]}: empty`}>
+                <button key={slot} onClick={() => it && setPick({ from: 'worn', id: it.id })} className={`flex flex-col items-center gap-1 rounded-lg p-1 ${pick?.id === it?.id && it ? 'bg-ink-800' : ''}`} aria-label={it ? nameOf(it) : `${SLOT_NAME[slot]}: empty`}>
                   {it ? <ItemTile item={it} size={44} /> : <span className="grid h-11 w-11 place-items-center rounded-lg border border-dashed border-ink-700 text-[9px] text-slate-600">empty</span>}
                   <span className="text-[9px] text-slate-500">{SLOT_NAME[slot]}</span>
                 </button>
@@ -844,7 +846,7 @@ function BagPanel({ gear, build, onWear, onTakeOff, onDrop, onClose }: { gear: H
             {Array.from({ length: BAG }, (_, i) => {
               const it = gear.bag[i];
               return it ? (
-                <button key={it.id} onClick={() => setPick({ from: 'bag', id: it.id })} className={`grid place-items-center rounded-lg p-1 ${pick?.id === it.id ? 'bg-ink-800' : ''}`} aria-label={it.name}>
+                <button key={it.id} onClick={() => setPick({ from: 'bag', id: it.id })} className={`grid place-items-center rounded-lg p-1 ${pick?.id === it.id ? 'bg-ink-800' : ''}`} aria-label={nameOf(it)}>
                   <ItemTile item={it} size={40} dim={shortOf(it, build) > 0} />
                 </button>
               ) : (
@@ -889,7 +891,7 @@ function BagPanel({ gear, build, onWear, onTakeOff, onDrop, onClose }: { gear: H
           )}
           {item && !wornNow && gear.worn[item.slot] && (
             <p className="mt-2 text-[10px] text-slate-500">
-              Now: <span style={{ color: RARITY[gear.worn[item.slot]!.rarity].color }}>{gear.worn[item.slot]!.name}</span>
+              Now: <span style={{ color: RARITY[gear.worn[item.slot]!.rarity].color }}>{nameOf(gear.worn[item.slot]!)}</span>
             </p>
           )}
         </div>
@@ -899,9 +901,9 @@ function BagPanel({ gear, build, onWear, onTakeOff, onDrop, onClose }: { gear: H
 }
 
 /** What happened to your gear: home and into the vault, or taken by the Fog. */
-function GearRecap({ out, vault }: { out: GearOutcome; vault: number }) {
+function GearRecap({ out, vault, first, flame }: { out: GearOutcome; vault: number; first: boolean; flame?: string }) {
   const rows = out.kept ? out.stored : out.lost;
-  if (!rows.length && !out.left.length) return null;
+  if (!rows.length && !out.left.length && !out.held) return null;
   return (
     <div className="mt-4 w-full max-w-xs rounded-xl bg-ink-800 p-3 text-left ring-1 ring-ink-700">
       <p className={`font-pixel text-[9px] ${out.kept ? 'text-gold-300' : 'text-red-300'}`}>{out.kept ? 'Into your vault' : 'The Fog took'}</p>
@@ -909,13 +911,24 @@ function GearRecap({ out, vault }: { out: GearOutcome; vault: number }) {
         {rows.map((it) => (
           <li key={it.id} className={`flex items-center gap-2 text-xs ${out.kept ? '' : 'opacity-60'}`}>
             <ItemTile item={it} size={22} />
-            <span style={{ color: RARITY[it.rarity].color }}>{it.name}</span>
+            <span style={{ color: RARITY[it.rarity].color }}>{nameOf(it)}</span>
           </li>
         ))}
       </ul>
+      {out.held && (
+        <p className="mt-2 flex items-center gap-2 text-xs text-orange-200">
+          <ItemTile item={out.held} size={22} />
+          {flame || 'Your flame'} held on to {nameOf(out.held)}.
+        </p>
+      )}
       {out.left.length > 0 && (
         <p className="mt-2 text-[10px] text-slate-400">
-          No room for {out.left.length} more (the vault holds {vault}). It grows with your workouts.
+          No room for {out.left.length} more (the vault holds {vault}, and it grows with your workouts). Mira melted {out.left.length === 1 ? 'it' : 'them'} into {out.embers ?? 0} embers.
+        </p>
+      )}
+      {!out.kept && out.lost.length > 0 && first && (
+        <p className="mt-2 text-xs italic text-slate-300">
+          <span className="not-italic text-gold-300">Mira:</span> &ldquo;The Fog takes what you carried, not who you are. Your training is still yours. Come back to the fire.&rdquo;
         </p>
       )}
     </div>

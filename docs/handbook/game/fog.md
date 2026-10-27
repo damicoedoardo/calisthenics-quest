@@ -37,8 +37,10 @@ level or story.
   walk in with: only what your points let you wear today; the rest stays home, safe.
   `settleGear` runs after `recordRun`: a win or a walk out by the stairs keeps what you wore and
   puts the bag in the vault (the best first, the rest left behind if it's full); dying loses all
-  of it. `wearFromVault`, `takeOffToVault` and `discardItem` are the Play tab's buttons
-  (`FogGearCard`). The items themselves are in [dungeon.md](dungeon.md).
+  of it, except the one item your flame holds (see [camp.md](camp.md)). What a full vault can't take
+  is melted into embers. `wearFromVault` and `takeOffToVault` are the vault's buttons
+  (`FogGearCard`), and "Melt down" is the forge's `salvage`. The items themselves are in
+  [dungeon.md](dungeon.md); the camp between runs, with Mira's forge, in [camp.md](camp.md).
 
 Tested in `src/lib/fog.test.ts` and `src/lib/fog-gear.test.ts`.
 
