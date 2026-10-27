@@ -17,7 +17,10 @@ characters/*.ts       one file per character: hero, wanderer, mira, ember, book,
                       enemies tomorrow, mirror, plateau, summit, and the Fog's wisp, plus the
                       dungeon's monsters: ram, smoke (the Smoker), seeker, splitter (the
                       Splitling, and splitterPop, its one-shot death), shade, and the mid-boss
-                      warden (the Warden of the Ashes)
+                      warden (the Warden of the Ashes); the dungeon bosses: glass.ts
+                      (mirrorBoss, you in glass, and mirrorBossShatter), knight.ts (knightBoss,
+                      stage 0-2), monolith.ts (plateauBoss, stage 0-2), hollowBoss.ts (hollowBoss
+                      and hollowBossFade), summitSpirit.ts (summitBoss)
 characters/pixel.ts   text-row art: paintRows (one character per pixel) and shifted
 ```
 
