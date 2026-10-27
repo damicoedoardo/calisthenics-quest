@@ -1,5 +1,5 @@
 import { attackOf, clamp, RANGE } from '../rules';
-import { BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup } from './engine';
+import { abilityReady, BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup } from './engine';
 
 /* The bot: a steady, careful player, not a great one. It sidesteps shots on course to hit it,
    keeps its class's distance from monsters (a sword goes close, the rest stay back), plays each
@@ -313,7 +313,7 @@ export function botInput(run: Run, h: Hero = run.hero): Input {
 
   // The ability, when it helps.
   let ability = false;
-  if (now >= h.abilityAt && !run.cleared) {
+  if (abilityReady(run, h) >= 1 && !run.cleared) {
     const low = h.hp < h.maxHp * 0.5;
     switch (h.ability) {
       case 'charge':

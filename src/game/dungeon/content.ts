@@ -559,7 +559,7 @@ export const ABILITIES: Record<AbilityId, { name: string; text: string; cd: numb
   charge: { name: 'Charge', text: 'Rush ahead, untouchable, hitting everything you pass and cutting the shots in your way.', cd: 6 },
   volley: { name: 'Volley', text: 'Loose arrows all around you that pierce through.', cd: 7 },
   blink: { name: 'Blink', text: 'Vanish and appear ahead, bursting where you land and wiping shots nearby.', cd: 8 },
-  still: { name: 'Stillness', text: 'Breathe: heal some HP and push everything away.', cd: 14 },
+  still: { name: 'Stillness', text: 'Breathe: heal some HP and push everything away. It fills as you fight: hits you land and hits you take.', cd: 14 },
   shock: { name: 'Shockwave', text: 'Knock back everything near you and wipe the shots around you.', cd: 7 },
 };
 /** Every class can dodge: a short dash, untouchable for a moment, on its own short clock. */

@@ -65,6 +65,11 @@ gear on (`power`; `base` is without), gear, the tapped target (`lock`), the pick
 or the run stays on `Run`: the map, monsters, shots, loot on the floor, stairs, the boss, the clock.
 A new field about the player goes on `Hero`; one about the place goes on `Run`.
 
+The class ability is ready on a clock (`abilityAt`), except the monk's Stillness: it fills `calm`
+from hits the monk lands and takes (`calmer`, numbers in `CALM`, `src/balance/classes.ts`), so
+waiting heals nothing. Ask `abilityReady(run, h)` (0 to 1) rather than reading the clock; the bot
+and the HUD's ring both do.
+
 `run.party` holds every hero, you first; `run.hero` is you (`party[0]`), the one this phone plays
 and the camera follows. Solo play is a party of one. Co-op adds `RunSetup.friends` (each a
 `HeroSetup`: power, class, worn gear, stat points), and `stepRun` takes one `Input` per hero, in
