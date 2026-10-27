@@ -12,7 +12,8 @@
     "sim": "SIM_OUT=sim-out vitest run src/sim",
     "fog:balance": "node scripts/fog-balance.cjs",
     "fog:sim": "node --no-warnings scripts/fog-sim.mjs",
-    "fog:tune": "node --no-warnings scripts/fog-sim.mjs tune"
+    "fog:tune": "node --no-warnings scripts/fog-sim.mjs tune",
+    "exercises:db": "node --no-warnings scripts/export-exercises.mjs"
   },
   "engines": {
     "node": ">=18"

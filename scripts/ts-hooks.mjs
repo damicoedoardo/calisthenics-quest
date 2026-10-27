@@ -17,3 +17,9 @@ export async function resolve(specifier, context, next) {
   }
   return next(spec, context);
 }
+
+// The app imports JSON the bundler way (no `with { type: 'json' }`), so add the attribute here.
+export async function load(url, context, next) {
+  if (url.endsWith('.json')) return next(url, { ...context, importAttributes: { type: 'json' } });
+  return next(url, context);
+}

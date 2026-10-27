@@ -1,11 +1,16 @@
 import { PATHS } from '@/lib/skills';
 import type { ExerciseId } from '@/sprites/characters/exercise';
+import type { Kit } from '@/sprites/characters/moves';
+import { classify } from './classify';
+import { COACHING, type Family, type Kind, type Region } from './coaching';
 
 /* The exercise library: the open catalog (free-exercise-db, public domain, 870+ exercises from
    barbell lifts to stretches; refresh with `node scripts/import-exercises.mjs`) plus the moves of
    FORMA's own program it doesn't have. The catalog is big, so it loads on demand (loadLibrary).
-   Which entries have a pixel demo is the DEMOS table below: add a demo in
-   src/sprites/characters/exercise.ts, then point catalog ids at it here. */
+   Every entry has a pixel demo (classify.ts picks the movement and the gear) and coaching for that
+   movement (coaching.ts: family, region, kind, tips, common mistakes). findExercises is the search
+   a coach uses to build a session; `pnpm exercises:db` writes the same data to
+   public/data/exercises.json for tools outside the app. */
 
 export interface CatalogExercise {
   id: string;
@@ -21,34 +26,21 @@ export interface CatalogExercise {
 }
 
 export interface LibraryExercise extends CatalogExercise {
-  /** The pixel demo that shows it, if there is one yet. */
-  demo?: ExerciseId;
+  /** The pixel demo that shows it. */
+  demo: ExerciseId;
+  /** The gear the demo holds. */
+  kit: Kit;
+  family: Family;
+  region: Region;
+  kind: Kind;
+  /** How to do it well, most important first. */
+  tips: string[];
+  /** What usually goes wrong. */
+  mistakes: string[];
   source: 'catalog' | 'forma';
 }
 
-/** Catalog id -> the demo that shows it. */
-export const DEMOS: Record<string, ExerciseId> = {
-  // the program's moves
-  'Incline_Push-Up': 'incline-pushup',
-  'Incline_Push-Up_Medium': 'incline-pushup',
-  Pushups: 'pushup',
-  'Push-Ups_-_Close_Triceps_Position': 'diamond-pushup',
-  Parallel_Bar_Dip: 'dips',
-  'Dips_-_Triceps_Version': 'dips',
-  'Band_Assisted_Pull-Up': 'assisted-pullup',
-  Pullups: 'pullup',
-  // the first batch of gym moves
-  Bodyweight_Squat: 'squat',
-  Barbell_Squat: 'barbell-squat',
-  Barbell_Full_Squat: 'barbell-squat',
-  Barbell_Deadlift: 'deadlift',
-  'Barbell_Bench_Press_-_Medium_Grip': 'bench-press',
-  Dumbbell_Bicep_Curl: 'curl',
-  Dumbbell_Shoulder_Press: 'shoulder-press',
-  Bent_Over_Barbell_Row: 'barbell-row',
-  Plank: 'plank',
-  Bodyweight_Walking_Lunge: 'lunge',
-};
+type Base = Omit<LibraryExercise, 'kit' | 'family' | 'region' | 'kind' | 'tips' | 'mistakes'>;
 
 /** The program's moves with no catalog entry of their own, shown from the skill tree. */
 const PROGRAM_ONLY: Record<string, Pick<CatalogExercise, 'equipment' | 'level' | 'force' | 'primary' | 'secondary'>> = {
@@ -65,7 +57,7 @@ const PROGRAM_ONLY: Record<string, Pick<CatalogExercise, 'equipment' | 'level' |
 };
 
 /** Staples the catalog is missing, written for FORMA. */
-const OWN: LibraryExercise[] = [
+const OWN: Base[] = [
   {
     id: 'forma:kettlebell-swing',
     name: 'Kettlebell Swing',
@@ -87,7 +79,7 @@ const OWN: LibraryExercise[] = [
   },
 ];
 
-function programOnly(): LibraryExercise[] {
+function programOnly(): Base[] {
   return PATHS.flatMap((p) => p.nodes)
     .filter((n) => n.id in PROGRAM_ONLY)
     .map((n) => ({
@@ -102,14 +94,24 @@ function programOnly(): LibraryExercise[] {
     }));
 }
 
+/** Adds the movement's coaching; the kit is the classifier's for catalog entries, none otherwise. */
+function withCoaching(x: Base, kit: Kit): LibraryExercise {
+  return { ...x, kit, ...COACHING[x.demo] };
+}
+
 let loaded: Promise<LibraryExercise[]> | null = null;
 
 /** Every exercise, sorted by name. Loads the catalog the first time. */
 export function loadLibrary(): Promise<LibraryExercise[]> {
   loaded ??= import('./catalog.json').then(({ default: catalog }) =>
-    [...(catalog as CatalogExercise[]).map((x): LibraryExercise => ({ ...x, demo: DEMOS[x.id], source: 'catalog' })), ...programOnly(), ...OWN].sort((a, b) =>
-      a.name.localeCompare(b.name),
-    ),
+    [
+      ...(catalog as CatalogExercise[]).map((x) => {
+        const { demo, kit } = classify(x);
+        return withCoaching({ ...x, demo, source: 'catalog' }, kit);
+      }),
+      ...programOnly().map((x) => withCoaching(x, 'none')),
+      ...OWN.map((x) => withCoaching(x, x.demo === 'kettlebell-swing' ? 'kettlebell' : 'none')),
+    ].sort((a, b) => a.name.localeCompare(b.name)),
   );
   return loaded;
 }
@@ -118,3 +120,71 @@ export function loadLibrary(): Promise<LibraryExercise[]> {
 export const EQUIPMENT = ['body only', 'dumbbell', 'barbell', 'kettlebells', 'cable', 'machine', 'bands', 'other'] as const;
 
 export const CATEGORIES = ['strength', 'stretching', 'plyometrics', 'cardio', 'powerlifting', 'olympic weightlifting', 'strongman'] as const;
+
+export const KINDS: Kind[] = ['strength', 'power', 'plyometric', 'cardio', 'stretch', 'mobility'];
+
+export const FAMILIES: Family[] = [
+  'squat',
+  'hinge',
+  'lunge',
+  'push-horizontal',
+  'push-vertical',
+  'pull-horizontal',
+  'pull-vertical',
+  'arms',
+  'shoulders',
+  'legs-isolation',
+  'core',
+  'carry',
+  'power',
+  'plyometric',
+  'cardio',
+  'stretch',
+  'mobility',
+];
+
+export interface ExerciseQuery {
+  /** Words that must all appear in the name, muscles, equipment or family. */
+  text?: string;
+  /** Any of these muscles, as primary (or secondary too with `anyMuscle`). */
+  muscles?: string[];
+  anyMuscle?: boolean;
+  /** Only exercises that need nothing but these (e.g. ['body only', 'dumbbell']). */
+  equipment?: string[];
+  kind?: Kind | Kind[];
+  family?: Family | Family[];
+  region?: Region | Region[];
+  /** At most this hard: 'beginner' leaves out intermediate and expert. */
+  maxLevel?: CatalogExercise['level'];
+  limit?: number;
+}
+
+const LEVELS = ['beginner', 'intermediate', 'expert'] as const;
+const list = <T>(v: T | T[] | undefined) => (v === undefined ? undefined : Array.isArray(v) ? v : [v]);
+
+/** Searches the library the way a coach builds a session: by movement, muscle, gear and level. */
+export function findExercises(all: LibraryExercise[], q: ExerciseQuery): LibraryExercise[] {
+  const words = (q.text ?? '').toLowerCase().split(/\s+/).filter(Boolean);
+  const kinds = list(q.kind);
+  const families = list(q.family);
+  const regions = list(q.region);
+  const muscles = q.muscles?.map((m) => m.toLowerCase());
+  const max = q.maxLevel ? LEVELS.indexOf(q.maxLevel) : 2;
+  const found = all.filter(
+    (x) =>
+      (!kinds || kinds.includes(x.kind)) &&
+      (!families || families.includes(x.family)) &&
+      (!regions || regions.includes(x.region)) &&
+      (!q.equipment || q.equipment.includes(x.equipment)) &&
+      LEVELS.indexOf(x.level) <= max &&
+      (!muscles || (q.anyMuscle ? [...x.primary, ...x.secondary] : x.primary).some((m) => muscles.includes(m))) &&
+      words.every((w) => searchText(x).includes(w)),
+  );
+  return q.limit ? found.slice(0, q.limit) : found;
+}
+
+export const searchText = (x: LibraryExercise) => `${x.name} ${x.primary.join(' ')} ${x.equipment} ${x.family} ${x.kind}`.toLowerCase();
+
+export function exerciseById(all: LibraryExercise[], id: string): LibraryExercise | undefined {
+  return all.find((x) => x.id === id);
+}
