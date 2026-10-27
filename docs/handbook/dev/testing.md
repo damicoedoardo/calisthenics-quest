@@ -28,7 +28,7 @@ Accept intended snapshot changes with `pnpm test -u`, and say in the PR why they
   writes each timeline and Fog snapshots to `sim-out/` (git-ignored).
 - **Fog** (`scripts/fog-sim.mjs`): `pnpm fog:sim steady 100` plays hundreds of bot runs per zone
   and class on those snapshots, on every core, with the game's own engine and bot (Node runs the
-  TypeScript through `scripts/ts-hooks.mjs`, which also lets it import JSON the bundler way). `pnpm fog:tune steady 60` finds each zone's HP and damage for the target win rates. It fits
+  TypeScript through `scripts/ts-hooks.mjs`, which also lets it import JSON the bundler way). Runs use the snapshot's real boss edge (`edgeFor`, see [../game/fog.md](../game/fog.md)); `EDGE='{"bossHp":0.7,"picks":3}'` plays every run as if the chapter's hearts were gone. `pnpm fog:tune steady 60` finds each zone's HP and damage for the target win rates. It fits
   the S curve of win rate against the zone's scale (a straight line in logit of the rate against
   ln of the scale) and usually lands in two or three measurements per zone, with all zones
   searched at once. Every measurement plays the same seeds, so two scales compare fairly. Each run

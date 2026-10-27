@@ -108,6 +108,32 @@ export function zoneStatus(state: GameState, zone: Zone): ZoneStatus {
   return { state: 'open' };
 }
 
+// ---------- a boss with no hearts left ----------
+
+/** Once a chapter's hearts are all gone (every workout it asks for is done), its boss fights with
+    less HP, and every workout after that starts each run with one more free skill, up to `picks`. */
+export const EDGE = { bossHp: 0.7, picks: 6 };
+
+export interface Edge {
+  /** The boss's HP is this share of normal (1 while the chapter still has hearts). */
+  bossHp: number;
+  /** Free skills at the start of a run, one per workout since the hearts ran out. */
+  picks: number;
+}
+
+export const NO_EDGE: Edge = { bossHp: 1, picks: 0 };
+
+/** Workouts done since the zone's chapter ran out of hearts; null while it still has some. */
+export function workoutsPastHearts(state: GameState, zone: Zone): number | null {
+  const past = state.sessions.length - chapterStart(zone.chapter + 1);
+  return past < 0 ? null : past;
+}
+
+export function edgeFor(state: GameState, zone: Zone): Edge {
+  const past = workoutsPastHearts(state, zone);
+  return past === null ? NO_EDGE : { bossHp: EDGE.bossHp, picks: Math.min(EDGE.picks, past) };
+}
+
 // ---------- power from training ----------
 
 export interface Power {

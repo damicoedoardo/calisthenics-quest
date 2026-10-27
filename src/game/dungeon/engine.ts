@@ -1,5 +1,5 @@
 import type { ClassId } from '@/lib/gear';
-import { rollUpgrades, xpToNext, type Power, type UpgradeId, type Zone } from '@/lib/fog';
+import { rollUpgrades, xpToNext, type Edge, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import {
   ATTACK,
   BOT_PICKS,
@@ -281,7 +281,8 @@ export type GameEvent =
   | { type: 'drop'; x: number; y: number; item: Item }
   | { type: 'loot'; item: Item };
 
-export type FreePick = 'fresh' | 'rested';
+/** Why a run starts with a free skill: trained lately, rested, or a workout since the boss lost its hearts. */
+export type FreePick = 'fresh' | 'rested' | 'past';
 
 export interface RunSetup {
   zone: Zone;
@@ -296,6 +297,8 @@ export interface RunSetup {
   worn?: Partial<Record<ItemSlot, Item>>;
   /** Stat points spent, which items ask for. */
   build?: Build;
+  /** The chapter's hearts are gone: a weaker boss and free skills at the start (`edgeFor` in src/lib/fog.ts). */
+  edge?: Edge;
 }
 
 /** How many items the bag holds. */
@@ -508,7 +511,7 @@ export function createRun(setup: RunSetup): Run {
       orbit: 0,
       fairyAt: 0,
       mirrorHurtAt: 0,
-      free: [...(power.fresh ? (['fresh'] as const) : []), ...(power.rested ? (['rested'] as const) : [])],
+      free: [...(power.fresh ? (['fresh'] as const) : []), ...(power.rested ? (['rested'] as const) : []), ...Array<FreePick>(setup.edge?.picks ?? 0).fill('past')],
       pendingLevels: 0,
       offer: null,
     },
@@ -913,7 +916,8 @@ function summonBoss(run: Run) {
   const which = run.setup.zone.boss,
     def = BOSSES[which],
     { zone } = run.setup;
-  const hp = def.plates ?? Math.round(def.hp * zone.hp * BOSS_HP);
+  const weak = run.setup.edge?.bossHp ?? 1;
+  const hp = def.plates ? Math.round(def.plates * weak) : Math.round(def.hp * zone.hp * BOSS_HP * weak);
   const b: Foe = {
     id: ++run.ids,
     kind: 'boss',

@@ -37,6 +37,7 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change how a boss fights | its entry in `BOSSES` (`content.ts`) and its branch in `steerBoss` (`engine.ts`) |
 | Change a boss's art | `BOSS_ART` in `scene.ts`, and its sheets in `src/game/sheets.ts` |
 | Add a zone | the chapter's `fog` in `src/story/chapters/`, then an entry in `ZONE_DUNGEONS` and `MIDS` (`content.ts`), `THEMES` (`themes.ts`) and `ZONE_MUSIC` (`src/lib/music-zones.ts`) |
+| Change how much easier a boss gets once its chapter's hearts are gone | `EDGE` in `src/lib/fog.ts` (`edgeFor`); the engine reads `RunSetup.edge` in `summonBoss` and `createRun` |
 | Balance | the `DIALS` in `content.ts`; measure with `pnpm sim`, then `pnpm fog:sim` |
 | Change how much of the room the screen shows | `FIT` and `fitScreen` in `scene.ts` |
 | Change the run's HUD (HP and XP, floor and depth, bag, pause, ability buttons) | `Vitals`, `DepthMap`, `BagButton`, `AbilityButton` in `src/components/FogRun.tsx`; the safe-area classes `run-t`/`run-b`/`run-l`/`run-r`/`run-x` in `src/app/globals.css` |

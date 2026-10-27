@@ -27,6 +27,12 @@ level or story.
   fireballs, a fire fairy heals when you're low. Training in the last two days gives a free run
   skill, resting (a day off or a minute by the fire) one more. `nextGrowth` writes the "train to
   grow" hint (points waiting to be spent, or that workouts earn them).
+- **A boss with no hearts left**: every workout takes a heart off the chapter's enemy; once the
+  chapter's hearts are gone (all its workouts done) and its boss still stands, `edgeFor` gives the
+  run an `Edge`: the boss fights with `EDGE.bossHp` of its HP (the Knight with that share of his
+  plates), and each workout since starts a run with one more free skill (`'past'` picks, up to
+  `EDGE.picks`). Playing well still beats it sooner. The Play tab says how many hearts are left,
+  or what the edge gives (`BossEdge` in `PlayTab.tsx`).
 - **Run skills**: `UPGRADES` and `rollUpgrades` (three random choices per level-up), `xpToNext`.
 - **Records**: `recordRun` saves runs, clears and each zone's bests (deepest, most monsters,
   fastest win) and the last run for the flame to talk about. The mid-boss guards floor
