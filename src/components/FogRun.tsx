@@ -128,25 +128,27 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
     const gear = gearOf(state),
       classId = state.profile.classId,
       look = state.profile.look;
+    // the regular monsters dressed for this zone (wet glass at the lake, scrap iron at the forges...)
+    const z = { zone: zone.id };
     const sheets: Sheets = {
       hero: sheetFor('hero', 'idle', { gear, classId, look }),
       heroAttack: sheetFor('hero', 'attack', { gear, classId, look }),
       hollow: sheetFor('hero', 'idle', { gear, classId, look, variant: 'hollow' }),
       ember: sheetFor('ember', 'idle'),
-      slime: sheetFor('slime', 'idle'),
-      wisp: sheetFor('wisp', 'idle'),
+      slime: sheetFor('slime', 'idle', z),
+      wisp: sheetFor('wisp', 'idle', z),
       mirror: sheetFor('mirror', 'idle'),
       golem: sheetFor('golem', 'idle'),
       knight: sheetFor('knight', 'idle'),
       echo: sheetFor('hero', 'idle', { gear, classId, look, variant: 'echo' }),
       book: sheetFor('book', 'idle'),
       summit: sheetFor('summit', 'idle'),
-      ram: sheetFor('ram', 'idle'),
-      smoke: sheetFor('smoke', 'idle'),
-      seeker: sheetFor('seeker', 'idle'),
-      splitter: sheetFor('splitter', 'idle'),
-      splitling: sheetFor('splitling', 'idle'),
-      shade: sheetFor('shade', 'idle'),
+      ram: sheetFor('ram', 'idle', z),
+      smoke: sheetFor('smoke', 'idle', z),
+      seeker: sheetFor('seeker', 'idle', z),
+      splitter: sheetFor('splitter', 'idle', z),
+      splitling: sheetFor('splitling', 'idle', z),
+      shade: sheetFor('shade', 'idle', z),
       splitterPop: sheetFor('splitterPop', 'idle'),
       warden: sheetFor('warden', 'idle'),
       ...bossSheets(zone.id, { gear, classId, look }),
@@ -265,9 +267,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
       {!hud && !end && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
 
       {hud && !end && hud.seconds < (dungeon ? 7 : 5) && (
-        <p className="pointer-events-none absolute inset-x-6 bottom-28 text-center text-sm text-slate-300 animate-pulse">
+        <p className={`pointer-events-none absolute inset-x-6 text-center text-sm text-slate-300 animate-pulse ${dungeon ? 'bottom-44' : 'bottom-28'}`}>
           {dungeon
-            ? `Drag anywhere to move. The small button (or Shift) dodges through shots. You attack on your own. Clear a room and the door opens. ${hud.floors} floors down, ${zone.bossName} waits. Fall, and the dungeon starts over.`
+            ? `Drag to move; you attack on your own. Dodge slips through shots. ${zone.bossName} waits ${hud.floors} floors down.`
             : 'Drag anywhere to move. You attack on your own.'}
         </p>
       )}

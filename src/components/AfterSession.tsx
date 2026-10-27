@@ -6,7 +6,8 @@ import { Hero } from './Hero';
 import { Enemy } from './Characters';
 import { music } from '@/lib/music';
 import { gearOf, levelInfo, totalXp, type FinishResult } from '@/lib/game';
-import type { StoryState } from '@/story/engine';
+import { storyWords, type StoryState } from '@/story/engine';
+import { afterWorkoutLine } from '@/story/daily';
 
 const CONFETTI = ['#fbbf24', '#f97316', '#22d3ee', '#a78bfa', '#34d399'];
 
@@ -75,6 +76,8 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
   const leveled = levelAfter > levelBefore;
   const big = leveled || newGear.length > 0;
   const lvl = levelInfo(totalXp(result.state));
+  // The flame's word on this workout: the first, a comeback, a new best, a short one...
+  const flameSays = useMemo(() => afterWorkoutLine(result.state), [result.state]);
   const pieces = useMemo(
     () =>
       Array.from({ length: big ? 40 : 18 }).map((_, i) => ({
@@ -129,7 +132,11 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
           </div>
         )}
 
-        {session.kind === 'mini' && newGear.length === 0 && <p className="mt-3 text-sm text-slate-300">Small still counts. Your week is alive.</p>}
+        {flameSays && (
+          <p className="mt-4 text-sm italic leading-snug text-slate-300">
+            <span className="not-italic text-orange-300">{storyWords(result.state).flame}:</span> &ldquo;{flameSays}&rdquo;
+          </p>
+        )}
 
         <button onClick={onClose} className="mt-6 w-full rounded-2xl bg-gold-400 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
           Continue

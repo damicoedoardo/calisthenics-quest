@@ -23,6 +23,11 @@ characters/*.ts       one file per character: hero, wanderer, mira, ember, book,
                       stage 0-2), monolith.ts (plateauBoss, stage 0-2), hollowBoss.ts (hollowBoss
                       and hollowBossFade), summitSpirit.ts (summitBoss)
 characters/pixel.ts   text-row art: paintRows (one character per pixel) and shifted
+characters/icons.ts   app icons as text rows: the six keepsakes (Hero tab, sprite `keepsake`) and
+                      what a day held in the Book of Days (sprite `dayIcon`)
+characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recolored onto the zone's
+                      ramp and dressed (lake glass and drips, forge scrap and glowing cracks,
+                      plateau sandstone, fog mist, summit ice)
 ```
 
 ## How to change things
@@ -42,13 +47,16 @@ characters/pixel.ts   text-row art: paintRows (one character per pixel) and shif
 | Redraw a weapon | `parts/weapons.ts` |
 | Change armor tiers, capes, shields | `heroSpec` layers in `characters/hero.ts` |
 | Redraw Mira, Ember, the Book or a chapter enemy | its file in `characters/` (`mira.ts`, `ember.ts`, `book.ts`, `tomorrow.ts`, `mirror.ts`, `plateau.ts`, `summit.ts`) |
+| Change how Lia, Sol or Vela look once you've helped them | `LIA_AFTER`, `SOL_AFTER` in `characters/villagers.ts`, `VELA_AFTER` in `vela.ts`; drawn with `{ after: true }`, and in the story by the cast ids `lia-after`, `sol-after`, `vela-after` |
 | Redraw old Vela (hair, softer eyes, shawl, lamp, cane) | `characters/vela.ts`: her lamp raise is the `raise` clip in `clips.ts` |
 | Redraw the flame's true form (the finale's fire kid) | the `ROWS` and `TIPS` text art in `characters/kindled.ts` (`LOCKS` is the long hair a long or pony look gets) |
 | Change a story backdrop's props (Vela's lamp tower, the road, a campfire) | its function in `places.ts` (`lampTower`, `road`...); which place has which props is in `src/story/places.ts` |
+| Change Vela's far tower on the Plateau, or how its lamp flashes | `FAR_TOWER` rows in `places.ts`; a place with it is drawn lit and unlit, and the `beacon` animation in `tailwind.config.ts` flashes the lit copy |
 | Change the looks a player starts with (boy, girl) | `STARTER_LOOKS` in `characters/hero.ts`; the editor's options are in `src/components/LookEditor.tsx` |
 | Redraw a dungeon monster | the `ROWS` text art in its file (`ram.ts`, `smoke.ts`, `seeker.ts`, `splitter.ts`, `shade.ts`); its palette sits under the rows |
 | Change which sprite a dungeon monster uses, or its size | `DUNGEON_LOOKS` in `src/game/dungeon/scene.ts` (a new sheet also needs a `SheetKey` in `src/game/rules.ts` and a line in `sheets` in `FogRun.tsx`) |
 | Redraw the dungeon's pillars, barrels, chests, shrine, torches | the text rows in `src/game/dungeon/props.ts` (floor, walls, door, water and spikes are drawn in `scene.ts`) |
+| Change how a zone dresses its regular monsters | `ZONE_RAMPS` (colors) and the zone's branch of `dress` in `characters/zoned.ts`; the sprites that take `{ zone }` are the `zoned(...)` entries in `registry.ts` |
 | Change a zone's dungeon colors (floor, stone, torch fire, water) | its entry in `THEMES` (`src/game/dungeon/themes.ts`); in developer mode the Fog's pause menu has a Theme button that cycles them |
 | Add a character | a file in `characters/`, then an entry in `SPRITES` (`registry.ts`) |
 | Use art from Aseprite or PixelLab | see below |

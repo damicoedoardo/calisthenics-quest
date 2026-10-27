@@ -72,7 +72,7 @@ export function skipIntro(state: GameState, now: Date): GameState {
         voice: state.profile.voice || 'You always quit.',
         letter: state.profile.letter.why
           ? state.profile.letter
-          : { why: 'I want to feel strong again', want: 'ten pull-ups', forWho: 'me', remind: 'I already did this once' },
+          : { why: 'I want to feel strong again', want: 'do ten pull-ups', forWho: 'me', remind: 'I already did this once' },
       },
     },
     now,

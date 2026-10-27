@@ -147,6 +147,16 @@ function cane(c: Ctx) {
   w.p(x + 6, hy - 1, Wd[0]);
 }
 
+/** After you join her story: the letter is sealed and stamped, held to her chest, ready to send. */
+function letter(c: Ctx) {
+  const { u } = c;
+  u.r(24, 39, 11, 7, '#f4ecd8');
+  u.line(24, 39, 29, 43, '#c9bc9c');
+  u.line(34, 39, 29, 43, '#c9bc9c');
+  u.r(31, 40, 3, 3, '#c0392b');
+  u.p(32, 41, '#f4ecd8');
+}
+
 const VELA: FigureSpec = {
   id: 'vela',
   attack: 'raise',
@@ -192,6 +202,17 @@ const VELA: FigureSpec = {
   },
 };
 
-export function drawVela(_o: unknown, frame: ClipFrame, f: number): Grid {
-  return drawFigure(VELA, VELA_LOOK, frame, f);
+const VELA_AFTER: FigureSpec = {
+  ...VELA,
+  layers: {
+    ...VELA.layers,
+    outfit(c) {
+      VELA.layers.outfit?.(c);
+      letter(c);
+    },
+  },
+};
+
+export function drawVela(o: { after?: boolean }, frame: ClipFrame, f: number): Grid {
+  return drawFigure(o.after ? VELA_AFTER : VELA, VELA_LOOK, frame, f);
 }

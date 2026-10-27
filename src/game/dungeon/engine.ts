@@ -507,7 +507,7 @@ export const ABILITIES: Record<AbilityId, { name: string; text: string; cd: numb
   volley: { name: 'Volley', text: 'Loose arrows all around you that pierce through.', cd: 7 },
   blink: { name: 'Blink', text: 'Vanish and appear ahead, bursting where you land and wiping shots nearby.', cd: 8 },
   still: { name: 'Stillness', text: 'Breathe: heal some HP and push everything away.', cd: 14 },
-  shock: { name: 'Shockwave', text: 'Knock back everything near you and wipe the shots around you.', cd: 7 },
+  shock: { name: 'Shockwave', text: 'Knock back everything near you and wipe the shots around you.', cd: 8 },
 };
 /** Every class can dodge: a short dash, untouchable for a moment, on its own short clock. */
 export const DODGE = { cd: 2.5, speed: 480, secs: 0.17, ghost: 0.27 };
@@ -516,7 +516,7 @@ export const DODGE = { cd: 2.5, speed: 480, secs: 0.17, ghost: 0.27 };
 /** Each class in the dungeon, against the others: HP, armor, and damage (orbs and waves hit crowds, so less each). */
 export const CLASS_BODY: Record<'slash' | 'arrow' | 'orb' | 'wave', { hp: number; armor: number; dmg: number }> = {
   slash: { hp: 1.5, armor: 0.35, dmg: 1 },
-  wave: { hp: 1.3, armor: 0.1, dmg: 0.9 },
+  wave: { hp: 1.3, armor: 0.1, dmg: 0.96 },
   arrow: { hp: 1, armor: 0, dmg: 1.1 },
   orb: { hp: 0.85, armor: 0, dmg: 0.62 },
 };

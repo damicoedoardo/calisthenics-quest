@@ -22,7 +22,7 @@ import type { FlameStage } from '@/sprites/characters/ember';
 
 const MOODS: FlameMood[] = ['happy', 'bright', 'soft', 'sleepy', 'smoky', 'scared', 'dim'];
 
-const LETTER = { why: 'I want to feel strong again', want: 'ten pull-ups', forWho: 'my kids', remind: 'I already did this once' };
+const LETTER = { why: 'I want to feel strong again', want: 'do ten pull-ups', forWho: 'my kids', remind: 'I already did this once' };
 const NO_LETTER = { why: '', want: '', forWho: '', remind: '' };
 const ANSWERS = {
   heart1: 'playing with friends',

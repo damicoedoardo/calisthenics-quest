@@ -16,7 +16,7 @@ import { drawPlateau } from './characters/plateau';
 import { drawSummit } from './characters/summit';
 import { drawTomorrow } from './characters/tomorrow';
 import { drawWanderer } from './characters/wanderer';
-import { drawKid, drawLia, drawSol } from './characters/villagers';
+import { drawKid, drawLia, drawSol, type VillagerOpts } from './characters/villagers';
 import { drawVela } from './characters/vela';
 import { drawKindled, type KindledOpts } from './characters/kindled';
 import { drawWisp } from './characters/wisp';
@@ -26,6 +26,8 @@ import { drawSeeker } from './characters/seeker';
 import { drawSplitling, drawSplitter, drawSplitterPop } from './characters/splitter';
 import { drawShade } from './characters/shade';
 import { drawWarden } from './characters/warden';
+import { ZONE_PLACE, dress, edged } from './characters/zoned';
+import { DAY_ICONS, KEEPSAKE_ICONS, type DayKind } from './characters/icons';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
    art for a character is a change here, never in a component. Two kinds:
@@ -84,6 +86,29 @@ const pixel = (label: string, art: PixelArt) =>
 const creature = (label: string, draw: DrawnSprite<NoOpts>['draw'], attack?: ClipId) =>
   drawn<NoOpts>({ label: () => label, defaults: {}, clips: () => (attack ? { idle: 'hover', attack } : { idle: 'hover' }), draw });
 
+/** Which zone a regular monster lives in: 0 is the Ashlands (the monster as drawn), 1-5 dress it
+    for the Mirror Lake, the Cold Forges, the Plateau, the Fog and the Summit (see zoned.ts). */
+export interface ZoneOpts {
+  zone: number;
+}
+
+/** A creature with a zone variant for each zone, from the same drawing. */
+const zoned = (label: string, draw: DrawnSprite<NoOpts>['draw'], attack: ClipId = 'lunge') =>
+  drawn<ZoneOpts>({
+    label: (o) => (o.zone > 0 && ZONE_PLACE[o.zone] ? `${ZONE_PLACE[o.zone]} ${label}` : label),
+    defaults: { zone: 0 },
+    clips: () => ({ idle: 'hover', attack }),
+    draw: (o, fr, f) => edged(dress(draw({}, fr, f), o.zone, f), o.zone),
+  });
+
+export interface KeepsakeOpts {
+  /** The zone whose boss gave it, 0-5. */
+  zone: number;
+}
+export interface DayIconOpts {
+  kind: DayKind;
+}
+
 const STARTER_GEAR = equippedGear(undefined, { push: 0, pull: 0, core: 0 });
 
 export const SPRITES = {
@@ -110,9 +135,10 @@ export const SPRITES = {
   mira: drawn<NoOpts>({ label: () => 'Mira the Smith', defaults: {}, clips: () => ({ idle: 'idle', attack: 'swing' }), draw: drawMira, look: () => ({ shadow: true }) }),
   knight: drawn<NoOpts>({ label: () => 'The Perfect Knight', defaults: {}, clips: () => ({ idle: 'idle', attack: 'swing' }), draw: drawKnight, look: () => ({ shadow: true }) }),
   kid: drawn<NoOpts>({ label: () => 'The kid inside the armor', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawKid, look: () => ({ shadow: true }) }),
-  lia: drawn<NoOpts>({ label: () => 'Lia the dancer', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawLia, look: () => ({ shadow: true }) }),
-  sol: drawn<NoOpts>({ label: () => 'Sol the runner', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawSol, look: () => ({ shadow: true }) }),
-  vela: drawn<NoOpts>({ label: () => 'Old Vela', defaults: {}, clips: () => ({ idle: 'idle', attack: 'raise' }), draw: drawVela, look: () => ({ shadow: true }) }),
+  // Villagers: { after: true } is how they look once you've helped them.
+  lia: drawn<VillagerOpts>({ label: ({ after }) => (after ? 'Lia, dancing again' : 'Lia the dancer'), defaults: { after: false }, clips: () => ({ idle: 'idle' }), draw: drawLia, look: () => ({ shadow: true }) }),
+  sol: drawn<VillagerOpts>({ label: ({ after }) => (after ? 'Sol, running again' : 'Sol the runner'), defaults: { after: false }, clips: () => ({ idle: 'idle' }), draw: drawSol, look: () => ({ shadow: true }) }),
+  vela: drawn<VillagerOpts>({ label: ({ after }) => (after ? 'Old Vela, letter sealed' : 'Old Vela'), defaults: { after: false }, clips: () => ({ idle: 'idle', attack: 'raise' }), draw: drawVela, look: () => ({ shadow: true }) }),
   kindled: drawn<KindledOpts>({
     label: () => "Your flame's true form",
     defaults: { hair: 'short' },
@@ -121,20 +147,28 @@ export const SPRITES = {
     look: () => ({ filter: 'drop-shadow(0 0 10px rgba(251,146,60,.6))' }),
   }),
   book: creature('The Book of Days', drawBook, 'hover'),
-  slime: creature('Tomorrow', drawTomorrow, 'lunge'),
+  slime: zoned('Tomorrow', drawTomorrow),
   mirror: creature('The Mirror', drawMirror, 'lunge'),
   golem: creature('The Plateau', drawPlateau, 'lunge'),
   summit: creature('The Summit', drawSummit),
-  wisp: creature('Ash Wisp', drawWisp, 'lunge'),
-  ram: creature('Ram', drawRam, 'lunge'),
-  smoke: creature('Smoker', drawSmoke, 'lunge'),
-  seeker: creature('Seeker', drawSeeker, 'lunge'),
-  splitter: creature('Splitter', drawSplitter, 'lunge'),
-  splitling: creature('Splitling', drawSplitling, 'lunge'),
+  wisp: zoned('Ash Wisp', drawWisp),
+  ram: zoned('Ram', drawRam),
+  smoke: zoned('Smoker', drawSmoke),
+  seeker: zoned('Seeker', drawSeeker),
+  splitter: zoned('Splitter', drawSplitter),
+  splitling: zoned('Splitling', drawSplitling),
   splitterPop: drawn<NoOpts>({ label: () => 'The Splitter splitting', defaults: {}, clips: () => ({ idle: 'pop' }), draw: drawSplitterPop }),
-  shade: creature('Shade', drawShade, 'lunge'),
+  shade: zoned('Shade', drawShade),
   warden: creature('The Warden of the Ashes', drawWarden, 'lunge'),
   // The dungeon bosses. The Mirror is you in glass (pass the player's look and gear, like the hero).
+  // app icons, hand-drawn at 16x16 (keepsakes) and 12x12 (Book of Days)
+  keepsake: drawn<KeepsakeOpts>({
+    label: (o) => `Keepsake ${o.zone + 1}`,
+    defaults: { zone: 0 },
+    clips: () => ({ idle: 'still' }),
+    draw: (o) => drawPixelArt(KEEPSAKE_ICONS[o.zone] ?? KEEPSAKE_ICONS[0]),
+  }),
+  dayIcon: drawn<DayIconOpts>({ label: (o) => o.kind, defaults: { kind: 'A visit' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(DAY_ICONS[o.kind]) }),
   mirrorBoss: drawn<HeroOpts>({
     label: () => 'The Mirror, you in glass',
     defaults: { gear: STARTER_GEAR },
