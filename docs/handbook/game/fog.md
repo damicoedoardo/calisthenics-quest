@@ -66,6 +66,7 @@ fills the whole screen and the camera follows you in it; the HUD is small and ke
 
 ## Balance
 
+The rule for every balance number, and the changelog, are in [balance.md](balance.md).
 `pnpm sim` writes snapshots of simulated players (see [../dev/testing.md](../dev/testing.md)), then
 `pnpm fog:sim` plays hundreds of bot runs on them per zone and class. `DIALS` in
 `src/game/dungeon/content.ts` are the main knobs. The sim starts every run in the starter kit with

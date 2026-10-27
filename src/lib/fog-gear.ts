@@ -2,6 +2,7 @@ import { daysSinceLastSession, type GameState } from './game';
 import type { GearSlot, Tier } from './gear';
 import { buildOf } from './stats';
 import { itemScore, shortOf, type Item, type ItemSlot } from '@/game/dungeon/items';
+import { FLAME_GUARD_DAYS, MELT, VAULT } from '@/balance';
 
 /* The things you wear into the Fog, between runs. Die in a run and the Fog takes everything you
    wore and carried; win, or leave by the stairs, and you keep it all. The vault keeps items safe at
@@ -23,14 +24,14 @@ export interface FogGear {
 export const NO_GEAR: FogGear = { worn: {}, vault: [] };
 
 /** Vault slots: 4, and one more every 5 workouts, up to 20. */
-export const vaultSize = (workouts: number) => Math.min(20, 4 + Math.floor(workouts / 5));
+export const vaultSize = (workouts: number) => Math.min(VAULT.max, VAULT.start + Math.floor(workouts / VAULT.every));
 
 const gearOf = (s: GameState): FogGear => s.fogGear ?? NO_GEAR;
 
 /** Trained in the last 2 days: the flame holds your guarded item if you fall. */
 export function flameGuards(state: GameState, now: Date): boolean {
   const gap = daysSinceLastSession(state, now);
-  return gap !== null && gap <= 2;
+  return gap !== null && gap <= FLAME_GUARD_DAYS;
 }
 
 /** How a run ended for what you carried: what came home (and what didn't fit in the vault), or what the Fog took. */
@@ -132,8 +133,7 @@ export function discardItem(state: GameState, id: string): GameState {
 
 /** Embers an item melts down into at the forge: more for rarer and upgraded ones. */
 export function salvageValue(it: Item): number {
-  const base = { common: 3, magic: 6, rare: 12, legendary: 30 }[it.rarity];
-  return Math.round(base * (1 + 0.5 * (it.plus ?? 0)));
+  return Math.round(MELT[it.rarity] * (1 + MELT.perPlus * (it.plus ?? 0)));
 }
 
 /** Choose the worn item the flame holds (null: none). */

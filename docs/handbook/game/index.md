@@ -10,6 +10,7 @@ timestamp: 2026-10-27
 
 - [Training rules](training.md): the built-in plan, today's quest, logging, progression, XP, stat points, classes and gear
 - [Story](story.md): the six chapters as data, scene format, daily lines, rules for the words
+- [Balance](balance.md): the design-for-balance rule, every balance number in `src/balance/`, the balance sheet, the changelog
 - [The Fog](fog.md): the rules around a run, zones, power from training, records, balance
 - [Mira's forge and the flame](forge.md): gear between runs: embers, upgrade, reroll, melt down, the item your flame keeps
 - [The Fog's dungeon](dungeon.md): content, the pure engine, the bot, the Phaser scene, how to change each

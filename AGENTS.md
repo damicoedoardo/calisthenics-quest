@@ -26,6 +26,7 @@ is laid out, how each part works, and which file to edit for each kind of change
 src/app/         Next.js routes: / (the whole app), /lab, /lab/story, /lab/music, /lab/night
 src/components/  React screens; they play data and call rules, no rules or art of their own
 src/lib/         Pure rules: save shape and XP (game.ts), the plan, stat points, gear, Fog rules, days, music, store
+src/balance/     Every balance number as named data, and the balance sheet (pnpm balance)
 src/story/       The six-month story as data, and its engine
 src/sprites/     All pixel art as code, by sprite id
 src/game/        The Fog: shared numbers, sprite sheets, dungeon/ (content, pure engine, bot, Phaser scene)
@@ -41,6 +42,9 @@ docs/handbook/   The handbook
 
 - **Rules are pure** and take `now: Date` or a seed; anything a replay or simulator runs uses
   `seeded()` (`src/lib/random.ts`) or an `rng` argument. No React or DOM below `src/components/`.
+- **Design for balance**: a number that sets how strong, fast, rare or costly something is gets a
+  name and a one-line goal in `src/balance/`, never inline in a formula. Change one: `pnpm balance`,
+  commit the sheet, add a changelog row. The rule: `docs/handbook/game/balance.md`.
 - **Content is data** (story, monsters, zones, music, sprites). Components only play it.
 - **Art is code**: draw with `<Sprite id="..." />`, never in a component.
 - **One save**: every change goes through `update(fn)` from `useGameState`. New save fields are
@@ -56,7 +60,7 @@ docs/handbook/   The handbook
 ## Before pushing
 
 ```bash
-pnpm test                          # rules, story, sprite fingerprints, Fog replays
+pnpm test                          # rules, story, sprite fingerprints, Fog replays, balance sheet
 pnpm exec tsc --noEmit; echo $?    # typecheck (read the exit code)
 pnpm handbook:lint && pnpm handbook:check
 ```

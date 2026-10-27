@@ -53,7 +53,8 @@ with code-checked guardrails) lands, and the offline fallback after it.
 
 ## XP and levels
 
-Constants at the top of `game.ts`: full session 100, minimum 30, perfect week (3 sessions,
+The numbers are in `src/balance/training.ts` (see [balance.md](balance.md)); `game.ts` keeps the
+old names (`XP_FULL_SESSION`, ...). Today: full session 100, minimum 30, perfect week (3 sessions,
 `WEEKLY_GOAL`) 100, welcome back after 14+ days 50. Weekly streak +10% per perfect week in a row
 (max +50%). A level is 500 XP.
 
@@ -62,7 +63,8 @@ Constants at the top of `game.ts`: full session 100, minimum 30, perfect week (3
 Training earns points; the champion spends them in the Fog. Every workout earns them whatever it
 was, so the reward never depends on the plan: `POINTS` per full workout, short workout, week at
 the goal, and "better than last time", plus `STARTING_POINTS`. `pointsEarned` derives them from
-the sessions; only what was spent is saved (`state.build`).
+the sessions; only what was spent is saved (`state.build`). The numbers (points, worth, base,
+falloff, armor, class lean) are in `src/balance/stats.ts`.
 
 - Four stats (`STATS`): **Health** (HP and a little armor), **Damage**, **Reach** (pickup range
   for light), **Speed** (attack speed). `spendPoint`, `refundPoint`, and `resetBuild` (take all
@@ -77,7 +79,7 @@ the sessions; only what was spent is saved (`state.build`).
 
 Warrior (sword), Archer (bow), Monk (staff), Mage (wand). A class only changes how you fight in
 the Fog: its attack style there, and a small lean to one stat (`CLASS_LEAN` in `stats.ts`, as if
-it had `CLASS_LEAN_POINTS` more there). Gear has a weapon, armor and shield slot. Mira's forge used to raise one slot a tier
+it had `CLASS_LEAN_POINTS` more there, set in `src/balance/stats.ts`). Gear has a weapon, armor and shield slot. Mira's forge used to raise one slot a tier
 every `GEAR_EVERY` workouts (`tiersAt`, `nextForge`); it doesn't any more. `migrate()` froze what
 it had made as the hero's look (`fogGear.kit`), and `gearOf` shows the finer of that and the
 item you wear from the Fog. Workouts now earn embers for Mira's forge on the Play tab
@@ -88,7 +90,8 @@ item you wear from the Fog. Workouts now earn embers for Mira's forge on the Pla
 | I want to... | Edit |
 |---|---|
 | Change the exercises of a day, or add a kit | `PLAN` in `src/lib/program.ts` (the exercise needs a demo: a test checks) |
-| Change how fast targets go up | `finishSession` and `MAX_RAISES_PER_WEEK` in `src/lib/game.ts` |
-| Change how many points a workout gives | `POINTS`, `STARTING_POINTS` in `src/lib/stats.ts` |
-| Change what a point is worth | `STATS[].per`, `BASE`, `FALLOFF` in `src/lib/stats.ts`, then `pnpm sim` and `pnpm fog:sim` |
-| Change embers per workout | `EMBERS` in `src/lib/forge.ts` ([forge.md](forge.md)) |
+| Change XP, levels or the streak bonus | `XP` in `src/balance/training.ts`, then `pnpm balance` |
+| Change how fast targets go up | `finishSession` in `src/lib/game.ts`, `PROGRESSION` in `src/balance/training.ts` |
+| Change how many points a workout gives | `POINTS`, `STARTING_POINTS` in `src/balance/stats.ts`, then `pnpm balance` |
+| Change what a point is worth | `POINT_WORTH`, `STAT_BASE`, `FALLOFF` in `src/balance/stats.ts`, then `pnpm balance`, `pnpm sim` and `pnpm fog:sim` |
+| Change embers per workout | `EMBERS` in `src/balance/economy.ts` ([forge.md](forge.md)) |
