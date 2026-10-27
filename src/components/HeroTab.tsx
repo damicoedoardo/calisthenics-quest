@@ -99,7 +99,7 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
       </section>
 
       {editingLook && (
-        <div className="safe-top safe-bottom fixed inset-0 z-40 overflow-y-auto bg-ink-950">
+        <div className="safe-top safe-bottom fixed inset-0 z-40 !mt-0 overflow-y-auto bg-ink-950">
           <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6 pt-4">
             <h2 className="mb-4 font-pixel text-xs text-gold-300">Your look</h2>
             <div className="flex-1">
