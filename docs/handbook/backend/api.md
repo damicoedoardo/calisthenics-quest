@@ -20,13 +20,14 @@ the workout planner (the LLM key must live on a server).
 | `backend/app/auth.py`, `auth_jwks.py` | Who is calling: checks the Supabase login token (copied from minlit) |
 | `backend/app/saves.py` | Where saves are kept: `PgStore` (Postgres) and `MemoryStore` (tests), same rules |
 | `backend/app/routes/save.py` | `GET`, `PUT`, `DELETE /save` |
+| `backend/app/friends.py`, `routes/friends.py` | Friend cards and friendships: `PUT /me`, `/friends` ([friends.md](friends.md)); creates its tables on start |
 | `backend/db/init.sql` | The schema, run by Postgres on first boot |
 | `backend/tests/` | pytest: the save rules and the token check, no database needed |
 
 ## Login
 
 Supabase does the login (its own `forma` project, not minlit's) and signs a token; the api only
-checks it, with Supabase's public keys (JWKS), and never issues tokens. Every `/save` route needs
+checks it, with Supabase's public keys (JWKS), and never issues tokens. Every `/save`, `/me` and `/friends` route needs
 `Authorization: Bearer <token>`; the player is the token's `sub`.
 
 ## The save rules
@@ -61,6 +62,6 @@ CI runs lint and tests on PRs that touch `backend/` (`.github/workflows/backend.
 | I want to... | Edit |
 |---|---|
 | Add a route | a new file in `backend/app/routes/`, included in `main.py`, tests in `backend/tests/` |
-| Change the table | a new `backend/db/migrate_<date>_<what>.sql`, the same change in `init.sql`; apply by hand on the server ([server.md](server.md)) |
+| Change the table | a new `backend/db/migrate_<date>_<what>.sql`, the same change in `init.sql`; apply by hand on the server ([server.md](server.md)). Friends tables are made by the api on start instead ([friends.md](friends.md)) |
 | Allow another web origin | `cors_origins` / `cors_origin_regex` in `config.py`, or `CORS_ORIGINS` in the server's `.env` |
 | Add a setting | `config.py` (`FORMA_` prefix), `docker-compose.yml` (`api` environment), `.env.example` |

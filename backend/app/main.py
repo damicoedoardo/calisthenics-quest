@@ -5,12 +5,13 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.db import close_pool, init_pool
-from app.routes import save
+from app.routes import friends, save
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_pool(settings.database_url)
+    await friends.get_friend_store().ensure()
     try:
         yield
     finally:
@@ -33,11 +34,12 @@ app.add_middleware(
     allow_origins=[o.strip() for o in settings.cors_origins.split(",") if o.strip()],
     allow_origin_regex=settings.cors_origin_regex or None,
     allow_credentials=False,
-    allow_methods=["GET", "PUT", "DELETE"],
+    allow_methods=["GET", "PUT", "POST", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
 app.include_router(save.router)
+app.include_router(friends.router)
 
 
 @app.get("/health")
