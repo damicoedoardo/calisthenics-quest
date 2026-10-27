@@ -119,6 +119,11 @@ corners, clear of the notch: HP and level top left, the floor and its depth row 
 the boss bars under it), bag, pause and minimap top right, Dodge and the class ability under the
 right thumb; the left half is free for the move stick.
 
+On a computer the scene reads the keyboard too (`create`): WASD or the arrows feed `stickInput`
+like the stick, Q asks for the ability and Space, E or Shift for the dodge, ignored while the run
+holds still; `setPaused` lets go of every key so nothing keeps walking after a pause. The other
+keys (pause, bag, map, cards) are `FogRun`'s, see [fog.md](fog.md).
+
 The engine plays every room standing up (the way on, east, is
 its top wall); the scene shows it on its side, so on screen east is to the right. `P(x, y)` in `scene.ts` turns an engine point into a screen point (the room's height
 becomes the screen's width). The floor, walls, water and the effects in engine points (`fade`) are
