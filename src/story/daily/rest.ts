@@ -4,21 +4,21 @@ import type { DailyLine } from '../types';
    General and kind: no body talk, no numbers. */
 
 export const REST_TRUTHS: string[] = [
-  'Strength grows while you rest, not while you train. Today is part of training.',
-  "Sleep is the best recovery there is, and it's free.",
-  "Being sore isn't proof of a good workout. Coming back is.",
+  'Somewhere in you, yesterday is quietly turning into strength. Let it.',
+  'Go to bed a little early tonight. Leave the phone in another room, if you can.',
+  'Sore? Be kind to the parts that worked hardest. A warm shower. A slow walk.',
   'A walk counts. Stretching counts. Doing nothing counts too.',
   "Restless? That's energy saving up for tomorrow.",
   "Water, a good meal, bed a little earlier. That's today's quest.",
-  'Rest is when the work you did turns into strength.',
+  'Make yourself something warm to drink, and drink it sitting down.',
   'Today, notice one thing you did for yourself this week. Just notice it.',
   'Go outside for a few minutes, if you can. No goal. Just air.',
   'The fire curls up low and happy in the ash. "Stay a while. I\'m keeping it warm for tomorrow."',
-  'Rest days are not a pause in the story. They are pages too.',
+  "Lie on the floor for a minute. Notice what you're still holding. Let it go.",
   'Do one kind thing for the person who trained this week. It was you.',
   'A rest day you planned is part of the plan. Nothing to make up for.',
   'Stretch for as long as it feels good, and stop when it stops feeling good.',
-  'Let today be ordinary. Ordinary days are where the strength settles in.',
+  'Let today be ordinary. Nothing to prove. Nothing to fix.',
 ];
 
 /** What the flame says after the minute by the fire. */

@@ -15,7 +15,7 @@ export const RUN_LINES: Record<RunKind, DailyLine[]> = {
   lost: [
     { text: 'The Fog won that round. It costs nothing. Rest, and we go again.' },
     { text: "Rough run. That's okay. The stairs will still be there." },
-    { text: "We fell down there. We'll be stronger next time, and you know how." },
+    { text: 'We fell down there. You got up faster than last time. I noticed.' },
     { text: "That one didn't go our way. Have some water. Then whenever you like." },
     { text: 'You got further than you think. I was counting rooms.' },
   ],
