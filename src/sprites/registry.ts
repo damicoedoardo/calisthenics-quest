@@ -35,7 +35,7 @@ import { drawWhisperMid } from './characters/whisperMid';
 import { drawGaleMid } from './characters/galeMid';
 import { drawExercise, type ExerciseOpts } from './characters/exercise';
 import { ZONE_PLACE, dress, edged } from './characters/zoned';
-import { ABILITY_ICONS, DAY_ICONS, KEEPSAKE_ICONS, MARK_ICONS, RELIC_ICONS, SKILL_ICONS, type DayKind } from './characters/icons';
+import { ABILITY_ICONS, DAY_ICONS, KEEPSAKE_ICONS, MARK_ICONS, RELIC_ICONS, SKILL_ICONS, UI_ICONS, ZONE_ICONS, type DayKind } from './characters/icons';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
    art for a character is a change here, never in a component. Two kinds:
@@ -125,6 +125,13 @@ export interface SkillIconOpts {
 export interface MarkIconOpts {
   name: 'warden' | 'boss';
 }
+export interface UiIconOpts {
+  name: keyof typeof UI_ICONS;
+}
+export interface ZoneIconOpts {
+  /** The zone's id (ZONES[i].id), 0-5. */
+  zone: number;
+}
 export interface DayIconOpts {
   kind: DayKind;
 }
@@ -198,6 +205,8 @@ export const SPRITES = {
   relicIcon: drawn<RelicIconOpts>({ label: (o) => o.name, defaults: { name: 'whetstone' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(RELIC_ICONS[o.name]) }),
   abilityIcon: drawn<AbilityIconOpts>({ label: (o) => o.name, defaults: { name: 'charge' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(ABILITY_ICONS[o.name]) }),
   skillIcon: drawn<SkillIconOpts>({ label: (o) => o.name, defaults: { name: 'power' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(SKILL_ICONS[o.name]) }),
+  uiIcon: drawn<UiIconOpts>({ label: (o) => o.name, defaults: { name: 'heart' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(UI_ICONS[o.name]) }),
+  zoneIcon: drawn<ZoneIconOpts>({ label: (o) => `zone ${o.zone}`, defaults: { zone: 0 }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(ZONE_ICONS[Math.max(0, Math.min(ZONE_ICONS.length - 1, o.zone))]) }),
   markIcon: drawn<MarkIconOpts>({ label: (o) => o.name, defaults: { name: 'boss' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(MARK_ICONS[o.name]) }),
   // you, doing an exercise of the program (the workout screen's demo)
   exercise: drawn<ExerciseOpts>({

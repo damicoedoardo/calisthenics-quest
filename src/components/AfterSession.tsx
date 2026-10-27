@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { Heart } from 'lucide-react';
 import { Hero } from './Hero';
 import { Enemy } from './Characters';
+import { Sprite } from './Sprite';
 import { music } from '@/lib/music';
 import { gearOf, levelInfo, totalXp, type FinishResult } from '@/lib/game';
 import { tierText } from '@/lib/gear';
@@ -50,9 +50,10 @@ export function AfterSession({ result, before, after, onClose }: Props) {
             )}
           </div>
         </div>
-        <div className="mt-6 flex flex-wrap justify-center gap-1">
+        <div className="mt-6 flex flex-wrap justify-center">
           {Array.from({ length: before.hearts }).map((_, i) => (
-            <Heart key={i} size={16} className={`transition-all duration-500 ${i < heartsShown ? 'fill-red-500 text-red-500' : 'text-ink-600'}`} />
+            // The heart this session takes pops as it goes dark.
+            <Sprite key={i} id="uiIcon" opts={{ name: i < heartsShown ? 'heart' : 'heartEmpty' }} size={18} label="" className={hit && i === heartsShown && i < before.heartsLeft ? 'animate-pop' : ''} />
           ))}
         </div>
         <p className="mt-4 text-sm text-slate-300">

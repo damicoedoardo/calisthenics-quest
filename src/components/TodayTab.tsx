@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Bookmark, BookOpen, ChevronRight, Flame, Heart, Play, X } from 'lucide-react';
+import { Bookmark, BookOpen, ChevronRight, Flame, Play, X } from 'lucide-react';
 import { BookOfDays } from './BookOfDays';
 import { Ember, Enemy, Hollow } from './Characters';
 import { SitByFire } from './SitByFire';
+import { Sprite } from './Sprite';
 import {
   WEEKLY_GOAL,
   dayType,
@@ -80,9 +81,9 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
               <p className="text-sm text-slate-300">
                 vs <span className="font-semibold text-slate-100">{story.chapter.enemy}</span>
               </p>
-              <div className="mt-1.5 flex flex-wrap gap-1">
+              <div className="mt-1.5 flex flex-wrap">
                 {Array.from({ length: story.hearts }).map((_, i) => (
-                  <Heart key={i} size={14} className={i < story.heartsLeft ? 'fill-red-500 text-red-500' : 'text-ink-600'} />
+                  <Sprite key={i} id="uiIcon" opts={{ name: i < story.heartsLeft ? 'heart' : 'heartEmpty' }} size={18} label="" />
                 ))}
               </div>
               <p className="mt-1.5 text-xs text-slate-400">
@@ -203,7 +204,7 @@ function FlameCard({ state, now, week, streak }: { state: GameState; now: Date; 
       </div>
       <div className="mt-3 flex gap-1.5">
         {Array.from({ length: WEEKLY_GOAL }).map((_, i) => (
-          <div key={i} className={`h-2.5 flex-1 rounded-sm ${i < week ? 'bg-gold-400' : 'bg-ink-600'}`} />
+          <div key={i} className={`pixel-notch h-3 flex-1 ${i < week ? 'bg-gold-400 shadow-[inset_0_-3px_0_#b45309]' : 'bg-ink-600 shadow-[inset_0_-3px_0_#1c2033]'}`} />
         ))}
       </div>
       <p className="mt-1 text-xs text-slate-500">
