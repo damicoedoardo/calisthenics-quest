@@ -5,11 +5,12 @@ import type { Line } from './types';
 // so it never names a sport, an age or a number.
 
 export const COLD_OPEN: Line[] = [
-  { who: 'narrator', text: 'Do you remember the last time you felt strong?' },
-  { who: 'narrator', text: 'Not how you looked. How it felt.' },
+  { who: 'narrator', text: 'Do you remember the last time you felt strong?', pace: 'slow' },
+  { who: 'narrator', text: 'Not how you looked. How it felt.', pause: 1.2 },
   { who: 'narrator', text: 'Lungs on fire. Hands shaking. And somehow, smiling.' },
-  { who: 'narrator', text: "You weren't proving anything. Moving was just one of the ways you knew you were alive." },
-  { who: 'narrator', text: "Back then you thought it would always be there. That's the thing about strength. It never tells you it's leaving." },
+  { who: 'narrator', text: 'The good ache the next morning, on the stairs. Laughing about it.', pause: 0.8 },
+  { who: 'narrator', text: "Back then you thought it would always be there. That's the thing about strength.", pause: 1.4 },
+  { who: 'narrator', text: "It never tells you it's leaving.", pace: 'slow', pause: 1.2 },
 ];
 
 /** The montage: who you were turns gray. The first two lines show you in your golden days, the last one the Hollow behind you. */
@@ -17,11 +18,11 @@ export const FADING: Line[] = [
   { who: 'narrator', text: "It didn't leave all at once." },
   { who: 'narrator', text: 'A busy week. Then a tired month. Then a whole stretch of life when everything else came first.' },
   { who: 'narrator', text: '“Next Monday,” you said. You said it so many times it stopped meaning anything.' },
-  { who: 'narrator', text: "Nobody took it from you. That's the part that hurts. You put it down, one day at a time, and forgot where." },
+  { who: 'narrator', text: 'You still have the shoes. They are at the back of a cupboard. You know exactly which one.', pause: 0.8 },
   { who: 'narrator', text: 'Now the stairs feel longer. You walk past old photos a little faster than you used to.' },
-  { who: 'narrator', text: 'Some days you think about starting again. Then you think about how far back you would be starting from, and the thought gets heavy, and you put that down too.' },
-  { who: 'narrator', text: "It was never laziness. Some part of you knows that. It's just hard to remember on the bad days." },
-  { who: 'narrator', text: 'And somewhere along the way, a voice moved in.' },
+  { who: 'narrator', text: 'Some mornings you almost start. Then you work out how far back you would be starting from, and you put that down too.' },
+  { who: 'narrator', text: "Nobody took it from you. That's the part that hurts. You put it down, one day at a time, and forgot where.", pause: 1.2, pace: 'slow' },
+  { who: 'narrator', text: 'And somewhere along the way, a voice moved in.', pause: 1.6, music: 'none' },
 ];
 
 /** Lines the player can pick as the Hollow's voice. */
@@ -72,18 +73,15 @@ export const MEET: Line[] = [
   { who: 'wanderer', text: "You did. Good. Now you know what you're fighting." },
   { who: 'wanderer', text: "It isn't a weight, or a number, or your age. It's a voice. And it wears your face." },
   { who: 'you', text: "It's right, though. I used to be... more." },
-  { who: 'wanderer', text: 'You used to be carrying less. That is not the same thing.' },
-  { who: 'wanderer', text: "Life got heavy, and for a while you carried other things instead. That isn't a crime. It's what people do." },
-  { who: 'you', text: 'Then why do I feel so ashamed?' },
-  { who: 'wanderer', text: 'Because you still care. Shame is caring with nowhere to go. We are going to give it somewhere to go.' },
+  { who: 'wanderer', text: 'You used to be carrying less. That is not the same thing.', pause: 1 },
+  { who: 'you', text: "Then why do I feel so ashamed?" },
+  { who: 'wanderer', text: "...Because you still care. You wouldn't feel a thing if you didn't.", pause: 1.4, pace: 'slow' },
   { who: 'you', text: 'How do I beat it?' },
   { who: 'wanderer', text: 'Not in one swing. Nobody beats it in one swing.' },
   { who: 'wanderer', text: 'You beat it the way water beats stone. One drop. Then another. Then another.' },
-  { who: 'wanderer', text: 'Every time you show up on a day it tells you not to, it gets a little quieter.' },
   { who: 'you', text: 'And when I fail?' },
   { who: 'wanderer', text: "You will. Many times. Failing isn't the end of the road. Stopping is. And even stopping wasn't the end. Look where you're standing." },
   { who: 'wanderer', text: 'One rule, before we walk. That voice talks to you like an enemy. I never will. Try not to, either.' },
-  { who: 'wanderer', text: 'Your strength is still here, under the ash. Buried, not gone.' },
   { who: 'wanderer', text: "Now write to the person you want to become. Not who you were. Who you're going to be." },
 ];
 
@@ -99,18 +97,18 @@ export const SEALED: Line[] = [
   { who: 'narrator', text: 'The Wanderer folds your letter without reading it, and keeps it close.' },
   { who: 'wanderer', text: "I'll carry this. One day I'll read it back to you. I promise." },
   { who: 'narrator', text: 'Then the Wanderer hands you a book. Old leather. Every page is blank.' },
-  { who: 'wanderer', text: 'Your past is already written. Nobody can change it. Not even you. You can stop rereading it, though.' },
+  { who: 'wanderer', text: 'Your past is already written. Nobody can change it. You can stop rereading it, though.' },
   { who: 'wanderer', text: "This one is empty. Every time you train, a page gets written. Rest days get a page too. Nothing in here is ever torn out." },
-  { who: 'narrator', text: 'Something flickers in the ash at your feet. A spark, no bigger than a fingernail.' },
+  { who: 'narrator', text: 'Something flickers in the ash at your feet. A spark, no bigger than a fingernail.', pause: 1.2 },
   { who: 'flame', text: "...hi. Sorry. I'm small right now. I used to be bigger." },
   { who: 'flame', text: "I think I'm the part of you that never stopped wanting this." },
-  { who: 'flame', mood: 'soft', text: "I waited a long time. I'm not upset. I'm just really, really glad you got up." },
+  { who: 'flame', mood: 'soft', text: "I waited a long time. I'm not upset. I'm just really, really glad you got up.", pace: 'slow' },
 ];
 
 export const FIRST_QUEST: Line[] = [
   { who: 'wanderer', text: 'Your first quest is simple. Show up three times this week.' },
   { who: 'wanderer', text: 'Not perfect. Present.' },
-  { who: 'wanderer', text: "Keep it small. You're not trying to get it all back this week. You're trying to prove one thing: that you can keep a promise to yourself." },
+  { who: 'wanderer', text: "Keep it small. You're not getting it all back this week. You're finding out if you can keep a promise to yourself." },
   { who: 'flame', text: 'Every session you do, I grow. Just so you know. No pressure. (Some pressure.)' },
   { who: 'narrator', text: 'Chapter 1: The Ashlands.' },
 ];

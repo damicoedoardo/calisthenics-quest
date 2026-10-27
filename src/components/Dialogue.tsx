@@ -52,6 +52,13 @@ interface Camera {
 const FAST = fastStory();
 const secondsOf = (s: Shot | undefined) => (FAST ? 0.1 : (s?.seconds ?? ('title' in (s ?? {}) ? 2.2 : 1.2)));
 
+/** The song at a beat: a line can change it (or let it drop out), and it stays changed. */
+function musicAt(beats: Beat[], index: number, start: TrackId | null): TrackId | null {
+  let m = start;
+  for (const { line } of beats.slice(0, index + 1)) if (line?.music) m = line.music === 'none' ? null : line.music;
+  return m;
+}
+
 /** Where the camera is at a beat: moves add up over the scene. */
 function cameraAt(beats: Beat[], index: number, place?: PlaceId): Camera {
   const cam: Camera = { place, x: 0, y: 0, zoom: 1, fade: 'none' };
@@ -99,6 +106,8 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
   const beats = useMemo<Beat[]>(() => [...shots.map((shot) => ({ shot })), ...lines.map((line) => ({ line, shot: line.shot }))], [shots, lines]);
   const [index, setIndex] = useState(0);
   const [shown, setShown] = useState(0);
+  // A line with a pause waits, empty, before it starts typing.
+  const [waiting, setWaiting] = useState(false);
   const beat = beats[index];
   const line = beat?.line;
   const full = line ? line.text.length : 0;
@@ -106,21 +115,28 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
   // With ?fast the typing never runs, so a finished line shows in full.
   const upTo = done ? full : shown;
   const narrator = line?.who === 'narrator';
-  const film = cinematic && narrator;
-  const speed = film ? 42 : 28;
+  const film = (cinematic || !!line?.film) && narrator;
+  const speed = line?.pace === 'slow' ? 62 : film ? 42 : 28;
   const cam = cameraAt(beats, index, place);
   const shot = beat?.shot;
-  useMusic(music);
+  useMusic(musicAt(beats, index, music));
 
+  // Only a new line restarts the typing (the lines prop is rebuilt on every parent render).
+  const pause = FAST ? 0 : (line?.pause ?? 0);
   useEffect(() => {
     setShown(0);
+    setWaiting(pause > 0);
+    if (!pause) return;
+    const t = setTimeout(() => setWaiting(false), pause * 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
 
   useEffect(() => {
-    if (done) return;
+    if (done || waiting) return;
     const t = setTimeout(() => setShown((n) => Math.min(full, n + 1)), speed);
     return () => clearTimeout(t);
-  }, [shown, full, done, speed]);
+  }, [shown, full, done, speed, waiting]);
 
   const next = () => {
     if (index + 1 >= beats.length) onDone();
@@ -138,7 +154,8 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
   if (!beat) return null;
 
   const advance = () => {
-    if (line && !done) setShown(full);
+    if (waiting) setWaiting(false);
+    else if (line && !done) setShown(full);
     else next();
   };
 

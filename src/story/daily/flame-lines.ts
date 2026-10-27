@@ -18,7 +18,7 @@ export const FLAME_LINES: Record<Moment, DailyLine[]> = {
     { text: 'One workout today. That\'s all today asks.' },
     { text: "You don't have to feel ready. You just have to start." },
     { text: 'Every page you write, I get a little brighter.' },
-    { text: 'Every workout is a step toward {want}.', needs: 'want' },
+    { text: 'You wrote: "One day I want to be able to {want}." Every workout is a step closer.', needs: 'want' },
     { text: "Let's go see what today's version of you can do." },
     { text: 'Flat road again today. Flat roads still go somewhere.', inChapter: 4 },
     { text: "The Plateau says nothing's changing. Let's go change something it can't see.", inChapter: 4 },
@@ -98,7 +98,7 @@ export const FLAME_LINES: Record<Moment, DailyLine[]> = {
   ],
   smoky: [
     { text: 'I need air. Rest with me tomorrow?' },
-    { text: "Four days in a row. I'm proud, and a little smoky. Rest tomorrow?" },
+    { text: "Day after day after day. I'm proud, and a little smoky. Rest tomorrow?" },
     { text: "Too much fuel, not enough air. Let's take a day off soon." },
     { text: "You've been amazing. Now be amazing at resting." },
   ],

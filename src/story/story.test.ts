@@ -46,6 +46,8 @@ describe('the story files', () => {
         expect(CAST, scene.id).toHaveProperty(l.who);
         if (l.show) expect(CAST, scene.id).toHaveProperty(l.show);
         if (l.shot && 'place' in l.shot) expect(PLACES, scene.id).toHaveProperty(l.shot.place);
+        if (l.music && l.music !== 'none') expect(TRACKS, scene.id).toHaveProperty(l.music);
+        if (l.film) expect(l.who, `${scene.id}: only narration plays as film`).toBe('narrator');
       }
       if (scene.place) expect(PLACES, scene.id).toHaveProperty(scene.place);
       if (scene.music) expect(TRACKS, scene.id).toHaveProperty(scene.music);
@@ -78,6 +80,25 @@ describe('the story files', () => {
     for (const [moment, lines] of Object.entries(FLAME_LINES)) expect(lines.length, moment).toBeGreaterThanOrEqual(4);
     expect(REST_TRUTHS.length).toBeGreaterThanOrEqual(6);
     for (const n of [1, 2, 3, 4, 5, 6]) expect(QUOTES.filter((q) => q.fits === n || q.fits === 'any').length, `chapter ${n}`).toBeGreaterThanOrEqual(2);
+  });
+
+  it("quotes the player's own words, so any answer reads right in anyone's mouth", () => {
+    // Letter parts and written answers can be in the first person ("my kids"): only ever inside quotes.
+    const own = ['why', 'want', 'forWho', 'remind', 'heart3', 'heart4', 'heart5', 'heart6'];
+    const quoted = (text: string, where: string) => {
+      for (const m of text.matchAll(/\{(\w+)\}/g)) {
+        if (!own.includes(m[1])) continue;
+        const before = text.slice(0, m.index).split('"').length - 1;
+        expect(before % 2, `${where}: {${m[1]}} outside quotes in "${text}"`).toBe(1);
+      }
+    };
+    for (const { scene } of ALL_SCENES) for (const l of linesOf(scene)) quoted(l.text, scene.id);
+    for (const lines of Object.values(FLAME_LINES)) for (const l of lines) quoted(l.text, 'flame line');
+  });
+
+  it('types slowly only short lines, so a slow line never drags', () => {
+    const long = ALL_SCENES.flatMap(({ scene }) => linesOf(scene).filter((l) => l.pace === 'slow' && l.text.length > 90).map((l) => `${scene.id}: ${l.text}`));
+    expect(long).toEqual([]);
   });
 
   it('keeps the script general: no digits in any line', () => {
@@ -220,6 +241,14 @@ describe('the months 4 to 6 rules', () => {
     expect(ids).not.toContain('ch1-kept');
     expect(ids).toContain('class-choice');
     expect(ids).toContain('ch1-tomorrow-begs');
+  });
+
+  it('notices a run of Rough days, and only a run', () => {
+    const rough = (kinds: Session['kind'][]) => ({ ...initialState(), sessions: kinds.map((k, i) => workout(day(i), k)) });
+    const due = (s: GameState) => pendingScenes(s, day(10)).map((x) => x.id);
+    expect(due(rough(['full', 'full', 'full', 'full', 'mini', 'mini', 'mini']))).toContain('heavy-days');
+    expect(due(rough(['full', 'mini', 'mini', 'mini']))).not.toContain('heavy-days');
+    expect(due(rough(['mini', 'mini', 'full', 'mini']))).not.toContain('heavy-days');
   });
 
   it('reads a stand-in line when the heart answer is missing, and the answer when it is there', () => {

@@ -53,6 +53,14 @@ export interface Line {
   mood?: FlameMood;
   /** A camera move that starts with this line. */
   shot?: Shot;
+  /** Seconds of quiet before the line starts: the box waits empty, like a held breath. */
+  pause?: number;
+  /** 'slow' types the line out slowly, for the words that need to land. */
+  pace?: 'slow';
+  /** Narration only: big words on the picture with no text box, like a film. */
+  film?: boolean;
+  /** From this line on, play this song instead; 'none' lets the music drop out. */
+  music?: TrackId | 'none';
 }
 
 /**
@@ -105,6 +113,8 @@ export interface When {
   needs?: WordKey;
   /** Helped at least one villager (true), or none of them (false). See VILLAGERS in engine.ts. */
   helped?: boolean;
+  /** The last this-many workouts were all short ones (Rough days or minimum quests). */
+  roughRun?: number;
   /** Away this many days or more. The scene can play again after every later absence. */
   away?: number;
   /** The whole story is finished. */
