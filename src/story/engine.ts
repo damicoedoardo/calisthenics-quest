@@ -187,11 +187,41 @@ export function storyWords(state: GameState): Words {
   };
 }
 
-/** Fill in a text's {words}. Letter parts sit inside sentences, so their end punctuation goes. */
+const LETTER_WORDS: WordKey[] = ['why', 'want', 'forWho', 'remind'];
+
+/** Pronouns as someone else says them back to you: "my kids" becomes "your kids". */
+const BACK: [RegExp, string][] = [
+  [/\bI am\b/g, 'you are'],
+  [/\bI was\b/g, 'you were'],
+  [/\bI'm\b/g, "you're"],
+  [/\bI've\b/g, "you've"],
+  [/\bI'll\b/g, "you'll"],
+  [/\bI'd\b/g, "you'd"],
+  [/\bI\b/g, 'you'],
+  [/\bmyself\b/gi, 'yourself'],
+  [/\bmine\b/gi, 'yours'],
+  [/\bmy\b/g, 'your'],
+  [/\bMy\b/g, 'Your'],
+  [/\bme\b/gi, 'you'],
+];
+
+/** The player's letter in someone else's mouth. */
+export function sayBack(words: string): string {
+  return BACK.reduce((t, [from, to]) => t.replace(from, to), words);
+}
+
+/**
+ * Fill in a text's {words}. Letter parts sit inside sentences, so their end punctuation goes. Read
+ * out in quotes they stay as written ("I'm starting again because {why}."); told back outside quotes
+ * they turn to "you" ("You did this for {forWho}" gives "for your kids", not "for my kids").
+ */
 export function fill(text: string, words: Words): string {
-  const out = text.replace(/\{(\w+)\}/g, (_, k: WordKey) => {
+  const out = text.replace(/\{(\w+)\}/g, (_, k: WordKey, at: number) => {
     const v = (words[k] ?? '').trim();
-    return k === 'voice' || k === 'heart3' ? v : v.replace(/[.!]+$/, '');
+    if (k === 'voice' || k === 'heart3') return v;
+    const bare = v.replace(/[.!]+$/, '');
+    const quoted = (text.slice(0, at).match(/"/g)?.length ?? 0) % 2 === 1;
+    return LETTER_WORDS.includes(k) && !quoted ? sayBack(bare) : bare;
   });
   return out.charAt(0).toUpperCase() + out.slice(1);
 }
