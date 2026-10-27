@@ -142,7 +142,7 @@ export const SPRITES = {
   hero: drawn<HeroOpts>({
     label: heroLabel,
     defaults: { gear: STARTER_GEAR },
-    clips: (o) => ({ idle: 'idle', attack: heroAttack(o.gear, o.classId) }),
+    clips: (o) => ({ idle: 'idle', attack: heroAttack(o.gear, o.classId), walk: 'walk' }),
     draw: drawHero,
     look: ({ variant }) =>
       variant === 'echo'

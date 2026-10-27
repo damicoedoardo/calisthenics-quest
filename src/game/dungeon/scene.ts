@@ -1233,21 +1233,26 @@ class DungeonScene extends Phaser.Scene {
     const r = this.run,
       now = this.time.now,
       h = this.hero;
-    // The hero: run bob and lean, blinking while untouchable after a hit.
+    // The hero: steps while moving (the walk clip lifts each foot in turn), a slight lean into the
+    // way it goes, blinking while untouchable after a hit. An attack plays over either.
     const moving = Math.hypot(r.hero.vx, r.hero.vy) > 5,
       [hx, hy] = this.P(r.hero.x, r.hero.y),
       // How fast you go across the screen: the engine's up is the screen's right.
-      across = -r.hero.vy;
+      across = -r.hero.vy,
+      playing = h.anims.currentAnim?.key;
     h.setPosition(hx, hy).setDepth(hy);
     if (moving) {
       if (Math.abs(across) > 5) h.setFlipX(across < 0);
-      const bob = Math.sin(now / 65) * 0.05;
-      h.setScale(0.8 * (1 - bob * 0.6), 0.8 * (1 + bob)).setAngle(Math.sign(across) * 7);
+      h.setAngle(Math.sign(across) * 3);
+      if (playing === 'hero' && this.anims.exists('heroWalk')) h.play('heroWalk');
       if (now >= this.trailAt) {
-        this.trailAt = now + 110;
-        this.puffs.explode(2, hx, hy + 22);
+        this.trailAt = now + 240;
+        this.puffs.explode(1, hx, hy + 24);
       }
-    } else h.setScale(0.8).setAngle(0);
+    } else {
+      h.setAngle(0);
+      if (playing === 'heroWalk') h.play('hero');
+    }
     const blink = r.t < r.hurtUntil || r.t < r.ghostUntil;
     h.setAlpha(blink ? (Math.floor(now / 80) % 2 ? 0.35 : 1) : 1);
 
