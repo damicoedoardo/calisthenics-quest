@@ -27,6 +27,12 @@ level or story.
   fireballs, a fire fairy heals when you're low. Training in the last two days gives a free run
   skill, resting (a day off or a minute by the fire) one more. `nextGrowth` writes the "train to
   grow" hint (points waiting to be spent, or that workouts earn them).
+- **A boss with no hearts left**: every workout takes a heart off the chapter's enemy; once the
+  chapter's hearts are gone (all its workouts done) and its boss still stands, `edgeFor` gives the
+  run an `Edge`: the boss fights with `EDGE.bossHp` of its HP (the Knight with that share of his
+  plates), and each workout since starts a run with one more free skill (`'past'` picks, up to
+  `EDGE.picks`). Playing well still beats it sooner. The Play tab says how many hearts are left,
+  or what the edge gives (`BossEdge` in `PlayTab.tsx`).
 - **Run skills**: `UPGRADES` and `rollUpgrades` (three random choices per level-up), `xpToNext`.
 - **Records**: `recordRun` saves runs, clears and each zone's bests (deepest, most monsters,
   fastest win) and the last run for the flame to talk about. The mid-boss guards floor
@@ -64,10 +70,19 @@ screen itself for the run (`useSideways`). The rest of the app stays upright. Si
 fills the whole screen and the camera follows you in it; the HUD is small and kept to the corners
 (see "Sideways on screen" in [dungeon.md](dungeon.md)).
 
+On a computer (mouse or trackpad: `useKeyboardPlay` in `src/components/useDesk.ts`) the run is
+played with keys and never asks you to turn anything. The scene's own keys: WASD or the arrows
+move, Q is the class ability, Space (or E, or Shift) dodges, a click on a monster aims at it; they
+do nothing while a card or the bag holds the run. `FogRun`'s keys: Esc or P pauses (and closes
+whatever is open), B or I the bag, M the map, 1 2 3 pick a skill, chest or stairs choice, Enter
+runs again at the end. Each button shows its key (`Key`), the pause menu lists them all
+(`KeyList`), the first tip talks keys, and on a big screen (`desk:`) the HUD is zoomed 1.4x.
+
 ## Balance
 
+The rule for every balance number, and the changelog, are in [balance.md](balance.md).
 `pnpm sim` writes snapshots of simulated players (see [../dev/testing.md](../dev/testing.md)), then
 `pnpm fog:sim` plays hundreds of bot runs on them per zone and class. `DIALS` in
-`src/game/dungeon/content.ts` are the main knobs. The sim starts every run in the starter kit with
+`src/balance/dungeon.ts` are the main knobs. The sim starts every run in the starter kit with
 the snapshot's points (as after a death); the bot wears what drops. Zones are tuned so that run
 is about where the game was before items, so the gear you keep is strength on top.

@@ -61,13 +61,13 @@ describe('sprite registry', () => {
           }
   });
 
-  it('the hand-drawn body draws every class, idle, walk and attack, and differs from the block body', () => {
+  it('the hand-drawn body (the default) draws every class, idle, walk and attack, and differs from the block body', () => {
     for (const classId of ['warrior', 'archer', 'monk', 'mage'] as ClassId[])
       for (const action of ['idle', 'walk', 'attack'] as SpriteAction[]) {
         const o = { gear: itemGear(classId, 'rare'), classId },
-          drawn = framesFor('hero', action, { ...o, body: 'drawn' });
+          drawn = framesFor('hero', action, o);
         drawn.forEach((g) => expect(g.length).toBe(SIZE));
-        expect(hash(drawn), `${classId} ${action}`).not.toBe(hash(framesFor('hero', action, o)));
+        expect(hash(drawn), `${classId} ${action}`).not.toBe(hash(framesFor('hero', action, { ...o, body: 'block' })));
       }
   });
 

@@ -187,6 +187,9 @@ export default function NightLab() {
         <Row icon={<Gem size={16} />} label="Loot: your gear and the vault" note="Play tab: what you wear into the Fog, the vault, an item you can't wear yet" onClick={() => open(geared(), 'tab=play')} />
         <Row icon={<Gem size={16} />} label="Loot in a run" note="Monsters and chests drop gear; the bag button top right; the stairs ask: deeper or leave with it" onClick={() => open(geared(), 'run=1')} />
         <Row icon={<Gem size={16} />} label="Loot in a run, the flame gone cold" note="No workout in 4 days: the bag says training would let the flame hold your sword" onClick={() => open(geared(4), 'run=1')} />
+        <Row icon={<Swords size={16} />} label="A boss with no hearts left" note="Play tab: 15 workouts in, Tomorrow still standing. It fights weaker, and runs start with 3 free skills" onClick={() => open(veteran(15, 0), 'tab=play')} />
+        <Row icon={<Swords size={16} />} label="A boss with no hearts left, in a run" note="The 3 free skills at the start, then Tomorrow with less HP" onClick={() => open(veteran(15, 0), 'run=0&at=boss')} />
+        <Row icon={<Swords size={16} />} label="A boss with hearts left" note="Play tab: how many workouts until Tomorrow runs out of hearts" onClick={() => open(veteran(8, 0), 'tab=play')} />
         <Row icon={<Swords size={16} />} label="Exercise library" note="Train tab, top button: 870+ exercises, pixel demos for boy and girl" onClick={() => open(veteran(10, 1), 'tab=train')} />
       </Panel>
 

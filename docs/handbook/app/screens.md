@@ -55,6 +55,15 @@ Upright must look exactly as before: the upright branch keeps its markup, and si
 Try it at 844×390 and 740×360 with the `/lab/night` jumps (`?sandbox&tab=…`; "Loot: your gear and
 the vault" opens a geared Play tab) and check 390×844 is unchanged.
 
+## On a computer: the tabs
+
+On a laptop or desktop window (the `desk:` variant in `tailwind.config.ts`: a mouse or trackpad,
+at least 1024px wide and over 600px tall, so never together with `land:`) `page.tsx` turns the tab
+bar into a wider rail down the left, with the hero big at its top and each tab's name beside its
+icon, and centers the header and the column (`max-w-2xl`) in the rest. The tabs keep their
+upright layout inside it. Add computer changes only as `desk:` classes. The Fog's keys are in
+[../game/fog.md](../game/fog.md).
+
 ## Components (`src/components/`)
 
 | Component | Job |
@@ -84,6 +93,7 @@ the vault" opens a geared Play tab) and check 390×844 is unchanged.
 | `DevPanel` | Developer mode's wrench and panel, see [dev-mode-and-labs.md](dev-mode-and-labs.md) |
 | `ServiceWorker` | Registers the offline worker, see [pwa.md](pwa.md) |
 | `useModal` | Focus trap and inert background for overlays inside a tab |
+| `useDesk` | `useKeyboardPlay`: true on a computer (mouse or trackpad), so the Fog shows its keys |
 | `useLand` | True while the phone is held sideways (the `land:` query); the tabs use it to pick their sideways screen |
 
 ## Held sideways: the overlays

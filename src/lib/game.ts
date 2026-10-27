@@ -6,18 +6,20 @@ import type { Look } from '@/sprites/engine/figure';
 import type { FogProgress } from './fog';
 import type { FogGear } from './fog-gear';
 import type { AnswerId } from '@/story/types';
+import { XP, WEEKLY_GOAL, PROGRESSION } from '@/balance';
 
-export const XP_FULL_SESSION = 100;
-export const XP_MINI_SESSION = 30;
-export const XP_PERFECT_WEEK = 100;
-export const XP_RETURN = 50;
-export const XP_PER_LEVEL = 500;
-export const WEEKLY_GOAL = 3;
+// The numbers live in src/balance/training.ts; these names stay for the code that reads them.
+export const XP_FULL_SESSION = XP.full;
+export const XP_MINI_SESSION = XP.mini;
+export const XP_PERFECT_WEEK = XP.perfectWeek;
+export const XP_RETURN = XP.comeback;
+export const XP_PER_LEVEL = XP.perLevel;
+export { WEEKLY_GOAL };
 export const REST_SECONDS = 90;
 /** A gap this long earns the return bonus. */
-export const RETURN_GAP_DAYS = 14;
+export const RETURN_GAP_DAYS = XP.comebackDays;
 /** Strength comes with time, not just sessions: an exercise's goal goes up at most this often a week. */
-export const MAX_RAISES_PER_WEEK = 2;
+export const MAX_RAISES_PER_WEEK = PROGRESSION.maxRaisesPerWeek;
 
 export type Rir = '4+' | '2-3' | '0-1';
 export type Checkin = 'rough' | 'normal' | 'strong';
@@ -176,7 +178,7 @@ export function weekStreak(state: GameState, now: Date): number {
 }
 
 export function streakMultiplier(streak: number): number {
-  return 1 + Math.min(streak, 5) * 0.1;
+  return 1 + Math.min(streak, XP.streakMax) * XP.streakStep;
 }
 
 export function daysSinceLastSession(state: GameState, now: Date): number | null {

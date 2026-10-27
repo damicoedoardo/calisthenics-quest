@@ -1,6 +1,7 @@
 import type { ClassId } from './gear';
 import type { GameState } from './game';
 import { weekKey, WEEKLY_GOAL } from './game';
+import { ARMOR_PER_POINT, CLASS_LEAN_POINTS, FALLOFF, MAX_ARMOR, POINT_WORTH, POINTS, STARTING_POINTS, STAT_BASE } from '@/balance';
 
 /* Stat points: training earns them, the champion spends them. Every workout gives points whatever it
    was (gym, a run, a stretch day), so the reward never depends on what the plan asked for. The
@@ -26,28 +27,20 @@ const pct = (what: string) => (v: number) => `+${Math.round(v * 100)}% ${what}`;
 /* Sized so a player who spreads their points ends six months (about 100 points a stat) where the
    old skill tree ended: +60% damage, +48% attack speed, +75 HP. */
 export const STATS: Stat[] = [
-  { id: 'health', name: 'Health', text: 'More HP, and you take a little less damage', per: 1, show: (v) => `+${Math.round(v)} HP` },
-  { id: 'damage', name: 'Damage', text: 'Every hit lands harder', per: 0.0065, show: pct('damage') },
-  { id: 'reach', name: 'Reach', text: 'You pick up light from further away', per: 0.01, show: pct('pickup range') },
-  { id: 'speed', name: 'Speed', text: 'You attack faster', per: 0.0054, show: pct('attack speed') },
+  { id: 'health', name: 'Health', text: 'More HP, and you take a little less damage', per: POINT_WORTH.health, show: (v) => `+${Math.round(v)} HP` },
+  { id: 'damage', name: 'Damage', text: 'Every hit lands harder', per: POINT_WORTH.damage, show: pct('damage') },
+  { id: 'reach', name: 'Reach', text: 'You pick up light from further away', per: POINT_WORTH.reach, show: pct('pickup range') },
+  { id: 'speed', name: 'Speed', text: 'You attack faster', per: POINT_WORTH.speed, show: pct('attack speed') },
 ];
 
 /** What every champion has before any point: the old skill tree's starting steps. */
-export const BASE: Record<StatId, number> = { health: 0, damage: 0.12, reach: 0.15, speed: 0.08 };
+export const BASE: Record<StatId, number> = STAT_BASE;
 
 export const getStat = (id: StatId) => STATS.find((s) => s.id === id)!;
 
-/** Points for each thing done. */
-export const POINTS = { full: 3, mini: 1, week: 2, better: 1 } as const;
-/** Points every hero starts with, so the first run already has something to spend. */
-export const STARTING_POINTS = 6;
-/** How fast points lose worth: the 150th point in a stat is worth half the first. */
-const FALLOFF = 150;
-/** Health also gives armor: this much per point, at most `MAX_ARMOR`. */
-const ARMOR_PER = 0.0027;
-const MAX_ARMOR = 0.4;
-/** Each class leans to one stat, as if it had this many extra points there. */
-export const CLASS_LEAN_POINTS = 4;
+// Points, their worth, the falloff and the class lean live in src/balance/stats.ts.
+export { POINTS, STARTING_POINTS, CLASS_LEAN_POINTS };
+const ARMOR_PER = ARMOR_PER_POINT;
 export const CLASS_LEAN: Record<ClassId, StatId> = { warrior: 'damage', archer: 'reach', monk: 'health', mage: 'speed' };
 
 export type Build = Partial<Record<StatId, number>>;

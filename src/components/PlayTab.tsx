@@ -6,7 +6,8 @@ import { Ember } from './Characters';
 import { Hero } from './Hero';
 import { warmRunSheets } from '@/game/sheets';
 import { gearOf, type GameState } from '@/lib/game';
-import { FLAME_AT, ZONES, nextGrowth, powerOf, zoneStatus, type Zone } from '@/lib/fog';
+import { EDGE, FLAME_AT, ZONES, edgeFor, nextGrowth, powerOf, workoutsPastHearts, zoneStatus, type Zone } from '@/lib/fog';
+import { chapterStart } from '@/story/engine';
 import { STATS, pointsFree } from '@/lib/stats';
 import { STAT_ICON } from './StatPoints';
 import { FogGearCard } from './FogGearCard';
@@ -153,6 +154,7 @@ export function PlayTab({ state, onPlay, update }: Props) {
                   <p className={`rounded-lg px-3 py-1.5 text-[11px] leading-snug ${power.fresh ? 'bg-emerald-950/60 text-emerald-300' : 'bg-ink-900 text-slate-400'}`}>{warm}</p>
                   <p className={`rounded-lg px-3 py-1.5 text-[11px] leading-snug ${power.rested ? 'bg-orange-950/50 text-orange-200' : 'bg-ink-900 text-slate-400'}`}>{rest}</p>
                 </div>
+                <BossEdge state={state} land />
               </div>
             </section>
           )}
@@ -184,7 +186,31 @@ export function PlayTab({ state, onPlay, update }: Props) {
         <ul className="mt-3 space-y-2.5">{rows.map((r) => row(r, false))}</ul>
         <p className={`mt-3 rounded-lg px-3 py-2 text-xs ${power.fresh ? 'bg-emerald-950/60 text-emerald-300' : 'bg-ink-900 text-slate-400'}`}>{warm}</p>
         <p className={`mt-2 rounded-lg px-3 py-2 text-xs ${power.rested ? 'bg-orange-950/50 text-orange-200' : 'bg-ink-900 text-slate-400'}`}>{rest}</p>
+        <BossEdge state={state} />
       </section>
     </div>
+  );
+}
+
+/** The boss you're up against: how close it is to running out of hearts, and what that gives you. */
+function BossEdge({ state, land = false }: { state: GameState; land?: boolean }) {
+  const zone = ZONES[state.fog?.cleared ?? 0];
+  if (!zone || zone.boss === 'summit' || zoneStatus(state, zone).state !== 'open') return null;
+  const past = workoutsPastHearts(state, zone);
+  const box = land ? 'mt-2 shrink-0 rounded-lg px-3 py-1.5 text-[11px] leading-snug' : 'mt-2 rounded-lg px-3 py-2 text-xs';
+  if (past === null) {
+    const left = chapterStart(zone.chapter + 1) - state.sessions.length;
+    return (
+      <p className={`${box} bg-ink-900 text-slate-400`}>
+        {`${zone.bossName} has ${left} heart${left === 1 ? '' : 's'} left. Each workout takes one. With none left it fights weaker, and every workout after that starts your runs with a free skill.`}
+      </p>
+    );
+  }
+  const { picks } = edgeFor(state, zone);
+  return (
+    <p className={`${box} bg-rose-950/50 text-rose-200`}>
+      {`${zone.bossName} has no hearts left: it fights with ${Math.round((1 - EDGE.bossHp) * 100)}% less HP. `}
+      {picks ? `Your runs start with ${picks} more free skill${picks === 1 ? '' : 's'}, one for each workout since${picks === EDGE.picks ? ' (that is the most)' : ''}.` : 'Each workout from now on starts your runs with one more free skill.'}
+    </p>
   );
 }

@@ -18,7 +18,7 @@ export interface HeroOpts {
   classId?: ClassId;
   variant?: HeroVariant;
   look?: Look;
-  /** 'drawn': the hand-drawn body (engine/drawn.ts), an option being tried in the Lab. */
+  /** The hand-drawn body (engine/drawn.ts) by default; 'block' is the old body, kept for the Lab. */
   body?: 'block' | 'drawn';
 }
 
@@ -60,7 +60,7 @@ const SASH: Ramp = ['#7a1f18', '#c0392b', '#e8604c'];
 const ramp3 = (r: string[]): Ramp => [r[0], r[1], r[2]];
 
 export function heroSpec({ gear, classId, variant, body }: HeroOpts): FigureSpec {
-  const drawn = body === 'drawn';
+  const drawn = body !== 'block';
   const cape = variant === 'best';
   const armorTier = gear.armor.tier;
   // A Fog item worn in a slot dresses the hero in that very item (its kind, rarity and colors);

@@ -1,5 +1,5 @@
 import type { ClassId } from '@/lib/gear';
-import { rollUpgrades, xpToNext, type Power, type UpgradeId, type Zone } from '@/lib/fog';
+import { rollUpgrades, xpToNext, type Edge, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import {
   ATTACK,
   BOT_PICKS,
@@ -73,6 +73,7 @@ import {
   zoneDungeon,
 } from './content';
 import { seeded } from '@/lib/random';
+import { BAG, DROP_LUCK, DROPS } from '@/balance';
 import type { Build } from '@/lib/stats';
 import { ITEM_SLOTS, itemScore, itemTotals, rollItem, rollRarity, shortOf, starterKit, type Item, type ItemSlot } from './items';
 
@@ -284,7 +285,8 @@ export type GameEvent =
   | { type: 'drop'; x: number; y: number; item: Item }
   | { type: 'loot'; item: Item };
 
-export type FreePick = 'fresh' | 'rested';
+/** Why a run starts with a free skill: trained lately, rested, or a workout since the boss lost its hearts. */
+export type FreePick = 'fresh' | 'rested' | 'past';
 
 /** Who walks into a run: their power from training, their class, what they wear, their stat points. */
 export interface HeroSetup {
@@ -294,6 +296,8 @@ export interface HeroSetup {
   worn?: Partial<Record<ItemSlot, Item>>;
   /** Stat points spent, which items ask for. */
   build?: Build;
+  /** The chapter's hearts are gone: a weaker boss and free skills at the start (`edgeFor` in src/lib/fog.ts). */
+  edge?: Edge;
 }
 
 /** A run: where, its seed, and you (the first hero). `friends` walk in with you, in co-op. */
@@ -308,10 +312,8 @@ export interface RunSetup extends HeroSetup {
   friends?: HeroSetup[];
 }
 
-/** How many items the bag holds. */
-export const BAG = 8;
-/** Which monsters drop an item, how often (an elite, a golem, any other). */
-export const DROPS = { elite: 0.15, golem: 0.3, plain: 0.006, chest: 0.5 };
+/** How many items the bag holds, and how often things drop (src/balance/items.ts). */
+export { BAG, DROPS };
 
 export interface Input {
   /** Where you push the stick, each in [-1, 1]. */
@@ -561,7 +563,7 @@ function newHero(hs: HeroSetup, id: number): Hero {
     orbit: 0,
     fairyAt: 0,
     mirrorHurtAt: 0,
-    free: [...(power.fresh ? (['fresh'] as const) : []), ...(power.rested ? (['rested'] as const) : [])],
+    free: [...(power.fresh ? (['fresh'] as const) : []), ...(power.rested ? (['rested'] as const) : []), ...Array<FreePick>(hs.edge?.picks ?? 0).fill('past')],
     pendingLevels: 0,
     offer: null,
   };
@@ -968,7 +970,8 @@ function summonBoss(run: Run) {
   const which = run.setup.zone.boss,
     def = BOSSES[which],
     { zone } = run.setup;
-  const hp = def.plates ?? Math.round(def.hp * zone.hp * BOSS_HP);
+  const weak = run.setup.edge?.bossHp ?? 1;
+  const hp = def.plates ? Math.round(def.plates * weak) : Math.round(def.hp * zone.hp * BOSS_HP * weak);
   const b: Foe = {
     id: ++run.ids,
     kind: 'boss',
@@ -1919,8 +1922,8 @@ function kill(run: Run, f: Foe, by: Hero) {
   const fang = relic(by, 'fang') + by.gearFx.heal;
   if (fang && f !== run.boss) by.hp = Math.min(by.maxHp, by.hp + fang);
   // Now and then a monster drops something to wear: elites and golems far more often.
-  if (f !== run.boss && f !== run.warden && f.def.xp > 0 && run.rnd() < (f.elite ? DROPS.elite : f.kind === 'golem' ? DROPS.golem : DROPS.plain)) dropEach(run, f.x, f.y, f.elite || f.kind === 'golem' ? 0.5 : 0);
-  if (f === run.warden) dropEach(run, f.x, f.y + 30, 2);
+  if (f !== run.boss && f !== run.warden && f.def.xp > 0 && run.rnd() < (f.elite ? DROPS.elite : f.kind === 'golem' ? DROPS.golem : DROPS.plain)) dropEach(run, f.x, f.y, f.elite || f.kind === 'golem' ? DROP_LUCK.elite : 0);
+  if (f === run.warden) dropEach(run, f.x, f.y + 30, DROP_LUCK.midBoss);
   if (f.kind === 'splitter')
     for (let i = 0; i < 3; i++) {
       const a = (i / 3) * Math.PI * 2 + run.rnd();
@@ -1935,7 +1938,7 @@ function kill(run: Run, f: Foe, by: Hero) {
   if (f === run.boss) {
     // The boss's own drop goes straight into each hero's bag: you take it home.
     for (const h of run.party) {
-      const it = newItem(run, 2, h.classId);
+      const it = newItem(run, DROP_LUCK.boss, h.classId);
       h.gear.bag.push(it);
       if (h === run.hero) emit(run, { type: 'loot', item: it });
     }
@@ -2253,7 +2256,7 @@ function openChest(run: Run, h: Hero) {
     if (!choices.includes(id)) choices.push(id);
   }
   emit(run, { type: 'chest', x: c.x, y: c.y });
-  if (run.rnd() < DROPS.chest) dropEach(run, c.x, c.y + 34, 1);
+  if (run.rnd() < DROPS.chest) dropEach(run, c.x, c.y + 34, DROP_LUCK.chest);
   h.relicOffer = choices;
   if (run.setup.autoPick) pickRelic(run, RELIC_BOT.find((id) => choices.includes(id)) ?? choices[0], h);
 }
