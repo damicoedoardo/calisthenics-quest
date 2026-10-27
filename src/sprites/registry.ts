@@ -1,4 +1,5 @@
 import { equippedGear } from '@/lib/gear';
+import type { AbilityId, RelicId } from '@/game/dungeon/engine';
 import { CLIPS, type ClipFrame, type ClipId, type SpriteAction } from './clips';
 import { toSheet, type Grid } from './engine/grid';
 import { drawBook } from './characters/book';
@@ -27,7 +28,7 @@ import { drawSplitling, drawSplitter, drawSplitterPop } from './characters/split
 import { drawShade } from './characters/shade';
 import { drawWarden } from './characters/warden';
 import { ZONE_PLACE, dress, edged } from './characters/zoned';
-import { DAY_ICONS, KEEPSAKE_ICONS, type DayKind } from './characters/icons';
+import { ABILITY_ICONS, DAY_ICONS, KEEPSAKE_ICONS, RELIC_ICONS, type DayKind } from './characters/icons';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
    art for a character is a change here, never in a component. Two kinds:
@@ -105,6 +106,12 @@ export interface KeepsakeOpts {
   /** The zone whose boss gave it, 0-5. */
   zone: number;
 }
+export interface RelicIconOpts {
+  name: RelicId;
+}
+export interface AbilityIconOpts {
+  name: AbilityId | 'dodge';
+}
 export interface DayIconOpts {
   kind: DayKind;
 }
@@ -169,6 +176,8 @@ export const SPRITES = {
     draw: (o) => drawPixelArt(KEEPSAKE_ICONS[o.zone] ?? KEEPSAKE_ICONS[0]),
   }),
   dayIcon: drawn<DayIconOpts>({ label: (o) => o.kind, defaults: { kind: 'A visit' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(DAY_ICONS[o.kind]) }),
+  relicIcon: drawn<RelicIconOpts>({ label: (o) => o.name, defaults: { name: 'whetstone' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(RELIC_ICONS[o.name]) }),
+  abilityIcon: drawn<AbilityIconOpts>({ label: (o) => o.name, defaults: { name: 'charge' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(ABILITY_ICONS[o.name]) }),
   mirrorBoss: drawn<HeroOpts>({
     label: () => 'The Mirror, you in glass',
     defaults: { gear: STARTER_GEAR },

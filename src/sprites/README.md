@@ -24,7 +24,8 @@ characters/*.ts       one file per character: hero, wanderer, mira, ember, book,
                       and hollowBossFade), summitSpirit.ts (summitBoss)
 characters/pixel.ts   text-row art: paintRows (one character per pixel) and shifted
 characters/icons.ts   app icons as text rows: the six keepsakes (Hero tab, sprite `keepsake`) and
-                      what a day held in the Book of Days (sprite `dayIcon`)
+                      what a day held in the Book of Days (sprite `dayIcon`), the dungeon's
+                      relics (`relicIcon`) and the ability and Dodge buttons (`abilityIcon`)
 characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recolored onto the zone's
                       ramp and dressed (lake glass and drips, forge scrap and glowing cracks,
                       plateau sandstone, fog mist, summit ice)
