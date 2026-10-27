@@ -183,13 +183,13 @@ const DUNGEON_LOOKS: Record<Exclude<MonsterKind, keyof typeof FOE_LOOKS>, Look> 
   warden: { tex: 'warden', scale: 1.3, bits: [0x78716c, 0xf97316, 0xfde68a] },
   // The Mirror's images look exactly like it (the scene swaps in the Mirror's own art, BOSS_ART).
   image: { tex: BOSS_LOOKS.mirror.tex, scale: BOSS_LOOKS.mirror.scale, bits: BOSS_LOOKS.mirror.bits },
-  // The other zones' mid-bosses wear stand-ins until their own art is drawn: a drowned flame, the
-  // old knight in work bronze, the Plateau's golem in sand, a big wisp, a pale cloud of smoke.
-  lantern: { tex: 'ember', scale: 1.15, bits: [0x7dd3fc, 0x0e7490, 0xe0f2fe], tint: 0x9be7ff },
-  foreman: { tex: 'knight', scale: 1, bits: [0xd6a36b, 0x92400e, 0xfde68a], tint: 0xe0b07a },
-  sandGolem: { tex: 'golem', scale: 1.05, bits: [0xe8c48a, 0xb08850, 0x8f6b3d], tint: 0xf0d29a },
-  whisper: { tex: 'wisp', scale: 0.72, bits: [0xc4b5fd, 0x7c3aed, 0xffffff], tint: 0xd8ccff },
-  gale: { tex: 'smoke', scale: 1.25, bits: [0xe2e8f0, 0x94a3b8, 0xffffff], tint: 0xeef2f7 },
+  // The other zones' mid-bosses: the Drowned Lantern, the Foreman, the Sand Golem (which swaps to
+  // its stone sheet while it stands), the Whisper and the Gale.
+  lantern: { tex: 'lanternMid', scale: 1.15, bits: [0x7dd3fc, 0x0e7490, 0xe0f2fe] },
+  foreman: { tex: 'foremanMid', scale: 1.2, bits: [0xd6a36b, 0x92400e, 0x86efac] },
+  sandGolem: { tex: 'sandGolemMid', scale: 1.25, bits: [0xe8c48a, 0xb08850, 0x8f6b3d] },
+  whisper: { tex: 'whisperMid', scale: 0.85, bits: [0xc4b5fd, 0x7c3aed, 0xffffff] },
+  gale: { tex: 'galeMid', scale: 1.15, bits: [0xe2e8f0, 0x94a3b8, 0xffffff] },
 };
 /** The mid-bosses' kinds, for the big pops and stomps. */
 const MID_KINDS = new Set<Foe['kind']>(MIDS.map((m) => m.kind));
@@ -1044,7 +1044,8 @@ class DungeonScene extends Phaser.Scene {
         }
       }
       const { s, base } = e;
-      s.setPosition(f.x, f.y).setDepth(f.y);
+      // The Drowned Lantern burns over its own dark.
+      s.setPosition(f.x, f.y).setDepth(f.kind === 'lantern' ? 141000 : f.y);
       if (Math.abs(f.vx) > 2) s.setFlipX(f.vx > 0);
       const born = (now - e.born) / RISE_MS;
       if (born < 1) s.setAlpha(born).setScale(base * (1.25 - 0.25 * born), base * (0.25 + 0.75 * born));
@@ -1060,12 +1061,14 @@ class DungeonScene extends Phaser.Scene {
       // A ram glowing before its charge; a shade fading out before it lands.
       if (f.kind === 'ram' && !e.flash) s.setTint(r.t < f.windUntil && Math.floor(now / 90) % 2 ? 0xff4d4d : (looks('ram', this.setup.zone).tint ?? 0xffffff));
       if (f.kind === 'shade') s.setAlpha(r.t < f.windUntil ? 0.25 : 1);
-      // The Sand Golem grey as stone while it stands; the Whisper flickering white before it trades places.
-      if (f === r.warden && !e.flash && (f.kind === 'sandGolem' || f.kind === 'whisper')) {
-        const tint = looks(f.kind, this.setup.zone).tint;
-        if (hardened(r, f)) s.setTint(0x8b8680);
-        else if (f.kind === 'whisper' && r.t < f.windUntil && Math.floor(now / 90) % 2) s.setTint(0xffffff);
-        else if (tint) s.setTint(tint);
+      // The Sand Golem set to stone while it stands; the Whisper flickering white before it trades places.
+      if (f === r.warden && f.kind === 'sandGolem') {
+        const tex = hardened(r, f) ? 'sandGolemMidStone' : 'sandGolemMid';
+        if (e.tex !== tex) s.play((e.tex = tex));
+      }
+      if (f === r.warden && !e.flash && f.kind === 'whisper') {
+        if (r.t < f.windUntil && Math.floor(now / 90) % 2) s.setTint(0xffffff);
+        else s.clearTint();
       }
       if (f === r.boss && r.t < f.windUntil && !e.flash) s.setTint(0xff6b6b);
       else if (f === r.boss && !e.flash && f.kind === 'boss' && s.isTinted && r.t >= f.dashUntil) s.clearTint();

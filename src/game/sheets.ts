@@ -48,7 +48,7 @@ function jobs(state: GameState, zone: Zone): Job[] {
     classId = state.profile.classId,
     look = state.profile.look,
     hero = { gear, classId, look };
-  const plain = ['ember', 'mirror', 'golem', 'knight', 'book', 'summit', 'splitterPop', 'warden'] as const;
+  const plain = ['ember', 'mirror', 'golem', 'knight', 'book', 'summit', 'splitterPop', 'warden', 'lanternMid', 'foremanMid', 'sandGolemMid', 'sandGolemMidStone', 'whisperMid', 'galeMid'] as const;
   // The regular monsters dressed for this zone (wet glass at the lake, scrap iron at the forges...).
   const dressed = ['slime', 'wisp', 'ram', 'smoke', 'seeker', 'splitter', 'splitling', 'shade'] as const;
   return [
