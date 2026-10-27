@@ -14,18 +14,18 @@ const ROWS = [
   '................................',
   '..................c.cc.cc.......',
   '.........jjjjj...cbbcbbcbbc.....',
-  '.......jjhhhhhhh.cbbbbbbbbbbc...',
-  '......jhhjhhjhhhHbbabbbabbbbbc..',
-  '......jhH....jhhHHbbbbbbbbbbbbc.',
-  '.....jhH..HH..jhHbccbbccbbccbbb.',
-  '.....jhH.HHHH.jhHbbbabbbabbbabbc',
-  '.....jhH.HHH..jhHbbbbbbbbbbbbbbb',
-  '....ffjhH....jhhHccbbccbbccbbccb',
-  '...ffffjhhjhhhhHbbabbbabbbabbbab',
-  '..fffffwjhhjhhHHbbbbbbbbbbbbbbbb',
-  '..ffoffffjjHHHfccbbccbbccbbccbbb',
-  '.ffffffffffffffbabbbabbbabbbabbb',
-  '.gfffffffffffffbbbbbbbbbbbbbbbba',
+  '.......jjhhhhhhh.bbbbbbccbbbb...',
+  '......jhhjhhjhhhHbccbbcbbabbbb..',
+  '......jhH....jhhHHbbabbaabbccbb.',
+  '.....jhH..HH..jhHbaabbbbbbcbbab.',
+  '.....jhH.HHHH.jhHbbbccbbbbbaabbb',
+  '.....jhH.HHH..jhHbbcbbabbccbbbbb',
+  '....ffjhH....jhhHbbbaabbcbbabccb',
+  '...ffffjhhjhhhhHbccbbbbbbaabcbba',
+  '..fffffwjhhjhhHHcbbabbccbbbbbaab',
+  '..ffoffffjjHHHfbbaabbcbbabbccbbb',
+  '.ffffffffffffffbbbbccbaabbcbbabb',
+  '.gfffffffffffffbbbcbbabbccbaabbb',
   'ggffffffffffffaaaaaaaaaaaaaaaaa.',
   'ngfffffffffffeeaaaaaaaaaaaaaaaa.',
   'gggfffffffffeeddaaaaaaaaaaaaaaa.',
@@ -51,6 +51,7 @@ const PAL: Record<string, string> = {
   g: '#6e5644',
   n: '#1a1214',
   m: '#1a1214',
+  // where the eye and its brow go (drawn over at 64x64)
   w: '#3a2c2a',
   o: '#3a2c2a',
   // horn: ivory, its ridges and the shade inside the curl
@@ -77,8 +78,7 @@ export function drawRam(_o: unknown, frame: ClipFrame, f: number): Grid {
     bob = frame.bob ?? 0;
   // the body breathes over planted legs
   const top = art.map((row, y) => (y < LEGS ? row : row.map(() => null))),
-    legs = art.map((row, y) => (y >= LEGS ? row : row.map(() => null))),
-    out = shifted(legs, 0, 0);
+    out = art.map((row, y) => (y >= LEGS ? row : row.map(() => null)));
   stamp(out, shifted(top, 0, bob + (wind ? 2 : 0)));
   // the charge: rear back, then the whole ram lunges left
   const dx = hit ? -8 : wind ? 3 : 0,
@@ -93,7 +93,8 @@ export function drawRam(_o: unknown, frame: ClipFrame, f: number): Grid {
   u.p(ex + 2, ey, E[2]);
   u.p(ex, ey + 1, E[0]);
   // steam from the nostril: a slow snort when idle, hard bursts as it winds up
-  const n = 0 + dx,
+  // the nostril sits at the snout's tip (x 0, y 40)
+  const n = dx,
     k = f % 8;
   if (wind)
     [[-1, 0], [-4, -2], [-6, 1], [-3, 3]].forEach(([x, y], i) => u.r(n + x, 40 + y, 2, 2, STEAM[i % 2]));
