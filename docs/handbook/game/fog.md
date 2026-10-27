@@ -41,7 +41,10 @@ shared between the hero and the engine (speed, HP, attacks) and the sprite sheet
 `prefers-reduced-motion`.
 
 `src/components/FogRun.tsx` loads `src/game/dungeon/scene.ts` with `import()` only when a run
-starts (Phaser is big); `PlayTab.tsx` warms the code and sheets while the tab sits idle.
+starts (Phaser is big); `PlayTab.tsx` warms the code and sheets while the tab sits idle. A run is
+played with the phone held sideways: held upright, `FogRun` holds the run behind a "turn your
+phone" card (`usePortrait`), and where the browser allows it (Android, installed) it turns the
+screen itself for the run (`useSideways`). The rest of the app stays upright.
 
 ## Balance
 

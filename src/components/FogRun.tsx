@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Pause } from 'lucide-react';
+import { Pause, Smartphone } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { fill, storyWords } from '@/story/engine';
 import type { FogLines } from '@/story/types';
@@ -45,6 +45,36 @@ function bossLines(zone: Zone, state: GameState): FogLines {
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
+/** Whether the screen is taller than wide: the Fog is played with the phone held sideways. */
+function usePortrait(): boolean {
+  const [portrait, setPortrait] = useState(false);
+  useEffect(() => {
+    const q = window.matchMedia('(orientation: portrait)'),
+      on = () => setPortrait(q.matches);
+    on();
+    q.addEventListener('change', on);
+    return () => q.removeEventListener('change', on);
+  }, []);
+  return portrait;
+}
+
+/** Where the browser lets a page turn the screen itself (Android, installed): sideways for the run,
+    back to the app's upright when it ends. iPhones can't, so the run asks you to turn the phone. */
+type Turnable = { lock?: (o: string) => Promise<void>; unlock?: () => void };
+function useSideways() {
+  useEffect(() => {
+    const o = (typeof screen !== 'undefined' ? screen.orientation : undefined) as Turnable | undefined;
+    o?.lock?.('landscape').catch(() => {});
+    return () => {
+      try {
+        o?.unlock?.();
+      } catch {
+        // Nothing was locked.
+      }
+    };
+  }, []);
+}
+
 /** A run in the Fog: the Phaser canvas, with the HUD, skill picks and results drawn over it. */
 export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
   const host = useRef<HTMLDivElement>(null);
@@ -71,6 +101,11 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
   const [chest, setChest] = useState<{ choices: RelicId[]; have: Partial<Record<RelicId, number>> } | null>(null);
   // The game code couldn't be fetched (offline before the Play tab ever loaded it).
   const [failed, setFailed] = useState(false);
+  // Held upright, the run waits behind a "turn your phone" card.
+  useSideways();
+  const portrait = usePortrait();
+  const upright = useRef(portrait);
+  upright.current = portrait;
 
   // Each zone has its own run and boss themes; the Warden halfway down has his own.
   const tunes = zoneMusic(zone.id);
@@ -122,6 +157,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
           onEnd(result);
         },
       });
+      if (upright.current) run.current.pause();
       // Once the first room is up, jump ahead (only on the first attempt, so Again plays normally).
       if (startAt && attempt === 0)
         jump = window.setTimeout(() => {
@@ -150,6 +186,12 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attempt, zone.id]);
 
+  // Turning the phone upright holds the run; turning it back lets it go (unless the pause menu is open).
+  useEffect(() => {
+    if (portrait) run.current?.pause();
+    else if (!paused) run.current?.resume();
+  }, [portrait, paused]);
+
   const pick = (id: UpgradeId) => {
     setOffer(null);
     run.current?.pick(id);
@@ -170,7 +212,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
       {hud && !end && (
         <div className="safe-top pointer-events-none absolute inset-x-0 top-0 px-3 pt-2">
           <div className="flex items-center gap-2">
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 max-w-xs flex-1">
               <div className="relative h-3.5 overflow-hidden rounded-sm bg-ink-800/90 ring-1 ring-black/40">
                 <div className="h-full bg-red-500 transition-[width] duration-150" style={{ width: `${(hud.hp / hud.maxHp) * 100}%` }} />
                 <span className="absolute inset-0 grid place-items-center font-mono text-[9px] font-bold text-white">
@@ -196,7 +238,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
                 </div>
               )}
             </div>
-            <div className="w-16 text-right">
+            <div className="ml-auto w-16 text-right">
               <p className={`font-pixel text-[11px] ${hud.boss ? 'text-red-400' : 'text-slate-100'}`}>
                 {hud.climb != null ? 'CLIMB' : hud.boss ? 'BOSS' : hud.floor ? `${hud.floor}/${hud.floors}` : clock(left)}
               </p>
@@ -237,8 +279,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
       )}
 
       {tip && hud && !end && hud.seconds < 6 && (
-        <p className={`pointer-events-none absolute inset-x-6 text-center text-sm text-slate-300 animate-pulse bottom-44`}>
-          {`Drag to move; you attack on your own. Dodge slips through shots. ${zone.bossName} waits ${hud.floors} floors down.`}
+        <p className="pointer-events-none absolute inset-x-6 bottom-28 mx-auto max-w-md animate-pulse text-center text-sm text-slate-300">
+          {`Drag to move; you attack on your own. Tap a monster to aim at it. Dodge slips through shots. ${zone.bossName} waits ${hud.floors} floors down.`}
         </p>
       )}
 
@@ -262,7 +304,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
       )}
 
       {boss && !offer && (
-        <div className="pointer-events-none absolute inset-x-6 top-28 rounded-2xl bg-ink-950/85 p-4 text-center ring-1 ring-violet-500/50">
+        <div className="pointer-events-none absolute inset-x-6 top-24 mx-auto max-w-md rounded-2xl bg-ink-950/85 p-4 text-center ring-1 ring-violet-500/50">
           <p className="font-pixel text-xs leading-relaxed text-violet-300">{zone.boss === 'summit' ? 'The climb begins' : `${zone.bossName} walks out of the Fog`}</p>
           {zone.boss === 'hollow' && state.profile.voice && <p className="mt-2 text-sm italic text-slate-200">&ldquo;{state.profile.voice}&rdquo;</p>}
           <p className="mt-2 text-sm text-slate-200">{zone.hint}</p>
@@ -395,6 +437,17 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
       )}
 
       {end && <Results state={state} zone={zone} end={end} broken={broken} onAgain={() => setAttempt((a) => a + 1)} onLeave={onLeave} />}
+
+      {portrait && !failed && (
+        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-5 bg-ink-950 px-8 text-center">
+          <Smartphone size={44} className="text-gold-300 motion-safe:animate-turn" aria-hidden />
+          <p className="font-pixel text-xs leading-relaxed text-gold-300">Turn your phone sideways</p>
+          <p className="max-w-xs text-sm text-slate-400">The Fog is played with the phone held across: move with your left thumb, fight with your right.</p>
+          <button onClick={onLeave} className="w-full max-w-xs rounded-xl bg-ink-800 py-3 text-sm text-slate-300">
+            Back
+          </button>
+        </div>
+      )}
     </div>
   );
 }
@@ -418,7 +471,7 @@ function DepthMap({ floor, floors, room, rooms, boss, midName, mid, path, doors 
         type="button"
         onPointerDown={(e) => e.stopPropagation()}
         onClick={() => setOpen((o) => !o)}
-        className="pointer-events-auto absolute left-1.5 top-24 flex flex-col items-center gap-[3px] rounded-lg bg-ink-950/50 px-1 py-1.5"
+        className="pointer-events-auto absolute left-1.5 top-16 flex flex-col items-center gap-[3px] rounded-lg bg-ink-950/50 px-1 py-1.5"
         aria-label={`Floor ${floor} of ${floors}, ${mid ? `${midName.replace(/^The/, 'the')} on floor ${mid}, ` : ''}${boss} at the bottom. Tap for this floor's rooms.`}
         aria-expanded={open}
       >
@@ -447,7 +500,7 @@ function DepthMap({ floor, floors, room, rooms, boss, midName, mid, path, doors 
         <Sprite id="markIcon" opts={{ name: 'boss' }} size={14} label="The boss" className={floor === floors ? 'animate-pulse' : 'opacity-70'} />
       </button>
       {open && (
-        <div onPointerDown={(e) => e.stopPropagation()} onClick={() => setOpen(false)} className="pointer-events-auto absolute left-10 top-24 z-10 w-44 animate-fadein rounded-lg bg-ink-950/95 p-2 ring-1 ring-gold-400/40">
+        <div onPointerDown={(e) => e.stopPropagation()} onClick={() => setOpen(false)} className="pointer-events-auto absolute left-10 top-16 z-10 w-44 animate-fadein rounded-lg bg-ink-950/95 p-2 ring-1 ring-gold-400/40">
           <p className="font-pixel text-[8px] text-gold-300">
             Floor {floor} of {floors}
           </p>
@@ -566,8 +619,8 @@ function Recap({ end, broken, midName }: { end: RunEnd; broken: ReturnType<typeo
 function Results({ state, zone, end, broken, onAgain, onLeave }: { state: GameState; zone: Zone; end: RunEnd; broken: ReturnType<typeof recordsBroken> | null; onAgain: () => void; onLeave: () => void }) {
   const hints = [nextGrowth(state)];
   return (
-    <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/90 px-6 text-center">
-      <p className={`font-pixel text-sm ${end.won ? 'text-gold-300' : 'text-slate-300'}`}>{end.won ? `${zone.name} cleared!` : 'The Fog took you'}</p>
+    <div className="absolute inset-0 flex flex-col items-center overflow-y-auto bg-ink-950/90 px-6 py-6 text-center">
+      <p className={`mt-auto font-pixel text-sm ${end.won ? 'text-gold-300' : 'text-slate-300'}`}>{end.won ? `${zone.name} cleared!` : 'The Fog took you'}</p>
       {end.height != null && <p className="mt-2 font-pixel text-[10px] text-sky-300">{end.height === 0 ? 'The first ledge waits for you.' : `You climbed ${end.height} ledge${end.height === 1 ? '' : 's'} high.`}</p>}
       <p className="mt-3 text-sm text-slate-300">{end.won ? <>The Wanderer: &ldquo;{zone.after}&rdquo;</> : end.floor ? 'The dungeon starts over from the top. Losing here costs nothing: come back stronger.' : 'Losing here costs nothing. Come back stronger.'}</p>
       {end.won && (
@@ -605,7 +658,7 @@ function Results({ state, zone, end, broken, onAgain, onLeave }: { state: GameSt
       <button onClick={onAgain} className="mt-6 w-full max-w-xs rounded-xl bg-gold-400 py-3 font-pixel text-[10px] text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
         Run again
       </button>
-      <button onClick={onLeave} className="mt-2 w-full max-w-xs py-3 text-sm text-slate-400">
+      <button onClick={onLeave} className="mb-auto mt-2 w-full max-w-xs py-3 text-sm text-slate-400">
         Back
       </button>
     </div>

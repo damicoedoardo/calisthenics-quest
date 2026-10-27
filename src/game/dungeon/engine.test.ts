@@ -72,6 +72,30 @@ describe('dungeon', () => {
     expect(run.t).toBe(t);
   });
 
+  it('aims at the monster you tapped while it is in reach, and lets go when asked', () => {
+    const run = createRun({ ...setup, classId: 'archer', autoPick: true });
+    for (let i = 0; i < 60 * 6 && run.foes.filter((f) => f.alive && run.t >= f.bornUntil).length < 2; i++) stepRun(run, { x: 0, y: 0, ability: false });
+    const [near, far] = run.foes.filter((f) => f.alive && run.t >= f.bornUntil);
+    const h = run.hero;
+    Object.assign(near, { x: h.x + 60, y: h.y, vx: 0, vy: 0 });
+    Object.assign(far, { x: h.x, y: h.y - 150, vx: 0, vy: 0 });
+    stepRun(run, { x: 0, y: 0, ability: false, lock: far.id });
+    expect(run.lock).toBe(far.id);
+    takeEvents(run);
+    let angle: number | null = null;
+    for (let i = 0; i < 120 && angle === null; i++) {
+      Object.assign(near, { x: h.x + 60, y: h.y });
+      Object.assign(far, { x: h.x, y: h.y - 150 });
+      stepRun(run, { x: 0, y: 0, ability: false });
+      const at = takeEvents(run).find((e) => e.type === 'attack');
+      if (at && at.type === 'attack') angle = at.angle;
+    }
+    expect(angle).not.toBeNull();
+    expect(Math.abs(angle! - -Math.PI / 2)).toBeLessThan(0.2);
+    stepRun(run, { x: 0, y: 0, ability: false, lock: null });
+    expect(run.lock).toBeNull();
+  });
+
   it('keeps the boss room shut until the boss falls', () => {
     const run = createRun(setup);
     skipToBoss(run);

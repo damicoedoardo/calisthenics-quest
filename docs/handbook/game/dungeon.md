@@ -35,6 +35,22 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change a boss's art | `BOSS_ART` in `scene.ts`, and its sheets in `src/game/sheets.ts` |
 | Add a zone | the chapter's `fog` in `src/story/chapters/`, then an entry in `ZONE_DUNGEONS` and `MIDS` (`content.ts`), `THEMES` (`themes.ts`) and `ZONE_MUSIC` (`src/lib/music-zones.ts`) |
 | Balance | the `DIALS` in `content.ts`; measure with `pnpm sim`, then `pnpm fog:sim` |
+| Change how much of the room the screen shows | `fitScreen` in `scene.ts` |
+
+## Sideways on screen
+
+The phone is held sideways in a run. The engine still plays every room standing up (you walk in at
+the bottom, the door is in the top wall); the scene shows it on its side, so on screen you walk to
+the right. `P(x, y)` in `scene.ts` turns an engine point into a screen point (the room's height
+becomes the screen's width). The floor, walls, water and the effects in engine points (`fade`) are
+drawn on layers turned a quarter (`turn`); people, monsters, props, spike tips, shadows and words
+stand upright at `P`. The stick is turned back the other way in `stickInput`. Because the engine
+never changed, the replays and the balance are the same as when the rooms stood up. So a new
+drawing in engine points goes on a turned layer (or through `fade`), and anything that must stay
+upright goes through `P` (or `fade(..., true)`).
+
+A tap on a monster aims your attacks at it while it's in reach (`Input.lock`, `run.lock`,
+`locked` in `engine.ts`); a second tap lets go. The bot never locks.
 
 Effects are capped (`FX_CAP` in `scene.ts`: particles and faded drawings alive at once) so a
 pile-up can't stall a slow phone; real fights peak far below the caps.

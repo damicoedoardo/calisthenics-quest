@@ -292,6 +292,8 @@ export interface Input {
   ability: boolean;
   /** The dodge button went down this step. */
   dodge?: boolean;
+  /** A monster tapped this step: your attacks go to it while it's in reach (null lets go). */
+  lock?: number | null;
 }
 
 export interface RunEnd {
@@ -321,6 +323,8 @@ export interface Run {
   room: number;
   /** This room's size, and what's on its floor. */
   area: { w: number; h: number };
+  /** The monster you tapped, which your attacks go to first while it's in reach. */
+  lock: number | null;
   terrain: Terrain;
   /** Waves still to come in this room. */
   waves: MonsterKind[][];
@@ -412,6 +416,7 @@ export function createRun(setup: RunSetup): Run {
     floor: 0,
     room: 0,
     area: { w: ROOM.w, h: ROOM.h },
+    lock: null,
     terrain: { water: [], pillars: [], spikes: [], barrels: [], shrine: null },
     waves: [],
     mines: [],
@@ -595,6 +600,7 @@ function enterRoom(run: Run) {
   run.kind = isBossRoom(run) || isWardenRoom(run) ? 'fight' : run.nextKind;
   run.nextKind = 'fight';
   run.area = roomSize(run);
+  run.lock = null;
   run.terrain = buildTerrain(run);
   run.hero.x = run.area.w / 2;
   run.hero.y = run.area.h - 70;
@@ -801,6 +807,7 @@ export function stepRun(run: Run, input: Input) {
     return end(run, false, 'limit');
   }
   if (now >= RUN_LIMIT) return end(run, false, 'limit');
+  if (input.lock !== undefined) run.lock = input.lock;
   if (input.dodge) dodge(run, input);
   moveHero(run, input);
   if (input.ability) useAbility(run, input);
@@ -1527,6 +1534,13 @@ function midFalls(run: Run) {
   if (f.kind === 'foreman' || f.kind === 'whisper') for (const o of run.foes) if (o.alive && o !== f) fade(run, o);
 }
 
+/** The monster you tapped, while it stands, can be hit and is in reach. */
+function locked(run: Run, reach: number): Foe | null {
+  const f = run.lock === null ? undefined : run.foes.find((o) => o.id === run.lock);
+  if (!f?.alive || run.t < f.bornUntil || untouchable(run, f) || dist(f, run.hero) > reach) return null;
+  return f;
+}
+
 function nearest(run: Run, x: number, y: number, skip?: Set<Foe>, within = Infinity): Foe | null {
   let best: Foe | null = null,
     bd = within * within;
@@ -1647,7 +1661,7 @@ function attack(run: Run) {
   const kind = attackOf(run.setup.classId),
     reach = kind === 'slash' ? SLASH_REACH : RANGE,
     b = run.boss?.alive && run.setup.zone.boss !== 'mirror' && !untouchable(run, run.boss) && run.t >= run.boss.bornUntil && dist(run.boss, h) <= reach ? run.boss : null,
-    target = b ?? nearest(run, h.x, h.y, undefined, reach);
+    target = locked(run, reach) ?? b ?? nearest(run, h.x, h.y, undefined, reach);
   if (!target && kind !== 'wave') return;
   if (kind === 'wave' && !nearest(run, h.x, h.y, undefined, 150)) return;
   run.cd.attack = attackCooldown(kind, run.setup.power, run.ups) / (1 + DIALS.relic * 0.1 * relic(run, 'quick')) / bodyOf(run).haste;
