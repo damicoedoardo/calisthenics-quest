@@ -2,13 +2,15 @@ import type { ClassId } from '@/lib/gear';
 import { statPower, type Build } from '@/lib/stats';
 import type { Power } from '@/lib/fog';
 import { ATTACK, HERO_HP, armorOf, attackOf } from './rules';
+import { CRIT_HIT } from '@/balance';
 import { CLASS_BODY } from './dungeon/content';
 import { itemTotals, starterKit, type Item, type ItemSlot } from './dungeon/items';
 
 /* One number for how strong a hero is, so training, gear, upgrades and classes can be compared on
    the same scale (docs/handbook/game/balance.md, "Power"). It follows the engine's own formulas
-   (applyGear and rules.ts): how fast you kill one foe, times how much damage you take before you
-   fall. It leaves out what only happens inside a run (run skills, chest items, the flame's fire,
+   (applyGear and rules.ts): how fast you kill one foe (crits counted at their average), times how
+   much damage you take before you fall. Walk speed (the Speed stat, `move`) helps you dodge but
+   has no place on this scale: the simulator measures it. It leaves out what only happens inside a run (run skills, chest items, the flame's fire,
    the class ability, the dodge) and how many foes a hit reaches, so it compares builds and gear,
    not classes' whole fights: the simulator does that. */
 
@@ -38,7 +40,7 @@ function raw(cls: ClassId, build: Build, worn: Partial<Record<ItemSlot, Item>>) 
     perSecond = ((1 + p.speed + (t.speed ?? 0)) * body.haste) / ATTACK[kind].cd,
     hp = (HERO_HP + p.health + (t.health ?? 0)) * body.hp,
     armor = armorOf({ ...p, armor: p.armor + body.armor + (t.armor ?? 0) } as Power, {});
-  return { dps: hit * perSecond, ehp: hp / (1 - armor) };
+  return { dps: hit * perSecond * (1 + p.crit * (CRIT_HIT - 1)), ehp: hp / (1 - armor) };
 }
 
 let ref = 0;

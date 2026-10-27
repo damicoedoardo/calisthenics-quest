@@ -55,16 +55,15 @@ function points(): string {
     st.name,
     ...at.map((n) => {
       const v = statPower({ [st.id]: n }, undefined)[st.id];
-      return st.id === 'health' ? `+${Math.round(v)}` : `+${pct(v)}`;
+      return st.id === 'health' ? `+${Math.round(v)}` : st.id === 'armor' || st.id === 'crit' ? pct(v) : `+${pct(v)}`;
     }),
   ]);
-  const armor = at.map((n) => pct(statPower({ health: n }, undefined).armor));
   return [
     '## What stat points give',
     '',
     `Every hero starts with ${STARTING_POINTS} points. A stat with this many points (no class lean):`,
     '',
-    table(['Stat', ...at.map((n) => `${n} pts`)], [...rows, ['Armor (from Health)', ...armor]]),
+    table(['Stat', ...at.map((n) => `${n} pts`)], rows),
   ].join('\n');
 }
 
@@ -204,8 +203,8 @@ function runLevels(): string {
 type Worn = Partial<Record<'weapon' | 'armor' | 'charm', Item>>;
 const modelPoints = (w: number) => STARTING_POINTS + w * POINTS.full + Math.floor(w / WEEKLY_GOAL) * POINTS.week;
 const evenBuild = (w: number): Build => {
-  const n = Math.floor(modelPoints(w) / 4);
-  return { health: n, damage: n, reach: n, speed: n };
+  const n = Math.floor(modelPoints(w) / STATS.length);
+  return Object.fromEntries(STATS.map((st) => [st.id, n]));
 };
 function middleItem(zone: number, floor: number, slot: 'weapon' | 'armor' | 'charm', cls: ClassId): Item {
   const first = { weapon: 0, armor: 0.5, charm: 0.9 }[slot];
@@ -285,7 +284,7 @@ function goals(): string {
   const toFive = Array.from({ length: 5 }, (_, i) => upgradeCost({ plus: i } as Item)).reduce((a, b) => a + b, 0),
     toTop = STEPS.reduce((n, st) => n + st.embers * triesFor(st.odds), 0);
   const weeks = weeksFor(toFive, WEEKLY_GOAL);
-  const spread = statPower({ health: 100, damage: 100, reach: 100, speed: 100 }, undefined);
+  const spread = statPower({ health: 70, armor: 70, damage: 70, speed: 70, move: 70, crit: 70 }, undefined);
   const check = (ok: boolean) => (ok ? 'on target' : '**off target**');
   const open = 'no goal set yet';
   return [
@@ -299,7 +298,11 @@ function goals(): string {
         ['How often a steady player levels up (6 months)', `${perLevel.toFixed(1)} workouts a level`, open],
         ['One item +0 to +5 in about 5 weeks of training', `${weeks.toFixed(1)} weeks`, check(weeks >= 4 && weeks <= 6)],
         ['One item +0 to +15 in about a year of training (embers; materials from co-op)', `${weeksFor(toTop, WEEKLY_GOAL).toFixed(0)} weeks`, check(weeksFor(toTop, WEEKLY_GOAL) >= 40 && weeksFor(toTop, WEEKLY_GOAL) <= 70)],
-        ['100 points a stat gives about +80% damage, +65% attack speed, +105 HP', `+${pct(spread.damage)}, +${pct(spread.speed)}, +${Math.round(spread.health)} HP`, check(Math.abs(spread.damage - 0.8) < 0.08 && Math.abs(spread.speed - 0.65) < 0.08 && Math.abs(spread.health - 105) < 10)],
+        [
+          '70 points a stat gives about +80% damage, +65% attack speed, +105 HP, 20% blocked, +25% walk speed, 20% crit',
+          `+${pct(spread.damage)}, +${pct(spread.speed)}, +${Math.round(spread.health)} HP, ${pct(spread.armor)} blocked, +${pct(spread.move)} walk, ${pct(spread.crit)} crit`,
+          check(Math.abs(spread.damage - 0.8) < 0.08 && Math.abs(spread.speed - 0.65) < 0.08 && Math.abs(spread.health - 105) < 10 && Math.abs(spread.armor - 0.2) < 0.04 && Math.abs(spread.move - 0.25) < 0.05 && Math.abs(spread.crit - 0.2) < 0.04),
+        ],
         [`A comeback after ${XP.comebackDays} days away earns a bonus`, `+${XP.comeback} XP`, check(XP.comeback > 0)],
         ...(['training', 'gear', 'upgrades'] as const).map((k) => {
           const shares = splitAt().map((w) => split(w)[k]),

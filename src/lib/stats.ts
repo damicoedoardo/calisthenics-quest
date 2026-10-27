@@ -5,11 +5,13 @@ import { ARMOR_PER_POINT, CLASS_LEAN_POINTS, FALLOFF, MAX_ARMOR, POINT_WORTH, PO
 
 /* Stat points: training earns them, the champion spends them. Every workout gives points whatever it
    was (gym, a run, a stretch day), so the reward never depends on what the plan asked for. The
-   player puts them into four stats and can take them all back for free at any time. Each point in
+   player puts them into six stats and can take them all back for free at any time. Each point in
    the same stat gives a little less than the one before, so spreading pays and six months of points
    don't break the Fog. */
 
-export type StatId = 'health' | 'damage' | 'reach' | 'speed';
+/** `speed` is attack speed (named Haste on screen) and `move` walk speed (named Speed): the ids
+    stayed so the points saves already hold keep their meaning. */
+export type StatId = 'health' | 'armor' | 'damage' | 'speed' | 'move' | 'crit';
 
 export interface Stat {
   id: StatId;
@@ -27,10 +29,12 @@ const pct = (what: string) => (v: number) => `+${Math.round(v * 100)}% ${what}`;
 /* What a point is worth per stat is in src/balance/stats.ts (POINT_WORTH), sized so points are about
    40% of a player's power growth (POWER_SPLIT). */
 export const STATS: Stat[] = [
-  { id: 'health', name: 'Health', text: 'More HP, and you take a little less damage', per: POINT_WORTH.health, show: (v) => `+${Math.round(v)} HP` },
+  { id: 'health', name: 'Health', text: 'More HP', per: POINT_WORTH.health, show: (v) => `+${Math.round(v)} HP` },
+  { id: 'armor', name: 'Armor', text: 'Every hit on you does less', per: ARMOR_PER_POINT, show: (v) => `${Math.round(v * 100)}% blocked` },
   { id: 'damage', name: 'Damage', text: 'Every hit lands harder', per: POINT_WORTH.damage, show: pct('damage') },
-  { id: 'reach', name: 'Reach', text: 'You pick up light from further away', per: POINT_WORTH.reach, show: pct('pickup range') },
-  { id: 'speed', name: 'Speed', text: 'You attack faster', per: POINT_WORTH.speed, show: pct('attack speed') },
+  { id: 'speed', name: 'Haste', text: 'You attack faster', per: POINT_WORTH.speed, show: pct('attack speed') },
+  { id: 'move', name: 'Speed', text: 'You walk faster', per: POINT_WORTH.move, show: pct('walk speed') },
+  { id: 'crit', name: 'Crit', text: 'A chance for a hit to do double', per: POINT_WORTH.crit, show: (v) => `${Math.round(v * 100)}% crit chance` },
 ];
 
 /** What every champion has before any point: the old skill tree's starting steps. */
@@ -40,8 +44,7 @@ export const getStat = (id: StatId) => STATS.find((s) => s.id === id)!;
 
 // Points, their worth, the falloff and the class lean live in src/balance/stats.ts.
 export { POINTS, STARTING_POINTS, CLASS_LEAN_POINTS };
-const ARMOR_PER = ARMOR_PER_POINT;
-export const CLASS_LEAN: Record<ClassId, StatId> = { warrior: 'damage', archer: 'reach', monk: 'health', mage: 'speed' };
+export const CLASS_LEAN: Record<ClassId, StatId> = { warrior: 'damage', archer: 'crit', monk: 'health', mage: 'speed' };
 
 export type Build = Partial<Record<StatId, number>>;
 
@@ -103,7 +106,7 @@ export function resetBuild(state: GameState): GameState {
   return { ...state, build: {} };
 }
 
-/** Spread every free point over the four stats, each to the one with the fewest (the simulator's players, and dev mode). */
+/** Spread every free point over the six stats, each to the one with the fewest (the simulator's players, and dev mode). */
 export function spendEvenly(state: GameState): GameState {
   let s = state;
   while (pointsFree(s) > 0) {
@@ -122,10 +125,12 @@ export interface StatPower {
   armor: number;
   /** Extra damage (0.12 = +12%). */
   damage: number;
-  /** Extra pickup range for light (0.2 = +20%). */
-  reach: number;
   /** Extra attack speed. */
   speed: number;
+  /** Extra walk speed. */
+  move: number;
+  /** The chance a hit does `CRIT_HIT` times its damage. */
+  crit: number;
 }
 
 export function statPower(build: Build, classId?: ClassId): StatPower {
@@ -134,10 +139,11 @@ export function statPower(build: Build, classId?: ClassId): StatPower {
   const v = (id: StatId) => BASE[id] + statValue(getStat(id).per, n(id));
   return {
     health: v('health'),
-    armor: Math.min(MAX_ARMOR, statValue(ARMOR_PER, n('health'))),
+    armor: Math.min(MAX_ARMOR, v('armor')),
     damage: v('damage'),
-    reach: v('reach'),
     speed: v('speed'),
+    move: v('move'),
+    crit: v('crit'),
   };
 }
 

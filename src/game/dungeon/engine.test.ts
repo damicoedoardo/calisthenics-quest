@@ -406,7 +406,7 @@ describe('a party (co-op)', () => {
   });
 
   it('drops co-op materials for the forge, each hero their own, and a solo run none', () => {
-    const run = party(21);
+    const run = party(25);
     const [me, friend] = run.party;
     expect(me.mats.thread ?? 0).toBeGreaterThan(0);
     expect(friend.mats.thread ?? 0).toBeGreaterThan(0);

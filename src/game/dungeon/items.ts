@@ -91,7 +91,7 @@ export const nameOf = (it: Item) => (it.plus ? `${it.name} +${it.plus}` : it.nam
 /** Each class's weapon and the stat it asks for (the class's own stat, CLASS_LEAN). */
 export const WEAPONS: Record<ClassId, { noun: string; stat: StatId; icon: ItemIcon }> = {
   warrior: { noun: 'sword', stat: 'damage', icon: 'sword' },
-  archer: { noun: 'bow', stat: 'reach', icon: 'bow' },
+  archer: { noun: 'bow', stat: 'crit', icon: 'bow' },
   monk: { noun: 'staff', stat: 'health', icon: 'staff' },
   mage: { noun: 'wand', stat: 'speed', icon: 'wand' },
 };
@@ -210,7 +210,7 @@ export function rollItem(rnd: () => number, at: DropAt, rarity: Rarity): Item {
         : rarity === 'magic' && bonuses.length
           ? `${mat} ${noun} of ${BONUSES[bonuses[0].id].word}`
           : `${mat} ${noun}`;
-  const stat: StatId | null = slot === 'weapon' ? WEAPONS[cls].stat : slot === 'armor' ? 'health' : null,
+  const stat: StatId | null = slot === 'weapon' ? WEAPONS[cls].stat : slot === 'armor' ? 'armor' : null,
     n = Math.round(evenPoints(at.workouts) * (NEED.fromFloor + NEED.perFloor9 * (at.floor / 9)) * r.need);
   return {
     id: Math.floor(rnd() * 2 ** 32).toString(36) + Math.floor(rnd() * 2 ** 32).toString(36),

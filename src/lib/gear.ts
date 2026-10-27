@@ -16,9 +16,9 @@ export interface HeroClass {
 
 export const CLASSES: HeroClass[] = [
   { id: 'warrior', name: 'Warrior', lean: 'Damage', weapon: 'sword', pitch: 'Up close, every blow counts.' },
-  { id: 'archer', name: 'Archer', lean: 'Reach', weapon: 'bow', pitch: 'Keep your distance, gather the light.' },
+  { id: 'archer', name: 'Archer', lean: 'Crit', weapon: 'bow', pitch: 'Keep your distance, find the weak spot.' },
   { id: 'monk', name: 'Monk', lean: 'Health', weapon: 'staff', pitch: 'Holding steady is a kind of power.' },
-  { id: 'mage', name: 'Mage', lean: 'Speed', weapon: 'wand', pitch: 'Quick hands, many sparks.' },
+  { id: 'mage', name: 'Mage', lean: 'Haste', weapon: 'wand', pitch: 'Quick hands, many sparks.' },
 ];
 
 export function getClass(id: ClassId | undefined): HeroClass | null {

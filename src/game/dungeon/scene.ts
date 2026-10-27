@@ -299,15 +299,10 @@ function bossStage(which: FogBoss, f: Foe): number {
   if (which === 'plateau') return f.phase <= 3 ? 0 : f.phase <= 6 ? 1 : 2;
   return 0;
 }
-/** What a door says about the room behind it (the mid-boss's door says its name). */
-const DOOR_LOOK: Record<Exclude<CellKind, 'warden'>, { label: string; color: number }> = {
-  fight: { label: 'FIGHT', color: 0xe2e8f0 },
-  elite: { label: 'ELITE', color: 0xf87171 },
-  treasure: { label: 'CHEST', color: 0xfbbf24 },
-  rest: { label: 'REST', color: 0x86efac },
-  stairs: { label: 'STAIRS', color: 0xfbbf24 },
-  boss: { label: 'BOSS', color: 0xa855f7 },
-};
+/** A crit's number: gold, and on its own, not added to the hits around it. */
+const CRIT_COLOR = '#fde047';
+/** A door to a room you haven't been in: it doesn't say what waits there. */
+const UNKNOWN = { label: '?', color: 0xcbd5e1 };
 /** A door back to a room you've been in. */
 const BEEN = 0x94a3b8;
 /** Into the room from each wall (engine space). */
@@ -1028,10 +1023,11 @@ class DungeonScene extends Phaser.Scene {
     }
   }
 
-  /** What a door says, and its color: dim once you've been behind it. */
+  /** What a door says, and its color: a door you haven't been through doesn't say what waits
+      behind it; once you have, it's dim. */
   private doorLook(d: Door) {
-    const look = d.kind === 'warden' ? { label: midBoss(this.setup.zone).name.split(' ').pop()!.toUpperCase(), color: 0xf97316 } : this.run.climb !== null ? { label: 'UP', color: 0xfbbf24 } : DOOR_LOOK[d.kind];
-    return d.been ? { label: '', color: BEEN } : look;
+    if (this.run.climb !== null) return { label: 'UP', color: 0xfbbf24 };
+    return d.been ? { label: '', color: BEEN } : UNKNOWN;
   }
   private doorColor(d: Door) {
     return this.doorLook(d).color;
@@ -1671,7 +1667,7 @@ class DungeonScene extends Phaser.Scene {
         this.burst(this.sparks, e.dmg >= 30 ? 6 : 2, e.x, e.y, -6);
         // a pixel star where the blow lands: pops big, shrinks away
         const [sx, sy] = this.P(e.x, e.y);
-        this.hitSpark(sx, sy - 6, e.dmg >= 30 ? 1.6 : 1.1);
+        this.hitSpark(sx, sy - 6, e.crit ? 2 : e.dmg >= 30 ? 1.6 : 1.1);
         const knight = e.boss && this.setup.zone.boss === 'knight',
           mid = this.run.warden?.id === e.id ? this.run.warden : null;
         if (knight) {
@@ -1695,7 +1691,7 @@ class DungeonScene extends Phaser.Scene {
           // It glanced off (the Sand Golem as stone): a grey ring, no number.
           const { x, y } = e;
           this.fade(220, (g, p) => g.lineStyle(3 * (1 - p) + 1, 0xd6d3d1, 0.9 * (1 - p)).strokeCircle(x, y - 6, 10 + 16 * p));
-        } else if (!(e.boss && this.setup.zone.boss === 'plateau')) this.number(e.x, e.y, 18, e.dmg, undefined, e.id);
+        } else if (!(e.boss && this.setup.zone.boss === 'plateau')) this.number(e.x, e.y, 18, e.dmg, e.crit ? CRIT_COLOR : undefined, e.crit ? undefined : e.id);
         if (e.dmg >= 30) this.hitStop(40, true);
         break;
       }
@@ -2037,11 +2033,9 @@ class DungeonScene extends Phaser.Scene {
         this.drawRoom();
         this.sfx('nova', 0.7);
         this.cleared(true);
-        const big = r.doors.find((d) => !d.been && (d.kind === 'boss' || d.kind === 'warden'));
         if (r.chest && isWardenRoom(r)) this.bus.say(`${midBoss(this.setup.zone).name.replace(/^the/, 'The')} left a chest. Open it, then take the stairs.`);
         else if (r.stairs) this.bus.say('Room clear. The stairs go down, or look round the floor first.');
-        else if (big) this.bus.say(big.kind === 'boss' ? 'Room clear. The boss waits behind the door marked BOSS.' : `Room clear. ${midBoss(this.setup.zone).name.replace(/^the/, 'The')} waits behind one door.`);
-        else this.bus.say(r.chest ? 'Room clear. Open the chest.' : 'Room clear. Each door says what waits behind it.');
+        else this.bus.say(r.chest ? 'Room clear. Open the chest.' : 'Room clear. Pick a door: you only know what waits behind it once you go in.');
         break;
       }
       case 'drop': {

@@ -45,6 +45,8 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change what the run shows is at risk if you fall | `atRisk` in `src/lib/fog-gear.ts`; `RiskLine` and `Guarded` (the flame's badge) in `src/components/FogRun.tsx` |
 | Change how a floor is laid out (how many rooms, branches, shortcuts) | `LAYOUT` and `ROOM_ODDS` in `content.ts`, `makeFloor` in `engine.ts` |
 | Change the minimap | `FloorMap` in `src/components/FogRun.tsx` (it reads `Hud.map`, built by `miniMap` in `scene.ts`) |
+| Change what a door says | `doorLook` in `scene.ts` (unknown rooms show `UNKNOWN`) |
+| Change crits | `CRIT_HIT` in `src/balance/stats.ts`; the roll is in `damage` (`engine.ts`, its own `run.critRnd`), the gold number in `scene.ts` |
 | Change where the bot goes on a floor | `route` in `bot.ts` |
 | Tune items (how strong, how much they ask, how rare) | `src/balance/items.ts`: `ITEM_POWER` (all finds next to the starter kit), `ITEM_BASE`, `BONUS_SIZE`, `RARITY_SIZE`, `RARITY_WEIGHTS`, `RARITY_LEAN`, `NEED`; then `pnpm balance` and `pnpm fog:tune` |
 | Change how often things drop, or the bag's size | `DROPS`, `DROP_LUCK` and `BAG` in `src/balance/items.ts` (read by `kill`, `openChest` in `engine.ts`) |
@@ -112,8 +114,11 @@ nothing to fight. Clearing the last room puts the stairs down in it (`run.stairs
 them asks (`run.stairsAsk`, the run holds still): go deeper (`downStairs`, HP full), leave with
 what you carry (`takeStairs(run, 'leave')` ends the run with `why: 'left'`), or not yet. The bot
 always goes deeper. The stairs card shows what a fall on the next floor would cost (see "Items and
-the bag"); in developer mode the pause menu's "The stairs card" opens it anywhere (`askStairs`). Cells are `seen` once you've stood next door to them, which is what
-the minimap shows. The bot explores (`route`): the nearest room it hasn't been in, a shrine when
+the bag"); in developer mode the pause menu's "The stairs card" opens it anywhere (`askStairs`). Cells are `seen` once you've stood next door to them. A door
+you haven't been through says nothing about what waits behind it (`doorLook` in `scene.ts`: a
+gray "?"), and the minimap draws a seen room you haven't been in as a gray dashed "?" whatever it
+is, the stairs and the boss too; you only learn a room by going in. (The bot still reads `kind`
+for its route, so the simulators play a player who knows the floor.) The bot explores (`route`): the nearest room it hasn't been in, a shrine when
 hurt, and the stairs once it has been in most of the floor.
 
 
@@ -129,7 +134,7 @@ beam over rare ones (`syncLoot`). Walking over one puts it in the bag (`run.hero
 You wear three things: a weapon and armor made for your class, and a charm. A run starts in what
 the save says you wear (`RunSetup.worn`), the starter kit (`starterKit`) filling an empty weapon or
 armor slot. An item asks for stat points (`need`, checked against `RunSetup.build` by `shortOf`):
-weapons the class's own stat, armor Health, charms nothing. `wear`, `takeOff` and `dropFromBag`
+weapons the class's own stat, armor Armor, charms nothing. `wear`, `takeOff` and `dropFromBag`
 change gear mid-run (the page pauses while the bag is open); `applyGear` puts what you wear on top
 of your power from training (`run.hero.base`). The run's end (`RunEnd.gear`) lists what you wore and
 carried, never the starter kit; `src/lib/fog-gear.ts` settles it into the save

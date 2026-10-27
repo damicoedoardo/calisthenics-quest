@@ -1,6 +1,6 @@
 import { PLAN, cueOf, type DayType, type Kit, type Slot, type SlotRole } from './program';
 import { makeGear, tiersAt, type ClassId, type Gear, type GearSlot, type Tier } from './gear';
-import { looksOf, nameOf, tierOf } from '@/game/dungeon/items';
+import { looksOf, nameOf, tierOf, type Item } from '@/game/dungeon/items';
 import type { Build } from './stats';
 import type { Look } from '@/sprites/engine/figure';
 import type { FogProgress } from './fog';
@@ -413,7 +413,7 @@ export function migrate(raw: unknown): GameState {
     // Mira's forge used to make new gear every few workouts. It doesn't any more: the gear it had
     // made by then stays as the hero's look (the starter kit), and finer gear comes from the Fog.
     const fogGear = s.fogGear?.kit ? s.fogGear : { worn: {}, vault: [], ...s.fogGear, kit: tiersAt((s.sessions ?? []).length) };
-    return { ...fresh, ...s, profile: profileOf(s.profile), fogGear };
+    return { ...fresh, ...s, profile: profileOf(s.profile), ...noReach(s.build, fogGear) };
   }
   if (r.version === 2) {
     const { progress: _progress, tests: _tests, reps: _reps, ...s } = r as unknown as GameState & { progress?: unknown; tests?: unknown };
@@ -445,6 +445,19 @@ export function migrate(raw: unknown): GameState {
     return { ...fresh, sessions };
   }
   return fresh;
+}
+
+/** Reach left the stats (loot comes to you): its points go back to spend, and items that asked
+    for Reach (the archer's bows) ask for Crit, the archer's stat now. */
+function noReach(build: GameState['build'], fogGear: FogGear): { build: GameState['build']; fogGear: FogGear } {
+  const old = build as Record<string, number> | undefined;
+  if (!old?.reach && !JSON.stringify(fogGear).includes('"stat":"reach"')) return { build, fogGear };
+  const { reach: _reach, ...rest } = old ?? {};
+  const fix = (it: Item): Item => (it.need && (it.need.stat as string) === 'reach' ? { ...it, need: { ...it.need, stat: 'crit' } } : it);
+  return {
+    build: old ? rest : build,
+    fogGear: { ...fogGear, vault: fogGear.vault.map(fix), worn: Object.fromEntries(Object.entries(fogGear.worn).map(([k, it]) => [k, it && fix(it)])) },
+  };
 }
 
 function defaultId(): string {

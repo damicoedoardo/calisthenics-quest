@@ -11,7 +11,7 @@ const item = (slot: Item['slot']): Item => {
     if (it.slot === slot) return it;
   }
 };
-const strong = (s: GameState): GameState => ({ ...s, build: { damage: 99, health: 99 } });
+const strong = (s: GameState): GameState => ({ ...s, build: { damage: 99, health: 99, armor: 99 } });
 
 describe('Fog gear between runs', () => {
   it('the vault starts at 4 and grows one every 5 workouts, up to 20', () => {

@@ -41,7 +41,7 @@ kept there as aliases, so callers didn't change).
 | File | Holds | Used by |
 |---|---|---|
 | `src/balance/training.ts` | XP per workout, perfect week, comeback, XP per level, streak bonus, `WEEKLY_GOAL`, how often goals rise | `src/lib/game.ts` |
-| `src/balance/stats.ts` | stat points per workout, starting points, what a point is worth, base stats, falloff, armor from Health, class lean | `src/lib/stats.ts` |
+| `src/balance/stats.ts` | stat points per workout, starting points, what a point is worth, base stats, falloff, armor per point, crit size, pickup reach, class lean | `src/lib/stats.ts` |
 | `src/balance/economy.ts` | embers per workout, forge prices, melt values, vault size, how long the flame guards | `src/lib/forge.ts`, `src/lib/fog-gear.ts` |
 | `src/balance/items.ts` | item power, base damage/HP/armor per level, bonus sizes, rarity sizes and weights, how luck and depth lean rarer, requirements, the starter kit, drop chances and luck, the bag | `src/game/dungeon/items.ts`, `src/game/dungeon/engine.ts` |
 | `src/balance/power.ts` | the target split of power growth (training / gear / upgrades) and its slack | the balance sheet |
@@ -67,10 +67,10 @@ until they are):
 
 Classes, gear, rarity and upgrades all add strength in different ways, so they are compared on
 one number: `powerScore(cls, build, worn)` in `src/game/power.ts`. It uses the engine's own
-formulas: damage a second against one foe times what you can take (HP over the share of damage
-that gets through), square-rooted, with a warrior with no points in the starter kit at 100.
+formulas: damage a second against one foe (crits at their average) times what you can take (HP
+over the share of damage that gets through), square-rooted, with a warrior with no points in the starter kit at 100.
 Doubling both halves doubles it. It leaves out what only happens inside a run (run skills,
-chest items, the flame's fire, class abilities, the dodge, hitting many foes), so it compares
+chest items, the flame's fire, class abilities, the dodge, walk speed, hitting many foes), so it compares
 builds and gear; the Fog simulator's win rates compare whole classes.
 
 The sheet's "Power by workouts" plays a model player (3 full workouts a week, points spread,
@@ -127,6 +127,7 @@ before and after.
 
 | Date | Change | Why | Before → after | PR |
 |---|---|---|---|---|
+| 2026-10-27 | Stats: Reach out; Armor (its own stat, no longer from Health), Speed (walk) and Crit in; `POINT_WORTH` x4/3 on top of #42's (health 1.8, damage 0.0117, haste 0.00972, armor 0.0036; walk 0.0044, crit 0.0026); `powerScore` counts crits; item needs spread over 6 stats; archer leans Crit | Edoardo: loot comes to you, so Reach did nothing worth a point; six stats feel fuller but stay finite | 70 points a stat now = what 100 a stat gave (+79% damage, +64% attack speed, +103 HP, 21% blocked), plus +25% walk and 20% crit; split 39/41/20 → 38/41/20, power at 37 workouts 235 → 234, at 64 345 → 348; fog:sim in the PR | #44 |
 | 2026-10-27 | Target split 40/40/20 set; `POINT_WORTH` x1.35, `ITEM_POWER` 2.2 → 1.76 | Training should earn more of a player's power (Edoardo's pick) | Split 28/48/24 → 39/41/20; power at 37 workouts 246 → 235, at 64 366 → 345; `fog:sim steady 24` zone win rates (open / later) 20/78, 26/51, 32/55, 50/51, 32/93, 32/85 → 20/81, 25/43, 21/70, 51/55, 40/98, 33/91 | #42 |
 | 2026-10-27 | `powerScore` and "Power by workouts" on the sheet (no number changed) | One scale to compare training, gear, upgrades and classes | Training ~27%, gear ~45-60%, upgrades up to ~30% of the gain; warrior +27%, mage -21% before abilities | #42 |
 | 2026-10-27 | Mira's forge goes to +15: `STEPS` (embers 55 to 140 a step from +6, co-op materials from +6, odds 90% down to 30% from +7), `FORGE_RISK`, `SAFE_POINTS`, `FALL_KEEP`, co-op `MAT_DROPS`, `GIFTS`; `FORGE.upgradeStep` replaced by `STEPS` | Edoardo: NosTale-style +15 with co-op-only materials and a new look per band | +0 to +5 unchanged (5.0 weeks); +15 about 62 weeks of embers for one item; a zone 1 co-op run finds about 2-3 threads and half a shard a hero; solo replays identical | forge +15 PR |

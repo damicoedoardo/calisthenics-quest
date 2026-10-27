@@ -6,10 +6,10 @@ import type { GameState } from '@/lib/game';
 import { STATS, buildOf, nextPoint, pointsEarned, pointsFree, refundPoint, resetBuild, spendPoint, statPower } from '@/lib/stats';
 import { Sprite } from './Sprite';
 
-/* The champion's stats: every workout earns points, and here they go into Health, Damage, Reach or
-   Speed. Taking them back is free, any time. */
+/* The champion's stats: every workout earns points, and here they go into Health, Armor, Damage,
+   Haste, Speed or Crit. Taking them back is free, any time. */
 
-export const STAT_ICON = { health: 'vital', damage: 'power', reach: 'magnet', speed: 'haste' } as const;
+export const STAT_ICON = { health: 'vital', armor: 'guard', damage: 'power', speed: 'haste', move: 'swift', crit: 'spark' } as const;
 
 /** `land`: the Hero tab held sideways, where the card is the first tab of a panel and fills it. */
 export function StatPoints({ state, update, land = false }: { state: GameState; update: (fn: (s: GameState) => GameState) => void; land?: boolean }) {
@@ -30,7 +30,7 @@ export function StatPoints({ state, update, land = false }: { state: GameState; 
       </div>
       <p className={`mt-1 text-slate-400 ${land ? 'text-[11px] leading-snug' : 'text-xs'}`}>Your training makes your champion stronger in the Fog. Put your points where you like; you can take them back any time.</p>
 
-      {/* Sideways the four stats are four tiles, two by two, that share the panel's height. */}
+      {/* Sideways the six stats are six tiles, two by three, that share the panel's height. */}
       <ul className={land ? 'mt-3 grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-2' : 'mt-3 space-y-2'}>
         {STATS.map((st) => {
           const n = build[st.id] ?? 0;

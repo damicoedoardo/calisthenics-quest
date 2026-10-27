@@ -66,8 +66,11 @@ the goal, and "better than last time", plus `STARTING_POINTS`. `pointsEarned` de
 the sessions; only what was spent is saved (`state.build`). The numbers (points, worth, base,
 falloff, armor, class lean) are in `src/balance/stats.ts`.
 
-- Four stats (`STATS`): **Health** (HP and a little armor), **Damage**, **Reach** (pickup range
-  for light), **Speed** (attack speed). `spendPoint`, `refundPoint`, and `resetBuild` (take all
+- Six stats (`STATS`): **Health** (HP), **Armor** (a share of every hit blocked, up to
+  `MAX_ARMOR`), **Damage**, **Haste** (attack speed; its id is `speed`), **Speed** (walk speed;
+  its id is `move`) and **Crit** (the chance a hit does `CRIT_HIT` times its damage). Reach is gone
+  (loot comes to you): `migrate` hands its points back and turns items that asked for it into
+  items that ask for Crit (`noReach` in `game.ts`). `spendPoint`, `refundPoint`, and `resetBuild` (take all
   back, free, any time) on the Hero tab.
 - Each point in the same stat is worth a little less (`statValue`, `FALLOFF`), so spreading pays.
 - `BASE` is what every champion has before any point. What a point is worth is set so points are

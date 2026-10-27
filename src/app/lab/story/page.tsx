@@ -9,6 +9,7 @@ import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
 import { Weather } from '@/components/Weather';
 import { addFakeWorkouts } from '@/lib/dev';
 import { initialState, type GameState } from '@/lib/game';
+import { useGameState } from '@/lib/store';
 import { CHAPTERS } from '@/story/chapters';
 import { ANYTIME } from '@/story/anytime';
 import { chapterStart, sceneFor } from '@/story/engine';
@@ -82,21 +83,25 @@ function describe(w: When): string {
   return parts.join(' · ') || 'any time';
 }
 
-/** A player who reached the scene's moment, with the lab's flame name and letter. */
-function stateFor(scene: Scene, chapter: number, flame: string, letter: boolean, answers: Partial<Record<AnswerId, string>>, now: Date): GameState {
+/** A player who reached the scene's moment, with the lab's flame name and letter, and your own
+    hero from this phone's save: your class and the gear you wear now, so scenes show you as you are. */
+function stateFor(scene: Scene, chapter: number, flame: string, letter: boolean, answers: Partial<Record<AnswerId, string>>, now: Date, mine: GameState): GameState {
   const base = initialState();
   const reach = scene.when.beaten ? chapterStart(scene.when.beaten + 1) : chapter > 0 ? chapterStart(chapter) : 0;
   const workouts = Math.max(scene.when.workouts ?? 0, reach);
   const state: GameState = {
     ...base,
     // The naming scene plays with a flame that has no name yet.
-    profile: { ...base.profile, onboarded: true, flame: scene.ask?.kind === 'name' ? undefined : flame, voice: letter ? 'You always quit.' : '', letter: letter ? LETTER : NO_LETTER },
+    fogGear: mine.fogGear,
+    profile: { ...base.profile, classId: mine.profile.classId, onboarded: true, flame: scene.ask?.kind === 'name' ? undefined : flame, voice: letter ? 'You always quit.' : '', letter: letter ? LETTER : NO_LETTER },
     answers,
   };
   return workouts > 0 ? addFakeWorkouts(state, workouts, now, false) : state;
 }
 
 export default function StoryLab() {
+  // Read only: the lab never writes your save.
+  const { state: mine, ready } = useGameState();
   const [stage, setStage] = useState<FlameStage>('candle');
   const [mood, setMood] = useState<FlameMood>('happy');
   const [flame, setFlame] = useState('');
@@ -115,7 +120,7 @@ export default function StoryLab() {
 
   const play = (scene: Scene, chapter: number) => {
     setResult('');
-    const state = stateFor(scene, chapter, name, letter, said, new Date());
+    const state = stateFor(scene, chapter, name, letter, said, new Date(), mine);
     // Lines for a villager you didn't join drop out, like in the game.
     setPlaying({ scene: sceneFor(scene, state), state });
   };
@@ -123,13 +128,14 @@ export default function StoryLab() {
   // /lab/night links here with ?play=<scene id>&back: play that scene at once, and return when it ends.
   const [backTo, setBackTo] = useState<string | null>(null);
   useEffect(() => {
+    if (!ready) return;
     const q = new URLSearchParams(window.location.search);
     const hit = all.find((a) => a.scene.id === q.get('play'));
     if (hit) play(hit.scene, hit.chapter);
     if (q.has('back')) setBackTo('/lab/night');
-    // Once, on arrival.
+    // Once, on arrival (when your save has loaded, so the scene shows your hero).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [ready]);
 
   const done = (r: SceneResult) => {
     if (backTo) {

@@ -246,7 +246,7 @@ export default function NightLab() {
 
       <Panel title="TRAINING AND DAYS">
         <Row icon={<Dumbbell size={16} />} label="The Train tab" note="Exercise library, gym or home, the plan's two days, the next gear" onClick={() => open(veteran(14, 1), 'tab=train')} />
-        <Row icon={<Sparkles size={16} />} label="Stat points" note="Hero tab: 30 workouts of points to put into Health, Damage, Reach, Speed" onClick={() => open(veteran(30, 2), 'tab=hero')} />
+        <Row icon={<Sparkles size={16} />} label="Stat points" note="Hero tab: 30 workouts of points to put into Health, Armor, Damage, Haste, Speed, Crit" onClick={() => open(veteran(30, 2), 'tab=hero')} />
         <Row icon={<Dumbbell size={16} />} label="Exercise demos" note="Your hero doing each exercise on the set logger; tap it to enlarge" onClick={() => open(veteran(14, 1), 'workout')} />
         <Row icon={<BookOpen size={16} />} label="Book of Days" note="Two weeks of pages, day icons and margin notes" onClick={() => open(veteran(30, 2), 'book')} />
         <Row icon={<Gem size={16} />} label="Keepsakes" note="Three won, the rest still in the fog" onClick={() => open(veteran(40, 3), 'tab=hero')} />

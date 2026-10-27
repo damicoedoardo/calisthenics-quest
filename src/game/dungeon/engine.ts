@@ -74,7 +74,7 @@ import {
   zoneDungeon,
 } from './content';
 import { seeded } from '@/lib/random';
-import { BAG, DROP_LUCK, DROPS } from '@/balance';
+import { BAG, CRIT_HIT, DROP_LUCK, DROPS } from '@/balance';
 import type { Build } from '@/lib/stats';
 import { ITEM_SLOTS, itemScore, itemTotals, rollItem, rollRarity, shortOf, starterKit, type Item, type ItemSlot } from './items';
 
@@ -241,7 +241,7 @@ export interface Gem {
 /** What happened this step, for the screen and the speakers. */
 export type GameEvent =
   | { type: 'attack'; kind: AttackKind; x: number; y: number; angle: number; n: number; r?: number }
-  | { type: 'hit'; id: number; x: number; y: number; dmg: number; boss: boolean }
+  | { type: 'hit'; id: number; x: number; y: number; dmg: number; boss: boolean; crit?: boolean }
   | { type: 'kill'; id: number; x: number; y: number; kind: FoeKind; elite: boolean }
   | { type: 'hurt'; x: number; y: number; dmg: number; by: 'shot' | 'touch' | 'image' | 'reflection' }
   | { type: 'shoot'; x: number; y: number; boss: boolean }
@@ -416,6 +416,8 @@ export interface Run {
   setup: RunSetup;
   layout: Layout;
   rnd: () => number;
+  /** Rolls for crits, apart from `rnd` so they don't shift the floor's other rolls. */
+  critRnd: () => number;
   t: number;
   ids: number;
   /** From 0. The last room of the last floor is the boss's. */
@@ -488,6 +490,7 @@ export function createRun(setup: RunSetup): Run {
     setup,
     layout,
     rnd: seeded(setup.seed),
+    critRnd: seeded(setup.seed ^ 0x5bd1e995),
     t: 0,
     ids: 0,
     floor: 0,
@@ -1130,7 +1133,7 @@ function moveHero(run: Run, h: Hero, input: Input) {
   }
   if (len > 0.05) h.facing = Math.atan2(y, x);
   // A cleared room is safe: cross it at a run, so the walk to the next fight is short.
-  const speed = heroSpeed(h.ups) * (1 + 0.1 * relic(h, 'boots') + h.gearFx.move) * bodyOf(h).move * (run.cleared ? CLEAR_RUN : 1);
+  const speed = heroSpeed(h.ups) * (1 + 0.1 * relic(h, 'boots') + h.gearFx.move + h.power.move) * bodyOf(h).move * (run.cleared ? CLEAR_RUN : 1);
   if (h.charge && now < h.charge.until) {
     h.vx = h.charge.x;
     h.vy = h.charge.y;
@@ -1894,7 +1897,9 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
   }
   f.hitAt = run.t;
   if (f === run.warden && run.dim !== null) run.dim = Math.min(DIM.full, run.dim + DIM.back);
-  const dmg = knight ? 1 : Math.max(1, Math.round(amount));
+  // A crit: the hit does double (Crit points, src/lib/stats.ts).
+  const crit = !knight && by.power.crit > 0 && run.critRnd() < by.power.crit,
+    dmg = knight ? 1 : Math.max(1, Math.round(amount * (crit ? CRIT_HIT : 1)));
   if (f.kind === 'reflection' || f.kind === 'image') {
     // A copy of you, or of the Mirror: it shatters, and you feel it.
     hitYourself(run, by, f.kind);
@@ -1902,7 +1907,7 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
     return kill(run, f, by);
   }
   f.hp -= dmg;
-  emit(run, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg, boss });
+  emit(run, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg, boss, crit });
   // The Plateau cracks, a little at a time, and shows nothing else.
   if (boss && run.setup.zone.boss === 'plateau') {
     const cracks = Math.floor((1 - Math.max(0, f.hp) / f.maxHp) / CRACK);
