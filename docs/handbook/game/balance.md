@@ -47,7 +47,7 @@ kept there as aliases, so callers didn't change).
 | `src/balance/power.ts` | the target split of power growth (training / gear / upgrades) and its slack | the balance sheet |
 | `src/balance/dungeon.ts` | `DIALS`, elites, run levels | `src/game/dungeon/content.ts`, `src/lib/fog.ts` |
 | `src/balance/upgrades.ts` | Mira's forge +1 to +15 (`STEPS`: embers, materials, odds, strength), misses (`FORGE_RISK`), safe marks, what a fall leaves of forged gear, co-op material drops and gifts, the look bands | `src/lib/forge.ts`, `src/lib/fog-gear.ts`, `src/game/dungeon/items.ts`, `engine.ts`, `PlusGlow.tsx` |
-| `src/balance/classes.ts` | the classes, moving in one at a time: so far the monk's calm (`CALM`: what fills Stillness) | `src/game/dungeon/engine.ts` |
+| `src/balance/classes.ts` | the classes: base attacks (`ATTACK`), bodies (`CLASS_BODY`), abilities (`ABILITY`: clocks and sizes), the monk's calm (`CALM`), the two stats each leans to (`CLASS_LEAN`, `SECOND_LEAN`), and how fair they must be (`CLASS_FAIR`) | `src/game/rules.ts`, `src/game/dungeon/content.ts`, `engine.ts`, `src/lib/stats.ts` |
 | `src/balance/index.ts` | exports them all | |
 
 The move is staged so it doesn't collide with work in flight. **Not moved yet** (find them here
@@ -55,7 +55,7 @@ until they are):
 
 | Area | Where it lives now | Hidden in formulas |
 |---|---|---|
-| Classes (the rest; `CALM` has moved) | `CLASS_BODY`, `ABILITIES`, `DODGE` in `content.ts`; `ATTACK`, `HERO_HP`, `HERO_SPEED` in `src/game/rules.ts` | the abilities' sizes in `useAbility` (`engine.ts`) |
+| The hero's base (every class) | `DODGE` in `content.ts`; `HERO_HP`, `HERO_SPEED` in `src/game/rules.ts` | |
 | Run skills | `UPGRADES` in `src/lib/fog.ts` (names); what each does, in `engine.ts` | each skill's size per level |
 | Boss edge (boss weaker, free skills after a chapter's hearts are gone) | `EDGE` in `src/lib/fog.ts` | |
 | The flame's helpers | `FLAME_AT` in `fog.ts`; `FLAME`, `FIREBALL`, `FAIRY` in `rules.ts` | |
@@ -103,8 +103,11 @@ run levels. `src/balance/sheet.test.ts` writes it.
 - A new feature with a goal adds its section or goal row in `sheet.test.ts`.
 
 The Fog's win rates are measured by `pnpm fog:sim` and tuned by `pnpm fog:tune`
-([../dev/testing.md](../dev/testing.md)); they are not on the sheet yet (a run takes seconds,
-not milliseconds).
+([../dev/testing.md](../dev/testing.md)). They are too slow for `pnpm test` (a run takes seconds,
+not milliseconds), so they have their own sheet: `pnpm fog:sheet` (about two minutes) writes
+`src/balance/fog-sheet.md`, each class's win rate against the four's (fair within `CLASS_FAIR`)
+and every zone's against its goal. Run it and commit it with any change to classes, zones or
+dials.
 
 ## How to change things
 
@@ -115,7 +118,7 @@ not milliseconds).
 | Change embers, reroll price, melt values, the vault | `src/balance/economy.ts`, then `pnpm balance` |
 | Change the forge's steps, odds, safe marks, co-op materials | `src/balance/upgrades.ts`, then `pnpm balance` |
 | Change how strong, rare or demanding items are, or how often they drop | `src/balance/items.ts`, then `pnpm balance` and `pnpm fog:tune` |
-| Change a class (so far: how fast the monk's Stillness fills) | `src/balance/classes.ts`, then `CLASSES=monk pnpm fog:sim` |
+| Change a class (body, attack, ability, leans) | `src/balance/classes.ts`, then `pnpm balance` and `pnpm fog:sheet` (all four within `CLASS_FAIR`) |
 | Change the dungeon's dials, elites, run levels | `src/balance/dungeon.ts`, then `pnpm sim` and `pnpm fog:sim` |
 | Add a feature with numbers | a file (or entry) in `src/balance/`, export it from `index.ts`, a goal row in `sheet.test.ts` |
 | Change something not moved yet | where the table above says, and move it into `src/balance/` if you're there anyway |
@@ -129,6 +132,8 @@ before and after.
 
 | Date | Change | Why | Before → after | PR |
 |---|---|---|---|---|
+| 2026-10-27 | Classes: their numbers moved into `src/balance/classes.ts`; each leans to a second stat (`SECOND_LEAN`, 2 points: warrior Armor, archer Speed, monk Armor, mage Damage); warrior body HP 1.22 → 1.1, armor 0.18 → 0.1, damage 1.08 → 1.04; archer damage 1.13 → 1.22, Volley every 7 → 6 s, 1.5 → 1.8x | Edoardo: every class its own feel, but fair | `fog:sheet` class averages (open / later) warrior 52/88, monk 35/76, mage 34/74, archer 24/69 (24 runs) → warrior 34/71, monk 41/75, mage 32/74, archer 33/75 (48 runs), all within 10 points; power-scale gap warrior +30% / mage -22% → +16% / -19%; split 38/41/20 → 39/41/20 | classes PR |
+| 2026-10-27 | The monk's Stillness fills by fighting (`CALM`: +1 a hit landed, +2 a hit taken, ready at 44) instead of every 14 s | Edoardo: hiding and waiting must not heal | About one Stillness every 15-20 s of fighting, as before; `CLASSES=monk fog:sim steady 48` average (open / later) 33/74 → 36/78 | #45 |
 | 2026-10-27 | Stats: Reach out; Armor (its own stat, no longer from Health), Speed (walk) and Crit in; `POINT_WORTH` x4/3 on top of #42's (health 1.8, damage 0.0117, haste 0.00972, armor 0.0036; walk 0.0044, crit 0.0026); `powerScore` counts crits; item needs spread over 6 stats; archer leans Crit | Edoardo: loot comes to you, so Reach did nothing worth a point; six stats feel fuller but stay finite | 70 points a stat now = what 100 a stat gave (+79% damage, +64% attack speed, +103 HP, 21% blocked), plus +25% walk and 20% crit; split 39/41/20 → 38/41/20, power at 37 workouts 235 → 234, at 64 345 → 348; fog:sim in the PR | #44 |
 | 2026-10-27 | Target split 40/40/20 set; `POINT_WORTH` x1.35, `ITEM_POWER` 2.2 → 1.76 | Training should earn more of a player's power (Edoardo's pick) | Split 28/48/24 → 39/41/20; power at 37 workouts 246 → 235, at 64 366 → 345; `fog:sim steady 24` zone win rates (open / later) 20/78, 26/51, 32/55, 50/51, 32/93, 32/85 → 20/81, 25/43, 21/70, 51/55, 40/98, 33/91 | #42 |
 | 2026-10-27 | `powerScore` and "Power by workouts" on the sheet (no number changed) | One scale to compare training, gear, upgrades and classes | Training ~27%, gear ~45-60%, upgrades up to ~30% of the gain; warrior +27%, mage -21% before abilities | #42 |

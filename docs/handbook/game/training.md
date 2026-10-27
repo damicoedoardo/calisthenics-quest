@@ -81,8 +81,9 @@ falloff, armor, class lean) are in `src/balance/stats.ts`.
 ## Classes and gear (`gear.ts`)
 
 Warrior (sword), Archer (bow), Monk (staff), Mage (wand). A class only changes how you fight in
-the Fog: its attack style there, and a small lean to one stat (`CLASS_LEAN` in `stats.ts`, as if
-it had `CLASS_LEAN_POINTS` more there, set in `src/balance/stats.ts`). Each has its own ability in a
+the Fog: its attack style there, and a small lean to two stats (`CLASS_LEAN` and `SECOND_LEAN` in
+`src/balance/classes.ts`, as if it had `CLASS_LEAN_POINTS` and `SECOND_LEAN_POINTS` more there:
+warrior Damage and Armor, archer Crit and Speed, monk Health and Armor, mage Haste and Damage). Each has its own ability in a
 run; the monk's Stillness fills by fighting, not by time (`CALM` in `src/balance/classes.ts`). Gear has a weapon, armor and shield slot. Mira's forge used to raise one slot a tier
 every `GEAR_EVERY` workouts (`tiersAt`, `nextForge`); it doesn't any more. `migrate()` froze what
 it had made as the hero's look (`fogGear.kit`), and `gearOf` shows the finer of that and the

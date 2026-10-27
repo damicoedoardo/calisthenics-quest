@@ -23,7 +23,8 @@ level or story.
 - **Power from training**: `powerOf(state, now)` turns the save into a run's power. The stat
   points the player put into the champion give Health, Armor, Damage, Haste (attack speed), Speed
   (walk speed) and Crit, see `statPower` in `src/lib/stats.ts` and
-  [training.md](training.md). The flame's fires circle you at `FLAME_AT` workouts (1, 6, 15, 30); a bonfire throws
+  [training.md](training.md); each class's attack, body and ability numbers are in
+  `src/balance/classes.ts`. The flame's fires circle you at `FLAME_AT` workouts (1, 6, 15, 30); a bonfire throws
   fireballs, a fire fairy heals when you're low. Training in the last two days gives a free run
   skill, resting (a day off or a minute by the fire) one more. `nextGrowth` writes the "train to
   grow" hint (points waiting to be spent, or that workouts earn them).

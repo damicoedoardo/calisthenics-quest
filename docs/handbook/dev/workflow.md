@@ -17,7 +17,7 @@ timestamp: 2026-10-27
 | `pnpm test` | Vitest: rules, story, sprites, Fog replays. `pnpm test -u` accepts snapshot changes you meant |
 | `pnpm exec tsc --noEmit; echo $?` | Typecheck. Read the exit code: piping into `tail` hides it |
 | `pnpm build` | Production build (also typechecks) |
-| `pnpm sim`, `pnpm fog:sim`, `pnpm fog:tune`, `pnpm fog:balance` | Simulators, see [testing.md](testing.md) |
+| `pnpm sim`, `pnpm fog:sim`, `pnpm fog:sheet`, `pnpm fog:tune`, `pnpm fog:balance` | Simulators, see [testing.md](testing.md) |
 | `pnpm balance` | Rewrite the balance sheet `src/balance/sheet.md`, see [../game/balance.md](../game/balance.md) |
 | `pnpm exercises:db` | Writes the exercise library to `public/data/exercises.json`, see [../game/exercise-library.md](../game/exercise-library.md) |
 | `pnpm handbook:lint`, `pnpm handbook:check` | The handbook guard, see [handbook.md](handbook.md) |

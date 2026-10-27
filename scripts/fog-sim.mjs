@@ -5,6 +5,7 @@
 //   pnpm sim                                   # writes sim-out/states/*.json (snapshots at each zone)
 //   pnpm fog:sim steady 100                    # win rates per zone, for each class
 //   pnpm fog:tune steady 60                    # finds each zone's hp/dmg for the target win rates
+//   pnpm fog:sheet                             # fog:sim steady 48, written to src/balance/fog-sheet.md
 //
 // Options (env): CLASSES=archer,mage (default: all four), ONLY=zone1-open,zone1-later picks
 // snapshots, SCALE='{"2":1.2}' plays zone 2 with its hp and dmg 1.2x, DIALS='{"fire":1.5}' turns the
@@ -115,8 +116,10 @@ if (!isMainThread) {
       return t.length ? `${(t[Math.floor(t.length / 2)] / 60).toFixed(1)}m` : '-';
     };
     console.log(`${'snapshot'.padEnd(12)} ${classes.map((c) => c.padStart(14)).join('')}   reached the boss, deepest floor on a loss`);
+    const table = [];
     for (const snap of snaps) {
       const per = await measure(snap, scales[snap.zone] ?? 1);
+      table.push({ snap, rates: per.map((p) => rate(p.res)) });
       const all = per.flatMap((p) => p.res);
       const reached = all.filter((r) => r.bossAt !== null).length / all.length;
       const lost = all.filter((r) => !r.won).map((r) => r.floor);
@@ -125,6 +128,47 @@ if (!isMainThread) {
       // A run this long means something held a room shut: worth a look (replay it with its seed).
       const long = per.flatMap((p) => p.res.filter((r) => r.seconds > 25 * 60).map((r) => `${p.cls} seed ${r.seed} (floor ${r.floor}.${r.room}, ${Math.round(r.seconds / 60)}m)`));
       if (long.length) console.log(`  ! ${long.length} past 25 min: ${long.slice(0, 6).join(', ')}${long.length > 6 ? ', ...' : ''}`);
+    }
+    // Each class's average over the zones, against the four's (CLASS_FAIR in src/balance/classes.ts).
+    const { CLASS_FAIR } = await import(`${root}src/balance/classes.ts`);
+    const fair = ['open', 'later'].map((kind) => {
+      const rows = table.filter((t) => t.snap.label.endsWith(kind));
+      const avg = classes.map((_, i) => rows.reduce((n, t) => n + t.rates[i], 0) / (rows.length || 1)),
+        mean = avg.reduce((a, b) => a + b, 0) / avg.length;
+      return { kind, avg, mean, ok: avg.every((a) => Math.abs(a - mean) <= CLASS_FAIR) };
+    });
+    console.log('');
+    for (const f of fair) console.log(`${`${f.kind} (average)`.padEnd(16)} ${f.avg.map((a, i) => `${classes[i]} ${pct(a)}`).join('  ')}   all four ${pct(f.mean)}: ${f.ok ? 'fair' : `a class is more than ${pct(CLASS_FAIR)} off`}`);
+    // SHEET=1 writes the result next to the balance sheet (pnpm fog:sheet).
+    if (process.env.SHEET) {
+      const { writeFileSync } = await import('node:fs');
+      const row = (cells) => `| ${cells.join(' | ')} |`;
+      const md = [
+        '# Fog sheet',
+        '',
+        `Written by \`pnpm fog:sheet\` (the Fog bot, ${runs} runs per class per point, player \`${player}\`). Do not edit by hand. The goals: \`src/balance/classes.ts\` and \`src/balance/dungeon.ts\`; the rule: \`docs/handbook/game/balance.md\`.`,
+        '',
+        '## Classes',
+        '',
+        `Each class's win rate, averaged over the zones, against the four's average (fair: within ${Math.round(CLASS_FAIR * 100)} points).`,
+        '',
+        row(['When', ...classes, 'All four', '']),
+        row(['---', ...classes.map(() => '---'), '---', '---']),
+        ...fair.map((f) => row([f.kind === 'open' ? 'The day a zone opens' : 'Six workouts later', ...f.avg.map((a) => pct(a).trim()), pct(f.mean).trim(), f.ok ? 'fair' : '**off**'])),
+        '',
+        '## Zones',
+        '',
+        'Win rate by zone and class. Goal: about 1 in 3 the day a zone opens, about 2 in 3 six workouts later.',
+        '',
+        row(['Zone', 'When', ...classes, 'All four']),
+        row(['---', '---', ...classes.map(() => '---'), '---']),
+        ...[...table]
+          .sort((x, y) => x.snap.zone - y.snap.zone || (x.snap.label.endsWith('open') ? -1 : 1))
+          .map((t) => row([String(t.snap.zone + 1), t.snap.label.endsWith('open') ? 'opens' : '+6 workouts', ...t.rates.map((r) => pct(r).trim()), pct(t.rates.reduce((a, b) => a + b, 0) / t.rates.length).trim()])),
+        '',
+      ].join('\n');
+      writeFileSync(`${root}src/balance/fog-sheet.md`, md);
+      console.log('Wrote src/balance/fog-sheet.md');
     }
   } else {
     // For each zone, the scale on its enemies' hp and damage that puts the average of
