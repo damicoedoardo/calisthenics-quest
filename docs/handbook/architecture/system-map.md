@@ -8,10 +8,15 @@ timestamp: 2026-10-27
 
 # System map
 
-FORMA is a Next.js 16 (App Router) app that runs entirely in the browser. There is no backend,
-no API route and no database: one page (`src/app/page.tsx`) holds the whole app, the save is in
+FORMA is a Next.js 16 (App Router) app that runs entirely in the browser. The game needs no
+server: one page (`src/app/page.tsx`) holds the whole app, the save is in
 `localStorage`, and Vercel serves the static build. Stack: TypeScript (strict), React 18,
 Tailwind 3, Phaser 3 for the Fog, Vitest for tests, pnpm.
+
+A backend is being added for login, save backup and the coming workout planner: a FastAPI app in
+`backend/` on FORMA's own server, with Supabase for login ([../backend/index.md](../backend/index.md)).
+The app calls it only when signed in, and sign-in shows only once the backend's env vars are
+set ([../backend/cloud-sync.md](../backend/cloud-sync.md)).
 
 ```
 src/
@@ -31,6 +36,8 @@ src/
 scripts/            Node tools: Fog simulator and balance, iOS splash drawing, TS loader for Node,
                     the handbook check
 public/             sw.js (offline service worker), app icons, iOS splash screens
+backend/            The FastAPI api (Python): login check, save backup ../backend/api.md
+caddy/, docker-compose.yml   The server's stack; scripts/deploy/ ships it ../backend/server.md
 docs/handbook/      This handbook
 ```
 

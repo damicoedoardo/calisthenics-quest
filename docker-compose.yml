@@ -1,0 +1,70 @@
+# FORMA's server: one box running this stack, the same shape as minlit's (see
+# docs/handbook/backend/server.md). Caddy is the only public door; Postgres is loopback only.
+# Settings come from .env next to this file (template: .env.example).
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    # Loopback only: reachable from the box (psql, backups), never from the internet. The api
+    # reaches it over the compose network as postgres:5432.
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_DB: forma
+      POSTGRES_USER: forma
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-forma_dev}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "forma", "-d", "forma"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    # On the server this image comes from GHCR and is swapped in with a zero-downtime
+    # `docker rollout api` (scripts/deploy/). `build:` is the local fallback.
+    image: ghcr.io/damicoedoardo/forma-api:latest
+    build: ./backend
+    # No host port: `docker rollout` briefly runs two api containers side by side, which would
+    # clash on a fixed port. Caddy reaches it as api:8000.
+    expose:
+      - "8000"
+    environment:
+      - FORMA_ENV=production
+      - FORMA_DATABASE_URL=postgresql://forma:${POSTGRES_PASSWORD:-forma_dev}@postgres:5432/forma
+      - FORMA_SUPABASE_ISSUER=${SUPABASE_ISSUER:-}
+      - FORMA_SUPABASE_JWKS_URL=${SUPABASE_JWKS_URL:-}
+      - FORMA_CORS_ORIGINS=${CORS_ORIGINS:-https://forma-nu-red.vercel.app,http://localhost:3000}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health').status==200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN:-localhost}
+    volumes:
+      # A directory mount, so a `git pull` that replaces the Caddyfile is seen after a reload.
+      - ./caddy:/etc/caddy
+      - caddy_data:/data
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  caddy_data:

@@ -1,0 +1,17 @@
+# The api's public address (DOMAIN in .env). Caddy fetches and renews the certificate itself.
+{$DOMAIN:localhost} {
+    # Find the `api` container again every 2s, and retry a request that lands on one being
+    # removed, so a `docker rollout api` swaps versions without dropping requests. Same as minlit.
+    reverse_proxy {
+        dynamic a {
+            name api
+            port 8000
+            refresh 2s
+        }
+        lb_try_duration 10s
+        lb_try_interval 250ms
+        transport http {
+            dial_timeout 2s
+        }
+    }
+}

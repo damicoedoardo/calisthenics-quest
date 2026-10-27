@@ -39,6 +39,16 @@ https://forma-nu-red.vercel.app.
 overnight run used them all on 2026-10-27 and production was refused. So: commit locally as much
 as you like, push a branch once when it is ready, and batch fixes into one push.
 
+## CI (GitHub Actions)
+
+| Workflow | When | What |
+|---|---|---|
+| `handbook.yml` | every PR | the handbook guard ([handbook.md](handbook.md)) |
+| `backend.yml` | PRs touching `backend/` | backend lint and tests ([../backend/api.md](../backend/api.md)) |
+| `deploy-backend.yml` | `backend/` lands on `main` | tests, then the api image to GHCR; the server picks it up ([../backend/server.md](../backend/server.md)) |
+
+The web app's tests (`pnpm test`) run locally before a push, not in CI.
+
 ## Showing work
 
 Send Edoardo a preview link to the real app (with a `/lab/night` jump when useful), not a
