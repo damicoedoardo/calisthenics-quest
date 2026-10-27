@@ -3,7 +3,7 @@ import type { ClassId } from '@/lib/gear';
 import { xpToNext, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import { music, type SfxId } from '@/lib/music';
 import type { Sheet } from '@/sprites/registry';
-import { BOSSES as BOSS_LOOKS, FOES as FOE_LOOKS, type SheetKey, type Stats } from '../rules';
+import { BOSSES as BOSS_LOOKS, FOES as FOE_LOOKS, type SheetKey, type Sheets, type Stats } from '../rules';
 import { R } from '@/sprites/palette';
 import { botInput } from './bot';
 import { BARREL, CHEST, CHEST_OPEN, PILLAR, SCONCE, SHRINE as SHRINE_PROP, type Prop } from './props';
@@ -51,7 +51,7 @@ export interface RunSetup {
   zone: Zone;
   power: Power;
   classId: ClassId | undefined;
-  sheets: Record<SheetKey, Sheet>;
+  sheets: Sheets;
   /** The bot plays (developer mode, balance tests). */
   autopilot?: boolean;
   /** Play the whole run at once without drawing it (balance tests). */

@@ -40,6 +40,7 @@ import {
   type AttackKind,
   type FoeKind,
   type SheetKey,
+  type Sheets,
   type Stats,
 } from './rules';
 import type { FogBoss } from '@/story/types';
@@ -61,7 +62,7 @@ export interface RunSetup {
   zone: Zone;
   power: Power;
   classId: ClassId | undefined;
-  sheets: Record<SheetKey, Sheet>;
+  sheets: Sheets;
   /** The bot plays: it moves and picks skills on its own (developer mode, balance tests). */
   autopilot?: boolean;
   /** Play the whole run as fast as the computer can, without drawing it (balance tests). */

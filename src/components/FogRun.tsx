@@ -7,10 +7,12 @@ import { getUpgrade, nextGrowth, powerOf, RUN_SECONDS, type RunResult, type Upgr
 import { music } from '@/lib/music';
 import { sheetFor } from '@/sprites/registry';
 import { SoundToggle, useMusic } from './Sound';
-import type { FreePick, Hud as SurviveHud, RunEnd as SurviveEnd, RunHandle as SurviveHandle, SheetKey } from '@/game/run';
+import type { FreePick, Hud as SurviveHud, RunEnd as SurviveEnd, RunHandle as SurviveHandle } from '@/game/run';
 import type { Hud as DungeonHud, RunEnd as DungeonEnd } from '@/game/dungeon/scene';
 import { ABILITIES, DODGE, RELICS, WARDEN, type AbilityId, type RelicId } from '@/game/dungeon/engine';
 import type { Sheet } from '@/sprites/registry';
+import type { HeroOpts } from '@/sprites/characters/hero';
+import type { BossSheetKey, Sheets } from '@/game/rules';
 
 interface Props {
   state: GameState;
@@ -58,6 +60,34 @@ const WARDEN_NAME = WARDEN.name.replace(/^the/, 'The');
 
 export const isDungeon = (zone: Zone) => zone.id === 0;
 
+/** The dungeon boss sheets for a zone (by id: 1 the Mirror, 2 the Knight, 3 the Plateau, 4 the
+    Hollow, 5 the Summit). Only the run's own boss is drawn: they're big and there are many. */
+function bossSheets(zoneId: number, hero: Pick<HeroOpts, 'gear' | 'classId' | 'look'>): Partial<Record<BossSheetKey, Sheet>> {
+  if (zoneId === 1)
+    return { mirrorBoss: sheetFor('mirrorBoss', 'idle', hero), mirrorBossAttack: sheetFor('mirrorBoss', 'attack', hero), mirrorBossShatter: sheetFor('mirrorBossShatter', 'idle', hero) };
+  if (zoneId === 2)
+    return {
+      knightBoss: sheetFor('knightBoss', 'idle', { stage: 0 }),
+      knightBossAttack: sheetFor('knightBoss', 'attack', { stage: 0 }),
+      knightBoss1: sheetFor('knightBoss', 'idle', { stage: 1 }),
+      knightBoss1Attack: sheetFor('knightBoss', 'attack', { stage: 1 }),
+      knightBoss2: sheetFor('knightBoss', 'idle', { stage: 2 }),
+      knightBoss2Attack: sheetFor('knightBoss', 'attack', { stage: 2 }),
+    };
+  if (zoneId === 3)
+    return {
+      plateauBoss: sheetFor('plateauBoss', 'idle', { stage: 0 }),
+      plateauBossAttack: sheetFor('plateauBoss', 'attack', { stage: 0 }),
+      plateauBoss1: sheetFor('plateauBoss', 'idle', { stage: 1 }),
+      plateauBoss1Attack: sheetFor('plateauBoss', 'attack', { stage: 1 }),
+      plateauBoss2: sheetFor('plateauBoss', 'idle', { stage: 2 }),
+      plateauBoss2Attack: sheetFor('plateauBoss', 'attack', { stage: 2 }),
+    };
+  if (zoneId === 4) return { hollowBoss: sheetFor('hollowBoss', 'idle'), hollowBossAttack: sheetFor('hollowBoss', 'attack'), hollowBossFade: sheetFor('hollowBossFade', 'idle') };
+  if (zoneId === 5) return { summitBoss: sheetFor('summitBoss', 'idle'), summitBossAttack: sheetFor('summitBoss', 'attack') };
+  return {};
+}
+
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 /** A run in the Fog: the Phaser canvas, with the HUD, skill picks and results drawn over it. */
@@ -91,7 +121,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
     const gear = gearOf(state),
       classId = state.profile.classId,
       look = state.profile.look;
-    const sheets: Record<SheetKey, Sheet> = {
+    const sheets: Sheets = {
       hero: sheetFor('hero', 'idle', { gear, classId, look }),
       heroAttack: sheetFor('hero', 'attack', { gear, classId, look }),
       hollow: sheetFor('hero', 'idle', { gear, classId, look, variant: 'hollow' }),
@@ -112,6 +142,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
       shade: sheetFor('shade', 'idle'),
       splitterPop: sheetFor('splitterPop', 'idle'),
       warden: sheetFor('warden', 'idle'),
+      ...bossSheets(zone.id, { gear, classId, look }),
     };
     setHud(null);
     setEnd(null);
