@@ -4,7 +4,10 @@ import { levelInfo, totalXp } from '@/lib/game';
 import { embersEarned, upgradeCost } from '@/lib/forge';
 import { salvageValue, vaultSize } from '@/lib/fog-gear';
 import { pointsEarned, statPower, STATS } from '@/lib/stats';
-import { MAX_PLUS, type Item, type Rarity } from '@/game/dungeon/items';
+import { MAX_PLUS, rollItem, rollRarity, RARITY, starterKit, type Item, type Rarity } from '@/game/dungeon/items';
+import { DROP_LUCK, DROPS, NEED } from '@/balance';
+import { ZONES, xpToNext } from '@/lib/fog';
+import { seeded } from '@/lib/random';
 import { playSeason } from '@/sim/season';
 import { PLAYERS } from '@/sim/players';
 
@@ -13,6 +16,8 @@ import { PLAYERS } from '@/sim/players';
    so every balance change shows its before and after in the pull request. */
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
+/** A share with one decimal, for small chances. */
+const pct1 = (v: number) => `${(v * 100).toFixed(1)}%`;
 const row = (cells: (string | number)[]) => `| ${cells.join(' | ')} |`;
 const table = (head: string[], rows: (string | number)[][]) => [row(head), row(head.map(() => '---')), ...rows.map(row)].join('\n');
 
@@ -76,6 +81,72 @@ function forge(): string {
   ].join('\n');
 }
 
+const RARITIES: Rarity[] = ['common', 'magic', 'rare', 'legendary'];
+
+/** A weapon from this spot with every roll at its middle (rnd 0 picks the weapon slot, then 0.5). */
+function middleWeapon(zone: number, floor: number, rarity: Rarity): Item {
+  let first = true;
+  const rnd = () => (first ? ((first = false), 0) : 0.5);
+  return rollItem(rnd, { zone, workouts: ZONES[zone].workouts, floor, cls: 'warrior' }, rarity);
+}
+
+/** Workouts until an even build has `n` points in each stat (the model requirements follow). */
+const workoutsFor = (n: number) => Math.max(0, Math.ceil((n * NEED.stats - NEED.start) / NEED.perWorkout));
+
+function items(): string {
+  const starter = starterKit('warrior').weapon.base[0].v;
+  const rows = ZONES.flatMap((z) =>
+    [0, 9].flatMap((floor) =>
+      (['magic', 'rare', 'legendary'] as Rarity[]).map((r) => {
+        const it = middleWeapon(z.id, floor, r);
+        const need = it.need?.n ?? 0;
+        return [`${z.id + 1} (${z.workouts} workouts in)`, floor + 1, RARITY[r].name, `+${pct(it.base[0].v)}`, it.bonuses.length, need, workoutsFor(need)];
+      }),
+    ),
+  );
+  return [
+    '## Weapons',
+    '',
+    `The starter weapon gives +${pct(starter)} damage. A weapon with middle rolls, by zone, floor and rarity, the points in the class's stat it asks for, and the workouts until an even build has them:`,
+    '',
+    table(['Zone', 'Floor', 'Rarity', 'Damage', 'Bonuses', 'Needs points', 'Even build after'], rows),
+  ].join('\n');
+}
+
+function drops(): string {
+  const N = 20000;
+  const share = (floor: number, luck: number) => {
+    const rnd = seeded(1),
+      n: Record<Rarity, number> = { common: 0, magic: 0, rare: 0, legendary: 0 };
+    for (let i = 0; i < N; i++) n[rollRarity(rnd, floor, luck)]++;
+    return RARITIES.map((r) => pct(n[r] / N));
+  };
+  const sources: [string, number, string][] = [
+    ['Monster', 0, pct1(DROPS.plain)],
+    ['Elite or golem', DROP_LUCK.elite, `${pct(DROPS.elite)} / ${pct(DROPS.golem)}`],
+    ['Chest', DROP_LUCK.chest, pct(DROPS.chest)],
+    ['Mid-boss, boss', DROP_LUCK.boss, '100%'],
+  ];
+  const rows = sources.flatMap(([name, luck, chance]) => [0, 9].map((floor) => [name, floor + 1, chance, ...share(floor, luck)]));
+  return [
+    '## Drops and rarity',
+    '',
+    `How often each source drops an item, and the rarity it rolls (${N} rolls each):`,
+    '',
+    table(['Source', 'Floor', 'Drop chance', ...RARITIES.map((r) => RARITY[r].name)], rows),
+  ].join('\n');
+}
+
+function runLevels(): string {
+  let total = 0;
+  const at = new Map<number, number>();
+  for (let l = 1; l <= 20; l++) {
+    total += xpToNext(l);
+    at.set(l + 1, total);
+  }
+  return ['## Run levels', '', 'Light to reach a level inside a run:', '', table(['Level', '2', '5', '10', '15', '20'], [['Light', ...[2, 5, 10, 15, 20].map((l) => at.get(l) ?? 0)]])].join('\n');
+}
+
 function goals(): string {
   const steady = playSeason(PLAYERS.find((p) => p.id === 'steady')!, 182).state;
   const perLevel = steady.sessions.length / (levelInfo(totalXp(steady)).level - 1);
@@ -115,6 +186,12 @@ describe('balance sheet', () => {
       points(),
       '',
       forge(),
+      '',
+      items(),
+      '',
+      drops(),
+      '',
+      runLevels(),
       '',
     ].join('\n');
     await expect(sheet).toMatchFileSnapshot('./sheet.md');

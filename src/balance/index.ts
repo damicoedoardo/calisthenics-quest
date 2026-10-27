@@ -5,3 +5,5 @@
 export * from './training';
 export * from './stats';
 export * from './economy';
+export * from './items';
+export * from './dungeon';
