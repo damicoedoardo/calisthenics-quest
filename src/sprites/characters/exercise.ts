@@ -25,7 +25,18 @@ export type ExerciseId =
   | 'tuck-lsit'
   | 'one-leg-lsit'
   | 'lsit'
-  | 'toes-to-bar';
+  | 'toes-to-bar'
+  // the general gym moves (the exercise library's first batch)
+  | 'squat'
+  | 'barbell-squat'
+  | 'deadlift'
+  | 'bench-press'
+  | 'curl'
+  | 'shoulder-press'
+  | 'barbell-row'
+  | 'plank'
+  | 'lunge'
+  | 'kettlebell-swing';
 
 export const EXERCISES: ExerciseId[] = [
   'incline-pushup',
@@ -44,6 +55,16 @@ export const EXERCISES: ExerciseId[] = [
   'one-leg-lsit',
   'lsit',
   'toes-to-bar',
+  'squat',
+  'barbell-squat',
+  'deadlift',
+  'bench-press',
+  'curl',
+  'shoulder-press',
+  'barbell-row',
+  'plank',
+  'lunge',
+  'kettlebell-swing',
 ];
 
 export interface ExerciseOpts {
@@ -138,7 +159,9 @@ const FLOOR = 56;
 const STEEL: Ramp = ['#4a5260', '#8a93a1', '#c9ced6'];
 const WOOD: Ramp = R.leather;
 
-function props(g: Grid, kind: 'floor' | 'bench' | 'bar' | 'dipbar' | 'parallettes', band?: { from: P; to: P }) {
+type Props = 'floor' | 'bench' | 'flatbench' | 'bar' | 'dipbar' | 'parallettes';
+
+function props(g: Grid, kind: Props, band?: { from: P; to: P }) {
   const put = (x: number, y: number, c: string) => {
     x = Math.round(x);
     y = Math.round(y);
@@ -164,6 +187,13 @@ function props(g: Grid, kind: 'floor' | 'bench' | 'bar' | 'dipbar' | 'parallette
     rect(4, 8, 59, 8, STEEL[2]);
     rect(2, 4, 3, 63, STEEL[0]);
     rect(60, 4, 61, 63, STEEL[0]);
+  }
+  if (kind === 'flatbench') {
+    // a long weight bench under the back, its feet at both ends
+    rect(16, 44, 50, 45, WOOD[2]);
+    rect(16, 46, 50, 47, WOOD[1]);
+    rect(18, 48, 20, FLOOR, STEEL[0]);
+    rect(46, 48, 48, FLOOR, STEEL[0]);
   }
   if (kind === 'dipbar') {
     rect(14, 30, 50, 31, STEEL[1]);
@@ -261,8 +291,12 @@ function drawHead(g: Grid, p: Pose, c: Colors, look?: Look) {
     }
   // a long tail of hair falls with gravity from the back of the head
   if (look && !p.front && (look.style === 'long' || look.style === 'pony')) {
-    const back = add(p.head, add(mul(p.face, -3.5), mul(p.up, 2)));
-    capsule(g, back, add(back, [-p.face[0] * 2, 7]), 1.6, c.hair[0]);
+    // long hair falls past the shoulders; a pony tail flicks out from higher on the head
+    const pony = look.style === 'pony',
+      back = add(p.head, add(mul(p.face, -3.5), mul(p.up, pony ? 3 : 1.5)));
+    const end = add(back, pony ? [-p.face[0] * 4, 6] : [-p.face[0] * 1.5, 9]);
+    capsule(g, back, end, pony ? 1.5 : 2, c.hair[1]);
+    capsule(g, back, lerp(back, end, 0.5), 0.8, c.hair[2]);
   }
   const put = (q: P, col: string) => {
     const x = Math.round(q[0]),
@@ -277,6 +311,11 @@ function drawHead(g: Grid, p: Pose, c: Colors, look?: Look) {
     const eye = add(p.head, add(mul(p.face, 2.6), mul(p.up, 0.4)));
     put(eye, '#1c1917');
     put(add(eye, mul(p.up, 1)), '#1c1917');
+    // a girl's lashes flick out past the eye; her lips catch a touch of color
+    if (look?.sex === 'f') {
+      put(add(eye, add(mul(p.up, 1.6), mul(p.face, 0.8))), '#1c1917');
+      put(add(p.head, add(mul(p.face, 4.2), mul(p.up, -2.6))), '#c4566a');
+    }
   }
 }
 
@@ -460,7 +499,205 @@ function diamondFront(d: number): Pose {
   };
 }
 
-function poseFor(id: ExerciseId, f: number, view: ExerciseOpts['view'] = 'side'): { pose: Pose; props: Parameters<typeof props>[1]; band?: { from: P; to: P } } {
+// ---------- the gym moves: standing, hinging, lying on a bench ----------
+
+/** What you're lifting, seen side on: a barbell's plate end on, a dumbbell's end, a kettlebell. */
+interface Weight {
+  kind: 'barbell' | 'dumbbell' | 'kettlebell';
+  at: P;
+  /** Drawn behind you (the bar across your back in a squat). */
+  behind?: boolean;
+}
+const IRON: Ramp = ['#1f232c', '#353b48', '#5b6373'];
+
+function drawWeight(g: Grid, w: Weight) {
+  const layer = grid(64);
+  if (w.kind === 'barbell') {
+    // the plate, end on: a dark disc, a raised rim, the bright sleeve in the middle
+    capsule(layer, w.at, w.at, 6, IRON[1]);
+    capsule(layer, add(w.at, [-0.5, -0.5]), add(w.at, [-0.5, -0.5]), 4.2, IRON[0]);
+    capsule(layer, w.at, w.at, 1.2, STEEL[2]);
+  } else if (w.kind === 'dumbbell') {
+    capsule(layer, w.at, w.at, 2.6, IRON[1]);
+    capsule(layer, w.at, w.at, 0.8, STEEL[1]);
+  } else {
+    // the handle in the hand, the round bell hanging under it
+    const down = add(w.at, [0, 4]);
+    capsule(layer, add(w.at, [-1.5, 0.5]), add(w.at, [1.5, 0.5]), 0.8, IRON[2]);
+    capsule(layer, down, down, 3.4, IRON[1]);
+    capsule(layer, add(down, [-1, -1]), add(down, [-1, -1]), 1, IRON[2]);
+  }
+  stamp(g, outline(layer));
+}
+
+/** A standing (or hinging) body from the feet up: the hip placed, the torso tipped `lean`
+    radians forward, both legs to the feet by IK, knees bending forward. */
+function standing(hip: P, lean: number, feet: { near: P; far: P }, arms: (shoulder: P, along: P) => { near: Arm; far: Arm }, toes: P = [1, 0.15]): Pose {
+  const along: P = [Math.sin(lean), -Math.cos(lean)],
+    shoulder = add(hip, mul(along, TORSO));
+  const l = leg(hip, feet.near, [1, 0], toes),
+    lf = leg(add(hip, [-1, 0]), feet.far, [1, 0], toes);
+  const { near, far } = arms(shoulder, along);
+  // the head on the neck, looking ahead and a little down as the torso tips
+  const face: P = unit(add([1, 0], mul(along, -0.15 + 0.5 * Math.sin(lean)))) as P;
+  return {
+    head: add(shoulder, add(mul(along, NECK), [1.2, 0])),
+    face,
+    up: along,
+    shoulder,
+    hip,
+    near: { arm: near, leg: l },
+    far: { arm: far, leg: lf },
+  };
+}
+
+/** The far arm: the near one nudged back a pixel. */
+const farOf = (a: Arm, by: P = [-1, 0]): Arm => ({ shoulder: add(a.shoulder, by), elbow: add(a.elbow, by), hand: add(a.hand, by) });
+const both = (a: Arm, by?: P) => ({ near: a, far: farOf(a, by) });
+const FEET = { near: [32, FLOOR - 1.5] as P, far: [31, FLOOR - 1.5] as P };
+
+/** A squat: hips back and down until the thighs are level, chest up, heels down. */
+function squatPose(d: number, arms: (shoulder: P, along: P) => { near: Arm; far: Arm }): Pose {
+  const hip = lerp([30, FLOOR - 1.5 - THIGH - SHIN + 0.4], [21, FLOOR - 1.5 - SHIN + 1], d);
+  return standing(hip, 0.08 + 0.45 * d, FEET, arms);
+}
+
+/** The hip hinge of a deadlift: d = 0 standing tall, 1 the bar on the floor, arms always hanging
+    straight, the back flat. */
+function deadliftPose(d: number): { pose: Pose; hand: P } {
+  const hip = lerp([29, 35.5], [23, 40], d);
+  const lean = 0.06 + 1.1 * d;
+  let hand: P = [0, 0];
+  const pose = standing(hip, lean, FEET, (shoulder) => {
+    hand = add(shoulder, [0.5, LOCKED]);
+    return both(arm(shoulder, hand, [-1, 0]));
+  });
+  return { pose, hand };
+}
+
+function gymPose(id: ExerciseId, f: number): { pose: Pose; props: Props; weight?: Weight } | null {
+  const d = REP[f % 16],
+    b = breath(f),
+    // a swing never stops: one smooth arc per loop
+    swing = (1 - Math.cos((2 * Math.PI * (f % 16)) / 16)) / 2;
+  switch (id) {
+    case 'squat':
+      // arms reach forward as you sit back, to balance
+      return {
+        pose: squatPose(d, (shoulder) => both(arm(shoulder, add(shoulder, mul(dir(70 - 60 * d), LOCKED)), [0, 1]))),
+        props: 'floor',
+      };
+    case 'barbell-squat': {
+      let bar: P = [0, 0];
+      const pose = squatPose(d, (shoulder, along) => {
+        // the bar sits across the upper back, hands just outside the shoulders, elbows down and back
+        bar = add(shoulder, add(mul(along, 0.5), [-2.5, 0]));
+        return both(arm(shoulder, add(bar, [1, 0]), [-0.6, 1], 6, 7));
+      });
+      return { pose, props: 'floor', weight: { kind: 'barbell', at: bar } };
+    }
+    case 'deadlift': {
+      const { pose, hand } = deadliftPose(d);
+      return { pose, props: 'floor', weight: { kind: 'barbell', at: [hand[0], Math.min(hand[1], FLOOR - 5.5)] } };
+    }
+    case 'bench-press': {
+      // lying on the bench, feet planted, the bar from locked arms down to the chest
+      const shoulder: P = [40, 40.5],
+        hip: P = [26, 41];
+      const hand = lerp([39.5, shoulder[1] - LOCKED], [36.5, 34.5], d);
+      const a = arm(shoulder, hand, [-0.2, 1]);
+      const l = leg(hip, [14, FLOOR - 1.5], [0, -1], [1, 0.2]);
+      return {
+        pose: {
+          head: add(shoulder, [NECK, -0.5]),
+          face: [0, -1],
+          up: [1, 0],
+          shoulder,
+          hip,
+          near: { arm: a, leg: l },
+          far: { arm: farOf(a, [-1, -0.5]), leg: leg(add(hip, [-1, 0]), [12, FLOOR - 1.5], [0, -1], [1, 0.2]) },
+        },
+        props: 'flatbench',
+        weight: { kind: 'barbell', at: add(hand, [0, -0.5]) },
+      };
+    }
+    case 'curl': {
+      // elbows pinned to the sides, only the forearms move
+      let hand: P = [0, 0];
+      const pose = standing([30, 35.5], 0.03, FEET, (shoulder) => {
+        const elbow = add(shoulder, [0.5, UPPER]);
+        hand = add(elbow, mul(dir(85 - 140 * d), FORE));
+        return both({ shoulder, elbow, hand });
+      });
+      return { pose, props: 'floor', weight: { kind: 'dumbbell', at: hand } };
+    }
+    case 'shoulder-press': {
+      let hand: P = [0, 0];
+      const pose = standing([30, 35.5], 0.02, FEET, (shoulder) => {
+        hand = lerp(add(shoulder, [6, 0.5]), add(shoulder, [0.8, -LOCKED]), d);
+        return both(arm(shoulder, hand, [1, 0.4]));
+      });
+      return { pose, props: 'floor', weight: { kind: 'dumbbell', at: add(hand, [0, -1]) } };
+    }
+    case 'barbell-row': {
+      // hinged over, back flat, the bar from hanging arms to the belly
+      let hand: P = [0, 0];
+      const pose = standing([24, 37], 1.05, FEET, (shoulder, along) => {
+        const hip = sub(shoulder, mul(along, TORSO));
+        hand = lerp(add(shoulder, [0.3, LOCKED]), add(lerp(hip, shoulder, 0.45), [0, 4.5]), d);
+        return both(arm(shoulder, hand, [-0.4, -1]));
+      });
+      return { pose, props: 'floor', weight: { kind: 'barbell', at: hand } };
+    }
+    case 'plank': {
+      // on the forearms, one straight line from the heels to the head
+      const feet: P = [8, FLOOR - 3.5],
+        elbow: P = [42, FLOOR - 1.5],
+        shoulder: P = [42, FLOOR - 1.5 - UPPER + b * 0.5];
+      const along = unit(sub(shoulder, feet)),
+        hip = add(feet, mul(along, THIGH + SHIN)),
+        knee = add(feet, mul(along, SHIN));
+      const a: Arm = { shoulder, elbow, hand: add(elbow, [FORE, 0]) };
+      const l: Leg = { hip, knee, foot: feet, toes: [0.35, 1] };
+      return {
+        pose: {
+          head: add(shoulder, add(mul(along, NECK), [0, 0.5])),
+          face: unit(add([along[1], -along[0]].map((v) => -v) as P, mul(along, 0.4))),
+          up: along,
+          shoulder,
+          hip,
+          near: { arm: a, leg: l },
+          far: { arm: farOf(a, [-1, -1]), leg: { ...l, foot: add(feet, [-1, 0]) } },
+        },
+        props: 'floor',
+      };
+    }
+    case 'lunge': {
+      // a split stance: both knees bend to 90° straight down, the back knee just off the floor
+      const hip = lerp([28, 36.5], [28, 45.5], d);
+      return {
+        pose: standing(hip, 0.03, { near: [38, FLOOR - 1.5], far: [17, FLOOR - 2] }, (shoulder) => both(arm(shoulder, add(hip, [3, -1]), [-1, 0]))),
+        props: 'floor',
+      };
+    }
+    case 'kettlebell-swing': {
+      // hips snap forward, the bell floats to chest height on straight arms, then hinge back
+      let hand: P = [0, 0];
+      const hip = lerp([22, 38.5], [29, 35.5], swing);
+      const pose = standing(hip, 0.95 - 0.92 * swing, FEET, (shoulder) => {
+        hand = add(shoulder, mul(dir(105 - 105 * swing), LOCKED));
+        return both(arm(shoulder, hand, [0, -1]));
+      });
+      return { pose, props: 'floor', weight: { kind: 'kettlebell', at: hand } };
+    }
+    default:
+      return null;
+  }
+}
+
+function poseFor(id: ExerciseId, f: number, view: ExerciseOpts['view'] = 'side'): { pose: Pose; props: Props; band?: { from: P; to: P }; weight?: Weight } {
+  const gym = gymPose(id, f);
+  if (gym) return gym;
   const d = REP[f % 16],
     b = breath(f);
   switch (id) {
@@ -544,16 +781,20 @@ function poseFor(id: ExerciseId, f: number, view: ExerciseOpts['view'] = 'side')
       return { pose: support(b, (hip) => ({ near: levelLeg(hip), far: tuckLeg(add(hip, [-1, 0])) })), props: 'parallettes' };
     case 'lsit':
       return { pose: support(b, (hip) => ({ near: levelLeg(hip), far: levelLeg(add(hip, [-1, 0])) })), props: 'parallettes' };
+    default:
+      throw new Error(`no demo for ${id}`);
   }
 }
 
 /** One frame of an exercise demo: the props, then you on them. */
 export function drawExercise(o: ExerciseOpts, f: number): Grid {
-  const { pose, props: kind, band } = poseFor(o.exercise, f, o.view);
+  const { pose, props: kind, band, weight } = poseFor(o.exercise, f, o.view);
   const g = grid(64);
   props(g, kind);
+  if (weight?.behind) drawWeight(g, weight);
   const fig = drawFigure(pose, colorsFor(o), o.look);
   stamp(g, fig);
+  if (weight && !weight.behind) drawWeight(g, weight);
   // the band goes in front of the shins, over the figure
   if (band) props(g, 'bar', band);
   return g;

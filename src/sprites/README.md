@@ -29,7 +29,9 @@ characters/icons.ts   app icons as text rows: the six keepsakes (Hero tab, sprit
                       level-up skills (`skillIcon`) and the floor track's Warden and boss (`markIcon`)
 characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look }): you doing
                       each exercise of the program, a jointed skeleton with IK elbows and knees,
-                      one rep per loop of the 16-frame `rep` clip
+                      one rep per loop of the 16-frame `rep` clip; also the gym moves of the
+                      exercise library (squat, deadlift, bench press, curl...), with a barbell,
+                      dumbbell or kettlebell drawn in the hands (`Weight`)
 characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recolored onto the zone's
                       ramp and dressed (lake glass and drips, forge scrap and glowing cracks,
                       plateau sandstone, fog mist, summit ice)
@@ -57,6 +59,7 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Redraw the flame's true form (the finale's fire kid) | the `ROWS` and `TIPS` text art in `characters/kindled.ts` (`LOCKS` is the long hair a long or pony look gets) |
 | Change a story backdrop's props (Vela's lamp tower, the road, a campfire) | its function in `places.ts` (`lampTower`, `road`...); which place has which props is in `src/story/places.ts` |
 | Change Vela's far tower on the Plateau, or how its lamp flashes | `FAR_TOWER` rows in `places.ts`; a place with it is drawn lit and unlit, and the `beacon` animation in `tailwind.config.ts` flashes the lit copy |
+| Add a pixel demo for an exercise in the library | a case in `gymPose` (`characters/exercise.ts`) plus its id in `ExerciseId`/`EXERCISES`, then link catalog ids to it in `DEMOS` (`src/exercises/library.ts`) |
 | Change the looks a player starts with (boy, girl) | `STARTER_LOOKS` in `characters/hero.ts`; the editor's options are in `src/components/LookEditor.tsx` |
 | Redraw a dungeon monster | the `ROWS` text art in its file (`ram.ts`, `smoke.ts`, `seeker.ts`, `splitter.ts`, `shade.ts`); its palette sits under the rows |
 | Change which sprite a dungeon monster uses, or its size | `DUNGEON_LOOKS` in `src/game/dungeon/scene.ts` (a new sheet also needs a `SheetKey` in `src/game/rules.ts` and a line in `sheets` in `FogRun.tsx`) |

@@ -151,6 +151,7 @@ export default function NightLab() {
           );
         })}
         <Row icon={<Swords size={16} />} label="The Play tab" note="Power from training with pixel icons, all six zones open" onClick={() => open(veteran(78, 6), 'tab=play')} />
+        <Row icon={<Swords size={16} />} label="Exercise library" note="Skills tab, top button: 870+ exercises, pixel demos for boy and girl" onClick={() => open(veteran(10, 1), 'tab=skills')} />
       </Panel>
 
       <Panel title="STORY: THE BIG MOMENTS" note="Played in the Story Lab with a sample letter and answers; nothing is saved. It comes back here when the scene ends.">
