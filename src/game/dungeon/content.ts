@@ -91,7 +91,7 @@ export const DIALS = {
   /** How many monsters a room holds. */
   crowd: 1,
   /** Share of HP back on the stairs to each new floor. */
-  stairs: 0.1,
+  stairs: 1,
   /** How strong chest items are (1 = as their text says). */
   relic: 1,
   /** How much more HP monsters have on the boss's floor than on the first (2 = three times). */

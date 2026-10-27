@@ -9,6 +9,9 @@ import { ZONES } from '@/lib/fog';
 import { SANDBOX_KEY } from '@/lib/store';
 import { withTodayPage } from '@/story/daily';
 import { midBoss } from '@/game/dungeon/engine';
+import { rollItem, type Item } from '@/game/dungeon/items';
+import { seeded } from '@/lib/random';
+import { spendEvenly } from '@/lib/stats';
 
 /* What's new tonight: one tap to try each change. Everything that opens the app does it on a
    sandbox save (SANDBOX_KEY, chosen by ?sandbox), so the real save on this phone is never touched.
@@ -39,6 +42,20 @@ function veteran(workouts: number, cleared: number): GameState {
   // Nothing waiting to play over the screen being opened (a rest-day scene, say).
   for (let i = 0; i < 5; i++) s = skipDueScenes(s, new Date());
   return s;
+}
+
+/** A veteran with points spent and Fog gear: a sword on, a few things in the vault, one they
+    can't wear yet. */
+function geared(): GameState {
+  const s = spendEvenly(veteran(14, 1)),
+    rnd = seeded(12),
+    find = (slot: Item['slot'], rarity: Item['rarity'], floor: number) => {
+      for (;;) {
+        const it = rollItem(rnd, { zone: 1, workouts: ZONES[1].workouts, floor, cls: 'warrior' }, rarity);
+        if (it.slot === slot) return it;
+      }
+    };
+  return { ...s, fogGear: { worn: { weapon: find('weapon', 'magic', 1) }, vault: [find('armor', 'rare', 2), find('charm', 'magic', 3), find('weapon', 'legendary', 9)] } };
 }
 
 /** Write the sandbox save and open the app on it at `query`. */
@@ -149,6 +166,8 @@ export default function NightLab() {
         })}
         <Row icon={<Swords size={16} />} label="The Play tab" note="Power from training with pixel icons, all six zones open" onClick={() => open(veteran(78, 6), 'tab=play')} />
         <Row icon={<Swords size={16} />} label="The Fog, sideways" note="Hold the phone across: rooms run left to right, tap a monster to aim at it" onClick={() => open(veteran(14, 1), 'run=0')} />
+        <Row icon={<Gem size={16} />} label="Loot: your gear and the vault" note="Play tab: what you wear into the Fog, the vault, an item you can't wear yet" onClick={() => open(geared(), 'tab=play')} />
+        <Row icon={<Gem size={16} />} label="Loot in a run" note="Monsters and chests drop gear; the bag button top right; the stairs ask: deeper or leave with it" onClick={() => open(geared(), 'run=1')} />
         <Row icon={<Swords size={16} />} label="Exercise library" note="Train tab, top button: 870+ exercises, pixel demos for boy and girl" onClick={() => open(veteran(10, 1), 'tab=train')} />
       </Panel>
 

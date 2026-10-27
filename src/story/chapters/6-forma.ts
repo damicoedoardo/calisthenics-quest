@@ -19,8 +19,8 @@ export const FORMA: Chapter = {
     hint: 'There is no top. Climb with your friends as high as you can: any height is a win.',
     after: "There's no top. Just higher than yesterday.",
     keepsake: { name: "The Wanderer's Cloak", text: 'Grey, warm, and exactly your size.' },
-    hp: 1.84,
-    dmg: 5.29,
+    hp: 2.69,
+    dmg: 7.73,
     ground: '#1a1a22',
     fog: '#e2e8f0',
     // stages: [each new ledge of the climb; the last one repeats]

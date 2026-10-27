@@ -72,6 +72,10 @@ import {
   zoneDungeon,
 } from './content';
 import { seeded } from '@/lib/random';
+import type { Build } from '@/lib/stats';
+import { ITEM_SLOTS, itemScore, itemTotals, rollItem, rollRarity, shortOf, starterKit, type Item, type ItemSlot } from './items';
+
+export * from './items';
 
 /* The Fog as a dungeon: floor after floor of rooms, monsters that shoot patterns you dodge, and the
    zone's boss at the bottom. Die anywhere and the next run starts again from the first floor.
@@ -272,7 +276,10 @@ export type GameEvent =
   | { type: 'gust'; x: number; y: number }
   /** The mid-boss speaks (in the speech bubble, over it). */
   | { type: 'midSay'; text: string }
-  | { type: 'say'; text: string };
+  | { type: 'say'; text: string }
+  /** Something to wear: dropped on the floor, or picked up into the bag. */
+  | { type: 'drop'; x: number; y: number; item: Item }
+  | { type: 'loot'; item: Item };
 
 export type FreePick = 'fresh' | 'rested';
 
@@ -281,10 +288,20 @@ export interface RunSetup {
   power: Power;
   classId: ClassId | undefined;
   seed: number;
-  /** Skills are taken by the bot's order instead of waiting for a pick. */
+  /** Skills are taken by the bot's order instead of waiting for a pick (and items the bot likes
+      are worn, and the stairs always go deeper). */
   autoPick?: boolean;
   layout?: Layout;
+  /** What you walk in wearing (an empty weapon or armor slot gets the free starter kit). */
+  worn?: Partial<Record<ItemSlot, Item>>;
+  /** Stat points spent, which items ask for. */
+  build?: Build;
 }
+
+/** How many items the bag holds. */
+export const BAG = 8;
+/** Which monsters drop an item, how often (an elite, a golem, any other). */
+export const DROPS = { elite: 0.15, golem: 0.3, plain: 0.006, chest: 0.5 };
 
 export interface Input {
   /** Where you push the stick, each in [-1, 1]. */
@@ -309,7 +326,10 @@ export interface RunEnd {
   floor: number;
   room: number;
   bossAt: number | null;
-  why: 'boss' | 'hp' | 'limit';
+  /** 'left' is walking out by the stairs: not a win, but you keep what you carry. */
+  why: 'boss' | 'hp' | 'limit' | 'left';
+  /** What you wore and carried at the end (the starter kit left out). Lost unless you won or left. */
+  gear: { worn: Partial<Record<ItemSlot, Item>>; bag: Item[] };
   /** How many ledges of the Summit's climb you went up, or null off the Summit. */
   height: number | null;
 }
@@ -341,6 +361,16 @@ export interface Run {
   chest: { x: number; y: number; opened: boolean } | null;
   stairs: { x: number; y: number } | null;
   relics: Partial<Record<RelicId, number>>;
+  /** Your power before what you wear, what you wear and carry, and what's on the floor here. */
+  base: Power;
+  gear: { worn: Partial<Record<ItemSlot, Item>>; bag: Item[] };
+  loot: { id: number; x: number; y: number; item: Item; full?: boolean }[];
+  /** What worn items add that Power has no field for. */
+  gearFx: { move: number; heal: number; cooldown: number };
+  /** Max HP that comes from your power and gear (the rest is relics and skills). */
+  gearMax: number;
+  /** Standing on the stairs: deeper, or out with what you carry? The run holds still. */
+  stairsAsk: boolean;
   /** Three items to pick from, from an opened chest: the run holds still until one is taken. */
   relicOffer: RelicId[] | null;
   /** The Ward Charm's ward is up from then. */
@@ -409,10 +439,10 @@ export const isBossRoom = (r: Pick<Run, 'map'>) => cellOf(r).kind === 'boss';
 const depth = (run: Run) => (run.layout.floors > 1 ? run.floor / (run.layout.floors - 1) : 0);
 
 export function createRun(setup: RunSetup): Run {
-  const body = CLASS_BODY[attackOf(setup.classId)],
-    hp = Math.round(heroMaxHp(setup.power) * body.hp),
-    power = { ...setup.power, armor: setup.power.armor + body.armor, damage: (1 + setup.power.damage) * body.dmg - 1 };
-  setup = { ...setup, power };
+  const base = setup.power,
+    power = base,
+    kit = starterKit(setup.classId),
+    hp = 0;
   const layout = setup.layout ?? LAYOUT;
   const run: Run = {
     setup,
@@ -434,6 +464,12 @@ export function createRun(setup: RunSetup): Run {
     chest: null,
     stairs: null,
     relics: {},
+    base,
+    gear: { worn: { weapon: setup.worn?.weapon ?? kit.weapon, armor: setup.worn?.armor ?? kit.armor, ...(setup.worn?.charm ? { charm: setup.worn.charm } : {}) }, bag: [] },
+    loot: [],
+    gearFx: { move: 0, heal: 0, cooldown: 0 },
+    gearMax: 0,
+    stairsAsk: false,
     relicOffer: null,
     wardAt: 0,
     cleared: false,
@@ -479,6 +515,7 @@ export function createRun(setup: RunSetup): Run {
     over: null,
     paused: false,
   };
+  applyGear(run);
   enterRoom(run, null);
   if (run.free.length) later(run, 0.7, () => offer(run, run.free.shift()!));
   return run;
@@ -512,7 +549,7 @@ export interface Cell {
   visited: boolean;
   cleared: boolean;
   /** The room as you left it, so it's the same when you walk back in. */
-  kept: { area: { w: number; h: number }; terrain: Terrain; chest: Run['chest'] } | null;
+  kept: { area: { w: number; h: number }; terrain: Terrain; chest: Run['chest']; loot: Run['loot'] } | null;
 }
 export interface FloorMap {
   cells: Cell[];
@@ -735,6 +772,7 @@ function enterRoom(run: Run, from: Side | null) {
   run.doorOpen = false;
   run.doors = [];
   run.chest = back?.chest ?? null;
+  run.loot = back?.loot ?? [];
   run.stairs = null;
   if (!c.visited) run.room++;
   c.seen = c.visited = true;
@@ -920,7 +958,7 @@ function throughDoor(run: Run, d: Door) {
     enterRoom(run, 'w');
     return;
   }
-  cellOf(run).kept = { area: run.area, terrain: run.terrain, chest: run.chest };
+  cellOf(run).kept = { area: run.area, terrain: run.terrain, chest: run.chest, loot: run.loot };
   run.map.at = d.to;
   enterRoom(run, ACROSS[d.side]);
 }
@@ -946,7 +984,7 @@ function downStairs(run: Run) {
 // ---------- the step ----------
 
 export function stepRun(run: Run, input: Input) {
-  if (run.over || run.paused || run.offer || run.relicOffer) return;
+  if (run.over || run.paused || run.offer || run.relicOffer || run.stairsAsk) return;
   run.t += STEP;
   const now = run.t;
   for (let i = 0; i < run.timers.length; i++) {
@@ -954,7 +992,7 @@ export function stepRun(run: Run, input: Input) {
       const fn = run.timers[i].run;
       run.timers.splice(i--, 1);
       fn();
-      if (run.over || run.offer || run.relicOffer) return;
+      if (run.over || run.offer || run.relicOffer || run.stairsAsk) return;
     }
   }
   if (run.bossAt !== null && now - run.bossAt >= (run.climb !== null ? CLIMB.limit : BOSS_LIMIT)) {
@@ -991,7 +1029,7 @@ function moveHero(run: Run, input: Input) {
     y /= len;
   }
   if (len > 0.05) h.facing = Math.atan2(y, x);
-  const speed = heroSpeed(run.ups) * (1 + 0.1 * relic(run, 'boots')) * bodyOf(run).move;
+  const speed = heroSpeed(run.ups) * (1 + 0.1 * relic(run, 'boots') + run.gearFx.move) * bodyOf(run).move;
   if (run.charge && now < run.charge.until) {
     h.vx = run.charge.x;
     h.vy = run.charge.y;
@@ -1015,7 +1053,25 @@ function moveHero(run: Run, input: Input) {
   const out: Side | null = h.y < 4 ? 'e' : h.y > H - 4 ? 'w' : h.x < 4 ? 'n' : h.x > w - 4 ? 's' : null,
     door = out && run.doors.find((d) => d.side === out);
   if (door) return throughDoor(run, door);
-  if (run.stairs && Math.hypot(run.stairs.x - h.x, run.stairs.y - h.y) < 18 + HERO_R) return downStairs(run);
+  if (run.stairs && Math.hypot(run.stairs.x - h.x, run.stairs.y - h.y) < 18 + HERO_R) {
+    if (run.setup.autoPick) return downStairs(run);
+    run.stairsAsk = true;
+    return;
+  }
+  // Loot: into the bag, while there's room.
+  for (const l of run.loot) {
+    if (Math.hypot(l.x - h.x, l.y - h.y) > 20 + HERO_R) continue;
+    if (run.gear.bag.length >= BAG) {
+      if (!l.full) emit(run, { type: 'say', text: 'Your bag is full. Wear or drop something to make room.' });
+      l.full = true;
+      continue;
+    }
+    run.loot = run.loot.filter((o) => o !== l);
+    run.gear.bag.push(l.item);
+    emit(run, { type: 'loot', item: l.item });
+    if (run.setup.autoPick) botWear(run, l.item);
+    break;
+  }
   // A chest: open it and pick what's inside.
   const c = run.chest;
   if (c && !c.opened && Math.hypot(c.x - h.x, c.y - h.y) < 22 + HERO_R) openChest(run);
@@ -1062,7 +1118,7 @@ function useAbility(run: Run, input: Input) {
     h = run.hero;
   if (now < run.abilityAt) return;
   const a = run.ability;
-  run.abilityAt = now + ABILITIES[a].cd / (1 + 0.25 * relic(run, 'hourglass'));
+  run.abilityAt = now + ABILITIES[a].cd / (1 + 0.25 * relic(run, 'hourglass') + run.gearFx.cooldown);
   let dx = input.x,
     dy = input.y;
   if (Math.hypot(dx, dy) < 0.1) {
@@ -1760,8 +1816,11 @@ function kill(run: Run, f: Foe) {
   run.kills++;
   emit(run, { type: 'kill', id: f.id, x: f.x, y: f.y, kind: f.kind, elite: f.elite });
   if (f.def.xp > 0) run.gems.push({ id: ++run.ids, x: f.x, y: f.y, value: f.def.xp, pulled: false });
-  const fang = relic(run, 'fang');
+  const fang = relic(run, 'fang') + run.gearFx.heal;
   if (fang && f !== run.boss) run.hp = Math.min(run.maxHp, run.hp + fang);
+  // Now and then a monster drops something to wear: elites and golems far more often.
+  if (f !== run.boss && f !== run.warden && f.def.xp > 0 && run.rnd() < (f.elite ? DROPS.elite : f.kind === 'golem' ? DROPS.golem : DROPS.plain)) dropItem(run, f.x, f.y, f.elite || f.kind === 'golem' ? 0.5 : 0);
+  if (f === run.warden) dropItem(run, f.x, f.y + 30, 2);
   if (f.kind === 'splitter')
     for (let i = 0; i < 3; i++) {
       const a = (i / 3) * Math.PI * 2 + run.rnd();
@@ -1773,7 +1832,13 @@ function kill(run: Run, f: Foe) {
     emit(run, { type: 'shatter', x: f.x, y: f.y });
     emit(run, { type: 'say', text: 'It all breaks at once. It had been breaking the whole time.' });
   }
-  if (f === run.boss) end(run, true, 'boss');
+  if (f === run.boss) {
+    // The boss's own drop goes straight into your bag: you take it home.
+    const it = newItem(run, 2);
+    run.gear.bag.push(it);
+    emit(run, { type: 'loot', item: it });
+    end(run, true, 'boss');
+  }
 }
 
 /** Pushes a foe away from a point without hurting it. */
@@ -2086,6 +2151,7 @@ function openChest(run: Run) {
     if (!choices.includes(id)) choices.push(id);
   }
   emit(run, { type: 'chest', x: c.x, y: c.y });
+  if (run.rnd() < DROPS.chest) dropItem(run, c.x, c.y + 34, 1);
   run.relicOffer = choices;
   if (run.setup.autoPick) pickRelic(run, RELIC_BOT.find((id) => choices.includes(id)) ?? choices[0]);
 }
@@ -2138,6 +2204,91 @@ export function pick(run: Run, id: UpgradeId) {
   else if (run.pendingLevels > 0) offer(run, null);
 }
 
+// ---------- things to wear ----------
+
+/** A new item for where you are: its zone and floor, your class, a rarity leaning rarer with `luck`. */
+function newItem(run: Run, luck: number): Item {
+  const z = run.setup.zone;
+  return rollItem(run.rnd, { zone: z.id, workouts: z.workouts, floor: floorOf10(run), cls: run.setup.classId }, rollRarity(run.rnd, floorOf10(run), luck));
+}
+
+function dropItem(run: Run, x: number, y: number, luck: number, item: Item = newItem(run, luck)) {
+  const { w, h } = run.area,
+    m = ROOM.wall + 16;
+  const l = { id: ++run.ids, x: clamp(x, m, w - m), y: clamp(y, m, h - m), item };
+  run.loot.push(l);
+  emit(run, { type: 'drop', x: l.x, y: l.y, item });
+}
+
+/** Your power with what you wear: weapon damage, armor HP, charms, and your class's build. */
+function applyGear(run: Run) {
+  const t = itemTotals(ITEM_SLOTS.map((s) => run.gear.worn[s])),
+    b = run.base,
+    body = bodyOf(run);
+  run.setup = {
+    ...run.setup,
+    power: { ...b, health: b.health + (t.health ?? 0), armor: b.armor + body.armor + (t.armor ?? 0), damage: (1 + b.damage + (t.damage ?? 0)) * body.dmg - 1, speed: b.speed + (t.speed ?? 0), reach: b.reach + (t.pickup ?? 0) },
+  };
+  run.gearFx = { move: t.move ?? 0, heal: t.heal ?? 0, cooldown: t.cooldown ?? 0 };
+  const max = Math.round(heroMaxHp(run.setup.power) * body.hp),
+    d = max - run.gearMax;
+  run.gearMax = max;
+  run.maxHp += d;
+  run.hp = Math.max(1, Math.min(run.maxHp, run.hp + Math.max(0, d)));
+}
+
+/** Points short of what an item asks (0: you can wear it). */
+export const shortFor = (run: Pick<Run, 'setup'>, it: Item) => shortOf(it, run.setup.build ?? {});
+
+/** Wear an item from the bag; what you wore goes into the bag (the starter kit just goes). */
+export function wear(run: Run, id: string) {
+  const it = run.gear.bag.find((o) => o.id === id);
+  if (!it || shortFor(run, it) > 0) return;
+  const old = run.gear.worn[it.slot];
+  run.gear.bag = run.gear.bag.filter((o) => o !== it);
+  if (old && !old.starter) run.gear.bag.push(old);
+  run.gear.worn[it.slot] = it;
+  applyGear(run);
+}
+
+/** Take a worn item off into the bag (a weapon or armor slot gets the starter kit back). */
+export function takeOff(run: Run, slot: ItemSlot) {
+  const it = run.gear.worn[slot];
+  if (!it || it.starter || run.gear.bag.length >= BAG) return;
+  run.gear.bag.push(it);
+  if (slot === 'charm') delete run.gear.worn.charm;
+  else run.gear.worn[slot] = starterKit(run.setup.classId)[slot];
+  applyGear(run);
+}
+
+/** Leave an item from the bag on the floor. */
+export function dropFromBag(run: Run, id: string) {
+  const it = run.gear.bag.find((o) => o.id === id);
+  if (!it) return;
+  run.gear.bag = run.gear.bag.filter((o) => o !== it);
+  const l = { id: ++run.ids, x: run.hero.x, y: run.hero.y + 36, item: it, full: true };
+  run.loot.push(l);
+  emit(run, { type: 'drop', x: l.x, y: l.y, item: it });
+}
+
+/** The bot wears what it picks up when it can and it's better than what it has. */
+function botWear(run: Run, it: Item) {
+  if (shortFor(run, it) === 0 && itemScore(it) > itemScore(run.gear.worn[it.slot])) wear(run, it.id);
+  // It keeps room in the bag by leaving what it won't wear.
+  if (run.gear.bag.length >= BAG) run.gear.bag.shift();
+}
+
+/** On the stairs: down to the next floor, out of the Fog with what you carry, or not yet. */
+export function takeStairs(run: Run, choice: 'deeper' | 'leave' | 'stay') {
+  if (!run.stairsAsk) return;
+  run.stairsAsk = false;
+  if (choice === 'deeper') downStairs(run);
+  else if (choice === 'leave') {
+    emit(run, { type: 'say', text: 'You walk back up into the light, with everything you carry.' });
+    end(run, false, 'left');
+  } else if (run.stairs) run.hero.y = run.stairs.y + 50;
+}
+
 // ---------- getting hit, ending ----------
 
 function hurt(run: Run, dmg: number, by: 'shot' | 'touch') {
@@ -2173,6 +2324,7 @@ function end(run: Run, won: boolean, why: RunEnd['why']) {
     bossAt: run.bossAt === null ? null : Math.floor(run.bossAt),
     why,
     height: run.climb,
+    gear: { worn: Object.fromEntries(Object.entries(run.gear.worn).filter(([, it]) => it && !it.starter)) as Partial<Record<ItemSlot, Item>>, bag: [...run.gear.bag] },
   };
   if (!won) run.hp = 0;
 }

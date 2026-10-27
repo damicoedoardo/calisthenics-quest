@@ -10,7 +10,9 @@ timestamp: 2026-10-27
 
 The Play tab's game: a short dungeon crawl where class, skills and gear matter and you can lose.
 It follows the rule "training earns, play spends" (see [../product/overview.md](../product/overview.md)):
-losing costs nothing, runs are free to replay, and only real training makes you stronger.
+runs are free to replay, gear comes only from the dungeon, and only real training makes you
+stronger and lets you wear what you find. Dying costs what you wore and carried, never points,
+level or story.
 
 ## Rules (`src/lib/fog.ts`)
 
@@ -30,7 +32,15 @@ losing costs nothing, runs are free to replay, and only real training makes you 
   fastest win) and the last run for the flame to talk about. The mid-boss guards floor
   `MID_FLOOR` (5).
 
-Tested in `src/lib/fog.test.ts`.
+- **Gear between runs** (`src/lib/fog-gear.ts`, saved as `state.fogGear`): what you wear
+  (`worn`) and the vault at home (`vault`, `vaultSize` grows with workouts). `wornFor` is what you
+  walk in with: only what your points let you wear today; the rest stays home, safe.
+  `settleGear` runs after `recordRun`: a win or a walk out by the stairs keeps what you wore and
+  puts the bag in the vault (the best first, the rest left behind if it's full); dying loses all
+  of it. `wearFromVault`, `takeOffToVault` and `discardItem` are the Play tab's buttons
+  (`FogGearCard`). The items themselves are in [dungeon.md](dungeon.md).
+
+Tested in `src/lib/fog.test.ts` and `src/lib/fog-gear.test.ts`.
 
 ## The run itself
 
@@ -51,4 +61,6 @@ screen itself for the run (`useSideways`). The rest of the app stays upright.
 
 `pnpm sim` writes snapshots of simulated players (see [../dev/testing.md](../dev/testing.md)), then
 `pnpm fog:sim` plays hundreds of bot runs on them per zone and class. `DIALS` in
-`src/game/dungeon/content.ts` are the main knobs.
+`src/game/dungeon/content.ts` are the main knobs. The sim starts every run in the starter kit with
+the snapshot's points (as after a death); the bot wears what drops. Zones are tuned so that run
+is about where the game was before items, so the gear you keep is strength on top.

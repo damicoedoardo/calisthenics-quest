@@ -6,6 +6,8 @@ import { BOT_PICKS, type BossSheetKey, type SheetKey, type Sheets } from '../rul
 import type { FogBoss, FogLines } from '@/story/types';
 import { R } from '@/sprites/palette';
 import { botInput } from './bot';
+import { ITEM_ICONS } from '@/sprites/characters/icons';
+import type { Build } from '@/lib/stats';
 import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STAIRS, type Prop } from './props';
 import { THEMES, themeFor, type Theme } from './themes';
 import {
@@ -28,6 +30,14 @@ import {
   RELICS,
   zoneDungeon,
   createRun,
+  dropFromBag,
+  iconOf,
+  RARITY,
+  takeOff,
+  takeStairs,
+  wear,
+  type Item,
+  type ItemSlot,
   pickRelic,
   relic,
   spikeState,
@@ -113,6 +123,9 @@ export interface RunSetup {
   autopilot?: boolean;
   /** Play the whole run at once without drawing it (balance tests). */
   fast?: boolean;
+  /** What you wear into the Fog (from the save), and your points, which items ask for. */
+  worn?: Partial<Record<ItemSlot, Item>>;
+  build?: Build;
 }
 
 /** A room on the minimap: where it is on the floor (east is +x, south is +y), what it holds,
@@ -157,6 +170,8 @@ export interface Hud {
   relics: Partial<Record<RelicId, number>>;
   /** Ledges climbed on the Summit, or null. */
   climb: number | null;
+  /** What you wear and carry. */
+  gear: { worn: Partial<Record<ItemSlot, Item>>; bag: Item[] };
 }
 
 export interface RunEvents {
@@ -168,6 +183,10 @@ export interface RunEvents {
   relic: (choices: RelicId[], have: Partial<Record<RelicId, number>>) => void;
   /** A new floor: its number from 1. */
   floor: (n: number) => void;
+  /** An item picked up into the bag. */
+  loot: (item: Item) => void;
+  /** On the stairs: go deeper, leave with what you carry, or not yet (answer with `stairs`). */
+  stairs: () => void;
   end: (r: RunEnd) => void;
 }
 
@@ -183,6 +202,11 @@ export interface RunHandle {
   /** Developer mode: show the next zone's dungeon theme; returns its name. */
   cycleTheme: () => string;
   pickRelic: (id: RelicId) => void;
+  /** Your gear, from the bag panel. */
+  wear: (id: string) => void;
+  takeOff: (slot: ItemSlot) => void;
+  dropItem: (id: string) => void;
+  stairs: (choice: 'deeper' | 'leave' | 'stay') => void;
   winNow: () => void;
   autopilot: (on: boolean) => void;
   destroy: () => void;
@@ -306,6 +330,10 @@ class DungeonScene extends Phaser.Scene {
   private mists: Phaser.GameObjects.Image[] = [];
   private chest: Phaser.GameObjects.Image | null = null;
   private stairs: Phaser.GameObjects.Image | null = null;
+  /** Items on the floor: the icon, its name, and a beam of light over rare ones. */
+  private loot = new Map<number, { icon: Phaser.GameObjects.Image; name: Phaser.GameObjects.Text; beam: Phaser.GameObjects.Rectangle | null }>();
+  /** The stairs question is up. */
+  private asked = false;
   private fx!: Phaser.GameObjects.Graphics;
   private shadows!: Phaser.GameObjects.Graphics;
   /** Upright marks over the room (eyes in the fog, a bomb in the air, the ring on the monster you tapped). */
@@ -366,7 +394,7 @@ class DungeonScene extends Phaser.Scene {
   ) {
     super('dungeon');
     this.theme = themeFor(setup.zone.id);
-    this.run = createRun({ zone: setup.zone, power: setup.power, classId: setup.classId, seed: Math.floor(Math.random() * 2 ** 31), autoPick: setup.fast });
+    this.run = createRun({ zone: setup.zone, power: setup.power, classId: setup.classId, seed: Math.floor(Math.random() * 2 ** 31), autoPick: setup.fast, worn: setup.worn, build: setup.build });
   }
 
   /** An engine point on the screen: the room on its side, its door on the right. */
@@ -572,6 +600,8 @@ class DungeonScene extends Phaser.Scene {
     this.chest = null;
     this.stairs = null;
     this.chestCall = null;
+    for (const l of this.loot.values()) [l.icon, l.name, l.beam].forEach((o) => o?.destroy());
+    this.loot.clear();
     this.turn();
     this.floorTiles.setSize(w, h).setTilePosition(r.map.at * 23 + r.floor * 41, r.floor * 17);
     const n = Math.round((w * h) / 8000);
@@ -756,6 +786,7 @@ class DungeonScene extends Phaser.Scene {
     prop('sconce', SCONCE);
     prop('stairs', STAIRS);
     prop('hitspark', HIT_SPARK);
+    for (const [k, art] of Object.entries(ITEM_ICONS)) prop(`item-${k}`, art);
     g.destroy();
     this.themeTextures();
   }
@@ -952,6 +983,40 @@ class DungeonScene extends Phaser.Scene {
     return this.doorLook(d).color;
   }
 
+  /** Items on the floor: each one's icon with its name in its rarity's color over it, and a
+      beam of light over rare and legendary ones, so they're seen from across the room. */
+  private syncLoot() {
+    const r = this.run,
+      now = this.time.now,
+      here = new Set(r.loot.map((l) => l.id));
+    for (const [id, l] of this.loot)
+      if (!here.has(id)) {
+        [l.icon, l.name, l.beam].forEach((o) => o?.destroy());
+        this.loot.delete(id);
+      }
+    for (const l of r.loot) {
+      let v = this.loot.get(l.id);
+      const [X, Y] = this.P(l.x, l.y),
+        color = RARITY[l.item.rarity].color,
+        c = parseInt(color.slice(1), 16);
+      if (!v) {
+        const big = l.item.rarity === 'rare' || l.item.rarity === 'legendary';
+        v = {
+          beam: big ? this.add.rectangle(X, Y - 60, 10, 120, c, 0.18).setDepth(-1.1) : null,
+          icon: this.add.image(X, Y, `item-${iconOf(l.item)}`).setDepth(-1),
+          name: this.add
+            .text(X, Y - 18, l.item.name, { fontFamily: '"Press Start 2P", monospace', fontSize: '7px', color, stroke: '#0b0d14', strokeThickness: 3 })
+            .setOrigin(0.5, 1)
+            .setDepth(95000),
+        };
+        this.loot.set(l.id, v);
+      }
+      // A slow bob, and the beam breathing.
+      v.icon.setY(Y - 2 + Math.round(Math.sin(now / 300 + l.id) * 2));
+      v.beam?.setAlpha(0.12 + 0.1 * ((Math.sin(now / 260 + l.id) + 1) / 2));
+    }
+  }
+
   /** A room clear (or cleared before): the word over each door, the chest, the stairs down. */
   private cleared(fresh: boolean) {
     const r = this.run,
@@ -1016,7 +1081,12 @@ class DungeonScene extends Phaser.Scene {
       this.wantLock = undefined;
       stepRun(run, input);
       for (const e of takeEvents(run)) this.react(e);
-      if (run.offer || run.over || this.time.now < this.stopUntil) break;
+      if (run.offer || run.over || run.stairsAsk || this.time.now < this.stopUntil) break;
+    }
+    if (run.stairsAsk && !this.asked) {
+      this.asked = true;
+      if (this.bot) this.stairsChoice('deeper');
+      else this.bus.stairs();
     }
     if (run.relicOffer && !this.offered) {
       this.offered = true;
@@ -1036,6 +1106,7 @@ class DungeonScene extends Phaser.Scene {
       this.bus.levelUp(run.offer.choices, { ...run.ups }, run.offer.free);
     }
     this.sync();
+    this.syncLoot();
     this.drawFx();
     this.drawPad();
     this.drawVignette();
@@ -1225,6 +1296,7 @@ class DungeonScene extends Phaser.Scene {
       cleared: r.cleared,
       relics: { ...r.relics },
       map: this.miniMap(),
+      gear: { worn: { ...r.gear.worn }, bag: [...r.gear.bag] },
     };
   }
 
@@ -1842,6 +1914,16 @@ class DungeonScene extends Phaser.Scene {
         else this.bus.say(r.chest ? 'Room clear. Open the chest.' : 'Room clear. Each door says what waits behind it.');
         break;
       }
+      case 'drop': {
+        const big = e.item.rarity === 'rare' || e.item.rarity === 'legendary';
+        this.burst(this.sparks, big ? 24 : 8, e.x, e.y, -6);
+        if (big) this.sfx('gem', e.item.rarity === 'legendary' ? 0.5 : 0.8);
+        break;
+      }
+      case 'loot':
+        this.sfx('gem', 1.3);
+        this.bus.loot(e.item);
+        break;
       case 'chest':
         this.chestCall?.destroy();
         this.chestCall = null;
@@ -2337,6 +2419,20 @@ class DungeonScene extends Phaser.Scene {
     this.fade(450, (g, p) => g.lineStyle(4 * (1 - p) + 1, 0xfbbf24, 0.9 * (1 - p)).strokeCircle(h.x, h.y, 24 + 80 * p));
   }
 
+  /** The bag panel's buttons: the page pauses the run while it's open. */
+  gear(fn: () => void) {
+    fn();
+    for (const e of takeEvents(this.run)) this.react(e);
+    this.syncLoot();
+    this.bus.hud(this.hud());
+  }
+
+  stairsChoice(choice: 'deeper' | 'leave' | 'stay') {
+    this.asked = false;
+    takeStairs(this.run, choice);
+    for (const e of takeEvents(this.run)) this.react(e);
+  }
+
   skipFloor() {
     this.whenBuilt(() => {
       skipFloor(this.run);
@@ -2376,6 +2472,10 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
     skipToWarden: () => scene.skipToWarden(),
     cycleTheme: () => scene.cycleTheme(),
     pickRelic: (id) => scene.pickRelic(id),
+    wear: (id) => scene.gear(() => wear(scene.run, id)),
+    takeOff: (slot) => scene.gear(() => takeOff(scene.run, slot)),
+    dropItem: (id) => scene.gear(() => dropFromBag(scene.run, id)),
+    stairs: (choice) => scene.stairsChoice(choice),
     winNow: () => scene.winNow(),
     autopilot: (on) => (scene.bot = on),
     destroy: () => game.destroy(true),

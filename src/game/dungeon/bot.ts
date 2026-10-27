@@ -285,8 +285,8 @@ export function botInput(run: Run): Input {
     x += (dx / d) * pull - (dy / d) * 0.35;
     y += (dy / d) * pull + (dx / d) * 0.35;
   } else if (run.cleared) {
-    // Gems come on their own: open the chest, then on to where the map says.
-    const c = run.chest && !run.chest.opened ? run.chest : null,
+    // Gems come on their own: pick up what dropped, open the chest, then on to where the map says.
+    const c = run.loot.find((l) => !l.full) ?? (run.chest && !run.chest.opened ? run.chest : null),
       door = c ? null : run.climb !== null ? (run.doors[0] ?? null) : route(run),
       [gx, gy] = c ? [c.x, c.y] : door ? beyond(run, door) : run.stairs ? [run.stairs.x, run.stairs.y] : [h.x, h.y],
       dx = gx - h.x,

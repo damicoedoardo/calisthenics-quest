@@ -22,6 +22,7 @@ import { withTodayPage } from '@/story/daily';
 import type { Scene } from '@/story/types';
 import { inSandbox, useGameState } from '@/lib/store';
 import { recordRun, ZONES, type Zone } from '@/lib/fog';
+import { settleGear } from '@/lib/fog-gear';
 import { skipIntro, useDevMode } from '@/lib/dev';
 
 type Tab = 'today' | 'train' | 'play' | 'hero';
@@ -217,7 +218,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         ) : tab === 'train' ? (
           <TrainTab state={state} update={update} />
         ) : tab === 'play' ? (
-          <PlayTab state={state} onPlay={setRun} />
+          <PlayTab state={state} onPlay={setRun} update={update} />
         ) : (
           <HeroTab
             state={state}
@@ -259,7 +260,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           zone={run}
           dev={dev}
           startAt={runStart}
-          onEnd={(r) => update((s) => recordRun(s, r))}
+          onEnd={(r) => update((s) => settleGear(recordRun(s, r), r).state)}
           onLeave={() => {
             setRun(null);
             setRunStart(undefined);

@@ -28,7 +28,7 @@ Accept intended snapshot changes with `pnpm test -u`, and say in the PR why they
   writes each timeline and Fog snapshots to `sim-out/` (git-ignored).
 - **Fog** (`scripts/fog-sim.mjs`): `pnpm fog:sim steady 100` plays hundreds of bot runs per zone
   and class on those snapshots, on every core, with the game's own engine and bot (Node runs the
-  TypeScript through `scripts/ts-hooks.mjs`, which also lets it import JSON the bundler way). `pnpm fog:tune steady 60` finds each zone's HP and damage for the target win rates.
+  TypeScript through `scripts/ts-hooks.mjs`, which also lets it import JSON the bundler way). `pnpm fog:tune steady 60` finds each zone's HP and damage for the target win rates. Each run starts in the starter kit with the snapshot's points (`build`), so items the bot finds can be worn.
 - **In-browser balance** (`scripts/fog-balance.cjs`): the bot plays a production build in a
   browser; needs `pnpm build && pnpm start -p 3124` running.
 

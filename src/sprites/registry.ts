@@ -1,6 +1,7 @@
 import { uniformGear } from '@/lib/gear';
 import type { AbilityId, RelicId } from '@/game/dungeon/engine';
 import type { UpgradeId } from '@/lib/fog';
+import type { ItemIcon } from '@/game/dungeon/items';
 import { CLIPS, type ClipFrame, type ClipId, type SpriteAction } from './clips';
 import { toSheet, type Grid } from './engine/grid';
 import { drawBook } from './characters/book';
@@ -35,7 +36,7 @@ import { drawWhisperMid } from './characters/whisperMid';
 import { drawGaleMid } from './characters/galeMid';
 import { drawExercise, type ExerciseOpts } from './characters/exercise';
 import { ZONE_PLACE, dress, edged } from './characters/zoned';
-import { ABILITY_ICONS, DAY_ICONS, KEEPSAKE_ICONS, MARK_ICONS, RELIC_ICONS, SKILL_ICONS, UI_ICONS, ZONE_ICONS, type DayKind } from './characters/icons';
+import { ABILITY_ICONS, DAY_ICONS, ITEM_ICONS, KEEPSAKE_ICONS, MARK_ICONS, RELIC_ICONS, SKILL_ICONS, UI_ICONS, ZONE_ICONS, type DayKind } from './characters/icons';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
    art for a character is a change here, never in a component. Two kinds:
@@ -112,6 +113,9 @@ const zoned = (label: string, draw: DrawnSprite<NoOpts>['draw'], attack: ClipId 
 export interface KeepsakeOpts {
   /** The zone whose boss gave it, 0-5. */
   zone: number;
+}
+export interface ItemIconOpts {
+  name: ItemIcon;
 }
 export interface RelicIconOpts {
   name: RelicId;
@@ -197,6 +201,7 @@ export const SPRITES = {
   // app icons, hand-drawn at 16x16 (keepsakes) and 12x12 (Book of Days)
   keepsake: icon<KeepsakeOpts>((o) => `Keepsake ${o.zone + 1}`, { zone: 0 }, (o) => KEEPSAKE_ICONS[o.zone] ?? KEEPSAKE_ICONS[0]),
   dayIcon: icon<DayIconOpts>((o) => o.kind, { kind: 'A visit' }, (o) => DAY_ICONS[o.kind]),
+  itemIcon: icon<ItemIconOpts>((o) => o.name, { name: 'sword' }, (o) => ITEM_ICONS[o.name]),
   relicIcon: icon<RelicIconOpts>((o) => o.name, { name: 'whetstone' }, (o) => RELIC_ICONS[o.name]),
   abilityIcon: icon<AbilityIconOpts>((o) => o.name, { name: 'charge' }, (o) => ABILITY_ICONS[o.name]),
   skillIcon: icon<SkillIconOpts>((o) => o.name, { name: 'power' }, (o) => SKILL_ICONS[o.name]),

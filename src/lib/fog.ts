@@ -6,6 +6,7 @@ import { chapterStart, storyState } from '@/story/engine';
 import { isRested } from '@/story/daily';
 import { flameStage, stageIndex } from '@/story/flame';
 import type { FogBoss, FogZone } from '@/story/types';
+import type { Item, ItemSlot } from '@/game/dungeon/items';
 
 /* The Fog: the game you play between workouts. A run is a few minutes of surviving waves of
    Fog creatures, picking new skills as you level, until the zone's boss shows up. Runs are free to
@@ -207,6 +208,10 @@ export interface RunResult extends RunBest {
   /** In a dungeon: the deepest floor and room reached, from 1. */
   floor?: number;
   room?: number;
+  /** How it ended ('left': out by the stairs, keeping what you carried). */
+  why?: string;
+  /** What you wore and carried at the end (fog-gear.ts settles it into the save). */
+  gear?: { worn: Partial<Record<ItemSlot, Item>>; bag: Item[] };
 }
 
 function mergeRecord(prev: RunRecord | undefined, r: RunResult): RunRecord {

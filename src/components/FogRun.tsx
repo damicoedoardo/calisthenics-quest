@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Pause, Smartphone } from 'lucide-react';
+import { Backpack, Pause, Smartphone } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { fill, storyWords } from '@/story/engine';
 import type { FogLines } from '@/story/types';
@@ -9,10 +9,14 @@ import { getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, type RunRe
 import { music } from '@/lib/music';
 import { zoneMusic } from '@/lib/music-zones';
 import { runSheets } from '@/game/sheets';
+import { buildOf } from '@/lib/stats';
+import { settleGear, vaultSize, wornFor, type GearOutcome } from '@/lib/fog-gear';
+import { ITEM_SLOTS, RARITY, SLOT_NAME, shortOf, type Item, type ItemSlot } from '@/game/dungeon/items';
+import { ItemCard, ItemTile } from './ItemCard';
 import { Sprite } from './Sprite';
 import { SoundToggle, useMusic } from './Sound';
 import type { FreePick, Hud, MiniMap, RunEnd, RunHandle } from '@/game/dungeon/scene';
-import { ABILITIES, DODGE, RELICS, ROOM_KINDS, midBoss, type AbilityId, type CellKind, type RelicId } from '@/game/dungeon/engine';
+import { ABILITIES, BAG, DODGE, RELICS, ROOM_KINDS, midBoss, type AbilityId, type CellKind, type RelicId } from '@/game/dungeon/engine';
 
 interface Props {
   state: GameState;
@@ -99,6 +103,14 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
   /** Which of this zone's records the last run beat. */
   const [broken, setBroken] = useState<ReturnType<typeof recordsBroken> | null>(null);
   const [chest, setChest] = useState<{ choices: RelicId[]; have: Partial<Record<RelicId, number>> } | null>(null);
+  // The bag, open over the run (which holds still), and the item picked in it.
+  const [bag, setBag] = useState(false);
+  // An item just picked up, shown for a moment.
+  const [found, setFound] = useState<{ item: Item; at: number } | null>(null);
+  // On the stairs: go deeper, or leave with what you carry.
+  const [stairs, setStairs] = useState(false);
+  // What came home from the run, or what the Fog took.
+  const [gearOut, setGearOut] = useState<GearOutcome | null>(null);
   // The game code couldn't be fetched (offline before the Play tab ever loaded it).
   const [failed, setFailed] = useState(false);
   // Held upright, the run waits behind a "turn your phone" card.
@@ -128,6 +140,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
     setTip(true);
     setBroken(null);
     setFailed(false);
+    setBag(false);
+    setStairs(false);
+    setGearOut(null);
     const tipGone = setTimeout(() => setTip(false), 10000);
     const moved = () => setTip(false);
     window.addEventListener('keydown', moved, { once: true });
@@ -136,7 +151,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
     let jump = 0;
     Promise.all([game, calm]).then(([{ startRun }]) => {
       if (cancelled) return;
-      run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast' }, {
+      run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast', worn: wornFor(state), build: buildOf(state) }, {
         hud: setHud,
         floor: (n: number) => {
           setFloorShown(n);
@@ -149,10 +164,15 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
           setTimeout(() => setBoss(false), 4500);
         },
         say: (text) => setSaid({ text, at: Date.now() }),
+        loot: (item) => setFound({ item, at: Date.now() }),
+        stairs: () => setStairs(true),
         end: (r) => {
-          music.sting(r.won ? (zoneMusic(zone.id).win ?? 'victory') : 'defeat');
+          music.sting(r.won ? (zoneMusic(zone.id).win ?? 'victory') : r.why === 'left' ? 'levelup' : 'defeat');
           const result: RunResult = { ...r, zone: zone.id };
           setBroken(recordsBroken(state.fog?.records?.[zone.id], result));
+          setBag(false);
+          setStairs(false);
+          setGearOut(settleGear(state, r).out);
           setEnd(r);
           onEnd(result);
         },
@@ -195,6 +215,18 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
   const pick = (id: UpgradeId) => {
     setOffer(null);
     run.current?.pick(id);
+  };
+
+  useEffect(() => {
+    if (!found) return;
+    const t = setTimeout(() => setFound(null), 2600);
+    return () => clearTimeout(t);
+  }, [found]);
+
+  const openBag = (on: boolean) => {
+    setBag(on);
+    if (on) run.current?.pause();
+    else if (!paused) run.current?.resume();
   };
 
   useEffect(() => {
@@ -244,6 +276,15 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
               </p>
               <p className="mt-1 font-mono text-[10px] text-slate-400">{hud.climb != null ? `ledge ${hud.climb + 1}` : `${hud.kills} down`}</p>
             </div>
+            <button
+              aria-label={`Bag: ${hud.gear.bag.length} of ${BAG}`}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => openBag(true)}
+              className={`pointer-events-auto relative grid h-9 w-9 place-items-center rounded-lg bg-ink-800/90 ${hud.gear.bag.length >= BAG ? 'text-red-300' : 'text-slate-200'}`}
+            >
+              <Backpack size={16} />
+              {hud.gear.bag.length > 0 && <span className="absolute -bottom-1 -right-1 rounded bg-ink-950 px-1 font-mono text-[8px] text-gold-300">{hud.gear.bag.length}</span>}
+            </button>
             <button
               aria-label="Pause"
               onClick={() => {
@@ -299,7 +340,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
               ? `${zone.bossName} is down here, in the last room.`
               : floorShown === hud?.wardenFloor
                 ? `Halfway down. ${midName(zone)} guards this floor's last room. ${midBoss(zone).tip}.`
-                : `${(hud?.floors ?? floorShown) - floorShown} more below, then ${zone.bossName}. A breath on the stairs: a little HP back.`}
+                : `${(hud?.floors ?? floorShown) - floorShown} more below, then ${zone.bossName}.`}
           </p>
         </div>
       )}
@@ -309,6 +350,61 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
           <p className="font-pixel text-xs leading-relaxed text-violet-300">{zone.boss === 'summit' ? 'The climb begins' : `${zone.bossName} walks out of the Fog`}</p>
           {zone.boss === 'hollow' && state.profile.voice && <p className="mt-2 text-sm italic text-slate-200">&ldquo;{state.profile.voice}&rdquo;</p>}
           <p className="mt-2 text-sm text-slate-200">{zone.hint}</p>
+        </div>
+      )}
+
+      {found && !end && !bag && (
+        <div key={found.at} className="pointer-events-none absolute inset-x-0 bottom-28 flex animate-fadein justify-center">
+          <div className="flex items-center gap-2 rounded-lg bg-ink-950/85 px-3 py-2 ring-1 ring-ink-700">
+            <ItemTile item={found.item} size={28} />
+            <div className="text-left">
+              <p className="text-xs font-semibold" style={{ color: RARITY[found.item.rarity].color }}>
+                {found.item.name}
+              </p>
+              <p className="text-[10px] text-slate-400">{shortOf(found.item, buildOf(state)) > 0 ? 'Into the bag. Train to wear it.' : 'Into the bag. Open it to wear.'}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bag && hud && !end && (
+        <BagPanel
+          gear={hud.gear}
+          build={buildOf(state)}
+          onWear={(id) => run.current?.wear(id)}
+          onTakeOff={(slot) => run.current?.takeOff(slot)}
+          onDrop={(id) => run.current?.dropItem(id)}
+          onClose={() => openBag(false)}
+        />
+      )}
+
+      {stairs && !end && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/80 px-4">
+          <p className="font-pixel text-sm text-gold-300">The stairs</p>
+          <p className="mt-2 max-w-sm text-center text-xs text-slate-400">
+            You catch your breath: HP full. Go down and keep what you find if you make it, or walk back up now and keep everything you carry.
+          </p>
+          <div className="mt-4 w-full max-w-sm space-y-2">
+            {(
+              [
+                ['deeper', 'Go deeper', `Floor ${(hud?.floor ?? 0) + 1}. If the Fog takes you, it takes what you wear and carry.`],
+                ['leave', 'Leave with your loot', `Home with ${hud ? hud.gear.bag.length : 0} item${hud?.gear.bag.length === 1 ? '' : 's'} in the bag. The dungeon starts over next time.`],
+                ['stay', 'Not yet', 'Look round this floor first.'],
+              ] as const
+            ).map(([id, label, text]) => (
+              <button
+                key={id}
+                onClick={() => {
+                  setStairs(false);
+                  run.current?.stairs(id);
+                }}
+                className={`w-full rounded-xl p-3 text-left ring-1 active:scale-[.98] ${id === 'deeper' ? 'bg-gold-400 text-ink-950 ring-gold-200' : 'bg-ink-800 text-slate-100 ring-ink-700'}`}
+              >
+                <span className="block text-sm font-semibold">{label}</span>
+                <span className={`mt-0.5 block text-xs ${id === 'deeper' ? 'text-ink-900' : 'text-slate-400'}`}>{text}</span>
+              </button>
+            ))}
+          </div>
         </div>
       )}
 
@@ -437,7 +533,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt }: Props) {
         </div>
       )}
 
-      {end && <Results state={state} zone={zone} end={end} broken={broken} onAgain={() => setAttempt((a) => a + 1)} onLeave={onLeave} />}
+      {end && <Results state={state} zone={zone} end={end} broken={broken} gear={gearOut} onAgain={() => setAttempt((a) => a + 1)} onLeave={onLeave} />}
 
       {portrait && !failed && (
         <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-5 bg-ink-950 px-8 text-center">
@@ -660,13 +756,22 @@ function Recap({ end, broken, midName }: { end: RunEnd; broken: ReturnType<typeo
   );
 }
 
-function Results({ state, zone, end, broken, onAgain, onLeave }: { state: GameState; zone: Zone; end: RunEnd; broken: ReturnType<typeof recordsBroken> | null; onAgain: () => void; onLeave: () => void }) {
-  const hints = [nextGrowth(state)];
+function Results({ state, zone, end, broken, gear, onAgain, onLeave }: { state: GameState; zone: Zone; end: RunEnd; broken: ReturnType<typeof recordsBroken> | null; gear: GearOutcome | null; onAgain: () => void; onLeave: () => void }) {
+  const hints = [nextGrowth(state)],
+    left = end.why === 'left';
   return (
     <div className="absolute inset-0 flex flex-col items-center overflow-y-auto bg-ink-950/90 px-6 py-6 text-center">
-      <p className={`mt-auto font-pixel text-sm ${end.won ? 'text-gold-300' : 'text-slate-300'}`}>{end.won ? `${zone.name} cleared!` : 'The Fog took you'}</p>
+      <p className={`mt-auto font-pixel text-sm ${end.won || left ? 'text-gold-300' : 'text-slate-300'}`}>{end.won ? `${zone.name} cleared!` : left ? 'Back in the light' : 'The Fog took you'}</p>
       {end.height != null && <p className="mt-2 font-pixel text-[10px] text-sky-300">{end.height === 0 ? 'The first ledge waits for you.' : `You climbed ${end.height} ledge${end.height === 1 ? '' : 's'} high.`}</p>}
-      <p className="mt-3 text-sm text-slate-300">{end.won ? <>The Wanderer: &ldquo;{zone.after}&rdquo;</> : end.floor ? 'The dungeon starts over from the top. Losing here costs nothing: come back stronger.' : 'Losing here costs nothing. Come back stronger.'}</p>
+      <p className="mt-3 text-sm text-slate-300">{end.won ? (
+          <>The Wanderer: &ldquo;{zone.after}&rdquo;</>
+        ) : left ? (
+          'You chose to walk out with what you found. Knowing when to stop is a skill too.'
+        ) : (
+          'The Fog takes what you carried, not who you are. Your points, your level and your story stay.'
+        )}
+      </p>
+      {gear && <GearRecap out={gear} vault={vaultSize(state.sessions.length)} />}
       {end.won && (
         <div className="mt-4 w-full max-w-xs rounded-xl bg-ink-800 p-3 text-left ring-1 ring-gold-400/30">
           <p className="font-pixel text-[9px] text-gold-300">You keep: {zone.keepsake.name}</p>
@@ -705,6 +810,114 @@ function Results({ state, zone, end, broken, onAgain, onLeave }: { state: GameSt
       <button onClick={onLeave} className="mb-auto mt-2 w-full max-w-xs py-3 text-sm text-slate-400">
         Back
       </button>
+    </div>
+  );
+}
+
+/** The bag over the run: what you wear (three slots) and what you carry. Tap an item to see it,
+    then wear it, take it off or leave it on the floor. */
+function BagPanel({ gear, build, onWear, onTakeOff, onDrop, onClose }: { gear: Hud['gear']; build: ReturnType<typeof buildOf>; onWear: (id: string) => void; onTakeOff: (slot: ItemSlot) => void; onDrop: (id: string) => void; onClose: () => void }) {
+  const [pick, setPick] = useState<{ from: 'worn' | 'bag'; id: string } | null>(null);
+  const all = [...Object.values(gear.worn), ...gear.bag].filter((x): x is Item => !!x),
+    item = pick && all.find((x) => x.id === pick.id);
+  const wornNow = item && gear.worn[item.slot]?.id === item.id;
+  return (
+    <div onPointerDown={(e) => e.stopPropagation()} className="pointer-events-auto absolute inset-0 z-10 flex animate-fadein items-center justify-center bg-ink-950/85 p-3">
+      <div className="flex max-h-full w-full max-w-2xl gap-3 overflow-auto rounded-xl bg-ink-950/95 p-3 ring-1 ring-gold-400/40">
+        <div className="min-w-0 flex-1">
+          <p className="font-pixel text-[9px] text-gold-300">Worn</p>
+          <div className="mt-2 flex gap-2">
+            {ITEM_SLOTS.map((slot) => {
+              const it = gear.worn[slot];
+              return (
+                <button key={slot} onClick={() => it && setPick({ from: 'worn', id: it.id })} className={`flex flex-col items-center gap-1 rounded-lg p-1 ${pick?.id === it?.id && it ? 'bg-ink-800' : ''}`} aria-label={it ? it.name : `${SLOT_NAME[slot]}: empty`}>
+                  {it ? <ItemTile item={it} size={44} /> : <span className="grid h-11 w-11 place-items-center rounded-lg border border-dashed border-ink-700 text-[9px] text-slate-600">empty</span>}
+                  <span className="text-[9px] text-slate-500">{SLOT_NAME[slot]}</span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-3 font-pixel text-[9px] text-gold-300">
+            Bag {gear.bag.length}/{BAG}
+          </p>
+          <div className="mt-2 grid grid-cols-4 gap-2 sm:grid-cols-8">
+            {Array.from({ length: BAG }, (_, i) => {
+              const it = gear.bag[i];
+              return it ? (
+                <button key={it.id} onClick={() => setPick({ from: 'bag', id: it.id })} className={`grid place-items-center rounded-lg p-1 ${pick?.id === it.id ? 'bg-ink-800' : ''}`} aria-label={it.name}>
+                  <ItemTile item={it} size={40} dim={shortOf(it, build) > 0} />
+                </button>
+              ) : (
+                <span key={i} className="mx-auto h-10 w-10 rounded-lg border border-dashed border-ink-800" />
+              );
+            })}
+          </div>
+          <button onClick={onClose} className="mt-3 w-full rounded-xl bg-gold-400 py-2.5 font-pixel text-[10px] text-ink-950">
+            Back to the run
+          </button>
+        </div>
+        <div className="w-60 shrink-0">
+          {item ? (
+            <ItemCard item={item} build={build}>
+              {wornNow ? (
+                !item.starter && (
+                  <button onClick={() => onTakeOff(item.slot)} disabled={gear.bag.length >= BAG} className="flex-1 rounded-lg bg-ink-700 py-2 text-xs text-slate-200 disabled:opacity-40">
+                    Take off
+                  </button>
+                )
+              ) : (
+                <>
+                  <button onClick={() => onWear(item.id)} disabled={shortOf(item, build) > 0} className="flex-1 rounded-lg bg-gold-400 py-2 text-xs font-semibold text-ink-950 disabled:bg-ink-700 disabled:text-slate-500">
+                    Wear
+                  </button>
+                  <button
+                    onClick={() => {
+                      onDrop(item.id);
+                      setPick(null);
+                    }}
+                    className="flex-1 rounded-lg bg-ink-700 py-2 text-xs text-slate-200"
+                  >
+                    Drop
+                  </button>
+                </>
+              )}
+            </ItemCard>
+          ) : (
+            <p className="rounded-xl bg-ink-800 p-3 text-xs text-slate-400">
+              Tap an item to see it. Items need stat points to wear, and points come from workouts. Die down here and the Fog takes what you wear and carry; leave by the stairs to keep it.
+            </p>
+          )}
+          {item && !wornNow && gear.worn[item.slot] && (
+            <p className="mt-2 text-[10px] text-slate-500">
+              Now: <span style={{ color: RARITY[gear.worn[item.slot]!.rarity].color }}>{gear.worn[item.slot]!.name}</span>
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** What happened to your gear: home and into the vault, or taken by the Fog. */
+function GearRecap({ out, vault }: { out: GearOutcome; vault: number }) {
+  const rows = out.kept ? out.stored : out.lost;
+  if (!rows.length && !out.left.length) return null;
+  return (
+    <div className="mt-4 w-full max-w-xs rounded-xl bg-ink-800 p-3 text-left ring-1 ring-ink-700">
+      <p className={`font-pixel text-[9px] ${out.kept ? 'text-gold-300' : 'text-red-300'}`}>{out.kept ? 'Into your vault' : 'The Fog took'}</p>
+      <ul className="mt-2 space-y-1">
+        {rows.map((it) => (
+          <li key={it.id} className={`flex items-center gap-2 text-xs ${out.kept ? '' : 'opacity-60'}`}>
+            <ItemTile item={it} size={22} />
+            <span style={{ color: RARITY[it.rarity].color }}>{it.name}</span>
+          </li>
+        ))}
+      </ul>
+      {out.left.length > 0 && (
+        <p className="mt-2 text-[10px] text-slate-400">
+          No room for {out.left.length} more (the vault holds {vault}). It grows with your workouts.
+        </p>
+      )}
     </div>
   );
 }

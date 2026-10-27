@@ -29,8 +29,9 @@ pieces of screen state, and decides what is on screen:
 | `AfterSession` | After a workout: a short battle against the chapter enemy, then the loot (XP, stat points, better than last time, level, gear, the flame's word) |
 | `TrainTab` | The "Exercise library" button, gym or home, the plan's two days with today's targets, when the next gear is forged |
 | `ExerciseLibrary` | The whole exercise library over the Train tab: search, equipment, kind and movement filters, list rows with a demo still; an exercise shows the boy and girl demo, steps, tips and common mistakes. Loaded on demand. See [../game/exercise-library.md](../game/exercise-library.md) |
-| `PlayTab` | Power from training, the zones, warms up the Fog's code and sprite sheets while idle |
-| `FogRun` | A run, held sideways: loads the Phaser scene on demand, the HUD, the depth ladder and the floor's minimap (`FloorMap`, tap for it big), pause menu, skill picks, the recap, the "turn your phone" card |
+| `PlayTab` | Power from training, what you take into the Fog (`FogGearCard`: worn gear and the vault), the zones, warms up the Fog's code and sprite sheets while idle |
+| `FogRun` | A run, held sideways: loads the Phaser scene on demand, the HUD, the depth ladder and the floor's minimap (`FloorMap`, tap for it big), the bag (`BagPanel`), the pickup note, the stairs card (deeper or leave), pause menu, skill picks, the recap with what came home or was lost (`GearRecap`), the "turn your phone" card |
+| `ItemCard` | An item's tile and card (name in its rarity's color, what it gives, what it needs), shared by the run's bag and the Play tab |
 | `HeroTab` | Gear, class, look editor, the champion's stat points (`StatPoints`: spend, take back), keepsakes, quest log, Backup and Restore, cloud backup sign-in (`CloudSave`) |
 | `ScenePlayer`, `Dialogue` | Play a story scene: lines, camera shots, the question, the answer lines |
 | `ClassPicker` | Four weapons in the ash: pick the class |
