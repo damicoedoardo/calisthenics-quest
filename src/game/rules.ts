@@ -1,9 +1,8 @@
 import type { ClassId } from '@/lib/gear';
 import type { Power, UpgradeId } from '@/lib/fog';
-import type { FogBoss } from '@/story/types';
 import type { Sheet } from '@/sprites/registry';
 
-/* The Fog's shared numbers and looks, as plain data and math with no Phaser: the dungeon engine
+/* The Fog's shared numbers and sprite sheet names, as plain data and math with no Phaser: the dungeon engine
    (dungeon/engine.ts) and its scene read them. */
 
 export type SheetKey = 'hero' | 'heroAttack' | 'ember' | 'hollow' | 'slime' | 'wisp' | 'mirror' | 'golem' | 'knight' | 'echo' | 'book' | 'summit'
@@ -38,54 +37,6 @@ export const HERO_HP = 100;
 export const RANGE = 240;
 /** A sword swings only at what it can reach, so it never whiffs on a foe still walking in. */
 export const SLASH_REACH = 90;
-
-export type FoeKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'boss';
-
-export interface Stats {
-  hp: number;
-  speed: number;
-  dmg: number;
-  xp: number;
-  scale: number;
-  r: number;
-  bits: number[];
-  /** Its sprite sheet. */
-  tex: SheetKey;
-}
-
-export const FOES: Record<Exclude<FoeKind, 'boss'>, Stats> = {
-  slime: { hp: 12, speed: 52, dmg: 7, xp: 1, scale: 0.55, r: 14, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0], tex: 'slime' },
-  wisp: { hp: 8, speed: 88, dmg: 5, xp: 1, scale: 0.5, r: 13, bits: [0xf97316, 0xfde68a, 0x6b7280], tex: 'wisp' },
-  mirror: { hp: 34, speed: 66, dmg: 11, xp: 3, scale: 0.65, r: 15, bits: [0xe2e8f0, 0xcbd5e1, 0xffffff], tex: 'mirror' },
-  golem: { hp: 160, speed: 42, dmg: 18, xp: 10, scale: 0.95, r: 18, bits: [0xa8a29e, 0x78716c, 0x84cc16], tex: 'golem' },
-  // A golden copy of you, sent by the Mirror. Hitting it hurts you.
-  reflection: { hp: 30, speed: 78, dmg: 8, xp: 0, scale: 0.75, r: 12, bits: [0xfde68a, 0xfbbf24, 0xffffff], tex: 'echo' },
-};
-
-/** The Perfect Knight's armor: every hit breaks one plate, however weak. */
-export const KNIGHT_PLATES = 40;
-
-/**
- * The bosses. Each one's rule is its chapter's lesson:
- * - Tomorrow heals while you keep your distance and splits off small Tomorrows: get close.
- * - The Mirror sends reflections of you, and hitting them hurts you: walk past them.
- * - The Perfect Knight wears plates that any hit breaks, and shouts to push you away: keep hitting.
- * - The Hollow dashes and calls the fog (the Plateau and the Summit fight like it for now).
- */
-export const BOSSES: Record<FogBoss, Stats> = {
-  tomorrow: { hp: 2000, speed: 46, dmg: 16, xp: 0, scale: 1.5, r: 20, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0], tex: 'slime' },
-  mirror: { hp: 480, speed: 36, dmg: 16, xp: 0, scale: 1.35, r: 16, bits: [0xe2e8f0, 0xcbd5e1, 0xffffff], tex: 'mirror' },
-  knight: { hp: KNIGHT_PLATES, speed: 62, dmg: 18, xp: 0, scale: 1.15, r: 14, bits: [0xe2e8f0, 0x94a3b8, 0xdc2626], tex: 'knight' },
-  plateau: { hp: 650, speed: 70, dmg: 20, xp: 0, scale: 1.5, r: 13, bits: [0xa78bfa, 0x6b21a8, 0xffffff], tex: 'hollow' },
-  hollow: { hp: 650, speed: 70, dmg: 20, xp: 0, scale: 1.5, r: 13, bits: [0xa78bfa, 0x6b21a8, 0xffffff], tex: 'hollow' },
-  summit: { hp: 650, speed: 70, dmg: 20, xp: 0, scale: 1.5, r: 13, bits: [0xa78bfa, 0x6b21a8, 0xffffff], tex: 'hollow' },
-};
-
-/** A boss you can't bring down in this long (s) means you need more training: the Fog closes in. */
-export const BOSS_LIMIT = 180;
-
-/** Tomorrow heals while you're further than this. */
-export const TOMORROW_REACH = 200;
 
 export type AttackKind = 'slash' | 'arrow' | 'orb' | 'wave';
 

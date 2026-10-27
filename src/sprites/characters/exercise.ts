@@ -119,7 +119,6 @@ interface Pose {
 const arm = (shoulder: P, hand: P, toward: P, l1 = UPPER, l2 = FORE): Arm => ({ shoulder, hand, elbow: ik(shoulder, hand, l1, l2, toward) });
 /** A locked arm's length: the hand exactly a straight arm away (no kink at the elbow). */
 const LOCKED = UPPER + FORE - 0.02;
-const leg = (hip: P, foot: P, toward: P, toes: P): Leg => ({ hip, foot, toes, knee: ik(hip, foot, THIGH, SHIN, toward) });
 /** A straight leg along a direction. */
 const straight = (hip: P, d: P, toes: P): Leg => ({ hip, knee: add(hip, mul(d, THIGH)), foot: add(hip, mul(d, THIGH + SHIN)), toes });
 
