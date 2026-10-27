@@ -333,8 +333,9 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
   },
 };
 /** How the Mirror splits: how often (s), when first, how long the images stay, and how long your
-    reflections stay; and how much of your HP it costs to hit an image, or a reflection of you. */
-export const SPLIT = { every: 11, first: 6, last: 7, stay: 8, image: 0.08, reflection: 0.025 };
+    reflections stay; how much of your HP it costs to hit an image, or a reflection of you; and how
+    close to a sword's aim (radians) a reflection must be for the swing to break it. */
+export const SPLIT = { every: 11, first: 6, last: 7, stay: 8, image: 0.08, reflection: 0.025, aim: 0.35 };
 /** A floor-5 mid-boss: its monster, its name, and what is said as it rises, past half, and as it
     falls. Each is a smaller echo of its zone's lesson. */
 export interface MidBoss {
@@ -400,20 +401,20 @@ export interface ZoneDungeon {
 export const ZONE_DUNGEONS: ZoneDungeon[] = [
   // The Ashlands: the first dungeon, everything met one floor at a time.
   { unlock: UNLOCK, ground: { water: 1, spikes: 1, barrels: 1, pillars: 1 } },
-  // Mirror Lake: mirrors and seekers early, shades (shadows of you) sooner; a pool in most rooms.
+  // Mirror Lake: mirrors early and seekers soon after, shades (shadows of you) sooner; a pool in most rooms.
   {
     unlock: [
       ['slime', 0, 2.5],
       ['wisp', 0, 2.5],
-      ['mirror', 0, 1.5],
-      ['seeker', 1, 1.8],
+      ['mirror', 0, 1.1],
+      ['seeker', 2, 1.6],
       ['ram', 2, 1.6],
       ['shade', 3, 1.8],
       ['book', 4, 1.4],
       ['splitter', 5, 1.6],
       ['smoke', 6, 1.6],
     ],
-    ground: { water: 2.4, spikes: 0.6, barrels: 0.5, pillars: 1 },
+    ground: { water: 1.7, spikes: 0.6, barrels: 0.5, pillars: 1 },
   },
   // The Village of Almosts, its forges gone cold: rams and smoke from the chimneys, the Book of
   // Days in every doorway, barrels everywhere, houses (pillars) to walk around.
@@ -2118,6 +2119,16 @@ function kill(run: Run, f: Foe) {
   if (f === run.boss) end(run, true, 'boss');
 }
 
+/** Pushes a foe away from a point without hurting it. */
+function nudge(run: Run, f: Foe, knock: number, fromX: number, fromY: number) {
+  const dx = f.x - fromX,
+    dy = f.y - fromY,
+    d = Math.hypot(dx, dy) || 1;
+  f.vx = (dx / d) * Math.max(knock, 120);
+  f.vy = (dy / d) * Math.max(knock, 120);
+  f.knockUntil = run.t + 0.18;
+}
+
 function hitYourself(run: Run, kind: 'image' | 'reflection') {
   if (run.over) return;
   if (!run.mirrorHurtAt) emit(run, { type: 'say', text: kind === 'image' ? 'Only an image, and it cut you. The real Mirror is the one that shoots.' : 'That was you. Walk past your reflections.' });
@@ -2129,7 +2140,12 @@ function hitYourself(run: Run, kind: 'image' | 'reflection') {
 }
 
 function burst(run: Run, x: number, y: number, R: number, dmg: number, color: Extract<GameEvent, { type: 'burst' }>['color'], skip?: Foe, knock = 160) {
-  for (const f of run.foes) if (f.alive && f !== skip && Math.hypot(f.x - x, f.y - y) <= R) damage(run, f, dmg, knock, x, y);
+  for (const f of run.foes) {
+    if (!f.alive || f === skip || Math.hypot(f.x - x, f.y - y) > R) continue;
+    // A blast all around isn't aimed: it pushes copies (yours, the Mirror's) away instead of breaking them.
+    if (f.kind === 'reflection' || f.kind === 'image') nudge(run, f, knock, x, y);
+    else damage(run, f, dmg, knock, x, y);
+  }
   for (const br of run.terrain.barrels) if (br.alive && Math.hypot(br.x - x, br.y - y) <= R) blowUp(run, br);
   emit(run, { type: 'burst', x, y, r: R, color });
 }
@@ -2178,6 +2194,12 @@ function slash(run: Run, angle: number, dmg: number) {
     if (d > R + f.def.r) continue;
     let diff = Math.atan2(f.y - h.y, f.x - h.x) - angle;
     diff = Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff)));
+    if ((f.kind === 'reflection' || f.kind === 'image') && diff >= SPLIT.aim) {
+      // Only a swing aimed at a copy (of you, or of the Mirror) shatters it: the edge of the arc
+      // pushes it aside.
+      if (diff < 1.3 || d < 22) nudge(run, f, 140, h.x, h.y);
+      continue;
+    }
     if (diff < 1.3 || d < 22) damage(run, f, dmg, 140);
   }
   for (const br of run.terrain.barrels) {

@@ -43,6 +43,12 @@ function bossJobs(zoneId: number, hero: Pick<HeroOpts, 'gear' | 'classId' | 'loo
   return [];
 }
 
+/** The zone's floor-5 mid-boss attacking (its idle sheet is a plain one): by zone id, like MIDS. */
+function midJobs(zoneId: number): [BossSheetKey, () => Sheet][] {
+  const ids = [['warden'], ['lanternMid'], ['foremanMid'], ['sandGolemMid', 'sandGolemMidStone'], ['whisperMid'], ['galeMid']] as const;
+  return (ids[Math.min(Math.max(zoneId, 0), ids.length - 1)] ?? []).map((id) => [`${id}Attack` as BossSheetKey, () => sheetFor(id, 'attack')]);
+}
+
 function jobs(state: GameState, zone: Zone): Job[] {
   const gear = gearOf(state),
     classId = state.profile.classId,
@@ -59,6 +65,7 @@ function jobs(state: GameState, zone: Zone): Job[] {
     ...plain.map((id): Job => [id, () => sheetFor(id, 'idle')]),
     ...dressed.map((id): Job => [id, () => sheetFor(id, 'idle', { zone: zone.id })]),
     ...bossJobs(zone.id, hero),
+    ...midJobs(zone.id),
   ];
 }
 
