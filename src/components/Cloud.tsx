@@ -9,6 +9,7 @@ import {
   cloudConfigured,
   deleteCloud,
   getCloud,
+  googleSignIn,
   lastRev,
   maybeSignedIn,
   Offline,
@@ -217,16 +218,18 @@ export function CloudSave({ sandbox }: { sandbox: boolean }) {
     return (
       <div className="mt-4 space-y-2">
         <p className="text-xs text-slate-400">Sign in to keep your hero safe in the cloud, and to bring it to a new phone.</p>
-        <button
-          onClick={async () => {
-            begin();
-            const err = await signInWithGoogle();
-            if (err) setMsg(err);
-          }}
-          className="flex w-full items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold"
-        >
-          <Cloud size={16} /> Sign in with Google
-        </button>
+        {googleSignIn && (
+          <button
+            onClick={async () => {
+              begin();
+              const err = await signInWithGoogle();
+              if (err) setMsg(err);
+            }}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold"
+          >
+            <Cloud size={16} /> Sign in with Google
+          </button>
+        )}
         <form
           className="flex gap-2"
           onSubmit={async (e) => {
@@ -241,7 +244,7 @@ export function CloudSave({ sandbox }: { sandbox: boolean }) {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="or your email"
+            placeholder={googleSignIn ? 'or your email' : 'your email'}
             aria-label="Email for a sign-in link"
             className="min-w-0 flex-1 rounded-xl bg-ink-900 px-3 text-sm text-slate-100 placeholder:text-slate-500"
           />

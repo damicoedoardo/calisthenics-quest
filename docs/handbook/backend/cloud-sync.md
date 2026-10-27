@@ -1,7 +1,7 @@
 ---
 type: reference
 title: Cloud backup in the app
-description: The app side of login and save backup — optional sign-in (Google or email link) in Hero > Settings, the sync hook that uploads the save a few seconds after each change, the plan() rules for phone vs cloud, and the which-save-to-keep question. Hidden until the NEXT_PUBLIC_ env vars are set.
+description: The app side of login and save backup — optional sign-in (email link; Google behind a flag) in Hero > Settings, the sync hook that uploads the save a few seconds after each change, the plan() rules for phone vs cloud, and the which-save-to-keep question. Hidden until the NEXT_PUBLIC_ env vars are set.
 tags: [backend, app, sync, login, supabase]
 timestamp: 2026-10-27
 ---
@@ -24,6 +24,9 @@ the cloud keeps a copy so a new phone (or a wiped one) can get the hero back.
 It shows only when all three are set at build time (Vercel env vars):
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_API_URL`. Without them
 the card is not drawn and no Supabase code is loaded. It is always off in `?sandbox`.
+
+Sign-in is by email link. The Google button shows only with `NEXT_PUBLIC_GOOGLE_SIGNIN=1`, set
+once the Google provider is turned on in the Supabase `forma` project (it isn't yet).
 
 ## How a sync goes
 

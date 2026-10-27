@@ -15,6 +15,9 @@ const API_URL = (process.env.NEXT_PUBLIC_API_URL ?? '').replace(/\/$/, '');
 
 export const cloudConfigured = !!(SUPABASE_URL && SUPABASE_ANON_KEY && API_URL);
 
+/** Google sign-in shows only once the Google provider is on in Supabase (NEXT_PUBLIC_GOOGLE_SIGNIN=1). */
+export const googleSignIn = process.env.NEXT_PUBLIC_GOOGLE_SIGNIN === '1';
+
 let client: Promise<SupabaseClient> | null = null;
 
 export function supabase(): Promise<SupabaseClient> {
