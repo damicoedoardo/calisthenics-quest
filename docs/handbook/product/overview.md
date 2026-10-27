@@ -11,7 +11,7 @@ timestamp: 2026-10-27
 FORMA ("form" in Italian) is a training app played like a pixel-art RPG. It is built for one
 player first (Edoardo, coming back to calisthenics after two years off) and is meant to be
 super clear, super intuitive and gamified. Live at https://forma-nu-red.vercel.app, installable
-to the home screen, works offline at the gym. Progress lives on the phone (Hero tab, Backup to save it). Signing in to keep a cloud copy is
+to the home screen (on phones it must be installed after the opening before the game goes on), works offline at the gym. Progress lives on the phone (Hero tab, Backup to save it). Signing in to keep a cloud copy is
 optional and shows only once FORMA's own server is set up.
 
 ## The rule the game is built on
@@ -28,7 +28,7 @@ training gave you. Gear comes from the dungeon, each item with its own art (lege
 | Today | The flame and its line for the day, today's quest (the plan's Day A or B: warm-up, main lifts, core, stretch), the rest card on rest days, the Book of Days | `src/components/TodayTab.tsx` |
 | Train | The exercise library (887 exercises, pixel demos, tips and mistakes), gym or home, the plan | `src/components/TrainTab.tsx` |
 | Play | The Fog: your power from training, the zones, a run | `src/components/PlayTab.tsx`, `FogRun.tsx` |
-| Hero | Gear, class, look, the champion's stat points, keepsakes, backup | `src/components/HeroTab.tsx` |
+| Hero | Gear, class, look, the champion's stat points, keepsakes, settings (sound, music in the menus), backup | `src/components/HeroTab.tsx` |
 
 Every time the app opens, a three-second splash: the flame catches, FORMA lands one letter per note, and the day's number in the Book of Days (`Opening`; on an iPhone it starts with "Tap to start", since sound needs a tap). Over the tabs: the opening story (first run only), the workout logger, the after-session fight and
 loot, story scenes, the class picker. See [../app/screens.md](../app/screens.md).

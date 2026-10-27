@@ -36,7 +36,7 @@ const noticed = (id: number) => ((Math.imul(id, 2654435761) >>> 0) % 1000) / 100
     most of the floor (or is badly hurt). The door on the way there, or null for the stairs in this room. */
 function route(run: Run): Door | null {
   const { cells, at } = run.map,
-    hp = run.hp / run.maxHp,
+    hp = run.hero.hp / run.hero.maxHp,
     isEnd = (k: CellKind) => k === 'stairs' || k === 'warden' || k === 'boss',
     rank = (k: CellKind) => (k === 'rest' ? (hp < 0.5 ? 3 : -1) : k === 'elite' ? (hp > 0.75 ? 1 : -2) : k === 'treasure' ? 1.5 : 0);
   // Doors from here to every room it knows, walking only through rooms it has been in.
@@ -76,7 +76,7 @@ const progress = new WeakMap<Run, { floor: number; at: number; climb: number | n
 function idle(run: Run): number {
   let hp = 0;
   for (const f of run.foes) hp += f.alive ? f.hp : 0;
-  hp += run.kills * 1e4;
+  hp += run.hero.kills * 1e4;
   const p = progress.get(run);
   if (!p || p.floor !== run.floor || p.at !== run.map.at || p.climb !== run.climb || p.hp !== hp) {
     progress.set(run, { floor: run.floor, at: run.map.at, climb: run.climb, hp, since: run.t });
@@ -236,9 +236,9 @@ export function botInput(run: Run): Input {
   const foreman = run.warden?.alive && (run.warden.kind === 'foreman' || run.warden.kind === 'whisper') ? run.warden : null;
   const goal = b ?? foreman ?? (near && !run.cleared ? near : null);
   // The Gale's gust: lean into it, and keep off the edge where it bites.
-  if (run.wind.x || run.wind.y) {
-    x -= (run.wind.x / GALE.push) * 1.6;
-    y -= (run.wind.y / GALE.push) * 1.6;
+  if (run.hero.wind.x || run.hero.wind.y) {
+    x -= (run.hero.wind.x / GALE.push) * 1.6;
+    y -= (run.hero.wind.y / GALE.push) * 1.6;
     const e = GALE.edge + ROOM.wall + 30;
     if (h.x < e) x += 2;
     if (h.x > run.area.w - e) x -= 2;
@@ -246,7 +246,7 @@ export function botInput(run: Run): Input {
     if (h.y > run.area.h - e) y -= 2;
     danger += 1;
   }
-  const shrine = T.shrine && !T.shrine.used && run.hp < run.maxHp * 0.6 ? T.shrine : null;
+  const shrine = T.shrine && !T.shrine.used && run.hero.hp < run.hero.maxHp * 0.6 ? T.shrine : null;
   if (shrine) {
     const dx = shrine.x - h.x,
       dy = shrine.y - h.y,
@@ -313,9 +313,9 @@ export function botInput(run: Run): Input {
 
   // The ability, when it helps.
   let ability = false;
-  if (now >= run.abilityAt && !run.cleared) {
-    const low = run.hp < run.maxHp * 0.5;
-    switch (run.ability) {
+  if (now >= run.hero.abilityAt && !run.cleared) {
+    const low = run.hero.hp < run.hero.maxHp * 0.5;
+    switch (run.hero.ability) {
       case 'charge':
         ability = nd < 140 || (!!b && Math.hypot(b.x - h.x, b.y - h.y) < 160);
         break;
@@ -334,7 +334,7 @@ export function botInput(run: Run): Input {
     }
   }
   // The dodge: through a shot that's about to land, along the way it was already stepping.
-  const dodge = imminent && now >= run.dodgeAt && !(run.charge && now < run.charge.until);
+  const dodge = imminent && now >= run.hero.dodgeAt && !(run.hero.charge && now < run.hero.charge.until);
   return { x: mx, y: my, ability, dodge };
 }
 

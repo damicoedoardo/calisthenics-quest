@@ -10,7 +10,7 @@
 
 import { ZONE_TRACKS, type ZoneStingId, type ZoneTrackId } from './music-zones';
 
-export type TrackId = 'memory' | 'hollow' | 'heartbeat' | 'rise' | 'camp' | 'fog' | 'fogBoss' | ZoneTrackId;
+export type TrackId = 'memory' | 'hollow' | 'heartbeat' | 'rise' | 'camp' | 'menu' | 'fog' | 'fogBoss' | ZoneTrackId;
 export type StingId = 'victory' | 'levelup' | 'defeat' | 'opening' | ZoneStingId;
 
 /** "thump" is a kick drum; "hat" and "snare" are noise drums. Drum tokens are just "x".
@@ -154,6 +154,55 @@ export const TRACKS: Record<TrackId | StingId, Track> = {
     ],
   },
   // Night camp and rest days: a slow F major lullaby by the fire.
+  // The menus: soft and warm in C major, like the opening's jingle, quiet enough to sit under anything.
+  menu: {
+    bpm: 76,
+    stepsPerBeat: 2,
+    level: 0.8,
+    voices: [
+      {
+        wave: 'triangle',
+        gain: 0.08,
+        pattern: bars(
+          'C3 G3 C4 E4 G4 E4 C4 G3',
+          'A2 E3 A3 C4 E4 C4 A3 E3',
+          'F2 C3 F3 A3 C4 A3 F3 C3',
+          'G2 D3 G3 B3 D4 B3 G3 D3',
+          'C3 G3 C4 E4 G4 E4 C4 G3',
+          'E2 B2 E3 G3 B3 G3 E3 B2',
+          'F2 C3 F3 A3 C4 A3 F3 C3',
+          'G2 D3 G3 B3 D4 B3 G3 D3',
+          'C3 G3 C4 E4 G4 E4 C4 G3',
+          'A2 E3 A3 C4 E4 C4 A3 E3',
+          'F2 C3 F3 A3 C4 A3 F3 C3',
+          'G2 D3 G3 B3 D4 B3 G3 D3',
+          'F2 C3 F3 A3 C4 A3 F3 C3',
+          'G2 D3 G3 B3 D4 B3 G3 D3',
+          'C3 G3 C4 E4 G4 E4 C4 G3',
+          'C3 G3 C4 E4 G4 - - -',
+        ),
+      },
+      {
+        wave: 'glass',
+        gain: 0.05,
+        pattern: bars(
+          ...rest(4),
+          'E5 - - - G5 - - -',
+          'B4 - - - - - - -',
+          'A4 - - - C5 - - -',
+          'D5 - - - - - - -',
+          'G5 - - - E5 - - -',
+          'C5 - - - E5 - - -',
+          'F5 - - - E5 - C5 -',
+          'D5 - - - - - - -',
+          'A4 - - - C5 - - -',
+          'B4 - - - D5 - - -',
+          'C5 - - - - - - -',
+          '. . . . . . . .',
+        ),
+      },
+    ],
+  },
   camp: {
     bpm: 58,
     stepsPerBeat: 2,
@@ -362,6 +411,7 @@ export function parsePattern(pattern: string): { events: NoteEvent[]; length: nu
 }
 
 const MUTE_KEY = 'forma-muted';
+const MENU_KEY = 'forma-menu-music';
 /** Cancels the limiter's built-in make-up gain (measured: see music-zones.ts, "Levels"). */
 const LIMIT_TRIM = 0.78;
 
@@ -422,9 +472,13 @@ class Engine {
   private gemRun = { at: -1, step: 0 };
   private playing: Playing | null = null;
   private wanted: TrackId | null = null;
+  /** What plays when no screen asks for a track: the menus' music. */
+  private base: TrackId | null = null;
   private releaseTimer: ReturnType<typeof setTimeout> | null = null;
   private listeners = new Set<() => void>();
   muted = false;
+  /** The menus have music (a setting of its own, under the mute). */
+  menuMusic = true;
   /** Rendering offline to measure a sound: the context isn't running yet, and that's fine. */
   private offline = false;
 
@@ -432,6 +486,7 @@ class Engine {
     if (!live || typeof window === 'undefined') return;
     try {
       this.muted = localStorage.getItem(MUTE_KEY) === '1';
+      this.menuMusic = localStorage.getItem(MENU_KEY) !== '0';
     } catch {
       // Storage can be blocked; music just starts unmuted.
     }
@@ -581,8 +636,29 @@ class Engine {
       this.releaseTimer = null;
       if (this.wanted !== id) return;
       this.wanted = null;
-      this.fadeOut();
+      // Back to the menus' music when a screen with its own song closes.
+      if (this.base && this.base !== id) this.play(this.base);
+      else this.fadeOut();
     }, 80);
+  }
+
+  /** Sets the track that plays whenever no screen asks for one (null: silence). */
+  setBase(id: TrackId | null) {
+    const prev = this.base;
+    this.base = id;
+    if (this.wanted !== null && this.wanted !== prev) return;
+    if (id) this.play(id);
+    else if (prev) this.release(prev);
+  }
+
+  setMenuMusic(on: boolean) {
+    this.menuMusic = on;
+    try {
+      localStorage.setItem(MENU_KEY, on ? '1' : '0');
+    } catch {
+      // Not saved; it still applies for this visit.
+    }
+    this.listeners.forEach((l) => l());
   }
 
   setMuted(m: boolean) {

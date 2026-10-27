@@ -192,6 +192,8 @@ describe('sprite registry', () => {
     for (const cls of ['warrior', 'archer', 'monk', 'mage'] as ClassId[])
       for (const rarity of RARITIES)
         for (const action of actions) prints[`hero ${cls} items ${rarity} ${action}`] = hash(framesFor('hero', action, { gear: itemGear(cls, rarity), classId: cls }));
+    for (const step of ['iosShare', 'iosAdd', 'iosChromeShare', 'androidMenu', 'androidAdd', 'home', 'safari'] as const)
+      prints[`install ${step}`] = hash(framesFor('installStep', 'idle', { step }));
     prints['kindled long hair'] = hash(framesFor('kindled', 'idle', { hair: 'long' }));
     expect(prints).toMatchSnapshot();
   });

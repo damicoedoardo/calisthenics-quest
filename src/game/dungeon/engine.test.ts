@@ -66,7 +66,7 @@ describe('dungeon', () => {
   it('holds still while a skill pick waits', () => {
     const run = createRun({ ...setup, power: { ...power, fresh: true } });
     for (let i = 0; i < 60; i++) stepRun(run, { x: 0, y: 0, ability: false });
-    expect(run.offer?.free).toBe('fresh');
+    expect(run.hero.offer?.free).toBe('fresh');
     const t = run.t;
     stepRun(run, { x: 1, y: 0, ability: false });
     expect(run.t).toBe(t);
@@ -80,7 +80,7 @@ describe('dungeon', () => {
     Object.assign(near, { x: h.x + 60, y: h.y, vx: 0, vy: 0 });
     Object.assign(far, { x: h.x, y: h.y - 150, vx: 0, vy: 0 });
     stepRun(run, { x: 0, y: 0, ability: false, lock: far.id });
-    expect(run.lock).toBe(far.id);
+    expect(run.hero.lock).toBe(far.id);
     takeEvents(run);
     let angle: number | null = null;
     for (let i = 0; i < 120 && angle === null; i++) {
@@ -93,7 +93,7 @@ describe('dungeon', () => {
     expect(angle).not.toBeNull();
     expect(Math.abs(angle! - -Math.PI / 2)).toBeLessThan(0.2);
     stepRun(run, { x: 0, y: 0, ability: false, lock: null });
-    expect(run.lock).toBeNull();
+    expect(run.hero.lock).toBeNull();
   });
 
   it('keeps the boss room shut until the boss falls', () => {
@@ -169,7 +169,7 @@ describe('dungeon', () => {
     }
     expect(floors).toBe(3);
     expect(chests).toBeGreaterThan(0);
-    expect(Object.values(run.relics).reduce((n, k) => n + (k ?? 0), 0)).toBe(chests);
+    expect(Object.values(run.hero.relics).reduce((n, k) => n + (k ?? 0), 0)).toBe(chests);
   });
 
   it('holds the Warden of the Ashes in the last room of floor 5, in two phases, and it leaves a chest', () => {
@@ -205,30 +205,30 @@ describe('dungeon', () => {
     run.hero.x = run.chest!.x;
     run.hero.y = run.chest!.y;
     stepRun(run, { x: 0, y: 0, ability: false });
-    expect(run.relicOffer).toHaveLength(3);
-    pickRelic(run, run.relicOffer![0]);
-    expect(Object.keys(run.relics)).toHaveLength(1);
+    expect(run.hero.relicOffer).toHaveLength(3);
+    pickRelic(run, run.hero.relicOffer![0]);
+    expect(Object.keys(run.hero.relics)).toHaveLength(1);
   });
 
   it('dodges: a short dash that shots pass through, then a wait before the next', () => {
     const run = createRun({ ...setup, seed: 9 });
     for (let i = 0; i < 30; i++) stepRun(run, { x: 0, y: 0, ability: false });
     const x0 = run.hero.x,
-      hp = run.hp;
+      hp = run.hero.hp;
     stepRun(run, { x: 1, y: 0, ability: false, dodge: true });
     expect(takeEvents(run).some((e) => e.type === 'dodge')).toBe(true);
     // A shot dead on you while you're in the dodge does nothing.
     const h = run.hero;
     run.bullets.push({ id: 9999, x: h.x + 4, y: h.y, vx: 0, vy: 0, r: 6, dmg: 50, born: run.t, boss: false, style: 'plain', ang: 0, spd: 0, bounce: 0 });
     for (let i = 0; i < 8; i++) stepRun(run, { x: 0, y: 0, ability: false });
-    expect(run.hp).toBe(hp);
+    expect(run.hero.hp).toBe(hp);
     expect(run.hero.x - x0).toBeGreaterThan(DODGE.speed * DODGE.secs * 0.8);
     // Pressing again right away does nothing until the dodge has recharged.
     takeEvents(run);
     run.bullets = [];
     stepRun(run, { x: -1, y: 0, ability: false, dodge: true });
     expect(takeEvents(run).some((e) => e.type === 'dodge')).toBe(false);
-    while (run.t < run.dodgeAt) stepRun(run, { x: 0, y: 0, ability: false });
+    while (run.t < run.hero.dodgeAt) stepRun(run, { x: 0, y: 0, ability: false });
     stepRun(run, { x: -1, y: 0, ability: false, dodge: true });
     expect(takeEvents(run).some((e) => e.type === 'dodge')).toBe(true);
   });
@@ -275,21 +275,21 @@ describe('dungeon', () => {
     expect(images).toHaveLength(2);
     expect(images.every((f) => f.def.shoots.length === 0)).toBe(true);
     // Stand right on an image: the attack aims at it, and it costs you.
-    const hp = run.hp,
+    const hp = run.hero.hp,
       im = images[0];
     run.hero.x = im.x;
     run.hero.y = im.y + 30;
     for (let i = 0; i < 90 && im.alive; i++) stepRun(run, still);
     expect(im.alive).toBe(false);
     expect(takeEvents(run).some((e) => e.type === 'hurt' && e.by === 'image')).toBe(true);
-    expect(run.hp).toBeLessThan(hp);
+    expect(run.hero.hp).toBeLessThan(hp);
   });
 
   it("the Hollow can't be hurt; standing in its open light long enough takes its hand", () => {
     const run = createRun({ ...setup, zone: ZONES[4], power: tough, seed: 2 });
     skipToBoss(run);
     // Standing still the whole fight: this is about the light, not about surviving it.
-    run.hp = run.maxHp = 100000;
+    run.hero.hp = run.hero.maxHp = 100000;
     while (!run.boss) stepRun(run, still);
     const b = run.boss;
     // Dark: hits do nothing to it.
@@ -312,16 +312,16 @@ describe('dungeon', () => {
     expect(run.climb).toBe(0);
     expect(run.boss).toBeNull();
     expect(run.allies.map((a) => a.kind)).toEqual(['wanderer', 'mira', 'vela']);
-    run.hp = run.maxHp = 100000;
+    run.hero.hp = run.hero.maxHp = 100000;
     while (!run.over && (run.climb ?? 0) < 2) {
       stepRun(run, botInput(run));
       run.events.length = 0;
     }
     expect(run.climb).toBe(2);
-    run.hp = 0.1;
-    run.hurtUntil = 0;
-    run.ghostUntil = 0;
-    run.relics = {};
+    run.hero.hp = 0.1;
+    run.hero.hurtUntil = 0;
+    run.hero.ghostUntil = 0;
+    run.hero.relics = {};
     while (!run.over) {
       stepRun(run, still);
       run.events.length = 0;
@@ -334,7 +334,7 @@ describe('dungeon', () => {
       const run = createRun({ ...setup, zone: ZONES[z], classId: 'archer', power: tough, seed: 8, autoPick: true });
       skipToBoss(run);
       // Plenty of HP (but not on the lake, where hitting a copy costs a share of it).
-      if (z !== 1) run.hp = run.maxHp = 100000;
+      if (z !== 1) run.hero.hp = run.hero.maxHp = 100000;
       while (!run.over) {
         stepRun(run, botInput(run));
         run.events.length = 0;

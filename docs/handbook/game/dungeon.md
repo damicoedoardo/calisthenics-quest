@@ -49,7 +49,19 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change how often things drop, or the bag's size | `DROPS` and `BAG` in `engine.ts` (`kill`, `openChest`) |
 | Add an item kind or a class's weapon | `WEAPONS`, `ARMORS`, `ItemIcon` (and `ItemArt`, `looksOf`) in `items.ts`; its art in `ITEM_ROWS` and `LEGEND_ROWS` (`src/sprites/characters/items.ts`), and how the hero wears it in `heroSpec` (`src/sprites/characters/hero.ts`), see [sprites.md](sprites.md) |
 | Change how an item looks (its kind, the seed that picks its colors) | `looksOf` and `seedOf` in `items.ts` (the seed comes from the name, so one name always looks the same) |
+| Add something each hero has (a cooldown, a count, a buff for the run) | `Hero` in `engine.ts` and its start in `createRun` (see "The hero") |
 | Change the bag panel, the pickup note or the stairs card | `BagPanel` and the `stairs` card in `src/components/FogRun.tsx` |
+
+## The hero
+
+Everything that belongs to the player lives on `run.hero` (`Hero` in `engine.ts`): where they
+stand, HP, level and XP, cooldowns, skills (`ups`), chest items (`relics`), gear, the tapped
+target (`lock`), the picks waiting for them (`offer`, `relicOffer`, `free`) and what's pushing them
+(`wind`, `shove`). What belongs to the room or the run stays on `Run`: the map, monsters, shots,
+loot on the floor, stairs, the boss, the clock. Solo play is a party of one; keeping the two apart
+is the first step to co-op (the plan: "FORMA co-op Fog" doc, project thread "Explore multiplayer
+dungeon runs with friends"). A new field that is about the player goes on `Hero`; one about the
+place goes on `Run`.
 
 ## Floors and the map
 
@@ -80,14 +92,14 @@ odds in `DROPS`): rolled by `newItem` for the zone, the floor and your class, ra
 from bigger foes. They lie on the floor (`run.loot`, kept with the room in `Cell.kept`); the scene
 draws each with its own art (`itemTexture`: the item's drawing from
 `src/sprites/characters/items.ts`, made into a texture once), its name in its rarity's color, and a
-beam over rare ones (`syncLoot`). Walking over one puts it in the bag (`run.gear.bag`, `BAG` slots), unless it's full.
+beam over rare ones (`syncLoot`). Walking over one puts it in the bag (`run.hero.gear.bag`, `BAG` slots), unless it's full.
 
 You wear three things: a weapon and armor made for your class, and a charm. A run starts in what
 the save says you wear (`RunSetup.worn`), the starter kit (`starterKit`) filling an empty weapon or
 armor slot. An item asks for stat points (`need`, checked against `RunSetup.build` by `shortOf`):
 weapons the class's own stat, armor Health, charms nothing. `wear`, `takeOff` and `dropFromBag`
 change gear mid-run (the page pauses while the bag is open); `applyGear` puts what you wear on top
-of your power from training (`run.base`). The run's end (`RunEnd.gear`) lists what you wore and
+of your power from training (`run.hero.base`). The run's end (`RunEnd.gear`) lists what you wore and
 carried, never the starter kit; `src/lib/fog-gear.ts` settles it into the save
 (see [fog.md](fog.md)). The bot wears what it picks up when it's better (`botWear`) and picks up
 loot once a room is clear.
@@ -118,7 +130,7 @@ stand upright at `P`. The stick is turned back the other way in `stickInput`. Th
 new drawing in engine points goes on a turned layer (or through `fade`), and anything that must stay
 upright goes through `P` (or `fade(..., true)`).
 
-A tap on a monster aims your attacks at it while it's in reach (`Input.lock`, `run.lock`,
+A tap on a monster aims your attacks at it while it's in reach (`Input.lock`, `run.hero.lock`,
 `locked` in `engine.ts`); a second tap lets go. The bot never locks.
 
 Effects are capped (`FX_CAP` in `scene.ts`: particles and faded drawings alive at once) so a

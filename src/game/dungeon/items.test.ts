@@ -52,14 +52,14 @@ describe('items', () => {
 describe('items in a run', () => {
   const power = powerOf(initialState(), new Date());
   const fresh = (build = {}) => createRun({ zone: ZONES[2], power, classId: 'warrior', seed: 4, build });
-  const give = (run: Run, it: Item) => run.gear.bag.push(it);
+  const give = (run: Run, it: Item) => run.hero.gear.bag.push(it);
 
   it('starts in the starter kit, or in what you wore in', () => {
-    expect(fresh().gear.worn.weapon?.starter).toBe(true);
+    expect(fresh().hero.gear.worn.weapon?.starter).toBe(true);
     const sword = many(40).find((i) => i.slot === 'weapon')!;
     const run = createRun({ zone: ZONES[2], power, classId: 'warrior', seed: 4, worn: { weapon: sword }, build: { damage: 99 } });
-    expect(run.gear.worn.weapon).toBe(sword);
-    expect(run.gear.worn.armor?.starter).toBe(true);
+    expect(run.hero.gear.worn.weapon).toBe(sword);
+    expect(run.hero.gear.worn.armor?.starter).toBe(true);
   });
 
   it('wears what your points allow, and it makes you stronger', () => {
@@ -68,21 +68,21 @@ describe('items in a run', () => {
     const weak = fresh();
     give(weak, sword);
     wear(weak, sword.id);
-    expect(weak.gear.worn.weapon?.starter).toBe(true);
+    expect(weak.hero.gear.worn.weapon?.starter).toBe(true);
     const run = fresh({ damage: 99, health: 99 }),
       { damage } = run.setup.power,
-      hp = run.maxHp;
+      hp = run.hero.maxHp;
     give(run, sword);
     give(run, armor);
     wear(run, sword.id);
     wear(run, armor.id);
     expect(run.setup.power.damage).toBeGreaterThan(damage);
-    expect(run.maxHp).toBeGreaterThan(hp);
+    expect(run.hero.maxHp).toBeGreaterThan(hp);
     // The starter kit just goes; taking off brings it back.
-    expect(run.gear.bag).toHaveLength(0);
+    expect(run.hero.gear.bag).toHaveLength(0);
     takeOff(run, 'weapon');
-    expect(run.gear.worn.weapon?.starter).toBe(true);
-    expect(run.gear.bag).toEqual([sword]);
+    expect(run.hero.gear.worn.weapon?.starter).toBe(true);
+    expect(run.hero.gear.bag).toEqual([sword]);
     expect(run.setup.power.damage).toBeCloseTo(damage);
   });
 
@@ -91,13 +91,13 @@ describe('items in a run', () => {
       ring = many(40).find((i) => i.slot === 'charm')!;
     give(run, ring);
     dropFromBag(run, ring.id);
-    expect(run.gear.bag).toHaveLength(0);
+    expect(run.hero.gear.bag).toHaveLength(0);
     expect(run.loot.map((l) => l.item)).toEqual([ring]);
     const l = run.loot[0];
     run.hero.x = l.x;
     run.hero.y = l.y;
     stepRun(run, { x: 0, y: 0, ability: false });
-    expect(run.gear.bag).toEqual([ring]);
+    expect(run.hero.gear.bag).toEqual([ring]);
     expect(takeEvents(run).some((e) => e.type === 'loot')).toBe(true);
   });
 
@@ -107,7 +107,7 @@ describe('items in a run', () => {
     const extra = many(BAG + 1).at(-1)!;
     run.loot.push({ id: 999, x: run.hero.x, y: run.hero.y, item: extra });
     stepRun(run, { x: 0, y: 0, ability: false });
-    expect(run.gear.bag).toHaveLength(BAG);
+    expect(run.hero.gear.bag).toHaveLength(BAG);
     expect(run.loot).toHaveLength(1);
   });
 
