@@ -1,13 +1,15 @@
-// The fast Fog simulator (src/game/sim.ts): plays hundreds of bot runs per snapshot of a simulated
-// player, on every core, without a browser. Same rules and same bot as the game (src/game/rules.ts).
+// The Fog simulator: plays hundreds of bot runs per snapshot of a simulated player, on every core,
+// without a browser. It runs the game's own engine (src/game/dungeon/engine.ts) with the bot
+// (src/game/dungeon/bot.ts), so what it measures is the game itself.
 //
 //   pnpm sim                                   # writes sim-out/states/*.json (snapshots at each zone)
 //   pnpm fog:sim steady 100                    # win rates per zone, for each class
 //   pnpm fog:tune steady 60                    # finds each zone's hp/dmg for the target win rates
 //
 // Options (env): CLASSES=archer,mage (default: all four), ONLY=zone1-open,zone1-later picks
-// snapshots, SCALE='{"2":1.2}' plays zone 2 with its hp and dmg 1.2x, TARGET=0.33,0.67 sets what the
-// tuner aims for (wins when a zone opens, and 6 workouts later).
+// snapshots, SCALE='{"2":1.2}' plays zone 2 with its hp and dmg 1.2x, DIALS='{"fire":1.5}' turns the
+// engine's dials, TARGET=0.33,0.67 sets what the tuner aims for (wins when a zone opens, and 6
+// workouts later).
 import { readdirSync, readFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { register } from 'node:module';
@@ -27,7 +29,14 @@ function shift(state, now) {
 }
 
 if (!isMainThread) {
-  const { simulateRun } = await import(`${root}src/game/sim.ts`);
+  const { playRun } = await import(`${root}src/game/dungeon/bot.ts`);
+  const { DIALS } = await import(`${root}src/game/dungeon/engine.ts`);
+  const { ATTENTION } = await import(`${root}src/game/dungeon/bot.ts`);
+  const dials = JSON.parse(process.env.DIALS || '{}');
+  // "attention" is the bot's: the share of shots it sees coming.
+  if (dials.attention !== undefined) ATTENTION.share = dials.attention;
+  delete dials.attention;
+  Object.assign(DIALS, dials);
   const { ZONES, powerOf } = await import(`${root}src/lib/fog.ts`);
   const now = Date.now();
   parentPort.on('message', (job) => {
@@ -36,7 +45,7 @@ if (!isMainThread) {
     const z = ZONES[job.zone];
     const zone = { ...z, hp: z.hp * job.scale, dmg: z.dmg * job.scale };
     const out = [];
-    for (let i = 0; i < job.runs; i++) out.push(simulateRun({ zone, power, classId: job.cls, seed: job.seed + i * 7919 }));
+    for (let i = 0; i < job.runs; i++) out.push(playRun({ zone, power, classId: job.cls, seed: job.seed + i * 7919 }));
     parentPort.postMessage(out);
   });
 } else {
@@ -92,12 +101,18 @@ if (!isMainThread) {
   const t0 = performance.now();
 
   if (!tune) {
-    console.log(`${'snapshot'.padEnd(12)} ${classes.map((c) => c.padStart(8)).join('')}   reached the boss`);
+    const mins = (res) => {
+      const t = res.filter((r) => r.won).map((r) => r.seconds).sort((a, b) => a - b);
+      return t.length ? `${(t[Math.floor(t.length / 2)] / 60).toFixed(1)}m` : '-';
+    };
+    console.log(`${'snapshot'.padEnd(12)} ${classes.map((c) => c.padStart(14)).join('')}   reached the boss, deepest floor on a loss`);
     for (const snap of snaps) {
       const per = await measure(snap, scales[snap.zone] ?? 1);
       const all = per.flatMap((p) => p.res);
       const reached = all.filter((r) => r.bossAt !== null).length / all.length;
-      console.log(`${snap.label.padEnd(12)} ${per.map((p) => pct(rate(p.res)).padStart(8)).join('')}   ${pct(reached)}`);
+      const lost = all.filter((r) => !r.won).map((r) => r.floor);
+      const deep = lost.length ? (lost.reduce((a, b) => a + b, 0) / lost.length).toFixed(1) : '-';
+      console.log(`${snap.label.padEnd(12)} ${per.map((p) => `${pct(rate(p.res))} ${mins(p.res).padStart(5)}`.padStart(14)).join('')}   ${pct(reached)}, floor ${deep}`);
     }
   } else {
     // For each zone, the scale on its enemies' hp and damage that puts the average of
