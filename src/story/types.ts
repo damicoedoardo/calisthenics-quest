@@ -147,6 +147,8 @@ export interface FogZone {
   hint: string;
   /** Said after you win. */
   after: string;
+  /** On the Play tab before your very first run here, when the zone is still out of reach. */
+  firstTry?: string;
   /** What you keep for winning. */
   keepsake: { name: string; text: string };
   /** Enemy toughness. */

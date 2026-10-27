@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { CircleDot, Copy, Flame, Heart, Magnet, Pause, Shield, Sparkles, Sword, Wind, Zap, type LucideIcon } from 'lucide-react';
+import { ChevronsRight, CircleDot, Copy, Crosshair, Flame, Heart, HeartPulse, Magnet, Pause, Shield, Skull, Sparkles, Sword, Wind, Zap, type LucideIcon } from 'lucide-react';
 import { gearOf, type GameState } from '@/lib/game';
 import { getUpgrade, nextGrowth, powerOf, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
 import { sheetFor } from '@/sprites/registry';
 import { SoundToggle, useMusic } from './Sound';
-import type { FreePick, Hud, RunEnd, RunHandle, SheetKey } from '@/game/run';
+import type { FreePick, Hud as SurviveHud, RunEnd as SurviveEnd, RunHandle as SurviveHandle, SheetKey } from '@/game/run';
+import type { Hud as DungeonHud, RunEnd as DungeonEnd } from '@/game/dungeon/scene';
+import { ABILITIES, type AbilityId } from '@/game/dungeon/engine';
 import type { Sheet } from '@/sprites/registry';
 
 interface Props {
@@ -32,6 +34,16 @@ const ICONS: Record<UpgradeId, LucideIcon> = {
   guard: Shield,
 };
 
+/* Zone 1 is a dungeon (src/game/dungeon); the other zones still play the survive-the-waves run
+   (src/game/run.ts) until their dungeons are built. Both report through the same HUD. */
+type Hud = SurviveHud & Partial<DungeonHud>;
+type RunEnd = SurviveEnd & Partial<DungeonEnd>;
+type RunHandle = SurviveHandle & { ability?: () => void; skipFloor?: () => void };
+
+const ABILITY_ICONS: Record<AbilityId, LucideIcon> = { charge: ChevronsRight, volley: Crosshair, blink: Sparkles, still: HeartPulse, dash: Wind };
+
+export const isDungeon = (zone: Zone) => zone.id === 0;
+
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 /** A run in the Fog: the Phaser canvas, with the HUD, skill picks and results drawn over it. */
@@ -50,6 +62,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
   // Developer mode: ?bot hands runs to the bot, ?bot=fast also plays them in a blink (balance tests).
   const [bot] = useState(() => (dev && typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('bot') : null));
   const [auto, setAuto] = useState(bot !== null);
+  const dungeon = isDungeon(zone);
+  const [floorShown, setFloorShown] = useState<number | null>(null);
 
   useMusic(end ? null : hud?.boss ? 'fogBoss' : 'fog');
 
@@ -71,14 +85,20 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
       golem: sheetFor('golem', 'idle'),
       knight: sheetFor('knight', 'idle'),
       echo: sheetFor('hero', 'idle', { gear, classId, look, variant: 'echo' }),
+      book: sheetFor('book', 'idle'),
+      summit: sheetFor('summit', 'idle'),
     };
     setHud(null);
     setEnd(null);
     setBoss(false);
-    import('@/game/run').then(({ startRun }) => {
+    (dungeon ? import('@/game/dungeon/scene') : import('@/game/run')).then(({ startRun }) => {
       if (cancelled) return;
       run.current = startRun(el, { zone, power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast' }, {
         hud: setHud,
+        floor: (n: number) => {
+          setFloorShown(n);
+          setTimeout(() => setFloorShown(null), 2200);
+        },
         levelUp: (choices, levels, free) => setOffer({ choices, levels, free }),
         boss: () => {
           setBoss(true);
@@ -136,8 +156,10 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
               </div>
             </div>
             <div className="w-16 text-right">
-              <p className={`font-pixel text-[11px] ${hud.boss ? 'text-red-400' : 'text-slate-100'}`}>{hud.boss ? 'BOSS' : clock(left)}</p>
-              <p className="mt-1 font-mono text-[10px] text-slate-400">{hud.kills} down</p>
+              <p className={`font-pixel text-[11px] ${hud.boss ? 'text-red-400' : 'text-slate-100'}`}>
+                {hud.boss ? 'BOSS' : hud.floor ? `${hud.floor}/${hud.floors}` : clock(left)}
+              </p>
+              <p className="mt-1 font-mono text-[10px] text-slate-400">{hud.floor && !hud.boss ? `room ${hud.room}/${hud.rooms}` : `${hud.kills} down`}</p>
             </div>
             <button
               aria-label="Pause"
@@ -164,10 +186,33 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
         </div>
       )}
 
+      {hud?.floor && hud.floors && hud.rooms && !end && <DepthMap floor={hud.floor} floors={hud.floors} room={hud.room ?? 1} rooms={hud.rooms} boss={zone.bossName} />}
+
       {!hud && !end && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
 
-      {hud && !end && hud.seconds < 5 && (
-        <p className="pointer-events-none absolute inset-x-0 bottom-24 text-center text-sm text-slate-300 animate-pulse">Drag anywhere to move. You attack on your own.</p>
+      {hud && !end && hud.seconds < (dungeon ? 7 : 5) && (
+        <p className="pointer-events-none absolute inset-x-6 bottom-28 text-center text-sm text-slate-300 animate-pulse">
+          {dungeon
+            ? `Drag anywhere to move and dodge the red shots. You attack on your own. Clear a room and the door opens. ${hud.floors} floors down, ${zone.bossName} waits. Fall, and the dungeon starts over.`
+            : 'Drag anywhere to move. You attack on your own.'}
+        </p>
+      )}
+
+      {hud?.ability && !end && (
+        <AbilityButton id={hud.ability.id} ready={hud.ability.ready} onUse={() => run.current?.ability?.()} />
+      )}
+
+      {floorShown && !end && (
+        <div className="pointer-events-none absolute inset-x-0 top-1/3 animate-fadein text-center">
+          <p className="font-pixel text-lg text-gold-300 drop-shadow-[0_2px_0_#0b0d14]">
+            Floor {floorShown} of {hud?.floors}
+          </p>
+          <p className="mt-2 text-xs text-slate-300">
+            {floorShown === hud?.floors
+              ? `${zone.bossName} is down here, in the last room.`
+              : `${(hud?.floors ?? floorShown) - floorShown} more below, then ${zone.bossName}. A breath on the stairs: a little HP back.`}
+          </p>
+        </div>
       )}
 
       {boss && !offer && (
@@ -244,6 +289,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
               {(
                 [
                   ['Skip to the boss', () => run.current?.skipToBoss()],
+                  ...(dungeon ? ([['Next floor', () => run.current?.skipFloor?.()]] as const) : []),
                   ['Win this run', () => run.current?.winNow()],
                   [
                     auto ? 'Take the controls' : 'Let the bot play',
@@ -276,12 +322,62 @@ export function FogRun({ state, zone, dev, onEnd, onLeave }: Props) {
   );
 }
 
+/** How deep you are: a ladder of floors down the left edge, filling as you go, the boss at the
+    bottom. The floor you're on shows its rooms. */
+function DepthMap({ floor, floors, room, rooms, boss }: { floor: number; floors: number; room: number; rooms: number; boss: string }) {
+  return (
+    <div className="pointer-events-none absolute left-1.5 top-24 flex flex-col items-center gap-[3px] rounded-lg bg-ink-950/50 px-1 py-1.5" aria-label={`Floor ${floor} of ${floors}, ${boss} at the bottom`}>
+      {Array.from({ length: floors }, (_, i) => {
+        const n = i + 1,
+          here = n === floor;
+        return (
+          <div key={n} className={`flex items-center gap-[2px] ${here ? 'rounded-sm bg-gold-400/20 px-[2px] py-[2px] ring-1 ring-gold-300' : ''}`}>
+            {here ? (
+              Array.from({ length: rooms }, (_, r) => (
+                <span
+                  key={r}
+                  className={`h-1.5 w-1.5 rounded-[1px] ${r + 1 < room ? 'bg-gold-300' : r + 1 === room ? 'animate-pulse bg-white' : n === floors && r + 1 === rooms ? 'bg-red-500' : 'bg-ink-700'}`}
+                />
+              ))
+            ) : (
+              <span className={`block h-1.5 w-4 rounded-[1px] ${n < floor ? 'bg-gold-400/70' : 'bg-ink-700/90'}`} />
+            )}
+          </div>
+        );
+      })}
+      <Skull size={14} className={`mt-0.5 ${floor === floors ? 'animate-pulse text-red-400' : 'text-red-400/70'}`} />
+    </div>
+  );
+}
+
+/** The class ability: a big round button under your right thumb, filling up while it recharges. */
+function AbilityButton({ id, ready, onUse }: { id: AbilityId; ready: number; onUse: () => void }) {
+  const Icon = ABILITY_ICONS[id],
+    up = ready >= 1;
+  return (
+    <div className="safe-bottom absolute bottom-6 right-5 flex flex-col items-center">
+      <button
+        aria-label={ABILITIES[id].name}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          if (up) onUse();
+        }}
+        className={`relative grid h-16 w-16 place-items-center overflow-hidden rounded-full ring-2 ${up ? 'bg-gold-400 text-ink-950 ring-gold-200 active:scale-95' : 'bg-ink-800/90 text-slate-500 ring-ink-700'}`}
+      >
+        {!up && <span className="absolute inset-x-0 bottom-0 bg-gold-400/30" style={{ height: `${ready * 100}%` }} />}
+        <Icon size={26} className="relative" />
+      </button>
+      <span className="mt-1 font-pixel text-[8px] text-slate-300">{ABILITIES[id].name}</span>
+    </div>
+  );
+}
+
 function Results({ state, zone, end, onAgain, onLeave }: { state: GameState; zone: Zone; end: RunEnd; onAgain: () => void; onLeave: () => void }) {
   const hints = (['push', 'pull', 'core'] as const).map((p) => nextGrowth(state, p)).filter((h): h is string => !!h);
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/90 px-6 text-center">
       <p className={`font-pixel text-sm ${end.won ? 'text-gold-300' : 'text-slate-300'}`}>{end.won ? `${zone.name} cleared!` : 'The Fog took you'}</p>
-      <p className="mt-3 text-sm text-slate-300">{end.won ? <>The Wanderer: &ldquo;{zone.after}&rdquo;</> : 'Losing here costs nothing. Come back stronger.'}</p>
+      <p className="mt-3 text-sm text-slate-300">{end.won ? <>The Wanderer: &ldquo;{zone.after}&rdquo;</> : end.floor ? 'The dungeon starts over from the top. Losing here costs nothing: come back stronger.' : 'Losing here costs nothing. Come back stronger.'}</p>
       {end.won && (
         <div className="mt-4 w-full max-w-xs rounded-xl bg-ink-800 p-3 text-left ring-1 ring-gold-400/30">
           <p className="font-pixel text-[9px] text-gold-300">You keep: {zone.keepsake.name}</p>
@@ -290,8 +386,8 @@ function Results({ state, zone, end, onAgain, onLeave }: { state: GameState; zon
       )}
       <div className="mt-5 grid w-full max-w-xs grid-cols-3 gap-2">
         {[
+          end.floor ? ['Floor', end.won ? 'All' : `${end.floor}·${end.room}`] : ['Level', String(end.level)],
           ['Time', clock(end.seconds)],
-          ['Level', String(end.level)],
           ['Down', String(end.kills)],
         ].map(([k, v]) => (
           <div key={k} className="rounded-xl bg-ink-800 py-2">
