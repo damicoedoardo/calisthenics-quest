@@ -249,7 +249,7 @@ const TOWER = [
 /** Off to the right, so the person speaking stands clear of it. */
 function lampTower(p: Painter, s: PlaceSpec) {
   const stone = mix(s.far, '#d6c8a8', 0.45),
-    x = 61,
+    x = 55,
     y = HORIZON + 18 - TOWER.length;
   glow(p, x + 9, y + 5, 9, '#fbbf24', false);
   paintRows(p, TOWER, {
@@ -269,13 +269,14 @@ function lampTower(p: Painter, s: PlaceSpec) {
 
 /** Vela's tower far off across the flat, a few pixels tall. Its lamp is drawn lit only in the lit
     copy of the backdrop, which the Place component flashes over the unlit one. */
-const FAR_TOWER = ['.k.', 'kyk', 'mmm', '.s.', '.s.', '.d.', '.s.', '.s.', '.d.', 'sss'];
+const FAR_TOWER = ['.k.', 'kyk', 'kyk', 'mmm', '.s.', '.s.', '.s.', '.s.', '.d.', '.s.', '.s.', '.s.', '.s.', '.d.', '.s.', '.s.', '.s.', '.s.', '.d.', '.s.', '.s.', '.s.', '.s.', '.d.', '.s.', '.s.', '.s.', '.s.', '.d.', 'sss'];
 
 function farTower(p: Painter, s: PlaceSpec, lit: boolean) {
   const stone = mix(s.far, '#d6c8a8', 0.45),
-    x = 19,
-    y = HORIZON - 10;
-  if (lit) glow(p, x + 1, y + 1, 4, '#fbbf24', false);
+    // tall and to the right, so its lamp clears the narration box that sits over the horizon
+    x = 64,
+    y = HORIZON - FAR_TOWER.length + 1;
+  if (lit) glow(p, x + 1, y + 1.5, 5, '#fbbf24', false);
   paintRows(p, FAR_TOWER, { k: '#1e1a16', y: lit ? '#fff3c4' : '#6b5326', m: mix(stone, '#000000', 0.25), s: stone, d: mix(stone, '#000000', 0.3) }, x, y);
 }
 
