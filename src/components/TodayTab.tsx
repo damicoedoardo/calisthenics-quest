@@ -136,8 +136,8 @@ export function TodayTab({ state, update, onStart, onReplayOpening }: Props) {
                 <span className="w-16 shrink-0 text-[10px] font-bold uppercase tracking-wider" style={{ color: path.color }}>
                   {ROLE_LABEL[q.role]}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm text-slate-100">{q.name}</span>
-                <span className="font-mono text-sm text-slate-300">
+                <span className="min-w-0 flex-1 text-sm leading-snug text-slate-100">{q.name}</span>
+                <span className="shrink-0 font-mono text-sm text-slate-300">
                   {inProgress ? `${Math.min(done, q.sets)}/${q.sets}` : `${q.sets}×${q.reps}${q.unit === 'sec' ? 's' : ''}`}
                 </span>
               </li>
