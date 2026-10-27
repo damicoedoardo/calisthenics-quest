@@ -166,6 +166,10 @@ describe('every day', () => {
     expect(quotes.size).toBe(3);
   });
 
+  it('never counts "1 pages" after the first workout', () => {
+    for (let d = 1; d <= 28; d++) expect(flameLine(trained(d), tue(d, 20))).not.toMatch(/\b1 pages\b/);
+  });
+
   it('updates the page line after a workout but keeps the quote', () => {
     const morning = withTodayPage(trained(26), tue(27, 9));
     const after = withTodayPage({ ...morning, sessions: [...morning.sessions, workout(tue(27, 11))] }, tue(27, 12));

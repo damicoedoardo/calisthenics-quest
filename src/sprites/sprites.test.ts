@@ -50,7 +50,7 @@ describe('sprite registry', () => {
     expect(clipFor('hero', 'attack', { gear: gear('archer'), classId: 'archer' })).toBe('shoot');
     expect(clipFor('hero', 'attack', { gear: gear('mage'), classId: 'mage' })).toBe('cast');
     // Chapter enemies lunge; sprites without an attack fall back to their idle clip.
-    for (const id of ['slime', 'mirror', 'golem', 'wisp'] as const) expect(clipFor(id, 'attack')).toBe('lunge');
+    for (const id of ['slime', 'mirror', 'golem', 'wisp', 'ram', 'smoke', 'seeker', 'splitter', 'splitling', 'shade'] as const) expect(clipFor(id, 'attack')).toBe('lunge');
     expect(clipFor('ember', 'attack')).toBe(clipFor('ember', 'idle'));
   });
 

@@ -85,7 +85,11 @@ export function flameLine(state: GameState, now: Date): string {
   const words = storyWords(state);
   const said = new Set(recentPages(state, now).map((d) => d.line));
   const chapter = storyState(state).index + 1;
-  const usable = (l: DailyLine) => (!l.needs || words[l.needs].trim()) && (!l.inChapter || l.inChapter === chapter);
+  // "That's {sessions} pages now" reads wrong after only one.
+  const usable = (l: DailyLine) =>
+    (!l.needs || words[l.needs].trim()) &&
+    (!l.inChapter || l.inChapter === chapter) &&
+    !(l.text.includes('{sessions}') && state.sessions.length < 2);
   const all = FLAME_LINES[todayMoment(state, now)].filter(usable).map((l) => fill(l.text, words));
   const fresh = all.filter((t) => !said.has(t));
   return pick(fresh.length ? fresh : all, daySeed(now), 1) ?? '';

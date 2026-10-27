@@ -13,9 +13,9 @@ import { Workout } from '@/components/Workout';
 import { AfterSession } from '@/components/AfterSession';
 import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
 import { ClassPicker } from '@/components/ClassPicker';
-import { DevPanel } from '@/components/DevPanel';
+import { DevButton, DevPanel } from '@/components/DevPanel';
 import { LookProvider } from '@/components/Look';
-import { finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
+import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { pendingScenes, storyState, type StoryState } from '@/story/engine';
 import { withTodayPage } from '@/story/daily';
 import type { Scene } from '@/story/types';
@@ -52,6 +52,12 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const [run, setRun] = useState<Zone | null>(null);
   // Bumped when something may have unlocked a scene outside a session (a max test).
   const [storyTick, setStoryTick] = useState(0);
+  const [devOpen, setDevOpen] = useState(false);
+  // Anything that takes the screen (a scene, a run, a workout) closes the panel for good.
+  const busy = !!(run || training || after || scene || picker);
+  useEffect(() => {
+    if (busy) setDevOpen(false);
+  }, [busy]);
   const { dev, live, toggle: setDev } = useDevMode();
   // Seven quick taps on the FORMA name unlock developer mode on the live app.
   const taps = useRef<number[]>([]);
@@ -73,10 +79,11 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
   // A page in the Book of Days for every day the app is opened (and today's line follows the day).
   const today = new Date().toDateString();
+  // A quest left open on an earlier day is saved on that day first, so it isn't mixed into today's.
   useEffect(() => {
-    if (!ready || !state.profile.onboarded) return;
-    update((s) => withTodayPage(s, new Date()));
-  }, [ready, state.profile.onboarded, state.sessions.length, today, update]);
+    if (!ready || !state.profile.onboarded || training) return;
+    update((s) => withTodayPage(closeStaleDraft(s, new Date()), new Date()));
+  }, [ready, state.profile.onboarded, state.sessions.length, today, training, update]);
 
   const endScene = useCallback(
     (r: SceneResult) => {
@@ -138,9 +145,12 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-baseline justify-between">
-              <p onClick={tapName} className="font-pixel text-sm tracking-widest text-gold-400">
-                FORMA
-              </p>
+              <div className="flex items-center gap-2">
+                <p onClick={tapName} className="font-pixel text-sm tracking-widest text-gold-400">
+                  FORMA
+                </p>
+                {dev && <DevButton onClick={() => setDevOpen(true)} />}
+              </div>
               <p className="text-xs text-slate-400">
                 Lv {lvl.level} · <span className="text-slate-200">{lvl.title}</span>
               </p>
@@ -178,6 +188,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           {TABS.map(({ id, label, Icon }) => (
             <button
               key={id}
+              aria-current={tab === id ? 'page' : undefined}
               onClick={() => {
                 setTab(id);
                 window.scrollTo({ top: 0 });
@@ -191,7 +202,9 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         </div>
       </nav>
 
-      {dev && !run && !training && !after && !scene && !picker && <DevPanel state={state} update={update} onPlayScene={setScene} onTurnOff={live ? () => setDev(false) : undefined} />}
+      {dev && devOpen && !busy && (
+        <DevPanel state={state} update={update} onPlayScene={setScene} onTurnOff={live ? () => setDev(false) : undefined} onClose={() => setDevOpen(false)} />
+      )}
       {run && <FogRun state={state} zone={run} dev={dev} onEnd={(r) => update((s) => recordRun(s, r))} onLeave={() => setRun(null)} />}
       {training && <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />}
       {after && <AfterSession result={after.result} before={after.before} after={after.after} onClose={() => setAfter(null)} />}

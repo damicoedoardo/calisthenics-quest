@@ -14,6 +14,11 @@ import { drawTomorrow } from './characters/tomorrow';
 import { drawWanderer } from './characters/wanderer';
 import { drawKid, drawLia, drawSol } from './characters/villagers';
 import { drawWisp } from './characters/wisp';
+import { drawRam } from './characters/ram';
+import { drawSmoke } from './characters/smoke';
+import { drawSeeker } from './characters/seeker';
+import { drawSplitling, drawSplitter } from './characters/splitter';
+import { drawShade } from './characters/shade';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
    art for a character is a change here, never in a component. Two kinds:
@@ -106,6 +111,12 @@ export const SPRITES = {
   golem: creature('The Plateau', drawPlateau, 'lunge'),
   summit: creature('The Summit', drawSummit),
   wisp: creature('Ash Wisp', drawWisp, 'lunge'),
+  ram: creature('Ram', drawRam, 'lunge'),
+  smoke: creature('Smoker', drawSmoke, 'lunge'),
+  seeker: creature('Seeker', drawSeeker, 'lunge'),
+  splitter: creature('Splitter', drawSplitter, 'lunge'),
+  splitling: creature('Splitling', drawSplitling, 'lunge'),
+  shade: creature('Shade', drawShade, 'lunge'),
 };
 
 export type SpriteId = keyof typeof SPRITES;

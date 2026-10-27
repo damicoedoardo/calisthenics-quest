@@ -32,7 +32,7 @@ export function SitByFire({ name, stage, line, onDone, seconds = 60 }: Props) {
   const breathingIn = (seconds - left) % 10 < 5;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-ink-950" role="dialog" aria-label="Sit by the fire">
+    <div className="fixed inset-0 z-50 !mt-0 flex flex-col overflow-hidden bg-ink-950" role="dialog" aria-label="Sit by the fire">
       <PlaceBackdrop id="ashlands-camp" className="absolute inset-0" />
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-ink-950 via-ink-950/80 to-transparent" />
 

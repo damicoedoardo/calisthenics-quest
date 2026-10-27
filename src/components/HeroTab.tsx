@@ -29,6 +29,7 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
   const story = storyState(state);
   const [test, setTest] = useState({ pushups: '', pullups: '', lsitSec: '' });
   const [msg, setMsg] = useState('');
+  const [backupMsg, setBackupMsg] = useState('');
   const [letterOpen, setLetterOpen] = useState(false);
   const [editingLook, setEditingLook] = useState(false);
   const look = useLook();
@@ -57,14 +58,19 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
     a.href = URL.createObjectURL(blob);
     a.download = `forma-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
-    URL.revokeObjectURL(a.href);
+    // Revoking right away can cancel the download on some phones.
+    setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
   };
 
   const restore = async (file: File | undefined) => {
     if (!file) return;
     const parsed = parseImport(await file.text());
-    if (parsed) update(() => parsed);
-    setMsg(parsed ? 'Backup restored.' : "That file isn't a FORMA backup.");
+    if (!parsed) return setBackupMsg("That file isn't a FORMA backup.");
+    // A restore replaces everything on this phone, so check first.
+    const n = parsed.sessions.length;
+    if (!window.confirm(`Replace the progress on this phone with this backup (${n} ${n === 1 ? 'workout' : 'workouts'})?`)) return;
+    update(() => parsed);
+    setBackupMsg('Backup restored.');
   };
 
   return (
@@ -93,7 +99,7 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
       </section>
 
       {editingLook && (
-        <div className="safe-top safe-bottom fixed inset-0 z-40 overflow-y-auto bg-ink-950">
+        <div className="safe-top safe-bottom fixed inset-0 z-40 !mt-0 overflow-y-auto bg-ink-950">
           <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6 pt-4">
             <h2 className="mb-4 font-pixel text-xs text-gold-300">Your look</h2>
             <div className="flex-1">
@@ -182,6 +188,7 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
               key={key}
               inputMode="numeric"
               placeholder={label}
+              aria-label={label}
               value={test[key]}
               onChange={(e) => setTest({ ...test, [key]: e.target.value.replace(/\D/g, '') })}
               className="w-full rounded-lg bg-ink-900 px-3 py-2.5 text-center text-sm outline-none ring-1 ring-ink-600 focus:ring-gold-400"
@@ -257,9 +264,19 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
           </button>
           <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold">
             <Upload size={16} /> Restore
-            <input type="file" accept="application/json" className="hidden" onChange={(e) => restore(e.target.files?.[0])} />
+            <input
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={(e) => {
+                restore(e.target.files?.[0]);
+                // Lets the same file be picked again.
+                e.target.value = '';
+              }}
+            />
           </label>
         </div>
+        {backupMsg && <p className="mt-2 text-center text-xs text-gold-300">{backupMsg}</p>}
       </section>
     </div>
   );
