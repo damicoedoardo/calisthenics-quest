@@ -47,7 +47,8 @@ export interface Line {
   missing?: WordKey;
   /** Only shown when the player gave this answer (or any answer when `is` is left out). */
   answer?: { id: AnswerId; is?: string };
-  /** Narration only: who stands on screen while it's read. */
+  /** Who stands on screen while it's read, when that isn't the speaker (narration, or a speaker shown
+      another way, like the true form waving). */
   show?: Speaker;
   /** The flame's face for this line. */
   mood?: FlameMood;
@@ -194,7 +195,7 @@ export type Portrait =
   /** The flame, at its current stage. */
   | { kind: 'flame'; size: number }
   /** The flame's true form (the finale), with the player's hair. */
-  | { kind: 'kindled'; size: number }
+  | { kind: 'kindled'; size: number; wave?: boolean }
   | { kind: 'none' };
 
 export interface CastMember {

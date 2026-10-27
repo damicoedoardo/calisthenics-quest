@@ -195,7 +195,7 @@ export const FORMA: Chapter = {
         { who: 'kindled', text: "I remember now. I'm the part of you that loved moving, back before anyone counted anything.", missing: 'heart1' },
         { who: 'kindled', text: 'You never lost me. You just stopped playing.' },
         { who: 'bestself', text: "This isn't an ending. Your best self isn't a place you arrive. It's a direction you keep facing." },
-        { who: 'kindled', text: '...So. Same time Monday?' },
+        { who: 'kindled', show: 'kindled-wave', text: '...So. Same time Monday?' },
       ],
     },
   ],

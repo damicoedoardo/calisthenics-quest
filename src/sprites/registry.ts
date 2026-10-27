@@ -112,7 +112,7 @@ export const SPRITES = {
   kindled: drawn<KindledOpts>({
     label: () => "Your flame's true form",
     defaults: { hair: 'short' },
-    clips: () => ({ idle: 'hover' }),
+    clips: () => ({ idle: 'hover', attack: 'wave' }),
     draw: drawKindled,
     look: () => ({ filter: 'drop-shadow(0 0 10px rgba(251,146,60,.6))' }),
   }),
