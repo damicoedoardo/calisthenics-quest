@@ -25,6 +25,13 @@ export const THE_FOG: Chapter = {
     dmg: 2,
     ground: '#111a17',
     fog: '#1f3b33',
+    // stages: [its light opens, its light goes dark]
+    lines: {
+      enter: 'Back again? You always stop around here.',
+      stages: ['Come into the light, then. I dare you.', 'See? Dark again. It always gets dark.'],
+      end: '...I only wanted you safe.',
+      taunts: ['{voice}', "Nobody's coming.", "You'll quit. You always do.", 'Go back to the quiet.'],
+    },
   },
   scenes: [
     {

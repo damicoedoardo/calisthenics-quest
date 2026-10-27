@@ -1,5 +1,5 @@
 import { weekKey, WEEKLY_GOAL, type GameState } from '@/lib/game';
-import { daysInRow, daysSinceTraining, isRestDay } from '@/lib/days';
+import { dayKey, daysInRow, daysSinceTraining, isRestDay } from '@/lib/days';
 import { ANYTIME } from './anytime';
 import { CAST, type CastId } from './cast';
 import { CHAPTERS } from './chapters';
@@ -159,6 +159,31 @@ export function pendingScenes(state: GameState, now: Date): Scene[] {
   }).map(({ scene }) => sceneFor(scene.when.away ? { ...scene, id: savedId(scene, state) } : scene, state));
   // Coming back after a long time goes first.
   return [...due.filter((s) => s.when.away), ...due.filter((s) => !s.when.away)];
+}
+
+/** At most this many scenes play at one moment; the rest wait for the next one. */
+export const MAX_SCENES_AT_ONCE = 2;
+
+/** One story moment: today, after this many workouts and max tests. A new workout or test starts a new one. */
+export function sceneMoment(state: GameState, now: Date): string {
+  return `${dayKey(now)}|${state.sessions.length}|${state.tests.length}`;
+}
+
+/**
+ * The scenes to play now: the due ones, but never more than MAX_SCENES_AT_ONCE at one moment.
+ * Extras (skill beats come last in story order) wait for the next workout, test or day.
+ */
+export function scenesToPlay(state: GameState, now: Date): Scene[] {
+  const at = sceneMoment(state, now);
+  const played = state.sceneMark?.at === at ? state.sceneMark.count : 0;
+  return pendingScenes(state, now).slice(0, Math.max(0, MAX_SCENES_AT_ONCE - played));
+}
+
+/** Mark a scene played, and count it against this moment. */
+export function sawScene(state: GameState, id: string, now: Date): GameState {
+  const at = sceneMoment(state, now);
+  const count = (state.sceneMark?.at === at ? state.sceneMark.count : 0) + 1;
+  return { ...state, seenScenes: state.seenScenes.includes(id) ? state.seenScenes : [...state.seenScenes, id], sceneMark: { at, count } };
 }
 
 export function sceneById(id: string): Placed | undefined {

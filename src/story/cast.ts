@@ -17,7 +17,12 @@ export const CAST = {
   bestself: { name: 'Your Best Self', portrait: { kind: 'hero', variant: 'best', size: 170 } },
   mira: { name: 'Mira', portrait: { kind: 'sprite', sprite: 'mira', size: 140 } },
   tomorrow: { name: 'Tomorrow', portrait: { kind: 'sprite', sprite: 'slime', size: 130 }, tag: 'slate' },
-  knight: { name: 'The Perfect Knight', portrait: { kind: 'sprite', sprite: 'knight', size: 160 }, tag: 'slate' },
+  // The bosses wear the same art as in the Fog. Later stages: the Knight losing plates, then his
+  // helm; the Plateau cracking, then breaking. Same names; use them as `who` or `show`.
+  knight: { name: 'The Perfect Knight', portrait: { kind: 'boss', boss: 'knight', size: 160 }, tag: 'slate' },
+  'knight-cracked': { name: 'The Perfect Knight', portrait: { kind: 'boss', boss: 'knight', stage: 1, size: 160 }, tag: 'slate' },
+  'knight-open': { name: 'The Perfect Knight', portrait: { kind: 'boss', boss: 'knight', stage: 2, size: 160 }, tag: 'slate' },
+  mirror: { name: 'The Mirror', portrait: { kind: 'boss', boss: 'mirror', size: 160 }, tag: 'slate' },
   kid: { name: 'The kid', portrait: { kind: 'sprite', sprite: 'kid', size: 120 } },
   lia: { name: 'Lia', portrait: { kind: 'sprite', sprite: 'lia', size: 140 }, tag: 'sky' },
   sol: { name: 'Sol', portrait: { kind: 'sprite', sprite: 'sol', size: 140 }, tag: 'sky' },
@@ -28,8 +33,10 @@ export const CAST = {
   'lia-after': { name: 'Lia', portrait: { kind: 'villager', sprite: 'lia', size: 140 }, tag: 'sky' },
   'sol-after': { name: 'Sol', portrait: { kind: 'villager', sprite: 'sol', size: 140 }, tag: 'sky' },
   'vela-after': { name: 'Vela', portrait: { kind: 'villager', sprite: 'vela', size: 140 }, tag: 'sky' },
-  plateau: { name: 'The Plateau', portrait: { kind: 'sprite', sprite: 'golem', size: 160 }, tag: 'slate' },
-  summit: { name: 'The Summit', portrait: { kind: 'sprite', sprite: 'summit', size: 160 }, tag: 'slate' },
+  plateau: { name: 'The Plateau', portrait: { kind: 'boss', boss: 'plateau', size: 160 }, tag: 'slate' },
+  'plateau-cracked': { name: 'The Plateau', portrait: { kind: 'boss', boss: 'plateau', stage: 1, size: 160 }, tag: 'slate' },
+  'plateau-breaking': { name: 'The Plateau', portrait: { kind: 'boss', boss: 'plateau', stage: 2, size: 160 }, tag: 'slate' },
+  summit: { name: 'The Summit', portrait: { kind: 'boss', boss: 'summit', size: 160 }, tag: 'slate' },
 } satisfies Record<string, CastMember>;
 
 export type CastId = keyof typeof CAST;

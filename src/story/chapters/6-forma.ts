@@ -24,6 +24,13 @@ export const FORMA: Chapter = {
     dmg: 2.2,
     ground: '#1a1a22',
     fog: '#e2e8f0',
+    // stages: [each new ledge of the climb; the last one repeats]
+    lines: {
+      enter: 'Higher. There is always higher.',
+      stages: ['Still not the top.', 'Whatever you reach, I am taller.', '...Why are you still smiling?'],
+      end: "...You were never climbing me. Were you?",
+      taunts: ["You'll never reach the top.", 'Others climb faster.', 'Look how far is left.', "Is this all you've got?"],
+    },
   },
   scenes: [
     {

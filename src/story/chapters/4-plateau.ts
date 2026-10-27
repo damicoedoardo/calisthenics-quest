@@ -23,6 +23,13 @@ export const PLATEAU: Chapter = {
     dmg: 1.8,
     ground: '#1c1712',
     fog: '#4a3a26',
+    // stages: [first cracks (art stage 1), breaking (art stage 2)]
+    lines: {
+      enter: '...Same. ...As. ...Yesterday.',
+      stages: ['...Still. ...Same.', '...Same...? ...Same.'],
+      end: '...Not. ...The same.',
+      taunts: ['...Nothing. ...Changes.', '...Why. ...Bother.', '...Flat. ...Forever.', '...You. ...Again?'],
+    },
   },
   scenes: [
     {
@@ -254,9 +261,12 @@ export const PLATEAU: Chapter = {
       id: 'ch4-victory',
       when: { beaten: 4 },
       lines: [
-        { who: 'plateau', text: '...Same. ...As...' },
-        { who: 'narrator', text: 'The Plateau shatters, all at once. It had been breaking for weeks.', shot: { shake: 'big' } },
-        { who: 'wanderer', text: 'It looked like nothing was happening. Everything was happening.' },
+        { who: 'plateau-breaking', text: '...Same. ...As...' },
+        { who: 'narrator', text: 'The Plateau shatters, all at once.', shot: { shake: 'big' }, pause: 0.6 },
+        { who: 'narrator', text: 'Inside, the stone is full of cracks. Fine ones, packed close, like the rings in a tree.', pause: 1.4, film: true, music: 'none' },
+        { who: 'narrator', text: 'Every one of them is a day it looked like nothing happened.', pace: 'slow', pause: 1.2, film: true },
+        { who: 'flame', mood: 'soft', text: "That one's a short day. That one's a day you nearly didn't come. That one... I don't know. A Tuesday." },
+        { who: 'narrator', show: 'flame', text: 'You pick up a piece. It is still warm. You put it in your pocket, next to the first stone.', pause: 0.8, music: 'rise' },
         { who: 'narrator', text: 'Behind you, the lamp on Vela\'s tower flashes twice. She saw.', answer: { id: 'vela', is: 'yes' } },
         { who: 'flame', mood: 'happy', text: 'Do you know who gets this far? Everyone who doesn\'t stop. That\'s the whole list.' },
         { who: 'narrator', text: 'Past the broken stone the road starts climbing again, into the trees. Into the fog.', shot: { pan: 'right', seconds: 2 } },

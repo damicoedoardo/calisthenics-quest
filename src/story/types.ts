@@ -104,7 +104,7 @@ export interface When {
   daysInRow?: number;
   /** Some week had all three workouts. */
   perfectWeek?: boolean;
-  /** Beat a skill: this path's level is past this number (pull past 3 = the first pull-up). */
+  /** Beat a skill: this path's level is past this number (pull past 2 = negatives beaten, the first strict pull-up). */
   skill?: { path: PathId; past: number };
   /** No class picked yet. */
   noClass?: boolean;
@@ -156,6 +156,22 @@ export interface Scene {
 }
 
 /** A Fog zone: the chapter's place in the game between workouts. */
+/**
+ * What the zone's boss says during the dungeon fight, shown over gameplay, so every line is short.
+ * Lines may hold {words} like scenes (the Hollow uses {voice}): fill them with `fill(text,
+ * storyWords(state))`, and skip a line whose word the player left empty.
+ */
+export interface FogLines {
+  /** When the boss appears. */
+  enter: string;
+  /** One line at each change of phase or stage, in order (see each zone for what they mean). */
+  stages: string[];
+  /** When the fight ends: beaten, or at peace. */
+  end: string;
+  /** The inner critic, said now and then during the fight. Three or four. */
+  taunts: string[];
+}
+
 export interface FogZone {
   name: string;
   /** Who waits at the end of the run. Each one fights in a way only the chapter's lesson beats. */
@@ -174,6 +190,8 @@ export interface FogZone {
   /** Ground color and the tint over the fog. */
   ground: string;
   fog: string;
+  /** The boss's voice in the dungeon. */
+  lines: FogLines;
 }
 
 export type FogBoss = 'tomorrow' | 'mirror' | 'knight' | 'plateau' | 'hollow' | 'summit';
@@ -208,6 +226,9 @@ export type Portrait =
   | { kind: 'kindled'; size: number; wave?: boolean }
   /** A villager as they look once you've helped them (dancing, running, the letter sealed). */
   | { kind: 'villager'; sprite: 'lia' | 'sol' | 'vela'; size: number }
+  /** A chapter's enemy as the Fog draws it, so the story and the dungeon show the same boss.
+      `stage` is how broken it is (0 whole, 2 nearly gone); the Mirror wears the player's look. */
+  | { kind: 'boss'; boss: 'mirror' | 'knight' | 'plateau' | 'summit'; stage?: 0 | 1 | 2; size: number }
   | { kind: 'none' };
 
 export interface CastMember {

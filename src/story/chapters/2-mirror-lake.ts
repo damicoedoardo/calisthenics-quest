@@ -23,6 +23,13 @@ export const MIRROR_LAKE: Chapter = {
     dmg: 1.25,
     ground: '#101826',
     fog: '#253a5c',
+    // stages: [the Mirror splits into images of itself]
+    lines: {
+      enter: 'Look at you. I never got tired.',
+      stages: ['Which one is me? Which one was you?'],
+      end: "...You're further than week one.",
+      taunts: ['You used to be faster.', 'Remember how easy it was?', 'Look how much you lost.', 'I never needed a warm-up.'],
+    },
   },
   scenes: [
     {
@@ -226,7 +233,7 @@ export const MIRROR_LAKE: Chapter = {
       id: 'ch2-victory',
       when: { beaten: 2 },
       lines: [
-        { who: 'narrator', text: 'The Mirror cracks. In one piece you see yourself in week one: red in the face, nearly turning back. In another, today.', shot: { shake: 'big' } },
+        { who: 'narrator', show: 'mirror', text: 'The Mirror cracks. In one piece you see yourself in week one: red in the face, nearly turning back. In another, today.', shot: { shake: 'big' } },
         { who: 'narrator', text: "You look at week one for a long time. You expected to be embarrassed. You aren't. You just want to tell them it's going to be okay.", pause: 1.2, film: true, music: 'none' },
         { who: 'you', text: 'You did fine. You did so fine.', pace: 'slow', pause: 1 },
         { who: 'echo', text: "...You're further than week one. I hate that I'm glad about it.", music: 'rise' },

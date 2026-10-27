@@ -24,6 +24,13 @@ export const ASHLANDS: Chapter = {
     dmg: 1,
     ground: '#231d2e',
     fog: '#4a3f63',
+    // stages: [Tomorrow splits]
+    lines: {
+      enter: "Mmh... why now? Tomorrow's better.",
+      stages: ['Two of me. Twice the tomorrows.'],
+      end: 'Mmh... fine. Today, then.',
+      taunts: ['Start fresh on Monday.', "You're tired. Go tomorrow.", "Why rush? There's always later.", "Tomorrow you'll feel ready."],
+    },
   },
   scenes: [
     {

@@ -4,7 +4,7 @@ import { TRACKS } from '@/lib/music';
 import { SPRITES } from '@/sprites/registry';
 import { CAST } from './cast';
 import { CHAPTERS } from './chapters';
-import { ALL_SCENES, VILLAGERS, chapterStart, fill, pendingScenes, renderLines, storyWords } from './engine';
+import { ALL_SCENES, MAX_SCENES_AT_ONCE, VILLAGERS, chapterStart, fill, pendingScenes, renderLines, sawScene, scenesToPlay, storyWords } from './engine';
 import { FLAME_STAGES } from './flame';
 import { PLACES } from './places';
 import { CALLBACKS, FLAME_LINES } from './daily/flame-lines';
@@ -295,6 +295,41 @@ describe('the daily follow-ups', () => {
     const n = 40;
     const picks = Array.from({ length: n }, (_, i) => afterWorkoutLine({ ...initialState(), sessions: Array.from({ length: i + 1 }, (_, k) => workout(day(k))) }));
     for (let i = 1; i < n; i++) expect(picks.slice(Math.max(1, i - 4), i), `workout ${i + 1}`).not.toContain(picks[i]);
+  });
+});
+
+describe('scenes at one moment', () => {
+  const day = (i: number) => new Date(2026, 0, 1 + i, 18);
+  it(`never plays more than ${MAX_SCENES_AT_ONCE} at once, and the rest wait for the next workout`, () => {
+    let state: GameState = { ...initialState(), sessions: Array.from({ length: 10 }, (_, i) => workout(day(i))) };
+    const now = day(9);
+    expect(pendingScenes(state, now).length).toBeGreaterThan(MAX_SCENES_AT_ONCE);
+    for (let i = 0; i < MAX_SCENES_AT_ONCE; i++) state = sawScene(state, scenesToPlay(state, now)[0].id, now);
+    expect(scenesToPlay(state, now)).toEqual([]);
+    const later = { ...state, sessions: [...state.sessions, workout(day(10))] };
+    expect(scenesToPlay(later, day(10)).length).toBeGreaterThan(0);
+  });
+});
+
+describe('the Fog bosses', () => {
+  it('give every zone a voice: an entrance, a line per stage, an end, and three or four short taunts', () => {
+    for (const c of CHAPTERS) {
+      const l = c.fog.lines;
+      const all = [l.enter, ...l.stages, l.end, ...l.taunts];
+      expect(l.stages.length, c.fog.name).toBeGreaterThan(0);
+      expect(l.taunts.length, c.fog.name).toBeGreaterThanOrEqual(3);
+      expect(l.taunts.length, c.fog.name).toBeLessThanOrEqual(4);
+      // Shown over gameplay: short, general, and only words every player has or can skip.
+      for (const t of all) {
+        expect(t.trim(), c.fog.name).not.toBe('');
+        expect(t.length, t).toBeLessThanOrEqual(44);
+        expect(t.replace(/\{\w+\}/g, ''), t).not.toMatch(/\d/);
+        for (const w of tokens(t)) expect(['voice', 'flame'], t).toContain(w);
+      }
+      // A taunt may be the player's own line, but the ones always said must be enough.
+      expect(l.taunts.filter((t) => !tokens(t).length).length, c.fog.name).toBeGreaterThanOrEqual(3);
+      expect(tokens(l.enter).length + tokens(l.end).length, c.fog.name).toBe(0);
+    }
   });
 });
 

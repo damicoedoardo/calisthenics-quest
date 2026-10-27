@@ -1,4 +1,6 @@
 import { equippedGear } from '@/lib/gear';
+import type { AbilityId, RelicId } from '@/game/dungeon/engine';
+import type { UpgradeId } from '@/lib/fog';
 import { CLIPS, type ClipFrame, type ClipId, type SpriteAction } from './clips';
 import { toSheet, type Grid } from './engine/grid';
 import { drawBook } from './characters/book';
@@ -26,8 +28,9 @@ import { drawSeeker } from './characters/seeker';
 import { drawSplitling, drawSplitter, drawSplitterPop } from './characters/splitter';
 import { drawShade } from './characters/shade';
 import { drawWarden } from './characters/warden';
+import { drawExercise, type ExerciseOpts } from './characters/exercise';
 import { ZONE_PLACE, dress, edged } from './characters/zoned';
-import { DAY_ICONS, KEEPSAKE_ICONS, type DayKind } from './characters/icons';
+import { ABILITY_ICONS, DAY_ICONS, KEEPSAKE_ICONS, MARK_ICONS, RELIC_ICONS, SKILL_ICONS, type DayKind } from './characters/icons';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
    art for a character is a change here, never in a component. Two kinds:
@@ -105,6 +108,18 @@ export interface KeepsakeOpts {
   /** The zone whose boss gave it, 0-5. */
   zone: number;
 }
+export interface RelicIconOpts {
+  name: RelicId;
+}
+export interface AbilityIconOpts {
+  name: AbilityId | 'dodge';
+}
+export interface SkillIconOpts {
+  name: UpgradeId;
+}
+export interface MarkIconOpts {
+  name: 'warden' | 'boss';
+}
 export interface DayIconOpts {
   kind: DayKind;
 }
@@ -169,6 +184,17 @@ export const SPRITES = {
     draw: (o) => drawPixelArt(KEEPSAKE_ICONS[o.zone] ?? KEEPSAKE_ICONS[0]),
   }),
   dayIcon: drawn<DayIconOpts>({ label: (o) => o.kind, defaults: { kind: 'A visit' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(DAY_ICONS[o.kind]) }),
+  relicIcon: drawn<RelicIconOpts>({ label: (o) => o.name, defaults: { name: 'whetstone' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(RELIC_ICONS[o.name]) }),
+  abilityIcon: drawn<AbilityIconOpts>({ label: (o) => o.name, defaults: { name: 'charge' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(ABILITY_ICONS[o.name]) }),
+  skillIcon: drawn<SkillIconOpts>({ label: (o) => o.name, defaults: { name: 'power' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(SKILL_ICONS[o.name]) }),
+  markIcon: drawn<MarkIconOpts>({ label: (o) => o.name, defaults: { name: 'boss' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(MARK_ICONS[o.name]) }),
+  // you, doing an exercise of the program (the workout screen's demo)
+  exercise: drawn<ExerciseOpts>({
+    label: (o) => `How to do it: ${o.exercise}`,
+    defaults: { exercise: 'pushup', gear: STARTER_GEAR },
+    clips: () => ({ idle: 'rep' }),
+    draw: (o, _fr, f) => drawExercise(o, f),
+  }),
   mirrorBoss: drawn<HeroOpts>({
     label: () => 'The Mirror, you in glass',
     defaults: { gear: STARTER_GEAR },
