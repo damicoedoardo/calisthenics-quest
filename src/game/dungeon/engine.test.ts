@@ -217,6 +217,8 @@ describe('dungeon', () => {
   it("the Hollow can't be hurt; standing in its open light long enough takes its hand", () => {
     const run = createRun({ ...setup, zone: ZONES[4], power: tough, seed: 2 });
     skipToBoss(run);
+    // Standing still the whole fight: this is about the light, not about surviving it.
+    run.hp = run.maxHp = 100000;
     while (!run.boss) stepRun(run, still);
     const b = run.boss;
     // Dark: hits do nothing to it.

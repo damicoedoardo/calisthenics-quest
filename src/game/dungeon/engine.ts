@@ -622,7 +622,7 @@ const RAMP = { from: 0.25, over: 1.1 };
 export type AbilityId = 'charge' | 'volley' | 'blink' | 'still' | 'shock';
 
 export const ABILITIES: Record<AbilityId, { name: string; text: string; cd: number }> = {
-  charge: { name: 'Charge', text: 'Rush ahead, untouchable, hitting everything you pass.', cd: 6 },
+  charge: { name: 'Charge', text: 'Rush ahead, untouchable, hitting everything you pass and cutting the shots in your way.', cd: 6 },
   volley: { name: 'Volley', text: 'Loose arrows all around you that pierce through.', cd: 7 },
   blink: { name: 'Blink', text: 'Vanish and appear ahead, bursting where you land and wiping shots nearby.', cd: 8 },
   still: { name: 'Stillness', text: 'Breathe: heal some HP and push everything away.', cd: 14 },
@@ -632,13 +632,18 @@ export const ABILITIES: Record<AbilityId, { name: string; text: string; cd: numb
 export const DODGE = { cd: 2.5, speed: 480, secs: 0.17, ghost: 0.27 };
 
 /** Up close you take more hits, so the sword's class is built to: more HP and armor. */
-/** Each class in the dungeon, against the others: HP, armor, and damage (orbs and waves hit crowds, so less each). */
-export const CLASS_BODY: Record<'slash' | 'arrow' | 'orb' | 'wave', { hp: number; armor: number; dmg: number }> = {
-  slash: { hp: 1.45, armor: 0.24, dmg: 1.08 },
-  wave: { hp: 1.35, armor: 0.16, dmg: 1.03 },
-  arrow: { hp: 1.05, armor: 0, dmg: 1.15 },
-  orb: { hp: 0.9, armor: 0, dmg: 0.68 },
+/**
+ * Each class in the dungeon, against the others: HP, armor, damage (orbs and waves hit crowds, so
+ * less each), move speed and attack speed. Up close you have to walk in and back out, so the sword
+ * and open hands are quicker on their feet and swing faster.
+ */
+export const CLASS_BODY: Record<'slash' | 'arrow' | 'orb' | 'wave', { hp: number; armor: number; dmg: number; move: number; haste: number }> = {
+  slash: { hp: 1.22, armor: 0.18, dmg: 1.08, move: 1.2, haste: 1.1 },
+  wave: { hp: 1.25, armor: 0.12, dmg: 1.03, move: 1.15, haste: 1.1 },
+  arrow: { hp: 1.05, armor: 0, dmg: 1.13, move: 1, haste: 1 },
+  orb: { hp: 0.9, armor: 0, dmg: 0.67, move: 1, haste: 1 },
 };
+const bodyOf = (run: Run) => CLASS_BODY[attackOf(run.setup.classId)];
 
 export function abilityOf(cls: ClassId | undefined): AbilityId {
   return cls === 'warrior' ? 'charge' : cls === 'archer' ? 'volley' : cls === 'mage' ? 'blink' : cls === 'monk' ? 'still' : 'shock';
@@ -1349,7 +1354,7 @@ function moveHero(run: Run, input: Input) {
     y /= len;
   }
   if (len > 0.05) h.facing = Math.atan2(y, x);
-  const speed = heroSpeed(run.ups) * (1 + 0.1 * relic(run, 'boots'));
+  const speed = heroSpeed(run.ups) * (1 + 0.1 * relic(run, 'boots')) * bodyOf(run).move;
   if (run.charge && now < run.charge.until) {
     h.vx = run.charge.x;
     h.vy = run.charge.y;
@@ -1386,6 +1391,7 @@ function moveHero(run: Run, input: Input) {
     emit(run, { type: 'heal', x: h.x, y: h.y, n: heal });
   }
   if (run.charge?.harm) {
+    clearBullets(run, h.x, h.y, HERO_R + 24);
     for (const f of run.foes) {
       if (!f.alive || run.charge.hit.has(f) || dist(f, h) > f.def.r + HERO_R + 12) continue;
       run.charge.hit.add(f);
@@ -2169,7 +2175,7 @@ function attack(run: Run) {
     target = b ?? nearest(run, h.x, h.y, undefined, reach);
   if (!target && kind !== 'wave') return;
   if (kind === 'wave' && !nearest(run, h.x, h.y, undefined, 150)) return;
-  run.cd.attack = attackCooldown(kind, run.setup.power, run.ups) / (1 + DIALS.relic * 0.1 * relic(run, 'quick'));
+  run.cd.attack = attackCooldown(kind, run.setup.power, run.ups) / (1 + DIALS.relic * 0.1 * relic(run, 'quick')) / bodyOf(run).haste;
   const n = 1 + (run.ups.multi ?? 0),
     dmg = pow(run, ATTACK[kind].dmg),
     angle = target ? Math.atan2(target.y - h.y, target.x - h.x) : h.facing;
