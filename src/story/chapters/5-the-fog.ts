@@ -22,7 +22,7 @@ export const THE_FOG: Chapter = {
     after: 'Nobody destroys it. You walked up to it anyway.',
     keepsake: { name: 'The Voice Stone', text: "Your Hollow's line, carved small enough to carry." },
     hp: 2.2,
-    dmg: 2.7,
+    dmg: 3.1,
     ground: '#111a17',
     fog: '#1f3b33',
   },
