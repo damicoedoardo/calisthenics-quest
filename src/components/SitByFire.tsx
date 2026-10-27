@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Ember } from './Characters';
 import { PlaceBackdrop } from './Place';
 import { SoundToggle, useMusic } from './Sound';
+import { useModal } from './useModal';
 import type { FlameStage } from '@/sprites/characters/ember';
 
 interface Props {
@@ -21,6 +22,8 @@ export function SitByFire({ name, stage, line, onDone, seconds = 60 }: Props) {
   const [left, setLeft] = useState(seconds);
   const done = left <= 0;
   useMusic('camp');
+  // Escape stops, or leaves once the minute is done.
+  const box = useModal<HTMLDivElement>(() => onDone(done));
 
   useEffect(() => {
     if (done) return;
@@ -32,7 +35,7 @@ export function SitByFire({ name, stage, line, onDone, seconds = 60 }: Props) {
   const breathingIn = (seconds - left) % 10 < 5;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-ink-950" role="dialog" aria-label="Sit by the fire">
+    <div ref={box} className="fixed inset-0 z-50 !mt-0 flex flex-col overflow-hidden bg-ink-950 outline-none" role="dialog" aria-modal="true" aria-label="Sit by the fire">
       <PlaceBackdrop id="ashlands-camp" className="absolute inset-0" />
       <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-ink-950 via-ink-950/80 to-transparent" />
 

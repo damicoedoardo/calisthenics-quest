@@ -18,6 +18,12 @@ body {
   min-height: 100dvh;
 }
 
+/* Keyboard focus shows as a gold ring: the browser's default blue is hard to see on the ink. */
+:focus-visible {
+  outline: 2px solid #fbbf24;
+  outline-offset: 2px;
+}
+
 /* Keep content clear of the notch and home indicator when installed. */
 .safe-top {
   padding-top: max(env(safe-area-inset-top), 12px);
@@ -40,5 +46,26 @@ body {
   }
   to {
     background-position: calc(var(--fw) * var(--n) * -1) var(--y);
+  }
+}
+
+/* Players who ask their system for less motion: no screen shakes, and the full-screen flashes
+   become a soft glow. (The Fog's camera shake and flashes follow the same setting: src/game/calm.ts.) */
+@keyframes flash-soft {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.2;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-shake,
+  .animate-bigshake {
+    animation: none;
+  }
+  .animate-flash {
+    animation: flash-soft 1.2s ease-in-out both;
   }
 }

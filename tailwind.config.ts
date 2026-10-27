@@ -11,6 +11,9 @@ export default {
       colors: {
         ink: { 950: '#0b0d14', 900: '#11141f', 800: '#181c2b', 700: '#232840', 600: '#30375a' },
         gold: { 300: '#fde68a', 400: '#fbbf24', 500: '#f59e0b' },
+        // Tailwind's slate-500 reads at under 4:1 on the ink cards; this one keeps it the quiet
+        // grey under slate-400 but clears 4.5:1 on ink-950 to ink-700.
+        slate: { 500: '#8291a7' },
       },
       keyframes: {
         pop: { '0%': { transform: 'scale(.6)', opacity: '0' }, '70%': { transform: 'scale(1.08)' }, '100%': { transform: 'scale(1)', opacity: '1' } },
@@ -19,6 +22,7 @@ export default {
         flicker: { '0%,100%': { transform: 'scale(1,1)' }, '25%': { transform: 'scale(.97,1.04)' }, '50%': { transform: 'scale(1.03,.97)' }, '75%': { transform: 'scale(.98,1.02)' } },
         shake: { '0%,100%': { transform: 'translateX(0)' }, '20%': { transform: 'translateX(-6px)' }, '40%': { transform: 'translateX(6px)' }, '60%': { transform: 'translateX(-4px)' }, '80%': { transform: 'translateX(4px)' } },
         hit: { '0%': { transform: 'translate(0,0) scale(.6)', opacity: '0' }, '20%': { opacity: '1' }, '100%': { transform: 'translate(0,-48px) scale(1.2)', opacity: '0' } },
+        beacon: { '0%,5%': { opacity: '1' }, '6%,11%': { opacity: '0' }, '12%,17%': { opacity: '1' }, '18%,100%': { opacity: '0' } },
         blink: { '0%,49%': { opacity: '1' }, '50%,100%': { opacity: '0' } },
         rain: { '0%': { transform: 'translateY(-20vh)' }, '100%': { transform: 'translateY(120vh)' } },
         ash: { '0%': { transform: 'translate(0,-10vh)' }, '50%': { transform: 'translate(12px,50vh)' }, '100%': { transform: 'translate(-8px,110vh)' } },
@@ -43,6 +47,7 @@ export default {
         shake: 'shake .4s ease-in-out',
         hit: 'hit .9s ease-out forwards',
         blink: 'blink 1s step-end infinite',
+        beacon: 'beacon 5s step-end infinite',
         rain: 'rain linear infinite',
         ash: 'ash linear infinite',
         fadein: 'fadein 1s ease-out both',

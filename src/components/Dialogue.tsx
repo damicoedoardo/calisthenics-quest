@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Hero } from './Hero';
-import { Ember, Hollow } from './Characters';
+import { Ember, Hollow, Kindled } from './Characters';
 import { PlaceBackdrop } from './Place';
 import { SoundToggle, useMusic } from './Sound';
 import { Sprite } from './Sprite';
 import { Weather } from './Weather';
+import { useLook } from './Look';
 import { castMember } from '@/story/cast';
 import { PLACES, type PlaceId } from '@/story/places';
 import type { Line, Shot, Words } from '@/story/types';
@@ -52,6 +53,13 @@ interface Camera {
 const FAST = fastStory();
 const secondsOf = (s: Shot | undefined) => (FAST ? 0.1 : (s?.seconds ?? ('title' in (s ?? {}) ? 2.2 : 1.2)));
 
+/** The song at a beat: a line can change it (or let it drop out), and it stays changed. */
+function musicAt(beats: Beat[], index: number, start: TrackId | null): TrackId | null {
+  let m = start;
+  for (const { line } of beats.slice(0, index + 1)) if (line?.music) m = line.music === 'none' ? null : line.music;
+  return m;
+}
+
 /** Where the camera is at a beat: moves add up over the scene. */
 function cameraAt(beats: Beat[], index: number, place?: PlaceId): Camera {
   const cam: Camera = { place, x: 0, y: 0, zoom: 1, fade: 'none' };
@@ -81,9 +89,24 @@ function Portrait({ line, gear, classId, flame }: { line: Line; gear: Record<Gea
     case 'flame':
       // A spark is a speck in its frame: show it bigger so its face reads.
       return <Ember size={flame === 'spark' ? Math.round(p.size * 1.7) : p.size} stage={flame} mood={line.mood} />;
+    case 'kindled':
+      return <Kindled size={p.size} wave={p.wave} />;
+    case 'villager':
+      return <Sprite id={p.sprite} size={p.size} opts={{ after: true }} />;
+    case 'boss':
+      return <Boss boss={p.boss} stage={p.stage ?? 0} size={p.size} gear={gear} classId={classId} />;
     default:
       return null;
   }
+}
+
+/** The Fog's boss sprites, shared with the story. */
+function Boss({ boss, stage, size, gear, classId }: { boss: 'mirror' | 'knight' | 'plateau' | 'summit'; stage: 0 | 1 | 2; size: number; gear: Record<GearSlot, Gear>; classId?: ClassId }) {
+  const look = useLook();
+  if (boss === 'mirror') return <Sprite id="mirrorBoss" opts={{ gear, classId, look }} size={size} />;
+  if (boss === 'knight') return <Sprite id="knightBoss" opts={{ stage }} size={size} />;
+  if (boss === 'plateau') return <Sprite id="plateauBoss" opts={{ stage }} size={size} />;
+  return <Sprite id="summitBoss" size={size} />;
 }
 
 const ENTER = { left: 'animate-enterleft', right: 'animate-enterright', below: 'animate-enterbelow' };
@@ -97,26 +120,37 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
   const beats = useMemo<Beat[]>(() => [...shots.map((shot) => ({ shot })), ...lines.map((line) => ({ line, shot: line.shot }))], [shots, lines]);
   const [index, setIndex] = useState(0);
   const [shown, setShown] = useState(0);
+  // A line with a pause waits, empty, before it starts typing.
+  const [waiting, setWaiting] = useState(false);
   const beat = beats[index];
   const line = beat?.line;
   const full = line ? line.text.length : 0;
   const done = FAST || shown >= full;
+  // With ?fast the typing never runs, so a finished line shows in full.
+  const upTo = done ? full : shown;
   const narrator = line?.who === 'narrator';
-  const film = cinematic && narrator;
-  const speed = film ? 42 : 28;
+  const film = (cinematic || !!line?.film) && narrator;
+  const speed = line?.pace === 'slow' ? 62 : film ? 42 : 28;
   const cam = cameraAt(beats, index, place);
   const shot = beat?.shot;
-  useMusic(music);
+  useMusic(musicAt(beats, index, music));
 
+  // Only a new line restarts the typing (the lines prop is rebuilt on every parent render).
+  const pause = FAST ? 0 : (line?.pause ?? 0);
   useEffect(() => {
     setShown(0);
+    setWaiting(pause > 0);
+    if (!pause) return;
+    const t = setTimeout(() => setWaiting(false), pause * 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
 
   useEffect(() => {
-    if (done) return;
+    if (done || waiting) return;
     const t = setTimeout(() => setShown((n) => Math.min(full, n + 1)), speed);
     return () => clearTimeout(t);
-  }, [shown, full, done, speed]);
+  }, [shown, full, done, speed, waiting]);
 
   const next = () => {
     if (index + 1 >= beats.length) onDone();
@@ -131,12 +165,37 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
 
+  // Keyboard players: Enter, Space or the right arrow do what a tap does, and focus starts on the
+  // scene, not on the tabs behind it.
+  const box = useRef<HTMLDivElement>(null);
+  const advanceRef = useRef<() => void>(() => {});
+  useEffect(() => {
+    // Hand focus back where it was when the scene ends, so the next Tab doesn't start from nowhere.
+    const before = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    box.current?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'ArrowRight') return;
+      // Enter on Skip (or in a text box) means that control, not the next line.
+      if (e.target instanceof HTMLElement && e.target.closest('button, input, textarea, select, a')) return;
+      e.preventDefault();
+      advanceRef.current();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      // After the tabs behind are interactive again (inert comes off in the same commit).
+      setTimeout(() => before?.isConnected && before.focus({ preventScroll: true }));
+    };
+  }, []);
+
   if (!beat) return null;
 
   const advance = () => {
-    if (line && !done) setShown(full);
+    if (waiting) setWaiting(false);
+    else if (line && !done) setShown(full);
     else next();
   };
+  advanceRef.current = advance;
 
   const who = line ? castMember(line.who) : null;
   const name = who?.name.replace('{flame}', words?.flame || 'A spark') ?? '';
@@ -147,7 +206,7 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
   const weather = cam.place ? PLACES[cam.place].weather : 'none';
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-ink-950" onClick={advance} role="dialog" aria-live="polite">
+    <div ref={box} tabIndex={-1} className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-ink-950 outline-none" onClick={advance} role="dialog" aria-modal="true" aria-live="polite">
       {cam.place && (
         <div key={`shake-${index}`} className={`absolute inset-0 ${shake}`}>
           <div
@@ -196,16 +255,16 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
             {film ? (
               <div key={index} className="min-h-[132px] animate-fadein px-2 text-center">
                 <p className="text-xl leading-relaxed text-slate-200">
-                  {line.text.slice(0, shown)}
+                  {line.text.slice(0, upTo)}
                   {!done && <span className="opacity-0">{line.text.slice(shown)}</span>}
                 </p>
-                <p className="mt-4 text-xs text-slate-600">{done ? <span className="animate-blink">tap</span> : <span>&nbsp;</span>}</p>
+                <p className="mt-4 text-xs text-slate-500">{done ? <span className="animate-blink">tap</span> : <span>&nbsp;</span>}</p>
               </div>
             ) : (
               <div className={`min-h-[132px] rounded-xl p-4 pixel-border ${dark ? 'bg-[#140f1f]' : 'bg-ink-800/95'} ${narrator ? 'text-center' : ''}`}>
                 {!narrator && <p className={`mb-2 font-pixel text-[10px] ${TAG[who?.tag ?? 'gold']}`}>{name}</p>}
                 <p className={`text-lg leading-snug ${narrator ? 'italic text-slate-300' : dark ? 'text-red-100' : 'text-slate-100'}`}>
-                  {line.text.slice(0, shown)}
+                  {line.text.slice(0, upTo)}
                   {!done && <span className="opacity-0">{line.text.slice(shown)}</span>}
                 </p>
                 <p className="mt-2 text-right text-xs text-slate-500">{done ? <span className="animate-blink">▼ tap</span> : <span>&nbsp;</span>}</p>

@@ -85,6 +85,9 @@ export default function Lab() {
         <Link href="/lab/story" className="ml-auto rounded-lg bg-ink-800 px-3 py-2 text-xs text-gold-300">
           Story Lab
         </Link>
+        <Link href="/lab/music" className="rounded-lg bg-ink-800 px-3 py-2 text-xs text-gold-300">
+          Music
+        </Link>
       </header>
 
       <Panel title="Your hero">
@@ -159,7 +162,7 @@ export default function Lab() {
                 <Sprite id={id} size={96} />
               </div>
               <p className="text-center text-[10px] leading-tight text-slate-400">{labelFor(id).split(' with ')[0]}</p>
-              <p className="font-mono text-[9px] text-slate-600">{id}</p>
+              <p className="font-mono text-[9px] text-slate-500">{id}</p>
             </div>
           ))}
         </div>

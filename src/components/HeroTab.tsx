@@ -1,13 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Download, Film, Gem, Lock, Mail, Palette, Trophy, Upload } from 'lucide-react';
 import { SoundToggle } from './Sound';
 import { Hero } from './Hero';
+import { Sprite } from './Sprite';
 import { useLook } from './Look';
 import { LookEditor } from './LookEditor';
+import { useModal } from './useModal';
 import { PATHS } from '@/lib/skills';
-import { getClass } from '@/lib/gear';
+import { getClass, tierText } from '@/lib/gear';
 import { gearOf, logMaxTest, nextTestDate, nodeName, type GameState } from '@/lib/game';
 import { exportState, parseImport } from '@/lib/store';
 import { storyState } from '@/story/engine';
@@ -29,6 +31,7 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
   const story = storyState(state);
   const [test, setTest] = useState({ pushups: '', pullups: '', lsitSec: '' });
   const [msg, setMsg] = useState('');
+  const [backupMsg, setBackupMsg] = useState('');
   const [letterOpen, setLetterOpen] = useState(false);
   const [editingLook, setEditingLook] = useState(false);
   const look = useLook();
@@ -57,14 +60,19 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
     a.href = URL.createObjectURL(blob);
     a.download = `forma-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
-    URL.revokeObjectURL(a.href);
+    // Revoking right away can cancel the download on some phones.
+    setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
   };
 
   const restore = async (file: File | undefined) => {
     if (!file) return;
     const parsed = parseImport(await file.text());
-    if (parsed) update(() => parsed);
-    setMsg(parsed ? 'Backup restored.' : "That file isn't a FORMA backup.");
+    if (!parsed) return setBackupMsg("That file isn't a FORMA backup.");
+    // A restore replaces everything on this phone, so check first.
+    const n = parsed.sessions.length;
+    if (!window.confirm(`Replace the progress on this phone with this backup (${n} ${n === 1 ? 'workout' : 'workouts'})?`)) return;
+    update(() => parsed);
+    setBackupMsg('Backup restored.');
   };
 
   return (
@@ -76,7 +84,7 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
           {(['weapon', 'armor', 'shield'] as const).map((slot) => (
             <div key={slot} className="rounded-lg bg-ink-900/70 px-2 py-2">
               <p className="uppercase tracking-wider text-slate-500">{slot}</p>
-              <p className="mt-0.5 font-semibold" style={{ color: gear[slot].tier === 0 ? '#64748b' : gear[slot].color }}>
+              <p className="mt-0.5 font-semibold" style={{ color: tierText(gear[slot].tier) }}>
                 {gear[slot].name}
               </p>
             </div>
@@ -93,7 +101,7 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
       </section>
 
       {editingLook && (
-        <div className="safe-top safe-bottom fixed inset-0 z-40 overflow-y-auto bg-ink-950">
+        <Overlay label="Your look" onClose={() => setEditingLook(false)}>
           <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6 pt-4">
             <h2 className="mb-4 font-pixel text-xs text-gold-300">Your look</h2>
             <div className="flex-1">
@@ -111,7 +119,7 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
               Done
             </button>
           </div>
-        </div>
+        </Overlay>
       )}
 
       {hasLetter && (
@@ -182,9 +190,10 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
               key={key}
               inputMode="numeric"
               placeholder={label}
+              aria-label={label}
               value={test[key]}
               onChange={(e) => setTest({ ...test, [key]: e.target.value.replace(/\D/g, '') })}
-              className="w-full rounded-lg bg-ink-900 px-3 py-2.5 text-center text-sm outline-none ring-1 ring-ink-600 focus:ring-gold-400"
+              className="w-full rounded-lg bg-ink-900 px-1 py-2.5 text-center text-sm outline-none ring-1 ring-ink-600 focus:ring-gold-400"
             />
           ))}
         </div>
@@ -257,9 +266,19 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
           </button>
           <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold">
             <Upload size={16} /> Restore
-            <input type="file" accept="application/json" className="hidden" onChange={(e) => restore(e.target.files?.[0])} />
+            <input
+              type="file"
+              accept=".json,application/json"
+              className="hidden"
+              onChange={(e) => {
+                restore(e.target.files?.[0]);
+                // Lets the same file be picked again.
+                e.target.value = '';
+              }}
+            />
           </label>
         </div>
+        {backupMsg && <p className="mt-2 text-center text-xs text-gold-300">{backupMsg}</p>}
       </section>
     </div>
   );
@@ -280,14 +299,21 @@ function Keepsakes({ cleared }: { cleared: number }) {
             <li key={z.id} className={`rounded-xl p-3 ${won ? 'bg-ink-900 ring-1 ring-gold-400/25' : 'bg-ink-900/50'}`}>
               {won ? (
                 <>
-                  <p className="text-sm font-semibold text-slate-100">{z.keepsake.name}</p>
-                  <p className="mt-1 text-[11px] leading-snug text-slate-400">{z.keepsake.text}</p>
+                  <div className="flex items-center gap-2">
+                    <Sprite id="keepsake" opts={{ zone: z.id }} size={36} label={z.keepsake.name} className="shrink-0" />
+                    <p className="text-sm font-semibold leading-tight text-slate-100">{z.keepsake.name}</p>
+                  </div>
+                  <p className="mt-1.5 text-[11px] leading-snug text-slate-400">{z.keepsake.text}</p>
                 </>
               ) : (
-                <p className="flex items-center gap-1.5 text-xs text-slate-600">
-                  {/* Only the next boss has a name; the ones after it are still in the fog. */}
-                  <Lock size={12} /> {z.id === cleared ? z.bossName : '???'}
-                </p>
+                <div className="flex items-center gap-2">
+                  {/* Still in the fog: only its shape shows. */}
+                  <Sprite id="keepsake" opts={{ zone: z.id }} size={36} label="A keepsake not won yet" className="shrink-0 opacity-40 brightness-0 invert-[.35]" />
+                  <p className="flex items-center gap-1.5 text-xs text-slate-500">
+                    {/* Only the next boss has a name; the ones after it are still in the fog. */}
+                    <Lock size={12} /> {z.id === cleared ? z.bossName : '???'}
+                  </p>
+                </div>
               )}
             </li>
           );
@@ -302,6 +328,16 @@ function Stat({ label, value }: { label: string; value: number | string }) {
     <div className="rounded-2xl bg-ink-800 p-3">
       <p className="text-[11px] uppercase tracking-wider text-slate-400">{label}</p>
       <p className="mt-1 font-mono text-2xl font-semibold">{value}</p>
+    </div>
+  );
+}
+
+/** A full-screen sheet over the Hero tab (the look editor): a dialog, closed with Escape too. */
+function Overlay({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
+  const box = useModal<HTMLDivElement>(onClose);
+  return (
+    <div ref={box} role="dialog" aria-modal="true" aria-label={label} className="safe-top safe-bottom fixed inset-0 z-40 !mt-0 overflow-y-auto bg-ink-950 outline-none">
+      {children}
     </div>
   );
 }

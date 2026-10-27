@@ -6,7 +6,9 @@ import { Hero } from './Hero';
 import { Enemy } from './Characters';
 import { music } from '@/lib/music';
 import { gearOf, levelInfo, totalXp, type FinishResult } from '@/lib/game';
+import { tierText } from '@/lib/gear';
 import type { StoryState } from '@/story/engine';
+import { afterWorkoutLine } from '@/story/daily';
 
 const CONFETTI = ['#fbbf24', '#f97316', '#22d3ee', '#a78bfa', '#34d399'];
 
@@ -54,7 +56,13 @@ export function AfterSession({ result, before, after, onClose }: Props) {
           ))}
         </div>
         <p className="mt-4 text-sm text-slate-300">
-          {hit ? (defeated ? `${before.chapter.enemy} is defeated!` : `Your training hit for ${reps}. One heart down.`) : 'Your reps strike...'}
+          {!hit
+            ? 'Your reps strike...'
+            : defeated
+              ? `${before.chapter.enemy} is defeated!`
+              : before.heartsLeft === 0
+                ? `Your training hit for ${reps}. Your max test on the Hero tab finishes it.`
+                : `Your training hit for ${reps}. One heart down.`}
         </p>
         {hit && <button className="mt-8 rounded-2xl bg-gold-400 px-8 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309]">Claim loot</button>}
       </div>
@@ -69,6 +77,9 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
   const leveled = levelAfter > levelBefore;
   const big = leveled || newGear.length > 0;
   const lvl = levelInfo(totalXp(result.state));
+  // The flame's word on this workout: the first, a comeback, a new best, a short one...
+  // Until the player names their flame (in the first chapter's scene) it's just "A spark", as in the scenes.
+  const flameSays = useMemo(() => afterWorkoutLine(result.state), [result.state]);
   const pieces = useMemo(
     () =>
       Array.from({ length: big ? 40 : 18 }).map((_, i) => ({
@@ -81,7 +92,8 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
   );
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-6 backdrop-blur-sm">
+    // Scrolls when the card is taller than a small screen (a level-up and new gear at once).
+    <div className="fixed inset-0 z-50 flex overflow-y-auto bg-black/80 p-6 backdrop-blur-sm">
       <div className="pointer-events-none fixed inset-0 overflow-hidden" aria-hidden>
         {pieces.map((p, i) => (
           <span
@@ -91,7 +103,7 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
           />
         ))}
       </div>
-      <div className="w-full max-w-sm animate-pop rounded-3xl bg-ink-800 p-6 text-center pixel-border">
+      <div className="m-auto w-full max-w-sm animate-pop rounded-3xl bg-ink-800 p-6 text-center pixel-border">
         <p className="font-pixel text-sm text-gold-300">{session.kind === 'full' ? 'Quest complete!' : 'Minimum quest!'}</p>
         <ul className="mt-4 space-y-1 text-sm">
           {session.breakdown.map((l, i) => (
@@ -115,14 +127,18 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
             <Hero gear={gearOf(result.state)} classId={result.state.profile.classId} size={130} />
             {newGear.map((g) => (
               <p key={g.slot} className="mt-1 text-sm">
-                Forged: <span className="font-semibold" style={{ color: g.color }}>{g.name}</span>
+                Forged: <span className="font-semibold" style={{ color: tierText(g.tier) }}>{g.name}</span>
               </p>
             ))}
             <p className="mt-1 text-xs text-slate-400">Next skill unlocked on your tree.</p>
           </div>
         )}
 
-        {session.kind === 'mini' && newGear.length === 0 && <p className="mt-3 text-sm text-slate-300">Small still counts. Your week is alive.</p>}
+        {flameSays && (
+          <p className="mt-4 text-sm italic leading-snug text-slate-300">
+            <span className="not-italic text-orange-300">{result.state.profile.flame || 'A spark'}:</span> &ldquo;{flameSays}&rdquo;
+          </p>
+        )}
 
         <button onClick={onClose} className="mt-6 w-full rounded-2xl bg-gold-400 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
           Continue

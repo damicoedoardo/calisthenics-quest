@@ -1,8 +1,9 @@
 import { finishSession, initialState, levelInfo, logMaxTest, todaysQuest, totalXp, type Checkin, type GameState, type Letter, type Rir } from '@/lib/game';
 import { recordRun, zoneStatus, ZONES } from '@/lib/fog';
 import { dayKey, daysApart, isRestDay } from '@/lib/days';
-import { pendingScenes, renderLines, speakerName, storyState, storyWords } from '@/story/engine';
-import { canSitByFire, dayQuote, fireLine, restTruth, todayMoment, todayPage, updateTodayPage, withTodayPage } from '@/story/daily';
+import { MAX_SCENES_AT_ONCE, sawScene, sceneMoment, scenesToPlay, renderLines, speakerName, storyState, storyWords } from '@/story/engine';
+import { CALLBACKS } from '@/story/daily/flame-lines';
+import { afterWorkoutLine, canSitByFire, dayQuote, fireLine, marginNote, restTruth, todayMoment, todayPage, updateTodayPage, withTodayPage } from '@/story/daily';
 import { DEFAULT_FLAME_NAME, flameStage } from '@/story/flame';
 import { STARTER_LOOKS } from '@/sprites/characters/hero';
 import type { ClassId } from '@/lib/gear';
@@ -58,11 +59,18 @@ export interface Season {
   played: string[];
   /** How many times each kind of day came up on Today. */
   moments: Partial<Record<Moment, number>>;
-  /** The player as each Fog zone opens, and six workouts later: what the Fog balance bot plays with. */
+  /** The player as each Fog zone opens, and some workouts later (see laterBy): what the Fog balance bot plays with. */
   snapshots: { label: string; state: GameState }[];
 }
 
-const FULL_LETTER: Letter = { why: 'I want to feel strong again', want: 'ten pull-ups', forWho: 'my little brother', remind: 'I already did this once.' };
+/**
+ * How many workouts after a zone opens its "later" snapshot is taken. The last two zones open when
+ * stats grow slowly (a path step every dozen workouts or so), so six workouts there changes almost
+ * nothing; about six weeks of steady training does.
+ */
+export const laterBy = (zone: number) => (zone >= 4 ? 18 : 6);
+
+const FULL_LETTER: Letter = { why: 'I want to feel strong again', want: 'do ten pull-ups', forWho: 'my little brother', remind: 'I already did this once.' };
 
 /** A random number generator that plays the same way every time. */
 export function seeded(seed: number): () => number {
@@ -136,38 +144,46 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
     }
   };
 
+  /** Scenes played at each story moment, to check none ever gets more than the cap. */
+  const perMoment = new Map<string, number>();
   /** Plays every scene that's due, like the app does when you're back on the main screen. */
   const playScenes = (when: string) => {
     let count = 0;
     for (let guard = 0; guard < 20; guard++) {
-      const scene = pendingScenes(state, now)[0];
+      const scene = scenesToPlay(state, now)[0];
       if (!scene) break;
       count++;
+      const moment = sceneMoment(state, now);
+      perMoment.set(moment, (perMoment.get(moment) ?? 0) + 1);
+      if (perMoment.get(moment)! > MAX_SCENES_AT_ONCE) note('problem', `more than ${MAX_SCENES_AT_ONCE} scenes at one moment (${scene.id})`);
       played.push(scene.id);
       checkLines(scene, scene.lines);
       note('scene', `${scene.id} (${when})`);
-      const seen = [...state.seenScenes, scene.id];
+      const seen = sawScene(state, scene.id, now).seenScenes;
+      const mark = sawScene(state, scene.id, now).sceneMark;
       const ask = scene.ask;
       if (ask?.kind === 'name') {
         const name = kind.flame || DEFAULT_FLAME_NAME;
         note('ask', `names the flame ${name}`);
-        state = { ...state, seenScenes: seen, profile: { ...state.profile, flame: name } };
+        state = { ...state, sceneMark: mark, seenScenes: seen, profile: { ...state.profile, flame: name } };
         checkLines(scene, ask.after);
       } else if (ask?.kind === 'choice') {
         const how = kind.answers ?? 'first';
-        const choice = how === 'first' ? ask.choices[0] : undefined;
-        const value = how === 'write' && ask.write ? 'my own words here' : (choice?.value ?? '');
+        // Someone who writes their own answers still has to pick one when there's nothing to write in.
+        const writes = how === 'write' && !!ask.write;
+        const choice = how === 'skip' || writes ? undefined : ask.choices[0];
+        const value = writes ? 'my own words here' : (choice?.value ?? '');
         note('ask', `${ask.id}: ${how === 'skip' ? 'skipped' : `"${value || '(no answer)'}"`}`);
-        state = { ...state, seenScenes: seen, answers: how === 'skip' ? state.answers : { ...state.answers, [ask.id]: value } };
+        state = { ...state, sceneMark: mark, seenScenes: seen, answers: how === 'skip' ? state.answers : { ...state.answers, [ask.id]: value } };
         const after = how === 'skip' ? undefined : (choice?.after ?? ask.after);
         if (after) checkLines(scene, after);
       } else if (ask?.kind === 'class') {
         if (state.profile.classId) note('problem', `${scene.id} asks for a class, but one was already picked`);
         const id = kind.class ?? 'warrior';
         note('ask', `picks the ${id} class`);
-        state = { ...state, seenScenes: seen, profile: { ...state.profile, classId: id } };
+        state = { ...state, sceneMark: mark, seenScenes: seen, profile: { ...state.profile, classId: id } };
       } else {
-        state = { ...state, seenScenes: seen };
+        state = { ...state, sceneMark: mark, seenScenes: seen };
       }
     }
     // A chapter's ending and the next one's start make two; more than three is a pile-up.
@@ -185,7 +201,11 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
     check('flame line on Today', page.line);
     check('quote author', page.quote.by);
     if (fresh && quotesBefore.includes(page.quote.text)) note('problem', `quote "${page.quote.text}" came back within 3 weeks`);
-    if (['back', 'missed', 'smoky', 'best', 'rough'].includes(moment)) note('day', `Today: ${moment} ("${page.line}")`);
+    const callback = CALLBACKS.find((c) => c.text === page.line);
+    if (callback && fresh) {
+      if ((state.days ?? []).some((p) => p.day !== dayKey(now) && p.line === callback.text)) note('problem', `follow-up after ${callback.after} said twice`);
+      note('day', `Today: follow-up to ${callback.after} ("${page.line}")`);
+    } else if (['back', 'missed', 'smoky', 'best', 'rough'].includes(moment)) note('day', `Today: ${moment} ("${page.line}")`);
     if (isRestDay(state, now)) {
       check('rest card', restTruth(now));
       if (kind.sitsByFire && canSitByFire(state, now) && !page.fire) {
@@ -240,6 +260,9 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
         const s = next.sessions[next.sessions.length - 1];
         state = next;
         note('workout', `workout ${state.sessions.length}${s.kind === 'mini' ? ' (short)' : ''}, +${s.xp} XP`);
+        const says = afterWorkoutLine(state);
+        check('after-workout line', says);
+        note('day', `after the workout: "${says}"`);
         for (const id of s.unlocked) note('skill', `beats ${id}`);
         // About 40 minutes later, back on Today.
         now = new Date(now.getTime() + 40 * 60_000);
@@ -270,10 +293,14 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
       snapshots.push({ label: `zone${id}-open`, state });
     }
     for (const [id, n] of Object.entries(openedAt)) {
-      if (state.sessions.length >= n + 6 && !snapshots.some((x) => x.label === `zone${id}-later`)) snapshots.push({ label: `zone${id}-later`, state });
+      if (state.sessions.length >= n + laterBy(Number(id)) && !snapshots.some((x) => x.label === `zone${id}-later`)) snapshots.push({ label: `zone${id}-later`, state });
     }
   }
   if (waitingSince !== null) note('problem', `still waiting for a max test since day ${waitingSince}`);
+  for (const page of state.days ?? []) {
+    const m = marginNote(state, page);
+    if (m) check(`margin note on ${page.day}`, m);
+  }
   return { player: kind, events, problems, state, played, moments, snapshots };
 }
 

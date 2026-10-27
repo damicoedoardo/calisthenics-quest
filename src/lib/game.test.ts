@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  closeStaleDraft,
   dayType,
   finishSession,
   initialState,
@@ -75,6 +76,20 @@ describe('finishSession', () => {
     expect(res.session.xp).toBe(100);
     expect(res.state.reps.pushup).toBe(9);
     expect(res.state.draft).toBeNull();
+  });
+
+  it('saves a workout left open on an earlier day on that day', () => {
+    const open = withSets(initialState(), { pushup: all(2, 8) });
+    // Same evening, or past midnight in the same workout: left alone.
+    expect(closeStaleDraft(open, new Date(2026, 9, 26, 22))).toBe(open);
+    expect(closeStaleDraft(open, new Date(2026, 9, 27, 1))).toBe(open);
+    const later = closeStaleDraft(open, new Date(2026, 9, 28, 9));
+    expect(later.draft).toBeNull();
+    expect(later.sessions).toHaveLength(1);
+    expect(later.sessions[0].date).toBe(monday.toISOString());
+    // An open quest with no sets logged is just dropped.
+    const empty = { ...initialState(), draft: { startedAt: monday.toISOString(), checkin: 'normal' as const, sets: {} } };
+    expect(closeStaleDraft(empty, new Date(2026, 9, 28, 9))).toEqual({ ...empty, draft: null });
   });
 
   it('holds the target when a set was very hard', () => {

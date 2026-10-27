@@ -8,8 +8,8 @@
 //
 // Options (env): CLASSES=archer,mage (default: all four), ONLY=zone1-open,zone1-later picks
 // snapshots, SCALE='{"2":1.2}' plays zone 2 with its hp and dmg 1.2x, DIALS='{"fire":1.5}' turns the
-// engine's dials, TARGET=0.33,0.67 sets what the tuner aims for (wins when a zone opens, and 6
-// workouts later).
+// engine's dials, TARGET=0.33,0.67 sets what the tuner aims for (wins when a zone opens, and later
+// on).
 import { readdirSync, readFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { register } from 'node:module';
@@ -45,7 +45,10 @@ if (!isMainThread) {
     const z = ZONES[job.zone];
     const zone = { ...z, hp: z.hp * job.scale, dmg: z.dmg * job.scale };
     const out = [];
-    for (let i = 0; i < job.runs; i++) out.push(playRun({ zone, power, classId: job.cls, seed: job.seed + i * 7919 }));
+    for (let i = 0; i < job.runs; i++) {
+      const seed = job.seed + i * 7919;
+      out.push({ ...playRun({ zone, power, classId: job.cls, seed }), seed });
+    }
     parentPort.postMessage(out);
   });
 } else {
@@ -113,13 +116,16 @@ if (!isMainThread) {
       const lost = all.filter((r) => !r.won).map((r) => r.floor);
       const deep = lost.length ? (lost.reduce((a, b) => a + b, 0) / lost.length).toFixed(1) : '-';
       console.log(`${snap.label.padEnd(12)} ${per.map((p) => `${pct(rate(p.res))} ${mins(p.res).padStart(5)}`.padStart(14)).join('')}   ${pct(reached)}, floor ${deep}`);
+      // A run this long means something held a room shut: worth a look (replay it with its seed).
+      const long = per.flatMap((p) => p.res.filter((r) => r.seconds > 25 * 60).map((r) => `${p.cls} seed ${r.seed} (floor ${r.floor}.${r.room}, ${Math.round(r.seconds / 60)}m)`));
+      if (long.length) console.log(`  ! ${long.length} past 25 min: ${long.slice(0, 6).join(', ')}${long.length > 6 ? ', ...' : ''}`);
     }
   } else {
     // For each zone, the scale on its enemies' hp and damage that puts the average of
-    // "when it opens" and "6 workouts later" on the middle of the two targets, by bisection.
+    // "when it opens" and "later" (6 workouts on, 18 for the last two zones: laterBy in src/sim/season.ts) on the middle of the two targets, by bisection.
     const ZONES = [...new Set(snaps.map((s) => s.zone))];
     const { ZONES: zones } = await import(`${root}src/lib/fog.ts`);
-    console.log(`Aim: ${pct(aimOpen)} of runs won when a zone opens, ${pct(aimLater)} six workouts later (all classes together).\n`);
+    console.log(`Aim: ${pct(aimOpen)} of runs won when a zone opens, ${pct(aimLater)} later on (all classes together).\n`);
     for (const z of ZONES) {
       const open = snaps.find((s) => s.zone === z && s.label.endsWith('open')),
         later = snaps.find((s) => s.zone === z && s.label.endsWith('later'));

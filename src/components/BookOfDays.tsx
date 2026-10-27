@@ -2,10 +2,14 @@
 
 import { useState } from 'react';
 import { ArrowLeft, Bookmark } from 'lucide-react';
+import { useModal } from './useModal';
 import { Book } from './Characters';
+import { Sprite } from './Sprite';
+import type { DayKind } from '@/sprites/characters/icons';
 import { dayKey, daysApart } from '@/lib/days';
 import type { DayPage, GameState } from '@/lib/game';
 import { ALL_SCENES, storyWords } from '@/story/engine';
+import { marginNote } from '@/story/daily';
 import type { AnswerId } from '@/story/types';
 
 const HEARTS: Extract<AnswerId, `heart${number}`>[] = ['heart1', 'heart2', 'heart3', 'heart4', 'heart5', 'heart6'];
@@ -17,7 +21,7 @@ function heartPrompt(id: AnswerId): string {
 }
 
 /** What a day held: a workout, a rest day, or just a visit. */
-function whatHappened(page: DayPage, state: GameState): string {
+function whatHappened(page: DayPage, state: GameState): DayKind {
   const date = new Date(`${page.day}T12:00:00`);
   const that = state.sessions.filter((s) => dayKey(new Date(s.date)) === page.day);
   if (that.length) return that.some((s) => s.kind === 'full') ? 'Workout' : 'Short workout';
@@ -34,12 +38,13 @@ const dateLabel = (day: string) => new Date(`${day}T12:00:00`).toLocaleDateStrin
 /** Every day the app was opened, newest first. Days you didn't open it aren't marked; they just aren't here. */
 export function BookOfDays({ state, onClose }: { state: GameState; onClose: () => void }) {
   const [kept, setKept] = useState(false);
+  const box = useModal<HTMLDivElement>(onClose);
   const words = storyWords(state);
   const pages = [...(state.days ?? [])].reverse().filter((p) => !kept || p.kept);
   const hearts = HEARTS.filter((id) => words[id].trim());
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-ink-950">
+    <div ref={box} role="dialog" aria-modal="true" aria-label="Book of Days" className="fixed inset-0 z-50 !mt-0 overflow-y-auto bg-ink-950 outline-none">
       <div className="safe-top safe-bottom mx-auto max-w-md space-y-4 px-4 pb-16">
         <header className="flex items-center gap-3 pt-2">
           <button onClick={onClose} aria-label="Back" className="rounded-lg bg-ink-800 p-2 text-slate-300">
@@ -48,7 +53,7 @@ export function BookOfDays({ state, onClose }: { state: GameState; onClose: () =
           <div className="min-w-0 flex-1">
             <h1 className="font-pixel text-sm text-gold-300">Book of Days</h1>
             <p className="text-xs text-slate-500">
-              {state.days?.length ?? 0} pages. A page for every day you opened it.
+              {state.days?.length ?? 0} {state.days?.length === 1 ? 'page' : 'pages'}. A page for every day you opened it.
             </p>
           </div>
           <Book size={44} />
@@ -89,8 +94,13 @@ export function BookOfDays({ state, onClose }: { state: GameState; onClose: () =
             <li key={p.day} className="rounded-2xl bg-ink-900 p-4 ring-1 ring-ink-700">
               <div className="flex items-baseline justify-between">
                 <p className="font-pixel text-[10px] text-gold-300">{dateLabel(p.day)}</p>
-                <p className="text-xs text-slate-400">{whatHappened(p, state)}</p>
+                <p className="flex items-center gap-1.5 text-xs text-slate-400">
+                  <Sprite id="dayIcon" opts={{ kind: whatHappened(p, state) }} size={28} label="" />
+                  {whatHappened(p, state)}
+                </p>
               </div>
+              {/* A note in your own hand, like the margins the Wanderer shows you on the mountain. */}
+              {marginNote(state, p) && <p className="mt-1 -rotate-1 font-mono text-xs text-amber-200/80">{marginNote(state, p)}</p>}
               <p className="mt-2 text-sm italic text-slate-300">
                 <span className="not-italic text-orange-300">{state.profile.flame ?? 'A spark'}:</span> &ldquo;{p.line}&rdquo;
               </p>

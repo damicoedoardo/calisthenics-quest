@@ -43,12 +43,25 @@ export interface Line {
   text: string;
   /** Only shown when this word was given (an empty letter line drops the story line). */
   needs?: WordKey;
-  /** Narration only: who stands on screen while it's read. */
+  /** Only shown when this word was left empty: the line that stands in for a `needs` line. */
+  missing?: WordKey;
+  /** Only shown when the player gave this answer (or any answer when `is` is left out). */
+  answer?: { id: AnswerId; is?: string };
+  /** Who stands on screen while it's read, when that isn't the speaker (narration, or a speaker shown
+      another way, like the true form waving). */
   show?: Speaker;
   /** The flame's face for this line. */
   mood?: FlameMood;
   /** A camera move that starts with this line. */
   shot?: Shot;
+  /** Seconds of quiet before the line starts: the box waits empty, like a held breath. */
+  pause?: number;
+  /** 'slow' types the line out slowly, for the words that need to land. */
+  pace?: 'slow';
+  /** Narration only: big words on the picture with no text box, like a film. */
+  film?: boolean;
+  /** From this line on, play this song instead; 'none' lets the music drop out. */
+  music?: TrackId | 'none';
 }
 
 /**
@@ -91,7 +104,7 @@ export interface When {
   daysInRow?: number;
   /** Some week had all three workouts. */
   perfectWeek?: boolean;
-  /** Beat a skill: this path's level is past this number (pull past 3 = the first pull-up). */
+  /** Beat a skill: this path's level is past this number (pull past 2 = negatives beaten, the first strict pull-up). */
   skill?: { path: PathId; past: number };
   /** No class picked yet. */
   noClass?: boolean;
@@ -99,6 +112,10 @@ export interface When {
   answer?: { id: AnswerId; is?: string };
   /** Only when the player gave this word (a part of the letter, a heart answer). */
   needs?: WordKey;
+  /** Helped at least one villager (true), or none of them (false). See VILLAGERS in engine.ts. */
+  helped?: boolean;
+  /** The last this-many workouts were all short ones (Rough days or minimum quests). */
+  roughRun?: number;
   /** Away this many days or more. The scene can play again after every later absence. */
   away?: number;
   /** The whole story is finished. */
@@ -139,6 +156,22 @@ export interface Scene {
 }
 
 /** A Fog zone: the chapter's place in the game between workouts. */
+/**
+ * What the zone's boss says during the dungeon fight, shown over gameplay, so every line is short.
+ * Lines may hold {words} like scenes (the Hollow uses {voice}): fill them with `fill(text,
+ * storyWords(state))`, and skip a line whose word the player left empty.
+ */
+export interface FogLines {
+  /** When the boss appears. */
+  enter: string;
+  /** One line at each change of phase or stage, in order (see each zone for what they mean). */
+  stages: string[];
+  /** When the fight ends: beaten, or at peace. */
+  end: string;
+  /** The inner critic, said now and then during the fight. Three or four. */
+  taunts: string[];
+}
+
 export interface FogZone {
   name: string;
   /** Who waits at the end of the run. Each one fights in a way only the chapter's lesson beats. */
@@ -157,6 +190,8 @@ export interface FogZone {
   /** Ground color and the tint over the fog. */
   ground: string;
   fog: string;
+  /** The boss's voice in the dungeon. */
+  lines: FogLines;
 }
 
 export type FogBoss = 'tomorrow' | 'mirror' | 'knight' | 'plateau' | 'hollow' | 'summit';
@@ -187,6 +222,13 @@ export type Portrait =
   | { kind: 'hollow'; size: number }
   /** The flame, at its current stage. */
   | { kind: 'flame'; size: number }
+  /** The flame's true form (the finale), with the player's hair. */
+  | { kind: 'kindled'; size: number; wave?: boolean }
+  /** A villager as they look once you've helped them (dancing, running, the letter sealed). */
+  | { kind: 'villager'; sprite: 'lia' | 'sol' | 'vela'; size: number }
+  /** A chapter's enemy as the Fog draws it, so the story and the dungeon show the same boss.
+      `stage` is how broken it is (0 whole, 2 nearly gone); the Mirror wears the player's look. */
+  | { kind: 'boss'; boss: 'mirror' | 'knight' | 'plateau' | 'summit'; stage?: 0 | 1 | 2; size: number }
   | { kind: 'none' };
 
 export interface CastMember {
@@ -221,6 +263,21 @@ export interface DailyLine {
   text: string;
   /** Only used when the player gave this word. */
   needs?: WordKey;
+  /** Only said while this chapter is the current one (a line about the Fog belongs to the Fog). */
+  inChapter?: number;
+  /** Only said from this chapter on (a line that names the Knight waits until you've met him). */
+  fromChapter?: number;
+}
+
+/** A one-off Today line that follows up on a scene: said once, on a day soon after it. */
+export interface Callback {
+  text: string;
+  /** The scene it follows up on. Said on a later day than the workout that scene came after. */
+  after: string;
+  /** Only within this many workouts of that scene's moment, so it never arrives stale. */
+  within: number;
+  /** Only on a day off (the day after a workout, or later). */
+  restDay?: boolean;
 }
 
 /** Words for the road: one a day under the flame's line. */

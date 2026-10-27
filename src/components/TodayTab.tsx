@@ -16,7 +16,7 @@ import {
   type GameState,
 } from '@/lib/game';
 import { getPath } from '@/lib/skills';
-import { daysSinceTraining, isRestDay } from '@/lib/days';
+import { daysSinceTraining, isRestDay, trainedToday } from '@/lib/days';
 import { storyState, storyWords } from '@/story/engine';
 import { flameStage } from '@/story/flame';
 import { fireLine, flameLine, flameMood, isRested, restTruth, todayPage, updateTodayPage } from '@/story/daily';
@@ -26,6 +26,8 @@ interface Props {
   update: (fn: (s: GameState) => GameState) => void;
   onStart: (checkin: Checkin) => void;
   onReplayOpening: () => void;
+  /** Developer mode (/lab/night): open with the Book of Days showing. */
+  openBook?: boolean;
 }
 
 const CHECKINS: { id: Checkin; label: string; note: string }[] = [
@@ -36,9 +38,12 @@ const CHECKINS: { id: Checkin; label: string; note: string }[] = [
 
 const ROLE_LABEL = { main: 'Main', core: 'Core', support: 'Support' } as const;
 
-export function TodayTab({ state, update, onStart, onReplayOpening }: Props) {
+export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: Props) {
   const now = new Date();
-  const [overlay, setOverlay] = useState<'fire' | 'book' | null>(null);
+  const [overlay, setOverlay] = useState<'fire' | 'book' | null>(openBook ? 'book' : null);
+  useEffect(() => {
+    if (openBook) setOverlay('book');
+  }, [openBook]);
   const [checkin, setCheckin] = useState<Checkin>(state.draft?.checkin ?? 'normal');
   const quest = todaysQuest(state, checkin);
   const story = storyState(state);
@@ -46,6 +51,8 @@ export function TodayTab({ state, update, onStart, onReplayOpening }: Props) {
   const streak = weekStreak(state, now);
   const day = dayType(state);
   const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
+  // After today's workout the quest below is the next one, not one still owed today.
+  const doneToday = !inProgress && trainedToday(state, now);
 
   return (
     <div className="space-y-4">
@@ -101,6 +108,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening }: Props) {
 
       {!inProgress && (
         <section>
+          {doneToday && <p className="mb-3 text-sm text-emerald-300">Today&apos;s quest is done. Here is the next one, for whenever you&apos;re ready.</p>}
           <p className="mb-2 font-pixel text-[10px] text-slate-400">How do you feel today?</p>
           <div className="grid grid-cols-3 gap-2">
             {CHECKINS.map((c) => (
@@ -133,8 +141,8 @@ export function TodayTab({ state, update, onStart, onReplayOpening }: Props) {
                 <span className="w-16 shrink-0 text-[10px] font-bold uppercase tracking-wider" style={{ color: path.color }}>
                   {ROLE_LABEL[q.role]}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-sm text-slate-100">{q.name}</span>
-                <span className="font-mono text-sm text-slate-300">
+                <span className="min-w-0 flex-1 text-sm leading-snug text-slate-100">{q.name}</span>
+                <span className="shrink-0 font-mono text-sm text-slate-300">
                   {inProgress ? `${Math.min(done, q.sets)}/${q.sets}` : `${q.sets}×${q.reps}${q.unit === 'sec' ? 's' : ''}`}
                 </span>
               </li>
@@ -148,7 +156,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening }: Props) {
         className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] transition active:translate-y-1 active:shadow-none"
       >
         <Play size={16} className="fill-ink-950" />
-        {inProgress ? 'Continue quest' : 'Start quest'}
+        {inProgress ? 'Continue quest' : doneToday ? 'Start the next quest' : 'Start quest'}
       </button>
 
       {overlay === 'fire' && (
@@ -271,7 +279,8 @@ function InstallHint() {
     }
   }, []);
   if (!show) return null;
-  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  // iPads say they are Macs; a Mac with a touch screen is an iPad.
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (/macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
   return (
     <div className="flex items-start gap-3 rounded-2xl bg-sky-950/60 p-3 text-sm ring-1 ring-sky-500/30">
       <p className="flex-1 text-sky-100">
@@ -285,7 +294,7 @@ function InstallHint() {
           } catch {}
           setShow(false);
         }}
-        className="text-sky-300"
+        className="-m-2 p-2 text-sky-300"
       >
         <X size={18} />
       </button>

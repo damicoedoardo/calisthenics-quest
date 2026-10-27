@@ -36,10 +36,18 @@ export function ClassPicker({ progress, current, onPick, onCancel }: Props) {
             <button
               key={c.id}
               onClick={() => setPick(c.id)}
-              className={`rounded-xl py-3 text-sm font-semibold transition active:scale-95 ${pick === c.id ? 'bg-gold-400 text-ink-950' : 'bg-ink-800 text-slate-300'}`}
+              className={`flex items-center gap-2 rounded-xl py-2 pl-2 pr-3 text-left text-sm font-semibold transition active:scale-95 ${pick === c.id ? 'bg-gold-400 text-ink-950' : 'bg-ink-800 text-slate-300'}`}
             >
-              {c.name}
-              <span className="block text-[11px] font-normal opacity-80">{c.path === 'balance' ? 'Balance' : getPath(c.path).name}</span>
+              <span className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-ink-950/40">
+                {/* a bust: the 64px figure, its head and shoulders in the frame */}
+                <span className="-ml-2 -mt-0.5 block">
+                  <Hero gear={equippedGear(c.id, { push: 2, pull: 2, core: 2 })} classId={c.id} size={64} bounce={false} />
+                </span>
+              </span>
+              <span className="min-w-0">
+                {c.name}
+                <span className="block text-[11px] font-normal opacity-80">{c.path === 'balance' ? 'Balance' : getPath(c.path).name}</span>
+              </span>
             </button>
           ))}
         </div>

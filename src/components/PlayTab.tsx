@@ -1,8 +1,11 @@
 'use client';
 
-import { Check, Flame, Heart, Lock, Play, Sparkles, Sword, Zap } from 'lucide-react';
+import { useEffect } from 'react';
+import { Check, Lock, Play } from 'lucide-react';
+import { Sprite } from './Sprite';
 import { Ember } from './Characters';
 import { Hero } from './Hero';
+import { warmRunSheets } from '@/game/sheets';
 import { gearOf, type GameState } from '@/lib/game';
 import { FLAME_AT, ZONES, nextGrowth, powerOf, zoneStatus, type Zone } from '@/lib/fog';
 import { flameMood } from '@/story/daily';
@@ -22,7 +25,35 @@ function isLight(hex: string): boolean {
   return 0.299 * (n >> 16) + 0.587 * ((n >> 8) & 255) + 0.114 * (n & 255) > 160;
 }
 
+/**
+ * While the Play tab sits idle, get the newest open zone's run ready: download and load the game
+ * code and draw its sprite sheets (both are cached), so tapping Play goes straight to the run.
+ */
+function useWarmRun(state: GameState) {
+  const zone = [...ZONES].reverse().find((z) => zoneStatus(state, z).state !== 'locked');
+  const id = zone?.id;
+  useEffect(() => {
+    if (!zone) return;
+    // Give the tab a moment to settle first.
+    let stop = () => {};
+    const t = window.setTimeout(() => {
+      // The run's code, so a run can then start offline.
+      void import('@/game/dungeon/scene')
+        .then(() => import('@/game/calm'))
+        .catch(() => {});
+      stop = warmRunSheets(state, zone);
+    }, 600);
+    return () => {
+      window.clearTimeout(t);
+      stop();
+    };
+    // Once per zone: the sheets for a new look or gear are drawn when the run starts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
+}
+
 export function PlayTab({ state, onPlay }: Props) {
+  useWarmRun(state);
   const now = new Date();
   const power = powerOf(state, now);
   const workouts = state.sessions.length;
@@ -32,18 +63,18 @@ export function PlayTab({ state, onPlay }: Props) {
     fairy = FLAME_STAGES.find((s) => s.id === 'fairy')!.at;
   const toGo = (n: number) => `${n - workouts} more workout${n - workouts === 1 ? '' : 's'}`;
   const rows = [
-    { Icon: Sword, name: 'Strike', from: 'Push', value: `+${Math.round(power.strike * 100)}% damage`, hint: nextGrowth(state, 'push') },
-    { Icon: Zap, name: 'Reach', from: 'Pull', value: `+${Math.round(power.reach * 100)}% speed`, hint: nextGrowth(state, 'pull') },
-    { Icon: Heart, name: 'Hold', from: 'Core', value: `+${power.hold} HP`, hint: nextGrowth(state, 'core') },
+    { icon: 'power' as const, name: 'Strike', from: 'Push', value: `+${Math.round(power.strike * 100)}% damage`, hint: nextGrowth(state, 'push') },
+    { icon: 'haste' as const, name: 'Reach', from: 'Pull', value: `+${Math.round(power.reach * 100)}% speed`, hint: nextGrowth(state, 'pull') },
+    { icon: 'vital' as const, name: 'Hold', from: 'Core', value: `+${power.hold} HP`, hint: nextGrowth(state, 'core') },
     {
-      Icon: Flame,
+      icon: 'flame' as const,
       name: power.flameName ? `${power.flameName}'s fire` : 'Your flame',
       from: 'Workouts',
       value: `${power.flames} flame${power.flames === 1 ? '' : 's'}`,
       hint: nextFlame ? `${toGo(nextFlame)}: one more flame` : null,
     },
     {
-      Icon: Sparkles,
+      icon: 'nova' as const,
       name: power.fairy ? 'Fire fairy' : 'Fireballs',
       from: stage.name,
       value: power.fairy ? 'Fireballs, heals you' : power.fireballs ? 'Fireballs' : 'Not yet',
@@ -67,10 +98,10 @@ export function PlayTab({ state, onPlay }: Props) {
       <section className="rounded-2xl bg-ink-800 p-4">
         <p className="font-pixel text-[10px] text-slate-400">Your power, from your training</p>
         <ul className="mt-3 space-y-2.5">
-          {rows.map(({ Icon, name, from, value, hint }) => (
+          {rows.map(({ icon, name, from, value, hint }) => (
             <li key={name} className="flex items-start gap-3">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-ink-900 text-gold-300">
-                <Icon size={16} />
+                <Sprite id="skillIcon" opts={{ name: icon }} size={28} label="" />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="flex items-baseline justify-between gap-2 text-sm">
@@ -101,7 +132,7 @@ export function PlayTab({ state, onPlay }: Props) {
           const best = state.fog?.best[z.id];
           const open = st.state !== 'locked';
           return (
-            <div key={z.id} className={`flex items-center gap-3 rounded-2xl p-3 ${open ? 'bg-ink-800' : 'bg-ink-900 opacity-70'}`}>
+            <div key={z.id} className={`flex items-center gap-3 rounded-2xl p-3 ${open ? 'bg-ink-800' : 'bg-ink-900 opacity-80'}`}>
               <span
                 className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl font-pixel text-[10px] ${isLight(z.fog) ? 'text-ink-900' : 'text-slate-200'}`}
                 style={{ background: z.fog }}

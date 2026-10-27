@@ -30,10 +30,14 @@ describe('season simulator', () => {
     expect(s.problems).toEqual([]);
   });
 
-  it('every scene of the written chapters plays for some kind of player', () => {
+  it('every scene plays for some kind of player', () => {
     const played = new Set(seasons.flatMap((s) => s.played.map((id) => id.replace(/-\d+$/, ''))));
-    const never = [...CHAPTERS.slice(0, 3).flatMap((c) => c.scenes), ...ANYTIME].filter((sc) => !played.has(sc.id)).map((sc) => sc.id);
+    const never = [...CHAPTERS.flatMap((c) => c.scenes), ...ANYTIME].filter((sc) => !played.has(sc.id)).map((sc) => sc.id);
     expect(never).toEqual([]);
+  });
+
+  it('a finished story ends with the finale', () => {
+    for (const s of seasons.filter((x) => x.played.includes('ch6-intro'))) expect(s.played, s.player.id).toContain('finale');
   });
 
   it('a story that waits for a max test moves on after a few workouts', () => {

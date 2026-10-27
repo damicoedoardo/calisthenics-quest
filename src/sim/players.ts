@@ -53,12 +53,13 @@ export const PLAYERS: PlayerKind[] = [
   },
   {
     id: 'never-tests',
-    about: 'Trains 3 times a week and never takes a max test',
+    about: 'Trains 3 times a week, never takes a max test and skips every question',
     trains: (d) => [0, 2, 4].includes(weekday(d)),
     visits: (_, r) => r() < 0.5,
     bossOnTry: 2,
     tests: 'never',
     flame: 'Fiamma',
+    answers: 'skip',
   },
   {
     id: 'night-owl',
@@ -68,5 +69,17 @@ export const PLAYERS: PlayerKind[] = [
     bossOnTry: 2,
     tests: 'when-asked',
     flame: 'Owl',
+  },
+  {
+    id: 'rough-patch',
+    about: 'Trains 3 times a week the whole way, often on Rough days, opens the app on some rest days',
+    trains: (d) => [0, 2, 4].includes(weekday(d)),
+    visits: (_, r) => r() < 0.4,
+    rough: (_, r) => r() < 0.35,
+    sex: 'f',
+    bossOnTry: 3,
+    tests: 'when-asked',
+    flame: 'Nova',
+    answers: 'first',
   },
 ];

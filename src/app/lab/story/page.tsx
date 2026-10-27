@@ -11,7 +11,7 @@ import { addFakeWorkouts } from '@/lib/dev';
 import { initialState, type GameState } from '@/lib/game';
 import { CHAPTERS } from '@/story/chapters';
 import { ANYTIME } from '@/story/anytime';
-import { chapterStart } from '@/story/engine';
+import { chapterStart, sceneFor } from '@/story/engine';
 import { DEFAULT_FLAME_NAME, FLAME_STAGES } from '@/story/flame';
 import { PLACES, type PlaceId } from '@/story/places';
 import type { AnswerId, FlameMood, Scene, When } from '@/story/types';
@@ -22,9 +22,20 @@ import type { FlameStage } from '@/sprites/characters/ember';
 
 const MOODS: FlameMood[] = ['happy', 'bright', 'soft', 'sleepy', 'smoky', 'scared', 'dim'];
 
-const LETTER = { why: 'I want to feel strong again', want: 'ten pull-ups', forWho: 'my kids', remind: 'I already did this once' };
+const LETTER = { why: 'I want to feel strong again', want: 'do ten pull-ups', forWho: 'my kids', remind: 'I already did this once' };
 const NO_LETTER = { why: '', want: '', forWho: '', remind: '' };
-const ANSWERS = { heart1: 'playing with friends', heart2: 'your confidence', heart3: 'I was scared of starting over.' };
+const ANSWERS = {
+  heart1: 'playing with friends',
+  heart2: 'your confidence',
+  heart3: 'I was scared of starting over.',
+  heart4: "I'm kinder to myself.",
+  heart5: 'The next step.',
+  heart6: 'Showing up, even small.',
+  // Joined every villager's story, so their lines show.
+  lia: 'yes',
+  sol: 'yes',
+  vela: 'yes',
+};
 
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -66,6 +77,7 @@ function describe(w: When): string {
   if (w.noClass) parts.push('no class yet');
   if (w.answer) parts.push(w.answer.is === undefined ? `answered ${w.answer.id}` : `${w.answer.id} = ${w.answer.is || '(none)'}`);
   if (w.needs) parts.push(`needs {${w.needs}}`);
+  if (w.helped !== undefined) parts.push(w.helped ? 'helped a villager' : 'helped no villager');
   if (w.away) parts.push(`away ${w.away}+ days`);
   if (w.finished) parts.push('story finished');
   return parts.join(' · ') || 'any time';
@@ -104,10 +116,27 @@ export default function StoryLab() {
 
   const play = (scene: Scene, chapter: number) => {
     setResult('');
-    setPlaying({ scene, state: stateFor(scene, chapter, name, letter, said, new Date()) });
+    const state = stateFor(scene, chapter, name, letter, said, new Date());
+    // Lines for a villager you didn't join drop out, like in the game.
+    setPlaying({ scene: sceneFor(scene, state), state });
   };
 
+  // /lab/night links here with ?play=<scene id>&back: play that scene at once, and return when it ends.
+  const [backTo, setBackTo] = useState<string | null>(null);
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const hit = all.find((a) => a.scene.id === q.get('play'));
+    if (hit) play(hit.scene, hit.chapter);
+    if (q.has('back')) setBackTo('/lab/night');
+    // Once, on arrival.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const done = (r: SceneResult) => {
+    if (backTo) {
+      window.location.href = backTo;
+      return;
+    }
     setPlaying(null);
     // Carry what was named and answered into the scenes that follow.
     if (r.flame) setFlame(r.flame);
@@ -270,7 +299,7 @@ export default function StoryLab() {
                         {s.ask ? ` · asks ${s.ask.kind === 'choice' ? s.ask.id : s.ask.kind}` : ''}
                       </span>
                     </span>
-                    <span className="shrink-0 text-[10px] text-slate-600">{s.lines.length}</span>
+                    <span className="shrink-0 text-[10px] text-slate-500">{s.lines.length}</span>
                   </button>
                 ))}
               </div>

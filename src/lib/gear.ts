@@ -43,6 +43,11 @@ export const TIER_COLORS: Record<Tier, string> = {
   6: '#7c3aed',
 };
 
+/* The gear colours as text on the dark UI. A few tiers' sprite colours are too dark to read as
+   words (under 4.5:1 on the cards), so their text is lifted; the sprites keep the originals. */
+const TIER_TEXT: Partial<Record<Tier, string>> = { 0: '#8291a7', 1: '#cd7f32', 6: '#a78bfa' };
+export const tierText = (tier: Tier) => TIER_TEXT[tier] ?? TIER_COLORS[tier];
+
 const GLOWS: Partial<Record<Tier, string>> = { 5: '#fb923c', 6: '#a78bfa' };
 
 const MATERIALS: Record<GearSlot, string[]> = {

@@ -56,7 +56,7 @@ export function fastStory(): boolean {
 }
 
 /** Story scenes that are due right now, marked as seen so they don't play. */
-function skipDueScenes(state: GameState, now: Date): GameState {
+export function skipDueScenes(state: GameState, now: Date): GameState {
   const due = pendingScenes(state, now).map((s) => s.id);
   return due.length ? { ...state, seenScenes: [...state.seenScenes, ...due] } : state;
 }
@@ -72,7 +72,7 @@ export function skipIntro(state: GameState, now: Date): GameState {
         voice: state.profile.voice || 'You always quit.',
         letter: state.profile.letter.why
           ? state.profile.letter
-          : { why: 'I want to feel strong again', want: 'ten pull-ups', forWho: 'me', remind: 'I already did this once' },
+          : { why: 'I want to feel strong again', want: 'do ten pull-ups', forWho: 'me', remind: 'I already did this once' },
       },
     },
     now,

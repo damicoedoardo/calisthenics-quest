@@ -1,10 +1,16 @@
 import { equippedGear } from '@/lib/gear';
+import type { AbilityId, RelicId } from '@/game/dungeon/engine';
+import type { UpgradeId } from '@/lib/fog';
 import { CLIPS, type ClipFrame, type ClipId, type SpriteAction } from './clips';
 import { toSheet, type Grid } from './engine/grid';
 import { drawBook } from './characters/book';
 import { drawEmber, type FlameOpts } from './characters/ember';
 import { drawHero, heroAttack, heroLabel, type HeroOpts } from './characters/hero';
-import { drawKnight } from './characters/knight';
+import { drawKnight, drawKnightBoss, type KnightBossOpts } from './characters/knight';
+import { drawGlassHero, drawGlassShatter } from './characters/glass';
+import { drawPlateauBoss, type PlateauBossOpts } from './characters/monolith';
+import { drawHollowBoss, drawHollowFade } from './characters/hollowBoss';
+import { drawSummitSpirit } from './characters/summitSpirit';
 import { drawMira } from './characters/mira';
 import { drawMirror } from './characters/mirror';
 import { drawPixelArt, type PixelArt } from './characters/pixel';
@@ -12,8 +18,24 @@ import { drawPlateau } from './characters/plateau';
 import { drawSummit } from './characters/summit';
 import { drawTomorrow } from './characters/tomorrow';
 import { drawWanderer } from './characters/wanderer';
-import { drawKid, drawLia, drawSol } from './characters/villagers';
+import { drawKid, drawLia, drawSol, type VillagerOpts } from './characters/villagers';
+import { drawVela } from './characters/vela';
+import { drawKindled, type KindledOpts } from './characters/kindled';
 import { drawWisp } from './characters/wisp';
+import { drawRam } from './characters/ram';
+import { drawSmoke } from './characters/smoke';
+import { drawSeeker } from './characters/seeker';
+import { drawSplitling, drawSplitter, drawSplitterPop } from './characters/splitter';
+import { drawShade } from './characters/shade';
+import { drawWarden } from './characters/warden';
+import { drawLanternMid } from './characters/lanternMid';
+import { drawForemanMid } from './characters/foremanMid';
+import { drawSandGolemMid } from './characters/sandGolemMid';
+import { drawWhisperMid } from './characters/whisperMid';
+import { drawGaleMid } from './characters/galeMid';
+import { drawExercise, type ExerciseOpts } from './characters/exercise';
+import { ZONE_PLACE, dress, edged } from './characters/zoned';
+import { ABILITY_ICONS, DAY_ICONS, KEEPSAKE_ICONS, MARK_ICONS, RELIC_ICONS, SKILL_ICONS, type DayKind } from './characters/icons';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
    art for a character is a change here, never in a component. Two kinds:
@@ -72,6 +94,41 @@ const pixel = (label: string, art: PixelArt) =>
 const creature = (label: string, draw: DrawnSprite<NoOpts>['draw'], attack?: ClipId) =>
   drawn<NoOpts>({ label: () => label, defaults: {}, clips: () => (attack ? { idle: 'hover', attack } : { idle: 'hover' }), draw });
 
+/** Which zone a regular monster lives in: 0 is the Ashlands (the monster as drawn), 1-5 dress it
+    for the Mirror Lake, the Cold Forges, the Plateau, the Fog and the Summit (see zoned.ts). */
+export interface ZoneOpts {
+  zone: number;
+}
+
+/** A creature with a zone variant for each zone, from the same drawing. */
+const zoned = (label: string, draw: DrawnSprite<NoOpts>['draw'], attack: ClipId = 'lunge') =>
+  drawn<ZoneOpts>({
+    label: (o) => (o.zone > 0 && ZONE_PLACE[o.zone] ? `${ZONE_PLACE[o.zone]} ${label}` : label),
+    defaults: { zone: 0 },
+    clips: () => ({ idle: 'hover', attack }),
+    draw: (o, fr, f) => edged(dress(draw({}, fr, f), o.zone, f), o.zone),
+  });
+
+export interface KeepsakeOpts {
+  /** The zone whose boss gave it, 0-5. */
+  zone: number;
+}
+export interface RelicIconOpts {
+  name: RelicId;
+}
+export interface AbilityIconOpts {
+  name: AbilityId | 'dodge';
+}
+export interface SkillIconOpts {
+  name: UpgradeId;
+}
+export interface MarkIconOpts {
+  name: 'warden' | 'boss';
+}
+export interface DayIconOpts {
+  kind: DayKind;
+}
+
 const STARTER_GEAR = equippedGear(undefined, { push: 0, pull: 0, core: 0 });
 
 export const SPRITES = {
@@ -98,14 +155,81 @@ export const SPRITES = {
   mira: drawn<NoOpts>({ label: () => 'Mira the Smith', defaults: {}, clips: () => ({ idle: 'idle', attack: 'swing' }), draw: drawMira, look: () => ({ shadow: true }) }),
   knight: drawn<NoOpts>({ label: () => 'The Perfect Knight', defaults: {}, clips: () => ({ idle: 'idle', attack: 'swing' }), draw: drawKnight, look: () => ({ shadow: true }) }),
   kid: drawn<NoOpts>({ label: () => 'The kid inside the armor', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawKid, look: () => ({ shadow: true }) }),
-  lia: drawn<NoOpts>({ label: () => 'Lia the dancer', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawLia, look: () => ({ shadow: true }) }),
-  sol: drawn<NoOpts>({ label: () => 'Sol the runner', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawSol, look: () => ({ shadow: true }) }),
+  // Villagers: { after: true } is how they look once you've helped them.
+  lia: drawn<VillagerOpts>({ label: ({ after }) => (after ? 'Lia, dancing again' : 'Lia the dancer'), defaults: { after: false }, clips: () => ({ idle: 'idle' }), draw: drawLia, look: () => ({ shadow: true }) }),
+  sol: drawn<VillagerOpts>({ label: ({ after }) => (after ? 'Sol, running again' : 'Sol the runner'), defaults: { after: false }, clips: () => ({ idle: 'idle' }), draw: drawSol, look: () => ({ shadow: true }) }),
+  vela: drawn<VillagerOpts>({ label: ({ after }) => (after ? 'Old Vela, letter sealed' : 'Old Vela'), defaults: { after: false }, clips: () => ({ idle: 'idle', attack: 'raise' }), draw: drawVela, look: () => ({ shadow: true }) }),
+  kindled: drawn<KindledOpts>({
+    label: () => "Your flame's true form",
+    defaults: { hair: 'short' },
+    clips: () => ({ idle: 'hover', attack: 'wave' }),
+    draw: drawKindled,
+    look: () => ({ filter: 'drop-shadow(0 0 10px rgba(251,146,60,.6))' }),
+  }),
   book: creature('The Book of Days', drawBook, 'hover'),
-  slime: creature('Tomorrow', drawTomorrow, 'lunge'),
+  slime: zoned('Tomorrow', drawTomorrow),
   mirror: creature('The Mirror', drawMirror, 'lunge'),
   golem: creature('The Plateau', drawPlateau, 'lunge'),
   summit: creature('The Summit', drawSummit),
-  wisp: creature('Ash Wisp', drawWisp, 'lunge'),
+  wisp: zoned('Ash Wisp', drawWisp),
+  ram: zoned('Ram', drawRam),
+  smoke: zoned('Smoker', drawSmoke),
+  seeker: zoned('Seeker', drawSeeker),
+  splitter: zoned('Splitter', drawSplitter),
+  splitling: zoned('Splitling', drawSplitling),
+  splitterPop: drawn<NoOpts>({ label: () => 'The Splitter splitting', defaults: {}, clips: () => ({ idle: 'pop' }), draw: drawSplitterPop }),
+  shade: zoned('Shade', drawShade),
+  warden: creature('The Warden of the Ashes', drawWarden, 'lunge'),
+  lanternMid: creature('The Drowned Lantern', drawLanternMid, 'lunge'),
+  foremanMid: creature('The Foreman', drawForemanMid, 'lunge'),
+  sandGolemMid: creature('The Sand Golem', drawSandGolemMid(false), 'lunge'),
+  sandGolemMidStone: creature('The Sand Golem, set to stone', drawSandGolemMid(true), 'lunge'),
+  whisperMid: creature('The Whisper', drawWhisperMid, 'lunge'),
+  galeMid: creature('The Gale', drawGaleMid, 'lunge'),
+  // The dungeon bosses. The Mirror is you in glass (pass the player's look and gear, like the hero).
+  // app icons, hand-drawn at 16x16 (keepsakes) and 12x12 (Book of Days)
+  keepsake: drawn<KeepsakeOpts>({
+    label: (o) => `Keepsake ${o.zone + 1}`,
+    defaults: { zone: 0 },
+    clips: () => ({ idle: 'still' }),
+    draw: (o) => drawPixelArt(KEEPSAKE_ICONS[o.zone] ?? KEEPSAKE_ICONS[0]),
+  }),
+  dayIcon: drawn<DayIconOpts>({ label: (o) => o.kind, defaults: { kind: 'A visit' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(DAY_ICONS[o.kind]) }),
+  relicIcon: drawn<RelicIconOpts>({ label: (o) => o.name, defaults: { name: 'whetstone' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(RELIC_ICONS[o.name]) }),
+  abilityIcon: drawn<AbilityIconOpts>({ label: (o) => o.name, defaults: { name: 'charge' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(ABILITY_ICONS[o.name]) }),
+  skillIcon: drawn<SkillIconOpts>({ label: (o) => o.name, defaults: { name: 'power' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(SKILL_ICONS[o.name]) }),
+  markIcon: drawn<MarkIconOpts>({ label: (o) => o.name, defaults: { name: 'boss' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(MARK_ICONS[o.name]) }),
+  // you, doing an exercise of the program (the workout screen's demo)
+  exercise: drawn<ExerciseOpts>({
+    label: (o) => `How to do it: ${o.exercise}`,
+    defaults: { exercise: 'pushup', gear: STARTER_GEAR },
+    clips: () => ({ idle: 'rep' }),
+    draw: (o, _fr, f) => drawExercise(o, f),
+  }),
+  mirrorBoss: drawn<HeroOpts>({
+    label: () => 'The Mirror, you in glass',
+    defaults: { gear: STARTER_GEAR },
+    clips: (o) => ({ idle: 'idle', attack: heroAttack(o.gear, o.classId) }),
+    draw: drawGlassHero,
+    look: () => ({ shadow: true, filter: 'drop-shadow(0 0 6px rgba(125,211,252,.6))' }),
+  }),
+  mirrorBossShatter: drawn<HeroOpts>({ label: () => 'The Mirror shattering', defaults: { gear: STARTER_GEAR }, clips: () => ({ idle: 'pop' }), draw: drawGlassShatter }),
+  knightBoss: drawn<KnightBossOpts>({
+    label: ({ stage }) => ['The Perfect Knight', 'The Perfect Knight, plates falling', 'The Perfect Knight, helm off'][stage],
+    defaults: { stage: 0 },
+    clips: () => ({ idle: 'idle', attack: 'swing' }),
+    draw: drawKnightBoss,
+    look: () => ({ shadow: true }),
+  }),
+  plateauBoss: drawn<PlateauBossOpts>({
+    label: ({ stage }) => ['The Plateau', 'The Plateau, cracking', 'The Plateau, breaking'][stage],
+    defaults: { stage: 0 },
+    clips: () => ({ idle: 'hover', attack: 'lunge' }),
+    draw: drawPlateauBoss,
+  }),
+  hollowBoss: creature('The Hollow', drawHollowBoss, 'lunge'),
+  summitBoss: creature('The Summit, the mountain spirit', drawSummitSpirit, 'lunge'),
+  hollowBossFade: drawn<NoOpts>({ label: () => 'The Hollow, letting go', defaults: {}, clips: () => ({ idle: 'pop' }), draw: drawHollowFade }),
 };
 
 export type SpriteId = keyof typeof SPRITES;

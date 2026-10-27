@@ -117,6 +117,8 @@ export interface GameState {
   draft: Draft | null;
   /** Story scenes already played. */
   seenScenes: string[];
+  /** How many scenes played at the last story moment (a day, a workout count and a test count). */
+  sceneMark?: { at: string; count: number };
   /** Runs in the Fog: zones cleared and best results. */
   fog?: FogProgress;
   /** What the player answered in the story: heart moments, villager stories. */
@@ -279,7 +281,9 @@ export function todaysQuest(state: GameState, checkin: Checkin = state.draft?.ch
   const other: PathId = day === 'A' ? 'pull' : 'push';
   // A fully beaten path hands the lead to the other one.
   const lead = block(state, main, 'main') ?? block(state, other, 'main');
-  if (checkin === 'rough') return lead ? [{ ...lead, sets: Math.min(lead.sets, 3) }] : [];
+  // A Rough day is one exercise; with both main paths beaten, core is what's left to train.
+  const rough = lead ?? block(state, 'core', 'core');
+  if (checkin === 'rough') return rough ? [{ ...rough, sets: Math.min(rough.sets, 3) }] : [];
   const list = [lead, block(state, 'core', 'core'), block(state, other, 'support')].filter((b): b is QuestExercise => !!b);
   return list.filter((b, i) => list.findIndex((o) => o.id === b.id) === i);
 }
@@ -366,6 +370,20 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
   const gearAfter = gearOf(next);
   const newGear = (['weapon', 'armor', 'shield'] as const).filter((s) => gearAfter[s].tier > gearBefore[s].tier).map((s) => gearAfter[s]);
   return { state: next, session, levelBefore: before, levelAfter: levelInfo(totalXp(next)).level, newGear };
+}
+
+/**
+ * A workout left open on an earlier day (the app was closed mid-quest) is saved on the day it was
+ * done, so its sets still count and don't get mixed into today's workout. Half a day of grace, so a
+ * late workout that runs past midnight isn't cut short.
+ */
+export function closeStaleDraft(state: GameState, now: Date): GameState {
+  const draft = state.draft;
+  if (!draft) return state;
+  const started = new Date(draft.startedAt);
+  const stale = started.toDateString() !== now.toDateString() && now.getTime() - started.getTime() > 12 * 3_600_000;
+  if (!stale) return state;
+  return finishSession(state, started)?.state ?? { ...state, draft: null };
 }
 
 export function nodeName(id: string): string {

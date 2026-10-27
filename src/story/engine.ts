@@ -1,11 +1,11 @@
 import { weekKey, WEEKLY_GOAL, type GameState } from '@/lib/game';
-import { daysInRow, daysSinceTraining, isRestDay } from '@/lib/days';
+import { dayKey, daysInRow, daysSinceTraining, isRestDay } from '@/lib/days';
 import { ANYTIME } from './anytime';
 import { CAST, type CastId } from './cast';
 import { CHAPTERS } from './chapters';
 import type { PlaceId } from './places';
 import { DEFAULT_FLAME_NAME } from './flame';
-import type { Chapter, Line, Scene, When, WordKey, Words } from './types';
+import type { AnswerId, Chapter, Line, Scene, When, WordKey, Words } from './types';
 
 /* Reads the story files: which chapter you're in, which scenes are due, and how a line reads
    with your own words in it. Nothing here knows the story itself. */
@@ -62,6 +62,16 @@ export function storyState(state: GameState): StoryState {
   return { index: CHAPTERS.length, chapter: null, hearts: 0, heartsLeft: 0, awaitingTest: false, finished: true };
 }
 
+/** The villagers whose stories you can join. Saying yes to one of them is "helping" them. */
+export const VILLAGERS: AnswerId[] = ['lia', 'sol', 'vela'];
+
+/** The villagers the player helped, in the order they met them. */
+export function helpedVillagers(state: GameState): AnswerId[] {
+  return VILLAGERS.filter((id) => state.answers?.[id] === 'yes');
+}
+
+const gave = (state: GameState, a: { id: AnswerId; is?: string }) => (a.is === undefined ? !!state.answers?.[a.id] : state.answers?.[a.id] === a.is);
+
 function hadPerfectWeek(state: GameState): boolean {
   const counts = new Map<string, number>();
   for (const s of state.sessions) {
@@ -88,8 +98,10 @@ export function holds(w: When, state: GameState, st: StoryState, now: Date): boo
     [w.perfectWeek, () => hadPerfectWeek(state) === w.perfectWeek],
     [w.skill, () => state.progress[w.skill!.path] > w.skill!.past],
     [w.noClass, () => !state.profile.classId === w.noClass],
-    [w.answer, () => (w.answer!.is === undefined ? !!state.answers?.[w.answer!.id] : state.answers?.[w.answer!.id] === w.answer!.is)],
+    [w.answer, () => gave(state, w.answer!)],
     [w.needs, () => !!words[w.needs!].trim()],
+    [w.roughRun, () => state.sessions.length >= w.roughRun! && state.sessions.slice(-w.roughRun!).every((x) => x.kind === 'mini')],
+    [w.helped, () => (helpedVillagers(state).length > 0) === w.helped],
     [w.away, () => (daysSinceTraining(state, now) ?? 0) >= w.away!],
     [w.finished, () => st.finished === w.finished],
   ];
@@ -110,10 +122,30 @@ export function savedId(scene: Scene, state: GameState): string {
   return scene.when.away ? `${scene.id}-${state.sessions.length}` : scene.id;
 }
 
+/** `when` fields that wait for something to happen (a rest day, a class...), not for a workout count. */
+const WAITS_FOR: (keyof When)[] = ['restDay', 'shortSession', 'roughRun', 'daysInRow', 'perfectWeek', 'skill', 'noClass', 'away', 'awaitingTest', 'beaten', 'finished'];
+
+/**
+ * A story beat tied to a workout plays then, or a few workouts later while a chapter catches up.
+ * One whose moment is long gone (a scene added after the player passed it) doesn't play late.
+ * Scenes that also wait for something else (the first rest day, a class pick) never go stale.
+ */
+function longGone(w: When, state: GameState): boolean {
+  if (w.workouts === undefined || WAITS_FOR.some((k) => w[k] !== undefined)) return false;
+  return state.sessions.length - w.workouts > TEST_GRACE;
+}
+
+/** A scene as this player gets it: lines that wait for an answer they didn't give are left out. */
+export function sceneFor(scene: Scene, state: GameState): Scene {
+  const lines = scene.lines.filter((l) => !l.answer || gave(state, l.answer));
+  return lines.length === scene.lines.length ? scene : { ...scene, lines };
+}
+
 /**
  * Scenes whose moment has come and that the player has not seen yet, in story order. Once a
- * chapter is behind you, its leftover scenes are skipped (except the one that ends it), so a
- * returning player isn't buried in old scenes.
+ * chapter is behind you, its leftover scenes are skipped (except the one that ends it, and the
+ * finale), and so are
+ * scenes tied to a workout long past, so nobody is buried in old scenes.
  */
 export function pendingScenes(state: GameState, now: Date): Scene[] {
   const st = storyState(state);
@@ -121,15 +153,42 @@ export function pendingScenes(state: GameState, now: Date): Scene[] {
   const current = st.index + 1;
   const due = ALL_SCENES.filter(({ scene, chapter }) => {
     if (seen.has(savedId(scene, state))) return false;
-    if (chapter > 0 && chapter < current && scene.when.beaten !== chapter) return false;
+    if (chapter > 0 && chapter < current && scene.when.beaten !== chapter && !scene.when.finished) return false;
+    if (longGone(scene.when, state)) return false;
     return holds(scene.when, state, st, now);
-  }).map(({ scene }) => (scene.when.away ? { ...scene, id: savedId(scene, state) } : scene));
+  }).map(({ scene }) => sceneFor(scene.when.away ? { ...scene, id: savedId(scene, state) } : scene, state));
   // Coming back after a long time goes first.
   return [...due.filter((s) => s.when.away), ...due.filter((s) => !s.when.away)];
 }
 
+/** At most this many scenes play at one moment; the rest wait for the next one. */
+export const MAX_SCENES_AT_ONCE = 2;
+
+/** One story moment: today, after this many workouts and max tests. A new workout or test starts a new one. */
+export function sceneMoment(state: GameState, now: Date): string {
+  return `${dayKey(now)}|${state.sessions.length}|${state.tests.length}`;
+}
+
+/**
+ * The scenes to play now: the due ones, but never more than MAX_SCENES_AT_ONCE at one moment.
+ * Extras (skill beats come last in story order) wait for the next workout, test or day.
+ */
+export function scenesToPlay(state: GameState, now: Date): Scene[] {
+  const at = sceneMoment(state, now);
+  const played = state.sceneMark?.at === at ? state.sceneMark.count : 0;
+  return pendingScenes(state, now).slice(0, Math.max(0, MAX_SCENES_AT_ONCE - played));
+}
+
+/** Mark a scene played, and count it against this moment. */
+export function sawScene(state: GameState, id: string, now: Date): GameState {
+  const at = sceneMoment(state, now);
+  const count = (state.sceneMark?.at === at ? state.sceneMark.count : 0) + 1;
+  return { ...state, seenScenes: state.seenScenes.includes(id) ? state.seenScenes : [...state.seenScenes, id], sceneMark: { at, count } };
+}
+
 export function sceneById(id: string): Placed | undefined {
-  return ALL_SCENES.find((p) => p.scene.id === id || id.startsWith(`${p.scene.id}-`));
+  // Exact first: `ch4-vela-down` is its own scene, not a repeat of `ch4-vela`.
+  return ALL_SCENES.find((p) => p.scene.id === id) ?? ALL_SCENES.find((p) => p.scene.when.away && id.startsWith(`${p.scene.id}-`));
 }
 
 /** Where a scene happens: its own place, else its chapter's, else the chapter you're in. */
@@ -155,18 +214,50 @@ export function storyWords(state: GameState): Words {
   };
 }
 
-/** Fill in a text's {words}. Letter parts sit inside sentences, so their end punctuation goes. */
+const LETTER_WORDS: WordKey[] = ['why', 'want', 'forWho', 'remind'];
+
+/** Pronouns as someone else says them back to you: "my kids" becomes "your kids". */
+const BACK: [RegExp, string][] = [
+  [/\bI am\b/g, 'you are'],
+  [/\bI was\b/g, 'you were'],
+  [/\bI'm\b/g, "you're"],
+  [/\bI've\b/g, "you've"],
+  [/\bI'll\b/g, "you'll"],
+  [/\bI'd\b/g, "you'd"],
+  [/\bI\b/g, 'you'],
+  [/\bmyself\b/gi, 'yourself'],
+  [/\bmine\b/gi, 'yours'],
+  [/\bmy\b/g, 'your'],
+  [/\bMy\b/g, 'Your'],
+  [/\bme\b/gi, 'you'],
+];
+
+/** The player's letter in someone else's mouth. */
+export function sayBack(words: string): string {
+  return BACK.reduce((t, [from, to]) => t.replace(from, to), words);
+}
+
+/**
+ * Fill in a text's {words}. Letter parts sit inside sentences, so their end punctuation goes. Read
+ * out in quotes they stay as written ("I'm starting again because {why}."); told back outside quotes
+ * they turn to "you" ("You did this for {forWho}" gives "for your kids", not "for my kids").
+ */
 export function fill(text: string, words: Words): string {
-  const out = text.replace(/\{(\w+)\}/g, (_, k: WordKey) => {
+  const out = text.replace(/\{(\w+)\}/g, (_, k: WordKey, at: number) => {
     const v = (words[k] ?? '').trim();
-    return k === 'voice' || k === 'heart3' ? v : v.replace(/[.!]+$/, '');
+    if (k === 'voice' || k === 'heart3') return v;
+    const bare = v.replace(/[.!]+$/, '');
+    const quoted = (text.slice(0, at).match(/"/g)?.length ?? 0) % 2 === 1;
+    return LETTER_WORDS.includes(k) && !quoted ? sayBack(bare) : bare;
   });
   return out.charAt(0).toUpperCase() + out.slice(1);
 }
 
-/** Fill in the player's own words and drop lines whose word is missing. */
+/** Fill in the player's own words, and drop lines whose word is missing (or, for `missing`, given). */
 export function renderLines(lines: Line[], words: Words): Line[] {
-  return lines.filter((l) => !l.needs || words[l.needs].trim()).map((l) => ({ ...l, text: fill(l.text, words) }));
+  return lines
+    .filter((l) => (!l.needs || words[l.needs].trim()) && (!l.missing || !words[l.missing].trim()))
+    .map((l) => ({ ...l, text: fill(l.text, words) }));
 }
 
 /** The name over a line. */
