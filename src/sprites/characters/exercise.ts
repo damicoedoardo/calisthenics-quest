@@ -110,9 +110,13 @@ interface Pose {
   far: { arm: Arm; leg: Leg };
   /** Seen from the front (the archer push-up): two eyes, no profile. */
   front?: boolean;
+  /** The head is drawn over the near arm (hanging: the arms pass beside and behind it). */
+  headFront?: boolean;
 }
 
-const arm = (shoulder: P, hand: P, toward: P): Arm => ({ shoulder, hand, elbow: ik(shoulder, hand, UPPER, FORE, toward) });
+const arm = (shoulder: P, hand: P, toward: P, l1 = UPPER, l2 = FORE): Arm => ({ shoulder, hand, elbow: ik(shoulder, hand, l1, l2, toward) });
+/** A locked arm's length: the hand exactly a straight arm away (no kink at the elbow). */
+const LOCKED = UPPER + FORE - 0.02;
 const leg = (hip: P, foot: P, toward: P, toes: P): Leg => ({ hip, foot, toes, knee: ik(hip, foot, THIGH, SHIN, toward) });
 /** A straight leg along a direction. */
 const straight = (hip: P, d: P, toes: P): Leg => ({ hip, knee: add(hip, mul(d, THIGH)), foot: add(hip, mul(d, THIGH + SHIN)), toes });
@@ -166,12 +170,11 @@ function props(g: Grid, kind: 'floor' | 'bench' | 'bar' | 'dipbar' | 'parallette
     rect(47, 32, 48, FLOOR, STEEL[0]);
   }
   if (kind === 'parallettes') {
-    rect(22, 47, 38, 48, STEEL[1]);
-    rect(22, 47, 38, 47, STEEL[2]);
-    rect(23, 49, 24, FLOOR, STEEL[0]);
-    rect(36, 49, 37, FLOOR, STEEL[0]);
-    rect(21, FLOOR, 26, FLOOR, STEEL[0]);
-    rect(34, FLOOR, 39, FLOOR, STEEL[0]);
+    // seen end on: the round grip, one post, the foot
+    rect(32, 47, 35, 48, STEEL[1]);
+    rect(32, 47, 35, 47, STEEL[2]);
+    rect(33, 49, 34, FLOOR, STEEL[0]);
+    rect(30, FLOOR, 37, FLOOR, STEEL[0]);
   }
   if (band) {
     // a resistance band looped over the bar and under the knee
@@ -236,8 +239,8 @@ function drawArm(g: Grid, a: Arm, c: Colors, dim: boolean) {
     skin = dim ? c.skin[0] : c.skin[1];
   capsule(g, a.elbow, a.hand, 1.4, skin);
   capsule(g, a.hand, a.hand, 1.7, skin);
-  capsule(g, a.shoulder, lerp(a.shoulder, a.elbow, 0.55), 1.8, shirt);
-  capsule(g, lerp(a.shoulder, a.elbow, 0.55), a.elbow, 1.5, skin);
+  capsule(g, a.shoulder, lerp(a.shoulder, a.elbow, 0.4), 1.8, shirt);
+  capsule(g, lerp(a.shoulder, a.elbow, 0.4), a.elbow, 1.5, skin);
 }
 
 function drawHead(g: Grid, p: Pose, c: Colors, look?: Look) {
@@ -283,10 +286,23 @@ function drawFigure(p: Pose, c: Colors, look?: Look): Grid {
     drawLeg(g, p.near.leg, c, false);
   }
   // the torso: shirt from shoulders to hips, a belt line at the hip
-  capsule(g, p.shoulder, p.hip, 3.6, c.shirt[1]);
+  capsule(g, p.shoulder, p.hip, 3.3, c.shirt[1]);
+  // the near arm is its own outlined layer, so it reads over the torso and head
+  const armLayer = grid(64);
+  drawArm(armLayer, p.near.arm, c, false);
+  const armDone = outline(autoshade(armLayer));
+  if (p.headFront) {
+    const body = outline(autoshade(g));
+    stamp(body, armDone);
+    const head = grid(64);
+    drawHead(head, p, c, look);
+    stamp(body, outline(autoshade(head)));
+    return body;
+  }
   drawHead(g, p, c, look);
-  drawArm(g, p.near.arm, c, false);
-  return outline(autoshade(g));
+  const body = outline(autoshade(g));
+  stamp(body, armDone);
+  return body;
 }
 
 // ---------- the exercises ----------
@@ -295,15 +311,17 @@ function drawFigure(p: Pose, c: Colors, look?: Look): Grid {
     line from heels to shoulders and pivots on the toes. d = 0 arms straight, 1 chest near the hands. */
 function pushup(d: number, handY: number, feetX: number, elbowsIn: boolean): Pose {
   const handBack = elbowsIn ? 3 : 0;
-  const feet: P = [feetX, FLOOR - 1],
+  // the body line runs through the ankles, lifted on the toes
+  const feet: P = [feetX, FLOOR - 3.5],
     body = THIGH + SHIN + TORSO;
-  const reach = UPPER + FORE - 0.5;
+  const reach = LOCKED;
   // top: shoulder straight above the hand
   const topRise = handY - reach;
   const topX = feetX + Math.sqrt(body * body - (feet[1] - topRise) ** 2);
   const hand: P = [topX - handBack, handY];
-  // bottom: shoulders just above the hands
-  const bottomY = handY - 5,
+  // bottom: elbows at about 90°, forearms upright, so the shoulders sit a forearm above the hands
+  // and the chest stays a few pixels off the floor; the hips never drop out of the line
+  const bottomY = handY - FORE,
     bottomX = feetX + Math.sqrt(body * body - (feet[1] - bottomY) ** 2);
   const shoulder = lerp([topX, topRise], [bottomX, bottomY], d);
   const along = unit(sub(shoulder, feet)),
@@ -315,7 +333,7 @@ function pushup(d: number, handY: number, feetX: number, elbowsIn: boolean): Pos
   // elbows travel back along the ribs (diamond) or out at 45° (seen from the side, back and up)
   const towardElbow: P = elbowsIn ? unit(add(mul(along, -1), mul(down, -0.2))) : unit(add(mul(along, -0.7), [0, -1]));
   const a = arm(shoulder, hand, towardElbow);
-  const l: Leg = { hip, knee, foot: feet, toes: [0, 1] };
+  const l: Leg = { hip, knee, foot: feet, toes: [0.35, 1] };
   return {
     head,
     face: faceDown,
@@ -331,12 +349,16 @@ function pushup(d: number, handY: number, feetX: number, elbowsIn: boolean): Pos
     the bar. `legs` places the legs from the hip. */
 function hang(pull: number, legs: (hip: P, shoulder: P) => { near: Leg; far: Leg }, lean = 0): Pose {
   const hand: P = [32, 9.5];
-  const reach = UPPER + FORE - 0.3;
-  const shoulder = lerp([32, hand[1] + reach], [28.5, hand[1] + 1.5], pull);
+  // bottom: arms locked straight; top: shoulders up at the bar, chest toward it
+  const shoulder = lerp([32, hand[1] + LOCKED], [27.5, hand[1] + 1.5], pull);
   const torso = unit([Math.sin(lean), Math.cos(lean)]);
   const hip = add(shoulder, mul(torso, TORSO));
-  const head = add(shoulder, [2.5 + pull * 1.5, -NECK]);
-  const a = arm(shoulder, hand, [-0.4, 1]);
+  // the head clears the bar in front of it at the top (chin over), the elbows go down and back
+  const head = add(shoulder, [2.5 + pull * 2.5, -NECK - pull]);
+  // the forearms stay upright under the bar the whole rep, so the elbow hardly moves while the body
+  // rises past it: straight overhead at the bottom, down by the ribs at the top (a wide grip pulls
+  // the elbows out to the sides, so from the side the upper arm only looks shorter)
+  const a: Arm = { shoulder, hand, elbow: [32 - pull, hand[1] + FORE - 0.5 * pull] };
   const { near, far } = legs(hip, shoulder);
   return {
     head,
@@ -346,16 +368,21 @@ function hang(pull: number, legs: (hip: P, shoulder: P) => { near: Leg; far: Leg
     hip,
     near: { arm: a, leg: near },
     far: { arm: { ...a, shoulder: add(a.shoulder, [-1, 0]), elbow: add(a.elbow, [-1, 0]), hand: add(a.hand, [-2, 0]) }, leg: far },
+    // low in the hang the arms pass behind the head (the far side of it, by the ears); high up the
+    // head is in front of the bar and the near forearm only brushes the back of it
+    headFront: pull < 0.35,
   };
 }
 
 const hangingLegs = (hip: P): { near: Leg; far: Leg } => ({ near: straight(hip, [0.05, 1], [1, 0.3]), far: straight(add(hip, [-1, 0]), [0.05, 1], [1, 0.3]) });
 
-/** Seated on the parallettes (hands at y = 47), arms locked, hips at hand height: an L-sit. */
+/** Pressed up on the parallettes (seen end on, hands at y = 47): arms locked straight, shoulders
+    pushed down and a little ahead of the hands, hips between the hands at hand height. */
 function support(b: number, legs: (hip: P) => { near: Leg; far: Leg }): Pose {
-  const hand: P = [30, 46.5];
-  const shoulder: P = [30.5, hand[1] - (UPPER + FORE - 0.4) + b];
-  const hip: P = [27.5, shoulder[1] + TORSO];
+  const hand: P = [33.5, 46.5];
+  // shoulders lean ahead of the hands and the hips sit back behind them, clear of the grips
+  const shoulder: P = add(hand, [2.2, -Math.sqrt(LOCKED * LOCKED - 2.2 * 2.2) + b]);
+  const hip = add(shoulder, mul(unit([-7, 12.5]), TORSO));
   const a = arm(shoulder, hand, [-1, 0]);
   const { near, far } = legs(hip);
   return {
@@ -378,15 +405,16 @@ const tuckLeg = (hip: P): Leg => {
 /** Front view of the archer push-up: hands wide on the floor, the shoulders slide over one hand
     while that arm bends and the other stays straight. s from -1 (over the left hand) to 1. */
 function archer(s: number, depth: number): Pose {
-  const top: P = [32, 41],
-    low: P = [32 + s * 7, 48];
+  // seen from the front the arms don't foreshorten: 11 + 11 pixels, hands very wide
+  const top: P = [32, 37.5],
+    low: P = [32 + s * 8, 48];
   const c = lerp(top, low, depth);
   const ls: P = add(c, [-6, 0]),
     rs: P = add(c, [6, 0]);
-  const lh: P = [18, FLOOR - 1],
-    rh: P = [46, FLOOR - 1];
-  const left = arm(ls, lh, [-1, -0.6]),
-    right = arm(rs, rh, [1, -0.6]);
+  const lh: P = [14, FLOOR - 1],
+    rh: P = [50, FLOOR - 1];
+  const left = arm(ls, lh, [-1, -0.8], 11, 11),
+    right = arm(rs, rh, [1, -0.8], 11, 11);
   // legs run away from the camera: a short, low shape behind the shoulders
   const hip = add(c, [0, -3]);
   const far = (x: number): Leg => ({ hip, knee: [32 + x, 50], foot: [32 + x * 1.2, FLOOR - 1], toes: [0, 1] });
@@ -420,10 +448,11 @@ function poseFor(id: ExerciseId, f: number): { pose: Pose; props: Parameters<typ
     case 'dips': {
       // straight-arm support on the bars down to elbows at 90°, leaning a little forward
       const hand: P = [32, 30];
-      const shoulder = lerp([31.5, hand[1] - (UPPER + FORE - 0.4)], [34, hand[1] - 3], d);
+      // bottom: upper arms about level with the floor, elbows back, forearms upright over the hands
+      const shoulder = lerp([32, hand[1] - LOCKED], [36, hand[1] - FORE + 1], d);
       const lean = 0.18 + 0.15 * d;
       const hip = add(shoulder, mul([-Math.sin(lean), Math.cos(lean)], TORSO));
-      const a = arm(shoulder, hand, [-1, 0.2]);
+      const a = arm(shoulder, hand, [-1, -0.4]);
       // knees bent, feet crossed behind
       const knee = add(hip, [1.5, THIGH - 0.5]),
         foot = add(knee, mul(unit([-1, 0.35]), SHIN));
