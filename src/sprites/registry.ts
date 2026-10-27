@@ -294,6 +294,23 @@ export function sheetFor<I extends SpriteId>(id: I, action: SpriteAction, opts?:
   return sheet;
 }
 
+const stills = new Map<string, string>();
+
+/** One frame of a drawn sprite's action as an image, built once and cached: cheaper than a whole
+    sheet when a long list only shows stills. Needs a browser (canvas). */
+export function stillFor<I extends SpriteId>(id: I, action: SpriteAction, opts?: Partial<SpriteOpts<I>>, frame = 0): string {
+  const d = def(id);
+  if (d.kind !== 'drawn') return '';
+  const o = withDefaults(id, opts),
+    clipId = clipFor(id, action, opts) ?? 'idle',
+    key = `${id}|${clipId}|${frame}|${JSON.stringify(o)}`,
+    hit = stills.get(key);
+  if (hit !== undefined) return hit;
+  const src = toSheet([d.draw(o, CLIPS[clipId].frames[frame], frame)]);
+  stills.set(key, src);
+  return src;
+}
+
 /** The sheet for one action of a PNG sprite: no drawing, just which row and how many frames. */
 export function imageSheet(d: ImageSprite, action: SpriteAction): Sheet {
   const c = d.clips[action] ?? d.clips.idle;

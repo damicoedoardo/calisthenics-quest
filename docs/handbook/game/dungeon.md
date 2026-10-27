@@ -36,5 +36,8 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Add a zone | the chapter's `fog` in `src/story/chapters/`, then an entry in `ZONE_DUNGEONS` and `MIDS` (`content.ts`), `THEMES` (`themes.ts`) and `ZONE_MUSIC` (`src/lib/music-zones.ts`) |
 | Balance | the `DIALS` in `content.ts`; measure with `pnpm sim`, then `pnpm fog:sim` |
 
+Effects are capped (`FX_CAP` in `scene.ts`: particles and faded drawings alive at once) so a
+pile-up can't stall a slow phone; real fights peak far below the caps.
+
 `pnpm test` replays a whole bot run in every zone (`engine.test.ts`): a refactor keeps those
 replays exactly as they were, and a balance change moves them on purpose (`pnpm test -u`).

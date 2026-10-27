@@ -968,6 +968,15 @@ class Engine {
 
 export const music = new Engine();
 
+/** Renders several sound effects starting together, to check that a pile-up doesn't clip. */
+export async function renderSfxMix(ids: SfxId[], seconds = 1.6, sampleRate = 44100): Promise<Float32Array> {
+  const ctx = new OfflineAudioContext(1, Math.round(seconds * sampleRate), sampleRate);
+  const e = new Engine(false);
+  e.renderSfxInto(ctx, ids[0]);
+  for (const id of ids.slice(1)) e.sfx(id);
+  return (await ctx.startRendering()).getChannelData(0);
+}
+
 /** Renders one sound effect to samples, mono, exactly as the app mixes it. Browser only: used to
     keep every effect about as loud as the others. */
 export async function renderSfx(id: SfxId, pitch = 1, seconds = 1.6, sampleRate = 44100): Promise<Float32Array> {

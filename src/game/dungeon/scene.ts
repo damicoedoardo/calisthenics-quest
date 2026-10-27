@@ -70,6 +70,10 @@ function recap(run: Run): RunEnd {
   return { ...over, relics: { ...run.relics }, warden };
 }
 
+/** Most particles and drawn effects alive at once. Measured fights peak far below this (bits 38,
+    sparks 16, puffs 72, effects 3); the caps only stop a freak pile-up from stalling a slow phone. */
+const FX_CAP = { bits: 300, sparks: 200, puffs: 160, fading: 80 };
+
 /** The system asks for less motion: no hit-stop and no buzz. */
 function reducedMotion(): boolean {
   try {
@@ -385,11 +389,12 @@ class DungeonScene extends Phaser.Scene {
       alpha: { start: 0.45, end: 0 },
       scale: { start: 0.1, end: 0.26 },
       tint: Phaser.Display.Color.HexStringToColor(this.theme.fog).lighten(25).color,
+      maxAliveParticles: FX_CAP.puffs,
     });
     this.puffs.setDepth(2);
-    this.bits = this.add.particles(0, 0, 'dot', { emitting: false, speed: { min: 50, max: 170 }, gravityY: 220, lifespan: { min: 280, max: 520 }, alpha: { start: 1, end: 0 }, scale: { start: 1.3, end: 0.4 } });
+    this.bits = this.add.particles(0, 0, 'dot', { emitting: false, speed: { min: 50, max: 170 }, gravityY: 220, lifespan: { min: 280, max: 520 }, alpha: { start: 1, end: 0 }, scale: { start: 1.3, end: 0.4 }, maxAliveParticles: FX_CAP.bits });
     this.bits.setDepth(90001);
-    this.sparks = this.add.particles(0, 0, 'dot', { emitting: false, speed: { min: 60, max: 200 }, lifespan: 300, alpha: { start: 1, end: 0 }, tint: [0xfde68a, 0xfbbf24, 0xffffff] });
+    this.sparks = this.add.particles(0, 0, 'dot', { emitting: false, speed: { min: 60, max: 200 }, lifespan: 300, alpha: { start: 1, end: 0 }, tint: [0xfde68a, 0xfbbf24, 0xffffff], maxAliveParticles: FX_CAP.sparks });
     this.sparks.setDepth(90002);
     for (let i = 0; i < 40; i++) {
       this.numbers.push(
@@ -1859,6 +1864,8 @@ class DungeonScene extends Phaser.Scene {
 
 
   private fade(ms: number, draw: (g: Phaser.GameObjects.Graphics, p: number) => void) {
+    // A ceiling on what's redrawn each frame, so a pile-up of effects can't stall a slow phone.
+    if (this.fading.length >= FX_CAP.fading) this.fading.shift();
     this.fading.push({ draw, start: this.time.now, ms });
   }
 

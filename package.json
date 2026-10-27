@@ -13,6 +13,7 @@
     "fog:balance": "node scripts/fog-balance.cjs",
     "fog:sim": "node --no-warnings scripts/fog-sim.mjs",
     "fog:tune": "node --no-warnings scripts/fog-sim.mjs tune",
+    "exercises:db": "node --no-warnings scripts/export-exercises.mjs",
     "prepare": "git config core.hooksPath .githooks || true",
     "handbook:lint": "node scripts/handbook.mjs lint",
     "handbook:check": "node scripts/handbook.mjs check"

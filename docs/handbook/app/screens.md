@@ -27,7 +27,8 @@ pieces of screen state, and decides what is on screen:
 | `TodayTab` | The flame card and its line, today's quest list with exercise stills, the rest-day card and `SitByFire`, the quote of the day, the Book of Days, the install nudge |
 | `Workout` | The set logger: one exercise at a time, one tap per set (reps in reserve), rest timer, Undo, the exercise demo |
 | `AfterSession` | After a workout: a short battle against the chapter enemy, then the loot (XP, level, gear, the flame's word) |
-| `SkillsTab` | The three paths and their nodes |
+| `SkillsTab` | The three paths and their nodes; the "Exercise library" button on top |
+| `ExerciseLibrary` | The whole exercise library over the Skills tab: search, equipment, kind and movement filters, list rows with a demo still; an exercise shows the boy and girl demo, steps, tips and common mistakes. Loaded on demand. See [../game/exercise-library.md](../game/exercise-library.md) |
 | `PlayTab` | Power from training, the zones, warms up the Fog's code and sprite sheets while idle |
 | `FogRun` | A run: loads the Phaser scene on demand, the HUD, pause menu, skill picks, the recap |
 | `HeroTab` | Level, gear, class, look editor, keepsakes, max test, Backup and Restore |

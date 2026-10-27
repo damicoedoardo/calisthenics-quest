@@ -1,7 +1,38 @@
 import type { ClassId, Gear, GearSlot } from '@/lib/gear';
-import { NIGHT, autoshade, grid, mix, outline, rampOf, stamp, type Grid, type Ramp } from '../engine/grid';
+import { grid, stamp, type Grid } from '../engine/grid';
 import type { Look } from '../engine/figure';
-import { HAIR, LINEN, R, SKIN, TROUSERS } from '../palette';
+import {
+  FLOOR,
+  FORE,
+  LOCKED,
+  NECK,
+  NEGATIVE,
+  REP,
+  SHIN,
+  THIGH,
+  TORSO,
+  add,
+  arm,
+  breath,
+  colorsFor,
+  dir,
+  drawFigure,
+  drawLine,
+  drawWeight,
+  lerp,
+  mul,
+  props,
+  straight,
+  sub,
+  unit,
+  type Arm,
+  type Leg,
+  type P,
+  type Pose,
+  type Props,
+  type Weight,
+} from '../engine/skeleton';
+import { MOVES, drawMove, type Kit, type MoveId } from './moves';
 
 /* Exercise demos: your own hero (skin, hair, armor color) doing each exercise of the program, side
    on, one rep per loop of the 16-frame `rep` clip (holds breathe instead). The figure is a jointed
@@ -9,25 +40,8 @@ import { HAIR, LINEN, R, SKIN, TROUSERS } from '../palette';
    IK, so the form is exact: a straight body line in a push-up, a full hang at the bottom of a
    pull-up, legs level in an L-sit. Facing right; the near arm and leg are drawn over the far ones. */
 
-export type ExerciseId =
-  | 'incline-pushup'
-  | 'pushup'
-  | 'diamond-pushup'
-  | 'dips'
-  | 'archer-pushup'
-  | 'dead-hang'
-  | 'assisted-pullup'
-  | 'negatives'
-  | 'strict-pullup'
-  | 'pullup'
-  | 'lsit-pullup'
-  | 'knee-raise'
-  | 'tuck-lsit'
-  | 'one-leg-lsit'
-  | 'lsit'
-  | 'toes-to-bar';
-
-export const EXERCISES: ExerciseId[] = [
+/** The program's moves, each drawn by hand below. */
+export const PROGRAM_DEMOS = [
   'incline-pushup',
   'pushup',
   'diamond-pushup',
@@ -44,266 +58,23 @@ export const EXERCISES: ExerciseId[] = [
   'one-leg-lsit',
   'lsit',
   'toes-to-bar',
-];
+] as const;
+
+/** A demo: one of the program's moves, or one of the library's (characters/moves.ts). */
+export type ExerciseId = (typeof PROGRAM_DEMOS)[number] | MoveId;
+
+export const EXERCISES: ExerciseId[] = [...PROGRAM_DEMOS, ...MOVES];
+const isMove = (id: ExerciseId): id is MoveId => (MOVES as readonly string[]).includes(id);
 
 export interface ExerciseOpts {
   exercise: ExerciseId;
   gear: Record<GearSlot, Gear>;
   classId?: ClassId;
   look?: Look;
+  /** What the library's moves are done with (a barbell, a cable...); each move has a default. */
+  kit?: Kit;
   /** 'front' shows the diamond push-up from the head end, so the hands' diamond shows. */
   view?: 'side' | 'front';
-}
-
-type P = [number, number];
-const add = (a: P, b: P): P => [a[0] + b[0], a[1] + b[1]];
-const sub = (a: P, b: P): P => [a[0] - b[0], a[1] - b[1]];
-const mul = (a: P, k: number): P => [a[0] * k, a[1] * k];
-const len = (a: P) => Math.hypot(a[0], a[1]);
-const unit = (a: P): P => mul(a, 1 / (len(a) || 1));
-const lerp = (a: P, b: P, t: number): P => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-/** A direction from an angle in degrees: 0 is right, 90 is down (screen y grows downward). */
-const dir = (deg: number): P => [Math.cos((deg * Math.PI) / 180), Math.sin((deg * Math.PI) / 180)];
-
-// body lengths, in sprite pixels
-const UPPER = 8,
-  FORE = 8,
-  THIGH = 10,
-  SHIN = 10,
-  TORSO = 14,
-  NECK = 6;
-
-/** The middle joint of a two-bone limb from a to c, bent toward `toward`. */
-function ik(a: P, c: P, l1: number, l2: number, toward: P): P {
-  const v = sub(c, a),
-    d = Math.min(len(v), l1 + l2 - 0.01),
-    u = unit(v),
-    x = (l1 * l1 - l2 * l2 + d * d) / (2 * d),
-    h = Math.sqrt(Math.max(0, l1 * l1 - x * x)),
-    base = add(a, mul(u, x)),
-    n: P = [-u[1], u[0]];
-  const one = add(base, mul(n, h)),
-    two = sub(base, mul(n, h));
-  const score = (q: P) => (q[0] - base[0]) * toward[0] + (q[1] - base[1]) * toward[1];
-  return score(one) >= score(two) ? one : two;
-}
-
-/** Where a limb's hand or foot ends up, for limbs given by joint positions. */
-interface Arm {
-  shoulder: P;
-  elbow: P;
-  hand: P;
-}
-interface Leg {
-  hip: P;
-  knee: P;
-  foot: P;
-  /** Which way the toes point. */
-  toes: P;
-}
-interface Pose {
-  head: P;
-  /** The way the face looks, and the top of the head. */
-  face: P;
-  up: P;
-  shoulder: P;
-  hip: P;
-  near: { arm: Arm; leg: Leg };
-  far: { arm: Arm; leg: Leg };
-  /** Seen from the front (the archer push-up): two eyes, no profile. */
-  front?: boolean;
-  /** The head is drawn over the near arm (hanging: the arms pass beside and behind it). */
-  headFront?: boolean;
-}
-
-const arm = (shoulder: P, hand: P, toward: P, l1 = UPPER, l2 = FORE): Arm => ({ shoulder, hand, elbow: ik(shoulder, hand, l1, l2, toward) });
-/** A locked arm's length: the hand exactly a straight arm away (no kink at the elbow). */
-const LOCKED = UPPER + FORE - 0.02;
-/** A straight leg along a direction. */
-const straight = (hip: P, d: P, toes: P): Leg => ({ hip, knee: add(hip, mul(d, THIGH)), foot: add(hip, mul(d, THIGH + SHIN)), toes });
-
-// ---------- timing ----------
-
-/** One rep: a beat at the top, down, a beat at the bottom, up. 0 is the start position, 1 the far end. */
-const REP = [0, 0, 0.12, 0.35, 0.6, 0.85, 1, 1, 1, 0.85, 0.6, 0.35, 0.12, 0, 0, 0];
-/** A negative: jump to the top, lower slowly for five seconds' worth of frames, drop off. */
-const NEGATIVE = [0, 0.6, 1, 1, 0.94, 0.87, 0.79, 0.7, 0.61, 0.52, 0.42, 0.32, 0.22, 0.12, 0, 0];
-/** Holds breathe: the body settles a pixel for half the loop. */
-const breath = (f: number) => (f % 16 >= 8 ? 0.6 : 0);
-
-// ---------- props ----------
-
-const FLOOR = 56;
-const STEEL: Ramp = ['#4a5260', '#8a93a1', '#c9ced6'];
-const WOOD: Ramp = R.leather;
-
-function props(g: Grid, kind: 'floor' | 'bench' | 'bar' | 'dipbar' | 'parallettes', band?: { from: P; to: P }) {
-  const put = (x: number, y: number, c: string) => {
-    x = Math.round(x);
-    y = Math.round(y);
-    if (x >= 0 && y >= 0 && x < 64 && y < 64) g[y][x] = c;
-  };
-  const rect = (x0: number, y0: number, x1: number, y1: number, c: string) => {
-    for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) put(x, y, c);
-  };
-  // the floor: a band of stone, darker underneath
-  if (kind !== 'bar') {
-    rect(0, FLOOR + 1, 63, FLOOR + 1, '#3a3f4d');
-    rect(0, FLOOR + 2, 63, 63, '#232733');
-    for (let x = 3; x < 64; x += 9) put(x, FLOOR + 3, '#2c3140');
-  }
-  if (kind === 'bench') {
-    rect(18, 44, 44, 45, WOOD[2]);
-    rect(18, 46, 44, 47, WOOD[1]);
-    rect(20, 48, 22, FLOOR, WOOD[0]);
-    rect(40, 48, 42, FLOOR, WOOD[0]);
-  }
-  if (kind === 'bar') {
-    rect(4, 8, 59, 9, STEEL[1]);
-    rect(4, 8, 59, 8, STEEL[2]);
-    rect(2, 4, 3, 63, STEEL[0]);
-    rect(60, 4, 61, 63, STEEL[0]);
-  }
-  if (kind === 'dipbar') {
-    rect(14, 30, 50, 31, STEEL[1]);
-    rect(14, 30, 50, 30, STEEL[2]);
-    rect(16, 32, 17, FLOOR, STEEL[0]);
-    rect(47, 32, 48, FLOOR, STEEL[0]);
-  }
-  if (kind === 'parallettes') {
-    // seen end on: the round grip, one post, the foot
-    rect(32, 47, 35, 48, STEEL[1]);
-    rect(32, 47, 35, 47, STEEL[2]);
-    rect(33, 49, 34, FLOOR, STEEL[0]);
-    rect(30, FLOOR, 37, FLOOR, STEEL[0]);
-  }
-  if (band) {
-    // a resistance band looped over the bar and under the knee
-    const n = Math.ceil(len(sub(band.to, band.from)));
-    for (let i = 0; i <= n; i++) {
-      const q = lerp(band.from, band.to, i / n);
-      put(q[0], q[1], '#ef4444');
-      put(q[0] + 2, q[1], '#b91c1c');
-    }
-  }
-}
-
-// ---------- the figure ----------
-
-interface Colors {
-  skin: Ramp;
-  hair: Ramp;
-  shirt: Ramp;
-  pants: Ramp;
-  shoe: string;
-}
-
-function colorsFor(o: ExerciseOpts): Colors {
-  const look = o.look;
-  const tier = o.gear.armor.tier;
-  return {
-    skin: SKIN[look?.skin ?? 'light'],
-    hair: HAIR[look?.hair ?? 'brown'],
-    shirt: tier === 0 ? LINEN : rampOf(o.gear.armor.color),
-    pants: tier >= 3 ? [mix(o.gear.armor.color, NIGHT, 0.6), mix(o.gear.armor.color, NIGHT, 0.4), o.gear.armor.color] : TROUSERS,
-    shoe: '#3e2614',
-  };
-}
-
-/** A filled capsule: every pixel within r of the segment a-b. */
-function capsule(g: Grid, a: P, b: P, r: number, c: string) {
-  const x0 = Math.floor(Math.min(a[0], b[0]) - r),
-    x1 = Math.ceil(Math.max(a[0], b[0]) + r),
-    y0 = Math.floor(Math.min(a[1], b[1]) - r),
-    y1 = Math.ceil(Math.max(a[1], b[1]) + r);
-  const ab = sub(b, a),
-    l2 = ab[0] * ab[0] + ab[1] * ab[1] || 1;
-  for (let y = y0; y <= y1; y++)
-    for (let x = x0; x <= x1; x++) {
-      if (x < 0 || y < 0 || x >= 64 || y >= 64) continue;
-      const t = Math.max(0, Math.min(1, ((x - a[0]) * ab[0] + (y - a[1]) * ab[1]) / l2)),
-        q = add(a, mul(ab, t));
-      if (Math.hypot(x - q[0], y - q[1]) <= r) g[y][x] = c;
-    }
-}
-
-function drawLeg(g: Grid, l: Leg, c: Colors, dim: boolean) {
-  const pants = dim ? c.pants[0] : c.pants[1],
-    shoe = dim ? mix(c.shoe, NIGHT, 0.4) : c.shoe;
-  capsule(g, l.hip, l.knee, 2.2, pants);
-  capsule(g, l.knee, l.foot, 1.8, pants);
-  capsule(g, l.foot, add(l.foot, mul(l.toes, 2.5)), 1.4, shoe);
-}
-
-function drawArm(g: Grid, a: Arm, c: Colors, dim: boolean) {
-  const shirt = dim ? c.shirt[0] : c.shirt[1],
-    skin = dim ? c.skin[0] : c.skin[1];
-  capsule(g, a.elbow, a.hand, 1.4, skin);
-  capsule(g, a.hand, a.hand, 1.7, skin);
-  capsule(g, a.shoulder, lerp(a.shoulder, a.elbow, 0.4), 1.8, shirt);
-  capsule(g, lerp(a.shoulder, a.elbow, 0.4), a.elbow, 1.5, skin);
-}
-
-function drawHead(g: Grid, p: Pose, c: Colors, look?: Look) {
-  const [cx, cy] = p.head,
-    r = 5.2;
-  for (let y = Math.floor(cy - r - 1); y <= Math.ceil(cy + r + 1); y++)
-    for (let x = Math.floor(cx - r - 1); x <= Math.ceil(cx + r + 1); x++) {
-      if (x < 0 || y < 0 || x >= 64 || y >= 64) continue;
-      const d: P = [x - cx, y - cy];
-      if (Math.hypot(d[0], d[1]) > r) continue;
-      const along = d[0] * p.face[0] + d[1] * p.face[1],
-        upward = d[0] * p.up[0] + d[1] * p.up[1];
-      // hair over the top and back of the head; the face stays clear in front
-      const hair = p.front ? upward > 1.2 : upward > 2 || along < -0.5;
-      g[y][x] = hair ? c.hair[1] : c.skin[1];
-    }
-  // a long tail of hair falls with gravity from the back of the head
-  if (look && !p.front && (look.style === 'long' || look.style === 'pony')) {
-    const back = add(p.head, add(mul(p.face, -3.5), mul(p.up, 2)));
-    capsule(g, back, add(back, [-p.face[0] * 2, 7]), 1.6, c.hair[0]);
-  }
-  const put = (q: P, col: string) => {
-    const x = Math.round(q[0]),
-      y = Math.round(q[1]);
-    if (x >= 0 && y >= 0 && x < 64 && y < 64) g[y][x] = col;
-  };
-  if (p.front) {
-    put([cx - 2, cy], '#1c1917');
-    put([cx + 2, cy], '#1c1917');
-  } else {
-    // one eye in profile, a bright highlight above it
-    const eye = add(p.head, add(mul(p.face, 2.6), mul(p.up, 0.4)));
-    put(eye, '#1c1917');
-    put(add(eye, mul(p.up, 1)), '#1c1917');
-  }
-}
-
-function drawFigure(p: Pose, c: Colors, look?: Look): Grid {
-  const g = grid(64);
-  drawArm(g, p.far.arm, c, true);
-  if (!p.front) {
-    drawLeg(g, p.far.leg, c, true);
-    drawLeg(g, p.near.leg, c, false);
-  }
-  // the torso: shirt from shoulders to hips, a belt line at the hip
-  capsule(g, p.shoulder, p.hip, 3.3, c.shirt[1]);
-  // the near arm is its own outlined layer, so it reads over the torso and head
-  const armLayer = grid(64);
-  drawArm(armLayer, p.near.arm, c, false);
-  const armDone = outline(autoshade(armLayer));
-  if (p.headFront) {
-    const body = outline(autoshade(g));
-    stamp(body, armDone);
-    const head = grid(64);
-    drawHead(head, p, c, look);
-    stamp(body, outline(autoshade(head)));
-    return body;
-  }
-  drawHead(g, p, c, look);
-  const body = outline(autoshade(g));
-  stamp(body, armDone);
-  return body;
 }
 
 // ---------- the exercises ----------
@@ -459,7 +230,7 @@ function diamondFront(d: number): Pose {
   };
 }
 
-function poseFor(id: ExerciseId, f: number, view: ExerciseOpts['view'] = 'side'): { pose: Pose; props: Parameters<typeof props>[1]; band?: { from: P; to: P } } {
+function poseFor(id: ExerciseId, f: number, view: ExerciseOpts['view'] = 'side'): { pose: Pose; props: Props; band?: { from: P; to: P }; weight?: Weight } {
   const d = REP[f % 16],
     b = breath(f);
   switch (id) {
@@ -543,16 +314,32 @@ function poseFor(id: ExerciseId, f: number, view: ExerciseOpts['view'] = 'side')
       return { pose: support(b, (hip) => ({ near: levelLeg(hip), far: tuckLeg(add(hip, [-1, 0])) })), props: 'parallettes' };
     case 'lsit':
       return { pose: support(b, (hip) => ({ near: levelLeg(hip), far: levelLeg(add(hip, [-1, 0])) })), props: 'parallettes' };
+    default:
+      throw new Error(`no demo for ${id}`);
   }
 }
 
 /** One frame of an exercise demo: the props, then you on them. */
 export function drawExercise(o: ExerciseOpts, f: number): Grid {
-  const { pose, props: kind, band } = poseFor(o.exercise, f, o.view);
+  if (isMove(o.exercise)) {
+    const m = drawMove(o.exercise, o.kit, f);
+    const g = grid(64);
+    props(g, m.props);
+    m.scene?.(g);
+    for (const w of m.weights) if (w.behind) drawWeight(g, w);
+    stamp(g, drawFigure(m.pose, colorsFor(o), o.look));
+    m.over?.(g);
+    for (const l of m.lines) drawLine(g, l);
+    for (const w of m.weights) if (!w.behind) drawWeight(g, w);
+    return g;
+  }
+  const { pose, props: kind, band, weight } = poseFor(o.exercise, f, o.view);
   const g = grid(64);
   props(g, kind);
+  if (weight?.behind) drawWeight(g, weight);
   const fig = drawFigure(pose, colorsFor(o), o.look);
   stamp(g, fig);
+  if (weight && !weight.behind) drawWeight(g, weight);
   // the band goes in front of the shins, over the figure
   if (band) props(g, 'bar', band);
   return g;
