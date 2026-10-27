@@ -9,6 +9,7 @@ import { FogRun, type RunStart } from '@/components/FogRun';
 import { Hero } from '@/components/Hero';
 import { Prologue } from '@/components/Prologue';
 import { Opening, openingDue } from '@/components/Opening';
+import { useMenuTrack } from '@/components/Sound';
 import { Workout } from '@/components/Workout';
 import { AfterSession } from '@/components/AfterSession';
 import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
@@ -91,6 +92,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   }, [ready]);
   // Anything that takes the screen (a scene, a run, a workout) closes the panel for good.
   const busy = !!(run || training || after || scene || picker);
+  // The menus' music, on the tabs only: the opening, story, workouts and runs have their own.
+  useMenuTrack(ready && state.profile.onboarded && !opening && !replaying && !busy);
   useEffect(() => {
     if (busy) setDevOpen(false);
   }, [busy]);
