@@ -491,7 +491,7 @@ function DepthMap({ floor, floors, room, rooms, boss, mid, path, doors }: { floo
         <Skull size={14} className={`mt-0.5 ${floor === floors ? 'animate-pulse text-red-400' : 'text-red-400/70'}`} />
       </button>
       {open && (
-        <div onPointerDown={(e) => e.stopPropagation()} onClick={() => setOpen(false)} className="pointer-events-auto absolute left-10 top-24 w-44 animate-fadein rounded-lg bg-ink-950/90 p-2 ring-1 ring-gold-400/40">
+        <div onPointerDown={(e) => e.stopPropagation()} onClick={() => setOpen(false)} className="pointer-events-auto absolute left-10 top-24 z-10 w-44 animate-fadein rounded-lg bg-ink-950/95 p-2 ring-1 ring-gold-400/40">
           <p className="font-pixel text-[8px] text-gold-300">
             Floor {floor} of {floors}
           </p>
