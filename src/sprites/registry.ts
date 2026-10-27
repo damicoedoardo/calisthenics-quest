@@ -27,6 +27,7 @@ import { drawSplitling, drawSplitter, drawSplitterPop } from './characters/split
 import { drawShade } from './characters/shade';
 import { drawWarden } from './characters/warden';
 import { ZONE_PLACE, dress, edged } from './characters/zoned';
+import { DAY_ICONS, KEEPSAKE_ICONS, type DayKind } from './characters/icons';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
    art for a character is a change here, never in a component. Two kinds:
@@ -100,6 +101,14 @@ const zoned = (label: string, draw: DrawnSprite<NoOpts>['draw'], attack: ClipId 
     draw: (o, fr, f) => edged(dress(draw({}, fr, f), o.zone, f), o.zone),
   });
 
+export interface KeepsakeOpts {
+  /** The zone whose boss gave it, 0-5. */
+  zone: number;
+}
+export interface DayIconOpts {
+  kind: DayKind;
+}
+
 const STARTER_GEAR = equippedGear(undefined, { push: 0, pull: 0, core: 0 });
 
 export const SPRITES = {
@@ -151,6 +160,14 @@ export const SPRITES = {
   shade: zoned('Shade', drawShade),
   warden: creature('The Warden of the Ashes', drawWarden, 'lunge'),
   // The dungeon bosses. The Mirror is you in glass (pass the player's look and gear, like the hero).
+  // app icons, hand-drawn at 16x16 (keepsakes) and 12x12 (Book of Days)
+  keepsake: drawn<KeepsakeOpts>({
+    label: (o) => `Keepsake ${o.zone + 1}`,
+    defaults: { zone: 0 },
+    clips: () => ({ idle: 'still' }),
+    draw: (o) => drawPixelArt(KEEPSAKE_ICONS[o.zone] ?? KEEPSAKE_ICONS[0]),
+  }),
+  dayIcon: drawn<DayIconOpts>({ label: (o) => o.kind, defaults: { kind: 'A visit' }, clips: () => ({ idle: 'still' }), draw: (o) => drawPixelArt(DAY_ICONS[o.kind]) }),
   mirrorBoss: drawn<HeroOpts>({
     label: () => 'The Mirror, you in glass',
     defaults: { gear: STARTER_GEAR },

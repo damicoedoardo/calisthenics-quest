@@ -3,6 +3,8 @@
 import { useState } from 'react';
 import { ArrowLeft, Bookmark } from 'lucide-react';
 import { Book } from './Characters';
+import { Sprite } from './Sprite';
+import type { DayKind } from '@/sprites/characters/icons';
 import { dayKey, daysApart } from '@/lib/days';
 import type { DayPage, GameState } from '@/lib/game';
 import { ALL_SCENES, storyWords } from '@/story/engine';
@@ -17,7 +19,7 @@ function heartPrompt(id: AnswerId): string {
 }
 
 /** What a day held: a workout, a rest day, or just a visit. */
-function whatHappened(page: DayPage, state: GameState): string {
+function whatHappened(page: DayPage, state: GameState): DayKind {
   const date = new Date(`${page.day}T12:00:00`);
   const that = state.sessions.filter((s) => dayKey(new Date(s.date)) === page.day);
   if (that.length) return that.some((s) => s.kind === 'full') ? 'Workout' : 'Short workout';
@@ -89,7 +91,10 @@ export function BookOfDays({ state, onClose }: { state: GameState; onClose: () =
             <li key={p.day} className="rounded-2xl bg-ink-900 p-4 ring-1 ring-ink-700">
               <div className="flex items-baseline justify-between">
                 <p className="font-pixel text-[10px] text-gold-300">{dateLabel(p.day)}</p>
-                <p className="text-xs text-slate-400">{whatHappened(p, state)}</p>
+                <p className="flex items-center gap-1.5 text-xs text-slate-400">
+                  <Sprite id="dayIcon" opts={{ kind: whatHappened(p, state) }} size={28} label="" />
+                  {whatHappened(p, state)}
+                </p>
               </div>
               <p className="mt-2 text-sm italic text-slate-300">
                 <span className="not-italic text-orange-300">{state.profile.flame ?? 'A spark'}:</span> &ldquo;{p.line}&rdquo;
