@@ -11,7 +11,7 @@ timestamp: 2026-10-27
 FORMA ("form" in Italian) is a training app played like a pixel-art RPG. It is built for one
 player first (Edoardo, coming back to calisthenics after two years off) and is meant to be
 super clear, super intuitive and gamified. Live at https://forma-nu-red.vercel.app, installable
-to the home screen, works offline at the gym. Progress lives on the phone (Hero tab, Backup to save it). Signing in to keep a cloud copy is
+to the home screen (on phones it must be installed after the opening before the game goes on), works offline at the gym. Progress lives on the phone (Hero tab, Backup to save it). Signing in to keep a cloud copy is
 optional and shows only once FORMA's own server is set up.
 
 ## The rule the game is built on

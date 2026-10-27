@@ -14,13 +14,15 @@ pieces of screen state, and decides what is on screen:
 1. **Not onboarded** (or replaying the opening): `Prologue` takes the whole screen.
    Otherwise, once per app open (`openingDue`, a `sessionStorage` flag; never in the sandbox),
    `Opening` plays over everything for about three seconds, and story scenes wait for it.
-2. **Otherwise** the header, the current tab and the bottom tab bar, with full-screen layers on
+2. **Onboarded, on a phone, in a browser tab** (not installed): `InstallGate` takes the whole
+   screen until FORMA is opened from the home screen, see [pwa.md](pwa.md#install-before-playing).
+3. **Otherwise** the header, the current tab and the bottom tab bar, with full-screen layers on
    top when one is open: `Workout` (training), `AfterSession` (right after finishing),
    `ScenePlayer` (a due story scene), `ClassPicker`, `FogRun`, and the `DevPanel`.
-3. While a layer is open the tabs underneath are made `inert` (no focus, hidden from screen
+4. While a layer is open the tabs underneath are made `inert` (no focus, hidden from screen
    readers). Overlays opened from inside a tab use `useModal` for the same thing.
-4. On the tabs (nothing over them) the menus' music plays, unless turned off in Settings (see [../game/sound.md](../game/sound.md)).
-5. Back on the tabs, the next due scene from `scenesToPlay` (`src/story/engine.ts`) plays.
+5. On the tabs (nothing over them) the menus' music plays, unless turned off in Settings (see [../game/sound.md](../game/sound.md)).
+6. Back on the tabs, the next due scene from `scenesToPlay` (`src/story/engine.ts`) plays.
 
 ## Held sideways: the tabs
 
@@ -40,7 +42,8 @@ changes only as `land:` classes.
 | Component | Job |
 |---|---|
 | `Opening` | The splash when the app opens: the small flame (always the spark) catches, FORMA lands one letter per note of the `opening` sting, "Day N · the fire's lit" (`dayNumber`). Sound starts by itself where the browser allows it; where it needs a tap first (iPhones, even installed), the flame waits on a blinking "Tap to start" and that tap plays the jingle with the letters. A tap while it plays skips. Muted means no sound at all; reduced motion shows it still |
-| `Prologue` | First run: boy or girl pick, the story opens, the first fight (`FirstFight`) you can't win, `RiseUp` (hold to stand), the letter, gym or home, then the `LookEditor` |
+| `Prologue` | First run: boy or girl pick (on iPhones with "Bring your hero" under it, `BringHero`), the story opens, the first fight (`FirstFight`) you can't win, `RiseUp` (hold to stand), the letter, gym or home, then the `LookEditor` |
+| `InstallGate`, `BringHero` | After the prologue, the guide to put FORMA on the home screen; and on an installed iPhone app's first screen, pasting in the hero copied in Safari. See [pwa.md](pwa.md#install-before-playing) |
 | `TodayTab` | The flame card and its line, today's quest list with exercise stills, the rest-day card and `SitByFire`, the quote of the day, the Book of Days, the install nudge |
 | `Workout` | The set logger: one exercise at a time, one tap per set (reps in reserve), rest timer, Undo, the exercise demo; the warm-up and the stretch are one "Done" tap |
 | `AfterSession` | After a workout: a short battle against the chapter enemy, then the loot (XP, stat points, better than last time, level, gear, the flame's word) |
@@ -83,6 +86,7 @@ edges clear of the notch, which is on the left or the right then.
 | `ClassPicker` | The hero you'd be on the left, the four classes and the button on the right |
 | `BookOfDays`, `ExerciseLibrary` | Wider, the pages and the list in two columns; the library's search and filters on one line, an exercise's demos and facts beside its how-to |
 | `DevPanel` | A wider sheet with its sections in two columns |
+| `InstallGate` | The flame and the why on the left, the steps on the right |
 | `Opening` | Fits as it is; the sound toggle keeps clear of the notch |
 
 To change one, look for the variant in that component; try it at 844×390 (the `/lab/night` jumps

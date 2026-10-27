@@ -145,6 +145,8 @@ describe('sprite registry', () => {
     for (const id of ['lia', 'sol', 'vela'] as const) prints[`${id} after`] = hash(framesFor(id, 'idle', { after: true }));
     for (const id of ZONED) for (const zone of [1, 2, 3, 4, 5]) prints[`${id} zone ${zone}`] = hash([...framesFor(id, 'idle', { zone }), ...framesFor(id, 'attack', { zone })]);
     for (const exercise of EXERCISES) prints[`exercise ${exercise}`] = hash(framesFor('exercise', 'idle', { exercise }));
+    for (const step of ['iosShare', 'iosAdd', 'iosChromeShare', 'androidMenu', 'androidAdd', 'home', 'safari'] as const)
+      prints[`install ${step}`] = hash(framesFor('installStep', 'idle', { step }));
     prints['kindled long hair'] = hash(framesFor('kindled', 'idle', { hair: 'long' }));
     expect(prints).toMatchSnapshot();
   });
