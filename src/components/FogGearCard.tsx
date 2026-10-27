@@ -80,7 +80,7 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
         <div className="mt-2 flex flex-wrap gap-2">
           {gear.vault.map((it) => (
             <button key={it.id} onClick={() => choose(it.id)} className={`rounded-lg p-1 ${it.id === pick ? 'bg-ink-900' : ''}`} aria-label={nameOf(it)}>
-              <ItemTile item={it} size={40} dim={shortOf(it, build) > 0} />
+              <ItemTile item={it} size={40} dim={shortOf(it, build) > 0} than={gear.worn[it.slot] ?? 'none'} />
             </button>
           ))}
         </div>
@@ -92,7 +92,7 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
       <Side on={land} className={`flex min-w-0 flex-1 flex-col overflow-y-auto rounded-xl ${item ? '' : 'items-center justify-center gap-2 bg-ink-900/60 p-4'}`}>
       {item ? (
         <div className={land ? 'space-y-2' : 'mt-3 space-y-2'}>
-          <ItemCard item={item} build={build}>
+          <ItemCard item={item} build={build} than={gear.worn[item.slot] ?? 'none'}>
             {worn ? (
               <>
                 <button onClick={() => update((s) => setGuard(s, gear.guard === item.slot ? null : item.slot))} className={`flex flex-1 items-center justify-center gap-1 rounded-lg py-2 text-xs ${gear.guard === item.slot ? 'bg-orange-500 font-semibold text-ink-950' : 'bg-ink-700 text-orange-200'}`}>

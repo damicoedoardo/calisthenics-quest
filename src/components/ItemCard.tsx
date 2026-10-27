@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 import { getStat, type Build } from '@/lib/stats';
-import { bandOf, itemLines, looksOf, nameOf, RARITY, SLOT_NAME, shortOf, type Item, type Rarity } from '@/game/dungeon/items';
+import { bandOf, betterBy, foundAt, itemLines, looksOf, nameOf, RARITY, SLOT_NAME, shortOf, type Item, type Rarity } from '@/game/dungeon/items';
 import { BANDS } from '@/balance';
 import { PlusGlow } from './PlusGlow';
 import { Sprite } from './Sprite';
@@ -35,7 +35,7 @@ const FRAME: Record<Rarity, { edge: string; back: string; glow?: string }> = {
 const artSize = (size: number) => Math.max(16, Math.round((size * 1.2) / 16) * 16);
 
 /** An item's art in a tile edged and lit in its rarity's color. */
-export function ItemTile({ item, size = 40, dim = false }: { item: Item; size?: number; dim?: boolean }) {
+export function ItemTile({ item, size = 40, dim = false, than }: { item: Item; size?: number; dim?: boolean; than?: Item | 'none' }) {
   const f = FRAME[item.rarity],
     still = useReducedMotion(),
     art = artSize(size);
@@ -45,7 +45,19 @@ export function ItemTile({ item, size = 40, dim = false }: { item: Item; size?: 
       <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
         <Sprite id="item" opts={looksOf(item)} size={art} playing={!still} label="" />
       </span>
+      {than && <UpDown pct={betterBy(item, than === 'none' ? undefined : than)} />}
       {item.plus ? <span className="absolute -bottom-1 -right-1 rounded bg-ink-950/90 px-0.5 font-mono text-[8px] leading-tight text-gold-300">+{item.plus}</span> : null}
+    </span>
+  );
+}
+
+/** A small green up or red down arrow in a tile's corner: better or worse than what you wear. */
+function UpDown({ pct }: { pct: number | null }) {
+  if (pct === null || pct === 0) return null;
+  const up = pct > 0;
+  return (
+    <span className={`absolute -left-1 -top-1 rounded px-0.5 font-mono text-[9px] font-bold leading-tight ${up ? 'bg-emerald-400 text-ink-950' : 'bg-red-500/90 text-white'}`} aria-label={up ? 'Better than yours' : 'Weaker than yours'}>
+      {up ? '▲' : '▼'}
     </span>
   );
 }
@@ -59,9 +71,12 @@ export function needLine(item: Item, build: Build): { text: string; ok: boolean 
 }
 
 /** An item on one card: its art on a stage lit in its rarity's color, the name in that color,
-    what it gives, what it asks. */
-export function ItemCard({ item, build, children }: { item: Item; build: Build; children?: React.ReactNode }) {
+    where it was found, what it gives, how it compares with what you wear (`than`: that item, or
+    'none' when the slot is empty), what it asks. */
+export function ItemCard({ item, build, than, children }: { item: Item; build: Build; than?: Item | 'none'; children?: React.ReactNode }) {
   const need = needLine(item, build),
+    at = foundAt(item),
+    pct = than ? betterBy(item, than === 'none' ? undefined : than) : null,
     f = FRAME[item.rarity],
     still = useReducedMotion(),
     color = RARITY[item.rarity].color,
@@ -88,7 +103,13 @@ export function ItemCard({ item, build, children }: { item: Item; build: Build; 
         </p>
         <p className="text-[10px] text-slate-500">
           {RARITY[item.rarity].name} {SLOT_NAME[item.slot].toLowerCase()}
+          {at && ` · Level ${at.level} · zone ${at.zone}, floor ${at.floor}`}
         </p>
+        {pct !== null && (
+          <p className={`mt-1 text-xs font-semibold ${pct > 0 ? 'text-emerald-300' : pct < 0 ? 'text-red-300' : 'text-slate-400'}`}>
+            {pct > 0 ? `▲ ${pct}% stronger than yours` : pct < 0 ? `▼ ${-pct}% weaker than yours` : 'About the same as yours'}
+          </p>
+        )}
         <ul className="mt-1 space-y-0.5 text-xs text-slate-300">
           {itemLines(item).map((l, i) => (
             <li key={i}>{l}</li>

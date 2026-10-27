@@ -46,7 +46,8 @@ level or story.
   puts the bag in the vault (the best first, the rest left behind if it's full); dying loses all
   of it, except the one item your flame holds and gear forged to +10 or more, which comes home a few pluses lower (see [forge.md](forge.md)). Mid-run, `atRisk` says
   the same thing ahead of time (what a fall would take, what the flame would hold, or would hold
-  if you trained), for the HUD's bag, the bag panel and the stairs card. What a full vault can't take
+  if you trained), for the HUD's bag, the bag panel and the stairs card. In the bag panel each item carries a green
+  ▲ or red ▼ against what you wear in its slot (`betterBy`), and its card says by how much. What a full vault can't take
   is melted into embers. `wearFromVault` and `takeOffToVault` are the vault's buttons
   (`FogGearCard`), and "Melt down" is the forge's `salvage`. The items themselves are in
   [dungeon.md](dungeon.md); Mira's forge and the flame in [forge.md](forge.md).

@@ -261,6 +261,20 @@ export function itemScore(it: Item | undefined): number {
 }
 
 /** Each line of an item's card. */
+/** Where an item was found, for its card: its level (1 to 60), zone and floor. Null for the starter kit. */
+export function foundAt(it: Item): { level: number; zone: number; floor: number } | null {
+  if (it.starter) return null;
+  return { level: it.level + 1, zone: Math.floor(it.level / 10) + 1, floor: (it.level % 10) + 1 };
+}
+
+/** How much stronger an item is than the one it would replace, in percent (-12 = 12% weaker).
+    With nothing worn in a slot, it's measured against the starter kit; a charm against nothing (null). */
+export function betterBy(it: Item, worn: Item | undefined): number | null {
+  const than = worn ?? (it.slot === 'charm' ? undefined : starterKit(it.cls ?? undefined)[it.slot]);
+  if (!than || than.id === it.id) return null;
+  return Math.round((itemScore(it) / itemScore(than) - 1) * 100);
+}
+
 export function itemLines(it: Item): string[] {
   return [...it.base, ...it.bonuses].map((b) => BONUSES[b.id].show(b.v * boostOf(it)));
 }
