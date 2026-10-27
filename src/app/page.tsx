@@ -63,8 +63,12 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   // and nothing for a screen reader to wander into. (React 18 has no inert prop, so it's set here.)
   const root = useRef<HTMLDivElement>(null);
   const covered = busy || (dev && devOpen);
+  // Only on a change, so it never undoes the inert an overlay inside a tab set (useModal).
+  const applied = useRef(false);
   useEffect(() => {
-    root.current?.querySelectorAll(':scope > header, :scope > main, :scope > nav').forEach((el) => el.toggleAttribute('inert', covered));
+    if (!root.current || applied.current === covered) return;
+    applied.current = covered;
+    root.current.querySelectorAll(':scope > header, :scope > main, :scope > nav').forEach((el) => el.toggleAttribute('inert', covered));
   });
   // Seven quick taps on the FORMA name unlock developer mode on the live app.
   const taps = useRef<number[]>([]);

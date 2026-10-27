@@ -1,12 +1,13 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Download, Film, Gem, Lock, Mail, Palette, Trophy, Upload } from 'lucide-react';
 import { SoundToggle } from './Sound';
 import { Hero } from './Hero';
 import { Sprite } from './Sprite';
 import { useLook } from './Look';
 import { LookEditor } from './LookEditor';
+import { useModal } from './useModal';
 import { PATHS } from '@/lib/skills';
 import { getClass, tierText } from '@/lib/gear';
 import { gearOf, logMaxTest, nextTestDate, nodeName, type GameState } from '@/lib/game';
@@ -100,7 +101,7 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
       </section>
 
       {editingLook && (
-        <div className="safe-top safe-bottom fixed inset-0 z-40 !mt-0 overflow-y-auto bg-ink-950">
+        <Overlay label="Your look" onClose={() => setEditingLook(false)}>
           <div className="mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6 pt-4">
             <h2 className="mb-4 font-pixel text-xs text-gold-300">Your look</h2>
             <div className="flex-1">
@@ -118,7 +119,7 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
               Done
             </button>
           </div>
-        </div>
+        </Overlay>
       )}
 
       {hasLetter && (
@@ -192,7 +193,7 @@ export function HeroTab({ state, update, onChangeClass, onTestLogged, onReplayOp
               aria-label={label}
               value={test[key]}
               onChange={(e) => setTest({ ...test, [key]: e.target.value.replace(/\D/g, '') })}
-              className="w-full rounded-lg bg-ink-900 px-3 py-2.5 text-center text-sm outline-none ring-1 ring-ink-600 focus:ring-gold-400"
+              className="w-full rounded-lg bg-ink-900 px-1 py-2.5 text-center text-sm outline-none ring-1 ring-ink-600 focus:ring-gold-400"
             />
           ))}
         </div>
@@ -327,6 +328,16 @@ function Stat({ label, value }: { label: string; value: number | string }) {
     <div className="rounded-2xl bg-ink-800 p-3">
       <p className="text-[11px] uppercase tracking-wider text-slate-400">{label}</p>
       <p className="mt-1 font-mono text-2xl font-semibold">{value}</p>
+    </div>
+  );
+}
+
+/** A full-screen sheet over the Hero tab (the look editor): a dialog, closed with Escape too. */
+function Overlay({ label, onClose, children }: { label: string; onClose: () => void; children: ReactNode }) {
+  const box = useModal<HTMLDivElement>(onClose);
+  return (
+    <div ref={box} role="dialog" aria-modal="true" aria-label={label} className="safe-top safe-bottom fixed inset-0 z-40 !mt-0 overflow-y-auto bg-ink-950 outline-none">
+      {children}
     </div>
   );
 }

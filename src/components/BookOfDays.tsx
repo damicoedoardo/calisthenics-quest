@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { ArrowLeft, Bookmark } from 'lucide-react';
+import { useModal } from './useModal';
 import { Book } from './Characters';
 import { Sprite } from './Sprite';
 import type { DayKind } from '@/sprites/characters/icons';
@@ -37,12 +38,13 @@ const dateLabel = (day: string) => new Date(`${day}T12:00:00`).toLocaleDateStrin
 /** Every day the app was opened, newest first. Days you didn't open it aren't marked; they just aren't here. */
 export function BookOfDays({ state, onClose }: { state: GameState; onClose: () => void }) {
   const [kept, setKept] = useState(false);
+  const box = useModal<HTMLDivElement>(onClose);
   const words = storyWords(state);
   const pages = [...(state.days ?? [])].reverse().filter((p) => !kept || p.kept);
   const hearts = HEARTS.filter((id) => words[id].trim());
 
   return (
-    <div className="fixed inset-0 z-50 !mt-0 overflow-y-auto bg-ink-950">
+    <div ref={box} role="dialog" aria-modal="true" aria-label="Book of Days" className="fixed inset-0 z-50 !mt-0 overflow-y-auto bg-ink-950 outline-none">
       <div className="safe-top safe-bottom mx-auto max-w-md space-y-4 px-4 pb-16">
         <header className="flex items-center gap-3 pt-2">
           <button onClick={onClose} aria-label="Back" className="rounded-lg bg-ink-800 p-2 text-slate-300">
