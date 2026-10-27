@@ -13,6 +13,12 @@ FORMA has its own server, apart from minlit's: the Hetzner project "Forma", serv
 only SSH (22), HTTP (80), HTTPS (443) and ping. **Minlit's server is a different machine; nothing
 here touches it.**
 
+Its public address is https://api.formaquest.app (an `A api` record in the formaquest.app DNS on
+Vercel). SSH is key-only (`/etc/ssh/sshd_config.d/00-forma-keys-only.conf`); Edoardo's Mac key
+is the way in. If a key is ever lost: Hetzner console, Rescue, "Enable rescue & power cycle" with a
+saved key, mount the disk and add the key to `/root/.ssh/authorized_keys`. A Hetzner rebuild can't
+add a key and wipes the disk.
+
 The web app stays on Vercel ([../dev/workflow.md](../dev/workflow.md)); the server runs only the
 backend, as the Docker Compose stack in `docker-compose.yml`:
 
