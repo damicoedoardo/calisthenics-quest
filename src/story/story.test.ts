@@ -4,7 +4,8 @@ import { TRACKS } from '@/lib/music';
 import { SPRITES } from '@/sprites/registry';
 import { CAST } from './cast';
 import { CHAPTERS } from './chapters';
-import { ALL_SCENES, chapterStart, fill, storyWords } from './engine';
+import { ALL_SCENES, VILLAGERS, chapterStart, fill, pendingScenes, renderLines, storyWords } from './engine';
+import { FLAME_STAGES } from './flame';
 import { PLACES } from './places';
 import { FLAME_LINES } from './daily/flame-lines';
 import { QUOTES } from './daily/quotes';
@@ -63,6 +64,7 @@ describe('the story files', () => {
       for (const l of linesOf(scene)) {
         check(l.text, scene.id);
         if (l.needs) expect(WORDS, scene.id).toContain(l.needs);
+        if (l.missing) expect(WORDS, scene.id).toContain(l.missing);
       }
       if (scene.when.needs) expect(WORDS, scene.id).toContain(scene.when.needs);
     }
@@ -76,6 +78,31 @@ describe('the story files', () => {
     for (const [moment, lines] of Object.entries(FLAME_LINES)) expect(lines.length, moment).toBeGreaterThanOrEqual(4);
     expect(REST_TRUTHS.length).toBeGreaterThanOrEqual(6);
     for (const n of [1, 2, 3, 4, 5, 6]) expect(QUOTES.filter((q) => q.fits === n || q.fits === 'any').length, `chapter ${n}`).toBeGreaterThanOrEqual(2);
+  });
+
+  it('keeps the script general: no digits in any line', () => {
+    for (const { scene } of ALL_SCENES) for (const l of linesOf(scene)) expect(l.text.replace(/\{\w+\}/g, ''), scene.id).not.toMatch(/\d/);
+  });
+
+  it('asks each heart question once, in its own month, and brings the answer back later', () => {
+    const order = ALL_SCENES.map((p) => p.scene.id);
+    for (const n of [1, 2, 3, 4, 5, 6]) {
+      const id = `heart${n}` as WordKey;
+      const asked = ALL_SCENES.filter((p) => p.scene.ask?.kind === 'choice' && p.scene.ask.id === id);
+      expect(asked.map((p) => p.chapter), id).toEqual([n]);
+      const at = order.indexOf(asked[0].scene.id);
+      const later = ALL_SCENES.filter((p, i) => i > at && p.scene.lines.some((l) => l.needs === id || l.text.includes(`{${id}}`)));
+      expect(later.length, `${id} comes back after it is asked`).toBeGreaterThan(0);
+    }
+  });
+
+  it('shows every growth of the flame in a scene on the workout it happens', () => {
+    for (const stage of FLAME_STAGES.slice(1)) expect(ALL_SCENES.some((p) => p.scene.when.workouts === stage.at), stage.id).toBe(true);
+  });
+
+  it('lets the player join every villager story, and only answers that exist gate lines', () => {
+    for (const v of VILLAGERS) expect(ALL_SCENES.some((p) => p.scene.ask?.kind === 'choice' && p.scene.ask.id === v), v).toBe(true);
+    for (const { scene } of ALL_SCENES) for (const l of scene.lines) if (l.answer) expect(VILLAGERS, scene.id).toContain(l.answer.id);
   });
 
   it('fills letter words mid-sentence and capitalizes the start', () => {
@@ -143,5 +170,58 @@ describe('every day', () => {
     expect(after.days).toHaveLength(1);
     expect(after.days![0].quote).toEqual(morning.days![0].quote);
     expect(FLAME_LINES.trained.map((l) => fill(l.text, storyWords(after)))).toContain(after.days![0].line);
+  });
+});
+
+describe('the months 4 to 6 rules', () => {
+  const day = (i: number) => new Date(2026, 0, 1 + i, 18);
+  /** A player in month five after `n` workouts, with the max tests months two and four asked for. */
+  const inTheFog = (n: number, answers: GameState['answers'] = {}): GameState => {
+    const sessions = Array.from({ length: n }, (_, i) => workout(day(i)));
+    const test = (i: number) => ({ id: `t${i}`, date: sessions[i].date, pushups: 20, pullups: 3, lsitSec: 5, xp: 200 });
+    return { ...initialState(), sessions, tests: [test(20), test(45)], answers };
+  };
+  const now = day(70);
+
+  it('brings the villagers you helped out of the fog, or Mira and the Echo when you helped none', () => {
+    for (let mask = 0; mask < 8; mask++) {
+      const helped = VILLAGERS.filter((_, i) => mask & (1 << i));
+      const answers = Object.fromEntries(VILLAGERS.map((v) => [v, helped.includes(v) ? 'yes' : 'no']));
+      const due = pendingScenes(inTheFog(63, answers), now).filter((s) => s.id.startsWith('ch5-gathering'));
+      expect(due, `helped ${helped.join(', ') || 'nobody'}`).toHaveLength(1);
+      const lines = renderLines(due[0].lines, storyWords(inTheFog(63, answers)));
+      const speakers = new Set(lines.flatMap((l) => [l.who, l.show ?? l.who]));
+      for (const v of VILLAGERS) expect(speakers.has(v as keyof typeof CAST), `${v} when helped ${helped.join(', ') || 'nobody'}`).toBe(helped.includes(v));
+      expect(speakers.has('mira')).toBe(helped.length === 0);
+      expect(speakers.has('echo')).toBe(helped.length === 0);
+    }
+  });
+
+  it('treats skipped villager questions as not helped', () => {
+    expect(pendingScenes(inTheFog(63), now).map((s) => s.id)).toContain('ch5-gathering-alone');
+  });
+
+  it('does not play a month\'s scenes before the month starts, even while the last one waits for a test', () => {
+    // Month four is done but its max test is missing: month five's workout scenes wait.
+    const waiting = { ...inTheFog(52), tests: [] as GameState['tests'] };
+    waiting.tests = inTheFog(52).tests.slice(0, 1);
+    const ids = pendingScenes(waiting, now).map((s) => s.id);
+    expect(ids).toContain('ch5-wings');
+    expect(ids.filter((id) => id.startsWith('ch5-') && id !== 'ch5-wings')).toEqual([]);
+  });
+
+  it('skips a story beat whose moment is long gone, but never a scene that waits for something else', () => {
+    const state = { ...initialState(), sessions: Array.from({ length: 10 }, (_, i) => workout(day(i))) };
+    const ids = pendingScenes(state, day(10)).map((s) => s.id);
+    expect(ids).not.toContain('ch1-kept');
+    expect(ids).toContain('class-choice');
+    expect(ids).toContain('ch1-tomorrow-begs');
+  });
+
+  it('reads a stand-in line when the heart answer is missing, and the answer when it is there', () => {
+    const finale = ALL_SCENES.find((p) => p.scene.id === 'finale')!.scene;
+    const flame = (heart1: string) => renderLines(finale.lines, { ...storyWords(initialState()), heart1 }).filter((l) => l.text.startsWith('I remember now'));
+    expect(flame('').map((l) => l.text)).toEqual(["I remember now. I'm the part of you that loved moving, back before anyone counted anything."]);
+    expect(flame('feeling free').map((l) => l.text)).toEqual(["I remember now. I'm the part of you that loved feeling free."]);
   });
 });

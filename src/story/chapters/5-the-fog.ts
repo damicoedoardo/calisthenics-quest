@@ -1,7 +1,10 @@
 import type { Chapter } from '../types';
 
-/* Month 5. Lesson: you don't silence the voice, you walk anyway. The month's new scenes and the
-   Hollow's own Fog fight come with the months 4 to 6 build. */
+/* Month 5. Lesson: you don't silence the voice, you walk anyway. The healing step: the inner critic
+   never fully leaves, so you learn to walk beside it, let yourself be looked after, and find out
+   you were never as alone as it said. The heart moment is the Hollow's own question: what do you
+   hold on to? Near the end, the villagers you helped walk out of the fog (Mira and the Echo come
+   when you helped none). */
 
 export const THE_FOG: Chapter = {
   n: 5,
@@ -25,6 +28,19 @@ export const THE_FOG: Chapter = {
   },
   scenes: [
     {
+      // The flame grows wings at the end of the Plateau, whatever the chapter is waiting for.
+      id: 'ch5-wings',
+      when: { workouts: 50 },
+      lines: [
+        { who: 'narrator', show: 'flame', text: 'The Plateau has no hearts left. In the quiet after the last workout, {flame} goes very still.' },
+        { who: 'flame', mood: 'scared', text: "...Something's happening. Is something happening? Something is DEFINITELY happening." },
+        { who: 'narrator', show: 'flame', text: 'Two wings of flame unfold from its back, and {flame} lifts off the ground, wobbling.', shot: { zoom: 'in', seconds: 1.6 } },
+        { who: 'flame', mood: 'happy', text: "Wings. I have wings. I've been growing these the whole time, and I didn't even know." },
+        { who: 'wanderer', text: "Neither did the Plateau. That's how it works. It hides, and hides, and then it shows all at once." },
+        { who: 'flame', mood: 'happy', text: "In the Fog I'll fly next to you now. And when you're hurt, I can patch you up a little. I'm a fire fairy. Is that a real thing? It's a real thing now." },
+      ],
+    },
+    {
       id: 'ch5-intro',
       when: { chapter: 5 },
       music: 'hollow',
@@ -33,17 +49,160 @@ export const THE_FOG: Chapter = {
         { who: 'narrator', text: 'The fog rolls in, thick and cold. In the middle of it, a shape you know. Your face, with empty eyes.' },
         { who: 'hollow', text: '{voice}', needs: 'voice' },
         { who: 'hollow', text: "Remember me? You've been busy. {sessions} sessions. Cute." },
-        { who: 'hollow', text: 'You\'ve started before. You always stop around here. It gets boring, you get tired, and you get smart about it.' },
+        { who: 'hollow', text: "You've started before. You always stop around here. It gets boring, you get tired, and you get smart about it." },
         { who: 'hollow', text: 'Save yourself the embarrassment. Come back to the quiet.' },
         { who: 'flame', mood: 'smoky', text: "Don't listen to it. It's loud. That doesn't make it right." },
+        { who: 'wanderer', text: "It isn't louder because you're failing. It's louder because you're getting close to something it can't follow you into." },
+        { who: 'flame', mood: 'soft', text: "My wings light up about this much fog. It'll have to do. Stay close?" },
+      ],
+    },
+    {
+      id: 'ch5-fairy-heals',
+      when: { workouts: 53, chapter: 5 },
+      lines: [
+        { who: 'narrator', text: 'A root you never saw. You go down hard in the wet leaves, and for a moment you just lie there.' },
+        { who: 'hollow', text: "There it is. Stay down. You know how. You're good at it." },
+        { who: 'narrator', show: 'flame', text: '{flame} lands on your chest, wings folded, glowing warm.', shot: { zoom: 'in', seconds: 1.2 } },
+        { who: 'flame', mood: 'soft', text: 'Hold still. ...There. Fairy business. Very official.' },
+        { who: 'flame', mood: 'soft', text: "Funny. I know how to do this. Like somebody did it for us once. Knelt down, and said 'you're okay, you're okay', until we were." },
+        { who: 'wanderer', text: 'Some days the work is to get up. Some days the work is to let yourself be looked after first. Both count.' },
+        { who: 'you', text: "...I'm okay." },
+        { who: 'flame', mood: 'happy', text: 'You are. Up we get.' },
+      ],
+    },
+    {
+      id: 'ch5-next-step',
+      when: { workouts: 55, chapter: 5 },
+      music: 'hollow',
+      shots: [{ pan: 'left', seconds: 1.6 }, { pan: 'right', seconds: 1.6 }, { pan: 'center' }],
+      lines: [
+        { who: 'narrator', text: 'The path is gone. Fog on every side. You turn around, and the way back is gone too.' },
+        { who: 'hollow', text: "You don't even know where this goes. You never did." },
+        { who: 'you', text: "...It's right. I can't see anything." },
+        { who: 'wanderer', text: "I've never seen the whole path. Nobody has. You see one step. You take it. Then there's another one." },
+        { who: 'you', text: 'And if I go the wrong way?' },
+        { who: 'wanderer', text: "Then you'll be walking the wrong way, which is still walking. A walker can turn. Nobody can steer someone standing still." },
+        { who: 'flame', mood: 'soft', text: "I can see one step. Right there. That's all I can see. Want it?" },
+      ],
+    },
+    {
+      id: 'ch5-hollow-knows',
+      when: { workouts: 57, chapter: 5 },
+      music: 'hollow',
+      lines: [
+        { who: 'narrator', show: 'hollow', text: 'The Hollow steps out of the fog right in front of the Wanderer. It tilts its head.' },
+        { who: 'hollow', text: 'You. I know you. You smell like... the one who stopped listening to me.' },
+        { who: 'wanderer', text: 'I listened to you for years. Then one ordinary day I walked anyway. You remember that day. You hated it.' },
+        { who: 'hollow', text: '...You never came back to the quiet.' },
+        { who: 'wanderer', text: 'No. And I was never sorry.' },
+        { who: 'flame', mood: 'scared', text: "Why does the Hollow know the Wanderer? Why does everyone know everyone? I'm a flame, I can't keep up." },
+      ],
+    },
+    {
+      id: 'ch5-heart',
+      when: { workouts: 59, chapter: 5 },
+      music: 'memory',
+      lines: [
+        { who: 'narrator', show: 'hollow', text: 'The Hollow sits down in the path, the way the Echo sat on the lake. It looks tired. You never thought of it as tired.' },
+        { who: 'hollow', text: "I don't get it. I'm right a lot. You know I'm right a lot." },
+        { who: 'hollow', text: 'So when I get loud, what do you even hold on to?' },
+      ],
+      ask: {
+        kind: 'choice',
+        id: 'heart5',
+        prompt: 'When the voice gets loud, what do you hold on to?',
+        choices: [
+          { label: 'The next step', value: 'The next step.' },
+          { label: 'The people walking with me', value: 'The people walking with me.' },
+          { label: 'Every promise I kept', value: 'Every promise I kept.' },
+          { label: "I got up before. I'll get up again.", value: "I got up before. I'll get up again." },
+        ],
+        write: 'Write your own',
+        after: [
+          { who: 'hollow', text: "...That's it? That's so small." },
+          { who: 'you', text: "Small is what I've got. It's been enough every time so far." },
+          { who: 'narrator', show: 'hollow', text: "The Hollow doesn't answer. For the first time since the ash, it looks unsure." },
+        ],
+      },
+    },
+    {
+      id: 'ch5-nothing-changed',
+      when: { workouts: 61, chapter: 5 },
+      music: 'hollow',
+      lines: [
+        { who: 'hollow', text: '{voice}', needs: 'voice' },
+        { who: 'hollow', text: 'And look at you. All this walking. Same face. Nothing has changed.' },
+        { who: 'flame', mood: 'smoky', text: 'Nothing? On the Plateau you told the Wanderer: "{heart4}." That\'s not nothing. That\'s the part it can\'t see.', needs: 'heart4' },
+        { who: 'flame', mood: 'smoky', text: 'Nothing? You keep your promises now. You rest without apologizing. You talk to yourself like a friend, most days. It just can\'t see any of that.', missing: 'heart4' },
+        { who: 'narrator', show: 'kid', text: 'You remember a kid in a village, and what you told them about day one: "{heart3}" You say it again, quietly. This time to yourself.', needs: 'heart3' },
+        { who: 'narrator', show: 'hollow', text: "The Hollow flickers, like a picture on a bad screen. It doesn't go away. But it steps aside." },
+        { who: 'wanderer', text: "You won't silence it. You don't have to. You just have to keep walking while it talks." },
+      ],
+    },
+    {
+      id: 'ch5-gathering',
+      when: { workouts: 63, chapter: 5, helped: true },
+      music: 'hollow',
+      lines: [
+        { who: 'narrator', text: "The fog closes in so thick you can't see {flame}'s wings. The Hollow's voice comes from everywhere at once." },
+        { who: 'hollow', text: 'Look around. Nobody. You were always going to end up alone out here. Everyone does.' },
+        { who: 'narrator', text: 'Then, footsteps. Not golden ones. Ordinary ones. More than one pair.', shot: { shake: 'small' } },
+        { who: 'lia', text: "You sat with me when nobody did. You didn't ask me when I was coming back. So I came.", shot: { enter: 'left' }, answer: { id: 'lia', is: 'yes' } },
+        { who: 'sol', text: 'You woke me up on a day you had every excuse not to. I owed you a morning. I brought a few.', shot: { enter: 'right' }, answer: { id: 'sol', is: 'yes' } },
+        { who: 'narrator', show: 'vela', text: "A light swings out of the fog: Vela's lamp, carried all the way from the flat road.", answer: { id: 'vela', is: 'yes' } },
+        { who: 'vela', text: "The light doesn't argue with the fog. It just stays on. I thought you could use one.", answer: { id: 'vela', is: 'yes' } },
+        { who: 'hollow', text: '...You were supposed to be alone.' },
+        { who: 'you', text: 'I thought so too.' },
+        { who: 'flame', mood: 'happy', text: "You helped them when it cost you something. Now look. They're helping back. That's how it works out here. That's how it works everywhere." },
+        { who: 'wanderer', text: 'Nobody walks out of the fog alone. They just believe they are alone, until someone shows up.' },
+      ],
+    },
+    {
+      id: 'ch5-gathering-alone',
+      when: { workouts: 63, chapter: 5, helped: false },
+      music: 'hollow',
+      lines: [
+        { who: 'narrator', text: "The fog closes in so thick you can't see {flame}'s wings. The Hollow's voice comes from everywhere at once." },
+        { who: 'hollow', text: 'Look around. Nobody. You were always going to end up alone out here. Everyone does.' },
+        { who: 'narrator', text: 'Then, footsteps. Heavy boots, and the clank of a hammer.', shot: { shake: 'small' } },
+        { who: 'mira', text: "Heard there was fog. I brought a hammer. Don't know what I'll hit with it, but I brought it.", shot: { enter: 'left' } },
+        { who: 'mira', text: "You didn't ask. You don't have to. That's what a village is for." },
+        { who: 'narrator', show: 'echo', text: 'Behind her, faint and golden, the Echo. Keeping its distance, but there.' },
+        { who: 'echo', text: "Don't make it weird. I'm only here because you're the only one who remembers me." },
+        { who: 'hollow', text: '...You were supposed to be alone.' },
+        { who: 'flame', mood: 'soft', text: "Nobody's ever as alone as the Hollow says. It just counts very badly." },
+        { who: 'wanderer', text: 'Nobody walks out of the fog alone. They just believe they are alone, until someone shows up.' },
+      ],
+    },
+    {
+      id: 'ch5-short',
+      when: { workouts: 51, shortSession: true, inChapter: 5 },
+      lines: [
+        { who: 'hollow', text: "That's all you've got today?" },
+        { who: 'you', text: 'Today, yes. And I brought it.' },
+        { who: 'flame', mood: 'soft', text: 'Walking slowly through fog is still walking through fog. Ask anyone who stood still in it.' },
+      ],
+    },
+    {
+      id: 'ch5-rest',
+      when: { restDay: true, inChapter: 5 },
+      music: 'camp',
+      lines: [
+        { who: 'narrator', show: 'flame', text: 'A rest day, in the middle of the fog. {flame} folds its wings and settles into your lap like a cat.' },
+        { who: 'flame', mood: 'sleepy', text: "Resting in here feels wrong. Like we should keep moving or it'll swallow us." },
+        { who: 'wanderer', text: 'Lost people rush. People who know where they are going can afford to sit down.' },
+        { who: 'hollow', text: 'Giving up already?' },
+        { who: 'flame', mood: 'sleepy', text: "Nope. Resting. You'd know the difference if you ever tried it." },
+        { who: 'flame', mood: 'soft', text: "Resting while it's loud is the bravest kind. It says: I'm not running from you." },
       ],
     },
     {
       id: 'ch5-victory',
       when: { beaten: 5 },
       lines: [
-        { who: 'narrator', text: 'Through the fog, you hear footsteps. Golden ones.' },
+        { who: 'narrator', text: 'The fog begins to thin. Golden footsteps come close, and stop beside you.' },
         { who: 'echo', text: "I said cruel things. I was scared that if you got strong again, you'd forget me." },
+        { who: 'you', text: "I won't forget you. You're the reason I knew it was possible." },
         { who: 'echo', text: 'You told me you lost {heart2}. Here. I kept it for you.', needs: 'heart2' },
         { who: 'echo', text: "I'm not your goal. I'm your proof. You did it once. You can do it again." },
         { who: 'narrator', text: 'The Echo turns into light and settles into your armor.' },
@@ -52,6 +211,7 @@ export const THE_FOG: Chapter = {
         { who: 'you', text: 'Every day. I just stopped obeying you.' },
         { who: 'hollow', text: "I'll be back." },
         { who: 'you', text: "I know. I'll be here." },
+        { who: 'flame', mood: 'soft', text: "...It looked scared just then. Did you see? I didn't know it could be scared." },
       ],
     },
   ],

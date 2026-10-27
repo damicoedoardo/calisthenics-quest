@@ -91,6 +91,8 @@ export const PLATEAU: Chapter = {
       lines: [
         { who: 'narrator', show: 'wanderer', text: 'Night on the flat road. The Wanderer sets the lantern down between you, and for once, sits.' },
         { who: 'wanderer', text: 'The Plateau says nothing changes. It will keep saying it. Stone is patient.' },
+        { who: 'wanderer', text: 'But think back. In the ash you learned to keep a promise to yourself. At the lake you let yourself miss what you lost. In the village you stopped hitting yourself to make yourself move.' },
+        { who: 'wanderer', text: 'None of that shows in a mirror. All of it is holding you up.' },
         { who: 'wanderer', text: "So let's not ask the stone. Let me ask you." },
       ],
       ask: {
@@ -139,6 +141,9 @@ export const PLATEAU: Chapter = {
         { who: 'flame', mood: 'happy', text: 'Boring in a good way. Like brushing your teeth, but with fire.' },
         { who: 'flame', mood: 'soft', text: "Before, every workout was a big decision. Now it's just... what we do on those days." },
         { who: 'wanderer', text: "That's not boredom. That's the habit setting. Like steel cooling." },
+        { who: 'wanderer', text: 'Listen to how you talk now. You used to say "I\'m trying to get back into it." Lately you just say "I train."' },
+        { who: 'you', text: '...Huh. I do.' },
+        { who: 'wanderer', text: "Results come and go like weather. Who you are is the ground under it. You've become someone who shows up. Nobody can test that out of you." },
       ],
     },
     {
@@ -166,7 +171,7 @@ export const PLATEAU: Chapter = {
     },
     {
       id: 'ch4-small-step',
-      when: { shortSession: true, inChapter: 4 },
+      when: { workouts: 38, shortSession: true, inChapter: 4 },
       lines: [
         { who: 'plateau', text: '...Small.' },
         { who: 'you', text: 'Still a step.' },

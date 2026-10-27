@@ -20,6 +20,14 @@ export const FLAME_LINES: Record<Moment, DailyLine[]> = {
     { text: 'Every page you write, I get a little brighter.' },
     { text: 'Every workout is a step toward {want}.', needs: 'want' },
     { text: "Let's go see what today's version of you can do." },
+    { text: 'Flat road again today. Flat roads still go somewhere.', inChapter: 4 },
+    { text: "The Plateau says nothing's changing. Let's go change something it can't see.", inChapter: 4 },
+    { text: 'Fog or no fog, one step. I can see one step. Want it?', inChapter: 5 },
+    { text: "The Hollow's loud this morning. That's okay. We can walk while it talks.", inChapter: 5 },
+    { text: "Wings out. Let's go.", inChapter: 5 },
+    { text: "There's no top, so there's no hurry. Just today's bit of mountain.", inChapter: 6 },
+    { text: "You're not trying to get back to who you were any more. You're just being who you are. I like this one.", inChapter: 6 },
+    { text: "You don't need to feel motivated. You just need to be someone who shows up. You already are." },
   ],
   trained: [
     { text: "Page written. Look at me, I'm practically glowing." },
@@ -28,6 +36,10 @@ export const FLAME_LINES: Record<Moment, DailyLine[]> = {
     { text: 'Done for today. The rest of the day is yours.' },
     { text: 'I felt that one. Warm all the way through.' },
     { text: 'Today counts. It always will.' },
+    { text: 'Another crack in the Plateau. You can\'t see it yet. I can.', inChapter: 4 },
+    { text: 'The fog got a little thinner. Did you notice? I noticed.', inChapter: 5 },
+    { text: 'A little higher. The view keeps changing. So do you.', inChapter: 6 },
+    { text: 'Another promise kept. Your word is getting heavy, in the good way.' },
   ],
   rest: [
     { text: "No training today. I'll keep the fire going, you keep the promise." },
@@ -38,6 +50,8 @@ export const FLAME_LINES: Record<Moment, DailyLine[]> = {
     { text: 'Today the work is to do nothing much. You can do that, right?' },
     { text: "I like rest days. You're calmer. I'm calmer." },
     { text: 'A walk, a stretch, a nap. Any of those counts today.' },
+    { text: 'My wings need a nap too. Even fairies rest.', inChapter: 5 },
+    { text: "Resting isn't being weak. It's looking after someone you care about. It happens to be you." },
   ],
   rested: [
     { text: "You rested. I can feel it. I'm burning bright today." },
@@ -53,12 +67,15 @@ export const FLAME_LINES: Record<Moment, DailyLine[]> = {
     { text: 'Missing days is part of it. Coming back is the part that matters.' },
     { text: "Let's not make up for lost time. Let's just do today." },
     { text: 'Start small today. Small still counts.' },
+    { text: "No catching up. There's nothing to catch up on. There's just today." },
+    { text: "Be gentle with yourself today. The Hollow will be loud enough for both of us, and it's wrong." },
   ],
   rough: [
     { text: "Small counts. Show up small and I'll do the rest." },
     { text: "A rough day, and you still came. That's the whole secret." },
     { text: "Short workouts are still workouts. I don't count minutes, I count pages." },
     { text: 'Go easy on yourself today. I am.' },
+    { text: "If a friend did a little on a bad day, you'd be proud of them. Be that friend today." },
   ],
   best: [
     { text: 'Did you feel that? I grew a little.' },
@@ -90,6 +107,8 @@ export const FLAME_LINES: Record<Moment, DailyLine[]> = {
     { text: 'I kept myself warm. Welcome back.' },
     { text: "No questions. I'm just glad you're here." },
     { text: "Let's start small again. I'll grow back fast, you'll see." },
+    { text: "You didn't lose anything. Every page you wrote is still in the book." },
+    { text: "Coming back after time away is the bravest workout there is. You just did the hard part." },
   ],
 };
 

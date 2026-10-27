@@ -30,9 +30,9 @@ describe('season simulator', () => {
     expect(s.problems).toEqual([]);
   });
 
-  it('every scene of the written chapters plays for some kind of player', () => {
+  it('every scene plays for some kind of player', () => {
     const played = new Set(seasons.flatMap((s) => s.played.map((id) => id.replace(/-\d+$/, ''))));
-    const never = [...CHAPTERS.slice(0, 3).flatMap((c) => c.scenes), ...ANYTIME].filter((sc) => !played.has(sc.id)).map((sc) => sc.id);
+    const never = [...CHAPTERS.flatMap((c) => c.scenes), ...ANYTIME].filter((sc) => !played.has(sc.id)).map((sc) => sc.id);
     expect(never).toEqual([]);
   });
 

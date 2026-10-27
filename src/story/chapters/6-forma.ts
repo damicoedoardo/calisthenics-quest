@@ -1,7 +1,9 @@
 import type { Chapter } from '../types';
 
-/* Month 6. Lesson: there is no top, only a direction. The month's new scenes and the endless
-   climb in the Fog come with the months 4 to 6 build. */
+/* Month 6. Lesson: there is no top, only a direction. The healing step: making peace with the voice
+   instead of beating it, and keeping who you've become rather than chasing an ending. Every heart
+   answer comes home here. The heart moment asks what you want to keep; the finale reads it back,
+   with the letter, before the Wanderer lowers the hood and the flame shows its true form. */
 
 export const FORMA: Chapter = {
   n: 6,
@@ -29,14 +31,138 @@ export const FORMA: Chapter = {
       when: { chapter: 6 },
       shots: [{ title: 'Chapter 6: Forma', seconds: 2.4 }, { pan: 'up', seconds: 2.4 }],
       lines: [
+        { who: 'narrator', text: 'Out of the fog, the land rises into a mountain. Snow on the slopes. Stars close enough to touch.' },
         { who: 'wanderer', text: 'The Summit. The last stretch.', shot: { pan: 'center' } },
         { who: 'wanderer', text: "I'm getting lighter, you know. With every rep you do." },
+        { who: 'flame', mood: 'scared', text: 'Lighter like happy, or lighter like see-through? Because you look a bit see-through.' },
+        { who: 'wanderer', text: "Both. Don't worry. It's a good sign." },
+        { who: 'narrator', show: 'hollow', text: 'Far behind, at the edge of the trees, the Hollow follows. Smaller than you have ever seen it.' },
+      ],
+    },
+    {
+      id: 'ch6-summit-speaks',
+      when: { workouts: 66, chapter: 6 },
+      shots: [{ pan: 'up', seconds: 2 }],
+      lines: [
+        { who: 'narrator', show: 'summit', text: 'The peak is not a peak. Every time you climb a ridge, there is another one above it.' },
+        { who: 'summit', text: 'Higher. There is always higher. Whatever you reach, I will be taller.' },
+        { who: 'summit', text: 'You will never stand on top of me. Nobody ever has.' },
+        { who: 'you', text: "...I'm not trying to stand on top of you." },
+        { who: 'flame', mood: 'soft', text: 'In the fog you told the Hollow what you hold on to: "{heart5}." Hold on to it up here too. It works on mountains.', needs: 'heart5' },
+        { who: 'wanderer', text: 'People think the top is the point. The top is just a place where the view changes. The walking is the point.' },
+      ],
+    },
+    {
+      id: 'ch6-kid',
+      when: { workouts: 68, chapter: 6 },
+      lines: [
+        { who: 'narrator', show: 'kid', text: 'Someone is running up the path behind you, out of breath and laughing. The kid from the Knight\'s armor.', shot: { enter: 'below' } },
+        { who: 'kid', text: 'Wait up! I had to tell you. I told the whole village what you said. "{heart3}" Mira carved it over the forge door.', needs: 'heart3' },
+        { who: 'kid', text: "Wait up! I've been practicing. I'm bad at it. I'm doing it anyway. You taught me that.", missing: 'heart3' },
+        { who: 'kid', text: 'Lia says hi. She teaches the little ones at the lake now. She says nobody is allowed to be the best in the room.', answer: { id: 'lia', is: 'yes' } },
+        { who: 'kid', text: "Sol says she's taking every Sunday off. Every single one. She says you'll know why.", answer: { id: 'sol', is: 'yes' } },
+        { who: 'kid', text: 'And the lady with the lamp sent one of her letters. The one that says "people like us do."', answer: { id: 'vela', is: 'yes' } },
+        { who: 'kid', text: "I'm not scared of being bad at things any more. Well. Less. Less scared." },
+        { who: 'flame', mood: 'happy', text: "Less scared is the best kind of scared. It's the kind that still goes outside." },
+      ],
+    },
+    {
+      id: 'ch6-remembering',
+      when: { workouts: 70, chapter: 6 },
+      music: 'memory',
+      lines: [
+        { who: 'narrator', show: 'flame', text: '{flame} flies ahead, then circles back, then flies ahead again. Like a kid on a long walk.' },
+        { who: 'flame', mood: 'soft', text: "Can I tell you a secret? I don't think I'm just a flame." },
+        { who: 'flame', mood: 'soft', text: 'I remember {heart1}. Not like a story somebody told me. Like I was there.', needs: 'heart1' },
+        { who: 'flame', mood: 'soft', text: 'The closer we get to the top, the more I remember. Long evenings. Nobody counting anything. Moving just because it felt like flying.' },
+        { who: 'flame', mood: 'soft', text: "And I remember the day it stopped feeling like that. That's when I got small." },
+        { who: 'narrator', show: 'hollow', text: 'A little way back, the Hollow sits on a rock, hugging its knees.' },
+        { who: 'flame', mood: 'soft', text: "It's still following us. ...It looks cold." },
+      ],
+    },
+    {
+      id: 'ch6-book',
+      when: { workouts: 72, chapter: 6 },
+      place: 'ashlands-camp',
+      music: 'camp',
+      lines: [
+        { who: 'narrator', show: 'wanderer', text: 'At the fire, the Wanderer hands back the book from the ash. It is thick now. Every page written.' },
+        { who: 'wanderer', text: 'Read the margins.' },
+        { who: 'narrator', text: 'Next to the hard days there are little notes. "Came anyway." "Short, still counts." "Rested. Good." The handwriting is yours.' },
+        { who: 'you', text: "I didn't write these." },
+        { who: 'wanderer', text: "Didn't you?" },
+        { who: 'flame', mood: 'scared', text: 'Okay. OKAY. The song. The scar. The footprints. Now the handwriting. Somebody explain things to the fairy.' },
+        { who: 'wanderer', text: 'Soon. I promised I would read you your letter. I keep my promises. I learned that from you.' },
+      ],
+    },
+    {
+      id: 'ch6-heart',
+      when: { workouts: 74, chapter: 6 },
+      music: 'memory',
+      lines: [
+        { who: 'narrator', show: 'flame', text: 'Night, high up. The stars are so close {flame} keeps trying to eat one.' },
+        { who: 'flame', mood: 'soft', text: 'The Wanderer keeps saying there is no top. So when we get up there, it isn\'t over. We just keep going?' },
+        { who: 'flame', mood: 'soft', text: "Then I want to know what we're taking with us. You first." },
+      ],
+      ask: {
+        kind: 'choice',
+        id: 'heart6',
+        prompt: 'What do you want to keep, from here on?',
+        choices: [
+          { label: 'Showing up, even small', value: 'Showing up, even small.' },
+          { label: 'Resting without guilt', value: 'Resting without guilt.' },
+          { label: 'Being kind to myself', value: 'Being kind to myself.' },
+          { label: 'The fun of it', value: 'The fun of it.' },
+        ],
+        write: 'Write your own',
+        after: [
+          { who: 'flame', mood: 'soft', text: '"{heart6}" ...I\'m writing that on my wings.' },
+          { who: 'flame', mood: 'happy', text: "Then that's the map. Not a mountain. That. I'll carry it for you when you forget." },
+        ],
+      },
+    },
+    {
+      id: 'ch6-short',
+      when: { workouts: 65, shortSession: true, inChapter: 6 },
+      lines: [
+        { who: 'summit', text: 'So little. You will never reach the top like that.' },
+        { who: 'wanderer', text: "Steep days call for short steps. That's how anyone climbs anything." },
+        { who: 'flame', mood: 'soft', text: 'And there is no top. So. Joke is on the mountain.' },
+      ],
+    },
+    {
+      id: 'ch6-rest',
+      when: { restDay: true, inChapter: 6 },
+      music: 'camp',
+      lines: [
+        { who: 'narrator', show: 'flame', text: 'A rest day on the mountain. The air is thin and clean. {flame} makes little smoke rings and is very pleased about it.' },
+        { who: 'flame', mood: 'sleepy', text: 'Thin air up here. All the more reason to breathe.' },
+        { who: 'flame', mood: 'soft', text: "Remember the first rest day, in the ash? I was so surprised. Now I can't imagine us without them." },
+        { who: 'wanderer', text: 'The people who keep going for a lifetime are the ones who learned to stop for a day.' },
+      ],
+    },
+    {
+      id: 'ch6-last-camp',
+      when: { workouts: 76, chapter: 6 },
+      music: 'camp',
+      shots: [{ pan: 'down', seconds: 2.4 }],
+      lines: [
+        { who: 'narrator', text: "The last camp before the top. You look down, and the whole road is there below you, in lights." },
+        { who: 'narrator', text: 'A fire in the ash, where you first got up. The lake, still and silver. The village, every forge lit.' },
+        { who: 'narrator', show: 'vela', text: "Out on the flat road, a lamp flashes twice. Vela, keeping it on.", answer: { id: 'vela', is: 'yes' } },
+        { who: 'wanderer', text: 'Every one of those lights is a day you came. Look how many.' },
+        { who: 'narrator', text: 'Your armor hums, softly. The Echo, settled in there, says one quiet thing.' },
+        { who: 'echo', text: 'Not bad. ...Not bad at all.' },
+        { who: 'flame', mood: 'sleepy', text: "Sleep. Big day tomorrow. Well. Normal day. That's sort of the point." },
       ],
     },
     {
       id: 'ch6-await-test',
       when: { awaitingTest: 6 },
-      lines: [{ who: 'wanderer', text: 'One last test. Not to prove anything. Just to see how far you\'ve come.' }],
+      lines: [
+        { who: 'wanderer', text: "One last test. Not to prove anything. Just to see how far you've come." },
+        { who: 'wanderer', text: "Fresh, after a warm-up, on the Hero tab. Whatever it says, it can't measure the part that matters: that you kept coming." },
+      ],
     },
     {
       id: 'finale',
@@ -45,6 +171,9 @@ export const FORMA: Chapter = {
         { who: 'narrator', text: "Near the top, a small shadow sits alone on a rock. The Hollow. It's the size of a child now." },
         { who: 'hollow', text: '{voice}', needs: 'voice' },
         { who: 'you', text: 'Maybe. I came anyway.' },
+        { who: 'hollow', text: "Why aren't you angry? I was awful to you. For years." },
+        { who: 'you', text: "You were scared. You thought if I never tried, I could never get hurt. You were trying to keep me safe." },
+        { who: 'you', text: "You don't have to do that any more. I've got it now." },
         { who: 'narrator', text: 'You hold out your hand. After a long moment, the shadow takes it.' },
         { who: 'wanderer', text: "You didn't destroy it. Nobody does. You just stopped letting it walk in front of you." },
         { who: 'narrator', text: 'At the top, the Wanderer lowers the hood.', shot: { zoom: 'in', seconds: 2 } },
@@ -52,12 +181,16 @@ export const FORMA: Chapter = {
         { who: 'bestself', text: "Hi. I've been waiting a long time to meet you." },
         { who: 'bestself', text: "I didn't come back to save you. I couldn't. I could only walk next to you." },
         { who: 'bestself', text: 'Every rep you did, I became a little more real.' },
+        { who: 'bestself', text: 'I promised I would read your letter back to you. Here it is.' },
         { who: 'bestself', text: 'On the first day you wrote: "I\'m starting again because {why}."', needs: 'why' },
         { who: 'bestself', text: 'You wanted to be able to {want}. Look at your hands.', needs: 'want' },
         { who: 'bestself', text: 'You said you were doing this for {forWho}. They got the best of you. So did you.', needs: 'forWho' },
         { who: 'bestself', text: 'And you asked me: "When I want to quit, remind me that {remind}."', needs: 'remind' },
         { who: 'bestself', text: 'You never needed me to remind you. You remembered on your own.' },
+        { who: 'bestself', text: 'And near the top you told {flame} what you want to keep: "{heart6}." That isn\'t an ending. That\'s a direction.', needs: 'heart6' },
+        { who: 'narrator', show: 'flame', text: '{flame} burns brighter than it ever has. You have to look away. When you look back, a small figure made of fire is standing beside you. A kid. Your face, from long before any of this.', shot: { fade: 'white', seconds: 1.6 } },
         { who: 'flame', mood: 'soft', text: "I remember now. I'm the part of you that loved {heart1}.", needs: 'heart1' },
+        { who: 'flame', mood: 'soft', text: "I remember now. I'm the part of you that loved moving, back before anyone counted anything.", missing: 'heart1' },
         { who: 'flame', mood: 'happy', text: 'You never lost me. You just stopped playing.' },
         { who: 'bestself', text: "This isn't an ending. Your best self isn't a place you arrive. It's a direction you keep facing." },
         { who: 'flame', mood: 'happy', text: '...So. Same time Monday?' },

@@ -279,7 +279,9 @@ export function todaysQuest(state: GameState, checkin: Checkin = state.draft?.ch
   const other: PathId = day === 'A' ? 'pull' : 'push';
   // A fully beaten path hands the lead to the other one.
   const lead = block(state, main, 'main') ?? block(state, other, 'main');
-  if (checkin === 'rough') return lead ? [{ ...lead, sets: Math.min(lead.sets, 3) }] : [];
+  // A Rough day is one exercise; with both main paths beaten, core is what's left to train.
+  const rough = lead ?? block(state, 'core', 'core');
+  if (checkin === 'rough') return rough ? [{ ...rough, sets: Math.min(rough.sets, 3) }] : [];
   const list = [lead, block(state, 'core', 'core'), block(state, other, 'support')].filter((b): b is QuestExercise => !!b);
   return list.filter((b, i) => list.findIndex((o) => o.id === b.id) === i);
 }

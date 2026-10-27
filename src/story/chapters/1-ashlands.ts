@@ -131,7 +131,7 @@ export const ASHLANDS: Chapter = {
     },
     {
       id: 'ch1-small-day',
-      when: { shortSession: true, inChapter: 1 },
+      when: { workouts: 4, shortSession: true, inChapter: 1 },
       lines: [
         { who: 'flame', mood: 'soft', text: 'A rough day, and you came anyway. Small, but you came.' },
         { who: 'hollow', text: "That barely counts. Who do you think you're fooling?" },

@@ -39,7 +39,7 @@ export const VILLAGE: Chapter = {
     },
     {
       id: 'ch3-knight',
-      when: { workouts: 26 },
+      when: { workouts: 26, chapter: 3 },
       lines: [
         { who: 'narrator', show: 'knight', text: 'A knight in flawless armor steps out of the village gate. Not one scratch on it.' },
         { who: 'knight', text: "Twenty minutes? Half a workout? Don't insult the forge.", shot: { enter: 'right' } },
@@ -49,19 +49,8 @@ export const VILLAGE: Chapter = {
       ],
     },
     {
-      id: 'ch3-song',
-      when: { workouts: 27 },
-      lines: [
-        { who: 'narrator', show: 'wanderer', text: "While you train, the Wanderer hums. It takes you a moment. It's the song you hum when you're nervous." },
-        { who: 'flame', mood: 'scared', text: 'How do they know your song?' },
-        { who: 'wanderer', text: 'Everybody knows that song.' },
-        { who: 'flame', mood: 'scared', text: "Nobody knows that song. It doesn't even have words. You made it up." },
-        { who: 'wanderer', text: "...Keep training. You're doing well." },
-      ],
-    },
-    {
       id: 'ch3-sol',
-      when: { workouts: 28 },
+      when: { workouts: 28, chapter: 3 },
       lines: [
         { who: 'narrator', show: 'sol', text: 'A runner is asleep at her desk, a cold forge behind her. A pair of running shoes hangs on a nail, dusty.' },
         { who: 'sol', text: "...Mm? I'll train when this project ends. Then the next one." },
@@ -119,6 +108,17 @@ export const VILLAGE: Chapter = {
         { who: 'flame', mood: 'happy', text: "I'm not a candle any more. Tell everyone." },
         { who: 'flame', text: "In the Fog I can throw fire now. Stand back. Or don't, I'll aim." },
         { who: 'narrator', text: 'Someone in a doorway takes their coat off the hook. Just to hold it, for now.' },
+      ],
+    },
+    {
+      id: 'ch3-song',
+      when: { workouts: 31, chapter: 3 },
+      lines: [
+        { who: 'narrator', show: 'wanderer', text: "While you train, the Wanderer hums. It takes you a moment. It's the song you hum when you're nervous." },
+        { who: 'flame', mood: 'scared', text: 'How do they know your song?' },
+        { who: 'wanderer', text: 'Everybody knows that song.' },
+        { who: 'flame', mood: 'scared', text: "Nobody knows that song. It doesn't even have words. You made it up." },
+        { who: 'wanderer', text: "...Keep training. You're doing well." },
       ],
     },
     {

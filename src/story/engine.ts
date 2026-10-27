@@ -142,7 +142,8 @@ export function sceneFor(scene: Scene, state: GameState): Scene {
 
 /**
  * Scenes whose moment has come and that the player has not seen yet, in story order. Once a
- * chapter is behind you, its leftover scenes are skipped (except the one that ends it), and so are
+ * chapter is behind you, its leftover scenes are skipped (except the one that ends it, and the
+ * finale), and so are
  * scenes tied to a workout long past, so nobody is buried in old scenes.
  */
 export function pendingScenes(state: GameState, now: Date): Scene[] {
@@ -151,7 +152,7 @@ export function pendingScenes(state: GameState, now: Date): Scene[] {
   const current = st.index + 1;
   const due = ALL_SCENES.filter(({ scene, chapter }) => {
     if (seen.has(savedId(scene, state))) return false;
-    if (chapter > 0 && chapter < current && scene.when.beaten !== chapter) return false;
+    if (chapter > 0 && chapter < current && scene.when.beaten !== chapter && !scene.when.finished) return false;
     if (longGone(scene.when, state)) return false;
     return holds(scene.when, state, st, now);
   }).map(({ scene }) => sceneFor(scene.when.away ? { ...scene, id: savedId(scene, state) } : scene, state));
