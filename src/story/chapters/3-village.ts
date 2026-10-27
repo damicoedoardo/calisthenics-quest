@@ -23,6 +23,13 @@ export const VILLAGE: Chapter = {
     dmg: 1.45,
     ground: '#1c1916',
     fog: '#4b4038',
+    // stages: [plates falling (art stage 1), helm off (art stage 2)]
+    lines: {
+      enter: "Do it properly, or don't do it.",
+      stages: ['Sloppy. That still counts?', '...Why does it keep working?'],
+      end: '...You kept going. Even badly.',
+      taunts: ["Half a workout? Don't bother.", "If it's not perfect, why try?", 'Everyone saw that.', 'Real warriors never rest.'],
+    },
   },
   scenes: [
     {
@@ -94,10 +101,10 @@ export const VILLAGE: Chapter = {
       id: 'ch3-knight-cracks',
       when: { shortSession: true, inChapter: 3 },
       lines: [
-        { who: 'narrator', show: 'knight', text: "A short session. When you finish, there's a crack in the Knight's perfect armor.", shot: { shake: 'small' } },
-        { who: 'knight', text: "That wasn't proper." },
+        { who: 'narrator', show: 'knight-cracked', text: "A short session. When you finish, there's a crack in the Knight's perfect armor.", shot: { shake: 'small' } },
+        { who: 'knight-cracked', text: "That wasn't proper." },
         { who: 'you', text: 'It was enough.' },
-        { who: 'knight', text: "...It shouldn't have worked." },
+        { who: 'knight-cracked', text: "...It shouldn't have worked." },
         { who: 'flame', mood: 'happy', text: 'Enough is a real word. Put it on a shirt.' },
       ],
     },
@@ -170,10 +177,11 @@ export const VILLAGE: Chapter = {
       when: { workouts: 35, answer: { id: 'sol', is: 'yes' } },
       place: 'lit-forges',
       lines: [
-        { who: 'narrator', show: 'sol', text: 'Sol starts running before she opens her work. Then she rests, a whole day, on purpose. Her forge lights, and this time it stays lit.' },
-        { who: 'sol', text: 'Nothing fell over. Can you believe it? I took the time, and the world held on without me.' },
-        { who: 'sol', text: "Rest isn't the prize for the work. It's part of the work." },
-        { who: 'flame', mood: 'happy', text: "I've been SAYING that." },
+        { who: 'narrator', show: 'sol-after', text: 'Sol starts running before she opens her work. Then she rests, a whole day, on purpose. Her forge lights, and this time it stays lit.' },
+        { who: 'sol-after', text: "New shoes. Bright ones. The old pair had too many excuses in them." },
+        { who: 'sol-after', text: 'Nothing fell over. Can you believe it? I took the time, and the world held on without me.' },
+        { who: 'sol-after', text: 'I slept all afternoon. Felt guilty for a bit. Then less. Less every time, I think.' },
+        { who: 'flame', mood: 'happy', text: "Less every time. I've been SAYING that. Well. Not in those words. But I was thinking it very loudly." },
       ],
     },
     {
@@ -191,10 +199,10 @@ export const VILLAGE: Chapter = {
       id: 'ch3-last-stand',
       when: { workouts: 36, chapter: 3 },
       lines: [
-        { who: 'narrator', show: 'knight', text: 'The Knight blocks the road out of the village. His armor is covered in hairline cracks now, one for every imperfect day you came anyway.' },
-        { who: 'knight', text: "Look at your record. Missed days. Short days. Bad days. It's a mess. It's not good enough." },
+        { who: 'narrator', show: 'knight-cracked', text: 'The Knight blocks the road out of the village. His armor is covered in hairline cracks now, one for every imperfect day you came anyway.' },
+        { who: 'knight-cracked', text: "Look at your record. Missed days. Short days. Bad days. It's a mess. It's not good enough." },
         { who: 'you', text: "It's not perfect. It's mine. And it's more than I had when I got here." },
-        { who: 'knight', text: 'That is not a standard.' },
+        { who: 'knight-cracked', text: 'That is not a standard.' },
         { who: 'you', text: "It's the only one that ever got me out of bed." },
         { who: 'flame', mood: 'happy', text: "Ooh. He's creaking. Keep going. One more page." },
       ],
@@ -204,7 +212,7 @@ export const VILLAGE: Chapter = {
       when: { beaten: 3 },
       music: 'memory',
       lines: [
-        { who: 'narrator', show: 'knight', text: 'The Knight drops to one knee. The armor opens with a sigh.', shot: { shake: 'small' } },
+        { who: 'narrator', show: 'knight-open', text: 'The Knight drops to one knee. The armor opens with a sigh.', shot: { shake: 'small' } },
         { who: 'narrator', show: 'kid', text: 'Inside there is no knight. Just a tired kid, scared of failing in front of everyone.', pause: 1.2 },
         { who: 'kid', text: 'If I never tried, I could never be bad at it.', shot: { enter: 'below' }, pace: 'slow' },
         { who: 'kid', text: 'I just wanted to keep you safe. If you were perfect, nobody could laugh.' },

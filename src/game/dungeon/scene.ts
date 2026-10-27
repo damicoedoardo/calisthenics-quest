@@ -40,7 +40,7 @@ import {
   type RelicId,
   type RoomKind,
   type Run,
-  type RunEnd,
+  type RunEnd as EngineEnd,
   type ShotStyle,
 } from './engine';
 
@@ -48,7 +48,32 @@ import {
    keeps a sprite for everything in it, and turns what happened (its events) into flashes, sparks,
    numbers and sound. Loaded only when a run starts, like everything that touches Phaser. */
 
-export type { SheetKey, FreePick, RunEnd };
+export type { SheetKey, FreePick };
+
+/** How a run ended, for the recap: the engine's result, the items picked up, and whether the
+    Warden fell (null when this dungeon has none). */
+export interface RunEnd extends EngineEnd {
+  relics: Partial<Record<RelicId, number>>;
+  warden: boolean | null;
+}
+
+function recap(run: Run): RunEnd {
+  const over = run.over!,
+    wf = wardenFloor(run.layout);
+  const warden = wf < 0 ? null : over.won || run.floor > wf || (run.floor === wf && !!run.warden && !run.warden.alive);
+  return { ...over, relics: { ...run.relics }, warden };
+}
+
+/** A light buzz on phones, for the moments you should feel: never with reduced motion or the sound off. */
+function buzz(pattern: number | number[]) {
+  try {
+    if (typeof navigator === 'undefined' || !('vibrate' in navigator) || music.muted) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    navigator.vibrate(pattern);
+  } catch {
+    // Some browsers refuse vibrate outside a tap: it's only a nicety.
+  }
+}
 
 export interface RunSetup {
   zone: Zone;
@@ -253,7 +278,7 @@ class DungeonScene extends Phaser.Scene {
       }
       this.ended = true;
       this.bus.hud(this.hud());
-      this.bus.end(this.run.over);
+      this.bus.end(recap(this.run));
       return;
     }
     this.makeTextures();
@@ -350,7 +375,9 @@ class DungeonScene extends Phaser.Scene {
       vh = height / zoom,
       // Room above the top wall for the HUD, so the door never hides under it.
       top = 78 / zoom,
-      bottom = 16;
+      // Room below the bottom wall for the Dodge and ability buttons, so they never cover you
+      // where you walk in.
+      bottom = 16 + 120 / zoom;
     const bw = Math.max(w + 24, vw),
       ch = h + top + bottom,
       bh = Math.max(ch, vh);
@@ -770,7 +797,7 @@ class DungeonScene extends Phaser.Scene {
       this.bus.hud(this.hud());
       if (run.over.won) this.cameras.main.flash(600, 255, 240, 200);
       else this.hero.setTint(0x6b7280);
-      this.time.delayedCall(run.over.won ? 1200 : 900, () => this.bus.end(run.over!));
+      this.time.delayedCall(run.over.won ? 1200 : 900, () => this.bus.end(recap(run)));
     }
   }
 
@@ -1093,6 +1120,7 @@ class DungeonScene extends Phaser.Scene {
           pop.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => pop.destroy());
         }
         if (big) {
+          buzz(huge ? [30, 40, 50] : 25);
           this.cameras.main.shake(huge ? 320 : 160, huge ? 0.01 : 0.006);
           this.hitStop(huge ? 70 : 60);
         }
@@ -1103,6 +1131,7 @@ class DungeonScene extends Phaser.Scene {
         break;
       }
       case 'hurt':
+        buzz(40);
         this.hitStop(70);
         this.hero.setTintFill(0xff6b6b);
         this.time.delayedCall(90, () => !this.run.over && this.hero.clearTint());
@@ -1223,6 +1252,7 @@ class DungeonScene extends Phaser.Scene {
         break;
       }
       case 'dodge': {
+        buzz(12);
         const { x, y, toX, toY } = e;
         this.sfx('dash', 1.3);
         this.puffs.explode(6, x, y + 18);

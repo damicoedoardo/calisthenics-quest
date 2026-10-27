@@ -1,6 +1,7 @@
 'use client';
 
-import { Check, Flame, Heart, Lock, Play, Sparkles, Sword, Zap } from 'lucide-react';
+import { Check, Lock, Play } from 'lucide-react';
+import { Sprite } from './Sprite';
 import { Ember } from './Characters';
 import { Hero } from './Hero';
 import { gearOf, type GameState } from '@/lib/game';
@@ -32,18 +33,18 @@ export function PlayTab({ state, onPlay }: Props) {
     fairy = FLAME_STAGES.find((s) => s.id === 'fairy')!.at;
   const toGo = (n: number) => `${n - workouts} more workout${n - workouts === 1 ? '' : 's'}`;
   const rows = [
-    { Icon: Sword, name: 'Strike', from: 'Push', value: `+${Math.round(power.strike * 100)}% damage`, hint: nextGrowth(state, 'push') },
-    { Icon: Zap, name: 'Reach', from: 'Pull', value: `+${Math.round(power.reach * 100)}% speed`, hint: nextGrowth(state, 'pull') },
-    { Icon: Heart, name: 'Hold', from: 'Core', value: `+${power.hold} HP`, hint: nextGrowth(state, 'core') },
+    { icon: 'power' as const, name: 'Strike', from: 'Push', value: `+${Math.round(power.strike * 100)}% damage`, hint: nextGrowth(state, 'push') },
+    { icon: 'haste' as const, name: 'Reach', from: 'Pull', value: `+${Math.round(power.reach * 100)}% speed`, hint: nextGrowth(state, 'pull') },
+    { icon: 'vital' as const, name: 'Hold', from: 'Core', value: `+${power.hold} HP`, hint: nextGrowth(state, 'core') },
     {
-      Icon: Flame,
+      icon: 'flame' as const,
       name: power.flameName ? `${power.flameName}'s fire` : 'Your flame',
       from: 'Workouts',
       value: `${power.flames} flame${power.flames === 1 ? '' : 's'}`,
       hint: nextFlame ? `${toGo(nextFlame)}: one more flame` : null,
     },
     {
-      Icon: Sparkles,
+      icon: 'nova' as const,
       name: power.fairy ? 'Fire fairy' : 'Fireballs',
       from: stage.name,
       value: power.fairy ? 'Fireballs, heals you' : power.fireballs ? 'Fireballs' : 'Not yet',
@@ -67,10 +68,10 @@ export function PlayTab({ state, onPlay }: Props) {
       <section className="rounded-2xl bg-ink-800 p-4">
         <p className="font-pixel text-[10px] text-slate-400">Your power, from your training</p>
         <ul className="mt-3 space-y-2.5">
-          {rows.map(({ Icon, name, from, value, hint }) => (
+          {rows.map(({ icon, name, from, value, hint }) => (
             <li key={name} className="flex items-start gap-3">
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-ink-900 text-gold-300">
-                <Icon size={16} />
+                <Sprite id="skillIcon" opts={{ name: icon }} size={28} label="" />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="flex items-baseline justify-between gap-2 text-sm">

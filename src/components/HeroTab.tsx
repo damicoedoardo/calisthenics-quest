@@ -305,10 +305,14 @@ function Keepsakes({ cleared }: { cleared: number }) {
                   <p className="mt-1.5 text-[11px] leading-snug text-slate-400">{z.keepsake.text}</p>
                 </>
               ) : (
-                <p className="flex items-center gap-1.5 text-xs text-slate-600">
-                  {/* Only the next boss has a name; the ones after it are still in the fog. */}
-                  <Lock size={12} /> {z.id === cleared ? z.bossName : '???'}
-                </p>
+                <div className="flex items-center gap-2">
+                  {/* Still in the fog: only its shape shows. */}
+                  <Sprite id="keepsake" opts={{ zone: z.id }} size={36} label="A keepsake not won yet" className="shrink-0 opacity-40 brightness-0 invert-[.35]" />
+                  <p className="flex items-center gap-1.5 text-xs text-slate-600">
+                    {/* Only the next boss has a name; the ones after it are still in the fog. */}
+                    <Lock size={12} /> {z.id === cleared ? z.bossName : '???'}
+                  </p>
+                </div>
               )}
             </li>
           );

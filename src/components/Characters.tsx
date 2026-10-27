@@ -56,7 +56,20 @@ export function Mira({ size = 64 }: { size?: number }) {
 
 export type EnemyId = 'slime' | 'mirror' | 'golem' | 'hollow' | 'summit' | 'knight';
 
+/** Each chapter's enemy as you meet it as the Fog's boss (the slime, Tomorrow, has no other form). */
 export function Enemy({ id, size = 72 }: { id: EnemyId; size?: number }) {
-  if (id === 'hollow') return <Hollow size={size} bounce={false} />;
-  return <Sprite id={id} size={size} />;
+  switch (id) {
+    case 'mirror':
+      return <Sprite id="mirrorBoss" size={size} label="The Mirror" />;
+    case 'knight':
+      return <Sprite id="knightBoss" opts={{ stage: 0 }} size={size} label="The Perfect Knight" />;
+    case 'golem':
+      return <Sprite id="plateauBoss" opts={{ stage: 0 }} size={size} label="The Plateau" />;
+    case 'hollow':
+      return <Sprite id="hollowBoss" size={size} label="The Hollow" />;
+    case 'summit':
+      return <Sprite id="summitBoss" size={size} label="The Summit" />;
+    default:
+      return <Sprite id={id} size={size} />;
+  }
 }

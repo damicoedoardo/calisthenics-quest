@@ -1,8 +1,8 @@
 import type { DayPage, GameState } from '@/lib/game';
 import { dayKey, daySeed, daysApart, daysInRow, daysSinceTraining, isRestDay } from '@/lib/days';
-import { fill, storyState, storyWords } from '../engine';
+import { ALL_SCENES, fill, storyState, storyWords } from '../engine';
 import type { DailyLine, FlameMood, Moment, Quote } from '../types';
-import { FLAME_LINES, MOMENT_MOOD } from './flame-lines';
+import { CALLBACKS, FLAME_LINES, MOMENT_MOOD } from './flame-lines';
 import { QUOTES } from './quotes';
 import { FIRE_LINES, REST_TRUTHS } from './rest';
 import { AFTER_LINES, MARGIN_NOTES, type AfterKind, type MarginKind } from './after';
@@ -94,8 +94,32 @@ function usableLines(lines: DailyLine[], state: GameState): string[] {
   return lines.filter(usable).map((l) => fill(l.text, words));
 }
 
+/** Days that aren't for a callback: the first, and the days the flame has missed you. */
+const NO_CALLBACK: Moment[] = ['first', 'back', 'missed'];
+
+/** A villager follow-up due today: its scene seen, not said on an earlier page, still fresh. */
+export function callbackLine(state: GameState, now: Date): string | undefined {
+  // Once said today, it stays today's line, even after a workout.
+  const page = todayPage(state, now);
+  if (page && CALLBACKS.some((c) => c.text === page.line)) return page.line;
+  const since = daysSinceTraining(state, now);
+  if (since === null || since === 0 || NO_CALLBACK.includes(todayMoment(state, now))) return undefined;
+  const key = dayKey(now);
+  const said = new Set((state.days ?? []).filter((d) => d.day !== key).map((d) => d.line));
+  const seen = new Set(state.seenScenes);
+  const n = state.sessions.length;
+  const due = CALLBACKS.find((c) => {
+    // Exact id: sceneById would also match `ch4-vela` for `ch4-vela-down`.
+    const at = ALL_SCENES.find((p) => p.scene.id === c.after)?.scene.when.workouts ?? 0;
+    return seen.has(c.after) && !said.has(c.text) && n <= at + c.within && (!c.restDay || isRestDay(state, now));
+  });
+  return due?.text;
+}
+
 /** Today's line from the flame, with your words filled in. */
 export function flameLine(state: GameState, now: Date): string {
+  const callback = callbackLine(state, now);
+  if (callback) return callback;
   const said = new Set(recentPages(state, now).map((d) => d.line));
   const all = usableLines(FLAME_LINES[todayMoment(state, now)], state);
   const fresh = all.filter((t) => !said.has(t));
@@ -133,11 +157,27 @@ export function afterKind(state: GameState): AfterKind {
   return last.kind === 'mini' ? 'short' : 'full';
 }
 
-/** What the flame says on the loot card, right after the workout that ends `state`. */
+/** An after-workout line doesn't come back within this many workouts (when the list has enough). */
+const AFTER_AVOID = 5;
+
+/**
+ * What the flame says on the loot card, right after the workout that ends `state`. The season is
+ * replayed workout by workout, so the pick is the same every time the card is drawn, and it skips
+ * whatever the last few workouts heard.
+ */
 export function afterWorkoutLine(state: GameState): string {
-  const lines = usableLines(AFTER_LINES[afterKind(state)], state);
-  // Walk through the list one workout at a time, so a line never comes back before the rest have had a turn.
-  return lines.length ? lines[state.sessions.length % lines.length] : '';
+  const recent: string[] = [];
+  let line = '';
+  for (let k = 1; k <= state.sessions.length; k++) {
+    const then = k === state.sessions.length ? state : { ...state, sessions: state.sessions.slice(0, k) };
+    const lines = usableLines(AFTER_LINES[afterKind(then)], then);
+    const fresh = lines.filter((t) => !recent.includes(t));
+    const pool = fresh.length ? fresh : lines;
+    line = pool.length ? pool[k % pool.length] : '';
+    if (line) recent.push(line);
+    if (recent.length > AFTER_AVOID) recent.shift();
+  }
+  return line;
 }
 
 /** What a Book of Days page held, for the note in its margin. */
