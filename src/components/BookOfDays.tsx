@@ -39,7 +39,7 @@ export function BookOfDays({ state, onClose }: { state: GameState; onClose: () =
   const hearts = HEARTS.filter((id) => words[id].trim());
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-ink-950">
+    <div className="fixed inset-0 z-50 !mt-0 overflow-y-auto bg-ink-950">
       <div className="safe-top safe-bottom mx-auto max-w-md space-y-4 px-4 pb-16">
         <header className="flex items-center gap-3 pt-2">
           <button onClick={onClose} aria-label="Back" className="rounded-lg bg-ink-800 p-2 text-slate-300">
@@ -48,7 +48,7 @@ export function BookOfDays({ state, onClose }: { state: GameState; onClose: () =
           <div className="min-w-0 flex-1">
             <h1 className="font-pixel text-sm text-gold-300">Book of Days</h1>
             <p className="text-xs text-slate-500">
-              {state.days?.length ?? 0} pages. A page for every day you opened it.
+              {state.days?.length ?? 0} {state.days?.length === 1 ? 'page' : 'pages'}. A page for every day you opened it.
             </p>
           </div>
           <Book size={44} />

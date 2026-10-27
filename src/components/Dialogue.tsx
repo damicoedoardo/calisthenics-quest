@@ -101,6 +101,8 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
   const line = beat?.line;
   const full = line ? line.text.length : 0;
   const done = FAST || shown >= full;
+  // With ?fast the typing never runs, so a finished line shows in full.
+  const upTo = done ? full : shown;
   const narrator = line?.who === 'narrator';
   const film = cinematic && narrator;
   const speed = film ? 42 : 28;
@@ -196,7 +198,7 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
             {film ? (
               <div key={index} className="min-h-[132px] animate-fadein px-2 text-center">
                 <p className="text-xl leading-relaxed text-slate-200">
-                  {line.text.slice(0, done ? full : shown)}
+                  {line.text.slice(0, upTo)}
                   {!done && <span className="opacity-0">{line.text.slice(shown)}</span>}
                 </p>
                 <p className="mt-4 text-xs text-slate-600">{done ? <span className="animate-blink">tap</span> : <span>&nbsp;</span>}</p>
@@ -205,7 +207,7 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
               <div className={`min-h-[132px] rounded-xl p-4 pixel-border ${dark ? 'bg-[#140f1f]' : 'bg-ink-800/95'} ${narrator ? 'text-center' : ''}`}>
                 {!narrator && <p className={`mb-2 font-pixel text-[10px] ${TAG[who?.tag ?? 'gold']}`}>{name}</p>}
                 <p className={`text-lg leading-snug ${narrator ? 'italic text-slate-300' : dark ? 'text-red-100' : 'text-slate-100'}`}>
-                  {line.text.slice(0, done ? full : shown)}
+                  {line.text.slice(0, upTo)}
                   {!done && <span className="opacity-0">{line.text.slice(shown)}</span>}
                 </p>
                 <p className="mt-2 text-right text-xs text-slate-500">{done ? <span className="animate-blink">▼ tap</span> : <span>&nbsp;</span>}</p>
