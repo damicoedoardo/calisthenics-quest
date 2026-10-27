@@ -60,3 +60,15 @@ CREATE TABLE IF NOT EXISTS party_invites (
     PRIMARY KEY (party_id, to_id)
 );
 CREATE INDEX IF NOT EXISTS party_invites_to ON party_invites (to_id);
+
+-- Forge materials one friend gives another, waiting until claimed (app/gifts.py).
+CREATE TABLE IF NOT EXISTS gifts (
+    id          uuid PRIMARY KEY,
+    sender      uuid NOT NULL,
+    receiver    uuid NOT NULL,
+    mat         text NOT NULL,
+    n           integer NOT NULL,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    claimed_at  timestamptz
+);
+CREATE INDEX IF NOT EXISTS gifts_receiver ON gifts (receiver) WHERE claimed_at IS NULL;

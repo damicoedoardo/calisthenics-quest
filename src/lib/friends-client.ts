@@ -29,3 +29,18 @@ export async function removeFriend(id: string): Promise<void> {
 }
 
 export { Offline };
+
+/** Co-op materials one friend gives another (app/routes/gifts.py on the server). */
+export interface Gift {
+  id: string;
+  from: string;
+  from_name: string;
+  mat: string;
+  n: number;
+}
+
+/** Give a friend materials: "given", with how many more you can give them today. */
+export const giveGift = async (to: string, mat: string, n: number) => json<{ status: string; left_today: number }>(await api('POST', '/gifts', { to, mat, n }));
+
+/** Take home what friends gave you (each gift only once). */
+export const claimGifts = async () => json<{ gifts: Gift[] }>(await api('POST', '/gifts/claim'));

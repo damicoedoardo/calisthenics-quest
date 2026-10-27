@@ -11,6 +11,7 @@ import { zoneMusic } from '@/lib/music-zones';
 import { friendSheets, runSheets } from '@/game/sheets';
 import type { FriendCard } from '@/lib/friends';
 import { buildOf } from '@/lib/stats';
+import { MATS, type MatId } from '@/balance';
 import { atRisk, settleGear, vaultSize, wornFor, type AtRisk, type GearOutcome } from '@/lib/fog-gear';
 import { ITEM_SLOTS, nameOf, RARITY, SLOT_NAME, shortOf, type Item, type ItemSlot } from '@/game/dungeon/items';
 import { ItemCard, ItemTile } from './ItemCard';
@@ -755,6 +756,14 @@ function RiskLine({ risk, flame, size = 26 }: { risk: AtRisk; flame: string; siz
           </span>
         </div>
       )}
+      {risk.slip.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2 text-[11px] text-gold-200">
+          {risk.slip.map((it) => (
+            <ItemTile key={it.id} item={it} size={size} />
+          ))}
+          <span>Forged too well for the Fog to take: a fall only slips {risk.slip.length === 1 ? 'it' : 'them'} back to the safe mark below.</span>
+        </div>
+      )}
       {risk.cold && (
         <div className="flex items-center gap-2 text-[11px] text-slate-300">
           <Guarded on cold label={`${Flame} can hold it once you train`}>
@@ -1169,11 +1178,12 @@ function BagPanel({ gear, build, risk, flame, onWear, onTakeOff, onDrop, onClose
 
 /** What happened to your gear: home and into the vault, or taken by the Fog. */
 function GearRecap({ out, vault, first, flame }: { out: GearOutcome; vault: number; first: boolean; flame?: string }) {
-  const rows = out.kept ? out.stored : out.lost;
-  if (!rows.length && !out.left.length && !out.held) return null;
+  const rows = out.kept ? out.stored : out.lost,
+    mats = (Object.entries(out.mats ?? {}) as [MatId, number][]).filter(([, n]) => n > 0);
+  if (!rows.length && !out.left.length && !out.held && !out.slipped?.length && !mats.length) return null;
   return (
     <div className="mt-4 w-full max-w-xs rounded-xl bg-ink-800 p-3 text-left ring-1 ring-ink-700">
-      <p className={`font-pixel text-[9px] ${out.kept ? 'text-gold-300' : 'text-red-300'}`}>{out.kept ? 'Into your vault' : 'The Fog took'}</p>
+      {rows.length > 0 && <p className={`font-pixel text-[9px] ${out.kept ? 'text-gold-300' : 'text-red-300'}`}>{out.kept ? 'Into your vault' : 'The Fog took'}</p>}
       <ul className="mt-2 space-y-1">
         {rows.map((it) => (
           <li key={it.id} className={`flex items-center gap-2 text-xs ${out.kept ? '' : 'opacity-60'}`}>
@@ -1186,6 +1196,23 @@ function GearRecap({ out, vault, first, flame }: { out: GearOutcome; vault: numb
         <p className="mt-2 flex items-center gap-2 text-xs text-orange-200">
           <ItemTile item={out.held} size={22} />
           {flame || 'Your flame'} held on to {nameOf(out.held)}.
+        </p>
+      )}
+      {out.slipped?.map((it) => (
+        <p key={it.id} className="mt-2 flex items-center gap-2 text-xs text-gold-200">
+          <ItemTile item={it} size={22} />
+          {nameOf(it)} came home with you, a few pluses lower.
+        </p>
+      ))}
+      {mats.length > 0 && (
+        <p className="mt-2 text-xs text-slate-300">
+          Found for Mira&apos;s forge:{' '}
+          {mats.map(([id, n], i) => (
+            <span key={id} style={{ color: MATS[id].color }}>
+              {i ? ', ' : ''}
+              {n} {MATS[id].name.toLowerCase()}
+            </span>
+          ))}
         </p>
       )}
       {out.left.length > 0 && (

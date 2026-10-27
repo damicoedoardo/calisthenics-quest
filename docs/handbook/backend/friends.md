@@ -67,6 +67,22 @@ party run in a zone you haven't opened keeps its loot but not the clear.
 | `src/lib/party.ts`, `party-client.ts` | Types, `startToJoin`, `canStart`; the calls and the shared party view (`usePartyView`), the lobby's open flag |
 | `src/components/Party.tsx` | `usePartyPoll` (every 4 s in a party, 30 s otherwise), `PartyInviteCard`, `PartyButton`, `PartyLobby` |
 
+## Gifts of forge materials
+
+Friends can give each other co-op materials for Mira's forge ([../game/forge.md](../game/forge.md)).
+On the Friends card each friend has a gift button: pick a material you have and how many, and
+**Give**. The server keeps the gift in `gifts` (`backend/app/gifts.py`, `routes/gifts.py`) and only
+then does your phone take the materials out of your save (`giveMats`). Your friend's card claims
+what waits on each refresh (`POST /gifts/claim`, each gift handed out once) into their save
+(`takeGifts`) and says who gave what.
+
+- Only to an accepted friend, only the four materials, and at most 10 a day from one friend to
+  another (`GIFTS.perDay` in `src/balance/upgrades.ts`; the server's copy is `PER_DAY` in
+  `routes/gifts.py`, keep the two the same). Over it, the server says how many are left (429).
+- The save is on the phone, so the server can't check you really had what you give; it only
+  makes sure a gift arrives once. There is no market and no trading back.
+- Tested in `backend/tests/test_gifts.py`; the save side in `src/lib/forge.test.ts`.
+
 ## How to change things
 
 | I want to... | Edit |
@@ -75,3 +91,5 @@ party run in a zone you haven't opened keeps its loot but not the clear.
 | Change how a friend looks in the list | `Row` / `FriendHero` in `Friends.tsx` |
 | Change when someone counts as online | `ONLINE_FOR` (server) and `BEAT_MS` (app) |
 | Change the party size | `MAX_PARTY` in `backend/app/party.py` and `src/lib/party.ts` |
+| Change how much can be given a day | `GIFTS.perDay` in `src/balance/upgrades.ts` and `PER_DAY` in `backend/app/routes/gifts.py` |
+| Change the gift picker | `GiveMats` in `Friends.tsx` |

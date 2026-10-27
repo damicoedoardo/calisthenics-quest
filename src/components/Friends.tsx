@@ -1,12 +1,14 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, Flame, Share2, Swords, UserPlus, Users, X } from 'lucide-react';
+import { Check, Flame, Gift as GiftIcon, Share2, Swords, UserPlus, Users, X } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { getClass, makeGear, type GearSlot } from '@/lib/gear';
 import { codeInUrl, friendTrainedToday, inviteLink, myCard, showCode, statusOf, type FriendCard, type FriendsList } from '@/lib/friends';
-import { acceptFriend, addFriend, getFriends, removeFriend, sendCard } from '@/lib/friends-client';
+import { acceptFriend, addFriend, claimGifts, getFriends, giveGift, removeFriend, sendCard } from '@/lib/friends-client';
 import { inviteToParty, setLobbyOpen } from '@/lib/party-client';
+import { giveMats, matsOf, takeGifts } from '@/lib/forge';
+import { GIFTS, MAT_IDS, MATS, type MatId } from '@/balance';
 import { cloudConfigured, useCloudStatus } from '@/lib/cloud-client';
 import { normalizeLook } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
@@ -77,11 +79,11 @@ export function FriendHero({ f, size = 44 }: { f: FriendCard; size?: number }) {
   return <Hero gear={gear} classId={cls} size={size} bounce={false} look={normalizeLook((f.look ?? undefined) as Partial<Look> | undefined)} />;
 }
 
-export function Row({ f, now, children }: { f: FriendCard; now: Date; children?: React.ReactNode }) {
+export function Row({ f, now, children, as: Tag = 'li' }: { f: FriendCard; now: Date; children?: React.ReactNode; as?: 'li' | 'div' }) {
   const cls = getClass(f.class_id ?? undefined);
   const dot = f.playing ? 'bg-gold-300' : f.online ? 'bg-emerald-400' : 'bg-slate-600';
   return (
-    <li className="flex items-center gap-3 py-2">
+    <Tag className="flex items-center gap-3 py-2">
       <div className="relative shrink-0">
         <FriendHero f={f} />
         <span className={`absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full ring-2 ring-ink-800 ${dot}`} aria-hidden />
@@ -100,12 +102,57 @@ export function Row({ f, now, children }: { f: FriendCard; now: Date; children?:
         </p>
       </div>
       {children}
-    </li>
+    </Tag>
   );
 }
 
-/** Hero tab: your friend code, adding friends, and who is online, in the Fog, or trained today. */
-export function FriendsCard({ state, update, sandbox }: { state: GameState; update: (fn: (s: GameState) => GameState) => void; sandbox: boolean }) {
+type Update = (fn: (s: GameState) => GameState) => void;
+
+/** Give a friend co-op materials for Mira's forge: pick one you have and how many (up to
+    GIFTS.perDay a day each friend). */
+function GiveMats({ f, state, update, done }: { f: FriendCard; state: GameState; update: Update; done: (msg: string) => void }) {
+  const have = matsOf(state),
+    mine = MAT_IDS.filter((id) => (have[id] ?? 0) > 0);
+  const [mat, setMat] = useState<MatId | null>(mine[0] ?? null);
+  const [n, setN] = useState(1);
+  if (!mat) return <p className="pb-2 text-[11px] text-slate-500">You have no forge materials to give yet. They drop when you play with friends.</p>;
+  const most = Math.min(have[mat] ?? 0, GIFTS.perDay);
+  return (
+    <div className="mb-2 space-y-2 rounded-xl bg-ink-900/60 p-2.5">
+      <div className="flex flex-wrap gap-1.5">
+        {mine.map((id) => (
+          <button key={id} onClick={() => { setMat(id); setN(1); }} className={`rounded-lg px-2 py-1 text-[11px] ${id === mat ? 'bg-ink-600 text-slate-100' : 'bg-ink-800 text-slate-400'}`} style={id === mat ? { boxShadow: `0 0 0 1px ${MATS[id].color}` } : undefined}>
+            <span style={{ color: MATS[id].color }}>{MATS[id].name}</span> {have[id]}
+          </button>
+        ))}
+      </div>
+      <div className="flex items-center gap-2">
+        <button aria-label="One less" onClick={() => setN(Math.max(1, n - 1))} className="rounded-lg bg-ink-700 px-2.5 py-1 text-sm">−</button>
+        <span className="w-6 text-center font-mono text-sm">{n}</span>
+        <button aria-label="One more" onClick={() => setN(Math.min(most, n + 1))} className="rounded-lg bg-ink-700 px-2.5 py-1 text-sm">+</button>
+        <button
+          onClick={async () => {
+            try {
+              const r = await giveGift(f.id, mat, n);
+              update((s) => giveMats(s, mat, n));
+              done(`Gave ${f.name || 'them'} ${n} ${MATS[mat].name.toLowerCase()}. ${r.left_today ? `You can give them ${r.left_today} more today.` : "That's all for today."}`);
+            } catch (e) {
+              done(e instanceof Error ? e.message : "Couldn't give it right now.");
+            }
+          }}
+          className="ml-auto flex items-center gap-1 rounded-lg bg-gold-400 px-3 py-1.5 text-xs font-semibold text-ink-950"
+        >
+          <GiftIcon size={13} /> Give
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Hero tab: your friend code, adding friends, and who is online, in the Fog, or trained today.
+    Friends can invite each other to a party and give each other forge materials. */
+export function FriendsCard({ state, update, sandbox }: { state: GameState; update: Update; sandbox: boolean }) {
+  const [giving, setGiving] = useState<string | null>(null);
   const { signedIn } = useCloudStatus();
   const [list, setList] = useState<FriendsList | null>(null);
   const [code, setCode] = useState('');
@@ -118,6 +165,15 @@ export function FriendsCard({ state, update, sandbox }: { state: GameState; upda
     try {
       setList(await getFriends());
       setNow(new Date());
+      // What friends gave you comes home with each refresh.
+      {
+        const { gifts } = await claimGifts();
+        if (gifts.length) {
+          update((s) => takeGifts(s, gifts));
+          const who = [...new Set(gifts.map((g) => g.from_name || 'A friend'))].join(' and ');
+          setMsg(`${who} gave you ${gifts.map((g) => `${g.n} ${(MATS[g.mat as MatId]?.name ?? g.mat).toLowerCase()}`).join(', ')} for Mira's forge.`);
+        }
+      }
     } catch {
       // Offline or a hiccup: keep what's on screen, try again on the next refresh.
     }
@@ -261,22 +317,38 @@ export function FriendsCard({ state, update, sandbox }: { state: GameState; upda
           {list.friends.length > 0 ? (
             <ul className="divide-y divide-ink-700">
               {list.friends.map((f) => (
-                <Row key={f.id} f={f} now={now}>
-                  <button
-                    aria-label={`Invite ${f.name || 'them'} to your party`}
-                    onClick={async () => {
-                      try {
-                        await inviteToParty(f.id);
-                        setLobbyOpen(true);
-                      } catch (e) {
-                        setMsg(e instanceof Error ? e.message : "Couldn't invite them right now.");
-                      }
-                    }}
-                    className="flex items-center gap-1 rounded-lg bg-ink-600 px-2.5 py-2 text-xs font-semibold"
-                  >
-                    <Swords size={14} /> Party
-                  </button>
-                </Row>
+                <li key={f.id}>
+                  <Row as="div" f={f} now={now}>
+                    <button
+                      aria-label={`Invite ${f.name || 'them'} to your party`}
+                      onClick={async () => {
+                        try {
+                          await inviteToParty(f.id);
+                          setLobbyOpen(true);
+                        } catch (e) {
+                          setMsg(e instanceof Error ? e.message : "Couldn't invite them right now.");
+                        }
+                      }}
+                      className="flex items-center gap-1 rounded-lg bg-ink-600 px-2.5 py-2 text-xs font-semibold"
+                    >
+                      <Swords size={14} /> Party
+                    </button>
+                    <button aria-label={`Give ${f.name || 'them'} forge materials`} onClick={() => setGiving(giving === f.id ? null : f.id)} className={`rounded-lg p-2 ${giving === f.id ? 'bg-gold-400 text-ink-950' : 'bg-ink-600 text-gold-200'}`}>
+                      <GiftIcon size={16} />
+                    </button>
+                  </Row>
+                  {giving === f.id && (
+                    <GiveMats
+                      f={f}
+                      state={state}
+                      update={update}
+                      done={(m) => {
+                        setMsg(m);
+                        setGiving(null);
+                      }}
+                    />
+                  )}
+                </li>
               ))}
             </ul>
           ) : (

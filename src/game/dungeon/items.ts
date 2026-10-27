@@ -1,6 +1,6 @@
 import type { ClassId } from '@/lib/gear';
 import type { Build, StatId } from '@/lib/stats';
-import { BONUS_SIZE, ITEM_BASE, ITEM_POWER, ITEM_ROLL_LOW, NEED, RARITY_LEAN, RARITY_SIZE, RARITY_WEIGHTS, SLOT_ODDS, STARTER } from '@/balance';
+import { BANDS, BONUS_SIZE, FALL_KEEP, ITEM_BASE, ITEM_POWER, ITEM_ROLL_LOW, MAX_PLUS, NEED, RARITY_LEAN, RARITY_SIZE, RARITY_WEIGHTS, SAFE_POINTS, SLOT_ODDS, STARTER, STEPS } from '@/balance';
 
 /* What the dungeon drops, as data: the things you wear, how rare they come, the bonuses they can
    carry, and what each asks of your training before you can wear it. engine.ts drops and wears
@@ -59,13 +59,32 @@ export interface Item {
   plus?: number;
   /** Bonuses rerolled at the forge so far (each reroll rolls from its own seed). */
   rerolls?: number;
+  /** Upgrades tried from +6 up, held or missed: the seed of the next try, so a press always gives the same result. */
+  tries?: number;
+  /** Misses since the last upgrade that held: each makes the next try likelier (FORGE_RISK.pity). */
+  misses?: number;
 }
 
-/** The forge's highest upgrade, and how much stronger each one makes an item. */
-export const MAX_PLUS = 5;
-export const PLUS_STEP = 0.1;
+/** The forge's highest upgrade (its steps are in src/balance/upgrades.ts). */
+export { MAX_PLUS };
+/** How much stronger an item is at this plus: each step's boost, added up. */
+export const boostAt = (plus: number) => 1 + STEPS.slice(0, plus).reduce((n, s) => n + s.boost, 0);
 /** How much stronger an item is for its upgrades. */
-export const boostOf = (it: Item) => 1 + PLUS_STEP * (it.plus ?? 0);
+export const boostOf = (it: Item) => boostAt(it.plus ?? 0);
+/** The highest safe point at or below this plus: a miss at the forge never slips under it. */
+export const safeFloor = (plus: number) => SAFE_POINTS.reduce((n, p) => (plus >= p ? p : n), 0);
+/** The highest safe point under this plus. */
+export const safeBelow = (plus: number) => SAFE_POINTS.reduce((n, p) => (plus > p ? p : n), 0);
+/** What a fall leaves of an item: from FALL_KEEP.from it comes home slipped to the safe point
+    under it; below that the Fog takes it (null). */
+export const afterFall = (it: Item): Item | null => ((it.plus ?? 0) >= FALL_KEEP.from ? { ...it, plus: safeBelow(it.plus ?? 0) } : null);
+/** The look an item has for its plus (a new one every few steps, see BANDS). */
+export const bandOf = (plus: number) => BANDS.reduce((b, x, i) => (plus >= x.from ? i : b), 0);
+/** The glow color of an item's band, or null when it's plain. */
+export function glowOf(it: Pick<Item, 'plus' | 'rarity'>): string | null {
+  const g = BANDS[bandOf(it.plus ?? 0)].glow;
+  return g === 'rarity' ? (it.rarity === 'common' ? '#e2e8f0' : RARITY[it.rarity].color) : g;
+}
 /** An item's name with its upgrades: "Ashen sword +2". */
 export const nameOf = (it: Item) => (it.plus ? `${it.name} +${it.plus}` : it.name);
 

@@ -234,7 +234,7 @@ export function gearOf(state: GameState): Record<GearSlot, Gear> {
   const gear = (slot: GearSlot): Gear => {
     const g = makeGear(slot, tier(slot), state.profile.classId),
       it = worn[slot === 'shield' ? 'charm' : slot];
-    return it ? { ...g, name: nameOf(it), item: looksOf(it) } : g;
+    return it ? { ...g, name: nameOf(it), item: looksOf(it), ...(it.plus ? { plus: it.plus } : {}) } : g;
   };
   return { weapon: gear('weapon'), armor: gear('armor'), shield: gear('shield') };
 }
