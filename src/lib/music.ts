@@ -11,7 +11,7 @@
 import { ZONE_TRACKS, type ZoneStingId, type ZoneTrackId } from './music-zones';
 
 export type TrackId = 'memory' | 'hollow' | 'heartbeat' | 'rise' | 'camp' | 'fog' | 'fogBoss' | ZoneTrackId;
-export type StingId = 'victory' | 'levelup' | 'defeat' | ZoneStingId;
+export type StingId = 'victory' | 'levelup' | 'defeat' | 'opening' | ZoneStingId;
 
 /** "thump" is a kick drum; "hat" and "snare" are noise drums. Drum tokens are just "x".
     "anvil" and "glass" are struck, pitched sounds that ring out (see PINGS). */
@@ -309,6 +309,17 @@ export const TRACKS: Record<TrackId | StingId, Track> = {
     ],
   },
   ...ZONE_TRACKS,
+  // The app opens: a glass ping as the flame catches, one note per letter of FORMA, then a warm chord.
+  opening: {
+    bpm: 100,
+    stepsPerBeat: 4,
+    voices: [
+      { wave: 'glass', gain: 0.08, pattern: 'G6 - - . . . . . . . E6 - - - - - - .' },
+      { wave: 'square', gain: 0.05, cutoff: 3000, pattern: '. . . G4 C5 E5 G5 C6 - - - - - - - - - .' },
+      { wave: 'square', gain: 0.03, cutoff: 2400, pattern: '. . . . . . . . . . E5 - - - - - - .' },
+      { wave: 'triangle', gain: 0.12, pattern: '. . . C3 - - - - - G3 C4 - - - - - - .' },
+    ],
+  },
   // A short fanfare for a hit that lands.
   victory: {
     bpm: 150,
@@ -425,7 +436,8 @@ class Engine {
       // Storage can be blocked; music just starts unmuted.
     }
     // Browsers only allow sound after a tap, so every tap tries to wake the audio.
-    window.addEventListener('pointerdown', () => this.unlock(), { passive: true });
+    // On phones a touch only counts once the finger lifts, so listen for the end of the tap too.
+    for (const ev of ['pointerdown', 'pointerup', 'touchend', 'click']) window.addEventListener(ev, () => this.unlock(), { passive: true });
     document.addEventListener('visibilitychange', () => {
       if (!this.ctx) return;
       const live = this.ctx as AudioContext;
@@ -539,6 +551,26 @@ class Engine {
     }
     // Let the last notes ring before letting go.
     setTimeout(() => out.disconnect(), (steps * stepDur + 2) * 1000);
+  }
+
+  /** Tries to wake the sound without a tap (some browsers allow it) and says within `ms` if it did. */
+  tryStart(ms = 200): Promise<boolean> {
+    this.unlock();
+    const ctx = this.ctx as AudioContext | null;
+    if (!ctx || ctx.state === 'running') return Promise.resolve(!!ctx);
+    return new Promise((done) => {
+      const on = () => {
+        if (ctx.state !== 'running') return;
+        clearTimeout(timer);
+        ctx.removeEventListener('statechange', on);
+        done(true);
+      };
+      const timer = setTimeout(() => {
+        ctx.removeEventListener('statechange', on);
+        done(ctx.state === 'running');
+      }, ms);
+      ctx.addEventListener('statechange', on);
+    });
   }
 
   /** Fade out `id` unless another screen asks for it right away. */
@@ -985,7 +1017,7 @@ export async function renderSfx(id: SfxId, pitch = 1, seconds = 1.6, sampleRate 
   return (await ctx.startRendering()).getChannelData(0);
 }
 
-const STING_IDS: Record<StingId, true> = { victory: true, levelup: true, defeat: true, shatter: true, warmth: true };
+const STING_IDS: Record<StingId, true> = { victory: true, levelup: true, defeat: true, opening: true, shatter: true, warmth: true };
 
 /** Renders `seconds` of a track (or a whole sting) to samples, mono, exactly as the app mixes it.
     Browser only. Used to measure loudness and to save tracks as audio files. */

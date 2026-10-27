@@ -12,6 +12,8 @@ The whole app is one page, `src/app/page.tsx`. It holds the save (`useGameState`
 pieces of screen state, and decides what is on screen:
 
 1. **Not onboarded** (or replaying the opening): `Prologue` takes the whole screen.
+   Otherwise, once per app open (`openingDue`, a `sessionStorage` flag; never in the sandbox),
+   `Opening` plays over everything for about three seconds, and story scenes wait for it.
 2. **Otherwise** the header, the current tab and the bottom tab bar, with full-screen layers on
    top when one is open: `Workout` (training), `AfterSession` (right after finishing),
    `ScenePlayer` (a due story scene), `ClassPicker`, `FogRun`, and the `DevPanel`.
@@ -23,6 +25,7 @@ pieces of screen state, and decides what is on screen:
 
 | Component | Job |
 |---|---|
+| `Opening` | The splash when the app opens: the small flame (always the spark) catches, FORMA lands one letter per note of the `opening` sting, "Day N · the fire's lit" (`dayNumber`). Sound starts by itself where the browser allows it; where it needs a tap first (iPhones, even installed), the flame waits on a blinking "Tap to start" and that tap plays the jingle with the letters. A tap while it plays skips. Muted means no sound at all; reduced motion shows it still |
 | `Prologue` | First run: boy or girl pick, the story opens, the first fight (`FirstFight`) you can't win, `RiseUp` (hold to stand), the letter, gym or home, then the `LookEditor` |
 | `TodayTab` | The flame card and its line, today's quest list with exercise stills, the rest-day card and `SitByFire`, the quote of the day, the Book of Days, the install nudge |
 | `Workout` | The set logger: one exercise at a time, one tap per set (reps in reserve), rest timer, Undo, the exercise demo; the warm-up and the stretch are one "Done" tap |

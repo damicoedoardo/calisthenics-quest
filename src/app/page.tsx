@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { TodayTab } from '@/components/TodayTab';
 import { TrainTab } from '@/components/TrainTab';
 import { HeroTab } from '@/components/HeroTab';
@@ -8,6 +8,7 @@ import { PlayTab } from '@/components/PlayTab';
 import { FogRun, type RunStart } from '@/components/FogRun';
 import { Hero } from '@/components/Hero';
 import { Prologue } from '@/components/Prologue';
+import { Opening, openingDue } from '@/components/Opening';
 import { Workout } from '@/components/Workout';
 import { AfterSession } from '@/components/AfterSession';
 import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
@@ -58,6 +59,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const [sandbox, setSandbox] = useState(false);
   const [runStart, setRunStart] = useState<RunStart | undefined>();
   const [openBook, setOpenBook] = useState(false);
+  // The few seconds when the app opens (once per open, not in the sandbox or before the prologue).
+  const [opening, setOpening] = useState(false);
   const jumped = useRef(false);
   // The cloud backup, when signed in. Never before the save has loaded, never in the sandbox.
   const cloud = useCloudSync(state, update, !ready || inSandbox());
@@ -81,6 +84,11 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     }
     if (q.has('book')) setOpenBook(true);
   }, [ready, update]);
+  // Before the first paint, so the tabs never flash ahead of it.
+  useLayoutEffect(() => {
+    if (ready && state.profile.onboarded && !inSandbox() && openingDue()) setOpening(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
   // Anything that takes the screen (a scene, a run, a workout) closes the panel for good.
   const busy = !!(run || training || after || scene || picker);
   useEffect(() => {
@@ -90,7 +98,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   // While a screen is open over the tabs, the tabs underneath are out of reach: no keyboard focus
   // and nothing for a screen reader to wander into. (React 18 has no inert prop, so it's set here.)
   const root = useRef<HTMLDivElement>(null);
-  const covered = busy || (dev && devOpen);
+  const covered = busy || opening || (dev && devOpen);
   // Only on a change, so it never undoes the inert an overlay inside a tab set (useModal).
   const applied = useRef(false);
   useEffect(() => {
@@ -110,11 +118,11 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
   // Play the next story scene whenever the player is back on the main screen.
   useEffect(() => {
-    if (!ready || !state.profile.onboarded || replaying || training || after || scene || picker || run) return;
+    if (!ready || !state.profile.onboarded || opening || replaying || training || after || scene || picker || run) return;
     const next = scenesToPlay(state, new Date())[0];
     if (next) setScene(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, state.profile.onboarded, state.sessions.length, replaying, training, after, scene, picker, run]);
+  }, [ready, state.profile.onboarded, state.sessions.length, opening, replaying, training, after, scene, picker, run]);
 
   // A page in the Book of Days for every day the app is opened (and today's line follows the day).
   const today = new Date().toDateString();
@@ -252,7 +260,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       </nav>
 
       {dev && devOpen && !busy && (
-        <DevPanel state={state} update={update} onPlayScene={setScene} onTurnOff={live ? () => setDev(false) : undefined} onClose={() => setDevOpen(false)} />
+        <DevPanel state={state} update={update} onPlayScene={setScene} onPlayOpening={() => setOpening(true)} onTurnOff={live ? () => setDev(false) : undefined} onClose={() => setDevOpen(false)} />
       )}
       {run && (
         <FogRun
@@ -282,6 +290,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         />
       )}
       <CloudChoice phone={state} onChoose={cloud.choose} />
+      {opening && <Opening state={state} onDone={() => setOpening(false)} />}
     </div>
   );
 }

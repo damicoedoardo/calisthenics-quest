@@ -38,6 +38,7 @@ export default {
         enterbelow: { '0%': { transform: 'translateY(40%)', opacity: '0' }, '100%': { transform: 'translateY(0)', opacity: '1' } },
         bigshake: { '0%,100%': { transform: 'translate(0,0)' }, '15%': { transform: 'translate(-10px,4px)' }, '30%': { transform: 'translate(9px,-5px)' }, '45%': { transform: 'translate(-7px,3px)' }, '60%': { transform: 'translate(6px,-2px)' }, '80%': { transform: 'translate(-3px,1px)' } },
         breathe: { '0%,100%': { transform: 'scale(.86)' }, '50%': { transform: 'scale(1.14)' } },
+        ignite: { '0%': { transform: 'scale(.2)', opacity: '0' }, '40%': { transform: 'scale(1.1)', opacity: '1' }, '100%': { transform: 'scale(1)', opacity: '.6' } },
         turn: { '0%,20%': { transform: 'rotate(0)' }, '55%,85%': { transform: 'rotate(90deg)' }, '100%': { transform: 'rotate(0)' } },
       },
       animation: {
@@ -64,6 +65,7 @@ export default {
         bigshake: 'bigshake .6s ease-in-out',
         breathe: 'breathe 10s ease-in-out infinite',
         turn: 'turn 1.8s ease-in-out infinite',
+        ignite: 'ignite .9s ease-out both',
       },
     },
   },
