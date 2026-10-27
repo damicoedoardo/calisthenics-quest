@@ -20,7 +20,7 @@ const SKILL = '.claude/skills/updating-handbook/SKILL.md';
 const TYPES = ['conceptual', 'reference', 'landing'];
 const REQUIRED = ['type', 'title', 'description', 'tags', 'timestamp'];
 // Paths a file must have a route for. Everything else (lockfile, .gitignore, docs) needs none.
-const COVERED = /^(src|scripts|public|\.github|\.githooks|\.claude)\/|^[^/]+\.(ts|js|cjs|mjs|json)$/;
+const COVERED = /^(src|scripts|public|backend|caddy|\.github|\.githooks|\.claude)\/|^[^/]+\.(ts|js|cjs|mjs|json|yml)$|^\.env\.example$/;
 const UNROUTED = new Set(['pnpm-lock.yaml', 'package-lock.json']);
 const SKIP_TRAILER = /^Handbook:\s*none\b/im;
 

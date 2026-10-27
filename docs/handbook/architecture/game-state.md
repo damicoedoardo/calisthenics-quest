@@ -32,6 +32,9 @@ under `forma-state-v1`. Corrupt or blocked storage falls back to a fresh state i
 crashing. It asks the browser to persist storage; the Today tab nudges iPhone users to install,
 because iOS can clear data of sites not on the home screen.
 
+When the player is signed in, a copy also goes to the server a few seconds after each change
+([../backend/cloud-sync.md](../backend/cloud-sync.md)). The phone's save stays the real one.
+
 ## Changing the shape
 
 Add new fields as optional (`fog?`, `answers?`, `days?` are examples), or bump `version` and

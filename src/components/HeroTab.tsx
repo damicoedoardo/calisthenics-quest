@@ -9,10 +9,11 @@ import { useLook } from './Look';
 import { LookEditor } from './LookEditor';
 import { useModal } from './useModal';
 import { StatPoints } from './StatPoints';
+import { CloudSave } from './Cloud';
 import { getClass, tierText } from '@/lib/gear';
 import { gearOf, type GameState } from '@/lib/game';
 import { planExercises } from '@/lib/program';
-import { exportState, parseImport } from '@/lib/store';
+import { exportState, inSandbox, parseImport } from '@/lib/store';
 import { storyState } from '@/story/engine';
 import { ZONES } from '@/lib/fog';
 
@@ -185,6 +186,7 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
           </label>
         </div>
         {backupMsg && <p className="mt-2 text-center text-xs text-gold-300">{backupMsg}</p>}
+        <CloudSave sandbox={inSandbox()} />
       </section>
     </div>
   );

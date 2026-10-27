@@ -1,7 +1,7 @@
 # FORMA
 
 A training app played like a pixel-art RPG: real workouts earn, the Fog game spends. Installable
-PWA, offline, no backend; the save lives on the phone. Next.js 16 (App Router), React 18,
+PWA, offline; the save lives on the phone (a backend for login and backup is in `backend/`). Next.js 16 (App Router), React 18,
 TypeScript (strict), Tailwind 3, Phaser 3, Vitest, pnpm. Live at https://forma-nu-red.vercel.app.
 
 ## Handbook (read first, update before pushing)
@@ -32,6 +32,8 @@ src/game/        The Fog: shared numbers, sprite sheets, dungeon/ (content, pure
 src/sim/         The season simulator
 scripts/         Fog simulators, splash drawing, the handbook check
 public/          Service worker, icons, iOS splash screens
+backend/         FastAPI api on FORMA's own server: Supabase login check, save backup (Python, uv)
+caddy/, docker-compose.yml   The server's stack; scripts/deploy/ ships it
 docs/handbook/   The handbook
 ```
 
