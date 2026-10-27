@@ -427,7 +427,8 @@ export interface Run {
   chest: { x: number; y: number; opened: boolean } | null;
   stairs: { x: number; y: number } | null;
   /** Items on the floor here. */
-  loot: { id: number; x: number; y: number; item: Item; full?: boolean }[];
+  /** Items on the floor. In a party each one is for one hero (`for`, their id): only they see and take it. */
+  loot: { id: number; x: number; y: number; item: Item; full?: boolean; for?: number }[];
   /** Standing on the stairs: deeper, or out with what you carry? The run holds still. */
   stairsAsk: boolean;
   /** Monsters already met this run (their first time gets a line). */
@@ -1147,7 +1148,7 @@ function moveHero(run: Run, h: Hero, input: Input) {
   }
   // Loot: into the bag, while there's room.
   for (const l of run.loot) {
-    if (Math.hypot(l.x - h.x, l.y - h.y) > 20 + HERO_R) continue;
+    if (!mine(l, h) || Math.hypot(l.x - h.x, l.y - h.y) > 20 + HERO_R) continue;
     if (h.gear.bag.length >= BAG) {
       if (!l.full) emit(run, { type: 'say', text: 'Your bag is full. Wear or drop something to make room.' });
       l.full = true;
@@ -1916,8 +1917,8 @@ function kill(run: Run, f: Foe, by: Hero) {
   const fang = relic(by, 'fang') + by.gearFx.heal;
   if (fang && f !== run.boss) by.hp = Math.min(by.maxHp, by.hp + fang);
   // Now and then a monster drops something to wear: elites and golems far more often.
-  if (f !== run.boss && f !== run.warden && f.def.xp > 0 && run.rnd() < (f.elite ? DROPS.elite : f.kind === 'golem' ? DROPS.golem : DROPS.plain)) dropItem(run, f.x, f.y, f.elite || f.kind === 'golem' ? 0.5 : 0, by.classId);
-  if (f === run.warden) dropItem(run, f.x, f.y + 30, 2, by.classId);
+  if (f !== run.boss && f !== run.warden && f.def.xp > 0 && run.rnd() < (f.elite ? DROPS.elite : f.kind === 'golem' ? DROPS.golem : DROPS.plain)) dropEach(run, f.x, f.y, f.elite || f.kind === 'golem' ? 0.5 : 0);
+  if (f === run.warden) dropEach(run, f.x, f.y + 30, 2);
   if (f.kind === 'splitter')
     for (let i = 0; i < 3; i++) {
       const a = (i / 3) * Math.PI * 2 + run.rnd();
@@ -2179,7 +2180,7 @@ function helpers(run: Run) {
 // ---------- light, levels, rooms ----------
 
 function pullGems(run: Run) {
-  // Each bit of light goes to the hero nearest it.
+  // Each bit of light flies to the hero nearest it, and every standing hero gets its XP.
   run.gems = run.gems.filter((g) => {
     const h = prey(run, g.x, g.y),
       reach = gemReach(h.power, h.ups),
@@ -2188,7 +2189,7 @@ function pullGems(run: Run) {
       d = Math.hypot(dx, dy);
     if (d < 16) {
       emit(run, { type: 'gem' });
-      gain(run, h, g.value);
+      for (const o of standing(run)) gain(run, o, g.value);
       return false;
     }
     // Once a room is clear, all its light comes to you.
@@ -2250,7 +2251,7 @@ function openChest(run: Run, h: Hero) {
     if (!choices.includes(id)) choices.push(id);
   }
   emit(run, { type: 'chest', x: c.x, y: c.y });
-  if (run.rnd() < DROPS.chest) dropItem(run, c.x, c.y + 34, 1, h.classId);
+  if (run.rnd() < DROPS.chest) dropEach(run, c.x, c.y + 34, 1);
   h.relicOffer = choices;
   if (run.setup.autoPick) pickRelic(run, RELIC_BOT.find((id) => choices.includes(id)) ?? choices[0], h);
 }
@@ -2311,13 +2312,23 @@ function newItem(run: Run, luck: number, cls: ClassId | undefined): Item {
   return rollItem(run.rnd, { zone: z.id, workouts: z.workouts, floor: floorOf10(run), cls }, rollRarity(run.rnd, floorOf10(run), luck));
 }
 
-function dropItem(run: Run, x: number, y: number, luck: number, cls: ClassId | undefined, item: Item = newItem(run, luck, cls)) {
+function dropItem(run: Run, x: number, y: number, luck: number, to: Hero) {
   const { w, h } = run.area,
-    m = ROOM.wall + 16;
-  const l = { id: ++run.ids, x: clamp(x, m, w - m), y: clamp(y, m, h - m), item };
+    m = ROOM.wall + 16,
+    item = newItem(run, luck, to.classId);
+  const l: Run['loot'][number] = { id: ++run.ids, x: clamp(x, m, w - m), y: clamp(y, m, h - m), item };
+  if (run.party.length > 1) l.for = to.id;
   run.loot.push(l);
-  emit(run, { type: 'drop', x: l.x, y: l.y, item });
+  if (to === run.hero) emit(run, { type: 'drop', x: l.x, y: l.y, item });
 }
+
+/** A drop is personal: each standing hero gets their own item, for their class, a little apart. */
+function dropEach(run: Run, x: number, y: number, luck: number) {
+  standing(run).forEach((h, i) => dropItem(run, x + i * 26, y, luck, h));
+}
+
+/** Loot a hero can see and take: theirs, or anyone's when there's no `for`. */
+export const mine = (l: { for?: number }, h: Pick<Hero, 'id'>) => l.for === undefined || l.for === h.id;
 
 /** Your power with what you wear: weapon damage, armor HP, charms, and your class's build. */
 function applyGear(run: Run, h: Hero) {
@@ -2362,7 +2373,8 @@ export function dropFromBag(run: Run, id: string, h: Hero = run.hero) {
   const it = h.gear.bag.find((o) => o.id === id);
   if (!it) return;
   h.gear.bag = h.gear.bag.filter((o) => o !== it);
-  const l = { id: ++run.ids, x: h.x, y: h.y + 36, item: it, full: true };
+  const l: Run['loot'][number] = { id: ++run.ids, x: h.x, y: h.y + 36, item: it, full: true };
+  if (run.party.length > 1) l.for = h.id;
   run.loot.push(l);
   emit(run, { type: 'drop', x: l.x, y: l.y, item: it });
 }

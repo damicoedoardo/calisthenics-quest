@@ -42,6 +42,7 @@ import {
   pickRelic,
   relic,
   spikeState,
+  mine,
   pick,
   skipFloor,
   skipToBoss,
@@ -997,13 +998,14 @@ class DungeonScene extends Phaser.Scene {
   private syncLoot() {
     const r = this.run,
       now = this.time.now,
-      here = new Set(r.loot.map((l) => l.id));
+      seen = r.loot.filter((l) => mine(l, r.hero)),
+      here = new Set(seen.map((l) => l.id));
     for (const [id, l] of this.loot)
       if (!here.has(id)) {
         [l.icon, l.name, l.beam].forEach((o) => o?.destroy());
         this.loot.delete(id);
       }
-    for (const l of r.loot) {
+    for (const l of seen) {
       let v = this.loot.get(l.id);
       const [X, Y] = this.P(l.x, l.y),
         color = RARITY[l.item.rarity].color,

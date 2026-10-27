@@ -66,11 +66,13 @@ party order. The rules treat every hero the same:
 
 - Functions that act for a hero take it (`moveHero(run, h, input)`, `attack(run, h)`,
   `hurt(run, h, ...)`); a hit names who struck it (`damage(run, by, f, ...)`, `Shot.by`,
-  `burst(run, by, ...)`), and that hero gets the kill, the fang heal and the drop rolled for
-  their class.
+  `burst(run, by, ...)`), and that hero gets the kill and the fang heal.
 - Monsters, their shots and homing bullets go for the nearest hero still standing (`prey`); shots,
   touch, bombs, barrels, spikes and the Gale hit whoever they reach (`standing`).
-- Light (gems) goes to the hero nearest it. The boss's drop goes into every hero's bag.
+- Light (gems) flies to the hero nearest it, and its XP goes to every hero still standing.
+- Drops are personal (`dropEach`): each standing hero gets their own item, rolled for their class
+  and tagged with their id (`loot[].for`, set only in a party). Only that hero sees and takes it
+  (`mine`, used by the pick-up, the bot and the scene). The boss's drop goes into every bag.
 - A hero at 0 HP is down (`fall`) and stops acting; the run ends when the whole party is down.
   `RunEnd` is still yours.
 - A pick (skill or chest item) by anyone still holds the whole run (`choosing`), and the stairs ask

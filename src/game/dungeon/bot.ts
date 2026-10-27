@@ -1,5 +1,5 @@
 import { attackOf, clamp, RANGE } from '../rules';
-import { BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup } from './engine';
+import { BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup } from './engine';
 
 /* The bot: a steady, careful player, not a great one. It sidesteps shots on course to hit it,
    keeps its class's distance from monsters (a sword goes close, the rest stay back), plays each
@@ -289,7 +289,7 @@ export function botInput(run: Run, h: Hero = run.hero): Input {
     y += (dy / d) * pull + (dx / d) * 0.35;
   } else if (run.cleared) {
     // Gems come on their own: pick up what dropped, open the chest, then on to where the map says.
-    const c = run.loot.find((l) => !l.full) ?? (run.chest && !run.chest.opened ? run.chest : null),
+    const c = run.loot.find((l) => !l.full && mine(l, h)) ?? (run.chest && !run.chest.opened ? run.chest : null),
       door = c ? null : run.climb !== null ? (run.doors[0] ?? null) : route(run),
       [gx, gy] = c ? [c.x, c.y] : door ? beyond(run, door) : run.stairs ? [run.stairs.x, run.stairs.y] : [h.x, h.y],
       dx = gx - h.x,

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { powerOf, ZONES } from '@/lib/fog';
 import { initialState } from '@/lib/game';
 import { botInput, playRun } from './bot';
-import { ACROSS, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, makeFloor, MIDS, pickRelic, SAND, skipToBoss, skipToWarden, SPLIT, stepRun, takeEvents, wardenFloor, type Side } from './engine';
+import { ACROSS, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, makeFloor, MIDS, mine, pickRelic, SAND, skipToBoss, skipToWarden, SPLIT, stepRun, takeEvents, wardenFloor, type Side } from './engine';
 
 describe('mid-bosses', () => {
   const power = powerOf(initialState(), new Date());
@@ -385,6 +385,24 @@ describe('a party (co-op)', () => {
     const again = party(21);
     expect(again.over).toEqual(run.over);
     expect(again.party.map((h) => [h.kills, h.level, h.xp])).toEqual(run.party.map((h) => [h.kills, h.level, h.xp]));
+  });
+
+  it('shares XP: every standing hero gets every bit of light', () => {
+    const [me, friend] = party(21).party;
+    expect(friend.level).toBe(me.level);
+  });
+
+  it('drops are personal: each hero gets their own item and takes only theirs', () => {
+    const run = createRun({ zone: ZONES[0], power, classId: 'warrior', seed: 21, autoPick: true, friends: [{ power, classId: 'archer' }] });
+    const [me, friend] = run.party;
+    for (let i = 0; i < 60 * 60 * 30 && !run.over; i++) {
+      stepRun(run, run.party.map((h) => botInput(run, h)));
+      run.events.length = 0;
+      if (run.loot.some((l) => l.for === me.id) && run.loot.some((l) => l.for === friend.id)) break;
+    }
+    const theirs = run.loot.find((l) => l.for === friend.id)!;
+    expect(mine(theirs, me)).toBe(false);
+    expect(mine(theirs, friend)).toBe(true);
   });
 
   it('a fallen hero is down, and the run goes on while a friend stands', () => {
