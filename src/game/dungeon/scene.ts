@@ -307,6 +307,9 @@ class DungeonScene extends Phaser.Scene {
     this.torchFire = this.add.graphics().setDepth(-0.5);
     this.shadows = this.add.graphics().setDepth(0.5);
     this.fx = this.add.graphics().setDepth(90000);
+    // In the fog, shots, telegraphs and eyes in the dark stay drawn over it: a hit must never come
+    // from nothing.
+    if (zoneDungeon(this.setup.zone).sight) this.fx.setDepth(145000);
     const fogTint = hex(this.theme.fog);
     for (let i = 0; i < 14; i++) {
       const m = this.add
@@ -538,6 +541,7 @@ class DungeonScene extends Phaser.Scene {
     // Monster shots: hot, round and easy to read against any ground.
     tex('bullet', 14, 14, () => {
       g.fillStyle(0xf43f5e, 0.35).fillCircle(7, 7, 7);
+      if (zone.boss === 'plateau') g.fillStyle(0x1c1712).fillCircle(7, 7, 6);
       g.fillStyle(0xfb7185).fillCircle(7, 7, 5);
       g.fillStyle(0xffe4e6).fillCircle(6, 6, 2);
     });
@@ -546,11 +550,14 @@ class DungeonScene extends Phaser.Scene {
       g.fillStyle(0xc084fc).fillCircle(9, 9, 6);
       g.fillStyle(0xf5d0fe).fillCircle(8, 8, 3);
     });
+    // On the Plateau's sandstone, warm shots get a dark rim and a bigger light core so they read.
+    const rim = zone.boss === 'plateau';
     const shot = (key: string, glow: number, body: number, core: number) =>
       tex(key, 14, 14, () => {
         g.fillStyle(glow, 0.35).fillCircle(7, 7, 7);
+        if (rim) g.fillStyle(0x1c1712).fillCircle(7, 7, 6);
         g.fillStyle(body).fillCircle(7, 7, 5);
-        g.fillStyle(core).fillCircle(6, 6, 2);
+        g.fillStyle(core).fillCircle(6, 6, rim ? 3 : 2);
       });
     shot('bullet-homing', 0x22d3ee, 0x67e8f9, 0xecfeff);
     shot('bullet-bounce', 0x84cc16, 0xbef264, 0xf7fee7);
@@ -1041,7 +1048,7 @@ class DungeonScene extends Phaser.Scene {
       }
     }
 
-    this.syncMap(this.bullets, r.bullets, (b) => this.add.image(b.x, b.y, b.boss && b.style === 'plain' ? 'bullet-boss' : SHOT_TEX[b.style]).setDepth(80000), (img, b) => {
+    this.syncMap(this.bullets, r.bullets, (b) => this.add.image(b.x, b.y, b.boss && b.style === 'plain' ? 'bullet-boss' : SHOT_TEX[b.style]).setDepth(this.dark ? 145000 : 80000), (img, b) => {
       if (b.style === 'wiggle') img.setRotation(r.t * 6 + b.id);
     });
     for (const b of r.terrain.barrels)
@@ -1635,6 +1642,16 @@ class DungeonScene extends Phaser.Scene {
         this.fx.fillStyle(0x6b21a8, 0.2 + 0.3 * p).fillCircle(f.dashX, f.dashY, 16);
       }
     }
+    // In the fog: the eyes of what waits just past what you can see.
+    const sight = zoneDungeon(this.setup.zone).sight;
+    if (sight)
+      for (const f of r.foes) {
+        const d = Math.hypot(f.x - r.hero.x, f.y - r.hero.y);
+        if (!f.alive || d < sight * 0.75 || d > sight + 260) continue;
+        const a = 0.75 * Math.min(1, (sight + 260 - d) / 160),
+          blink = Math.floor((now + f.id * 397) / 140) % 23 === 0;
+        if (!blink) this.fx.fillStyle(f === r.boss ? 0xc084fc : 0xfca5a5, a).fillRect(f.x - 4, f.y - 6, 2, 2).fillRect(f.x + 2, f.y - 6, 2, 2);
+      }
     // Your shots: arrows leave a short streak, orbs glow and pulse.
     for (const sh of r.shots) {
       const sp = Math.hypot(sh.vx, sh.vy) || 1;
