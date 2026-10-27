@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { powerOf, ZONES } from '@/lib/fog';
 import { initialState } from '@/lib/game';
 import { botInput, playRun } from './bot';
-import { createRun, isBossRoom, skipToBoss, stepRun } from './engine';
+import { createRun, DODGE, isBossRoom, isWardenRoom, pickRelic, skipToBoss, skipToWarden, stepRun, takeEvents, wardenFloor } from './engine';
 
 describe('dungeon', () => {
   const power = powerOf(initialState(), new Date());
@@ -52,5 +52,74 @@ describe('dungeon', () => {
     for (const [a, b] of doors) expect(a).not.toBe(b);
     expect(chests).toBeGreaterThan(0);
     expect(Object.values(run.relics).reduce((n, k) => n + (k ?? 0), 0)).toBe(chests);
+  });
+
+  it('holds the Warden of the Ashes in the last room of floor 5, in two phases, and it leaves a chest', () => {
+    expect(wardenFloor({ floors: 10, rooms: 5 })).toBe(4);
+    expect(wardenFloor({ floors: 2, rooms: 2 })).toBe(-1);
+    const run = createRun({ ...setup, power: { ...power, armor: 0.95 }, seed: 5 });
+    skipToWarden(run);
+    expect(run.floor).toBe(4);
+    expect(isWardenRoom(run)).toBe(true);
+    const w = run.warden!;
+    expect(w.kind).toBe('warden');
+    expect(run.foes.filter((f) => f.alive)).toEqual([w]);
+    // Phase one: the turning cross. Shots fly while you stand still, and the room stays shut.
+    for (let i = 0; i < 240; i++) stepRun(run, { x: 0, y: 0, ability: false });
+    expect(run.bullets.length).toBeGreaterThan(4);
+    expect(run.doorOpen).toBe(false);
+    takeEvents(run);
+    // Past half its HP: phase two, announced once.
+    w.hp = w.maxHp * 0.45;
+    stepRun(run, { x: 0, y: 0, ability: false });
+    expect(w.phase).toBe(2);
+    expect(takeEvents(run).filter((e) => e.type === 'phase')).toHaveLength(1);
+    // Down: the room opens one door (to the stairs) and leaves a chest that offers items.
+    w.hp = 1;
+    run.hero.x = w.x;
+    run.hero.y = w.y + 40;
+    for (let i = 0; i < 600 && !run.cleared; i++) stepRun(run, { x: 0, y: 0, ability: false });
+    expect(run.cleared).toBe(true);
+    expect(run.doors).toHaveLength(1);
+    expect(run.chest).not.toBeNull();
+    run.hero.x = run.chest!.x;
+    run.hero.y = run.chest!.y;
+    stepRun(run, { x: 0, y: 0, ability: false });
+    expect(run.relicOffer).toHaveLength(3);
+    pickRelic(run, run.relicOffer![0]);
+    expect(Object.keys(run.relics)).toHaveLength(1);
+  });
+
+  it('dodges: a short dash that shots pass through, then a wait before the next', () => {
+    const run = createRun({ ...setup, seed: 9 });
+    for (let i = 0; i < 30; i++) stepRun(run, { x: 0, y: 0, ability: false });
+    const x0 = run.hero.x,
+      hp = run.hp;
+    stepRun(run, { x: 1, y: 0, ability: false, dodge: true });
+    expect(takeEvents(run).some((e) => e.type === 'dodge')).toBe(true);
+    // A shot dead on you while you're in the dodge does nothing.
+    const h = run.hero;
+    run.bullets.push({ id: 9999, x: h.x + 4, y: h.y, vx: 0, vy: 0, r: 6, dmg: 50, born: run.t, boss: false, style: 'plain', ang: 0, spd: 0, bounce: 0 });
+    for (let i = 0; i < 8; i++) stepRun(run, { x: 0, y: 0, ability: false });
+    expect(run.hp).toBe(hp);
+    expect(run.hero.x - x0).toBeGreaterThan(DODGE.speed * DODGE.secs * 0.8);
+    // Pressing again right away does nothing until the dodge has recharged.
+    takeEvents(run);
+    run.bullets = [];
+    stepRun(run, { x: -1, y: 0, ability: false, dodge: true });
+    expect(takeEvents(run).some((e) => e.type === 'dodge')).toBe(false);
+    while (run.t < run.dodgeAt) stepRun(run, { x: 0, y: 0, ability: false });
+    stepRun(run, { x: -1, y: 0, ability: false, dodge: true });
+    expect(takeEvents(run).some((e) => e.type === 'dodge')).toBe(true);
+  });
+
+  it('the bot dodges when a shot it sees is about to land', () => {
+    const run = createRun({ ...setup, seed: 9 });
+    for (let i = 0; i < 30; i++) stepRun(run, { x: 0, y: 0, ability: false });
+    const h = run.hero;
+    // A shot fired a moment ago (the bot has had time to see it), a few steps away and coming.
+    const id = [...Array(50).keys()].map((k) => 20000 + k).find((k) => ((Math.imul(k, 2654435761) >>> 0) % 1000) / 1000 < 0.5)!;
+    run.bullets = [{ id, x: h.x - 30, y: h.y, vx: 240, vy: 0, r: 5, dmg: 10, born: run.t - 0.5, boss: false, style: 'plain', ang: 0, spd: 240, bounce: 0 }];
+    expect(botInput(run).dodge).toBe(true);
   });
 });

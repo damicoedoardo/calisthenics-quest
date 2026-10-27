@@ -123,7 +123,7 @@ export const DIALS = {
   /** Monster HP, on top of the zone's. */
   hp: 1.3,
   /** How often monsters shoot (2 = twice as often). */
-  fire: 2.7,
+  fire: 3,
   /** How fast their shots fly. */
   speed: 1.5,
   /** How many monsters a room holds. */
@@ -134,8 +134,8 @@ export const DIALS = {
   relic: 1,
   /** How much more HP monsters have on the boss's floor than on the first (2 = three times). */
   deep: 3,
-  /** How much harder they hit there (3 = four times): chest items and levels make you grow fast. */
-  deepDmg: 3,
+  /** How much harder they hit there (3 = four times): chest items, levels and the dodge make you grow fast. */
+  deepDmg: 3.6,
   /** Share of HP the shrine on each floor gives back. */
   shrine: 0.25,
 };
@@ -235,17 +235,17 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
   // slow cross of shots (walk around it with the arms); hurt past half, it stops turning and fires
   // aimed bursts at you, with a ring now and then. It never joins an ordinary room.
   warden: {
-    hp: 560,
-    speed: 30,
-    dmg: 16,
+    hp: 850,
+    speed: 32,
+    dmg: 18,
     r: 26,
     xp: 30,
     move: 'chase',
     shoots: [
-      { every: 0.2, kind: 'spiral', n: 4, speed: 72, dmg: 8, turn: 0.13, above: 0.5, first: 1.2 },
-      { every: 2.6, kind: 'spread', n: 5, arc: 0.9, speed: 110, dmg: 9, above: 0.5, first: 2.5 },
-      { every: 1.5, kind: 'aimed', n: 3, speed: 120, dmg: 9, below: 0.5 },
-      { every: 3.2, kind: 'ring', n: 18, speed: 80, dmg: 8, below: 0.5 },
+      { every: 0.16, kind: 'spiral', n: 4, speed: 75, dmg: 8, turn: 0.12, above: 0.5, first: 1.2 },
+      { every: 2.4, kind: 'spread', n: 7, arc: 1, speed: 115, dmg: 10, above: 0.5, first: 2.5 },
+      { every: 1.3, kind: 'aimed', n: 3, speed: 125, dmg: 9, below: 0.5 },
+      { every: 2.6, kind: 'ring', n: 20, speed: 82, dmg: 9, below: 0.5 },
     ],
     cost: 0,
   },
@@ -369,7 +369,7 @@ export const ABILITIES: Record<AbilityId, { name: string; text: string; cd: numb
   volley: { name: 'Volley', text: 'Loose arrows all around you that pierce through.', cd: 7 },
   blink: { name: 'Blink', text: 'Vanish and appear ahead, bursting where you land and wiping shots nearby.', cd: 8 },
   still: { name: 'Stillness', text: 'Breathe: heal some HP and push everything away.', cd: 14 },
-  shock: { name: 'Shockwave', text: 'Knock back everything near you and wipe the shots around you.', cd: 6 },
+  shock: { name: 'Shockwave', text: 'Knock back everything near you and wipe the shots around you.', cd: 7 },
 };
 /** Every class can dodge: a short dash, untouchable for a moment, on its own short clock. */
 export const DODGE = { cd: 2.5, speed: 480, secs: 0.17, ghost: 0.27 };
