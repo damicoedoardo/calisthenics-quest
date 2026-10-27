@@ -36,9 +36,13 @@ characters/icons.ts   app icons as text rows: the six keepsakes (Hero tab, sprit
                       what a day held in the Book of Days (sprite `dayIcon`), the dungeon's
                       relics (`relicIcon`), the ability and Dodge buttons (`abilityIcon`), the run's
                       level-up skills (`skillIcon`) and the floor track's Warden and boss (`markIcon`)
-characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look }): you doing
-                      each exercise of the program, a jointed skeleton with IK elbows and knees,
-                      one rep per loop of the 16-frame `rep` clip
+characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look, kit }): you
+                      doing each exercise of the program (hand-posed), one rep per loop of the
+                      16-frame `rep` clip, or one of the exercise library's movements from moves.ts
+characters/moves.ts   the exercise library's 81 movements (lifts, machines, core, cardio, stretches,
+                      mobility) and the gear each can hold (`Kit`: barbell, dumbbell, cable, band...)
+engine/skeleton.ts    the jointed skeleton both use: IK elbows and knees, props (bench, bar, floor),
+                      weights, cables and bands, and how the figure is drawn
 characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recolored onto the zone's
                       ramp and dressed (lake glass and drips, forge scrap and glowing cracks,
                       plateau sandstone, fog mist, summit ice)
@@ -71,6 +75,7 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Change which sprite a dungeon monster uses, or its size | `DUNGEON_LOOKS` in `src/game/dungeon/scene.ts` (a new sheet also needs a `SheetKey` in `src/game/rules.ts` and its sheet in `src/game/sheets.ts`) |
 | Redraw the dungeon's pillars, barrels, chests, shrine, torches | the text rows in `src/game/dungeon/props.ts` (floor, walls, door, water and spikes are drawn in `scene.ts`) |
 | Fix an exercise demo's form (depth, lean, where the hands go) | its case in `poseFor` (`characters/exercise.ts`); a new exercise in `src/lib/skills.ts` needs one too (a test checks every program exercise has a demo) |
+| Fix a library movement's demo, or add one | its case in `frame` (`characters/moves.ts`); a new one also needs an id in `MOVES`, coaching and a classifier rule, see [exercise-library.md](exercise-library.md) |
 | Change how a zone dresses its regular monsters | `ZONE_RAMPS` (colors) and the zone's branch of `dress` in `characters/zoned.ts`; the sprites that take `{ zone }` are the `zoned(...)` entries in `registry.ts` |
 | Change a zone's dungeon colors (floor, stone, torch fire, water) | its entry in `THEMES` (`src/game/dungeon/themes.ts`); in developer mode the Fog's pause menu has a Theme button that cycles them |
 | Add a character | a file in `characters/`, then an entry in `SPRITES` (`registry.ts`) |
@@ -107,6 +112,9 @@ eight-frame float where `bob` is the breath, and `lunge` is their attack, a wind
 
 The hero is drawn with the player's look (body, hair, hair color, skin), which `<LookProvider>`
 hands to every `<Hero />` on screen, so the Echo, the Best Self and the Hollow match the player.
+
+Long lists show stills, not sheets: `stillFor(id, action, opts, frame)` (`registry.ts`) draws a
+single frame once and caches it (the exercise library's rows draw one as each row scrolls in).
 
 ## Using a PNG sprite sheet
 

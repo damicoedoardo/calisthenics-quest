@@ -26,7 +26,7 @@ costs nothing.
 | Tab | What it is | Code |
 |---|---|---|
 | Today | The flame and its line for the day, today's quest (Day A Push + Core, Day B Pull + Core), the rest card on rest days, the Book of Days | `src/components/TodayTab.tsx` |
-| Skills | The three skill paths (Push, Pull, Core) and where you are on each | `src/components/SkillsTab.tsx` |
+| Skills | The three skill paths (Push, Pull, Core) and where you are on each, and the exercise library (887 exercises, pixel demos, tips and mistakes) | `src/components/SkillsTab.tsx` |
 | Play | The Fog: your power from training, the zones, a run | `src/components/PlayTab.tsx`, `FogRun.tsx` |
 | Hero | Level, gear, class, look, keepsakes, max test, backup | `src/components/HeroTab.tsx` |
 
@@ -43,6 +43,8 @@ never strength. See [../game/story.md](../game/story.md).
 ## Direction
 
 As of 2026-10-27 FORMA is moving from calisthenics-only to general workouts (gym, weights,
-cardio), with an exercise library and pixel demos for each exercise. A training coach (adaptive
+cardio). The exercise library is the first step: every exercise has a boy and girl pixel demo,
+tips and common mistakes, and it is a searchable database a future coach (an LLM) can build
+workouts from ([../game/exercise-library.md](../game/exercise-library.md)). A training coach (adaptive
 rest, faster progression when easy) is parked on branch `training-coach`. Wearables (Whoop,
 Apple Health) are planned, not built.

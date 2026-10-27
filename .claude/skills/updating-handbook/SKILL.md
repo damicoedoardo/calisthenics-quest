@@ -39,6 +39,7 @@ no row: give a new folder its row (and a page if no page fits).
 | `src/game/dungeon/**` | `game/dungeon.md` |
 | `src/story/**`, `src/components/{ScenePlayer,Dialogue,Place,Weather,BookOfDays,SitByFire}.tsx` | `game/story.md` |
 | `src/sprites/**`, `src/components/{Sprite,Hero,Characters,Look,LookEditor}.tsx` | `game/sprites.md` |
+| `src/exercises/**`, `scripts/import-exercises.mjs`, `scripts/export-exercises.mjs`, `src/components/ExerciseLibrary.tsx` | `game/exercise-library.md` |
 | `src/lib/music*.ts`, `src/components/Sound.tsx`, `src/app/lab/music/**` | `game/sound.md` |
 | `src/lib/dev*.ts`, `src/components/DevPanel.tsx`, `src/app/lab/**` | `app/dev-mode-and-labs.md` |
 | `public/**`, `src/components/ServiceWorker.tsx`, `src/app/layout.tsx`, `src/app/manifest.ts`, `src/app/*.{png,svg,json}`, `scripts/splash.cjs`, `next.config.ts` | `app/pwa.md` |

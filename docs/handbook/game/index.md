@@ -12,5 +12,6 @@ timestamp: 2026-10-27
 - [Story](story.md): the six chapters as data, scene format, daily lines, rules for the words
 - [The Fog](fog.md): the rules around a run, zones, power from training, records, balance
 - [The Fog's dungeon](dungeon.md): content, the pure engine, the bot, the Phaser scene, how to change each
+- [Exercise library](exercise-library.md): 887 exercises with pixel demos, tips and mistakes, searchable by a coach
 - [Sprites and animation](sprites.md): all pixel art as code, the registry, clips, the labs
 - [Music and sound](sound.md): the chiptune engine, tracks, sound effects

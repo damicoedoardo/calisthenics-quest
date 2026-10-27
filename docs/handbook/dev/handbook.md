@@ -40,4 +40,5 @@ so a skipped page is visible to the reviewer.
 ## Adding a folder or file the table doesn't know
 
 `lint` fails with "no row in the routing table". Add a row to the skill's table pointing at the
-closest page, or write a new page (see the skill's "Adding a page").
+closest page, or write a new page (see the skill's "Adding a page"). A folder's old README moves
+into its page and leaves a one-line pointer (as `src/sprites/README.md` and `src/exercises/README.md` do).

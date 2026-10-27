@@ -21,6 +21,8 @@ and works offline.
 - **Playing**: `useMusic(id)` in `src/components/Sound.tsx` plays a track while a screen is on and
   fades it when it leaves; `SoundToggle` mutes. Story scenes name their song in `music` (see
   [story.md](story.md)).
+- **Checking a pile-up**: `renderSfxMix(ids)` renders several effects starting together, to
+  check they don't clip (browser only, like `renderSfx`).
 - **Trying it**: `/lab/music` plays every theme and sting.
 
 Tested in `src/lib/music.test.ts` (real notes only, voices loop together, every zone has its themes). The project files hold WAV

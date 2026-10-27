@@ -20,5 +20,8 @@ signal.
 | Icons | `src/app/icon.svg`, `src/app/apple-icon.png`, `public/icon-*.png` (brand kit in the project's design files) |
 | iOS splash screens | `public/splash/*.png`, one per iPhone size, drawn by `scripts/splash.cjs`; sizes in `src/app/splash-sizes.json`, wired in `src/app/layout.tsx` |
 
+`public/data/exercises.json` is the exercise library as data for tools outside the app (not used
+by the app itself, which bundles the library), see [../game/exercise-library.md](../game/exercise-library.md).
+
 The game must keep working offline: the Fog's code is fetched while the Play tab is idle
 (`PlayTab.tsx`) so a run can start with no network, and music is synthesized (no audio files).
