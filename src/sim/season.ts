@@ -2,7 +2,7 @@ import { finishSession, initialState, levelInfo, logMaxTest, todaysQuest, totalX
 import { recordRun, zoneStatus, ZONES } from '@/lib/fog';
 import { dayKey, daysApart, isRestDay } from '@/lib/days';
 import { pendingScenes, renderLines, speakerName, storyState, storyWords } from '@/story/engine';
-import { canSitByFire, dayQuote, fireLine, restTruth, todayMoment, todayPage, updateTodayPage, withTodayPage } from '@/story/daily';
+import { afterWorkoutLine, canSitByFire, dayQuote, fireLine, marginNote, restTruth, todayMoment, todayPage, updateTodayPage, withTodayPage } from '@/story/daily';
 import { DEFAULT_FLAME_NAME, flameStage } from '@/story/flame';
 import { STARTER_LOOKS } from '@/sprites/characters/hero';
 import type { ClassId } from '@/lib/gear';
@@ -242,6 +242,9 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
         const s = next.sessions[next.sessions.length - 1];
         state = next;
         note('workout', `workout ${state.sessions.length}${s.kind === 'mini' ? ' (short)' : ''}, +${s.xp} XP`);
+        const says = afterWorkoutLine(state);
+        check('after-workout line', says);
+        note('day', `after the workout: "${says}"`);
         for (const id of s.unlocked) note('skill', `beats ${id}`);
         // About 40 minutes later, back on Today.
         now = new Date(now.getTime() + 40 * 60_000);
@@ -276,6 +279,10 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
     }
   }
   if (waitingSince !== null) note('problem', `still waiting for a max test since day ${waitingSince}`);
+  for (const page of state.days ?? []) {
+    const m = marginNote(state, page);
+    if (m) check(`margin note on ${page.day}`, m);
+  }
   return { player: kind, events, problems, state, played, moments, snapshots };
 }
 

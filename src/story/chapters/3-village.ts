@@ -150,11 +150,27 @@ export const VILLAGE: Chapter = {
       ],
     },
     {
-      id: 'ch3-sol-rest',
+      // Sol's arc, the fall: she stops again. You give her what the story gave you.
+      id: 'ch3-sol-stops',
       when: { workouts: 34, answer: { id: 'sol', is: 'yes' } },
+      lines: [
+        { who: 'narrator', show: 'sol', text: "Sol's forge is cold again. The shoes are back on the nail. She doesn't look up when you come in." },
+        { who: 'sol', text: "Don't. I know. A deadline came, then another one, and I stopped. Just like before." },
+        { who: 'sol', text: "I was doing so well. Now I have to start all over, and I'm so tired of starting.", pause: 1 },
+        { who: 'narrator', text: 'You know that feeling. You know exactly how heavy that nail is.', pause: 1.2, film: true, music: 'none' },
+        { who: 'flame', mood: 'soft', text: "Can I say something? We've stopped too. Lots. Nobody made us start over. We just carried on from where we were." },
+        { who: 'you', text: "The walks you took are still in your legs. You didn't lose them. Want to take a short one?" },
+        { who: 'sol', text: "...That's it? You're not going to tell me I should have known better?" },
+        { who: 'you', text: 'You already did that part. I could hear it from the door.' },
+        { who: 'narrator', show: 'sol', text: 'She laughs, wet and surprised, and takes the shoes down again. Faster, this time.', pause: 0.8 },
+      ],
+    },
+    {
+      id: 'ch3-sol-rest',
+      when: { workouts: 35, answer: { id: 'sol', is: 'yes' } },
       place: 'lit-forges',
       lines: [
-        { who: 'narrator', show: 'sol', text: 'For a week, Sol runs before she opens her work. Then she rests, one whole day, on purpose. Her forge lights.' },
+        { who: 'narrator', show: 'sol', text: 'Sol starts running before she opens her work. Then she rests, a whole day, on purpose. Her forge lights, and this time it stays lit.' },
         { who: 'sol', text: 'Nothing fell over. Can you believe it? I took the time, and the world held on without me.' },
         { who: 'sol', text: "Rest isn't the prize for the work. It's part of the work." },
         { who: 'flame', mood: 'happy', text: "I've been SAYING that." },

@@ -48,6 +48,18 @@ export const PLATEAU: Chapter = {
       ],
     },
     {
+      // Lia's arc, what she gives back: a note in her own hand, and a student.
+      id: 'ch4-lia-bird',
+      when: { workouts: 40, chapter: 4, answer: { id: 'lia', is: 'yes' } },
+      lines: [
+        { who: 'narrator', show: 'flame', text: 'A paper bird comes skimming down the flat road and lands on your boot. It is folded a little crooked.' },
+        { who: 'narrator', text: 'Inside, in round handwriting: "Danced badly again today. Nobody laughed. One person clapped. It was me."', pause: 1.2, film: true },
+        { who: 'narrator', text: '"A little one at the lake asked me to teach her. I said I\'m not very good any more. She said: good, then you won\'t be scary."', film: true },
+        { who: 'narrator', text: '"Go and look at your reflection for me sometime. Be nice to them. Love, L."', pause: 1, film: true },
+        { who: 'flame', mood: 'soft', text: "Can I keep the bird? I'll hold it away from my face. Mostly." },
+      ],
+    },
+    {
       id: 'ch4-vela',
       when: { workouts: 41, chapter: 4 },
       place: 'lamp-road',
@@ -83,6 +95,19 @@ export const PLATEAU: Chapter = {
           },
         ],
       },
+    },
+    {
+      // Sol's arc, what she gives back: the rest she learned, posted to you.
+      id: 'ch4-sol-socks',
+      when: { workouts: 42, restDay: true, inChapter: 4, answer: { id: 'sol', is: 'yes' } },
+      music: 'camp',
+      lines: [
+        { who: 'narrator', show: 'sol', text: 'A parcel is waiting by the road, tied with string. Inside: a pair of very soft socks, and a note in hurried handwriting.' },
+        { who: 'narrator', text: '"Put these on. Do nothing today. That is an order from someone who learned it the hard way."', pause: 1, film: true },
+        { who: 'narrator', text: '"Nothing will fall over. I checked. Sol."', pause: 0.8, film: true },
+        { who: 'flame', mood: 'sleepy', text: "They're so soft. Can I sleep in one? Just my head." },
+        { who: 'narrator', show: 'flame', text: "You put the socks on. You do nothing, on purpose, for a whole day. You're getting better at it." },
+      ],
     },
     {
       // The Plateau doubt: the month's hardest moment. The stones from month one come back.
@@ -150,6 +175,25 @@ export const PLATEAU: Chapter = {
         { who: 'wanderer', text: 'Have you noticed how you talk about it now?' },
         { who: 'wanderer', text: 'At the start you said "I\'m trying to get back into it." Lately you just say "I train."', pause: 0.8 },
         { who: 'you', text: '...Huh. I do.', pause: 1 },
+      ],
+    },
+    {
+      // Vela's arc, the turn and the gift: she comes down from the tower, and promises a light behind you.
+      id: 'ch4-vela-down',
+      when: { workouts: 46, chapter: 4, answer: { id: 'vela', is: 'yes' } },
+      place: 'lamp-road',
+      lines: [
+        { who: 'narrator', show: 'vela', text: 'The lamp is lit, but the tower is empty. Vela is at the bottom of the stairs, one hand on the rail, a letter in the other.' },
+        { who: 'vela', text: "Don't look so surprised. I'm surprised enough for both of us." },
+        { who: 'vela', text: "I haven't come down in years. Up there the voice can't follow me. Down here it talks right in my ear." },
+        { who: 'vela', text: "People like us don't...", pace: 'slow', pause: 1.2 },
+        { who: 'vela', text: "...walk to the post stone. Yes, well. Today we do. Will you walk with me? I'm slow." },
+        { who: 'you', text: "Slow is fine. Slow is what I do." },
+        { who: 'narrator', text: "It takes her most of the afternoon. You don't hurry her once. When she stops to breathe, you stop too, and pretend you needed it.", pause: 1.4, film: true, music: 'none' },
+        { who: 'narrator', show: 'vela', text: 'At the post stone she holds the letter over the slot for a long moment. Then she lets go.', pause: 1.2 },
+        { who: 'vela', text: "There. Now it's somebody else's problem.", music: 'rise' },
+        { who: 'vela', text: 'Something for your road. It goes flat again after this. It always does. When it does, look back. My light will be on.' },
+        { who: 'flame', mood: 'soft', text: "We'll look back. We'll wave, even. Big waves." },
       ],
     },
     {
