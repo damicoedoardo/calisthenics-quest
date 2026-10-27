@@ -46,6 +46,8 @@ describe('the story files', () => {
         expect(CAST, scene.id).toHaveProperty(l.who);
         if (l.show) expect(CAST, scene.id).toHaveProperty(l.show);
         if (l.shot && 'place' in l.shot) expect(PLACES, scene.id).toHaveProperty(l.shot.place);
+        if (l.music && l.music !== 'none') expect(TRACKS, scene.id).toHaveProperty(l.music);
+        if (l.film) expect(l.who, `${scene.id}: only narration plays as film`).toBe('narrator');
       }
       if (scene.place) expect(PLACES, scene.id).toHaveProperty(scene.place);
       if (scene.music) expect(TRACKS, scene.id).toHaveProperty(scene.music);
@@ -216,6 +218,13 @@ describe('the months 4 to 6 rules', () => {
     expect(ids).not.toContain('ch1-kept');
     expect(ids).toContain('class-choice');
     expect(ids).toContain('ch1-tomorrow-begs');
+  });
+
+  it('notices a run of Rough days, and only a run', () => {
+    const rough = (kinds: Session['kind'][]) => ({ ...initialState(), sessions: kinds.map((k, i) => workout(day(i), k)) });
+    const due = (s: GameState) => pendingScenes(s, day(10)).map((x) => x.id);
+    expect(due(rough(['full', 'mini', 'mini', 'mini']))).toContain('heavy-days');
+    expect(due(rough(['mini', 'mini', 'full', 'mini']))).not.toContain('heavy-days');
   });
 
   it('reads a stand-in line when the heart answer is missing, and the answer when it is there', () => {

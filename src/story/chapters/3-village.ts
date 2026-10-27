@@ -31,7 +31,7 @@ export const VILLAGE: Chapter = {
       shots: [{ title: 'Chapter 3: The Village of Almosts', seconds: 2.4 }, { pan: 'right', seconds: 2 }],
       lines: [
         { who: 'narrator', text: 'A village where the forges went cold. Full of people who stopped, like you did.' },
-        { who: 'narrator', text: 'Every doorway has someone in it, half-dressed to go out, never quite going.' },
+        { who: 'narrator', text: 'Every doorway has someone in it, coat half on, never quite going out.' },
         { who: 'mira', text: 'Another one. Let me guess: you used to be good.', shot: { pan: 'center' } },
         { who: 'mira', text: "Me too. Everyone here used to be good. That's what's wrong with the place." },
         { who: 'mira', text: "Bring me effort. I'll make it into steel. Not perfect effort. Any effort." },
@@ -68,8 +68,8 @@ export const VILLAGE: Chapter = {
             after: [
               { who: 'sol', text: "Is it morning? It's always almost morning." },
               { who: 'you', text: "Want to walk for ten minutes? That's all." },
-              { who: 'sol', text: "...Ten minutes. Okay. Ten minutes I have." },
-              { who: 'sol', text: "Nobody's asked me to do anything for myself in a long time. It feels like being let off the hook." },
+              { who: 'sol', text: '...Ten minutes. Okay. Ten minutes I have.' },
+              { who: 'narrator', show: 'sol', text: 'She takes the shoes off the nail and blows the dust off them. Her hands are not quite steady.', pause: 0.8 },
             ],
           },
           { label: 'Let her sleep', value: 'no', after: [{ who: 'flame', mood: 'soft', text: 'She does look tired. Rest is good too.' }] },
@@ -77,15 +77,17 @@ export const VILLAGE: Chapter = {
       },
     },
     {
+      // The Knight is a mask of the Hollow: he speaks its line, the one the player picked.
       id: 'ch3-knight-voice',
       when: { workouts: 29, chapter: 3 },
       lines: [
-        { who: 'knight', text: 'Sloppy. Slow. You call that a workout? You should be ashamed of how far you let yourself go.' },
-        { who: 'narrator', show: 'knight', text: 'You flinch. Not because it hurts. Because you know the words. You have said every one of them to yourself.' },
-        { who: 'mira', text: 'Tell me something. If my apprentice came in late and tired, and I talked to them like that. What would they do?' },
+        { who: 'knight', text: 'Sloppy. Slow. You call that a workout? Look how far you let yourself go.' },
+        { who: 'knight', text: '{voice}', needs: 'voice', pace: 'slow' },
+        { who: 'narrator', show: 'knight', text: "You flinch. It's the Hollow's line. In the Knight's polished voice it sounds almost reasonable.", pause: 1, music: 'none' },
+        { who: 'narrator', text: "You know every word he says. You've said them all to yourself, in the bathroom mirror, before anyone was awake.", pause: 1.4, film: true },
+        { who: 'mira', text: 'Tell me something. If my apprentice came in late and tired, and I talked to them like that. What would they do?', pause: 0.8, music: 'rise' },
         { who: 'you', text: '...Quit. They would quit.' },
-        { who: 'mira', text: "So would anyone. Then stop hiring him to coach you. You don't get better by being hit. You get better by coming back." },
-        { who: 'flame', mood: 'soft', text: 'When he talks, try answering the way you would answer a friend. Even if you don\'t believe it yet. Especially then.' },
+        { who: 'mira', text: "So would anyone. So stop hiring him to coach you." },
       ],
     },
     {
@@ -107,7 +109,7 @@ export const VILLAGE: Chapter = {
         { who: 'narrator', show: 'flame', text: '{flame} roars up into a bonfire. All over the village, doors open and people come out to look.', shot: { zoom: 'in', seconds: 1.6 } },
         { who: 'flame', mood: 'happy', text: "I'm not a candle any more. Tell everyone." },
         { who: 'flame', text: "In the Fog I can throw fire now. Stand back. Or don't, I'll aim." },
-        { who: 'narrator', text: 'Someone in a doorway takes their coat off the hook. Just to hold it, for now.' },
+        { who: 'narrator', text: 'Someone in a doorway takes their coat off the hook. Just to hold it, for now.', pause: 0.8 },
       ],
     },
     {
@@ -118,19 +120,20 @@ export const VILLAGE: Chapter = {
         { who: 'flame', mood: 'scared', text: 'How do they know your song?' },
         { who: 'wanderer', text: 'Everybody knows that song.' },
         { who: 'flame', mood: 'scared', text: "Nobody knows that song. It doesn't even have words. You made it up." },
-        { who: 'wanderer', text: "...Keep training. You're doing well." },
+        { who: 'wanderer', text: '...Keep training. You are doing well.' },
       ],
     },
     {
       id: 'ch3-mira-story',
       when: { workouts: 32 },
+      music: 'memory',
       lines: [
         { who: 'mira', text: 'You want to know why my forge went cold? An injury. Then a long, slow way back.' },
-        { who: 'mira', text: "The worst part wasn't the pain. It was what I said to myself while I healed. Weak. Useless. Finished." },
-        { who: 'mira', text: 'I was cruel to the one person who was trying to help me get better. Me.' },
-        { who: 'mira', text: 'The day I stopped, the day I talked to myself like an apprentice instead of a disappointment, that was the day it started to work.' },
+        { who: 'mira', text: 'Every morning I stood at the cold forge and called myself names. Out loud. The apprentices heard all of it.' },
+        { who: 'mira', text: 'Then one morning I was too tired to shout. So I just lit a fire. A small one.', pause: 1 },
+        { who: 'mira', text: 'That was the first good day.', pace: 'slow', pause: 0.8 },
         { who: 'mira', text: 'I came back slower than I wanted.' },
-        { who: 'mira', text: 'I came back.' },
+        { who: 'mira', text: 'I came back.', pause: 1 },
       ],
     },
     {
@@ -142,7 +145,7 @@ export const VILLAGE: Chapter = {
         { who: 'mira', text: 'Made it from your effort. All of it. The good days and the short ones and the ones you nearly skipped.' },
         { who: 'you', text: "It's crooked." },
         { who: 'mira', text: "It's real. Crooked and real beats perfect and imaginary. Every time." },
-        { who: 'mira', text: "That ring doesn't say you're strong. It says you're someone who keeps showing up. Wear that one." },
+        { who: 'narrator', show: 'mira', text: 'She pushes it onto your finger without asking. It fits.', pause: 0.8 },
         { who: 'flame', mood: 'soft', text: "...It's the nicest thing anyone's ever made out of us." },
       ],
     },
@@ -152,7 +155,7 @@ export const VILLAGE: Chapter = {
       place: 'lit-forges',
       lines: [
         { who: 'narrator', show: 'sol', text: 'Three mornings in a row, Sol runs before she opens her work. On the fourth day she rests, all day. Her forge lights.' },
-        { who: 'sol', text: "Nothing fell over. Can you believe it? I took the time, and the world held on without me." },
+        { who: 'sol', text: 'Nothing fell over. Can you believe it? I took the time, and the world held on without me.' },
         { who: 'sol', text: "Rest isn't the prize for the work. It's part of the work." },
         { who: 'flame', mood: 'happy', text: "I've been SAYING that." },
       ],
@@ -166,7 +169,6 @@ export const VILLAGE: Chapter = {
         { who: 'narrator', show: 'flame', text: 'A rest day in the village. {flame} sits in a cold forge, warming it up for whoever comes next.' },
         { who: 'knight', text: 'Resting? Real warriors never rest.' },
         { who: 'flame', mood: 'sleepy', text: 'Real warriors are asleep right now. That is how they stay real warriors.' },
-        { who: 'flame', mood: 'soft', text: "Resting isn't you being weak. It's you looking after someone you care about. It happens to be you." },
       ],
     },
     {
@@ -174,7 +176,7 @@ export const VILLAGE: Chapter = {
       when: { workouts: 36, chapter: 3 },
       lines: [
         { who: 'narrator', show: 'knight', text: 'The Knight blocks the road out of the village. His armor is covered in hairline cracks now, one for every imperfect day you came anyway.' },
-        { who: 'knight', text: "Look at your record. Missed days. Short days. Bad form. It's a mess. It's not good enough." },
+        { who: 'knight', text: "Look at your record. Missed days. Short days. Bad days. It's a mess. It's not good enough." },
         { who: 'you', text: "It's not perfect. It's mine. And it's more than I had when I got here." },
         { who: 'knight', text: 'That is not a standard.' },
         { who: 'you', text: "It's the only one that ever got me out of bed." },
@@ -187,11 +189,11 @@ export const VILLAGE: Chapter = {
       music: 'memory',
       lines: [
         { who: 'narrator', show: 'knight', text: 'The Knight drops to one knee. The armor opens with a sigh.', shot: { shake: 'small' } },
-        { who: 'narrator', show: 'kid', text: 'Inside there is no knight. Just a tired kid, scared of failing in front of everyone.' },
-        { who: 'kid', text: 'If I never tried, I could never be bad at it.', shot: { enter: 'below' } },
-        { who: 'kid', text: "I just wanted to keep you safe. If you were perfect, nobody could laugh." },
+        { who: 'narrator', show: 'kid', text: 'Inside there is no knight. Just a tired kid, scared of failing in front of everyone.', pause: 1.2 },
+        { who: 'kid', text: 'If I never tried, I could never be bad at it.', shot: { enter: 'below' }, pace: 'slow' },
+        { who: 'kid', text: 'I just wanted to keep you safe. If you were perfect, nobody could laugh.' },
+        { who: 'narrator', show: 'kid', text: "You kneel down so you're the same height. Up close, the kid is chewing a thumbnail. You used to do that.", pause: 1 },
         { who: 'you', text: 'I was bad at it for weeks. Look where it got me.' },
-        { who: 'narrator', show: 'kid', text: "You kneel down so you're the same height. You were never angry at the Knight, you realize. You were angry at being scared." },
         { who: 'kid', text: 'Can I ask you something?' },
       ],
       ask: {
@@ -206,7 +208,7 @@ export const VILLAGE: Chapter = {
         ],
         write: 'Write your own',
         after: [
-          { who: 'kid', text: "...I'll remember that." },
+          { who: 'kid', text: "...I'll remember that.", pace: 'slow' },
           { who: 'kid', text: "Can I tell other people too? There are a lot of people here who need to hear it." },
           { who: 'narrator', show: 'kid', text: 'The armor stays on the ground, empty. The kid walks into the village, and one by one, the forges light.', shot: { place: 'lit-forges', seconds: 1.2 } },
         ],

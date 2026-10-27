@@ -100,6 +100,7 @@ export function holds(w: When, state: GameState, st: StoryState, now: Date): boo
     [w.noClass, () => !state.profile.classId === w.noClass],
     [w.answer, () => gave(state, w.answer!)],
     [w.needs, () => !!words[w.needs!].trim()],
+    [w.roughRun, () => state.sessions.length >= w.roughRun! && state.sessions.slice(-w.roughRun!).every((x) => x.kind === 'mini')],
     [w.helped, () => (helpedVillagers(state).length > 0) === w.helped],
     [w.away, () => (daysSinceTraining(state, now) ?? 0) >= w.away!],
     [w.finished, () => st.finished === w.finished],
@@ -122,7 +123,7 @@ export function savedId(scene: Scene, state: GameState): string {
 }
 
 /** `when` fields that wait for something to happen (a rest day, a class...), not for a workout count. */
-const WAITS_FOR: (keyof When)[] = ['restDay', 'shortSession', 'daysInRow', 'perfectWeek', 'skill', 'noClass', 'away', 'awaitingTest', 'beaten', 'finished'];
+const WAITS_FOR: (keyof When)[] = ['restDay', 'shortSession', 'roughRun', 'daysInRow', 'perfectWeek', 'skill', 'noClass', 'away', 'awaitingTest', 'beaten', 'finished'];
 
 /**
  * A story beat tied to a workout plays then, or a few workouts later while a chapter catches up.
