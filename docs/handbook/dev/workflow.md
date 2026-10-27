@@ -33,10 +33,10 @@ timestamp: 2026-10-27
 
 Project "forma" deploys every pushed branch as a preview
 (`forma-git-<branch>-edoardo-damicos-projects.vercel.app`) and `main` to
+https://formaquest.app (the domain is on Vercel, which also holds its DNS) and
 https://forma-nu-red.vercel.app.
 
-**The free plan allows 100 deployments a day (rolling 24 h), and every branch push is one.** An
-overnight run used them all on 2026-10-27 and production was refused. So: commit locally as much
+**The team is on Vercel Pro since 2026-10-27; the free plan's 100 deployments a day ran out twice.** So: commit locally as much
 as you like, push a branch once when it is ready, and batch fixes into one push.
 
 ## CI (GitHub Actions)
