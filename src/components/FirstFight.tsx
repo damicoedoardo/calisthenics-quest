@@ -69,16 +69,18 @@ export function FirstFight({ voice, gear, onDone }: { voice: string; gear: Recor
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-ink-950">
       {phase === 'answer' && <div className="pointer-events-none fixed inset-0 z-[55] animate-flash bg-red-900" aria-hidden />}
-      <div className="safe-top flex px-4">
+      <div className="safe-top land-safe-x flex px-4">
         <SoundToggle />
       </div>
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-8">
+      {/* Held sideways: the fight on the left, the words and Strike on the right. */}
+      <div className="land-safe-x mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-8 [@media(orientation:landscape)_and_(max-height:600px)]:min-h-0 [@media(orientation:landscape)_and_(max-height:600px)]:max-w-4xl [@media(orientation:landscape)_and_(max-height:600px)]:flex-row [@media(orientation:landscape)_and_(max-height:600px)]:gap-8 [@media(orientation:landscape)_and_(max-height:600px)]:pb-4">
+        <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:flex-col">
         <div className="mt-2 grid grid-cols-2 gap-6">
           <Bar label="You" pct={heroHp} color="#22c55e" />
           <Bar label="The Hollow" pct={HOLLOW_HP[struck]} color="#7c3aed" />
         </div>
 
-        <div className="flex flex-1 items-end justify-center gap-6 pb-6">
+        <div className="flex flex-1 items-end justify-center gap-6 pb-6 [@media(orientation:landscape)_and_(max-height:600px)]:pb-2">
           <div
             className={`transition-all duration-1000 ${phase === 'strike' ? 'animate-lunge' : phase === 'answer' ? 'animate-shake' : ''}`}
             style={phase === 'down' ? { transform: 'rotate(-90deg) translateX(-30px)', filter: 'grayscale(1)', opacity: 0.6 } : undefined}
@@ -91,6 +93,8 @@ export function FirstFight({ voice, gear, onDone }: { voice: string; gear: Recor
           </div>
         </div>
 
+        </div>
+        <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:w-80 [@media(orientation:landscape)_and_(max-height:600px)]:flex-col [@media(orientation:landscape)_and_(max-height:600px)]:justify-center">
         <div className={`min-h-[110px] rounded-xl p-4 pixel-border ${hollowSpeaks ? 'bg-[#140f1f]' : 'bg-ink-800'}`}>
           {hollowSpeaks && <p className="mb-2 font-pixel text-[10px] text-red-400">The Hollow</p>}
           <p key={text} className={`animate-fadein text-lg leading-snug ${hollowSpeaks ? 'text-red-100' : 'italic text-slate-300'}`}>
@@ -105,6 +109,7 @@ export function FirstFight({ voice, gear, onDone }: { voice: string; gear: Recor
         >
           Strike
         </button>
+        </div>
       </div>
     </div>
   );

@@ -35,6 +35,12 @@ interface Props {
 const goldButton =
   'w-full rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none disabled:opacity-40';
 
+/** Held sideways, the letter, the kit pick and the look editor go in two columns: who speaks and the
+    button on the left, the form on the right. */
+const SIDE = 'land-safe-x [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:max-w-4xl [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-[16rem_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:600px)]:grid-rows-[auto_1fr] [@media(orientation:landscape)_and_(max-height:600px)]:gap-x-8 [@media(orientation:landscape)_and_(max-height:600px)]:pb-4';
+// The button stays in reach when the form is taller than the screen (the look editor).
+const SIDE_BUTTON = '[@media(orientation:landscape)_and_(max-height:600px)]:sticky [@media(orientation:landscape)_and_(max-height:600px)]:bottom-4 [@media(orientation:landscape)_and_(max-height:600px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:600px)]:row-start-2 [@media(orientation:landscape)_and_(max-height:600px)]:self-end';
+
 /** The fading montage: who you were turns gray, and something stands behind you. */
 function fadingBackdrop(gear: ReturnType<typeof equippedGear>) {
   return (i: number) => {
@@ -97,10 +103,14 @@ export function Prologue({ state, onFinish, onLook, onExit, onSkip }: Props) {
     case 'title':
       if (firstRun && !state.profile.look)
         return (
-          <div className="fixed inset-0 flex flex-col items-center justify-center bg-ink-950 px-6 text-center">
-            <p className="font-pixel text-3xl tracking-widest text-gold-400">FORMA</p>
-            <p className="mt-3 font-pixel text-[10px] text-slate-400">The Road Back</p>
-            <p className="mt-12 font-pixel text-[10px] text-slate-300">Who walks the road?</p>
+          // Held sideways: the name on the left, the pick on the right.
+          <div className="fixed inset-0 flex flex-col items-center justify-center bg-ink-950 px-6 text-center [@media(orientation:landscape)_and_(max-height:600px)]:flex-row [@media(orientation:landscape)_and_(max-height:600px)]:gap-16">
+            <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:block">
+              <p className="font-pixel text-3xl tracking-widest text-gold-400">FORMA</p>
+              <p className="mt-3 font-pixel text-[10px] text-slate-400">The Road Back</p>
+            </div>
+            <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:flex-col [@media(orientation:landscape)_and_(max-height:600px)]:items-center">
+            <p className="mt-12 font-pixel text-[10px] text-slate-300 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0">Who walks the road?</p>
             <div className="mt-5 flex gap-4">
               {(['m', 'f'] as const).map((sex) => (
                 <button
@@ -116,23 +126,27 @@ export function Prologue({ state, onFinish, onLook, onExit, onSkip }: Props) {
                 </button>
               ))}
             </div>
-            <p className="mt-8 flex items-center gap-2 text-xs text-slate-500">
+            <p className="mt-8 flex items-center gap-2 text-xs text-slate-500 [@media(orientation:landscape)_and_(max-height:600px)]:mt-4">
               <Headphones size={14} /> Best with sound on
             </p>
             {skip}
+            </div>
           </div>
         );
       return (
         <div
-          className="fixed inset-0 flex flex-col items-center justify-center bg-ink-950 px-6 text-center"
+          className="fixed inset-0 flex flex-col items-center justify-center bg-ink-950 px-6 text-center [@media(orientation:landscape)_and_(max-height:600px)]:flex-row [@media(orientation:landscape)_and_(max-height:600px)]:gap-16"
           onClick={begin}
         >
+          <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:flex-col [@media(orientation:landscape)_and_(max-height:600px)]:items-center">
           <p className="font-pixel text-3xl tracking-widest text-gold-400">FORMA</p>
           <p className="mt-3 font-pixel text-[10px] text-slate-400">The Road Back</p>
-          <div className="mt-12 opacity-60 grayscale">
+          <div className="mt-12 opacity-60 grayscale [@media(orientation:landscape)_and_(max-height:600px)]:mt-6">
             <Hero gear={gear} size={96} />
           </div>
-          <p className="mt-12 animate-blink font-pixel text-[10px] text-slate-300">Tap to begin</p>
+          </div>
+          <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:flex-col [@media(orientation:landscape)_and_(max-height:600px)]:items-center">
+          <p className="mt-12 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0 animate-blink font-pixel text-[10px] text-slate-300">Tap to begin</p>
           <p className="mt-6 flex items-center gap-2 text-xs text-slate-500">
             <Headphones size={14} /> Best with sound on
           </p>
@@ -148,6 +162,7 @@ export function Prologue({ state, onFinish, onLook, onExit, onSkip }: Props) {
             </button>
           )}
           {skip}
+          </div>
         </div>
       );
     case 'cold':
@@ -216,15 +231,16 @@ export function Prologue({ state, onFinish, onLook, onExit, onSkip }: Props) {
 function MakeItYours({ look, setLook, gear, onDone }: { look: Look; setLook: (l: Look) => void; gear: Record<GearSlot, Gear>; onDone: () => void }) {
   useMusic('rise');
   return (
-    <div className="safe-top safe-bottom mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6">
-      <div className="mt-4 flex items-center gap-3">
+    // Held sideways: the flame and the button on the left, the editor on the right.
+    <div className={`safe-top safe-bottom mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6 ${SIDE}`}>
+      <div className="mt-4 flex items-center gap-3 [@media(orientation:landscape)_and_(max-height:600px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:600px)]:row-start-1">
         <Ember size={64} stage="spark" />
         <p className="flex-1 text-sm text-slate-300">&ldquo;One more thing before we walk. Is this really you? Change anything. You can change it again later.&rdquo;</p>
       </div>
-      <div className="mt-5 flex-1">
+      <div className="mt-5 flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:600px)]:row-span-2 [@media(orientation:landscape)_and_(max-height:600px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:600px)]:mt-4">
         <LookEditor look={look} onChange={setLook} gear={gear} />
       </div>
-      <button onClick={onDone} className={`mt-5 ${goldButton}`}>
+      <button onClick={onDone} className={`mt-5 ${goldButton} ${SIDE_BUTTON}`}>
         This is me
       </button>
     </div>
@@ -247,10 +263,12 @@ function VoicePick({
   useMusic('memory');
   return (
     <div className="safe-bottom fixed inset-0 overflow-y-auto bg-ink-950">
-      <div className="safe-top flex px-4">
+      <div className="safe-top land-safe-x flex px-4">
         <SoundToggle />
       </div>
-      <div className="mx-auto flex min-h-[90dvh] max-w-md flex-col px-5 pb-6">
+      {/* Held sideways: the Hollow and its question on the left, the answers on the right. */}
+      <div className="land-safe-x mx-auto flex min-h-[90dvh] max-w-md flex-col px-5 pb-6 [@media(orientation:landscape)_and_(max-height:600px)]:min-h-0 [@media(orientation:landscape)_and_(max-height:600px)]:max-w-4xl [@media(orientation:landscape)_and_(max-height:600px)]:flex-row [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:gap-8 [@media(orientation:landscape)_and_(max-height:600px)]:pb-3">
+        <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:block [@media(orientation:landscape)_and_(max-height:600px)]:flex-1">
         <div className="flex justify-center opacity-50">
           <Hollow size={90} />
         </div>
@@ -258,7 +276,9 @@ function VoicePick({
           It&apos;s quiet. It&apos;s always there. And it sounds exactly like you.
         </p>
         <p className="mt-5 text-center font-pixel text-[11px] text-red-300">What does it tell you?</p>
-        <div className="mt-5 space-y-2">
+        </div>
+        <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:flex-col">
+        <div className="mt-5 space-y-2 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0 [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:600px)]:gap-2 [@media(orientation:landscape)_and_(max-height:600px)]:space-y-0">
           {VOICES.map((v) => (
             <button
               key={v}
@@ -266,7 +286,7 @@ function VoicePick({
                 setVoice(v);
                 setCustom(false);
               }}
-              className={`w-full rounded-xl px-4 py-3 text-left text-base transition active:scale-[.98] ${
+              className={`w-full rounded-xl px-4 py-3 text-left text-base transition active:scale-[.98] [@media(orientation:landscape)_and_(max-height:600px)]:py-2 ${
                 !custom && voice === v ? 'bg-[#2a1630] text-red-100 ring-1 ring-red-400/60' : 'bg-ink-800 text-slate-300'
               }`}
             >
@@ -280,7 +300,7 @@ function VoicePick({
               onChange={(e) => setVoice(e.target.value)}
               placeholder="In its words..."
               maxLength={80}
-              className="w-full rounded-xl bg-[#2a1630] px-4 py-3 text-base text-red-100 outline-none ring-1 ring-red-400/60 placeholder:text-red-200/40"
+              className="w-full rounded-xl bg-[#2a1630] px-4 py-3 text-base text-red-100 [@media(orientation:landscape)_and_(max-height:600px)]:py-2 outline-none ring-1 ring-red-400/60 placeholder:text-red-200/40"
             />
           ) : (
             <button
@@ -288,17 +308,18 @@ function VoicePick({
                 setCustom(true);
                 setVoice('');
               }}
-              className="w-full rounded-xl bg-ink-800 px-4 py-3 text-left text-base text-slate-500"
+              className="w-full rounded-xl bg-ink-800 px-4 py-3 text-left text-base text-slate-500 [@media(orientation:landscape)_and_(max-height:600px)]:py-2"
             >
               Something else...
             </button>
           )}
         </div>
-        <p className="mt-4 text-center text-xs text-slate-500">Be honest. Only you will ever see this.</p>
+        <p className="mt-4 text-center text-xs text-slate-500 [@media(orientation:landscape)_and_(max-height:600px)]:mt-2">Be honest. Only you will ever see this.</p>
         <div className="flex-1" />
-        <button onClick={onDone} disabled={!voice.trim()} className={`mt-6 ${goldButton}`}>
+        <button onClick={onDone} disabled={!voice.trim()} className={`mt-6 ${goldButton} [@media(orientation:landscape)_and_(max-height:600px)]:mt-3 [@media(orientation:landscape)_and_(max-height:600px)]:py-3`}>
           That&apos;s the one
         </button>
+        </div>
       </div>
     </div>
   );
@@ -307,14 +328,15 @@ function VoicePick({
 function LetterForm({ letter, setLetter, onDone }: { letter: Letter; setLetter: (l: Letter) => void; onDone: () => void }) {
   useMusic('rise');
   return (
-    <div className="safe-top safe-bottom mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6">
-      <div className="mt-4 flex items-center gap-3">
+    // Held sideways: the Wanderer and the button on the left, the letter on the right.
+    <div className={`safe-top safe-bottom mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6 ${SIDE}`}>
+      <div className="mt-4 flex items-center gap-3 [@media(orientation:landscape)_and_(max-height:600px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:600px)]:row-start-1">
         <Wanderer size={56} />
         <p className="flex-1 text-sm italic text-slate-300">&ldquo;Write to the person you want to become.&rdquo;</p>
         <SoundToggle />
       </div>
-      <div className="mt-5 flex-1 space-y-4 rounded-2xl bg-[#f5ecd7] p-5 text-[#3b2a1a] shadow-xl">
-        <p className="font-pixel text-[11px]">A letter to my future self</p>
+      <div className="mt-5 flex-1 space-y-4 rounded-2xl bg-[#f5ecd7] p-5 text-[#3b2a1a] shadow-xl [@media(orientation:landscape)_and_(max-height:600px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:600px)]:row-span-2 [@media(orientation:landscape)_and_(max-height:600px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:600px)]:mt-4 [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:600px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:600px)]:gap-y-3 [@media(orientation:landscape)_and_(max-height:600px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:600px)]:p-4">
+        <p className="font-pixel text-[11px] [@media(orientation:landscape)_and_(max-height:600px)]:col-span-2">A letter to my future self</p>
         {LETTER_PROMPTS.map((p) => (
           <label key={p.key} className="block">
             <span className="text-sm font-semibold">{p.label}</span>
@@ -327,9 +349,9 @@ function LetterForm({ letter, setLetter, onDone }: { letter: Letter; setLetter: 
             />
           </label>
         ))}
-        <p className="text-xs text-[#7a6a4f]">Every line is optional. Only you will ever read it.</p>
+        <p className="text-xs text-[#7a6a4f] [@media(orientation:landscape)_and_(max-height:600px)]:col-span-2">Every line is optional. Only you will ever read it.</p>
       </div>
-      <button onClick={onDone} className={`mt-5 ${goldButton}`}>
+      <button onClick={onDone} className={`mt-5 ${goldButton} ${SIDE_BUTTON}`}>
         Seal the letter
       </button>
     </div>
@@ -344,12 +366,13 @@ const KITS: { id: Kit; label: string; note: string }[] = [
 function KitPick({ kit, setKit, onDone }: { kit: Kit; setKit: (k: Kit) => void; onDone: () => void }) {
   useMusic('rise');
   return (
-    <div className="safe-top safe-bottom mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6">
-      <div className="mt-4 flex items-center gap-3">
+    // Held sideways: the flame and the button on the left, the two places on the right.
+    <div className={`safe-top safe-bottom mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6 ${SIDE}`}>
+      <div className="mt-4 flex items-center gap-3 [@media(orientation:landscape)_and_(max-height:600px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:600px)]:row-start-1">
         <Ember size={64} stage="spark" />
         <p className="flex-1 text-sm text-slate-300">&ldquo;Before we walk: where will you train? Either is fine. You can change it on the Train tab.&rdquo;</p>
       </div>
-      <div className="mt-6 flex-1 space-y-3">
+      <div className="mt-6 flex-1 space-y-3 [@media(orientation:landscape)_and_(max-height:600px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:600px)]:row-span-2 [@media(orientation:landscape)_and_(max-height:600px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:600px)]:mt-4 [@media(orientation:landscape)_and_(max-height:600px)]:self-center">
         {KITS.map((k) => (
           <button
             key={k.id}
@@ -363,7 +386,7 @@ function KitPick({ kit, setKit, onDone }: { kit: Kit; setKit: (k: Kit) => void; 
         ))}
         <p className="px-1 text-xs text-slate-500">Every workout starts light, with a warm-up, and ends with a stretch. Day one should feel winnable.</p>
       </div>
-      <button onClick={onDone} className={`mt-5 ${goldButton}`}>
+      <button onClick={onDone} className={`mt-5 ${goldButton} ${SIDE_BUTTON}`}>
         Begin the road
       </button>
     </div>

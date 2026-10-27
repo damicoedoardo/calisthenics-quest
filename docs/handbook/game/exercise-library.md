@@ -11,7 +11,8 @@ timestamp: 2026-10-27
 Code: `src/exercises/`. Shown in the app from the Train tab ("Exercise library",
 `src/components/ExerciseLibrary.tsx`): search, filters for equipment, kind (stretch, mobility...)
 and movement, and per exercise the boy and girl demo, how-to steps, "Do it well" tips and common
-mistakes.
+mistakes. Held sideways, the search and filters share one line, the list has two columns, and an
+exercise shows its demos and facts beside the how-to.
 
 887 exercises: the open catalog [free-exercise-db](https://github.com/yuhonas/free-exercise-db)
 (public domain) plus the FORMA program's own moves. Every one has a pixel demo (boy and girl) and

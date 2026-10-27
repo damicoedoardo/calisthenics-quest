@@ -51,7 +51,11 @@ export function DevPanel({ state, update, onPlayScene, onPlayOpening, onTurnOff,
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col justify-end bg-ink-950/70" onClick={() => onClose()}>
-      <div className="safe-bottom mx-auto max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-ink-900 p-4 ring-1 ring-sky-400/30" onClick={(e) => e.stopPropagation()}>
+      {/* Held sideways: a wider sheet, its sections in two columns. */}
+      <div
+        className="safe-bottom mx-auto max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-ink-900 p-4 ring-1 ring-sky-400/30 [@media(orientation:landscape)_and_(max-height:600px)]:max-h-[94dvh] [@media(orientation:landscape)_and_(max-height:600px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:600px)]:pl-[max(env(safe-area-inset-left),16px)] [@media(orientation:landscape)_and_(max-height:600px)]:pr-[max(env(safe-area-inset-right),16px)]"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between">
           <p className="font-pixel text-[10px] text-sky-300">Developer mode</p>
           <button aria-label="Close" onClick={() => onClose()} className="grid h-9 w-9 place-items-center rounded-lg bg-ink-800 text-slate-300">
@@ -59,6 +63,7 @@ export function DevPanel({ state, update, onPlayScene, onPlayOpening, onTurnOff,
           </button>
         </div>
 
+        <div className="[@media(orientation:landscape)_and_(max-height:600px)]:columns-2 [@media(orientation:landscape)_and_(max-height:600px)]:gap-6 [@media(orientation:landscape)_and_(max-height:600px)]:[&>section]:break-inside-avoid">
         <section className="mt-4">
           <p className="text-xs text-slate-400">Workouts: {state.sessions.length} logged</p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -194,6 +199,8 @@ export function DevPanel({ state, update, onPlayScene, onPlayOpening, onTurnOff,
             </button>
           </div>
         </section>
+
+        </div>
 
         <section className="mt-5 border-t border-ink-700 pt-4">
           <button

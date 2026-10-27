@@ -18,6 +18,7 @@ name turn it back on.
 It adds: "Skip the intro" on the title screen; a wrench in the header with fake workouts, class
 and stat-point buttons (spread them evenly, take all back), any story scene on demand, the app opening again, Fog boss clears, a save wipe; and in a Fog
 run's pause menu "Skip to the boss", "Next floor", "To the mid-boss", "The stairs card" (the stairs choice, here and now), "Win this run", the bot, and a Theme button that cycles zone colors.
+Held sideways the panel is a wider sheet with its sections in two columns.
 Helpers are pure functions on `GameState` and tested in `src/lib/dev.test.ts`.
 
 ## Labs (`src/app/lab/`)

@@ -70,12 +70,13 @@ export function RiseUp({ gear, onDone }: { gear: Record<GearSlot, Gear>; onDone:
     >
       <Weather kind="ash" />
       {stood && <div className="pointer-events-none fixed inset-0 z-[55] animate-flash bg-amber-200" aria-hidden />}
-      <div className="safe-top flex px-4">
+      <div className="safe-top land-safe-x flex px-4">
         <SoundToggle />
       </div>
 
-      <div className="mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-8">
-        <div className="relative flex flex-1 items-end justify-center pb-4">
+      {/* Held sideways: you on the ground on the left, the words and the button on the right. */}
+      <div className="land-safe-x mx-auto flex w-full max-w-md flex-1 flex-col px-5 pb-8 [@media(orientation:landscape)_and_(max-height:600px)]:min-h-0 [@media(orientation:landscape)_and_(max-height:600px)]:max-w-4xl [@media(orientation:landscape)_and_(max-height:600px)]:flex-row [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:gap-8 [@media(orientation:landscape)_and_(max-height:600px)]:pb-4">
+        <div className="relative flex flex-1 items-end justify-center pb-4 [@media(orientation:landscape)_and_(max-height:600px)]:self-stretch [@media(orientation:landscape)_and_(max-height:600px)]:items-center">
           <div className="absolute right-4 top-6 transition-opacity duration-1000" style={{ opacity: stood ? 0.15 : 0.45 }}>
             <Hollow size={90} />
           </div>
@@ -90,7 +91,8 @@ export function RiseUp({ gear, onDone }: { gear: Record<GearSlot, Gear>; onDone:
           </div>
         </div>
 
-        <div className="min-h-[150px] text-center">
+        <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:flex-col [@media(orientation:landscape)_and_(max-height:600px)]:justify-center">
+        <div className="min-h-[150px] text-center [@media(orientation:landscape)_and_(max-height:600px)]:min-h-[120px]">
           {!atHold && current && (
             <p key={line} className={`animate-fadein text-xl leading-relaxed ${current.who === 'hollow' ? 'text-red-300' : 'text-slate-200'}`}>
               {current.text}
@@ -131,6 +133,7 @@ export function RiseUp({ gear, onDone }: { gear: Record<GearSlot, Gear>; onDone:
             <span className="relative">{holding ? 'Keep going...' : 'Hold to get up'}</span>
           </button>
         )}
+        </div>
       </div>
     </div>
   );

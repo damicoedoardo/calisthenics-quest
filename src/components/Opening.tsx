@@ -100,7 +100,7 @@ export function Opening({ state, onDone }: { state: GameState; onDone: () => voi
       onClick={tap}
       className={`fixed inset-0 z-50 flex select-none flex-col items-center justify-center bg-ink-950 transition-opacity duration-300 ${phase === 'out' ? 'pointer-events-none opacity-0' : ''}`}
     >
-      <div className="safe-top absolute right-2 top-2">
+      <div className="safe-top absolute right-2 top-2 [@media(orientation:landscape)_and_(max-height:600px)]:right-[max(env(safe-area-inset-right),8px)]">
         <SoundToggle />
       </div>
       {go && (

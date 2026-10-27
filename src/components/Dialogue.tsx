@@ -204,6 +204,8 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
   const enter = shot && 'enter' in shot ? ENTER[shot.enter] : 'animate-pop';
   const ms = secondsOf(shot) * 1000;
   const weather = cam.place ? PLACES[cam.place].weather : 'none';
+  // Something to show beside the words (a speaker, someone shown, or the opening's pictures).
+  const side = !!line && !(narrator && !line.show && !backdrop);
 
   return (
     <div ref={box} tabIndex={-1} className="fixed inset-0 z-50 flex flex-col overflow-hidden bg-ink-950 outline-none" onClick={advance} role="dialog" aria-modal="true" aria-live="polite">
@@ -220,7 +222,7 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
       )}
       {weather !== 'none' && <Weather kind={weather} behind />}
 
-      <div className="safe-top relative z-10 flex justify-between px-4">
+      <div className="safe-top land-safe-x relative z-10 flex justify-between px-4">
         <SoundToggle />
         <button
           onClick={(e) => {
@@ -240,8 +242,9 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
       )}
 
       {line && (
-        <>
-          <div key={`shake-p-${index}`} className={`relative flex justify-center pb-6 ${narrator ? 'flex-[0.8] items-end' : 'flex-1 items-end'} ${cam.place ? '' : shake}`}>
+        // Held sideways, whoever is on screen stands on the left and the words sit beside them.
+        <div className={side ? 'land-safe-x contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:min-h-0 [@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:gap-6' : 'contents'}>
+          <div key={`shake-p-${index}`} className={`relative flex justify-center pb-6 ${narrator ? 'flex-[0.8] items-end' : 'flex-1 items-end'} ${side ? '[@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:pb-4' : ''} ${cam.place ? '' : shake}`}>
             {narrator && !line.show
               ? backdrop?.(index)
               : (
@@ -251,7 +254,7 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
               )}
           </div>
 
-          <div className={`safe-bottom relative mx-auto w-full max-w-md px-4 pb-6 ${narrator ? 'flex-1' : ''}`}>
+          <div className={`safe-bottom relative mx-auto w-full max-w-md px-4 pb-6 ${narrator ? 'flex-1' : ''} ${side ? '[@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:flex-col [@media(orientation:landscape)_and_(max-height:600px)]:justify-center [@media(orientation:landscape)_and_(max-height:600px)]:px-0 [@media(orientation:landscape)_and_(max-height:600px)]:pb-4' : ''}`}>
             {film ? (
               <div key={index} className="min-h-[132px] animate-fadein px-2 text-center">
                 <p className="text-xl leading-relaxed text-slate-200">
@@ -271,7 +274,7 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
               </div>
             )}
           </div>
-        </>
+        </div>
       )}
 
       {!line && !(shot && 'title' in shot) && <div className="flex-1" />}

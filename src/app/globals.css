@@ -94,3 +94,15 @@ body {
     animation: flash-soft 1.2s ease-in-out both;
   }
 }
+
+/* ---- Landscape phones: the full-screen overlays (Workout, scenes, Book of Days, library...) ----
+   Phones held sideways are short and wide, and the notch sits on the left or the right. The
+   overlays switch their layout with the variant [@media(orientation:landscape)_and_(max-height:600px)]
+   in their own classes; this keeps their edges clear of the notch there. Portrait is untouched. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .land-safe-x {
+    padding-left: max(env(safe-area-inset-left), 16px);
+    padding-right: max(env(safe-area-inset-right), 16px);
+  }
+}
+/* ---- end landscape overlays ---- */
