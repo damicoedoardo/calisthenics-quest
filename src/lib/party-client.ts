@@ -34,13 +34,21 @@ export const usePartyView = () =>
 
 export const partyMe = () => me;
 
+/** Calls started, and the newest one whose answer is shown: an answer that comes back after a newer
+    one (a look sent just before you tapped Join) is old news, and would bring the invite back. */
+let started = 0;
+let shown = 0;
+
 async function call(method: 'GET' | 'PUT' | 'POST', path: string, body?: unknown): Promise<PartyView> {
+  const n = ++started;
   const r = await api(method, path, body);
   if (!r.ok) {
     const detail = ((await r.json().catch(() => null)) as { detail?: string } | null)?.detail;
     throw new Error(typeof detail === 'string' ? detail : `Request failed (${r.status})`);
   }
   const v = (await r.json()) as PartyView;
+  if (n < shown) return view;
+  shown = n;
   set(v);
   return v;
 }
