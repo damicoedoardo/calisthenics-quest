@@ -7,7 +7,8 @@ touches `backend/**` runs the backend tests, then builds `ghcr.io/damicoedoardo/
 image in with a zero-downtime `docker rollout api`, then checks `https://<DOMAIN>/health`.
 
 Application code ships inside the image. Changes to `docker-compose.yml`, `caddy/Caddyfile` or
-these scripts need a manual `git pull` on the server (below).
+these scripts need a manual `git pull` on the server (below). The game server is the exception: it
+is built on the server from the repo (Live party runs, below).
 
 | File | Role |
 |---|---|
@@ -83,6 +84,29 @@ docker compose up -d livekit caddy   # caddy is recreated to see VOICE_DOMAIN
 docker rollout api                    # the api picks up the LIVEKIT_ settings
 curl -s https://voice.formaquest.app  # "OK"
 ```
+
+## Live party runs (one time)
+
+The game server (`play` in `docker-compose.yml`, code in `play/`) runs the one real run for a
+party; phones reach it at `wss://<DOMAIN>/play` through Caddy, so no new DNS record or port. The
+api signs a pass for each party member with a secret both share. Until `PLAY_SECRET` is set, the
+api answers 503 and parties play with bots, as before.
+
+```bash
+cd /root/forma && git pull
+cat >> .env <<EOF2
+PLAY_URL=wss://api.formaquest.app/play
+PLAY_SECRET=$(openssl rand -hex 32)
+EOF2
+docker compose up -d --build play                                               # the game server
+docker compose exec -w /etc/caddy caddy caddy reload --config /etc/caddy/Caddyfile   # the /play route
+docker rollout api                                                              # the api reads PLAY_*
+curl -s https://api.formaquest.app/play/health                                  # {"ok":true,"rooms":0}
+```
+
+After that the poller keeps it current: when `play/`, `src/` or `scripts/ts-hooks.mjs` change on
+`main`, it fast-forwards the repo and runs `docker compose up -d --build play` (ending the runs
+going on at that moment). `docker compose logs -f play` shows it.
 
 ## Looking around
 

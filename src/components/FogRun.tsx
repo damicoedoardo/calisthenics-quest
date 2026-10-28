@@ -22,6 +22,8 @@ import { SoundToggle, useMusic } from './Sound';
 import { useKeyboardPlay } from './useDesk';
 import { track } from '@/lib/analytics-client';
 import { runEndEvent, runStartEvent } from '@/lib/analytics';
+import { joinLive, type PlayLink, type Waiting } from '@/lib/play-client';
+import { partyMe } from '@/lib/party-client';
 import type { FreePick, Hud, MiniMap, RunEnd, RunHandle } from '@/game/dungeon/scene';
 import { ABILITIES, BAG, DODGE, RELICS, ROOM_KINDS, SP_MOVES, midBoss, type AbilityId, type CellKind, type RelicId, type SpMoveId } from '@/game/dungeon/engine';
 
@@ -34,8 +36,8 @@ interface Props {
   onLeave: () => void;
   /** Developer mode (/lab/night): start the first attempt at the mid-boss, at the boss, or won (the recap). */
   startAt?: RunStart;
-  /** A party's run: the shared seed, and the friends who come along (played by bots until the
-      game server exists). */
+  /** A party's run: the shared seed, and the friends who come along. The first attempt is live on
+      the game server when it's there; otherwise (and on "Try again") bots play the friends. */
   party?: { seed: number; friends: FriendCard[] };
 }
 
@@ -123,6 +125,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
   const [gearOut, setGearOut] = useState<(GearOutcome & { first: boolean }) | null>(null);
   // The game code couldn't be fetched (offline before the Play tab ever loaded it).
   const [failed, setFailed] = useState(false);
+  // A live party run: waiting for the others to walk in (who's here, out of whom).
+  const [waiting, setWaiting] = useState<Waiting | null>(null);
   // On a computer the buttons show their keys, and a tall window plays as it is.
   const keys = useKeyboardPlay();
   // Held upright, the run waits behind a "turn your phone" card.
@@ -162,17 +166,27 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
     el.addEventListener('pointerdown', moved, { once: true });
     let jump = 0;
     const how = { party: !!party, bot: !!auto, start_at: startAt && attempt === 0 ? startAt : null };
-    Promise.all([game, calm]).then(([{ startRun }]) => {
-      if (cancelled) return;
+    const hero = { power: powerOf(state, new Date()), classId, worn: wornFor(state), build: buildOf(state), heroLevel: heroLevel(state), edge: edgeFor(state, zone), sp: spWorn(state) || undefined };
+    // A party's first attempt: the live run on the game server, once everyone walks in. When it
+    // isn't there (not set up, no signal), the run is a practice one with bots, as before.
+    const leaving = new AbortController();
+    const live: Promise<PlayLink | null> =
+      party && attempt === 0 && !auto
+        ? (setWaiting({ here: [], need: [] }), joinLive(hero, (w) => !cancelled && setWaiting(w), leaving.signal, dev ? labLive() : undefined).catch(() => null))
+        : Promise.resolve(null);
+    Promise.all([game, calm, live]).then(([{ startRun }, , net]) => {
+      setWaiting(null);
+      if (cancelled) return net?.close();
       track(runStartEvent(state, zone.id, how));
-      run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast', worn: wornFor(state),
-        build: buildOf(state),
-        heroLevel: heroLevel(state),
-        edge: edgeFor(state, zone),
-        sp: spWorn(state) || undefined,
+      const look = (f: FriendCard | undefined, classId: ClassId | undefined) => ({ name: f?.name ?? 'Friend', classId, ...friendSheets({ classId, look: f?.look ?? null, tiers: f?.look?.gear }) });
+      run.current = startRun(el, { zone, lines: bossLines(zone, state), ...hero, sheets, autopilot: auto, fast: bot === 'fast',
         // Only the first attempt shares the party's seed; "Try again" is a run of your own.
         seed: party && attempt === 0 ? party.seed : undefined,
-        friends: party?.friends.map((f) => ({ name: f.name, classId: f.class_id ?? undefined, ...friendSheets({ classId: f.class_id ?? undefined, look: f.look, tiers: f.look?.gear }) })),
+        // Live: the others in the run's order (the server's), each as their friend card shows them.
+        friends: net
+          ? net.start.users.flatMap((u, i) => (i === net.me ? [] : [look(party?.friends.find((f) => f.id === u), net.start.heroes[i].classId)]))
+          : party?.friends.map((f) => look(f, f.class_id ?? undefined)),
+        net: net ?? undefined,
       }, {
         hud: setHud,
         floor: (n: number) => {
@@ -188,6 +202,11 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
         say: (text) => setSaid({ text, at: Date.now() }),
         loot: (item) => setFound({ item, at: Date.now() }),
         stairs: () => setStairs(true),
+        dismiss: () => {
+          setStairs(false);
+          setOffer(null);
+          setChest(null);
+        },
         end: (r) => {
           music.sting(r.won ? (zoneMusic(zone.id).win ?? 'victory') : r.why === 'left' ? 'levelup' : 'defeat');
           const result: RunResult = { ...r, zone: zone.id };
@@ -201,8 +220,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
         },
       });
       if (upright.current) run.current.pause();
+      if (party && attempt === 0 && !net && !auto) setSaid({ text: 'Live play is off right now: bots walk in for your friends.', at: Date.now() });
       // Once the first room is up, jump ahead (only on the first attempt, so Again plays normally).
-      if (startAt && attempt === 0)
+      if (startAt && attempt === 0 && !net)
         jump = window.setTimeout(() => {
           const h = run.current;
           if (startAt === 'mid') h?.skipToWarden();
@@ -223,6 +243,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
     });
     return () => {
       cancelled = true;
+      leaving.abort();
+      setWaiting(null);
       clearTimeout(tipGone);
       clearTimeout(jump);
       window.removeEventListener('keydown', moved);
@@ -371,7 +393,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
         </div>
       )}
 
-      {!hud && !end && !failed && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
+      {!hud && !end && !failed && !waiting && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
+      {waiting && <PartyWait waiting={waiting} friends={party?.friends ?? []} onLeave={onLeave} />}
       {failed && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
           <p className="text-sm text-slate-300">The Fog has to download once, with a signal. After that it works offline too.</p>
@@ -632,6 +655,44 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
 
 /** A final just went off: its icon and name, small, under the HP, for a moment (a new key per
     final starts it over). */
+/** Developer mode: `?live=ws://localhost:8090/play&pass=<token>` joins a game server running on
+    this computer without the api (only a local one, so a link can't send you elsewhere). */
+function labLive(): { url: string; token: string } | undefined {
+  const q = new URLSearchParams(window.location.search),
+    url = q.get('live'),
+    token = q.get('pass');
+  if (!url || !token) return undefined;
+  const host = new URL(url).hostname;
+  return host === 'localhost' || host === '127.0.0.1' ? { url, token } : undefined;
+}
+
+/** A live party run, before it begins: who has walked in. It starts when everyone is here, or soon
+    after the first (the server doesn't wait long). */
+function PartyWait({ waiting, friends, onLeave }: { waiting: Waiting; friends: FriendCard[]; onLeave: () => void }) {
+  const me = partyMe();
+  const name = (id: string) => (id === me ? 'You' : (friends.find((f) => f.id === id)?.name ?? 'Friend'));
+  return (
+    <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
+      <p className="font-pixel text-sm text-gold-300">Waiting for your party</p>
+      {waiting.need.length > 0 ? (
+        <ul className="space-y-1 text-sm">
+          {waiting.need.map((u) => (
+            <li key={u} className={waiting.here.includes(u) ? 'text-emerald-300' : 'animate-pulse text-slate-500'}>
+              {name(u)} {waiting.here.includes(u) ? 'is here' : '...'}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="animate-pulse text-sm text-slate-400">Finding the run...</p>
+      )}
+      <p className="max-w-xs text-[11px] leading-snug text-slate-500">The run starts when everyone is in, or in a few seconds without the slow ones.</p>
+      <button onClick={onLeave} className="w-full max-w-xs rounded-xl bg-ink-800 py-3 text-sm text-slate-300">
+        Back
+      </button>
+    </div>
+  );
+}
+
 function FinalBadge({ id }: { id: SpMoveId }) {
   const [on, setOn] = useState(true);
   useEffect(() => {

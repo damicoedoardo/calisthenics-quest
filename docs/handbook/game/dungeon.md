@@ -144,12 +144,16 @@ party order. The rules treat every hero the same:
   Harvest and Stillness heal them the same share of their own HP (`healFriends`); Shield Wall,
   Blessing and Tide Spin make them untouchable and clear the shots round them too. Curse, Bubble
   and Radiance already help everyone (any hit on a cursed monster lands harder).
-- A pick (skill or chest item) by anyone still holds the whole run (`choosing`): that changes with
-  the game server. The Summit's friends walk beside you.
+- A pick (skill or chest item) by anyone holds the whole run (`choosing`); in a live run the
+  server picks for a phone that takes too long ([../backend/live-runs.md](../backend/live-runs.md)).
+  The Summit's friends walk beside you.
 - The friend bots (`botInput` for a hero other than you) get a friend up first, then follow you to
   the door or stairs you wait at.
 
-**A practice party run** (until the game server exists): the scene takes `RunSetup.friends`
+**A live party run**: the game server plays the run and the scene follows it (`RunSetup.net`,
+`live()` in `scene.ts`); see [../backend/live-runs.md](../backend/live-runs.md).
+
+**A practice party run** (no game server, or "Try again"): the scene takes `RunSetup.friends`
 (name, class and their own hero sheets from `friendSheets` in `src/game/sheets.ts`) and `seed`,
 gives each friend your strength in their own class, steps them with `botInput`, takes their picks
 for them, and draws them with their name over their head (grey while down). Started from a

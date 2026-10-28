@@ -23,6 +23,7 @@ live on a server).
 | `backend/app/friends.py`, `routes/friends.py` | Friend cards and friendships: `PUT /me`, `/friends` ([friends.md](friends.md)); creates its tables on start |
 | `backend/app/party.py`, `routes/party.py` | Parties: invite, join, ready, zone, start (`/party...`, [friends.md](friends.md#parties)); creates its tables on start |
 | `backend/app/voice.py` | The party voice pass for `POST /party/voice` ([friends.md](friends.md#party-voice)) |
+| `backend/app/play.py` | The live run pass for `POST /party/play` ([live-runs.md](live-runs.md)); `FORMA_PLAY_URL`, `FORMA_PLAY_SECRET` |
 | `backend/app/gifts.py`, `routes/gifts.py` | Forge materials friends give each other: `POST /gifts`, `GET /gifts`, `POST /gifts/claim` ([friends.md](friends.md)); creates its table on start |
 | `backend/app/coach.py`, `routes/coach.py` | `POST /coach`: the coach's rules (`SYSTEM`), its tools (`TOOLS`), the call to the LLM through the LiteLLM proxy, and a daily cap per player; creates its table on start (below) |
 | `backend/db/init.sql` | The schema, run by Postgres on first boot |
