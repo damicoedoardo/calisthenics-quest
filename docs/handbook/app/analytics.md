@@ -10,7 +10,8 @@ timestamp: 2026-10-28
 
 FORMA sends play stats to its own PostHog project, so balance can be tuned on real players (not
 only the bot) and we can see who comes back, when, and where they stop. It is separate from
-minlit's PostHog: its own project and key.
+minlit's PostHog: its own organization "FORMA" on PostHog's EU cloud (eu.posthog.com, project
+324817), with its own key and free allowance. Never change minlit's organization or project.
 
 ## Where it lives
 
