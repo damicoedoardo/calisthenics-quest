@@ -13,6 +13,8 @@ import { RiseUp } from './RiseUp';
 import { SoundToggle, useMusic } from './Sound';
 import { Weather } from './Weather';
 import { PixelSnap } from './sideways';
+import { SignInGate } from './SignInGate';
+import { useCloudStatus } from '@/lib/cloud-client';
 import type { GameState, Kit, Letter } from '@/lib/game';
 import { equippedGear, type ClassId, type Gear, type GearSlot } from '@/lib/gear';
 import { music } from '@/lib/music';
@@ -23,7 +25,7 @@ import { renderLines, storyWords } from '@/story/engine';
 import { STARTER_LOOKS } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
 
-type Step = 'title' | 'cold' | 'fading' | 'voice' | 'wake' | 'fog' | 'hollow' | 'fallen' | 'meet' | 'class' | 'write' | 'letter' | 'sealed' | 'kit' | 'quest' | 'look' | 'name';
+type Step = 'start' | 'login' | 'title' | 'cold' | 'fading' | 'voice' | 'wake' | 'fog' | 'hollow' | 'fallen' | 'meet' | 'class' | 'write' | 'letter' | 'sealed' | 'kit' | 'quest' | 'look' | 'name';
 
 interface Props {
   state: GameState;
@@ -41,6 +43,9 @@ interface Props {
   onPause?: (patch: { voice: string }) => void;
   /** On the first screen of an installed iPhone app: bring the hero over from Safari. */
   bring?: ReactNode;
+  /** A brand-new phone first asks: a new game, or sign in to the hero you already have (the cloud
+      copy then replaces this empty save, and the opening is over). */
+  askLogin?: boolean;
 }
 
 const goldButton =
@@ -84,9 +89,12 @@ export function Prologue(props: Props) {
   );
 }
 
-function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, dev = false, onPause, bring }: Props) {
+function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, dev = false, onPause, bring, askLogin = false }: Props) {
   // Opened again after the install step: on at the class pick.
-  const [step, setStep] = useState<Step>(state.profile.opening === 'class' && !state.profile.onboarded ? 'class' : 'title');
+  const [step, setStep] = useState<Step>(
+    state.profile.opening === 'class' && !state.profile.onboarded ? 'class' : askLogin && !state.profile.onboarded && !state.profile.look ? 'start' : 'title',
+  );
+  const cloud = useCloudStatus();
   const look = useLook();
   const firstRun = !state.profile.onboarded;
   const [letter, setLetter] = useState<Letter>(state.profile.letter);
@@ -125,6 +133,37 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, dev = false, o
   );
 
   switch (step) {
+    case 'start':
+      return (
+        <div className="fixed inset-0 flex flex-col items-center justify-center bg-ink-950 px-6 text-center">
+          <p className="font-pixel text-3xl tracking-widest text-gold-400">FORMA</p>
+          <p className="mt-3 font-pixel text-[10px] text-slate-400">The Road Back</p>
+          <div className="mt-12 w-full max-w-xs space-y-3 [@media(orientation:landscape)_and_(max-height:600px)]:mt-8">
+            <button onClick={go('title')} className={goldButton}>
+              New game
+            </button>
+            <button onClick={go('login')} className="w-full rounded-2xl bg-ink-800 py-4 text-sm font-semibold text-slate-100 ring-1 ring-ink-700 active:scale-[.98]">
+              I already have a hero
+            </button>
+          </div>
+          {bring}
+          {skip}
+        </div>
+      );
+    case 'login':
+      // Signed in with a hero in the cloud, the save is replaced and the opening is over. Signed in
+      // with nothing there yet, this account starts a new game.
+      if (cloud.signedIn && cloud.phase === 'saved')
+        return (
+          <div className="fixed inset-0 flex flex-col items-center justify-center bg-ink-950 px-6 text-center">
+            <Ember size={64} stage="spark" />
+            <p className="mt-4 max-w-xs text-sm text-slate-300">There&apos;s no hero on {cloud.email ?? 'this account'} yet. Start a new game, and it&apos;s kept there.</p>
+            <button onClick={go('title')} className={`mt-6 max-w-xs ${goldButton}`}>
+              New game
+            </button>
+          </div>
+        );
+      return <SignInGate welcome back={go('start')} />;
     case 'title':
       if (firstRun && !state.profile.look)
         return (
