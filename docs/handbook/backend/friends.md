@@ -36,7 +36,7 @@ waits until the other side accepts; adding back someone who asked you is a yes.
 | `backend/tests/test_friends.py` | Ask, accept, add back, codes, online timing |
 | `src/lib/friends.ts` | Pure: your card from the save (`myCard`), status lines, trained today, invite links |
 | `src/lib/friends-client.ts` | The calls, through `api()` in `cloud-client.ts` |
-| `src/components/Friends.tsx` | `useFriendsBeat` (in `page.tsx`) and `FriendsCard` (Play tab, Together) |
+| `src/components/Friends.tsx` | `useFriendsBeat` and `useFriends` (both in `page.tsx`: the list, refreshed every 20 s on the Friends tab and every minute elsewhere for the tab's online count, with sample friends in the sandbox) and `FriendsCard` (the Friends tab, `FriendsTab.tsx`) |
 
 - **Heartbeat:** while signed in and the app is visible, `useFriendsBeat` sends your card with
   `PUT /me` every 30 s, when the app comes back to the front, and when a run starts or ends. The
@@ -59,9 +59,9 @@ with the ready flags cleared. The first attempt is a **live run** on the game se
 one run ([live-runs.md](live-runs.md)); when that isn't there (not set up, offline) each phone
 plays a **practice run**: you, with bots playing your friends' heroes (see
 [../game/dungeon.md](../game/dungeon.md)). A
-party run (the Play tab's **Together**) keeps its loot and co-op materials but never moves the story:
+party run (from the **Friends** tab) keeps its loot and co-op materials but never moves the story:
 only Story runs clear a zone (`page.tsx`, `onEnd`). The lobby also lists the **Ember Road**'s chapters up to the one the leader is on (sent to the server as zone `20 + chapter`, `partyCode`/`zoneByCode` in `src/lib/fog.ts`); beating a road boss there moves the road on for each hero on that chapter (`wonRoad`, see [../game/story.md](../game/story.md)). Friends, invites and the lobby button live
-under Together.
+on the Friends tab.
 
 | File | What |
 |---|---|

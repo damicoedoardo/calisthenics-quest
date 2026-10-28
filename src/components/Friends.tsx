@@ -149,34 +149,43 @@ function GiveMats({ f, state, update, done }: { f: FriendCard; state: GameState;
   );
 }
 
-/** The Play tab, Together: your friend code, adding friends, and who is online, in the Fog, or trained today.
-    Friends can invite each other to a party and give each other forge materials. */
-export function FriendsCard({ state, update, sandbox }: { state: GameState; update: Update; sandbox: boolean }) {
-  const [giving, setGiving] = useState<string | null>(null);
+/** Friends in the sandbox (/lab/night), so the Friends tab can be seen without signing in. */
+const DEMO: FriendsList = {
+  me: { code: 'DEMO42', name: 'You' },
+  friends: [
+    { id: 'demo-a', name: 'Ana', class_id: 'archer', level: 12, look: { sex: 'f', gear: { weapon: 3, armor: 2, shield: 1 } }, trained_at: new Date().toISOString(), online: true, playing: 'The Ashen Edge', seen_at: new Date().toISOString() },
+    { id: 'demo-b', name: 'Ben', class_id: 'mage', level: 8, look: { sex: 'm', hair: 'black', gear: { weapon: 2, armor: 1, shield: 0 } }, trained_at: null, online: true, playing: null, seen_at: new Date().toISOString() },
+    { id: 'demo-c', name: 'Cleo', class_id: 'monk', level: 5, look: { sex: 'f', hair: 'black', gear: { weapon: 1, armor: 1, shield: 0 } }, trained_at: null, online: false, playing: null, seen_at: new Date(Date.now() - 3 * 3600_000).toISOString() },
+  ],
+  asks_in: [],
+  asks_out: [],
+};
+
+/** Your friends, kept fresh while signed in: every REFRESH_MS while `open` (the Friends tab is
+    showing), every minute otherwise for the tab's online count. What friends gave you comes home
+    with each refresh. `off`: a save that never reaches friends (the sandbox, the developer save);
+    `demo`: the sandbox, with three sample friends and no network. */
+export function useFriends(update: Update, off: boolean, demo: boolean, open: boolean) {
   const { signedIn } = useCloudStatus();
   const [list, setList] = useState<FriendsList | null>(null);
-  const [code, setCode] = useState('');
-  const [name, setName] = useState('');
   const [msg, setMsg] = useState('');
   const [now, setNow] = useState(() => new Date());
-  const on = cloudConfigured && !sandbox && signedIn;
+  const on = cloudConfigured && !off && signedIn;
 
   const refresh = useCallback(async () => {
     try {
       setList(await getFriends());
       setNow(new Date());
-      // What friends gave you comes home with each refresh.
-      {
-        const { gifts } = await claimGifts();
-        if (gifts.length) {
-          update((s) => takeGifts(s, gifts));
-          const who = [...new Set(gifts.map((g) => g.from_name || 'A friend'))].join(' and ');
-          setMsg(`${who} gave you ${gifts.map((g) => `${g.n} ${(MATS[g.mat as MatId]?.name ?? g.mat).toLowerCase()}`).join(', ')} for Mira's forge.`);
-        }
+      const { gifts } = await claimGifts();
+      if (gifts.length) {
+        update((s) => takeGifts(s, gifts));
+        const who = [...new Set(gifts.map((g) => g.from_name || 'A friend'))].join(' and ');
+        setMsg(`${who} gave you ${gifts.map((g) => `${g.n} ${(MATS[g.mat as MatId]?.name ?? g.mat).toLowerCase()}`).join(', ')} for Mira's forge.`);
       }
     } catch {
       // Offline or a hiccup: keep what's on screen, try again on the next refresh.
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const add = useCallback(
@@ -184,7 +193,6 @@ export function FriendsCard({ state, update, sandbox }: { state: GameState; upda
       try {
         const r = await addFriend(c);
         setMsg(r.status === 'friends' ? `You and ${r.name || 'your friend'} are friends now.` : `Asked ${r.name || 'them'}. They'll see it next time they open FORMA.`);
-        setCode('');
         await refresh();
       } catch (e) {
         setMsg(e instanceof Error ? e.message : "Couldn't add them right now.");
@@ -195,14 +203,36 @@ export function FriendsCard({ state, update, sandbox }: { state: GameState; upda
 
   useEffect(() => {
     if (!on) return;
-    void refresh();
     const invite = takeInvite();
     if (invite) void add(invite);
-    const t = window.setInterval(() => visible() && void refresh(), REFRESH_MS);
-    return () => window.clearInterval(t);
-  }, [on, refresh, add]);
+  }, [on, add]);
 
-  if (!cloudConfigured || sandbox) return null;
+  useEffect(() => {
+    if (!on) return;
+    void refresh();
+    const t = window.setInterval(() => visible() && void refresh(), open ? REFRESH_MS : 60_000);
+    return () => window.clearInterval(t);
+  }, [on, open, refresh]);
+
+  return { list: demo ? DEMO : list, now, msg, setMsg, refresh, add, signedIn: demo || signedIn, demo, shown: demo || (cloudConfigured && !off) };
+}
+
+export type Friends = ReturnType<typeof useFriends>;
+
+const rank = (f: FriendCard) => (f.playing ? 0 : f.online ? 1 : 2);
+
+/** Friends online now (or in the Fog), for the tab bar's count. */
+export const onlineCount = (f: Friends) => f.list?.friends.filter((x) => x.online || x.playing).length ?? 0;
+
+/** The Friends tab's list: your friend code, adding friends, and every friend with their status.
+    Friends can invite each other to a party and give each other forge materials. */
+export function FriendsCard({ state, update, friends }: { state: GameState; update: Update; friends: Friends }) {
+  const [giving, setGiving] = useState<string | null>(null);
+  const [code, setCode] = useState('');
+  const [name, setName] = useState('');
+  const { list, now, msg, setMsg, refresh, add, signedIn } = friends;
+
+  if (!friends.shown) return null;
 
   return (
     <section className="rounded-2xl bg-ink-800 p-4">
@@ -278,7 +308,7 @@ export function FriendsCard({ state, update, sandbox }: { state: GameState; upda
             className="flex gap-2"
             onSubmit={(e) => {
               e.preventDefault();
-              if (code.trim()) void add(code.trim());
+              if (code.trim()) void add(code.trim()).then(() => setCode(''));
             }}
           >
             <input
@@ -316,7 +346,8 @@ export function FriendsCard({ state, update, sandbox }: { state: GameState; upda
 
           {list.friends.length > 0 ? (
             <ul className="divide-y divide-ink-700">
-              {list.friends.map((f) => (
+              {/* In the Fog first, then online, then the rest. */}
+              {[...list.friends].sort((a, b) => rank(a) - rank(b)).map((f) => (
                 <li key={f.id}>
                   <Row as="div" f={f} now={now}>
                     <button

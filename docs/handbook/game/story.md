@@ -97,8 +97,8 @@ A second, shorter story apart from the six months: three chapters and a finale a
 rely on each other). Tamsin (`cast.ts`, her sprite in `villagers.ts`) walks it ahead of you and
 leaves fires and notes. The data is `road.ts`; the rules are `src/lib/road.ts`.
 
-- **Setting out:** the Ember Road card in the Fog's Together door (`RoadCard` in
-  `src/components/PlayTab.tsx`). That saves `road: { from, beaten }` and its first scene plays.
+- **Setting out:** the Ember Road card on the Friends tab (`RoadCard` in
+  `src/components/FriendsTab.tsx`). That saves `road: { from, beaten }` and its first scene plays.
 - **Each chapter** ends in a boss the party beats in a run Together. A chapter's run borrows a
   story zone's dungeon and boss fight (`base`), with the road's own names, rule text, words and
   keepsake (`ROAD_ZONES` in `src/lib/fog.ts`; the lobby sends it as zone `20 + chapter`). A win

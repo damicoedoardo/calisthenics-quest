@@ -4,7 +4,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { TodayTab } from '@/components/TodayTab';
 import { TrainTab } from '@/components/TrainTab';
 import { HeroTab, type HeroPart } from '@/components/HeroTab';
-import { PlayTab, type FogMode } from '@/components/PlayTab';
+import { PlayTab } from '@/components/PlayTab';
+import { FriendsTab } from '@/components/FriendsTab';
 import { YouPage } from '@/components/YouPage';
 import { FogRun, type RunStart } from '@/components/FogRun';
 import { Hero } from '@/components/Hero';
@@ -22,7 +23,7 @@ import { DevButton, DevPanel, type DevGo } from '@/components/DevPanel';
 import { Sprite } from '@/components/Sprite';
 import { LookProvider } from '@/components/Look';
 import { useCloudSync } from '@/components/Cloud';
-import { useFriendsBeat } from '@/components/Friends';
+import { onlineCount, useFriends, useFriendsBeat } from '@/components/Friends';
 import { SignInGate, signInDue } from '@/components/SignInGate';
 import { PartyButton, PartyInviteCard, PartyLobby, usePartyPoll } from '@/components/Party';
 import { others, startToJoin } from '@/lib/party';
@@ -45,13 +46,14 @@ import { mustInstall, needsCarry } from '@/lib/install';
 import { useInstall } from '@/lib/install-client';
 import { freshNudge } from '@/lib/coach/nudge';
 
-type Tab = 'today' | 'train' | 'play' | 'hero';
+type Tab = 'today' | 'train' | 'play' | 'friends' | 'hero';
 
-// Each tab's pixel icon (src/sprites/characters/icons.ts): crossed swords, a dumbbell, a game pad, a shield.
-const TABS: { id: Tab; label: string; icon: 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabHero' }[] = [
+// Each tab's pixel icon (src/sprites/characters/icons.ts): crossed swords, a dumbbell, a game pad, two friends, a shield.
+const TABS: { id: Tab; label: string; icon: 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabFriends' | 'tabHero' }[] = [
   { id: 'today', label: 'Today', icon: 'tabToday' },
   { id: 'train', label: 'Train', icon: 'tabTrain' },
   { id: 'play', label: 'Play', icon: 'tabPlay' },
+  { id: 'friends', label: 'Friends', icon: 'tabFriends' },
   { id: 'hero', label: 'Hero', icon: 'tabHero' },
 ];
 
@@ -78,7 +80,6 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const [tab, setTab] = useState<Tab>('today');
   // The Hero tab's open part, kept here so the Fog's ready strip can open Hero > Gear.
   const [heroPart, setHeroPart] = useState<HeroPart>('gear');
-  const [fogMode, setFogMode] = useState<FogMode>('story');
   // The You page, opened by tapping your hero at the top.
   const [you, setYou] = useState(false);
   const [training, setTraining] = useState(false);
@@ -100,6 +101,9 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   useCloudSync(state, update, !ready || offRecord());
   // Shows you online to your friends while the app is open, and in the Fog during a run.
   useFriendsBeat(state, run?.name ?? null, !ready || offRecord());
+  // Your friends: the Friends tab, and how many are online on its tab button.
+  const friends = useFriends(update, !ready || offRecord(), sandbox, tab === 'friends');
+  const online = onlineCount(friends);
   // After the install step, an account: a hard rule, no playing on without one (SignInGate).
   const { signedIn } = useCloudStatus();
   // Parties: kept fresh while signed in; a start the leader made opens the run here too.
@@ -113,10 +117,11 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     setSandbox(true);
     const q = new URLSearchParams(window.location.search);
     const t = q.get('tab');
-    if (t === 'today' || t === 'train' || t === 'play' || t === 'hero') setTab(t);
+    if (t === 'today' || t === 'train' || t === 'play' || t === 'friends' || t === 'hero') setTab(t);
     const part = q.get('hero');
     if (part === 'gear' || part === 'stats' || part === 'class') setHeroPart(part);
-    if (q.get('fog') === 'together') setFogMode('together');
+    // The old jump to the Fog's Together: now the Friends tab.
+    if (q.get('fog') === 'together') setTab('friends');
     if (q.has('you')) setYou(true);
     // ?run=road1: an Ember Road run (try it with &party).
     const zone = ZONES.find((z) => String(z.id) === q.get('run')) ?? ROAD_ZONES.find((z) => `road${z.road}` === q.get('run'));
@@ -258,8 +263,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     if (to === 'workout') return start('normal');
     const hero = to === 'gear' || to === 'stats' || to === 'class';
     if (hero) setHeroPart(to);
-    if (to === 'fog' || to === 'together') setFogMode(to === 'fog' ? 'story' : 'together');
-    setTab(hero ? 'hero' : to === 'fog' || to === 'together' ? 'play' : to);
+    setTab(hero ? 'hero' : to === 'fog' ? 'play' : to === 'together' ? 'friends' : to);
     window.scrollTo({ top: 0 });
     main.current?.scrollTo({ top: 0 });
   };
@@ -380,8 +384,6 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           <PlayTab
             state={state}
             onPlay={setRun}
-            update={update}
-            start={fogMode}
             onGear={() => {
               setHeroPart('gear');
               setTab('hero');
@@ -389,14 +391,16 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
               main.current?.scrollTo({ top: 0 });
             }}
           />
+        ) : tab === 'friends' ? (
+          <FriendsTab state={state} update={update} friends={friends} />
         ) : (
           <HeroTab state={state} update={update} onChangeClass={() => setPicker('manual')} part={heroPart} onPart={setHeroPart} />
         )}
       </main>
 
-      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-ink-700 bg-ink-900/95 backdrop-blur land:right-auto land:top-0 land:flex land:w-[calc(4.5rem+env(safe-area-inset-left))] land:flex-col land:items-center land:justify-center land:gap-3 land:border-r land:border-t-0 land:pl-[env(safe-area-inset-left)] desk:right-auto desk:top-0 desk:flex desk:w-56 desk:flex-col desk:gap-6 desk:border-r desk:border-t-0 desk:px-3 desk:py-6">
+      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-ink-700 bg-ink-900/95 backdrop-blur land:right-auto land:top-0 land:flex land:w-[calc(4.5rem+env(safe-area-inset-left))] land:flex-col land:items-center land:justify-center land:gap-2 land:border-r land:border-t-0 land:pl-[env(safe-area-inset-left)] desk:right-auto desk:top-0 desk:flex desk:w-56 desk:flex-col desk:gap-6 desk:border-r desk:border-t-0 desk:px-3 desk:py-6">
         {/* Sideways, the hero from the header sits at the top of the rail; on a computer, bigger. */}
-        <button onClick={() => setYou(true)} aria-label="You: your letter, quest log and settings" className="hidden h-11 w-11 place-items-center rounded-xl bg-ink-800 active:scale-95 land:grid desk:mx-auto desk:grid desk:h-28 desk:w-28">
+        <button onClick={() => setYou(true)} aria-label="You: your letter, quest log and settings" className="hidden h-10 w-10 place-items-center rounded-xl bg-ink-800 active:scale-95 land:grid desk:mx-auto desk:grid desk:h-28 desk:w-28">
           <span className="desk:hidden">
             <Hero gear={gear} classId={state.profile.classId} size={38} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
           </span>
@@ -404,7 +408,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
             <Hero gear={gear} classId={state.profile.classId} size={96} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
           </span>
         </button>
-        <div className="mx-auto grid max-w-md grid-cols-4 land:mx-0 land:w-full land:grid-cols-1 land:gap-1 desk:mx-0 desk:w-full desk:grid-cols-1 desk:gap-1">
+        <div className="mx-auto grid max-w-md grid-cols-5 land:mx-0 land:w-full land:grid-cols-1 land:gap-1 desk:mx-0 desk:w-full desk:grid-cols-1 desk:gap-1">
           {TABS.map(({ id, label, icon }) => (
             <button
               key={id}
@@ -414,13 +418,15 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
                 window.scrollTo({ top: 0 });
                 main.current?.scrollTo({ top: 0 });
               }}
-              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium land:mx-2 land:rounded-xl land:py-2 desk:flex-row desk:gap-3 desk:rounded-xl desk:px-4 desk:py-3 desk:text-sm desk:hover:bg-ink-800/60 ${tab === id ? 'text-gold-400 land:bg-ink-800 land:ring-1 land:ring-gold-400/30 desk:bg-ink-800 desk:ring-1 desk:ring-gold-400/30' : 'text-slate-500 desk:hover:text-slate-300'}`}
+              className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium land:mx-2 land:gap-0.5 land:rounded-xl land:py-1 desk:flex-row desk:gap-3 desk:rounded-xl desk:px-4 desk:py-3 desk:text-sm desk:hover:bg-ink-800/60 ${tab === id ? 'text-gold-400 land:bg-ink-800 land:ring-1 land:ring-gold-400/30 desk:bg-ink-800 desk:ring-1 desk:ring-gold-400/30' : 'text-slate-500 desk:hover:text-slate-300'}`}
             >
               {/* Full color on the open tab; faded and grey on the others. */}
               <span className="relative grid h-[22px] place-items-center">
                 <Sprite id="uiIcon" opts={{ name: icon }} size={22} label="" className={tab === id ? '' : 'opacity-70 grayscale'} />
                 {/* The flame has something to say. */}
                 {id === 'train' && tab !== 'train' && state && freshNudge(state, new Date()) && <span aria-label="New from your flame" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-gold-300 ring-2 ring-ink-900" />}
+                {/* How many friends are online. */}
+                {id === 'friends' && online > 0 && <span aria-label={`${online} online`} className="absolute -right-2.5 -top-1 min-w-[1rem] rounded-full bg-emerald-500 px-1 text-center font-mono text-[9px] font-bold leading-4 text-ink-950 ring-2 ring-ink-900">{online}</span>}
               </span>
               {label}
             </button>

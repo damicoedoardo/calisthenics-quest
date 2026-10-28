@@ -31,7 +31,7 @@ It adds: "Skip the intro" on the title screen; "Play here without installing" on
 
 | Tab | What |
 |---|---|
-| Go | Open any tab or screen of the app (Fog Story or Together, Hero's parts, the You page, a workout), and links to every lab page below |
+| Go | Open any tab or screen of the app (Play, Friends, Hero's parts, the You page, a workout), and links to every lab page below |
 | Wallet | Embers (`giveEmbers`, as if melted down), sweat coins (`giveCoins`: less than nothing spent), each co-op material (`giveMaterials`), "Rich" (plenty of each), "Empty the wallet" |
 | Gear | Make an item to order (`makeItem`: slot, rarity, zone, +0 to +15, for your class, wearable now) and wear it (`wearNew`, the old one goes to the vault) or put it in the vault (`toVault`, even past its size); everything worn to any plus; take all off; empty the vault |
 | Hero | Class (free, no coins), each of the four SPs awake and worn (`giveSpAwake`), all four, the first one sealed, none; stat points given on top (`giveStatPoints`, saved as `devPoints`), spread evenly, take all back |

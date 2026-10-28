@@ -3,7 +3,7 @@ type: conceptual
 title: System map
 description: One-page tour of the FORMA code — a client-only Next.js PWA with pure rules in lib/, content as data in story/ and sprites/, a Phaser game loaded on demand, and thin components.
 tags: [architecture, overview, layers]
-timestamp: 2026-10-27
+timestamp: 2026-10-28
 ---
 
 # System map
@@ -73,7 +73,7 @@ gear and a few ids, so keep those imports to types and pure functions.
 ## How the app runs
 
 `page.tsx` loads the save, wraps everything in `LookProvider` (the player's look for every hero
-sprite) and picks what is on screen: the opening until `profile.onboarded`, then the four tabs,
+sprite) and picks what is on screen: the opening until `profile.onboarded`, then the five tabs,
 with full-screen layers over them (workout, after-session, scene, class picker, Fog run, dev
 panel). Whenever the player is back on the tabs it asks `scenesToPlay` for the next due story
 scene. See [../app/screens.md](../app/screens.md).

@@ -223,6 +223,7 @@ export default function NightLab() {
       </Panel>
 
       <Panel title="DESIGN PASS" note="Pixel, minimal, fewer words: one screen at a time.">
+        <Row icon={<Swords size={16} />} label="The Friends tab" note="Its own tab: who is online now (tap to invite), your party, the Ember Road, every friend. Sample friends in the sandbox" onClick={() => open(geared(), 'tab=friends')} />
         <Row icon={<Dumbbell size={16} />} label="Today, with a week planned" note="The chapter's boss, your flame, today's quest and Start" onClick={async () => open(await withWeek(veteran(30, 3)), 'tab=today')} />
       </Panel>
 
@@ -268,9 +269,9 @@ export default function NightLab() {
         </div>
         <Row icon={<Swords size={16} />} label="Change class with sweat coins" note="Hero tab, Change class: the first change is free, then 3 coins" onClick={() => open({ ...withSp(true), sweat: { spent: 0, changes: 1 } }, 'tab=hero&hero=class')} />
       </Panel>
-      <Panel title="MENUS" note="Four tabs, one job each: Fog only plays (Story or Together), Hero holds your gear, vault and forge, stats and class. Tap your hero at the top for the You page.">
+      <Panel title="MENUS" note="Five tabs, one job each: Play is your story, Friends is everything with others, Hero holds your gear, vault and forge, stats and class. Tap your hero at the top for the You page.">
         <Row icon={<Swords size={16} />} label="Fog: Story" note="The worlds, then the ready strip: what you wear (tap it for Hero > Gear), warmed up, rested, the boss's hearts" onClick={() => open(geared(), 'tab=play')} />
-        <Row icon={<Swords size={16} />} label="Fog: Together" note="Play with friends: the rules, the party, your friends (on a real signed-in save)" onClick={() => open(geared(), 'tab=play&fog=together')} />
+        <Row icon={<Swords size={16} />} label="Friends" note="The Friends tab: who is online (tap to invite), your party, the Ember Road, every friend (sample friends here)" onClick={() => open(geared(), 'tab=friends')} />
         <Row icon={<Gem size={16} />} label="Hero > Gear" note="What you wear, the vault, and Mira's forge for the item you tap: the only place for them" onClick={() => open(forged(7), 'tab=hero&hero=gear')} />
         <Row icon={<Sparkles size={16} />} label="Hero > Stats" note="Your champion's points, and what your flame gives you" onClick={() => open(veteran(30, 2), 'tab=hero&hero=stats')} />
         <Row icon={<Swords size={16} />} label="Hero > Class" note="Your class and Change class" onClick={() => open(veteran(30, 2), 'tab=hero&hero=class')} />
@@ -317,8 +318,8 @@ export default function NightLab() {
         })}
         <Row icon={<Swords size={16} />} label="The Play tab" note="Story: all six worlds open, the ready strip under them" onClick={() => open(veteran(78, 6), 'tab=play')} />
         <Row icon={<Swords size={16} />} label="The Fog, sideways" note="Hold the phone across: rooms run left to right, tap a monster to aim at it" onClick={() => open(veteran(14, 1), 'run=0')} />
-        <Row icon={<Swords size={16} />} label="The Ember Road, before setting out" note="Fog > Together: the road card; tap Set out and its first scene plays" onClick={() => open(geared(), 'tab=play&fog=together')} />
-        <Row icon={<Swords size={16} />} label="The Ember Road, chapter 2" note="The Lull beaten, 10 workouts in: The Quiet Miles open, the road card shows what's next" onClick={() => open(onRoad(1, 10), 'tab=play&fog=together')} />
+        <Row icon={<Swords size={16} />} label="The Ember Road, before setting out" note="Friends tab: the road card; tap Set out and its first scene plays" onClick={() => open(geared(), 'tab=friends')} />
+        <Row icon={<Swords size={16} />} label="The Ember Road, chapter 2" note="The Lull beaten, 10 workouts in: The Quiet Miles open, the road card shows what's next" onClick={() => open(onRoad(1, 10), 'tab=friends')} />
         <Row icon={<Swords size={16} />} label="An Ember Road run: The Lull" note="Chapter 1's party run (practice), with Ana and Ben; win it and Tamsin speaks" onClick={() => open(onRoad(0, 2), 'run=road1&party')} />
         <Row icon={<Swords size={16} />} label="A party run (practice)" note="You with two friends, Ana the archer and Ben the mage, played by the bot: names over their heads, XP for all, drops each their own" onClick={() => open(veteran(14, 1), 'run=0&party')} />
         <Row icon={<Gem size={16} />} label="Loot: your gear and the vault" note="Hero > Gear: what you wear into the Fog, the vault, an item you can't wear yet" onClick={() => open(geared(), 'tab=hero&hero=gear')} />
