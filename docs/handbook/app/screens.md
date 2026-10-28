@@ -3,7 +3,7 @@ type: reference
 title: Screens
 description: How src/app/page.tsx picks what is on screen (opening, tabs, workout, after-session, scenes, class picker, Fog run) and what every component in src/components does.
 tags: [app, components, ui]
-timestamp: 2026-10-27
+timestamp: 2026-10-28
 ---
 
 # Screens
@@ -14,6 +14,8 @@ pieces of screen state, and decides what is on screen:
 1. **Not onboarded** (or replaying the opening): `Prologue` takes the whole screen.
    Otherwise, once per app open (`openingDue`, a `sessionStorage` flag; never in the sandbox),
    `Opening` plays over everything for about three seconds, and story scenes wait for it.
+   If the workout was left open (`draft.open`, today's), the app opens straight back on `Workout`
+   instead, with no `Opening`: a phone that closed the app while locked lands where you were.
 2. **Onboarded, on a phone, in a browser tab** (not installed): `InstallGate` takes the whole
    screen until FORMA is opened from the home screen, see [pwa.md](pwa.md#install-before-playing).
 3. **Onboarded, not signed in** (and the backend set up, not in the sandbox): `SignInGate` asks
@@ -74,7 +76,7 @@ upright layout inside it. Add computer changes only as `desk:` classes. The Fog'
 | `SignInGate` | After the install step, an account once: email, then the code from the email (the way in on an installed iPhone app, where the link opens Safari) |
 | `PartyInviteCard`, `PartyButton`, `PartyLobby` | A friend's invite (join or not now), the button back to your party's lobby, and the lobby: who's in and ready, the zone (the leader picks), Into the Fog, invite more, leave. See [../backend/friends.md](../backend/friends.md#parties) |
 | `TodayTab` | The flame card and its line, today's quest list with exercise stills, the rest-day card and `SitByFire`, the quote of the day, the Book of Days, the install nudge |
-| `Workout` | The set logger: one exercise at a time, one tap per set (reps in reserve), rest timer, Undo, the exercise demo; the warm-up and the stretch are one "Done" tap |
+| `Workout` | The set logger: one exercise at a time, one tap per set (reps in reserve), rest timer, Undo, the exercise demo; the warm-up and the stretch are one "Done" tap. Keeps the screen on while open (Screen Wake Lock); the rest's end time lives in the save (`draft.restUntil`), so it keeps counting while the phone is locked or the app is closed |
 | `AfterSession` | After a workout: a short battle against the chapter enemy, then the loot (XP, stat points, better than last time, level, gear, the flame's word) |
 | `TrainTab` | The "Exercise library" button, gym or home, the plan's two days with today's targets, the embers workouts earn |
 | `ExerciseLibrary` | The whole exercise library over the Train tab: search, equipment, kind and movement filters, list rows with a demo still; an exercise shows the boy and girl demo, steps, tips and common mistakes. Loaded on demand. See [../game/exercise-library.md](../game/exercise-library.md) |
