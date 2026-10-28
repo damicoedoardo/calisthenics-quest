@@ -134,9 +134,7 @@ export function reroll(state: GameState, id: string, i: number): GameState {
 export function salvage(state: GameState, id: string): GameState {
   const it = findItem(state, id);
   if (!it || it.starter) return state;
-  const g = gearOf(state);
-  const out = change(state, id, null, -salvageValue(it));
-  return g.guard && g.worn[g.guard]?.id === id ? { ...out, fogGear: { ...out.fogGear!, guard: undefined } } : out;
+  return change(state, id, null, -salvageValue(it));
 }
 
 /** Give a friend some materials: they leave your save once the server has taken the gift. */

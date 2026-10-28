@@ -1,6 +1,6 @@
 import type { ClassId } from '@/lib/gear';
 import type { Build, StatId } from '@/lib/stats';
-import { BANDS, BONUS_POOL, BONUS_SIZE, FALL_KEEP, ITEM_BASE, ITEM_POWER, ITEM_ROLL_LOW, LEVEL_NEED, MAX_PLUS, POINTS, RARITY_LEAN, RARITY_SIZE, RARITY_WEIGHTS, SAFE_POINTS, SLOT_ODDS, STARTER, STARTING_POINTS, STEPS, WEAPON_CRIT, WEAR_AFTER, WEEKLY_GOAL, XP } from '@/balance';
+import { BANDS, BONUS_POOL, BONUS_SIZE, ITEM_BASE, ITEM_POWER, ITEM_ROLL_LOW, LEVEL_NEED, MAX_PLUS, POINTS, RARITY_LEAN, RARITY_SIZE, RARITY_WEIGHTS, SAFE_POINTS, SLOT_ODDS, STARTER, STARTING_POINTS, STEPS, WEAPON_CRIT, WEAR_AFTER, WEEKLY_GOAL, XP } from '@/balance';
 
 /* What the dungeon drops, as data: the things you wear, how rare they come, the bonuses they can
    carry, and what each asks of your training before you can wear it. engine.ts drops and wears
@@ -79,11 +79,6 @@ export const boostAt = (plus: number) => 1 + STEPS.slice(0, plus).reduce((n, s) 
 export const boostOf = (it: Item) => boostAt(it.plus ?? 0);
 /** The highest safe point at or below this plus: a miss at the forge never slips under it. */
 export const safeFloor = (plus: number) => SAFE_POINTS.reduce((n, p) => (plus >= p ? p : n), 0);
-/** The highest safe point under this plus. */
-export const safeBelow = (plus: number) => SAFE_POINTS.reduce((n, p) => (plus > p ? p : n), 0);
-/** What a fall leaves of an item: from FALL_KEEP.from it comes home slipped to the safe point
-    under it; below that the Fog takes it (null). */
-export const afterFall = (it: Item): Item | null => ((it.plus ?? 0) >= FALL_KEEP.from ? { ...it, plus: safeBelow(it.plus ?? 0) } : null);
 /** The look an item has for its plus (a new one every few steps, see BANDS). */
 export const bandOf = (plus: number) => BANDS.reduce((b, x, i) => (plus >= x.from ? i : b), 0);
 /** The glow color of an item's band, or null when it's plain. */

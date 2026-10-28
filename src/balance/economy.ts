@@ -36,9 +36,6 @@ export const VAULT = {
   max: 20,
 } as const;
 
-/** Trained in the last this-many days: the flame keeps your guarded item if you fall. */
-export const FLAME_GUARD_DAYS = 2;
-
 /** Sweat coins (Edoardo 2026-10-28): every workout earns them, and changing who you are spends
     them. Goal: a new build or a new class is a choice you train for, never a free toggle, and the
     first class you try isn't a trap. */

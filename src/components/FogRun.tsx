@@ -14,7 +14,7 @@ import type { ClassId } from '@/lib/gear';
 import { buildOf } from '@/lib/stats';
 import { MATS, type MatId } from '@/balance';
 import { spWorn } from '@/lib/sp';
-import { atRisk, settleGear, vaultSize, wornFor, type AtRisk, type GearOutcome } from '@/lib/fog-gear';
+import { atRisk, settleGear, vaultSize, wornFor, type GearOutcome } from '@/lib/fog-gear';
 import { canWear, ITEM_SLOTS, nameOf, otherClass, RARITY, SLOT_NAME, type Item, type ItemSlot } from '@/game/dungeon/items';
 import { ItemCard, ItemTile } from './ItemCard';
 import { Sprite } from './Sprite';
@@ -316,8 +316,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
   }, []);
 
   const left = hud ? Math.max(0, RUN_SECONDS - hud.seconds) : RUN_SECONDS;
-  // What a fall would cost right now, and what the flame would hold.
-  const risk = hud ? atRisk(state, hud.gear, new Date()) : null;
+  // What a fall would cost right now: what you found and still carry in the bag.
+  const risk = hud ? atRisk(state, hud.gear.bag) : null;
 
   return (
     <div className="fixed inset-0 z-50 touch-none select-none bg-ink-950" data-run-end={end ? JSON.stringify(end) : undefined}>
@@ -352,7 +352,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
           </div>
           <div className="flex w-[11.5rem] shrink-0 flex-col items-end gap-1.5">
             <div className="flex items-center gap-1.5">
-              <BagButton bag={hud.gear.bag.length} risk={risk} flame={flameName || 'your flame'} keys={keys} onOpen={() => openBag(true)} />
+              <BagButton bag={hud.gear.bag.length} risk={risk} keys={keys} onOpen={() => openBag(true)} />
               <button
                 aria-label="Pause"
                 onPointerDown={(e) => e.stopPropagation()}
@@ -437,7 +437,6 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
           level={heroLevel(state)}
           cls={state.profile.classId}
           risk={risk}
-          flame={flameName || 'your flame'}
           onWear={(id) => run.current?.wear(id)}
           onTakeOff={(slot) => run.current?.takeOff(slot)}
           onDrop={(id) => run.current?.dropItem(id)}
@@ -454,7 +453,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
             </p>
             {risk && (
               <div className="mt-3 rounded-lg bg-ink-900/90 p-2.5 ring-1 ring-ink-700">
-                <RiskLine risk={risk} flame={flameName || 'your flame'} size={24} />
+                <RiskLine risk={risk} size={24} />
               </div>
             )}
           </div>
@@ -464,7 +463,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
                 [
                   'deeper',
                   'Go deeper',
-                  `Floor ${(hud?.floor ?? 0) + 1}. ${risk?.lost.length ? `Fall, and you lose ${risk.lost.length} item${risk.lost.length === 1 ? '' : 's'}${risk.held ? ` (${flameName || 'your flame'} keeps ${nameOf(risk.held)})` : ''}.` : 'Nothing to lose yet.'}`,
+                  `Floor ${(hud?.floor ?? 0) + 1}. ${risk?.length ? `Fall, and you lose ${risk.length} item${risk.length === 1 ? '' : 's'} from the bag.` : 'Nothing to lose yet.'}`,
                 ],
                 ['leave', 'Leave with your loot', `Home with ${hud ? hud.gear.bag.length : 0} item${hud?.gear.bag.length === 1 ? '' : 's'} in the bag. The dungeon starts over next time.`],
                 ['stay', 'Not yet', 'Look round this floor first.'],
@@ -688,14 +687,13 @@ function Vitals({ hud }: { hud: Hud }) {
   );
 }
 
-/** The bag, top right: how full it is, and in red how many things a fall would cost right now
-    (a small flame when the flame would hold one of them). */
-function BagButton({ bag, risk, flame, keys, onOpen }: { bag: number; risk: AtRisk | null; flame: string; keys: boolean; onOpen: () => void }) {
-  const lost = risk?.lost.length ?? 0,
+/** The bag, top right: how full it is, and in red how many things a fall would cost right now. */
+function BagButton({ bag, risk, keys, onOpen }: { bag: number; risk: Item[] | null; keys: boolean; onOpen: () => void }) {
+  const lost = risk?.length ?? 0,
     full = bag >= BAG;
   return (
     <button
-      aria-label={`Bag: ${bag} of ${BAG}.${lost ? ` ${lost} item${lost === 1 ? '' : 's'} at risk if you fall.` : ''}${risk?.held ? ` ${flame} keeps ${nameOf(risk.held)}.` : ''}`}
+      aria-label={`Bag: ${bag} of ${BAG}.${lost ? ` ${lost} item${lost === 1 ? '' : 's'} at risk if you fall.` : ''}`}
       onPointerDown={(e) => e.stopPropagation()}
       onClick={onOpen}
       className={`pointer-events-auto relative flex h-9 items-center gap-1 rounded-md bg-ink-950/70 px-2 ring-1 active:scale-95 ${full ? 'text-red-300 ring-red-400/60' : 'text-slate-200 ring-white/10'}`}
@@ -704,7 +702,6 @@ function BagButton({ bag, risk, flame, keys, onOpen }: { bag: number; risk: AtRi
       <span className="font-pixel text-[8px]">
         {bag}/{BAG}
       </span>
-      {risk?.held && <Sprite id="uiIcon" opts={{ name: 'flame' }} size={10} label="" />}
       {keys && <Key k="B" corner />}
       {lost > 0 && <span className="absolute -right-1.5 -top-1.5 min-w-[16px] rounded-sm bg-red-500 px-1 py-[3px] text-center font-pixel text-[7px] leading-none text-white ring-1 ring-ink-950">{lost}</span>}
     </button>
@@ -751,65 +748,17 @@ function KeyList() {
   );
 }
 
-/** An item tile with the flame's mark on it: the one item a fall leaves you (grey while the flame
-    is cold and can't hold it). */
-function Guarded({ children, on, label, cold = false }: { children: ReactNode; on: boolean; label: string; cold?: boolean }) {
+/** What a fall would cost, in short: what you found and still carry. The bag panel and the stairs
+    card both show it. */
+function RiskLine({ risk, size = 26 }: { risk: Item[]; size?: number }) {
   return (
-    <span className="relative inline-grid">
-      {children}
-      {on && (
-        <span className={`absolute -right-1.5 -top-1.5 grid h-4 w-4 place-items-center rounded-sm bg-ink-950 ring-1 ${cold ? 'ring-slate-500' : 'ring-orange-400'}`}>
-          <Sprite id="uiIcon" opts={{ name: 'flame' }} size={11} label={label} className={cold ? 'opacity-50 grayscale' : ''} />
-        </span>
-      )}
-    </span>
-  );
-}
-
-/** What a fall would cost, in short: the flame's item, and what the Fog would take. The bag panel
-    and the stairs card both show it. */
-function RiskLine({ risk, flame, size = 26 }: { risk: AtRisk; flame: string; size?: number }) {
-  const Flame = flame.charAt(0).toUpperCase() + flame.slice(1);
-  return (
-    <div className="space-y-1.5 text-left">
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <p className={`font-pixel text-[8px] leading-relaxed ${risk.lost.length ? 'text-red-300' : 'text-slate-400'}`}>
-          {risk.lost.length ? `At risk if you fall: ${risk.lost.length} item${risk.lost.length === 1 ? '' : 's'}` : risk.held ? 'Nothing else at risk' : 'Nothing at risk yet'}
-        </p>
-        {risk.lost.map((it) => (
-          <ItemTile key={it.id} item={it} size={size} />
-        ))}
-      </div>
-      {risk.held && (
-        <div className="flex items-center gap-2 text-[11px] text-orange-200">
-          <Guarded on label={`Kept by ${flame} if you fall`}>
-            <ItemTile item={risk.held} size={size} />
-          </Guarded>
-          <span>
-            <span style={{ color: RARITY[risk.held.rarity].color }}>{nameOf(risk.held)}</span>: kept by {flame} if you fall.
-          </span>
-        </div>
-      )}
-      {risk.slip.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2 text-[11px] text-gold-200">
-          {risk.slip.map((it) => (
-            <ItemTile key={it.id} item={it} size={size} />
-          ))}
-          <span>Forged too well for the Fog to take: a fall only slips {risk.slip.length === 1 ? 'it' : 'them'} back to the safe mark below.</span>
-        </div>
-      )}
-      {risk.cold && (
-        <div className="flex items-center gap-2 text-[11px] text-slate-300">
-          <Guarded on cold label={`${Flame} can hold it once you train`}>
-            <span className="opacity-60 grayscale">
-              <ItemTile item={risk.cold} size={size} />
-            </span>
-          </Guarded>
-          <span>
-            {Flame} can&apos;t hold your <span style={{ color: RARITY[risk.cold.rarity].color }}>{nameOf(risk.cold)}</span> yet. Train, and {flame} keeps it if you fall.
-          </span>
-        </div>
-      )}
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-left">
+      <p className={`font-pixel text-[8px] leading-relaxed ${risk.length ? 'text-red-300' : 'text-slate-400'}`}>
+        {risk.length ? `At risk if you fall: ${risk.length} item${risk.length === 1 ? '' : 's'} from the bag` : 'Nothing at risk yet'}
+      </p>
+      {risk.map((it) => (
+        <ItemTile key={it.id} item={it} size={size} />
+      ))}
     </div>
   );
 }
@@ -1096,7 +1045,7 @@ function Results({ state, zone, end, broken, gear, keys, onAgain, onLeave }: { s
           'The Fog takes what you carried, not who you are. Your points, your level and your story stay.'
         )}
       </p>
-      {gear && <GearRecap out={gear} vault={vaultSize(state.sessions.length)} first={gear.first} flame={state.profile.flame} />}
+      {gear && <GearRecap out={gear} vault={vaultSize(state.sessions.length)} first={gear.first} />}
       {end.won && (
         <div className="mt-4 w-full max-w-xs rounded-xl bg-ink-800 p-3 text-left ring-1 ring-gold-400/30">
           <p className="font-pixel text-[9px] text-gold-300">You keep: {zone.keepsake.name}</p>
@@ -1139,23 +1088,19 @@ function Results({ state, zone, end, broken, gear, keys, onAgain, onLeave }: { s
   );
 }
 
-/** The bag over the run: what you wear (three slots) and what you carry, with the flame's mark on
-    the item a fall would leave you and what a fall would cost. Tap an item to see it, then wear it,
-    take it off or leave it on the floor. */
-function BagPanel({ gear, build, level, cls, risk, flame, onWear, onTakeOff, onDrop, onClose }: { gear: Hud['gear']; build: ReturnType<typeof buildOf>; level: number; cls: ClassId | undefined; risk: AtRisk; flame: string; onWear: (id: string) => void; onTakeOff: (slot: ItemSlot) => void; onDrop: (id: string) => void; onClose: () => void }) {
+/** The bag over the run: what you wear (three slots) and what you carry, and what a fall would
+    cost. Tap an item to see it, then wear it, take it off or leave it on the floor. */
+function BagPanel({ gear, build, level, cls, risk, onWear, onTakeOff, onDrop, onClose }: { gear: Hud['gear']; build: ReturnType<typeof buildOf>; level: number; cls: ClassId | undefined; risk: Item[]; onWear: (id: string) => void; onTakeOff: (slot: ItemSlot) => void; onDrop: (id: string) => void; onClose: () => void }) {
   const [pick, setPick] = useState<{ from: 'worn' | 'bag'; id: string } | null>(null);
   const all = [...Object.values(gear.worn), ...gear.bag].filter((x): x is Item => !!x),
     item = pick && all.find((x) => x.id === pick.id);
   const wornNow = item && gear.worn[item.slot]?.id === item.id;
-  const kept = `Kept by ${flame} if you fall`,
-    fate = (it: Item) =>
-      it.starter
-        ? { text: 'Starter kit: it always comes home.', cls: 'text-slate-400' }
-        : it.id === risk.held?.id
-          ? { text: `${kept}.`, cls: 'text-orange-200' }
-          : it.id === risk.cold?.id
-            ? { text: `At risk if you fall. Train, and ${flame} holds it.`, cls: 'text-red-300' }
-            : { text: 'At risk if you fall. Leave by the stairs to keep it.', cls: 'text-red-300' };
+  const fate = (it: Item) =>
+    it.starter
+      ? { text: 'Starter kit: it always comes home.', cls: 'text-slate-400' }
+      : risk.includes(it)
+        ? { text: 'At risk if you fall. Wear it, or leave by the stairs, to keep it.', cls: 'text-red-300' }
+        : { text: 'It comes home, even if you fall.', cls: 'text-slate-400' };
   return (
     <div onPointerDown={(e) => e.stopPropagation()} className="run-x pointer-events-auto absolute inset-0 z-10 flex animate-fadein items-center justify-center bg-ink-950/85 py-2">
       <div className="flex max-h-full w-full max-w-3xl gap-3 overflow-auto rounded-xl bg-ink-950/95 p-3 ring-1 ring-gold-400/40">
@@ -1165,18 +1110,15 @@ function BagPanel({ gear, build, level, cls, risk, flame, onWear, onTakeOff, onD
               <p className="font-pixel text-[9px] text-gold-300">Worn</p>
               <div className="mt-2 flex gap-1.5">
                 {ITEM_SLOTS.map((slot) => {
-                  const it = gear.worn[slot],
-                    held = !!it && it.id === risk.held?.id;
+                  const it = gear.worn[slot];
                   return (
-                    <button key={slot} data-bag-item={it ? '' : undefined} onClick={() => it && setPick({ from: 'worn', id: it.id })} className={`flex flex-col items-center gap-1 rounded-lg p-1 ${pick?.id === it?.id && it ? 'bg-ink-800' : ''}`} aria-label={it ? `${nameOf(it)}${held ? `. ${kept}.` : ''}` : `${SLOT_NAME[slot]}: empty`}>
+                    <button key={slot} data-bag-item={it ? '' : undefined} onClick={() => it && setPick({ from: 'worn', id: it.id })} className={`flex flex-col items-center gap-1 rounded-lg p-1 ${pick?.id === it?.id && it ? 'bg-ink-800' : ''}`} aria-label={it ? nameOf(it) : `${SLOT_NAME[slot]}: empty`}>
                       {it ? (
-                        <Guarded on={held} label={kept}>
-                          <ItemTile item={it} size={40} />
-                        </Guarded>
+                        <ItemTile item={it} size={40} />
                       ) : (
                         <span className="grid h-10 w-10 place-items-center rounded-lg border border-dashed border-ink-700 text-[9px] text-slate-600">empty</span>
                       )}
-                      <span className={`text-[9px] ${held ? 'text-orange-300' : 'text-slate-500'}`}>{held ? 'Kept' : SLOT_NAME[slot]}</span>
+                      <span className="text-[9px] text-slate-500">{SLOT_NAME[slot]}</span>
                     </button>
                   );
                 })}
@@ -1201,7 +1143,7 @@ function BagPanel({ gear, build, level, cls, risk, flame, onWear, onTakeOff, onD
             </div>
           </div>
           <div className="mt-2 rounded-lg bg-ink-900 p-2 ring-1 ring-ink-700">
-            <RiskLine risk={risk} flame={flame} size={22} />
+            <RiskLine risk={risk} size={22} />
           </div>
           <button onClick={onClose} className="mt-2 w-full rounded-lg bg-gold-400 py-2 font-pixel text-[9px] text-ink-950 shadow-[0_3px_0_#b45309] active:translate-y-0.5 active:shadow-none">
             Back to the run
@@ -1235,13 +1177,12 @@ function BagPanel({ gear, build, level, cls, risk, flame, onWear, onTakeOff, onD
                 )}
               </ItemCard>
               <div className={`mt-2 flex items-center gap-1.5 text-[11px] ${fate(item).cls}`}>
-                {item.id === risk.held?.id && <Sprite id="uiIcon" opts={{ name: 'flame' }} size={11} label="" />}
                 {fate(item).text}
               </div>
             </>
           ) : (
             <p className="rounded-xl bg-ink-800 p-3 text-xs text-slate-400">
-              Tap an item to see it. Items need stat points to wear, and points come from workouts. Fall down here and the Fog takes what you wear and carry; leave by the stairs to keep it.
+              Tap an item to see it. Items need stat points to wear, and points come from workouts. What you wear always comes home. Fall down here and the Fog takes what you found and carry in the bag; leave by the stairs to keep it.
             </p>
           )}
           {item && !wornNow && gear.worn[item.slot] && (
@@ -1256,10 +1197,10 @@ function BagPanel({ gear, build, level, cls, risk, flame, onWear, onTakeOff, onD
 }
 
 /** What happened to your gear: home and into the vault, or taken by the Fog. */
-function GearRecap({ out, vault, first, flame }: { out: GearOutcome; vault: number; first: boolean; flame?: string }) {
+function GearRecap({ out, vault, first }: { out: GearOutcome; vault: number; first: boolean }) {
   const rows = out.kept ? out.stored : out.lost,
     mats = (Object.entries(out.mats ?? {}) as [MatId, number][]).filter(([, n]) => n > 0);
-  if (!rows.length && !out.left.length && !out.held && !out.slipped?.length && !mats.length) return null;
+  if (!rows.length && !out.left.length && !mats.length) return null;
   return (
     <div className="mt-4 w-full max-w-xs rounded-xl bg-ink-800 p-3 text-left ring-1 ring-ink-700">
       {rows.length > 0 && <p className={`font-pixel text-[9px] ${out.kept ? 'text-gold-300' : 'text-red-300'}`}>{out.kept ? 'Into your vault' : 'The Fog took'}</p>}
@@ -1271,18 +1212,6 @@ function GearRecap({ out, vault, first, flame }: { out: GearOutcome; vault: numb
           </li>
         ))}
       </ul>
-      {out.held && (
-        <p className="mt-2 flex items-center gap-2 text-xs text-orange-200">
-          <ItemTile item={out.held} size={22} />
-          {flame || 'Your flame'} held on to {nameOf(out.held)}.
-        </p>
-      )}
-      {out.slipped?.map((it) => (
-        <p key={it.id} className="mt-2 flex items-center gap-2 text-xs text-gold-200">
-          <ItemTile item={it} size={22} />
-          {nameOf(it)} came home with you, a few pluses lower.
-        </p>
-      ))}
       {mats.length > 0 && (
         <p className="mt-2 text-xs text-slate-300">
           Found for Mira&apos;s forge:{' '}
@@ -1301,7 +1230,7 @@ function GearRecap({ out, vault, first, flame }: { out: GearOutcome; vault: numb
       )}
       {!out.kept && out.lost.length > 0 && first && (
         <p className="mt-2 text-xs italic text-slate-300">
-          <span className="not-italic text-gold-300">Mira:</span> &ldquo;The Fog takes what you carried, not who you are. Your training is still yours, and so is your flame.&rdquo;
+          <span className="not-italic text-gold-300">Mira:</span> &ldquo;The Fog takes what you carried, not who you are. What you wore is still yours, and so is your training.&rdquo;
         </p>
       )}
     </div>

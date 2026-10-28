@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { seeded } from './random';
 import { initialState, type GameState, type Session } from './game';
 import { canUpgrade, EMBERS, embersOf, giveMats, matsShort, takeGifts, REROLL_COST, reroll, salvage, tryUpgrade, upgrade, upgradeCost, upgradeOdds } from './forge';
-import { salvageValue, setGuard, settleGear } from './fog-gear';
+import { salvageValue, settleGear } from './fog-gear';
 import { bandOf, boostOf, itemScore, MAX_PLUS, nameOf, rollItem, safeFloor, starterKit, type Item } from '@/game/dungeon/items';
 import { FORGE_RISK, STEPS } from '@/balance';
 
@@ -83,13 +83,12 @@ describe("Mira's forge", () => {
     expect(upgradeOdds(s, it, day)).toBeCloseTo(STEPS[9].odds + FORGE_RISK.rested);
   });
 
-  it('a +10 or higher item comes home from a fall, slipped to the safe point below', () => {
+  it('a forged item you wear comes home from a fall as it is', () => {
     const it = sword(),
       s = rich(it, 12),
-      out = settleGear(s, { won: false, why: 'hp', gear: { worn: { weapon: { ...it, plus: 12 } }, bag: [{ ...it, id: 'b', plus: 10 }] } }, new Date(2040, 0, 1));
+      out = settleGear(s, { won: false, why: 'hp', gear: { worn: { weapon: { ...it, plus: 12 } }, bag: [] } });
     expect(out.out.lost).toEqual([]);
-    expect(out.state.fogGear!.worn.weapon!.plus).toBe(10);
-    expect(out.state.fogGear!.vault.map((x) => x.plus)).toEqual([6]);
+    expect(out.state.fogGear!.worn.weapon!.plus).toBe(12);
   });
 
   it('keeps co-op materials found in a run, however it ends', () => {
@@ -128,12 +127,10 @@ describe("Mira's forge", () => {
     expect(embersOf(a)).toBe(50 - REROLL_COST);
   });
 
-  it('melts an item down into embers, and the flame lets go of it', () => {
+  it('melts an item down into embers', () => {
     const it = sword();
-    const s = setGuard(withSword(0, it), 'weapon');
-    const out = salvage(s, it.id);
+    const out = salvage(withSword(0, it), it.id);
     expect(out.fogGear!.worn).toEqual({});
-    expect(out.fogGear!.guard).toBeUndefined();
     expect(embersOf(out)).toBe(salvageValue(it));
     expect(salvageValue({ ...it, plus: 2 })).toBe(salvageValue(it) * 2);
   });
