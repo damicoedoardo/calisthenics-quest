@@ -5,7 +5,6 @@ import dynamic from 'next/dynamic';
 import { BookOpen, ChevronRight } from 'lucide-react';
 import { dayType, repsFor, type GameState } from '@/lib/game';
 import { PLAN, ROLE_LABEL, type DayType, type Kit } from '@/lib/program';
-import { EMBERS, embersOf } from '@/lib/forge';
 import { useLand } from './useLand';
 
 // The library carries the whole exercise catalog, so it loads only when opened.
@@ -23,15 +22,10 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
   const next = dayType(state);
   const land = useLand();
   const setKit = (k: Kit) => update((s) => ({ ...s, profile: { ...s.profile, kit: k } }));
-  const embers = (
-    <>
-      Each workout earns <span className="text-slate-200">{EMBERS.full} embers</span> ({EMBERS.mini} for the minimum quest) for Mira&apos;s forge on the Play tab. You have <span className="text-gold-300">{embersOf(state)}</span>.
-    </>
-  );
   const soon = 'Soon: tell your coach what you feel like, and it builds the workout from the library.';
   const intro = 'Every workout opens with a warm-up and ends with a stretch. Do every set with a couple of reps left in the tank, and the target goes up a rep at a time.';
 
-  // Sideways, one screen: a side column (the library, gym or home, embers) beside the plan, its
+  // Sideways, one screen: a side column (the library, gym or home) beside the plan, its
   // two days as two equal panels that fill the height.
   if (land)
     return (
@@ -76,7 +70,6 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
               <PlanDay key={day} state={state} kit={kit} day={day} next={day === next} land />
             ))}
           </div>
-          <p className="mt-2 shrink-0 rounded-lg bg-ink-900 px-3 py-1.5 text-[11px] leading-snug text-slate-400">{embers}</p>
         </section>
       </div>
     );
@@ -121,7 +114,6 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
         ))}
       </section>
 
-      <p className="rounded-xl bg-ink-900 px-3 py-2 text-xs text-slate-400">{embers}</p>
 
       <p className="text-center text-xs text-slate-500">{soon}</p>
     </div>

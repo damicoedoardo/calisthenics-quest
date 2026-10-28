@@ -15,7 +15,7 @@ import type { Look } from '@/sprites/engine/figure';
 import { Hero } from './Hero';
 
 /* Friends on screen: the heartbeat that shows you online to your friends (useFriendsBeat, in
-   page.tsx) and the Friends card on the Hero tab. Rules and types in lib/friends.ts. */
+   page.tsx) and the Friends card in the Fog's Together. Rules and types in lib/friends.ts. */
 
 /** How often the app says "still here" while it is open; the server counts 75 s as online. */
 const BEAT_MS = 30_000;
@@ -149,7 +149,7 @@ function GiveMats({ f, state, update, done }: { f: FriendCard; state: GameState;
   );
 }
 
-/** Hero tab: your friend code, adding friends, and who is online, in the Fog, or trained today.
+/** The Fog tab, Together: your friend code, adding friends, and who is online, in the Fog, or trained today.
     Friends can invite each other to a party and give each other forge materials. */
 export function FriendsCard({ state, update, sandbox }: { state: GameState; update: Update; sandbox: boolean }) {
   const [giving, setGiving] = useState<string | null>(null);
@@ -210,7 +210,7 @@ export function FriendsCard({ state, update, sandbox }: { state: GameState; upda
         <Users size={14} /> Friends
       </h2>
       {!signedIn ? (
-        <p className="mt-2 text-xs text-slate-400">Sign in (in Settings, below) to add friends and see when they train and play.</p>
+        <p className="mt-2 text-xs text-slate-400">Sign in (tap your hero at the top, then Settings) to add friends and see when they train and play.</p>
       ) : !list ? (
         <p className="mt-2 text-xs text-slate-500">Loading…</p>
       ) : (

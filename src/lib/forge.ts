@@ -4,7 +4,7 @@ import { NO_GEAR, salvageValue, type FogGear } from './fog-gear';
 import { MAX_PLUS, rerollBonus, safeFloor, type Item } from '@/game/dungeon/items';
 import { EMBERS, FORGE, FORGE_RISK, MAT_IDS, STEPS, type MatId } from '@/balance';
 
-/* Mira's forge, on the Play tab's gear card. Workouts earn embers, and the forge spends them: upgrade an item
+/* Mira's forge, on the Hero tab's Gear part. Workouts earn embers, and the forge spends them: upgrade an item
    (+1 to +15), roll one of its bonuses again, or melt an item down for a few embers. Embers come
    mostly from training; melting down what the dungeon gives adds a little. From +6 a step also asks
    for materials, which only co-op runs drop, and from +7 it can miss (the numbers are in

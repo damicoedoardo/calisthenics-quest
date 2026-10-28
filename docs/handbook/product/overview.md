@@ -3,7 +3,7 @@ type: conceptual
 title: Product overview
 description: FORMA is a training app played like a pixel RPG — training earns, the Fog game spends — installable, offline, one save per phone.
 tags: [product, overview]
-timestamp: 2026-10-27
+timestamp: 2026-10-28
 ---
 
 # Product overview
@@ -11,13 +11,13 @@ timestamp: 2026-10-27
 FORMA ("form" in Italian) is a training app played like a pixel-art RPG. It is built for one
 player first (Edoardo, coming back to calisthenics after two years off) and is meant to be
 super clear, super intuitive and gamified. Live at https://formaquest.app (also https://forma-nu-red.vercel.app), installable
-to the home screen (on phones it must be installed after the opening before the game goes on), works offline at the gym. Progress lives on the phone (Hero tab, Backup to save it). After the opening it asks once for
+to the home screen (on phones it must be installed after the opening before the game goes on), works offline at the gym. Progress lives on the phone (You page: tap your hero at the top, Backup to save it). After the opening it asks once for
 an account (email), which keeps a cloud copy and is who you are to friends; the game still plays offline.
 
 ## The rule the game is built on
 
 **Training earns, play spends.** A workout always "wins": it gives XP, raises the next targets,
-moves the story on and makes the hero really stronger. The Fog (the Play tab) is a short action
+moves the story on and makes the hero really stronger. The Fog (its own tab, Story alone or Together with friends) is a short action
 game where you can lose, played with the phone held sideways, exploring a dungeon floor by floor; what you bring into it is what your
 training gave you. Gear comes from the dungeon, each item with its own art (legendaries burn), shows on your hero as you wear it, and needs stat points to wear; dying in a run loses what you wore and carried, never points, level or story, and a vault at home keeps items safe. Between runs, on the Play tab, your flame keeps one item through a fall if you trained lately, and Mira's forge spends embers from workouts to upgrade (+1 to +15, a new shine every few pluses, full at +15; from +6 it also needs materials that only drop when you play with friends, who can also give them to you) and reroll what you found.
 
