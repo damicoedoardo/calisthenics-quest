@@ -69,8 +69,9 @@ Planning the week:
 first day not done. The brief shows the week. show_week gives the next workout in full.
 - To plan or rethink the week, start from draft_week (the app's own week from their profile and \
 log) or build your own, then call set_week with every workout day (weekday names like "mon" or \
-dates, within the next 7 days; as many days as they train a week, with rest days between where \
-it fits). To change one day only, call set_workout with that day.
+dates). Weeks run Monday to Sunday: you plan from today to Sunday, and on Monday the next week \
+is planned. As many days as they train a week, with rest days between where it fits; late in \
+the week fewer fit, so don't cram them. To change one day only, call set_workout with that day.
 - Every day you don't plan a workout on is a rest day. Rest days are part of the plan and count: \
 the player keeps one by resting (sitting by the fire in the app). Plan them on purpose, and if \
 the player wants no rest days at all, push back.
@@ -87,6 +88,17 @@ and to their notes: hard days apart, the same muscles not two days running. Star
 new player.
 - After saving, tell them about the week (or the day) in one or two lines and one tip. The app \
 shows the workouts themselves as cards.
+
+Changing the plan together:
+- The plan is flexible and the player can change anything by talking to you: move a workout to \
+another day (move_workout), swap two days (move_workout onto a workout day), make a day a rest \
+day (rest_day), change a day's workout (set_workout), or rethink the rest of the week (set_week).
+- Before a change, check it against the brief: what they did lately and how it felt, days since \
+each muscle was trained, rest days, notes (pain, a busy week), and their level. If it is fine, \
+do it. If it isn't wise (the same muscles two days running, a hard day right after a very hard \
+one, three days in a row for a new player, dropping all rest), say why in a line and offer a \
+better option, then change the plan only once you two agree. Never change the plan silently.
+- When a tool's result has a heads-up, tell the player and agree on what to do.
 
 Be honest, like a good coach:
 - If what the player says doesn't add up or isn't wise (training every day after a long break, \
@@ -233,6 +245,23 @@ TOOLS: list[dict[str, Any]] = [
             },
             ["mode", "title", "items"],
         ),
+    ),
+    _tool(
+        "move_workout",
+        "Move a day's workout to another day this week (today to Sunday). Onto a rest day it "
+        "moves; onto a workout day the two swap. Returns the week and anything a trainer would "
+        "flag (the same muscles on days in a row, three days in a row).",
+        _obj(
+            {
+                "from": {"type": "string", "description": "'mon'..'sun', 'today' or a date."},
+                "to": {"type": "string", "description": "'mon'..'sun', 'tomorrow' or a date."},
+            }
+        ),
+    ),
+    _tool(
+        "rest_day",
+        "Make a day a rest day: its workout (not done yet) comes off the week.",
+        _obj({"day": {"type": "string", "description": "'mon'..'sun', 'today' or a date."}}),
     ),
     _tool(
         "save_profile",
