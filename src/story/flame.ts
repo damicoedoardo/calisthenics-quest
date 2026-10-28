@@ -18,8 +18,8 @@ export interface FlameStage {
 export const FLAME_STAGES: FlameStage[] = [
   { id: 'spark', at: 0, name: 'Spark', gives: 'A flame circles you in the Fog after your first workout.' },
   { id: 'candle', at: 6, name: 'Candle', gives: 'Two flames circle you in the Fog.' },
-  { id: 'torch', at: 15, name: 'Torch', gives: 'Three flames, and it holds your rest timer during workouts.' },
-  { id: 'bonfire', at: 30, name: 'Bonfire', gives: 'Four flames, and it throws fireballs in the Fog.' },
+  { id: 'torch', at: 15, name: 'Little fairy', gives: 'Three flames, and it holds your rest timer during workouts.' },
+  { id: 'bonfire', at: 30, name: 'Fairy', gives: 'Four flames, and it throws fireballs in the Fog.' },
   { id: 'fairy', at: 50, name: 'Fire fairy', gives: "It flies beside you and heals you a little when you're low." },
 ];
 

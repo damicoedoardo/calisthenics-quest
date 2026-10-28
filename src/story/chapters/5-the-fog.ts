@@ -92,7 +92,7 @@ export const THE_FOG: Chapter = {
   },
   scenes: [
     {
-      // The flame grows wings at the end of the Plateau, whatever the chapter is waiting for.
+      // The flame's wings turn gold at the end of the Plateau, whatever the chapter is waiting for.
       id: 'ch5-wings',
       when: { workouts: 50 },
       // Still on the Plateau: the fog only comes after this.
@@ -100,11 +100,11 @@ export const THE_FOG: Chapter = {
       lines: [
         { who: 'narrator', show: 'flame', text: 'The Plateau has no hearts left. In the quiet after the last workout, {flame} goes very still.' },
         { who: 'flame', mood: 'scared', text: "...Something's happening. Is something happening? Something is DEFINITELY happening." },
-        { who: 'narrator', show: 'flame', text: 'Two wings of flame unfold from its back, and {flame} lifts off the ground, wobbling.', shot: { zoom: 'in', seconds: 1.6 } },
-        { who: 'flame', mood: 'happy', text: "Wings. I have wings. I've been growing these the whole time, and I didn't even know." },
+        { who: 'narrator', show: 'flame', text: 'Its wings stretch out wide and turn gold, a small crown of light settles on its head, and {flame} lifts off the ground, wobbling.', shot: { zoom: 'in', seconds: 1.6 } },
+        { who: 'flame', mood: 'happy', text: "Look at my wings. Gold, all the way to the tips. I've been growing these the whole time, and I didn't even know." },
         { who: 'wanderer', text: "Neither did the Plateau. That's how it works. It hides, and hides, and then it shows all at once." },
         { who: 'flame', mood: 'soft', text: "You walked a whole flat month with no proof it was working. That's what grew these. I believe you're someone who keeps going without proof." },
-        { who: 'flame', mood: 'happy', text: "In the Fog I'll fly next to you now. And when you're hurt, I can patch you up a little. I'm a fire fairy. Is that a real thing? It's a real thing now." },
+        { who: 'flame', mood: 'happy', text: "In the Fog I'll fly next to you now. And when you're hurt, I can patch you up a little. I'm a fire fairy, with a crown. Is that a real thing? It's a real thing now." },
       ],
     },
     {

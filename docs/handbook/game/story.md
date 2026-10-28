@@ -20,7 +20,7 @@ cast.ts               everyone who speaks: name, portrait (sprite), name color
 places.ts             where scenes happen: painted backdrops (src/sprites/places.ts draws them)
 chapters/1-6          one file per month: the chapter, its Fog zone, its scenes
 anytime.ts            scenes that can happen in any chapter (beating last time, coming back)
-flame.ts              the flame's stages (spark to fire fairy), the default name, and heroVariant:
+flame.ts              the flame's stages (spark, candle, then three fairies: little, proper, crowned fire fairy), the default name, and heroVariant:
                       after the finale the flame has fused with you and your hero burns red
 opening.ts            the opening, before the first workout
 daily/flame-lines.ts  what the flame says on Today, by kind of day, and its face

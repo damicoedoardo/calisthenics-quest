@@ -1,12 +1,14 @@
 import type { ClipFrame } from '../clips';
 import { SIZE } from '../engine/figure';
-import { autoshade, grid, mix, outline, painter, type Grid } from '../engine/grid';
+import { autoshade, grid, mix, outline, painter, stamp, type Grid } from '../engine/grid';
 import { FLAME } from '../palette';
 
 /* The flame: your spark, and later your friend. A chubby flame spirit with a big face and manga
    eyes that grows with your workouts (stage) and shows how it feels (mood). Over the hover clip its
    tip curls side to side, it breathes, sparks rise, and it blinks once. The candle is the classic
-   Ember look; the other stages are drawn from the same shapes, scaled and dressed up. */
+   Ember look; the other stages are drawn from the same shapes, scaled and dressed up. From the
+   torch on it is a fire fairy that grows: a little one (torch), a proper one with a flame dress
+   (bonfire), and the grandest, with big bright wings and a crown (fairy). */
 
 export type FlameStage = 'spark' | 'candle' | 'torch' | 'bonfire' | 'fairy';
 export type FlameFace = 'happy' | 'bright' | 'soft' | 'sleepy' | 'smoky' | 'scared' | 'dim';
@@ -21,16 +23,18 @@ const SWAY = [0, 1, 2, 1, 0, -1, -2, -1];
 const BLINK_FRAME = 6;
 const MOUTH = '#7f1d1d';
 const SMOKE = ['#6b7280', '#9ca3af'];
-const LOG = ['#3b2414', '#5b3a24', '#7c5233'];
 
 /** Size and placement per stage: kx, ky scale the body; cy is where the belly sits. */
 const BUILD: Record<FlameStage, { kx: number; ky: number; tip: number; cy: number }> = {
   spark: { kx: 0.5, ky: 0.5, tip: 1, cy: 50 },
   candle: { kx: 1, ky: 1, tip: 1, cy: 43 },
-  torch: { kx: 0.92, ky: 0.95, tip: 1.3, cy: 45 },
-  bonfire: { kx: 1.12, ky: 0.92, tip: 1.1, cy: 44 },
-  fairy: { kx: 0.78, ky: 0.8, tip: 1.05, cy: 38 },
+  torch: { kx: 0.74, ky: 0.72, tip: 0.9, cy: 34 },
+  bonfire: { kx: 0.78, ky: 0.76, tip: 0.85, cy: 27 },
+  fairy: { kx: 0.8, ky: 0.78, tip: 0.8, cy: 27 },
 };
+
+/** The fairy stages: 0 little, 1 proper, 2 the grandest. */
+const FAIRY: Partial<Record<FlameStage, 0 | 1 | 2>> = { torch: 0, bonfire: 1, fairy: 2 };
 
 export function drawEmber(o: Partial<FlameOpts>, frame: ClipFrame, f: number): Grid {
   const stage = o.stage ?? 'candle',
@@ -40,8 +44,9 @@ export function drawEmber(o: Partial<FlameOpts>, frame: ClipFrame, f: number): G
     p = painter(g),
     s = SWAY[f % SWAY.length],
     b = frame.bob ?? 0,
-    // The fairy bobs on its wings; everyone else breathes.
-    lift = stage === 'fairy' ? [0, -1, -2, -1, 0, 1, 1, 0][f % 8] : 0,
+    fairy = FAIRY[stage],
+    // A fairy bobs on its wings; everyone else breathes.
+    lift = fairy !== undefined ? [0, -1, -2, -1, 0, 1, 1, 0][f % 8] : 0,
     cx = 32,
     cy = B.cy + b + lift;
   // Colors fade when the flame is dim (you've been away) or smoky (no rest for days).
@@ -56,21 +61,21 @@ export function drawEmber(o: Partial<FlameOpts>, frame: ClipFrame, f: number): G
   const poly = (pts: [number, number][], col: string) => p.poly(pts.map(([x, y]) => P(x, y)), col);
   const ell = (dy: number, rx: number, ry: number, col: string) => p.ellipse(cx, cy + dy * B.ky, rx * B.kx, ry * B.ky, col);
 
-  if (stage === 'fairy') wings(p, cx, cy, f, c);
-  if (stage === 'bonfire') logs(p, cx, cy + 15 * B.ky);
+  // A fairy's wings and crown are drawn on their own layers, so each keeps its own outline.
+  const back = grid(SIZE),
+    front = grid(SIZE);
+  if (fairy !== undefined) {
+    wings(painter(back), cx, cy, f, fairy, c);
+    dress(p, cx, cy + 9 * B.ky, s, fairy, red, orange, yellow);
+  }
 
   // outer flame: a round body, a tall curling tip, a small second tip and two little arms
   ell(0, 18, 15 - b, red);
   poly([[-11, -10], [12, -8], [9, -24], [5 + s, -37 + b], [1, -26], [-4, -22]], red);
   poly([[-15, -6], [-6, -14], [-11 + s, -27 + b]], red);
-  if (stage === 'bonfire') {
-    // more fire: tips on both shoulders
-    poly([[8, -10], [16, -6], [17 - s, -22 + b]], red);
-    poly([[-18, 0], [-12, -8], [-21 + s, -16]], red);
-  }
   if (stage !== 'spark') {
-    // arms: out to the sides, raised high on the torch (it carries the light ahead of you)
-    const up = stage === 'torch' ? -9 : 0;
+    // arms: out to the sides; a fairy holds them low, like it's about to curtsy
+    const up = fairy !== undefined ? 7 : 0;
     poly([[-17, 2], [-16, -5], [-23 + s / 2, -7 + up]], red);
     poly([[17, 2], [16, -5], [23 + s / 2, -8 + up]], red);
   }
@@ -82,10 +87,15 @@ export function drawEmber(o: Partial<FlameOpts>, frame: ClipFrame, f: number): G
   poly([[-4, -7], [6, -7], [3 + s / 2, -19 + b]], yellow);
   p.ellipse(cx, cy + 3 * B.ky, 10.5 * B.kx, (8.5 - b) * B.ky, core);
 
-  const out = outline(autoshade(g)),
-    face = painter(out);
+  if (fairy === 2) crown(painter(front), cx, Math.round(cy - 11 * B.ky), c);
+
+  const out = outline(autoshade(back));
+  stamp(out, outline(autoshade(g)));
+  stamp(out, outline(front));
+  const face = painter(out);
   drawFace(face, stage, mood, cx, cy, B.kx, f);
-  sparks(face, stage, mood, cx, f, yellow, orange);
+  if (fairy !== undefined) dust(face, cx, cy, f, fairy, mood, yellow, core);
+  else sparks(face, stage, mood, cx, f, yellow, orange);
   if (mood === 'smoky') smoke(face, cx, cy - 36 * B.ky * B.tip, f);
   if (mood === 'sleepy' || mood === 'dim') zzz(face, cx + 14 * B.kx, cy - 22 * B.ky, f);
   return out;
@@ -209,25 +219,122 @@ function zzz(face: ReturnType<typeof painter>, x: number, y: number, f: number) 
   face.row(zy + 2, zx, zx + 2, Z);
 }
 
-function logs(p: ReturnType<typeof painter>, cx: number, y: number) {
-  p.thick(cx - 16, y + 1, cx + 14, y - 3, 3, LOG[1]);
-  p.thick(cx - 14, y - 3, cx + 16, y + 1, 3, LOG[0]);
-  p.r(cx - 17, y, 3, 3, LOG[2]);
-  p.r(cx + 15, y, 3, 3, LOG[2]);
+/** A filled ellipse turned by `turn` radians, as a polygon (for wing lobes). */
+function lobe(p: ReturnType<typeof painter>, x: number, y: number, rx: number, ry: number, turn: number, col: string) {
+  const pts: [number, number][] = [];
+  for (let i = 0; i < 20; i++) {
+    const a = (i / 20) * Math.PI * 2,
+      ex = Math.cos(a) * rx,
+      ey = Math.sin(a) * ry;
+    pts.push([x + ex * Math.cos(turn) - ey * Math.sin(turn), y + ex * Math.sin(turn) + ey * Math.cos(turn)]);
+  }
+  p.poly(pts, col);
 }
 
-function wings(p: ReturnType<typeof painter>, cx: number, cy: number, f: number, c: (col: string) => string) {
-  // Two flame wings that beat over the clip.
-  const beat = [0, 2, 4, 2, 0, -1, -2, -1][f % 8],
-    outer = c(FLAME.orange[2]),
-    inner = c(FLAME.yellow);
+/** Butterfly wings of light that beat over the clip, each lobe drawn from the rim in: small and
+    round on the little fairy, big with a lower pair on the proper one, and on the grandest wide and
+    gold with a white glow, the lower pair long swallowtails. */
+function wings(p: ReturnType<typeof painter>, cx: number, cy: number, f: number, level: 0 | 1 | 2, c: (col: string) => string) {
+  const beat = [0, 1, 2, 1, 0, -1, -2, -1][f % 8],
+    // the wings fold a little on the down beat
+    fold = [1, 0.95, 0.85, 0.95, 1, 1, 1, 1][f % 8],
+    layers = [
+      [FLAME.orange[1], mix(FLAME.yellow, '#ffffff', 0.5)],
+      [FLAME.orange[1], FLAME.yellow, mix(FLAME.yellow, '#ffffff', 0.6)],
+      ['#f59e0b', FLAME.yellow, '#fef9c3', '#ffffff'],
+    ][level].map(c),
+    top = [
+      { x: 14, y: -9, rx: 8, ry: 5 },
+      { x: 18, y: -10, rx: 11, ry: 6.5 },
+      { x: 20, y: -12, rx: 14, ry: 8.5 },
+    ][level],
+    low = [
+      { x: 12, y: 2, rx: 5, ry: 3.5 },
+      { x: 15, y: 5, rx: 7.5, ry: 5 },
+      { x: 16, y: 9, rx: 12, ry: 5 },
+    ][level];
   ([-1, 1] as const).forEach((side) => {
-    const x0 = cx + side * 9,
-      tipX = cx + side * 30,
-      tipY = cy - 22 + beat,
-      lowX = cx + side * 26,
-      lowY = cy + 4 + beat / 2;
-    p.poly([[x0, cy - 6], [tipX, tipY], [cx + side * 24, cy - 6], [lowX, lowY], [x0, cy + 2]], outer);
-    p.poly([[x0, cy - 4], [cx + side * 24, tipY + 5], [cx + side * 18, cy - 4], [cx + side * 20, lowY - 2], [x0, cy]], inner);
+    [
+      // the grandest fairy's lower wings are long swallowtails
+      { ...low, turn: side * (level === 2 ? 1 : 0.6), y: low.y + beat / 2 },
+      { ...top, turn: side * -1, y: top.y + beat },
+    ].forEach((w) => {
+      const x = cx + side * w.x * fold,
+        y = cy + w.y;
+      // each inner layer is smaller and sits a little toward the body
+      layers.forEach((col, i) => lobe(p, x - side * i * 0.8, y + i * 0.3, (w.rx - i * 2) * fold, w.ry - i * 1.4, w.turn, col));
+    });
+  });
+}
+
+/** Below the face: a short wisp of a tail on the little fairy; on the others a bell dress of flame
+    that sways, with three points at the hem (longer on the grandest). */
+function dress(p: ReturnType<typeof painter>, cx: number, y: number, s: number, level: 0 | 1 | 2, red: string, orange: string, yellow: string) {
+  if (level === 0) {
+    p.poly([[cx - 6, y], [cx + 6, y], [cx + 1 + s, y + 11]], red);
+    p.poly([[cx - 3, y], [cx + 3, y], [cx + s / 2, y + 7]], orange);
+    return;
+  }
+  const L = level === 2 ? 1.35 : 1,
+    w = level === 2 ? 1.1 : 1;
+  const bell = (k: number, dy: number): [number, number][] =>
+    (
+      [
+        [-5, 0],
+        [5, 0],
+        [8, 9],
+        [12 + s / 2, 17],
+        [5, 15],
+        [s / 2, 20],
+        [-5, 15],
+        [-12 + s / 2, 17],
+        [-8, 9],
+      ] as [number, number][]
+    ).map(([x, yy]) => [cx + x * k * w, y + dy + yy * k * L]);
+  p.poly(bell(1, 0), red);
+  p.poly(bell(0.7, 1), orange);
+  p.poly(bell(0.4, 1), yellow);
+  if (level === 2) p.poly(bell(0.18, 2), mix(yellow, '#ffffff', 0.6));
+}
+
+/** A small gold crown with three points and a red gem, sat on the grandest fairy's head. */
+function crown(p: ReturnType<typeof painter>, cx: number, y: number, c: (col: string) => string) {
+  const gold = c('#fbbf24'),
+    deep = c('#d97706'),
+    gem = c(FLAME.red[1]);
+  p.r(cx - 6, y - 1, 13, 3, gold);
+  p.row(y + 1, cx - 6, cx + 6, deep);
+  p.poly([[cx - 6, y - 1], [cx - 5, y - 5], [cx - 3, y - 1]], gold);
+  p.poly([[cx - 2, y - 1], [cx, y - 7], [cx + 2, y - 1]], gold);
+  p.poly([[cx + 3, y - 1], [cx + 5, y - 5], [cx + 6, y - 1]], gold);
+  p.r(cx - 1, y - 1, 3, 2, gem);
+}
+
+/** Fairy dust: little twinkles that fall from the wings, more of them as the fairy grows. */
+function dust(face: ReturnType<typeof painter>, cx: number, cy: number, f: number, level: 0 | 1 | 2, mood: FlameFace, yellow: string, core: string) {
+  if (mood === 'dim') return;
+  const spots: [number, number, number][] = [
+    [-14, 4, 0],
+    [15, 6, 4],
+    [-20, -4, 2],
+    [21, -2, 6],
+    [-9, 18, 3],
+    [10, 20, 7],
+    [-24, 10, 5],
+    [25, 12, 1],
+  ];
+  spots.slice(0, [3, 5, 8][level]).forEach(([dx, dy, phase]) => {
+    const k = (f + phase) % 8;
+    if (k > 5) return;
+    const x = cx + dx,
+      y = Math.round(cy + dy + k);
+    // a twinkle: a plus at its brightest, a dot as it fades
+    if (k === 1 || k === 2) {
+      face.p(x, y, core);
+      face.p(x - 1, y, yellow);
+      face.p(x + 1, y, yellow);
+      face.p(x, y - 1, yellow);
+      face.p(x, y + 1, yellow);
+    } else face.p(x, y, yellow);
   });
 }
