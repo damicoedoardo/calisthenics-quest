@@ -46,6 +46,7 @@ if (!isMainThread) {
   const { ZONES, powerOf, edgeFor } = await import(`${root}src/lib/fog.ts`);
   const forced = process.env.EDGE ? JSON.parse(process.env.EDGE) : null;
   const { buildOf } = await import(`${root}src/lib/stats.ts`);
+  const { heroLevel } = await import(`${root}src/lib/game.ts`);
   const { seasonedKit } = await import(`${root}src/sim/seasoned.ts`);
   const { seeded } = await import(`${root}src/lib/random.ts`);
   // GEAR=0 plays in the starter kit; by default the bot walks in with what a player keeps (SEASONED).
@@ -60,17 +61,18 @@ if (!isMainThread) {
     const state = JSON.parse(readFileSync(job.file, 'utf8'));
     const power = powerOf(shift(state, now), new Date(now));
     // Every run starts in what a player keeps (seasonedKit; GEAR=0: the starter kit); the bot wears what drops if its points allow.
-    const build = buildOf(state);
+    const build = buildOf(state),
+      level = heroLevel(state);
     const z = ZONES[job.zone];
     const zone = { ...z, hp: z.hp * job.scale, dmg: z.dmg * job.scale };
     const edge = forced ?? edgeFor(state, z);
     const out = [];
     for (let i = 0; i < job.runs; i++) {
       const seed = job.seed + i * 7919;
-      const worn = geared ? seasonedKit(seeded(seed ^ 0x5eed), ZONES, job.zone, state.sessions.length, job.cls, build) : undefined;
+      const worn = geared ? seasonedKit(seeded(seed ^ 0x5eed), ZONES, job.zone, state.sessions.length, job.cls, build, level) : undefined;
       // The model player wears the SP once its trial is done (SP_MODEL_AT workouts).
       const sp = !noSp && state.sessions.length >= SP_MODEL_AT ? spNo : false;
-      out.push({ ...playRun({ zone, power, classId: job.cls, seed, build, edge, worn, sp }), seed });
+      out.push({ ...playRun({ zone, power, classId: job.cls, seed, build, heroLevel: level, edge, worn, sp }), seed });
     }
     parentPort.postMessage(out);
   });
