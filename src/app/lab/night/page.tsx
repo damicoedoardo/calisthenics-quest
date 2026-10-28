@@ -202,7 +202,7 @@ export default function NightLab() {
       <Panel title="CLASSES, SP AND SWEAT COINS" note="Your class at the start, weapons that belong to one class, the first SP with its trial, and sweat coins to change class or start your points over.">
         <Row icon={<Swords size={16} />} label="After the boss: pick up, then go home" note="The boss's room goes quiet, HOME stairs come up; walk over what's left first" onClick={() => open(veteran(14, 1), 'run=0&at=boss')} />
         <Row icon={<Play size={16} />} label="The opening, with the class pick" note="A new player: after the name, pick a class (you can change it later)" onClick={() => open(initialState(), '')} />
-        <Row icon={<Gem size={16} />} label="Another class's weapon" note="Play tab: an archer's bow in a warrior's vault says 'Archer only' and can't be worn" onClick={() => open(otherBow(), 'tab=play')} />
+        <Row icon={<Gem size={16} />} label="Another class's weapon" note="Hero > Gear: an archer's bow in a warrior's vault says 'Archer only' and can't be worn" onClick={() => open(otherBow(), 'tab=hero&hero=gear')} />
         <Row icon={<Film size={16} />} label="The Wanderer gives the first SP" note="sp-gift, at 3 workouts" href="/lab/story?play=sp-gift&back" />
         <div className="rounded-xl bg-ink-950 px-3 py-2.5">
           <p className="text-sm text-slate-200">The SP wakes: the transformation</p>
@@ -215,9 +215,9 @@ export default function NightLab() {
             ))}
           </div>
         </div>
-        <Row icon={<Sparkles size={16} />} label="The SP, sealed" note="Hero tab: the card in ash, and its trial (train twice more, reach floor 5)" onClick={() => open(withSp(false), 'tab=hero')} />
-        <Row icon={<Sparkles size={16} />} label="The SP, awake" note="Hero tab: you in its look, the card in color, its moves and the switch to wear it" onClick={() => open(withSp(true), 'tab=hero')} />
-        <Row icon={<Sparkles size={16} />} label="All four SPs" note="Hero tab: scroll the SPs you own with the arrows, and pick the one to wear" onClick={() => open(withSp(true, 'warrior', 2), 'tab=hero')} />
+        <Row icon={<Sparkles size={16} />} label="The SP, sealed" note="Hero tab: the card in ash, and its trial (train twice more, reach floor 5)" onClick={() => open(withSp(false), 'tab=hero&hero=class')} />
+        <Row icon={<Sparkles size={16} />} label="The SP, awake" note="Hero tab: you in its look, the card in color, its moves and the switch to wear it" onClick={() => open(withSp(true), 'tab=hero&hero=class')} />
+        <Row icon={<Sparkles size={16} />} label="All four SPs" note="Hero tab: scroll the SPs you own with the arrows, and pick the one to wear" onClick={() => open(withSp(true, 'warrior', 2), 'tab=hero&hero=class')} />
         <Row icon={<Film size={16} />} label="The second SP" note="sp-second, after chapter 2: the Wanderer hands it over, awake" href="/lab/story?play=sp-second&back" />
         <Row icon={<Film size={16} />} label="The third SP" note="sp-third, after chapter 4" href="/lab/story?play=sp-third&back" />
         <Row icon={<Film size={16} />} label="The fourth SP" note="sp-fourth, after chapter 5, before the last" href="/lab/story?play=sp-fourth&back" />
@@ -234,7 +234,16 @@ export default function NightLab() {
             )}
           </div>
         </div>
-        <Row icon={<Swords size={16} />} label="Change class with sweat coins" note="Hero tab, Change class: the first change is free, then 3 coins" onClick={() => open({ ...withSp(true), sweat: { spent: 0, changes: 1 } }, 'tab=hero')} />
+        <Row icon={<Swords size={16} />} label="Change class with sweat coins" note="Hero tab, Change class: the first change is free, then 3 coins" onClick={() => open({ ...withSp(true), sweat: { spent: 0, changes: 1 } }, 'tab=hero&hero=class')} />
+      </Panel>
+      <Panel title="MENUS" note="Four tabs, one job each: Fog only plays (Story or Together), Hero holds your gear, vault and forge, stats and class. Tap your hero at the top for the You page.">
+        <Row icon={<Swords size={16} />} label="Fog: Story" note="The worlds, then the ready strip: what you wear (tap it for Hero > Gear), warmed up, rested, the boss's hearts" onClick={() => open(geared(), 'tab=play')} />
+        <Row icon={<Swords size={16} />} label="Fog: Together" note="Play with friends: the rules, the party, your friends (on a real signed-in save)" onClick={() => open(geared(), 'tab=play&fog=together')} />
+        <Row icon={<Gem size={16} />} label="Hero > Gear" note="What you wear, the vault, and Mira's forge for the item you tap: the only place for them" onClick={() => open(forged(7), 'tab=hero&hero=gear')} />
+        <Row icon={<Sparkles size={16} />} label="Hero > Stats" note="Your champion's points, and what your flame gives you" onClick={() => open(veteran(30, 2), 'tab=hero&hero=stats')} />
+        <Row icon={<Swords size={16} />} label="Hero > Class" note="Your class and Change class" onClick={() => open(veteran(30, 2), 'tab=hero&hero=class')} />
+        <Row icon={<BookOpen size={16} />} label="The You page" note="Tap your hero at the top: letter, quest log, settings, backup, cloud save" onClick={() => open(veteran(30, 2), 'you')} />
+        <Row icon={<Gem size={16} />} label="Today with keepsakes" note="Three keepsakes won, at the end of Today" onClick={() => open(veteran(40, 3), 'tab=today')} />
       </Panel>
 
       <Panel title="INSTALL THE APP" note="After the opening, a phone in a browser tab has to put FORMA on its home screen before playing on. Each guide is shown here whatever phone you hold.">
@@ -274,16 +283,16 @@ export default function NightLab() {
             </div>
           );
         })}
-        <Row icon={<Swords size={16} />} label="The Play tab" note="Power from training with pixel icons, all six zones open" onClick={() => open(veteran(78, 6), 'tab=play')} />
+        <Row icon={<Swords size={16} />} label="The Fog tab" note="Story: all six worlds open, the ready strip under them" onClick={() => open(veteran(78, 6), 'tab=play')} />
         <Row icon={<Swords size={16} />} label="The Fog, sideways" note="Hold the phone across: rooms run left to right, tap a monster to aim at it" onClick={() => open(veteran(14, 1), 'run=0')} />
         <Row icon={<Swords size={16} />} label="A party run (practice)" note="You with two friends, Ana the archer and Ben the mage, played by the bot: names over their heads, XP for all, drops each their own" onClick={() => open(veteran(14, 1), 'run=0&party')} />
-        <Row icon={<Gem size={16} />} label="Loot: your gear and the vault" note="Play tab: what you wear into the Fog, the vault, an item you can't wear yet" onClick={() => open(geared(), 'tab=play')} />
+        <Row icon={<Gem size={16} />} label="Loot: your gear and the vault" note="Hero > Gear: what you wear into the Fog, the vault, an item you can't wear yet" onClick={() => open(geared(), 'tab=hero&hero=gear')} />
         <div className="rounded-xl bg-ink-950 px-3 py-2.5">
           <p className="text-sm text-slate-200">Mira&apos;s forge, +1 to +15</p>
           <p className="text-[11px] text-slate-500">Your sword forged this far, co-op materials to spend, a new look every few pluses (vault: +4, +10, +13). Tap the sword, then try for the next plus.</p>
           <div className="mt-2 grid grid-cols-6 gap-1">
             {[3, 6, 9, 12, 14, 15].map((p) => (
-              <button key={p} className={chip} onClick={() => open(forged(p), 'tab=play')}>
+              <button key={p} className={chip} onClick={() => open(forged(p), 'tab=hero&hero=gear')}>
                 +{p}
               </button>
             ))}
@@ -300,7 +309,7 @@ export default function NightLab() {
           <p className="text-sm text-slate-200">A legendary worn</p>
           <p className="text-[11px] text-slate-500">A legendary sword at +0: the ring of fire on its card, red flames around you in a run, no forge shine yet.</p>
           <div className="mt-2 grid grid-cols-2 gap-1">
-            <button className={chip} onClick={() => open(legendWorn(), 'tab=play')}>
+            <button className={chip} onClick={() => open(legendWorn(), 'tab=hero&hero=gear')}>
               Play tab
             </button>
             <button className={chip} onClick={() => open(legendWorn(), 'run=1')}>
@@ -310,9 +319,9 @@ export default function NightLab() {
         </div>
         <Row icon={<Gem size={16} />} label="Loot in a run" note="Monsters and chests drop gear; the bag button top right; the stairs ask: deeper or leave with it" onClick={() => open(geared(), 'run=1')} />
         <Row icon={<Gem size={16} />} label="Loot in a run, the flame gone cold" note="No workout in 4 days: the bag says training would let the flame hold your sword" onClick={() => open(geared(4), 'run=1')} />
-        <Row icon={<Swords size={16} />} label="A boss with no hearts left" note="Play tab: 15 workouts in, Tomorrow still standing. It fights weaker, and runs start with 3 free skills" onClick={() => open(veteran(15, 0), 'tab=play')} />
+        <Row icon={<Swords size={16} />} label="A boss with no hearts left" note="Fog tab: 15 workouts in, Tomorrow still standing. It fights weaker, and runs start with 3 free skills" onClick={() => open(veteran(15, 0), 'tab=play')} />
         <Row icon={<Swords size={16} />} label="A boss with no hearts left, in a run" note="The 3 free skills at the start, then Tomorrow with less HP" onClick={() => open(veteran(15, 0), 'run=0&at=boss')} />
-        <Row icon={<Swords size={16} />} label="A boss with hearts left" note="Play tab: how many workouts until Tomorrow runs out of hearts" onClick={() => open(veteran(8, 0), 'tab=play')} />
+        <Row icon={<Swords size={16} />} label="A boss with hearts left" note="Fog tab: how many workouts until Tomorrow runs out of hearts" onClick={() => open(veteran(8, 0), 'tab=play')} />
         <Row icon={<Swords size={16} />} label="Exercise library" note="Train tab, top button: 870+ exercises, pixel demos for boy and girl" onClick={() => open(veteran(10, 1), 'tab=train')} />
       </Panel>
 
@@ -333,10 +342,10 @@ export default function NightLab() {
 
       <Panel title="TRAINING AND DAYS">
         <Row icon={<Dumbbell size={16} />} label="The Train tab" note="Exercise library, gym or home, the plan's two days, the next gear" onClick={() => open(veteran(14, 1), 'tab=train')} />
-        <Row icon={<Sparkles size={16} />} label="Stat points" note="Hero tab: 30 workouts of points to put into Health, Armor, Damage, Haste, Speed, Crit" onClick={() => open(veteran(30, 2), 'tab=hero')} />
+        <Row icon={<Sparkles size={16} />} label="Stat points" note="Hero tab: 30 workouts of points to put into Health, Armor, Damage, Haste, Speed, Crit" onClick={() => open(veteran(30, 2), 'tab=hero&hero=stats')} />
         <Row icon={<Dumbbell size={16} />} label="Exercise demos" note="Your hero doing each exercise on the set logger; tap it to enlarge" onClick={() => open(veteran(14, 1), 'workout')} />
         <Row icon={<BookOpen size={16} />} label="Book of Days" note="Two weeks of pages, day icons and margin notes" onClick={() => open(veteran(30, 2), 'book')} />
-        <Row icon={<Gem size={16} />} label="Keepsakes" note="Three won, the rest still in the fog" onClick={() => open(veteran(40, 3), 'tab=hero')} />
+        <Row icon={<Gem size={16} />} label="Keepsakes" note="Today, at the end: three won, the rest still in the fog" onClick={() => open(veteran(40, 3), 'tab=today')} />
         <Row icon={<Music size={16} />} label="Music Lab" note="Every zone's theme, the Warden's, and the stings" href="/lab/music" />
       </Panel>
 

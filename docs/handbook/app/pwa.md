@@ -3,7 +3,7 @@ type: reference
 title: Installable and offline
 description: How FORMA installs to the home screen and works with no signal — public/sw.js, the ServiceWorker component, the manifest, icons, and the iOS splash screens.
 tags: [app, pwa, offline, service-worker]
-timestamp: 2026-10-27
+timestamp: 2026-10-28
 ---
 
 # Installable and offline
@@ -42,5 +42,5 @@ move where a picture rings the button, its case in `install.ts` under `src/sprit
 `public/data/exercises.json` is the exercise library as data for tools outside the app (not used
 by the app itself, which bundles the library), see [../game/exercise-library.md](../game/exercise-library.md).
 
-The game must keep working offline: the Fog's code is fetched while the Play tab is idle
+The game must keep working offline: the Fog's code is fetched while the Fog tab is idle
 (`PlayTab.tsx`) so a run can start with no network, and music is synthesized (no audio files).

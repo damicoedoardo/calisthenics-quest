@@ -65,6 +65,10 @@ export interface Draft {
   checkin: Checkin;
   /** Logged sets by exercise id. */
   sets: Record<string, SetLog[]>;
+  /** The workout screen was left open: the app opens back on it (after a lock closed the app). */
+  open?: boolean;
+  /** When the running rest ends (ms since epoch), so it keeps counting while the app is closed. */
+  restUntil?: number | null;
 }
 
 export interface Letter {

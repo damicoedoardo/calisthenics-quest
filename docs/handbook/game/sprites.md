@@ -33,7 +33,7 @@ characters/*.ts       one file per character: hero, wanderer, mira, ember, book,
                       stage 0-2), monolith.ts (plateauBoss, stage 0-2), hollowBoss.ts (hollowBoss
                       and hollowBossFade), summitSpirit.ts (summitBoss)
 characters/pixel.ts   text-row art: paintRows (one character per pixel) and shifted
-characters/icons.ts   app icons as text rows: the six keepsakes (Hero tab, sprite `keepsake`) and
+characters/icons.ts   app icons as text rows: the six keepsakes (end of the Today tab, sprite `keepsake`) and
                       what a day held in the Book of Days (sprite `dayIcon`), the dungeon's
                       relics (`relicIcon`), the ability and Dodge buttons (`abilityIcon`), the SP's moves and finals (`spIcon`; the later SPs' drawn from a kind of move and an element, `shaped`), the run's
                       level-up skills (`skillIcon`), and the floor track's Warden and boss (`markIcon`)
@@ -56,7 +56,7 @@ characters/moves.ts   the exercise library's 81 movements (lifts, machines, core
                       mobility) and the gear each can hold (`Kit`: barbell, dumbbell, cable, band...)
 engine/skeleton.ts    the jointed skeleton both use: IK elbows and knees, props (bench, bar, floor),
                       weights, cables and bands, and how the figure is drawn
-characters/worlds.ts  the Play tab's world picker: the big padlock on a shut world (`worldLock`) and the
+characters/worlds.ts  the Fog tab's world picker: the big padlock on a shut world (`worldLock`) and the
                       bank of fog that drifts over it (`fogBank`)
 characters/install.ts the install guide's pictures (`installStep`, opts { step }): a small phone with
                       the button to tap ringed in gold, drawn on a character grid

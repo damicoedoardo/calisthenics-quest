@@ -1,14 +1,14 @@
 ---
 type: conceptual
 title: Mira's forge and the flame
-description: What you do with Fog gear between runs, on the Play tab's gear card — embers from workouts, Mira's forge (upgrade +1..+15 with co-op materials from +6, misses from +7, safe marks, a new look every few pluses), reroll, melt down, the one item your flame keeps if you fall — rules in src/lib/forge.ts and fog-gear.ts, numbers in src/balance/upgrades.ts, screen FogGearCard.tsx.
+description: What you do with Fog gear between runs, on the Hero tab's Gear part — embers from workouts, Mira's forge (upgrade +1..+15 with co-op materials from +6, misses from +7, safe marks, a new look every few pluses), reroll, melt down, the one item your flame keeps if you fall — rules in src/lib/forge.ts and fog-gear.ts, numbers in src/balance/upgrades.ts, screen FogGearCard.tsx.
 tags: [game, fog, forge, gear, co-op]
-timestamp: 2026-10-27
+timestamp: 2026-10-28
 ---
 
 # Mira's forge and the flame
 
-Between runs your gear lives on the Play tab's gear card (`src/components/FogGearCard.tsx`): the
+Between runs your gear lives on the Hero tab's Gear part (`src/components/FogGearCard.tsx`): the
 three slots you wear, the vault, and, for the item you tap, what you can do with it. Each vault
 item carries a green ▲ or red ▼ against what you wear in its slot, and its card says by how much. (A walkable
 camp was tried for this and dropped: Edoardo wanted it on the normal screens.)

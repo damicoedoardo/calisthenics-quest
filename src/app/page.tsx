@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { TodayTab } from '@/components/TodayTab';
 import { TrainTab } from '@/components/TrainTab';
-import { HeroTab } from '@/components/HeroTab';
-import { PlayTab } from '@/components/PlayTab';
+import { HeroTab, type HeroPart } from '@/components/HeroTab';
+import { PlayTab, type FogMode } from '@/components/PlayTab';
+import { YouPage } from '@/components/YouPage';
 import { FogRun, type RunStart } from '@/components/FogRun';
 import { Hero } from '@/components/Hero';
 import { Prologue } from '@/components/Prologue';
@@ -34,7 +35,7 @@ import { withTodayPage } from '@/story/daily';
 import { heroVariant } from '@/story/flame';
 import type { Scene } from '@/story/types';
 import { inSandbox, useGameState } from '@/lib/store';
-import { recordRun, ZONES, zoneStatus, type Zone } from '@/lib/fog';
+import { recordRun, ZONES, type Zone } from '@/lib/fog';
 import { settleGear } from '@/lib/fog-gear';
 import { skipIntro, useDevMode } from '@/lib/dev';
 import { mustInstall, needsCarry } from '@/lib/install';
@@ -46,7 +47,7 @@ type Tab = 'today' | 'train' | 'play' | 'hero';
 const TABS: { id: Tab; label: string; icon: 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabHero' }[] = [
   { id: 'today', label: 'Today', icon: 'tabToday' },
   { id: 'train', label: 'Train', icon: 'tabTrain' },
-  { id: 'play', label: 'Play', icon: 'tabPlay' },
+  { id: 'play', label: 'Fog', icon: 'tabPlay' },
   { id: 'hero', label: 'Hero', icon: 'tabHero' },
 ];
 
@@ -71,6 +72,11 @@ export default function Home() {
 
 function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const [tab, setTab] = useState<Tab>('today');
+  // The Hero tab's open part, kept here so the Fog's ready strip can open Hero > Gear.
+  const [heroPart, setHeroPart] = useState<HeroPart>('gear');
+  const [fogMode, setFogMode] = useState<FogMode>('story');
+  // The You page, opened by tapping your hero at the top.
+  const [you, setYou] = useState(false);
   const [training, setTraining] = useState(false);
   const [after, setAfter] = useState<{ result: FinishResult; before: StoryState; after: StoryState } | null>(null);
   const [scene, setScene] = useState<Scene | null>(null);
@@ -104,6 +110,10 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     const q = new URLSearchParams(window.location.search);
     const t = q.get('tab');
     if (t === 'today' || t === 'train' || t === 'play' || t === 'hero') setTab(t);
+    const part = q.get('hero');
+    if (part === 'gear' || part === 'stats' || part === 'class') setHeroPart(part);
+    if (q.get('fog') === 'together') setFogMode('together');
+    if (q.has('you')) setYou(true);
     const zone = ZONES.find((z) => String(z.id) === q.get('run'));
     if (zone) {
       const at = q.get('at');
@@ -120,7 +130,13 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   }, [ready, update]);
   // Before the first paint, so the tabs never flash ahead of it.
   useLayoutEffect(() => {
-    if (ready && state.profile.onboarded && !inSandbox() && openingDue()) setOpening(true);
+    if (!ready || !state.profile.onboarded) return;
+    // The phone closed the app mid-workout: open straight back on it, still today's.
+    if (closeStaleDraft(state, new Date()).draft?.open) {
+      setTraining(true);
+      return;
+    }
+    if (!inSandbox() && openingDue()) setOpening(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
   // Anything that takes the screen (a scene, a run, a workout) closes the panel for good.
@@ -284,9 +300,9 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           </div>
         )}
         <div className="flex items-center gap-3 land:min-w-0 land:flex-1">
-          <div className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800 land:hidden desk:hidden">
+          <button onClick={() => setYou(true)} aria-label="You: your letter, quest log and settings" className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800 active:scale-95 land:hidden desk:hidden">
             <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
-          </div>
+          </button>
           <div className="min-w-0 flex-1 land:flex land:items-center land:gap-4">
             <div className="flex items-baseline justify-between land:shrink-0 land:items-center land:gap-4">
               <div className="flex items-center gap-2">
@@ -315,27 +331,33 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         ) : tab === 'train' ? (
           <TrainTab state={state} update={update} />
         ) : tab === 'play' ? (
-          <PlayTab state={state} onPlay={setRun} update={update} />
-        ) : (
-          <HeroTab
+          <PlayTab
             state={state}
+            onPlay={setRun}
             update={update}
-            onChangeClass={() => setPicker('manual')}
-            onReplayOpening={() => setReplaying(true)}
+            start={fogMode}
+            onGear={() => {
+              setHeroPart('gear');
+              setTab('hero');
+              window.scrollTo({ top: 0 });
+              main.current?.scrollTo({ top: 0 });
+            }}
           />
+        ) : (
+          <HeroTab state={state} update={update} onChangeClass={() => setPicker('manual')} part={heroPart} onPart={setHeroPart} />
         )}
       </main>
 
       <nav className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-ink-700 bg-ink-900/95 backdrop-blur land:right-auto land:top-0 land:flex land:w-[calc(4.5rem+env(safe-area-inset-left))] land:flex-col land:items-center land:justify-center land:gap-3 land:border-r land:border-t-0 land:pl-[env(safe-area-inset-left)] desk:right-auto desk:top-0 desk:flex desk:w-56 desk:flex-col desk:gap-6 desk:border-r desk:border-t-0 desk:px-3 desk:py-6">
         {/* Sideways, the hero from the header sits at the top of the rail; on a computer, bigger. */}
-        <div aria-hidden className="hidden h-11 w-11 place-items-center rounded-xl bg-ink-800 land:grid desk:mx-auto desk:grid desk:h-28 desk:w-28">
+        <button onClick={() => setYou(true)} aria-label="You: your letter, quest log and settings" className="hidden h-11 w-11 place-items-center rounded-xl bg-ink-800 active:scale-95 land:grid desk:mx-auto desk:grid desk:h-28 desk:w-28">
           <span className="desk:hidden">
             <Hero gear={gear} classId={state.profile.classId} size={38} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
           </span>
           <span className="hidden desk:block">
             <Hero gear={gear} classId={state.profile.classId} size={96} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
           </span>
-        </div>
+        </button>
         <div className="mx-auto grid max-w-md grid-cols-4 land:mx-0 land:w-full land:grid-cols-1 land:gap-1 desk:mx-0 desk:w-full desk:grid-cols-1 desk:gap-1">
           {TABS.map(({ id, label, icon }) => (
             <button
@@ -368,8 +390,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           dev={dev}
           startAt={runStart}
           party={partyRun ?? undefined}
-          // A party run in a zone you haven't opened yet keeps its loot but not the clear: the story still opens zones.
-          onEnd={(r) => update((s) => spAfterRun(settleGear(partyRun && zoneStatus(s, run).state === 'locked' ? s : recordRun(s, r), r).state, r))}
+          // A run Together keeps its loot but never moves the story: only Story runs clear zones.
+          onEnd={(r) => update((s) => spAfterRun(settleGear(partyRun ? s : recordRun(s, r), r).state, r))}
           onLeave={() => {
             setRun(null);
             setRunStart(undefined);
@@ -400,6 +422,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           onCancel={() => setPicker(null)}
         />
       )}
+      {you && !busy && <YouPage state={state} update={update} onReplayOpening={() => setReplaying(true)} onClose={() => setYou(false)} />}
       <CloudChoice phone={state} onChoose={cloud.choose} />
       {opening && <Opening state={state} onDone={() => setOpening(false)} />}
     </div>

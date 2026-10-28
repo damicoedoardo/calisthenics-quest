@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, Minus, Plus, Undo2, X } from 'lucide-react';
 import { REST_SECONDS, gearOf, isTap, todaysQuest, type GameState, type Rir } from '@/lib/game';
 import { ROLE_COLOR, ROLE_LABEL } from '@/lib/program';
@@ -29,7 +29,12 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   const sets = state.draft?.sets ?? {};
   const firstOpen = quest.findIndex((q) => (sets[q.id]?.length ?? 0) < q.sets);
   const [index, setIndex] = useState(firstOpen === -1 ? 0 : firstOpen);
-  const [restUntil, setRestUntil] = useState<number | null>(null);
+  // Kept in the save, so a rest started before the phone locked is still counting when it opens.
+  const restUntil = state.draft?.restUntil ?? null;
+  const setRestUntil = useCallback(
+    (until: number | null) => update((s) => (s.draft ? { ...s, draft: { ...s.draft, restUntil: until } } : s)),
+    [update],
+  );
   // Exercises in the order their sets were logged on this screen, so Undo can reach back after the
   // logger has moved on to the next exercise.
   const [history, setHistory] = useState<string[]>([]);
@@ -46,6 +51,17 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   useEffect(() => {
     setReps(q.reps);
   }, [q.id, q.reps]);
+
+  // Marked open, so if the phone closes the app the workout is where it opens again.
+  useEffect(() => {
+    update((s) => (s.draft && !s.draft.open ? { ...s, draft: { ...s.draft, open: true } } : s));
+  }, [update]);
+  useWakeLock();
+
+  const close = () => {
+    update((s) => (s.draft ? { ...s, draft: { ...s.draft, open: false, restUntil: null } } : s));
+    onClose();
+  };
 
   const log = (rir: Rir) => {
     update((s) => {
@@ -85,7 +101,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-ink-950">
       <header className="safe-top land-safe-x flex items-center justify-between px-4 pb-2 [@media(orientation:landscape)_and_(max-height:600px)]:pb-1">
-        <button onClick={onClose} aria-label="Back to Today" className="grid h-10 w-10 place-items-center rounded-lg bg-ink-800">
+        <button onClick={close} aria-label="Back to Today" className="grid h-10 w-10 place-items-center rounded-lg bg-ink-800">
           <X size={18} />
         </button>
         <div className="flex gap-1.5">
@@ -229,6 +245,32 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
       {restUntil && <Rest stage={flameStage(state.sessions.length).id} until={restUntil} next={exerciseDone ? null : `Set ${logged.length + 1} of ${q.name}`} onDone={() => setRestUntil(null)} />}
     </div>
   );
+}
+
+/** Keeps the screen on while the workout is open, so the phone doesn't lock between sets. */
+function useWakeLock() {
+  useEffect(() => {
+    let lock: WakeLockSentinel | null = null;
+    let gone = false;
+    const ask = () => {
+      if (gone || document.visibilityState !== 'visible' || !('wakeLock' in navigator)) return;
+      navigator.wakeLock
+        .request('screen')
+        .then((l) => {
+          if (gone) l.release().catch(() => {});
+          else lock = l;
+        })
+        .catch(() => {});
+    };
+    ask();
+    // The browser drops the lock when the app is hidden; take it again on return.
+    document.addEventListener('visibilitychange', ask);
+    return () => {
+      gone = true;
+      document.removeEventListener('visibilitychange', ask);
+      lock?.release().catch(() => {});
+    };
+  }, []);
 }
 
 /** You doing the exercise, looping one rep: small above the sets, tap for a big one. */

@@ -14,8 +14,8 @@ import { Sprite } from './Sprite';
 type Update = (fn: (s: GameState) => GameState) => void;
 
 /** Your gear for the Fog, on one card: the three slots you wear (the flame's mark on the one it
-    keeps if you fall), the vault at home, and Mira's forge for the item you tap. `land`: the Play tab
-    held sideways, where the card fills the height it is given, what you have on the left and the
+    keeps if you fall), the vault at home, and Mira's forge for the item you tap. `land`: the Hero tab's
+    Gear part held sideways, where the card fills the height it is given, what you have on the left and the
     tapped item with the forge on the right. */
 export function FogGearCard({ state, update, land = false }: { state: GameState; update: Update; land?: boolean }) {
   const gear = state.fogGear ?? NO_GEAR,

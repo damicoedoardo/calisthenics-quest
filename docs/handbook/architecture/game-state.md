@@ -21,7 +21,7 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 | `buildAt`, `sweat` | Optional. Points as they stood at the last workout (what the free take-back is measured from), and sweat coins spent plus class changes made (`src/lib/sweat.ts`, see [../game/training.md](../game/training.md)) |
 | `sp` | Optional. The SPs: the workout count when the Wanderer gave the first, whether its trial's floor was reached, the later ones the story gave (`more`), the one picked to wear (`worn`), and `off` when taken off (`src/lib/sp.ts`, see [../game/fog.md](../game/fog.md)) |
 | `fogGear` | Optional. What you wear into the Fog and the vault at home (`src/lib/fog-gear.ts`, see [../game/fog.md](../game/fog.md)); embers found and spent, co-op materials for the forge (`mats`), the slot the flame holds (`guard`), `deaths`, and the starter kit's look (`kit`, set by `migrate()` from the old forge) ([../game/forge.md](../game/forge.md)) |
-| `draft` | The workout in progress, or null. A draft left from an earlier day is closed onto that day (`closeStaleDraft`) |
+| `draft` | The workout in progress, or null. A draft left from an earlier day is closed onto that day (`closeStaleDraft`). `open` marks the workout screen as open (the app reopens on it) and `restUntil` is when the running rest ends (ms), both optional |
 | `seenScenes`, `sceneMark` | Story scenes already played, and how many played at the last story moment |
 | `answers` | What the player chose in the story (heart moments, villager stories) |
 | `fog` | Zones cleared, runs, best records per zone, the last run |
@@ -42,7 +42,7 @@ When the player is signed in, a copy also goes to the server a few seconds after
 
 Add new fields as optional (`fog?`, `answers?`, `days?` are examples), or bump `version` and
 teach `migrate()` (`src/lib/game.ts`) to upgrade old saves. A save from the live app must always
-load. `parseImport` (Hero tab Restore) accepts versions 1 to 3 and runs `migrate` too.
+load. `parseImport` (You page Restore) accepts versions 1 to 3 and runs `migrate` too.
 
 ## Sandbox
 
