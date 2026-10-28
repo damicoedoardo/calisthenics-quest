@@ -165,6 +165,12 @@ Creatures (Ember, the Book, the enemies) read the same frames their own way: `ho
 eight-frame float where `bob` is the breath, and `lunge` is their attack, a wind-up
 (`right: 'up'`) and then the hit (`fx: 'impact'`).
 
+Ember (`ember.ts`) has five stages. The spark and the candle are plain flames. From the torch on
+it is a fire fairy that grows: little (torch: tiny wings, a wisp of a tail), proper (bonfire:
+butterfly wings, a flame dress) and the grandest (fairy: gold swallowtail wings, a longer dress, a
+crown). The fairies bob on their wings and drop fairy dust; wings and crown are drawn on their own
+layers so each keeps its outline. `BUILD` sizes each stage and `FAIRY` says which fairy it is.
+
 ### Fog items
 
 Each item kind is one hand-drawn text-row drawing; the letters are roles, not colors (`D M L W` the
