@@ -115,8 +115,18 @@ with one short sentence. Use days for things that pass, like a sore knee or a bu
 - When the player tells you something that changes their profile (more days, new gear, a new \
 goal, a level that is clearly wrong), call save_profile with only that change and why.
 
-Keep to training, the app, and how the player feels about it. If asked about something else, \
-answer in a line and bring it back to training."""
+Questions about the game:
+- When the player asks how FORMA works (XP and levels, stat points, items, embers and the \
+forge, sweat coins, classes, SPs, the Fog, a boss, falling, friends, the story's pace), call \
+game_guide with their question and answer from what it returns, in your own short words. It \
+also has the player's own numbers (embers, points, level).
+- Never guess a rule or a number. If the guide doesn't say, say you're not sure.
+- No spoilers. The guide only shows what the player has reached. When it says something is \
+ahead, tell them warmly they'll find out on the way, and don't guess what it is. Never tell \
+what happens later in the story, or name a form, zone, boss or SP the brief and the guide don't.
+
+Keep to training, the app, the game, and how the player feels about it. If asked about \
+something else, answer in a line and bring it back to training."""
 
 MODES = ["gym", "calisthenics", "running"]
 GOALS = ["health", "strength", "muscle", "endurance", "skill"]
@@ -298,6 +308,13 @@ TOOLS: list[dict[str, Any]] = [
         "remove_note",
         "Forget a note that is no longer true, by its id from the brief.",
         _obj({"id": {"type": "string"}}),
+    ),
+    _tool(
+        "game_guide",
+        "How FORMA works, for a player's question about the game: loot, XP, stats, gear, the "
+        "forge, classes, SPs, the Fog, bosses, friends, the story's pace. Returns only what the "
+        "player has reached (no spoilers), with their own numbers. Empty question: the topics.",
+        _obj({"question": {"type": "string"}}),
     ),
     _tool(
         "suggest_replies",

@@ -70,7 +70,7 @@ screen counts that down.
   `restDay`), `set_workout` (one day, a rest day to come gets a workout, else the next; ids, roles,
   sets, reps or seconds, rest, run minutes; the app fills names, demos, easier and swap, builds run
   steps, and runs `validate`, then says what it fixed), `save_profile` (setup, or one change with `why`,
-  written to `history`), `add_note` / `remove_note`, and `suggest_replies` (the taps under its
+  written to `history`), `add_note` / `remove_note`, `game_guide` (how the game works, below), and `suggest_replies` (the taps under its
   message; it ends the turn). Every input is checked again; bad values are dropped and said.
 - **Search** (`search.ts`): words in any order, typos and plurals forgiven ("pushups", "dumbell
   row"), everyday words mapped to the library's ("abs", "chest", "legs"); staples first.
@@ -78,8 +78,8 @@ screen counts that down.
   `move_workout` return a heads-up from `weekWarnings` (the same muscles on days in a row, three
   days in a row); the rules on the server tell the coach to check a change against the brief, push
   back when it isn't wise, and change the plan only once the two agree.
-- **Who it is**: the brief names the flame and the player, its form now (`flameStage`, the same
-  stages the story draws) and where the story is (chapter, lesson, the enemy's hearts left,
+- **Who it is**: the brief names the flame and the player, its form now and only the next one
+  (`flameStage`, the same stages the story draws; the later forms are the story's to show) and where the story is (chapter, lesson, the enemy's hearts left,
   `storyState`), so it speaks from there. The rules (warm, short, one question at a time, no body
   talk, not a doctor, honest: push back on what isn't wise or doesn't match the log, and suggest
   better) are fixed on the server.
@@ -89,6 +89,28 @@ screen counts that down.
   says it there (`hearNudge`, kept in `coach.heard`), or an empty chat opens on it from the coach.
 - **Sign-in**: the app can't be used without an account (`SignInGate`), so the chat always can
   talk; setup happens only in the chat (the quick taps are gone).
+
+## The game guide (`guide.ts`)
+
+Players ask the coach how the game works ("what are embers for?", "can I lose my +10 sword?",
+"how do I beat Tomorrow?"). It answers from the game guide, its only source on the game, through
+the `game_guide` tool, and the rules on the server tell it never to guess and never to spoil.
+
+- **Topics as data** (`GUIDE`): one per part of the game (the loop, XP, stat points, crits and
+  bonuses, items, falling and the vault, the forge to +5 and past it, sweat coins, classes, the
+  Fog, chapters, rest days, friends, the flame, SPs, one per zone, and the player's purse). Each
+  has `words` a question might use, `text(state, now)` built from `src/balance` and the rules in
+  `src/lib` (never a number typed in), so a balance change is in the guide the moment it lands,
+  and the player's own numbers (embers, points, level, materials).
+- **No spoilers** (`opens`): a topic can be ahead of the player. The SP topic opens once the
+  Wanderer gave the first (`state.sp`) and lists only the SPs owned; a zone's topic (its boss and
+  the rule that beats it, `hint`) once the zone is open; the flame topic names only the next form;
+  the story topic only the chapter you're in. `askGuide` hands the coach the best few topics
+  reached; when the best fit is still ahead it says only "Ahead", so the coach can't tell what
+  it never sees. An empty question lists the topics reached (`guideIndex`).
+- **Kept in sync** (`guide.test.ts`): every file in `src/balance/` is in some topic's `from` or in
+  `BEHIND_THE_SCENES` with a reason; every reached topic writes without holes; a new player's
+  guide never names a later zone, boss, chapter, SP or flame form; numbers match the balance.
 
 ## Memory: three layers
 
@@ -188,3 +210,5 @@ an LLM gets back to do better.
 | Give the coach a tool | `TOOLS` in `backend/app/coach.py` and a case in `runTool` (`tools.ts`), with tests on both sides |
 | Change the model | `litellm-config.yaml` on the server ([../backend/server.md](../backend/server.md)) |
 | Teach the search a word | `SAME` in `src/lib/coach/search.ts` |
+| Teach the coach a part of the game | a topic in `GUIDE` (`src/lib/coach/guide.ts`), numbers read from `src/balance`, `opens` if it is a surprise |
+| Keep something a surprise | `opens` on its topic, and its names in the spoiler test (`guide.test.ts`) |

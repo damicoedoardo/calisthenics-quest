@@ -43,6 +43,10 @@ art, animation timing, sound, story words.
    what changed, why, the sheet (and `fog:sim`) before → after, the PR. Start the commit message
    with `Balance:`.
 8. **Commit the sheet** (`src/balance/sheet.md`). `pnpm test` fails while it is stale.
+9. **Let the coach explain it.** If players meet the number (a cost, a reward, a requirement), check
+   that a topic of the coach's game guide (`src/lib/coach/guide.ts`) reads it from `@/balance`
+   and says it in plain words; a new mechanic gets a topic (with `opens` when it's a surprise). A
+   new balance file needs a topic or a line in `BEHIND_THE_SCENES` (`guide.test.ts` checks).
 
 ## Coordinating
 
