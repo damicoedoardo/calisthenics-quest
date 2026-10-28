@@ -3,7 +3,7 @@ type: conceptual
 title: The Fog (the game between workouts)
 description: The rules around a Fog run in src/lib/fog.ts — zones from the story's chapters, when a zone opens, power from real training, run skills, records — and how a run is loaded and drawn.
 tags: [game, fog, rules]
-timestamp: 2026-10-27
+timestamp: 2026-10-28
 ---
 
 # The Fog
@@ -86,7 +86,9 @@ The rule for every balance number, and the changelog, are in [balance.md](balanc
 `src/game/power.ts` scores a hero's points, class and gear on one scale (`powerScore`, see
 [balance.md](balance.md)).
 `pnpm sim` writes snapshots of simulated players (see [../dev/testing.md](../dev/testing.md)), then
-`pnpm fog:sim` plays hundreds of bot runs on them per zone and class. `DIALS` in
-`src/balance/dungeon.ts` are the main knobs. The sim starts every run in the starter kit with
+`pnpm fog:sim` plays hundreds of bot runs on them per zone and class, and prints the hits the
+bot takes a minute (the run recap in `FogRun` shows a person's, to check the bot against people;
+`HUMAN='{"notice":0.8}'` turns how human it plays). `DIALS` in `src/balance/dungeon.ts` are the
+main knobs. The sim starts every run in the starter kit with
 the snapshot's points (as after a death); the bot wears what drops. Zones are tuned so that run
 is about where the game was before items, so the gear you keep is strength on top.

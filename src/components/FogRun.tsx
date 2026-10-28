@@ -981,6 +981,11 @@ function Recap({ end, broken, midName }: { end: RunEnd; broken: ReturnType<typeo
           </div>
         ))}
       </div>
+      {end.hits !== undefined && end.seconds > 0 && (
+        <p className="mt-2 text-left text-[11px] text-slate-400">
+          Hits taken: {end.hits} ({(end.hits / (end.seconds / 60)).toFixed(1)} a minute)
+        </p>
+      )}
       {end.warden !== null && end.warden !== undefined && (
         <p className={`mt-3 flex items-center gap-2 text-left text-xs ${end.warden ? 'text-orange-300' : 'text-slate-500'}`}>
           <Sprite id="markIcon" opts={{ name: 'warden' }} size={14} label="" className={end.warden ? '' : 'opacity-40 grayscale'} />

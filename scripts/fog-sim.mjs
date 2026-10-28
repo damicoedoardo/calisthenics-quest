@@ -33,11 +33,10 @@ function shift(state, now) {
 if (!isMainThread) {
   const { playRun } = await import(`${root}src/game/dungeon/bot.ts`);
   const { DIALS } = await import(`${root}src/game/dungeon/engine.ts`);
-  const { ATTENTION } = await import(`${root}src/game/dungeon/bot.ts`);
+  const { HUMAN } = await import(`${root}src/balance/dungeon.ts`);
   const dials = JSON.parse(process.env.DIALS || '{}');
-  // "attention" is the bot's: the share of shots it sees coming.
-  if (dials.attention !== undefined) ATTENTION.share = dials.attention;
-  delete dials.attention;
+  // HUMAN=... sets how human the bot plays (src/balance/dungeon.ts), e.g. {"notice":0.8}.
+  Object.assign(HUMAN, JSON.parse(process.env.HUMAN || '{}'));
   Object.assign(DIALS, dials);
   const { ZONES, powerOf, edgeFor } = await import(`${root}src/lib/fog.ts`);
   const forced = process.env.EDGE ? JSON.parse(process.env.EDGE) : null;
@@ -126,7 +125,9 @@ if (!isMainThread) {
       const reached = all.filter((r) => r.bossAt !== null).length / all.length;
       const lost = all.filter((r) => !r.won).map((r) => r.floor);
       const deep = lost.length ? (lost.reduce((a, b) => a + b, 0) / lost.length).toFixed(1) : '-';
-      console.log(`${snap.label.padEnd(12)} ${per.map((p) => `${pct(rate(p.res))} ${mins(p.res).padStart(5)}`.padStart(14)).join('')}   ${pct(reached)}, floor ${deep}`);
+      // Hits the bot takes a minute, to set against what people take (the run recap shows yours).
+      const hitsMin = (all.reduce((n, r) => n + (r.hits ?? 0), 0) / Math.max(1, all.reduce((n, r) => n + r.seconds, 0) / 60)).toFixed(1);
+      console.log(`${snap.label.padEnd(12)} ${per.map((p) => `${pct(rate(p.res))} ${mins(p.res).padStart(5)}`.padStart(14)).join('')}   ${pct(reached)}, floor ${deep}, ${hitsMin} hits a minute`);
       // A run this long means something held a room shut: worth a look (replay it with its seed).
       const long = per.flatMap((p) => p.res.filter((r) => r.seconds > 25 * 60).map((r) => `${p.cls} seed ${r.seed} (floor ${r.floor}.${r.room}, ${Math.round(r.seconds / 60)}m)`));
       if (long.length) console.log(`  ! ${long.length} past 25 min: ${long.slice(0, 6).join(', ')}${long.length > 6 ? ', ...' : ''}`);

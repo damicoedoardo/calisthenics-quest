@@ -314,6 +314,12 @@ const hex = (c: string) => Phaser.Display.Color.HexStringToColor(c).color;
 /** A bubble's middle, kept far enough in from the walls that it fits. */
 const clampX = (x: number, w: number) => Math.min(w - 105, Math.max(105, x));
 
+
+/** How long before a monster's volley it swells, so you see the shots coming (s). */
+const TELL = 0.35;
+/** Whether a monster is about to fire a volley (not a stream of quick shots, which would just throb). */
+const aboutToFire = (f: Run['foes'][number], t: number) => f.def.shoots.some((p, i) => !p.on && p.every >= 1 && f.next[i] > t && f.next[i] - t < TELL);
+
 class DungeonScene extends Phaser.Scene {
   run: Run;
   bot = false;
@@ -1518,7 +1524,7 @@ class DungeonScene extends Phaser.Scene {
       const born = (now - e.born) / RISE_MS;
       if (born < 1) s.setAlpha(born).setScale(base * (1.25 - 0.25 * born), base * (0.25 + 0.75 * born));
       else if (now < e.squash) s.setAlpha(1).setScale(base * 1.22, base * 0.8);
-      else s.setAlpha(1).setScale(base);
+      else s.setAlpha(1).setScale(base * (aboutToFire(f, r.t) ? 1.14 : 1));
       if (e.flash && now >= e.flash) {
         e.flash = 0;
         const tint = f.kind === 'reflection' ? 0xfde68a : f.kind === 'boss' || f.kind === 'image' ? undefined : looks(f.kind, this.setup.zone).tint;

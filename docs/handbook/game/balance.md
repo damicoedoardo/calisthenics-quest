@@ -3,7 +3,7 @@ type: conceptual
 title: Balance (design for balance)
 description: The rule every feature follows so FORMA stays tunable — every balance number named in src/balance/ with its goal, the balance sheet (pnpm balance) that shows what they add up to, the map of numbers not moved yet, and the balance changelog.
 tags: [game, balance, rules, changelog]
-timestamp: 2026-10-27
+timestamp: 2026-10-28
 ---
 
 # Balance
@@ -45,7 +45,7 @@ kept there as aliases, so callers didn't change).
 | `src/balance/economy.ts` | embers per workout, forge prices, melt values, vault size, how long the flame guards | `src/lib/forge.ts`, `src/lib/fog-gear.ts` |
 | `src/balance/items.ts` | item power, base damage/HP/armor per level, bonus sizes, rarity sizes and weights, how luck and depth lean rarer, when an item can be worn (`WEAR_AFTER`, in workouts after its zone opens), the starter kit, drop chances and luck, the bag | `src/game/dungeon/items.ts`, `src/game/dungeon/engine.ts` |
 | `src/balance/power.ts` | the target split of power growth (training / gear / upgrades) and its slack | the balance sheet |
-| `src/balance/dungeon.ts` | `DIALS`, elites, run levels, what the bot should win in a zone (`ZONE_WINS`) | `src/game/dungeon/content.ts`, `src/lib/fog.ts` |
+| `src/balance/dungeon.ts` | `DIALS`, elites, run levels, what the bot should win in a zone (`ZONE_WINS`), how human the bot plays (`HUMAN`) | `src/game/dungeon/content.ts`, `src/lib/fog.ts` |
 | `src/balance/upgrades.ts` | Mira's forge +1 to +15 (`STEPS`: embers, materials, odds, strength), misses (`FORGE_RISK`), safe marks, what a fall leaves of forged gear, co-op material drops and gifts, the look bands | `src/lib/forge.ts`, `src/lib/fog-gear.ts`, `src/game/dungeon/items.ts`, `engine.ts`, `PlusGlow.tsx` |
 | `src/balance/classes.ts` | the classes: base attacks (`ATTACK`), bodies (`CLASS_BODY`), abilities (`ABILITY`: clocks and sizes), the monk's calm (`CALM`), the two stats each leans to (`CLASS_LEAN`, `SECOND_LEAN`), and how fair they must be (`CLASS_FAIR`) | `src/game/rules.ts`, `src/game/dungeon/content.ts`, `engine.ts`, `src/lib/stats.ts` |
 | `src/balance/index.ts` | exports them all | |
@@ -132,6 +132,7 @@ before and after.
 
 | Date | Change | Why | Before → after | PR |
 |---|---|---|---|---|
+| 2026-10-28 | Shots slower and harder: `DIALS.speed` 1.5 → 0.95 (most shots now slower than your 150 walk), `fire` 3 → 2, new `shot` 1.5 (shot damage); the bot plays like a person (`HUMAN`: reaction 0.28-0.5 s per shot, sees 92% of shots in a calm room and fewer when busy or fast, decides 10 times a second, thumb up to 0.3 rad off, misses 1 dodge in 4) in place of a fixed 0.25 s and 75% of shots; warrior body HP 1.1 → 1.0, armor 0.1 → 0.04, damage 1.04 → 0.85; all six zones' hp/dmg x0.74-0.83 (`fog:tune`); monsters swell 0.35 s before a volley (look only); the run recap shows hits taken a minute | Edoardo: playing zone 1 by hand was much harder than the bot said; shots too fast to step out of, as RotMG lets you | Old shots with the human bot: zone 1 six workouts in 74% → 22%. After the retune, `fog:sheet` class averages (open / later) 32/71%, all fair; every zone on target (zone 1 15/75%, zone 5 later 84% → 74%); the bot takes about 5 hits a minute in zone 1 six workouts in | human bot PR |
 | 2026-10-27 | Zone 2 hp/dmg 1.61/2.33 → 1.48/2.14; the Fog sheet counts zone 1's opening day (the very first run, 0 workouts) as on target when it is no easier than `ZONE_WINS.open` | Zone 2 was hard six workouts in; losing the first run is meant | Zone 2 (open / later) 21/48% → 29/70%. Left as is: zone 4 (43/60%, both on target; its slope is the stat growth over six workouts there, a global change to move), zone 5 later on 84% (two points over: it is 18 workouts on, past the chapter's hearts, so the boss is weaker; 1.05x and 1.08x gave 20/83% and 14/77%) | zone retune PR |
 | 2026-10-27 | Item requirements: `NEED`'s formula and the rarity `need` factors replaced by `WEAR_AFTER` (workouts after the zone opens: common/magic 0/2/4, rare 2/4/7, legendary 4/7/11 for floors 1-3/4-7/8-10), turned into points from `POINTS`, `STARTING_POINTS`, `WEEKLY_GOAL` | Edoardo: know how much training an item takes; a zone's best item was out of reach before the next zone (zone 4's floor 10 legendary needed 56 workouts, zone 5 opens at 50) | Every zone's floor 10 legendary wearable 11 workouts in, 1-3 before the next zone; first floors now ask an even build's points (were half); model power at 37 workouts 230 → 220, at 64 338 → 324; split 39/41/20 → 41/39/19; `fog:sheet` class averages 28% / 70%, fair; zone 1 opening day 18% → 11% (flagged) | items PR |
 | 2026-10-27 | Pace: `STORY_MONTHS` (5-6) and `ZONE_WINS` (33% / 67% ± 15) set as goals; zone 4 hp/dmg 2.57/3.43 → 2.63/3.51, zone 5 2.7/5.38 → 2.92/5.81, zone 6 2.54/7.29 → 2.69/7.73 | Edoardo: the main story is done in 5-6 months; zones 4-6 were too easy on opening day | Story 78 workouts = 6.0 months (on target); `fog:sheet` opening day zones 4-6 51/39/44% → 43/27/31%, later 64/92/91% → 60/84/80%; class averages 29-32% / 68-73%, fair. Still flagged: zone 2 later 48%, zone 5 later 84% | pace PR |

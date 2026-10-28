@@ -3,7 +3,7 @@ type: reference
 title: The Fog's dungeon (engine, content, scene)
 description: How a Fog run is built — data in content.ts, a pure seeded engine, a bot, and a Phaser scene — and which file to edit for each kind of change.
 tags: [game, fog, dungeon, phaser]
-timestamp: 2026-10-27
+timestamp: 2026-10-28
 ---
 # The Fog's dungeon
 
@@ -19,8 +19,12 @@ items.ts            the things you wear, as data: slots, rarity, bonuses, class 
 content.ts          what a dungeon is made of, as data: ground, rooms, chest items, monsters and how they
                     shoot, each zone's dungeon and mid-boss, the bosses, the classes' abilities
 engine.ts           plays it: a pure step function (60 a second, seeded), no Phaser
-bot.ts              a player for balance tests (scripts/fog-sim.mjs) and the autopilot
-scene.ts            draws a run with Phaser and turns events into sound and sparks
+bot.ts              a player for balance tests (scripts/fog-sim.mjs) and the autopilot; it plays
+                    like a person on a phone (HUMAN in src/balance/dungeon.ts: its own reaction
+                    per shot, fewer shots seen when busy or fast, 10 decisions a second, a thumb
+                    a little off, a missed dodge now and then)
+scene.ts            draws a run with Phaser and turns events into sound and sparks; a monster
+                    swells TELL (0.35 s) before a volley, so you see the shots coming
 themes.ts           each zone's colors (floor, stone, torches, water)
 props.ts            pillars, barrels, chests, shrine, stairs and torches as text rows
 src/game/rules.ts   numbers shared with the hero (HP, reach, from the stat points; the class attacks come from src/balance/classes.ts) and the sprite sheet names

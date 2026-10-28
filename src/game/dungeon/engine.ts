@@ -341,6 +341,8 @@ export interface RunEnd {
   floor: number;
   room: number;
   bossAt: number | null;
+  /** Hits you took. */
+  hits?: number;
   /** 'left' is walking out by the stairs: not a win, but you keep what you carry. */
   why: 'boss' | 'hp' | 'limit' | 'left';
   /** What you wore and carried at the end (the starter kit left out). Lost unless you won or left. */
@@ -400,6 +402,8 @@ export interface Hero {
   abilityAt: number;
   /** The monk's calm: Stillness is ready when it reaches CALM.full (it fills by fighting). */
   calm: number;
+  /** Hits taken this run (what the run's recap shows, to set the bot against people). */
+  hits: number;
   cd: { attack: number; spark: number; nova: number; fireball: number };
   ups: Partial<Record<UpgradeId, number>>;
   flames: number;
@@ -570,6 +574,7 @@ function newHero(hs: HeroSetup, id: number): Hero {
     ability: abilityOf(hs.classId),
     abilityAt: 0,
     calm: 0,
+    hits: 0,
     cd: { attack: 0.5, spark: 2, nova: 3, fireball: 2.5 },
     ups: {},
     flames: power.flames,
@@ -1486,7 +1491,7 @@ function shoot(run: Run, f: Foe, p: Pattern) {
     at = Math.atan2(h.y - f.y, h.x - f.x),
     boss = f === run.boss || f === run.warden,
     r = p.r ?? (boss ? 7 : 5),
-    dmg = p.dmg * run.setup.zone.dmg * (f === run.boss ? 1 : (1 + DIALS.deepDmg * depth(run)) * (f.elite ? ELITE.dmg : 1) * (1 + CLIMB.tougher * (run.climb ?? 0))),
+    dmg = p.dmg * DIALS.shot * run.setup.zone.dmg * (f === run.boss ? 1 : (1 + DIALS.deepDmg * depth(run)) * (f.elite ? ELITE.dmg : 1) * (1 + CLIMB.tougher * (run.climb ?? 0))),
     speed = p.speed * DIALS.speed,
     style = p.style ?? 'plain';
   if (p.kind === 'mine') {
@@ -2462,6 +2467,7 @@ function hurt(run: Run, h: Hero, dmg: number, by: 'shot' | 'touch') {
   }
   const taken = dmg * (1 - armorOf(h.power, h.ups)) / (1 + DIALS.relic * 0.14 * relic(h, 'iron'));
   h.hp -= taken;
+  h.hits++;
   h.hurtUntil = now + INVULNERABLE;
   calmer(h, CALM.taken);
   emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: Math.round(taken), by });
@@ -2484,6 +2490,7 @@ function end(run: Run, won: boolean, why: RunEnd['why']) {
     won,
     seconds: Math.floor(run.t),
     kills: run.hero.kills,
+    hits: run.hero.hits,
     level: run.hero.level,
     hp: won ? Math.max(0, Math.ceil(run.hero.hp)) : 0,
     maxHp: run.hero.maxHp,
