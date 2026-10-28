@@ -191,7 +191,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
           <div className="mt-3 flex justify-center gap-2">
             {q.item.easier.length > 0 && (
               <button onClick={() => setChoices('easier')} className="flex items-center gap-1.5 rounded-lg bg-ink-800 px-3 py-2 text-xs font-semibold text-slate-200 active:scale-95">
-                <TrendingDown size={14} className="text-sky-300" /> Too hard? Easier
+                <TrendingDown size={14} className="text-sky-300" /> Easier
               </button>
             )}
             {q.item.swaps.length > 0 && (
@@ -276,10 +276,10 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
             </div>
             <p className="mt-1 text-center text-xs text-slate-500">
               Target {q.reps}
-              {unit}. Stop with two in the tank.{q.slot.weighted ? ' Pick a weight you could lift about two more times.' : ''}
+              {unit} · stop with 2 left
             </p>
 
-            <p className="mt-6 text-center text-sm font-semibold text-slate-200 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">Done? How many {unit ? 'seconds' : 'reps'} were left in the tank?</p>
+            <p className="mt-6 text-center text-sm font-semibold text-slate-200 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">{unit ? 'Seconds' : 'Reps'} left in the tank?</p>
             <div className="mt-3 grid grid-cols-3 gap-2 [@media(orientation:landscape)_and_(max-height:600px)]:mt-2">
               {RIR_BUTTONS.map((b) => (
                 <button

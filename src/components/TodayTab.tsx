@@ -350,33 +350,33 @@ function QuoteCard({ state, now, update, onOpenBook, land }: { state: GameState;
   const page = todayPage(state, now);
   if (!page) return null;
   const pages = state.days?.length ?? 0;
+  // Two icons: keep these words, and the Book of Days with its page count.
   const keep = (
     <button
       onClick={() => update((s) => updateTodayPage(s, new Date(), { kept: !page.kept }))}
       aria-pressed={!!page.kept}
-      className={`flex items-center gap-1.5 rounded-lg px-2.5 text-xs ${land ? 'py-1' : 'py-1.5'} ${page.kept ? 'bg-gold-400/15 text-gold-300' : 'bg-ink-800 text-slate-300'}`}
+      aria-label={page.kept ? 'Kept in the Book of Days' : 'Keep these words'}
+      className={`shrink-0 rounded-lg ${land ? 'p-1.5' : 'p-2'} ${page.kept ? 'bg-gold-400/15' : 'bg-ink-800'}`}
     >
-      <Sprite id="uiIcon" opts={{ name: page.kept ? 'bookmarkKept' : 'bookmark' }} size={14} label="" /> {page.kept ? 'Kept' : 'Keep'}
+      <Sprite id="uiIcon" opts={{ name: page.kept ? 'bookmarkKept' : 'bookmark' }} size={16} label="" />
     </button>
   );
   const book = (
-    <button onClick={onOpenBook} className={`flex items-center gap-2 text-left text-xs text-slate-400 ${land ? 'min-w-0 flex-1' : 'mt-3 w-full border-t border-ink-700 pt-3'}`}>
-      <Sprite id="uiIcon" opts={{ name: 'book' }} size={land ? 16 : 22} label="" />
-      <span className={land ? 'min-w-0 flex-1 truncate' : 'flex-1'}>Book of Days · {pages} {pages === 1 ? 'page' : 'pages'}</span>
-      <Sprite id="uiIcon" opts={{ name: 'chevron' }} size={12} label="" />
+    <button onClick={onOpenBook} aria-label={`Book of Days, ${pages} ${pages === 1 ? 'page' : 'pages'}`} className={`relative shrink-0 rounded-lg bg-ink-800 ${land ? 'p-1.5' : 'p-2'}`}>
+      <Sprite id="uiIcon" opts={{ name: 'book' }} size={16} label="" />
+      <span className="absolute -right-1 -top-1 rounded bg-ink-700 px-1 font-mono text-[9px] text-slate-300">{pages}</span>
     </button>
   );
   // Sideways, a cell of the strip: Keep beside the title, the quote takes the middle.
   if (land)
     return (
       <section className="flex h-full flex-col rounded-2xl bg-ink-900 p-3 ring-1 ring-ink-700">
-        <p className="font-pixel text-[8px] text-slate-500">WORDS FOR THE ROAD</p>
-        <p className="mt-1.5 min-h-0 flex-1 overflow-y-auto text-xs leading-snug text-slate-100 [@media(max-height:370px)]:mt-1 [@media(max-height:370px)]:text-[11px] [@media(max-height:370px)]:leading-tight">
+        <p className="min-h-0 flex-1 overflow-y-auto text-xs leading-snug text-slate-100 [@media(max-height:370px)]:mt-1 [@media(max-height:370px)]:text-[11px] [@media(max-height:370px)]:leading-tight">
           &ldquo;{page.quote.text}&rdquo; <span className="text-slate-400">{page.quote.by}</span>
         </p>
-        <div className="mt-1.5 flex items-center gap-2 border-t border-ink-700 pt-1.5 [@media(max-height:370px)]:mt-1 [@media(max-height:370px)]:pt-1">
-          {book}
+        <div className="mt-1.5 flex items-center justify-end gap-2 [@media(max-height:370px)]:mt-1">
           {keep}
+          {book}
         </div>
       </section>
     );
@@ -386,18 +386,8 @@ function QuoteCard({ state, now, update, onOpenBook, land }: { state: GameState;
         <p className="text-sm leading-snug text-slate-100">&ldquo;{page.quote.text}&rdquo;</p>
         <p className="mt-1 text-[11px] text-slate-500">{page.quote.by}</p>
       </div>
-      <button
-        onClick={() => update((s) => updateTodayPage(s, new Date(), { kept: !page.kept }))}
-        aria-pressed={!!page.kept}
-        aria-label={page.kept ? 'Kept in the Book of Days' : 'Keep these words'}
-        className={`shrink-0 rounded-lg p-2 ${page.kept ? 'bg-gold-400/15' : 'bg-ink-800'}`}
-      >
-        <Sprite id="uiIcon" opts={{ name: page.kept ? 'bookmarkKept' : 'bookmark' }} size={16} label="" />
-      </button>
-      <button onClick={onOpenBook} aria-label={`Book of Days, ${pages} ${pages === 1 ? 'page' : 'pages'}`} className="relative shrink-0 rounded-lg bg-ink-800 p-2">
-        <Sprite id="uiIcon" opts={{ name: 'book' }} size={16} label="" />
-        <span className="absolute -right-1 -top-1 rounded bg-ink-700 px-1 font-mono text-[9px] text-slate-300">{pages}</span>
-      </button>
+      {keep}
+      {book}
     </section>
   );
 }
@@ -498,19 +488,17 @@ function LandToday(p: LandProps) {
                   <Enemy id={story.chapter.enemySprite} size={48} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="font-pixel text-[8px] text-slate-400">Chapter {story.chapter.n}</p>
-                  <h2 className="mt-1 font-pixel text-[10px] leading-snug text-gold-300">{story.chapter.name}</h2>
-                  <p className="mt-0.5 text-xs text-slate-300">
-                    vs <span className="font-semibold text-slate-100">{story.chapter.enemy}</span>
+                  <p className="font-pixel text-[8px] leading-relaxed text-slate-500">
+                    Ch.{story.chapter.n} · {story.chapter.enemy}
                   </p>
+                  <h2 className="mt-1 font-pixel text-[10px] leading-snug text-gold-300">{story.chapter.name}</h2>
                 </div>
               </div>
-              <div className="mt-1.5 flex flex-wrap">
+              <div className="mt-1.5 flex flex-wrap" aria-label={`${story.heartsLeft} hearts left: every session takes one`}>
                 {Array.from({ length: story.hearts }).map((_, i) => (
                   <Sprite key={i} id="uiIcon" opts={{ name: i < story.heartsLeft ? 'heart' : 'heartEmpty' }} size={12} label="" />
                 ))}
               </div>
-              <p className="mt-1 text-[11px] leading-tight text-slate-400">{`Every session takes a heart. ${story.heartsLeft} to go.`}</p>
             </section>
           ) : (
             <section className="flex h-full flex-col justify-center rounded-2xl bg-ink-800 p-3 text-center pixel-border">
@@ -541,8 +529,10 @@ function LandToday(p: LandProps) {
       <section className="flex min-h-0 flex-1 flex-col rounded-2xl bg-ink-800 p-3">
         <div className="flex items-baseline gap-3">
           <h3 className="shrink-0 font-pixel text-[10px] text-gold-300">{p.title}</h3>
-          <p className="shrink-0 text-xs text-slate-400">+{p.xp} XP</p>
-          {p.doneToday && <p className="min-w-0 flex-1 truncate text-xs text-emerald-300">Today&apos;s quest is done. Here is the next one, for whenever you&apos;re ready.</p>}
+          <p className="shrink-0 font-mono text-[11px] text-slate-400">
+            {p.onCheckin && `${CHECKINS.find((c) => c.id === p.checkin)!.minutes} min · `}+{p.xp} XP
+          </p>
+          {p.doneToday && <p className="min-w-0 flex-1 truncate text-xs text-emerald-300">Done for today. The next one is ready.</p>}
           {p.aheadNote && <p className="min-w-0 flex-1 truncate text-xs text-orange-200">{p.aheadNote}</p>}
         </div>
 
@@ -570,7 +560,7 @@ function LandToday(p: LandProps) {
           <div className="flex w-40 shrink-0 flex-col min-[800px]:w-44">
             {p.onCheckin && (
               <>
-                <p className="font-pixel text-[7px] text-slate-400">How do you feel today?</p>
+                <p className="font-pixel text-[7px] text-slate-500">I FEEL</p>
                 <div className="mb-2 mt-1.5 grid grid-cols-3 gap-1 rounded-xl bg-ink-900 p-1">
                   {CHECKINS.map((c) => (
                     <button
@@ -592,7 +582,6 @@ function LandToday(p: LandProps) {
               <Sprite id="uiIcon" opts={{ name: 'play' }} size={14} label="" className="shrink-0" />
               {p.startLabel}
             </button>
-            {p.onCheckin && <p className="mt-2 text-[11px] leading-snug text-slate-400 [@media(max-height:370px)]:mt-1.5 [@media(max-height:370px)]:text-[10px] [@media(max-height:370px)]:leading-tight">{CHECKINS.find((c) => c.id === p.checkin)!.note}</p>}
           </div>
         </div>
       </section>
