@@ -3,7 +3,7 @@ type: reference
 title: Screens
 description: How src/app/page.tsx picks what is on screen (opening, tabs, workout, after-session, scenes, class picker, Fog run) and what every component in src/components does.
 tags: [app, components, ui]
-timestamp: 2026-10-28
+timestamp: 2026-10-29
 ---
 
 # Screens
@@ -109,6 +109,7 @@ upright layout inside it. Add computer changes only as `desk:` classes. The Fog'
 | `Sound` | `useMusic` (a track while a screen is on), the mute toggle |
 | `DevPanel` | Developer mode's wrench and its tabbed panel (Go, Wallet, Gear, Hero, Story, Fog, Save), see [dev-mode-and-labs.md](dev-mode-and-labs.md) |
 | `ServiceWorker` | Registers the offline worker, see [pwa.md](pwa.md) |
+| `ViewportHeal` | In the installed iPhone app, makes iOS measure the screen again after the keyboard closes, so the tab bar goes back to the bottom, see [pwa.md](pwa.md) |
 | `useModal` | Focus trap and inert background for overlays inside a tab |
 | `useDesk` | `useKeyboardPlay`: true on a computer (mouse or trackpad), so the Fog shows its keys |
 | `useLand` | True while the phone is held sideways (the `land:` query); the tabs use it to pick their sideways screen |
