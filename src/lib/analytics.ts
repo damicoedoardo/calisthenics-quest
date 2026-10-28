@@ -142,8 +142,9 @@ export function eventsBetween(a: GameState, b: GameState): AnalyticsEvent[] {
   const chatA = new Set(a.coach?.chat ?? []);
   const said = (b.coach?.chat ?? []).filter((m) => m.role === 'user' && !chatA.has(m)).length;
   if (said) add('coach_message', { count: said });
-  const plan = b.coach?.plan;
-  if (plan && plan !== a.coach?.plan) add('coach_plan');
+  // A new week planned (not a day ticked off in the same week).
+  const weekA = a.coach?.week, wk = b.coach?.week;
+  if (wk && (wk.start !== weekA?.start || wk.by !== weekA?.by || wk.days.length !== weekA?.days.length)) add('coach_week', { by: wk.by, days: wk.days.length });
 
   const daysA = new Map((a.days ?? []).map((d) => [d.day, d]));
   for (const d of b.days ?? []) {

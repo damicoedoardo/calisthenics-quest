@@ -64,7 +64,7 @@ Every event carries the hero context: `workouts`, `hero_level`, `chapter`, `stor
 | `sp_given`, `sp_worn` | SPs | `sp` |
 | `stat_points` | points put in or taken back | `stat`, `change`, `now` |
 | `item_worn`, `item_forged`, `forge_missed`, `item_rerolled` | gear | `slot`, `rarity`, `level`, `plus` |
-| `coach_setup`, `coach_message`, `coach_plan` | coach use | `count` |
+| `coach_setup`, `coach_message`, `coach_week` | coach use: set up, messages sent, a new week planned | `count`, `by`, `days` |
 | `quote_kept`, `sat_by_fire` | Today and rest days | |
 
 "Build" is the worn weapon, armor and charm (`*_rarity`, `*_level`, `*_plus`; `starter` for the
