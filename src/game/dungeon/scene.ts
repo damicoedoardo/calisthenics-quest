@@ -2358,8 +2358,8 @@ class DungeonScene extends Phaser.Scene {
     return out;
   }
 
-  /** How each SP move looks. Fire for the Ember Knight, wind for the Wind Ranger, stars for the
-      Star Sage, water for the River Monk; the final is the same element, bigger. */
+  /** How each SP move looks (the first SPs' moves: fire, wind, stars, water; the later ones in
+      their SP's colors); the final is the same, bigger. The moves get redone to fit the new SPs. */
   private spMove(e: Extract<GameEvent, { type: 'sp' }>, aura: number[]) {
     const { id, x, y, r } = e,
       angle = e.angle ?? 0,
@@ -2860,7 +2860,7 @@ class DungeonScene extends Phaser.Scene {
         mk.fillStyle(0xfde047, 0.9).fillTriangle(fx - 2, fy, fx + 2, fy, fx, fy - h * 0.55);
       }
     }
-    // The Wind Ranger's Tailwind: wind streaks past you while it lasts.
+    // The Rainstalker's Tailwind: wind streaks past you while it lasts.
     if (r.hero.tailwind > r.t && r.hero.hp > 0) {
       const [X, Y] = this.P(r.hero.x, r.hero.y);
       mk.lineStyle(2, 0xe0fff6, 0.6);

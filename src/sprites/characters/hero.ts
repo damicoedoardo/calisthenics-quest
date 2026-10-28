@@ -88,7 +88,8 @@ export function heroSpec({ gear, classId, variant, body, sp: spOn }: HeroOpts): 
   const W = wc ? (classId === 'archer' ? wc.handle : classId === 'monk' ? wc.trim : classId === 'mage' ? wc.gem : ramp3(wc.body)) : rampOf(gear.weapon.tier === 0 ? R.wood[1] : gear.weapon.color);
   const Sh = rampOf(gear.shield.tier === 0 ? R.leather[1] : gear.shield.color);
   const glow = wc?.glow ? wc.glow[1] : gear.weapon.glow ?? (gear.weapon.tier >= 3 ? W[2] : '#9fd3ff');
-  const off = gear.shield.tier > 0 ? classId ?? 'warrior' : null;
+  // an SP with its own weapon carries nothing else: no shield, quiver, orb or gloves
+  const off = gear.shield.tier > 0 && !sp?.weapon ? classId ?? 'warrior' : null;
   const attack = heroAttack(gear, classId);
   const wl = weaponLook(wc, weaponLegend);
   const legs = sp?.legs ?? (dress === 'heavy' ? [mix(A[0], NIGHT, 0.4), A[0], A[1]] : dress ? TROUSERS : armorTier >= 3 ? [mix(A[0], NIGHT, 0.4), A[0], A[1]] : TROUSERS);
@@ -319,13 +320,15 @@ export function heroSpec({ gear, classId, variant, body, sp: spOn }: HeroOpts): 
         }
       },
       weapon(c) {
-        if (gear.weapon.tier === 0) drawStick(c, glow);
+        if (sp?.weapon) sp.weapon(c);
+        else if (gear.weapon.tier === 0) drawStick(c, glow);
         else if (classId === 'archer') drawBow(c, W, glow, wl);
         else if (classId === 'monk') drawStaff(c, W, glow, wl);
         else if (classId === 'mage') drawWand(c, W, glow, wl);
         else drawSword(c, W, glow, wl);
       },
       hands(c) {
+        sp?.hands?.(c);
         if (off !== 'monk') return;
         (['L', 'R'] as const).forEach((s) => {
           const [x, y] = c.P.arms[s].hand;

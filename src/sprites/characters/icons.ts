@@ -543,20 +543,21 @@ export const ABILITY_ICONS: Record<AbilityId | 'dodge', PixelArt> = {
   },
 };
 
-/** The colors of each later SP's light, dark to light (as in characters/spLooks.ts). */
+/** The colors of each later SP's moves, dark to light, in its element (as in characters/spLooks.ts). */
 const ELEMENT: Record<string, [string, string, string]> = {
-  stone: ['#3b0764', '#8b5cf6', '#ede9fe'],
-  storm: ['#3b4fb8', '#facc15', '#fef08a'],
-  dawn: ['#b45309', '#fbbf24', '#fff7d6'],
-  frost: ['#1e40af', '#93c5fd', '#f0f9ff'],
-  leaf: ['#9a3412', '#f97316', '#fde047'],
+  // each move set in the element of the SP that has it
+  stone: ['#b45309', '#fbbf24', '#fff7d6'],
+  storm: ['#1e40af', '#60a5fa', '#e0f2fe'],
+  dawn: ['#3b0764', '#8b5cf6', '#ede9fe'],
+  frost: ['#9a3412', '#f97316', '#fde047'],
+  leaf: ['#b45309', '#fcd34d', '#ffffff'],
   moon: ['#312e81', '#a5b4fc', '#eef2ff'],
   crystal: ['#0e7490', '#67e8f9', '#ffffff'],
-  sand: ['#9a3412', '#f97316', '#fed7aa'],
+  sand: ['#b45309', '#fcd34d', '#fffbeb'],
   void: ['#3b0764', '#a855f7', '#f3e8ff'],
   tiger: ['#b45309', '#fcd34d', '#ffffff'],
-  lotus: ['#3b0764', '#a855f7', '#f3e8ff'],
-  sun: ['#b45309', '#fbbf24', '#fffbeb'],
+  lotus: ['#1e40af', '#60a5fa', '#e0f2fe'],
+  sun: ['#3b0764', '#a855f7', '#f3e8ff'],
 };
 
 /** One drawing for each kind of SP move (SpShape in src/game/dungeon/content.ts): 1, 2, 3 are the

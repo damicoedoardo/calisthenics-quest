@@ -72,16 +72,18 @@ off (`setSpOff`). The one worn goes into every run (`spWorn`, a number 1 to 4 or
 
 | Class | 1 | 2 | 3 | 4 |
 |---|---|---|---|---|
-| Warrior | Ember Knight (fire) | Stone Warden (shadow) | Storm Blade (water) | Dawn Paladin (light) |
-| Archer | Wind Ranger (light) | Frost Hunter (water) | Leaf Warden (fire) | Moon Stalker (shadow) |
-| Mage | Star Sage (light) | Crystal Mage (water) | Sand Oracle (fire) | Void Seer (shadow) |
-| Monk | River Monk (water) | Tiger Fist (light) | Lotus Sage (shadow) | Sun Fist (fire) |
+| Warrior | Blaze Reaver (fire, great axe) | Sun Bastion (light, hammer and tower shield) | Riptide Lancer (water, lance) | Nightscythe (shadow, scythe) |
+| Archer | Rainstalker (water, long bow) | Flintfire (fire, hand cannon and bomb) | Wolfcaller (light, boomerang and a wolf of light) | Silent Fang (shadow, twin daggers) |
+| Mage | Ashcaller (fire, flame staff) | Tidesinger (water, water orb) | Dawnbell (light, bell staff, halo) | Hexedge (shadow, shadow sword) |
+| Monk | Dragonheart (fire, gauntlets) | White Claw (light, claws) | Stillwater (water, bo staff) | Voidpalm (shadow, ki in the palms) |
 
-Each class has one SP of each of the four elements (`SpElement`: fire, water, light, shadow;
-`SP_ELEMENTS`, `ELEMENT_NAMES`), and each card has a one-line idea of who it is (`about`). The
-element only sets colors and the mark on the card for now; how elements beat each other, and
-monsters with elements, come later. `theme` (`SpTheme`) is the SP's own light (ember, frost,
-lotus...), which picks how it storms in when it wakes. See all sixteen, boy and girl, at `/lab/sp`.
+An SP turns you into a different job: its own clothes, headgear and weapon, the boy and the girl
+each with their own cut. Each class has one SP of each of the four elements (`SpElement`: fire,
+water, light, shadow; `SP_ELEMENTS`, `ELEMENT_NAMES`), and each card has a one-line idea of who
+it is (`about`). The element only sets colors and the mark on the card for now; the moves and
+passives below still come from the first design and get redone to fit each job, and how elements
+beat each other and monsters with elements come later. `theme` (`SpTheme`) picks how the SP
+storms in when it wakes. See all sixteen, boy and girl, at `/lab/sp`.
 
 Each has the class ability, its own move, a final and a passive that is always on (`SP_PASSIVES`:
 Embers burns, Bedrock hardens you standing still, Static sparks, Second Wind heals once a floor,

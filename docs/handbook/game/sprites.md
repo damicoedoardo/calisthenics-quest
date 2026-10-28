@@ -23,6 +23,7 @@ engine/figure.ts      the base 64x64 humanoid: body, face, hair, arms, layer ord
 engine/manga.ts       the manga head (the hero's default): face as text art, hair as shapes
 engine/drawn.ts       the hero's hand-drawn body (`body: 'block'` gives the old block body)
 parts/weapons.ts      sword, stick, staff, wand, bow
+parts/spWeapons.ts    the SPs' own weapons: `held` paints one along the hand's aim, `along` finds a point on it
 characters/*.ts       one file per character: hero, wanderer, mira, ember, book, vela (old Vela),
                       kindled (a kid made of fire, from the old finale; no scene uses it now), villagers (Lia, Sol, the kid), and the chapter
                       enemies tomorrow, mirror, plateau, summit, and the Fog's wisp, plus the
@@ -43,13 +44,15 @@ characters/items.ts   the Fog's items (sprite `item`, opts `ItemLook` { art, rar
                       (`LEGEND_ROWS`), on a 32x32 frame; `itemColors` picks the colors from rarity
                       and seed (also drawn on the floor by the scene, and worn by the hero)
 characters/spLooks.ts  each SP's look, four per class (`SP_LOOKS`, `spLook(classId, n)`): the dress it wears (plate, jerkin or robe) in its
-                      colors, plus its own pieces (the Ember Knight's circlet and burning mantle, the Wind
-                      Ranger's feather and scarf, the Star Sage's hat and circling star, the River Monk's
-                      headband, sash and beads), and its element's colors for the transformation.
+                      colors, its own headgear (a horned helm, a fin crest, hoods, goggles, a straw
+                      hat, a halo), its own weapon in place of the class's (`weapon`, drawn with
+                      `held` from parts/spWeapons.ts so it follows every arm pose; no shield,
+                      quiver or orb then) and what it wears on the hands (`hands`: gauntlets, claws,
+                      ki). A girl gets her own cut where it matters (braids, a ponytail, a circlet
+                      instead of a helm; a short skirt where the look sets `skirt`, `spGirlCut`).
                       Colors follow the element: fire red and orange, water blue, light white and
-                      gold, shadow black and violet. A girl wears plate or a jerkin with a short
-                      flared skirt (`spGirlCut`; a robe stays as it is). The hero wears it with
-                      `sp: n` (`true` is the first); all sixteen, boy and girl: `/lab/sp`
+                      gold, shadow black and violet. The hero wears it with `sp: n` (`true` is the
+                      first); all sixteen, boy and girl: `/lab/sp`
 characters/spCard.ts  the SP card (sprite `spCard`, opts { classId, n, awake, gear, look }): a 48x64 card, you in
                       the SP's look from the chest up in its window; sealed it is ash with a crack of light
 characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look, kit }): you
@@ -83,6 +86,7 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Add a hairstyle | a new entry in `HAIRSTYLES` (`engine/figure.ts`), plus one in `MANGA_HAIR` for the manga head (without it, that style falls back to the classic head) |
 | Change the classic face | `EYE_PATTERN` and `FACE` in `engine/figure.ts` |
 | Redraw a weapon | `parts/weapons.ts` |
+| Redraw an SP's look or weapon | its entry in `characters/spLooks.ts` (helpers in `parts/spWeapons.ts`); check `/lab/sp` |
 | Change armor tiers, capes, shields | `heroSpec` layers in `characters/hero.ts` |
 | Redraw a Fog item, or a legendary | its rows in `ITEM_ROWS` or `LEGEND_ROWS` (`characters/items.ts`); the letters are listed at the top of the file |
 | Change an item rarity's colors, the dyes and gems a seed picks, or the legendaries' looks | `METAL`, `LEATHER`, `CLOTH`, `GEMS`, `TRIM`, `ACCENTS`, `THEMES` and `itemColors` in `characters/items.ts` |

@@ -180,7 +180,7 @@ export interface Foe {
   phase: number;
   /** When you last hit it (run seconds). */
   hitAt: number;
-  /** Burning from the Ember Knight's Embers: its next tick, when it stops, each tick's damage, and who lit it. */
+  /** Burning from the Blaze Reaver's Embers: its next tick, when it stops, each tick's damage, and who lit it. */
   burn?: { next: number; until: number; dmg: number; by: Hero };
   /** Slowed (Frostbite, Hourglass, Blizzard, Stop the Sands): moves `k` slower until then. */
   slow?: { until: number; k: number };
@@ -443,10 +443,10 @@ export interface Hero {
   skillAt: number;
   /** The SP's final is ready when this reaches SURGE.full (it fills by fighting). */
   surge: number;
-  /** The Wind Ranger's Tailwind runs until then; the Star Sage's attacks, counted for Split Star. */
+  /** The Rainstalker's Tailwind runs until then; the Ashcaller's attacks, counted for Split Star. */
   tailwind: number;
   shots: number;
-  /** The River Monk's Flow heals again from then. */
+  /** The Dragonheart's Flow heals again from then. */
   flow: number;
   /** How long you've been moving, and standing still (Momentum, Bedrock); hits landed (Static,
       Sunburst); Second Wind used on this floor; a Crystal Shell up until then; a guard (Sun Guard,
@@ -1323,7 +1323,7 @@ function dodge(run: Run, h: Hero, input: Input) {
   dy /= d;
   h.charge = { until: now + DODGE.secs, x: dx * DODGE.speed, y: dy * DODGE.speed, hit: new Set(), harm: false };
   h.ghostUntil = Math.max(h.ghostUntil, now + DODGE.ghost);
-  // Tailwind (the Wind Ranger's passive): the wind carries you on after a dodge. Crystal Shell:
+  // Tailwind (the Rainstalker's passive): the wind carries you on after a dodge. Crystal Shell:
   // a shell forms round you.
   if (has(h, 'tailwind')) {
     h.tailwind = now + DODGE.secs + SP_PASSIVE.tailwind.secs;
@@ -1399,7 +1399,7 @@ function spMore(h: Hero): number {
 /** More crits: Focus, while you're barely scratched. */
 const spCrit = (h: Hero) => (has(h, 'focus') && h.hp >= h.maxHp * SP_PASSIVE.focus.above ? SP_PASSIVE.focus.crit : 0);
 
-/** Flow (the River Monk's passive): a hit you land heals you a little, at most once every `every` s. */
+/** Flow (the Dragonheart's passive): a hit you land heals you a little, at most once every `every` s. */
 function flow(run: Run, by: Hero) {
   const k = SP_PASSIVE.flow;
   if (!k.heal || by.hp <= 0 || by.hp >= by.maxHp || run.t < by.flow) return;
@@ -1408,7 +1408,7 @@ function flow(run: Run, by: Hero) {
   emit(run, { type: 'passive', id: 'flow', x: by.x, y: by.y });
 }
 
-/** Embers (the Ember Knight's passive): a hit can set a monster burning, if it isn't already. */
+/** Embers (the Blaze Reaver's passive): a hit can set a monster burning, if it isn't already. */
 function kindle(run: Run, by: Hero, f: Foe) {
   if (!f.alive || (f.burn && run.t < f.burn.until)) return;
   const k = SP_PASSIVE.embers;
@@ -2343,7 +2343,7 @@ function kill(run: Run, f: Foe, by: Hero) {
   if (f.def.xp > 0) run.gems.push({ id: ++run.ids, x: f.x, y: f.y, value: f.def.xp, pulled: false });
   const fang = relic(by, 'fang') + by.gearFx.heal;
   if (fang && f !== run.boss) by.hp = Math.min(by.maxHp, by.hp + fang);
-  // Harvest (the Leaf Warden's passive): each one you bring down gives back a little.
+  // Harvest (the Wolfcaller's passive): each one you bring down gives back a little.
   if (has(by, 'harvest') && by.hp > 0 && f.def.xp > 0) {
     by.hp = Math.min(by.maxHp, by.hp + Math.max(1, Math.round(by.maxHp * SP_PASSIVE.harvest.heal)));
     emit(run, { type: 'passive', id: 'harvest', x: by.x, y: by.y });
@@ -2458,7 +2458,7 @@ function attack(run: Run, h: Hero) {
       hit.add(t);
       fire(run, h, 'orb', Math.atan2(t.y - h.y, t.x - h.x) + (i - (n - 1) / 2) * 0.4, 250, dmg, 0, t);
     }
-    // Split Star (the Star Sage's passive): every few attacks, one more orb at another monster.
+    // Split Star (the Ashcaller's passive): every few attacks, one more orb at another monster.
     if (has(h, 'splitstar') && ++h.shots % SP_PASSIVE.splitstar.every === 0) {
       const t = nearest(run, h.x, h.y, hit, RANGE) ?? target;
       fire(run, h, 'orb', Math.atan2(t.y - h.y, t.x - h.x) + 0.5, 250, dmg, 0, t);
