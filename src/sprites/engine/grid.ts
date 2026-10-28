@@ -293,7 +293,9 @@ export function toSheet(frames: Grid[]): string {
     cv = document.createElement('canvas');
   cv.width = W;
   cv.height = h;
-  const ctx = cv.getContext('2d');
+  // A canvas kept in memory, not on the graphics chip: reading a chip canvas back (toDataURL) waits
+  // for the chip, and while a run is drawing that froze the game for a moment each new sprite.
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
   if (!ctx) return '';
   const img = ctx.createImageData(W, h),
     px = img.data;

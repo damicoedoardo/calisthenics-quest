@@ -164,7 +164,8 @@ party order. The rules treat every hero the same:
   the door or stairs you wait at.
 
 **A live party run**: the game server plays the run and the scene follows it (`RunSetup.net`,
-`live()` in `scene.ts`); see [../backend/live-runs.md](../backend/live-runs.md).
+`live()` in `scene.ts`, which hands the following to `Follower` in `src/game/net/follow.ts`; your own moves' events carry
+the hero who made them, `byOf(e)`, so a live run shows them at once); see [../backend/live-runs.md](../backend/live-runs.md).
 
 **A practice party run** (no game server, or "Try again"): the scene takes `RunSetup.friends`
 (name, class and their own hero sheets from `friendSheets` in `src/game/sheets.ts`) and `seed`,
@@ -283,6 +284,21 @@ A tap on a monster aims your attacks at it while it's in reach (`Input.lock`, `r
 
 Effects are capped (`FX_CAP` in `scene.ts`: particles and faded drawings alive at once) so a
 pile-up can't stall a slow phone; real fights peak far below the caps.
+
+What a frame costs, kept small for phones (measured with a phone-speed CPU in Chrome):
+
+- The walls and doors are some 17,000 small rects. `drawRoom` draws them on `room`, a Graphics off
+  the display list, and stamps that into `walls`, a RenderTexture, once per room and again when it
+  is cleared; a Graphics on screen would redraw every rect every frame. Without a renderer (a
+  fast bot run) `walls` is the Graphics itself.
+- Shadows under the hero and monsters are images from a pool (`shadowPool`, texture `shadow`), not
+  Graphics ellipses, which are cut into triangles anew each frame for every monster.
+- Damage numbers are BitmapText from a digit sheet drawn once in the pixel font (`numberFonts`:
+  `num9`, `num11`, tinted per number); a Text would paint and upload a new picture on every hit.
+- The HUD goes to the page only when something on it changed (`sendHud`), and parts that didn't
+  change stay the same objects, so `FogRun`'s memoized parts skip redrawing.
+- Prefer images, pools and drawn-once textures over a Graphics redrawn each frame; keep per-frame
+  Graphics to what moves (water, spike tips, effects).
 
 `pnpm test` replays a whole bot run in every zone (`engine.test.ts`): a refactor keeps those
 replays exactly as they were, and a balance change moves them on purpose (`pnpm test -u`).

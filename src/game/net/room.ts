@@ -22,6 +22,19 @@ interface Seat {
   ack: number;
   /** Since when their pick has waited (real seconds), or null. */
   askedAt: number | null;
+  /** The newest step that has come from the phone. */
+  got: number;
+  /** Buttons from steps passed over, for the next step played. */
+  held: Press | null;
+}
+
+/** Buttons pressed in a step that's passed over go with the next one. */
+function carry(into: Press, g: Press) {
+  into.ability ||= g.ability;
+  into.skill ||= g.skill;
+  into.final ||= g.final;
+  into.dodge ||= g.dodge;
+  if (g.lock !== undefined && into.lock === undefined) into.lock = g.lock;
 }
 
 const still: Input = { x: 0, y: 0, ability: false };
@@ -34,6 +47,8 @@ export const NET = {
   pickSeconds: 15,
   /** Steps kept from a phone that's ahead of the server. */
   maxQueue: 8,
+  /** Steps that may wait before two are played as one (a phone whose clock runs a little fast). */
+  steady: 6,
 };
 
 export class Room {
@@ -64,8 +79,9 @@ export class Room {
     if (seat) {
       seat.online = true;
       seat.queue = [];
+      seat.held = null;
       if (!this.run) seat.hero = hero;
-    } else this.seats.set(user, { user, hero, online: true, queue: [], stick: { x: 0, y: 0 }, ack: 0, askedAt: null });
+    } else this.seats.set(user, { user, hero, online: true, queue: [], stick: { x: 0, y: 0 }, ack: 0, askedAt: null, got: 0, held: null });
     this.firstAt ??= now;
     return true;
   }
@@ -111,18 +127,14 @@ export class Room {
     if (!seat || !run || !h) return;
     switch (m.t) {
       case 'in':
-        seat.queue.push(...m.steps.slice(-NET.maxQueue));
+        for (const p of m.steps.slice(-NET.maxQueue)) {
+          seat.got = Math.max(seat.got, p.seq);
+          seat.queue.push(p);
+        }
         // A phone far ahead of the server: keep the newest steps, and any button pressed in the rest.
         if (seat.queue.length > NET.maxQueue) {
-          const gone = seat.queue.splice(0, seat.queue.length - NET.maxQueue),
-            first = seat.queue[0];
-          for (const g of gone) {
-            first.ability ||= g.ability;
-            first.skill ||= g.skill;
-            first.final ||= g.final;
-            first.dodge ||= g.dodge;
-            if (g.lock !== undefined && first.lock === undefined) first.lock = g.lock;
-          }
+          const gone = seat.queue.splice(0, seat.queue.length - NET.maxQueue);
+          for (const g of gone) carry(seat.queue[0], g);
         }
         break;
       case 'pick':
@@ -164,11 +176,33 @@ export class Room {
   private inputFor(seat: Seat, h: Hero): Input {
     const run = this.run!;
     if (!seat.online) return botInput(run, h);
+    // Steps already played (with the held stick, below) are passed over when they come late; their
+    // buttons go with the next one.
+    const keep = (g: Press) => {
+      seat.stick = { x: g.x, y: g.y };
+      seat.held = seat.held ? (carry(seat.held, g), seat.held) : { ...g };
+    };
+    while (seat.queue.length && seat.queue[0].seq <= seat.ack) keep(seat.queue.shift()!);
+    // A phone a little faster than the server: two steps in one, so its steps never wait long.
+    if (seat.queue.length > NET.steady) keep(seat.queue.shift()!);
     const p = seat.queue.shift();
-    if (!p) return { ...still, ...seat.stick };
-    seat.ack = p.seq;
-    seat.stick = { x: p.x, y: p.y };
-    const { seq: _seq, ...input } = p;
+    let input: Input;
+    if (p) {
+      seat.ack = p.seq;
+      seat.stick = { x: p.x, y: p.y };
+      input = { ...p };
+    } else {
+      // Their step hasn't come yet: play it with the stick as they last held it, and count it as
+      // played, so their phone (which already moved them) and the server agree on how far they
+      // went. Not for a phone that stopped sending for a while (locked): those steps never come.
+      if (seat.got > 0 && seat.ack - seat.got < NET.maxQueue) seat.ack++;
+      input = { ...still, ...seat.stick };
+    }
+    if (seat.held) {
+      carry(input as Press, seat.held);
+      seat.held = null;
+    }
+    delete (input as Partial<Press>).seq;
     return input;
   }
 

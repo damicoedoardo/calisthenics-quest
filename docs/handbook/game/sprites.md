@@ -196,6 +196,10 @@ The forge's bands are in [forge.md](forge.md).
 Long lists show stills, not sheets: `stillFor(id, action, opts, frame)` (`registry.ts`) draws a
 single frame once and caches it (the exercise library's rows draw one as each row scrolls in).
 
+`toSheet` (`engine/grid.ts`) turns frames into a PNG data URL on a canvas kept in memory
+(`willReadFrequently`): reading back a canvas on the graphics chip waits for the chip, and during a
+Fog run that froze the game for a moment each time a new icon first showed.
+
 ## Using a PNG sprite sheet
 
 Drop the PNG in `public/sprites/`, one row per action, all frames the same size, then register it:
