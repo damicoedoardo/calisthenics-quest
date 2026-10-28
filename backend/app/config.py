@@ -27,6 +27,18 @@ class Settings(BaseSettings):
     # How long a voice pass lasts; the app asks for a new one each time it joins.
     voice_pass_seconds: int = 6 * 3600
 
+    # The coach (an LLM) through the LiteLLM proxy on this server, which sends it to OpenRouter
+    # (litellm-config.yaml). Empty key: the coach is off and /coach says so. Keys live only in
+    # the server's .env, never in the repo.
+    litellm_url: str = "http://litellm:4000"
+    litellm_key: str = ""
+    coach_model: str = "forma-coach"
+    # Messages a player may send the coach in a day, and model calls in all (tools take a few).
+    coach_turns_per_day: int = 40
+    coach_calls_per_day: int = 200
+    # The biggest chat we pass on, in bytes of JSON; the phone keeps only the recent part.
+    max_coach_bytes: int = 200_000
+
     model_config = {"env_prefix": "FORMA_"}
 
 

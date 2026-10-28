@@ -22,10 +22,19 @@ interface Props {
   before: StoryState;
   after: StoryState;
   onClose: () => void;
+  /** How the workout felt, for the coach. */
+  onFelt?: (felt: Felt, comment: string) => void;
 }
 
+type Felt = NonNullable<FinishResult['session']['felt']>;
+const FELT: { id: Felt; label: string }[] = [
+  { id: 'easy', label: 'Easy' },
+  { id: 'right', label: 'Just right' },
+  { id: 'hard', label: 'Hard' },
+];
+
 /** After a session: a short battle against the chapter enemy, then the loot. */
-export function AfterSession({ result, before, after, onClose }: Props) {
+export function AfterSession({ result, before, after, onClose, onFelt }: Props) {
   const [stage, setStage] = useState<'battle' | 'loot'>(before.chapter ? 'battle' : 'loot');
   const [hit, setHit] = useState(false);
   const reps = result.session.entries.reduce((a, e) => a + e.sets.reduce((b, s) => b + s.reps, 0), 0);
@@ -73,11 +82,14 @@ export function AfterSession({ result, before, after, onClose }: Props) {
     );
   }
 
-  return <Loot result={result} onClose={onClose} />;
+  return <Loot result={result} onClose={onClose} onFelt={onFelt} />;
 }
 
-function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }) {
+function Loot({ result, onClose, onFelt }: { result: FinishResult; onClose: () => void; onFelt?: Props['onFelt'] }) {
   const { session, newGear, levelBefore, levelAfter } = result;
+  const [felt, setFelt] = useState<Felt | null>(null);
+  const [comment, setComment] = useState('');
+  const nameOf = (id: string) => session.entries.find((e) => e.exerciseId === id)?.name ?? planExercises().find((x) => x.id === id)?.name ?? id;
   const leveled = levelAfter > levelBefore;
   const big = leveled || newGear.length > 0;
   const lvl = levelInfo(totalXp(result.state));
@@ -128,7 +140,7 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
           +{EMBERS[session.kind]} embers <span className="text-slate-400">for Mira&apos;s forge, on the Hero tab</span>
         </p>
         {session.better && <p className="mt-1 text-xs text-emerald-300">Better than last time.</p>}
-        {!!session.heavier?.length && <p className="mt-1 text-xs text-sky-300">Too easy now: next time add a little weight to {session.heavier.map((id) => planExercises().find((x) => x.id === id)?.name ?? id).join(', ')}.</p>}
+        {!!session.heavier?.length && <p className="mt-1 text-xs text-sky-300">Too easy now: next time add a little weight to {session.heavier.map(nameOf).join(', ')}.</p>}
         </div>
         <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:block">
         {leveled && (
@@ -157,7 +169,33 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
           </p>
         )}
 
-        <button onClick={onClose} className="mt-6 w-full rounded-2xl bg-gold-400 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
+        {onFelt && (
+          <div className="mt-4 rounded-xl bg-ink-900 p-3 text-left [@media(orientation:landscape)_and_(max-height:600px)]:first:mt-0">
+            <p className="text-xs font-semibold text-slate-300">How did it feel? <span className="font-normal text-slate-500">Your coach learns from it.</span></p>
+            <div className="mt-2 grid grid-cols-3 gap-2">
+              {FELT.map((f) => (
+                <button key={f.id} aria-pressed={felt === f.id} onClick={() => setFelt(f.id)} className={`rounded-lg py-2 text-xs font-semibold ${felt === f.id ? 'bg-gold-400 text-ink-950' : 'bg-ink-800 text-slate-200'}`}>
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            {felt && (
+              <input
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="A word for your coach (optional)"
+                className="mt-2 w-full rounded-lg bg-ink-800 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-gold-400"
+              />
+            )}
+          </div>
+        )}
+
+        <button
+          onClick={() => {
+            if (felt && onFelt) onFelt(felt, comment.trim().slice(0, 200));
+            onClose();
+          }}
+          className="mt-6 w-full rounded-2xl bg-gold-400 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
           Continue
         </button>
         </div>

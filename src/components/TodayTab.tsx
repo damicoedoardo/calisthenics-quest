@@ -80,11 +80,11 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
   );
   const items = inProgress ? todaysQuest(state) : quest;
   const startLabel = inProgress ? 'Continue quest' : doneToday ? 'Start the next quest' : 'Start quest';
-  const questTitle = checkin === 'rough' && !inProgress ? 'Minimum quest' : `Day ${day} quest`;
+  const questTitle = checkin === 'rough' && !inProgress ? 'Minimum quest' : state.coach?.plan ? state.coach.plan.title : `Day ${day} quest`;
   const xp = previewXp(state, inProgress ? state.draft!.checkin : checkin, now);
   const reps = (q: (typeof items)[number]) => {
     const done = state.draft?.sets[q.id]?.length ?? 0;
-    return inProgress ? `${Math.min(done, q.sets)}/${q.sets}` : `${q.sets > 1 ? `${q.sets}×` : ''}${q.reps}${q.unit === 'sec' ? 's' : ''}`;
+    return inProgress ? `${Math.min(done, q.sets)}/${q.sets}` : q.run ? `${Math.round(q.reps / 60)} min` : `${q.sets > 1 ? `${q.sets}×` : ''}${q.reps}${q.unit === 'sec' ? 's' : ''}`;
   };
 
   if (land)
@@ -195,7 +195,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
               <li key={q.id} className="flex items-center gap-3 rounded-xl bg-ink-900 py-1.5 pl-1.5 pr-3">
                 {/* A still of you doing it: the demo's first frame, at 1:1 so it stays crisp. */}
                 {(EXERCISES as string[]).includes(q.id) ? (
-                  <Sprite id="exercise" opts={{ exercise: q.id as ExerciseId, ...hero }} size={64} playing={false} label={`${q.name}, demo`} className="shrink-0 rounded-lg bg-ink-950" />
+                  <Sprite id="exercise" opts={{ exercise: q.demo, ...hero }} size={64} playing={false} label={`${q.name}, demo`} className="shrink-0 rounded-lg bg-ink-950" />
                 ) : (
                   <span className="h-16 w-16 shrink-0" />
                 )}
@@ -483,7 +483,7 @@ function LandToday(p: LandProps) {
               <li key={q.id} className="flex min-h-0 flex-col rounded-xl bg-ink-900 p-1.5 text-center">
                 <span className="relative flex min-h-0 flex-1 items-end justify-center overflow-hidden rounded-lg bg-ink-950">
                   {(EXERCISES as string[]).includes(q.id) && (
-                    <Sprite id="exercise" opts={{ exercise: q.id as ExerciseId, ...p.hero }} size={64} playing={false} label={`${q.name}, demo`} className="shrink-0" />
+                    <Sprite id="exercise" opts={{ exercise: q.demo, ...p.hero }} size={64} playing={false} label={`${q.name}, demo`} className="shrink-0" />
                   )}
                   <span className="absolute left-1 top-1 rounded bg-ink-950/85 px-0.5 text-[9px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[q.role] }}>
                     {ROLE_LABEL[q.role]}

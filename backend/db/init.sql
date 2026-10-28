@@ -72,3 +72,12 @@ CREATE TABLE IF NOT EXISTS gifts (
     claimed_at  timestamptz
 );
 CREATE INDEX IF NOT EXISTS gifts_receiver ON gifts (receiver) WHERE claimed_at IS NULL;
+
+-- How many messages each player sent the coach today, to cap the bill (app/coach.py).
+CREATE TABLE IF NOT EXISTS coach_usage (
+    user_id  uuid NOT NULL,
+    day      date NOT NULL,
+    turns    integer NOT NULL DEFAULT 0,
+    calls    integer NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, day)
+);

@@ -55,8 +55,18 @@ const PROGRAM_ONLY: Record<string, Pick<CatalogExercise, 'name' | 'steps' | 'equ
   'toes-to-bar': { name: 'Toes to bar', steps: ['Straight legs up to the bar, slow on the way down.'], equipment: 'body only', level: 'expert', force: 'pull', primary: ['abdominals'], secondary: ['lats', 'forearms'] },
 };
 
+/** Runs for the coach's running days: each is an effort and a time, built step by step. */
+const RUN_BASE = { category: 'cardio', equipment: 'body only', force: null, mechanic: null, primary: ['quadriceps'], secondary: ['calves', 'hamstrings', 'glutes'], demo: 'run' as const, source: 'forma' as const };
+const RUNS: Base[] = [
+  { ...RUN_BASE, id: 'forma:easy-run', name: 'Easy run', level: 'beginner', steps: ['Run at a pace where you could still talk in full sentences.', 'If you have to stop, walk for a minute and go again.'] },
+  { ...RUN_BASE, id: 'forma:run-walk', name: 'Run-walk', level: 'beginner', steps: ['Run easy for a few minutes, then walk one minute. Repeat.', 'The walks are part of the plan, not a failure.'] },
+  { ...RUN_BASE, id: 'forma:interval-run', name: 'Interval run', level: 'intermediate', steps: ['Warm up with easy running.', 'Run fast but in control for the fast parts, then jog or walk easy until the next one.', 'Cool down with easy running.'] },
+  { ...RUN_BASE, id: 'forma:long-run', name: 'Long run', level: 'intermediate', steps: ['Slower than your easy pace, for longer.', 'Drink water if it is warm. Walk breaks are fine.'] },
+];
+
 /** Staples the catalog is missing, written for FORMA. */
 const OWN: Base[] = [
+  ...RUNS,
   {
     id: 'forma:kettlebell-swing',
     name: 'Kettlebell Swing',

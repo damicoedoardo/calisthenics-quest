@@ -28,12 +28,14 @@ demo id (so it has a pixel demo and coaching), with a role:
 A slot has a target range (`low`..`high`); `weighted` slots are done with a weight the player
 picks. `cueOf(id)` is the exercise's first coaching tip.
 
-This is the plan until the workout planner (an LLM that builds sessions from the exercise library,
-with code-checked guardrails) lands, and the offline fallback after it.
+Once the coach is set up it builds every workout instead (`state.coach.plan`, see
+[coach.md](coach.md)); the built-in plan is what plays before setup.
 
 ## Today's quest
 
-- `todaysQuest`: the day's slots with their current targets (`state.reps[id]`, else `low`).
+- `todaysQuest`: the coach's next workout when there is one (`state.coach.plan`, skipped items
+  left out), else the built-in day's slots; with their current targets (`state.reps[id]`, else
+  `low`). A run's length is the coach's, not a target that rises.
 - The check-in: **Rough** keeps the warm-up and the stretch around one exercise of at most 3 sets,
   and counts as a minimum session; Normal and Strong are the full day.
 - The warm-up alone is not a workout: `finishSession` needs one logged set of real work.
@@ -43,7 +45,9 @@ with code-checked guardrails) lands, and the offline fallback after it.
 - A set is logged as reps plus reps left in the tank (`Rir`: `4+`, `2-3`, `0-1`), then a
   `REST_SECONDS` (90 s) rest timer.
 - `finishSession` turns the draft into a `Session`: full if at least half the sets were done and
-  the day wasn't Rough, otherwise mini.
+  the day wasn't Rough, otherwise mini. Entries keep the exercise's name and family; a coach
+  workout also writes its mode, who planned it, what was skipped or changed, then clears the plan
+  and moves levels ([coach.md](coach.md)). How it felt is added after, from the after-workout card.
 - Every set at target with reps to spare raises that exercise's target by one rep (holds by 5
   seconds, every other time), at most `MAX_RAISES_PER_WEEK` times a week, up to `high`. A
   `weighted` exercise done cleanly at `high` goes back to `low` and is listed in

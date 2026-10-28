@@ -3,9 +3,10 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { BookOpen, ChevronRight } from 'lucide-react';
-import { dayType, repsFor, type GameState } from '@/lib/game';
+import { dayType, repsFor, type Checkin, type GameState } from '@/lib/game';
 import { PLAN, ROLE_LABEL, type DayType, type Kit } from '@/lib/program';
 import { useLand } from './useLand';
+import { CoachScreen } from './CoachChat';
 
 // The library carries the whole exercise catalog, so it loads only when opened.
 const ExerciseLibrary = dynamic(() => import('./ExerciseLibrary').then((m) => m.ExerciseLibrary), { ssr: false });
@@ -15,15 +16,35 @@ const KITS: { id: Kit; label: string; note: string }[] = [
   { id: 'home', label: 'Home', note: 'No kit: a chair and a table' },
 ];
 
-/** Training: the exercise library, what you train with, and the plan your workouts follow. */
-export function TrainTab({ state, update }: { state: GameState; update: (fn: (s: GameState) => GameState) => void }) {
+/** Training: the coach (your flame, its chat and the workout it built), the exercise library, and before the coach the built-in plan. */
+export function TrainTab({ state, update, onStart }: { state: GameState; update: (fn: (s: GameState) => GameState) => void; onStart: (c: Checkin) => void }) {
   const [library, setLibrary] = useState(false);
   const kit = state.profile.kit ?? 'gym';
   const next = dayType(state);
   const land = useLand();
   const setKit = (k: Kit) => update((s) => ({ ...s, profile: { ...s.profile, kit: k } }));
-  const soon = 'Soon: tell your coach what you feel like, and it builds the workout from the library.';
   const intro = 'Every workout opens with a warm-up and ends with a stretch. Do every set with a couple of reps left in the tank, and the target goes up a rep at a time.';
+
+  const libraryButton = (
+    <button onClick={() => setLibrary(true)} className="flex w-full items-center gap-3 rounded-xl bg-ink-800 p-3 text-left ring-1 ring-ink-700 active:bg-ink-700">
+      <BookOpen size={18} className="shrink-0 text-gold-300" />
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold">Exercise library</span>
+        <span className="block text-xs text-slate-400">870+ exercises, how to do each, pixel demos</span>
+      </span>
+      <ChevronRight size={16} className="text-slate-500" />
+    </button>
+  );
+
+  // Once the coach is set up it builds the workouts: the coach screen takes the place of the built-in plan.
+  if (state.coach?.profile)
+    return (
+      <div className="space-y-4">
+        <CoachScreen state={state} update={update} onStart={onStart} />
+        {libraryButton}
+        {library && <ExerciseLibrary state={state} onClose={() => setLibrary(false)} />}
+      </div>
+    );
 
   // Sideways, one screen: a side column (the library, gym or home) beside the plan, its
   // two days as two equal panels that fill the height.
@@ -55,7 +76,9 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
               ))}
             </div>
           </section>
-          <p className="flex min-h-0 flex-1 items-center overflow-y-auto rounded-xl border border-dashed border-ink-700 p-3 text-[11px] leading-snug text-slate-500">{soon}</p>
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <CoachScreen state={state} update={update} onStart={onStart} />
+          </div>
         </div>
         {library && <ExerciseLibrary state={state} onClose={() => setLibrary(false)} />}
 
@@ -76,14 +99,8 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
 
   return (
     <div className="space-y-6">
-      <button onClick={() => setLibrary(true)} className="flex w-full items-center gap-3 rounded-xl bg-ink-800 p-3 text-left ring-1 ring-ink-700 active:bg-ink-700">
-        <BookOpen size={18} className="shrink-0 text-gold-300" />
-        <span className="min-w-0 flex-1">
-          <span className="block text-sm font-semibold">Exercise library</span>
-          <span className="block text-xs text-slate-400">870+ exercises, how to do each, pixel demos</span>
-        </span>
-        <ChevronRight size={16} className="text-slate-500" />
-      </button>
+      <CoachScreen state={state} update={update} onStart={onStart} />
+      {libraryButton}
       {library && <ExerciseLibrary state={state} onClose={() => setLibrary(false)} />}
 
       <section>
@@ -114,8 +131,6 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
         ))}
       </section>
 
-
-      <p className="text-center text-xs text-slate-500">{soon}</p>
     </div>
   );
 }

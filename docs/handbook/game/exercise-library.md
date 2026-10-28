@@ -3,7 +3,7 @@ type: reference
 title: Exercise library
 description: The 887-exercise library (free-exercise-db plus FORMA's own) as a searchable database for a coach — fields, kinds and movement families, findExercises, the JSON export, pixel demos, tips and common mistakes, and where to edit what.
 tags: [game, exercises, library, coach, data]
-timestamp: 2026-10-27
+timestamp: 2026-10-28
 ---
 
 # Exercise library
@@ -14,8 +14,8 @@ and movement, and per exercise the boy and girl demo, how-to steps, "Do it well"
 mistakes. Held sideways, the search and filters share one line, the list has two columns, and an
 exercise shows its demos and facts beside the how-to.
 
-887 exercises: the open catalog [free-exercise-db](https://github.com/yuhonas/free-exercise-db)
-(public domain) plus the FORMA program's own moves. Every one has a pixel demo (boy and girl) and
+891 exercises: the open catalog [free-exercise-db](https://github.com/yuhonas/free-exercise-db)
+(public domain) plus the FORMA program's own moves and four runs for the coach (`RUNS` in `library.ts`). Every one has a pixel demo (boy and girl) and
 coaching. Built so a coach (a person, a script, or an LLM) can find exercises and put sessions
 together.
 

@@ -199,6 +199,10 @@ export default function NightLab() {
         Everything here opens on a sandbox save. Your real progress on this phone is untouched; the app shows a blue bar while you&apos;re in the sandbox.
       </p>
 
+      <Panel title="YOUR COACH: THE FLAME" note="Your flame plans your training now. Train tab: its last words and today's workout as cards with demos, easier and swap on each. Tap Let's start and it chats with you at the camp fire. Talking needs a sign-in (Hero > Settings) on the real save.">
+        <Row icon={<Sparkles size={16} />} label="Meet your coach" note="Train tab, no coach set up yet: Pip says hello" onClick={() => open(veteran(6, 0), 'tab=train')} />
+      </Panel>
+
       <Panel title="CLASSES, SP AND SWEAT COINS" note="Your class at the start, weapons that belong to one class, the first SP with its trial, and sweat coins to change class or start your points over.">
         <Row icon={<Swords size={16} />} label="After the boss: pick up, then go home" note="The boss's room goes quiet, HOME stairs come up; walk over what's left first" onClick={() => open(veteran(14, 1), 'run=0&at=boss')} />
         <Row icon={<Play size={16} />} label="The opening, with the class pick" note="A new player: after the name, pick a class (you can change it later)" onClick={() => open(initialState(), '')} />

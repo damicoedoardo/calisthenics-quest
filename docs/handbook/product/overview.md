@@ -26,7 +26,7 @@ training gave you. Gear comes from the dungeon, each item with its own art (lege
 | Tab | What it is | Code |
 |---|---|---|
 | Today | The flame and its line for the day, today's quest (the plan's Day A or B: warm-up, main lifts, core, stretch), the rest card on rest days, the Book of Days | `src/components/TodayTab.tsx` |
-| Train | The exercise library (887 exercises, pixel demos, tips and mistakes), gym or home, the plan | `src/components/TrainTab.tsx` |
+| Train | The coach: your flame, which you chat with (it asks where you start, builds every workout and changes it when you say), today's workout as cards with demos, easier and swap; the exercise library (891 exercises, pixel demos, tips and mistakes); before setup, gym or home and the built-in plan | `src/components/TrainTab.tsx`, `CoachChat.tsx` |
 | Play | The Fog: your power from training, the zones, a run | `src/components/PlayTab.tsx`, `FogRun.tsx` |
 | Hero | Gear, class, look, the champion's stat points, keepsakes, friends (who is online, in the Fog, trained today), settings (sound, music in the menus), backup | `src/components/HeroTab.tsx` |
 

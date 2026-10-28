@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
 from app.db import close_pool, init_pool
-from app.routes import friends, gifts, party, save
+from app.routes import coach, friends, gifts, party, save
 
 
 @asynccontextmanager
@@ -14,6 +14,7 @@ async def lifespan(app: FastAPI):
     await friends.get_friend_store().ensure()
     await party.get_party_store().ensure()
     await gifts.get_gift_store().ensure()
+    await coach.get_usage_store().ensure()
     try:
         yield
     finally:
@@ -44,6 +45,7 @@ app.include_router(save.router)
 app.include_router(friends.router)
 app.include_router(party.router)
 app.include_router(gifts.router)
+app.include_router(coach.router)
 
 
 @app.get("/health")

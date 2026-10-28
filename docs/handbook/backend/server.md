@@ -1,7 +1,7 @@
 ---
 type: conceptual
 title: Server and deploys
-description: FORMA's Hetzner server (separate from minlit's), the Docker Compose stack (Caddy, api, Postgres), and the GHCR image + systemd timer auto-deploy copied from minlit.
+description: FORMA's Hetzner server (separate from minlit's), the Docker Compose stack (Caddy, api, Postgres, LiveKit, the LiteLLM proxy for the coach), and the GHCR image + systemd timer auto-deploy copied from minlit.
 tags: [backend, ops, docker-compose, caddy, hetzner, ghcr]
 timestamp: 2026-10-28
 ---
@@ -27,6 +27,7 @@ backend, as the Docker Compose stack in `docker-compose.yml`:
 | `caddy` | host `:80`, `:443` | The only public door. Gets the TLS certificate for `DOMAIN` itself (`caddy/Caddyfile`) |
 | `livekit` | `livekit:7880` through Caddy at `VOICE_DOMAIN`; host TCP `7881`, UDP `7882` | Party voice ([friends.md](friends.md#party-voice)). Settings in `livekit/livekit.yaml`; the key pair (`LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`) in `.env`, shared with the api |
 | `api` | `api:8000`, compose network only | The FastAPI app ([api.md](api.md)); image from GHCR |
+| `litellm` | `litellm:4000`; host `127.0.0.1:4000` only (an SSH port-forward reaches its `/ui`) | The coach's LLM proxy, as on minlit: the api asks for `forma-coach`, `litellm-config.yaml` maps it to DeepSeek V4.1 Flash 1017 on OpenRouter. Keys in `.env`: `OPENROUTER_API_KEY` and `LITELLM_MASTER_KEY` (shared with the api). To change model: edit `litellm-config.yaml`, `git pull`, `docker compose up -d litellm`, no deploy |
 | `postgres` | host `127.0.0.1:5432` only | Runs `backend/db/init.sql` on first boot; data in the `postgres_data` volume |
 
 Settings live in `/root/forma/.env` on the server (template: `.env.example`), never in git.
