@@ -14,6 +14,9 @@ import { rollItem, type Item } from '@/game/dungeon/items';
 import { seeded } from '@/lib/random';
 import { spendEvenly } from '@/lib/stats';
 import type { ClassId } from '@/lib/gear';
+import { loadLibrary } from '@/exercises/library';
+import { applySetup } from '@/lib/coach/setup';
+import { buildWeek } from '@/lib/coach/week';
 
 /* What's new tonight: one tap to try each change. Everything that opens the app does it on a
    sandbox save (SANDBOX_KEY, chosen by ?sandbox), so the real save on this phone is never touched.
@@ -126,6 +129,15 @@ function otherBow(): GameState {
   return { ...s, fogGear: { ...s.fogGear!, vault: [{ ...bow, need: null }, ...s.fogGear!.vault] } };
 }
 
+/** `s` with the coach set up and this week planned, so Today shows a quest to start. */
+async function withWeek(s: GameState): Promise<GameState> {
+  let n = 0;
+  const now = new Date();
+  const coach = applySetup(s.coach, { modes: ['gym'], goal: 'muscle', days: 3, minutes: 40, gear: ['gym'], experience: 'returning', pushups: 2, pullups: 1, lifts: 1, run: 1, avoid: [] }, now, () => `n${++n}`);
+  const week = buildWeek({ all: await loadLibrary(), coach, sessions: s.sessions, now, rng: seeded(1) });
+  return { ...s, coach: { ...coach, week } };
+}
+
 /** Write the sandbox save and open the app on it at `query`. */
 function open(state: GameState, query: string) {
   try {
@@ -208,6 +220,10 @@ export default function NightLab() {
 
       <Panel title="DEVELOPER MODE, IN TABS" note="The wrench next to FORMA opens one menu with tabs: Go (any screen, every Lab), Wallet (embers, sweat coins, co-op materials), Gear (any item, any rarity, +0 to +15), Hero (class, SPs, stat points), Story (chapter jump, scenes, days), Fog (bosses beaten, a run in any zone at any spot), Save (copy, load, wipe).">
         <Row icon={<Sparkles size={16} />} label="Open the developer menu" note="A hero 30 workouts in, the menu open on top" onClick={() => open(veteran(30, 2), 'tab=today&dev')} />
+      </Panel>
+
+      <Panel title="DESIGN PASS" note="Pixel, minimal, fewer words: one screen at a time.">
+        <Row icon={<Dumbbell size={16} />} label="Today, with a week planned" note="The chapter's boss, your flame, today's quest and Start" onClick={async () => open(await withWeek(veteran(30, 3)), 'tab=today')} />
       </Panel>
 
       <Panel title="YOUR COACH: THE FLAME" note="Your flame plans your training now. Train tab: its last words and today's workout as cards with demos, easier and swap on each. Tap Let's start and it chats with you at the camp fire. Talking needs a sign-in (Hero > Settings) on the real save.">

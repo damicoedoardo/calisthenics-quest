@@ -107,3 +107,22 @@ export const PARTY = {
   /** The share of the heal a friend gets, as a share of their own HP (1 = the same as you). */
   share: 1,
 };
+/** The first dungeon a new player walks, in the opening (`RunSetup.tutorial`). Goal: everyone gets
+    to the bottom on the first try (you can't fall: HP stops at 1), learns to move, dodge and take
+    the stairs in about two minutes, and then loses to the Hollow, as the story needs. */
+export const TUTORIAL = {
+  /** Floors, and rooms on each: the last room of the last floor is the Hollow's. */
+  layout: { floors: 3, rooms: 2, side: 0 },
+  /** Slimes in each wave of a floor's rooms, by floor. More is longer, not harder. */
+  waves: [[2, 3], [3, 3], [3, 2]],
+  /** From this floor (from 0) one wisp joins each wave: its fan of shots teaches the dodge. */
+  wispFrom: 1,
+  /** How tough and how hard-hitting the monsters are (a zone's hp and dmg). Lower is gentler. */
+  hp: 0.6,
+  dmg: 0.5,
+  /** The Hollow's HP: each of your hits takes 1, and it never goes under 1. */
+  bossHp: 100,
+  /** Seconds after it walks out: it says your line, then it strikes you down. */
+  voiceAt: 5,
+  lose: 14,
+};

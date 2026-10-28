@@ -22,10 +22,14 @@ signal.
 
 ## Install before playing
 
-After the prologue, a phone that runs FORMA in a browser tab has to install it before the game goes
-on: `InstallGate` (`src/components/InstallGate.tsx`) takes the screen until FORMA is opened from the
-home screen. A computer is not asked (its browser keeps the save). The opening itself always plays
-in the browser.
+A phone that runs FORMA in a browser tab has to install it before the game goes on:
+`InstallGate` (`src/components/InstallGate.tsx`) takes the screen until FORMA is opened from the
+home screen. A computer is not asked (its browser keeps the save). For a new player it comes in the
+middle of the opening (Edoardo, 2026-10-28): the story, the first dungeon and the Wanderer play in
+the browser, then the Wanderer asks (`midway`, "Keep me close"), and the slow part (class, letter,
+look, name, sign-in) is done in the installed app, which opens on the class pick
+(`profile.opening`). A save that finished the opening without installing still gets the gate
+after it.
 
 | Piece | Where |
 |---|---|

@@ -163,6 +163,8 @@ export interface RunSetup {
   /** A live party run: the game server plays the one real run (src/game/net), this phone shows it
       and looks a few steps ahead with what you press. `friends` are the others, in the run's order. */
   net?: PlayLink;
+  /** The opening's first dungeon, and the line the Hollow says at its bottom. */
+  tutorial?: { voice: string };
 }
 
 /** A room on the minimap: where it is on the floor (east is +x, south is +y), what it holds,
@@ -519,6 +521,7 @@ class DungeonScene extends Phaser.Scene {
       sp: setup.sp,
       // A practice run: friends come with your strength in their own class and starter kit.
       friends: setup.friends?.map((f) => ({ power: setup.power, classId: f.classId })),
+      tutorial: setup.tutorial,
     });
   }
 
@@ -1511,6 +1514,7 @@ class DungeonScene extends Phaser.Scene {
     const b = this.run.boss;
     if (!b || this.run.home) return null;
     const which = this.setup.zone.boss;
+    if (this.setup.tutorial) return { hp: Math.max(0, b.hp), max: b.maxHp };
     if (which === 'plateau') return { hp: b.hp > 0 ? b.maxHp : 0, max: b.maxHp, label: 'It looks the same' };
     if (which === 'hollow') return { hp: this.run.hold, max: LIGHT.hold, label: b.phase === 2 ? 'Stand in its light' : 'Wait for its light' };
     return { hp: Math.max(0, b.hp), max: b.maxHp };
@@ -2245,6 +2249,8 @@ class DungeonScene extends Phaser.Scene {
         this.drawRoom();
         this.sfx('nova', 0.7);
         this.cleared(true);
+        // The first dungeon shows its own tip for the door and the stairs.
+        if (this.setup.tutorial) break;
         if (r.home) this.bus.say('The boss is down. Pick up what it left, then take the stairs home.');
         else if (r.chest && isWardenRoom(r)) this.bus.say(`${midBoss(this.setup.zone).name.replace(/^the/, 'The')} left a chest. Open it, then take the stairs.`);
         else if (r.stairs) this.bus.say('Room clear. The stairs go down, or look round the floor first.');
@@ -2670,7 +2676,7 @@ class DungeonScene extends Phaser.Scene {
     // The Hollow's light: faint while it's dark, open and warm when it's lit, with how long you've
     // stood in it running round its edge.
     const hb = r.boss;
-    if (hb?.alive && this.setup.zone.boss === 'hollow' && !r.over) {
+    if (hb?.alive && this.setup.zone.boss === 'hollow' && !this.setup.tutorial && !r.over) {
       const p = (Math.sin(now / 160) + 1) / 2;
       if (hb.phase === 2) {
         this.fx.fillStyle(0xfef3c7, 0.16 + 0.08 * p).fillCircle(hb.x, hb.y, LIGHT.r);

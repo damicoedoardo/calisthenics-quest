@@ -25,10 +25,16 @@ group('cloud sync plan', () => {
     expect(plan(played(2), cloud(1, 0), null)).toEqual({ kind: 'upload', baseRev: 1 });
   });
 
-  it('asks when both have progress the other has not seen', () => {
-    const c = cloud(9, 12);
-    expect(plan(played(3), c, null)).toEqual({ kind: 'ask', cloud: c });
-    expect(plan(played(3), c, 8)).toEqual({ kind: 'ask', cloud: c });
+  it('takes the newer save from another device without asking', () => {
+    // The cloud moved on past the rev this phone saw: more workouts there wins.
+    expect(plan(played(3), cloud(9, 12), 8)).toEqual({ kind: 'use-cloud' });
+    expect(plan(played(3), cloud(9, 12), null)).toEqual({ kind: 'use-cloud' });
+    // A tie goes to the cloud, the side that was played and sent.
+    expect(plan(played(3), cloud(9, 3), 8)).toEqual({ kind: 'use-cloud' });
+  });
+
+  it('keeps the phone when it has more workouts than the cloud', () => {
+    expect(plan(played(5), cloud(9, 3), 8)).toEqual({ kind: 'upload', baseRev: 9 });
   });
 });
 

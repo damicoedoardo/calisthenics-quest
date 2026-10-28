@@ -116,7 +116,6 @@ export function WorldPicker({ state, onPlay, land = false }: { state: GameState;
   const edge = land ? 'calc(9% - 0.75rem)' : 'calc(14% - 0.75rem)';
   return (
     <section className={land ? 'flex h-full flex-col' : 'space-y-2'} aria-roledescription="carousel" aria-label="The road through the Fog">
-      {!land && title}
 
       <div
         ref={box}
@@ -276,7 +275,7 @@ function WorldCard({ zone: z, index, state, active, cardRef, artRef, onPick, onP
         </div>
         {!locked && (
           <p className="mt-2 text-xs text-slate-300">
-            {best ? (best.won ? `Cleared in ${clock(best.seconds)}` : `Best: ${clock(best.seconds)}, level ${best.level}`) : `Ten floors down, then ${z.bossName}.`}
+            {best ? (best.won ? `Cleared in ${clock(best.seconds)}` : `Best: ${clock(best.seconds)}, level ${best.level}`) : `10 floors, then ${z.bossName}.`}
           </p>
         )}
         {st.state === 'open' && !best && z.firstTry && <p className="mt-1 text-[11px] text-gold-300">{z.firstTry}</p>}

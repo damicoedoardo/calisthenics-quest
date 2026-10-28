@@ -18,7 +18,9 @@ export const signInDue = (signedIn: boolean) => cloudConfigured && !signedIn && 
 
 const begin = () => window.dispatchEvent(new Event('forma-cloud-start'));
 
-export function SignInGate() {
+/** `back` and `welcome`: the opening's "I already have a hero" (a returning player on a new phone):
+    a way back to the start, and words for coming back rather than for a new account. */
+export function SignInGate({ back, welcome = false }: { back?: () => void; welcome?: boolean } = {}) {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState('');
@@ -53,9 +55,11 @@ export function SignInGate() {
     <div className="safe-top fixed inset-0 z-40 overflow-y-auto bg-ink-950 land-safe-x">
       <div className="mx-auto flex min-h-full max-w-md flex-col items-center justify-center px-5 pb-10 pt-6 text-center">
         <Ember size={64} stage="spark" />
-        <h1 className="mt-4 font-pixel text-sm leading-relaxed text-gold-400">Make your hero yours</h1>
+        <h1 className="mt-4 font-pixel text-sm leading-relaxed text-gold-400">{welcome ? 'Welcome back' : 'Make your hero yours'}</h1>
         <p className="mt-3 text-sm text-slate-300">
-          Sign in to play. Your hero is kept safe and comes with you to a new phone, your friends can find you, and your flame can coach you. After that FORMA works with no signal.
+          {welcome
+            ? 'Type the email you play with. We send you a code, and your hero comes back to this phone just as you left it.'
+            : 'Sign in to play. Your hero is kept safe and comes with you to a new phone, your friends can find you, and your flame can coach you. After that FORMA works with no signal.'}
         </p>
 
         {offline ? (
@@ -133,6 +137,11 @@ export function SignInGate() {
         )}
 
         {msg && <p className="mt-3 text-xs text-sky-300">{msg}</p>}
+        {back && (
+          <button type="button" onClick={back} className="mt-6 text-sm text-slate-400">
+            Back
+          </button>
+        )}
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import type { Letter } from '@/lib/game';
-import type { Line } from './types';
+import type { FogZone, Line } from './types';
 
 // The opening, scene by scene. It's written for anyone who once loved training and lost it,
 // so it never names a sport, an age or a number.
@@ -30,26 +30,53 @@ export const FADING: Line[] = [
 export const VOICES = ["You're not enough.", 'You always quit.', "It's too late for you.", 'You used to be someone.', "Everyone can see you've given up."];
 
 /** Meeting the Hollow. The first line shows you, the second the Hollow far off, then the Hollow up close. */
-export const HOLLOW_MEET: Line[] = [
+/** Before the first dungeon: you wake in the ash, and something below knows your name. */
+export const WAKE: Line[] = [
   { who: 'narrator', text: "You wake up in a gray land. Ash falls like snow. There's a cracked sword in your hand." },
-  { who: 'narrator', text: 'Someone stands a few steps away, with their back to you.' },
-  { who: 'narrator', text: 'They turn around. They have your face. But the eyes are empty.' },
+  { who: 'narrator', text: 'The ground falls away in front of you, down into the fog. Something down there knows your name.' },
+  { who: 'narrator', text: "You can't stay up here. So you go down." },
+];
+
+/** The first dungeon (the opening's Fog run): three small floors, and at the bottom the Hollow,
+    which can't be beaten yet. What the run shows; the rest of the zone is the first chapter's. */
+export const FIRST_FOG: Pick<FogZone, 'name' | 'hint' | 'after' | 'lines'> = {
+  name: 'The First Fog',
+  hint: 'It wears your face. Fight anyway.',
+  after: '',
+  lines: {
+    enter: "There you are. I knew you'd come down eventually.",
+    stages: [],
+    end: "Stay down. It's easier.",
+    taunts: ['Everyone can see it. You know that, right?', "Stay down. It's easier.", 'Remember the last time you tried?'],
+  },
+};
+
+/** The run's tips, one at a time, as you go down. */
+export const FIRST_FOG_TIPS = {
+  move: 'Drag anywhere to move. You attack on your own when a monster is close.',
+  moveKeys: 'WASD or the arrows to move. You attack on your own when a monster is close.',
+  door: 'Room clear. The door is open: walk through it.',
+  stairs: 'Stairs down. Walk onto them.',
+  dodge: 'Wisps fire a fan of shots. Tap Dodge to roll through them.',
+  dodgeKeys: 'Wisps fire a fan of shots. Press Space to roll through them.',
+  bottom: 'Almost at the bottom. Something is waiting there.',
+};
+
+/** After the Hollow strikes you down in the first dungeon: it stands over you and talks. */
+export const HOLLOW_MEET: Line[] = [
+  { who: 'narrator', text: 'The sword skids away across the stone. You try to get up.' },
+  { who: 'narrator', text: 'Someone stands over you. They lean down.' },
+  { who: 'narrator', text: 'They have your face. But the eyes are empty.' },
   { who: 'hollow', text: '{voice}', needs: 'voice' },
   { who: 'hollow', text: "Don't look so surprised. You've heard me every day for years." },
   { who: 'hollow', text: "I'm not your enemy. I'm the only one who's honest with you." },
   { who: 'hollow', text: 'I was there every time you looked in the mirror and looked away. Every time you said "next Monday" and we both knew.' },
   { who: 'hollow', text: "Remember the last time you tried? I was there. I'm always there." },
   { who: 'hollow', text: "If you don't try, you can't fail. Put the sword down. Stay here with me. It's quiet here." },
-  { who: 'narrator', text: "Your hand tightens on the sword. You don't know why. It just does.", pause: 0.8 },
+  { who: 'narrator', text: "Your hand finds the sword again. You don't know why. It just does.", pause: 0.8 },
   { who: 'you', text: '...No.' },
-  { who: 'hollow', text: 'No? Alright. Show me.' },
-];
-
-/** The first fight can't be won. Each strike, the Hollow answers. */
-export const FIGHT_TURNS: { strike: string; answer: string }[] = [
-  { strike: 'Your arms shake. The sword is heavier than you remember.', answer: '{voice}' },
-  { strike: 'You swing again. Slower.', answer: 'Everyone can see it. You know that, right?' },
-  { strike: 'You can barely lift it.', answer: "Stay down. It's easier." },
+  { who: 'hollow', text: 'No? Alright.' },
+  { who: 'narrator', text: 'It pushes you back down with one finger.' },
 ];
 
 export const FALLEN: Line[] = [
@@ -87,6 +114,13 @@ export const MEET: Line[] = [
   { who: 'wanderer', text: "You will. Many times. You stopped once already, remember? Look where you're standing." },
   { who: 'wanderer', text: 'One rule, before we walk. That voice talks to you like an enemy. I never will. Try not to, either.' },
   { who: 'wanderer', text: "Now write to the person you want to become. Not who you were. Who you're going to be." },
+];
+
+/** For a hero with no class yet: the Wanderer offers help, then hands over the class pick
+    (said in place of MEET's last line, which comes after the pick). */
+export const HELP: Line[] = [
+  { who: 'wanderer', text: "I'll help you. I'll walk with you, the whole way." },
+  { who: 'wanderer', text: 'But not with that cracked sword. Pick up the one that fits your hand.' },
 ];
 
 export const LETTER_PROMPTS: { key: keyof Letter; label: string; placeholder: string }[] = [
