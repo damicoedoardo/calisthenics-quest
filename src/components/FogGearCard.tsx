@@ -4,7 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { Flame } from 'lucide-react';
 import { heroLevel, type GameState } from '@/lib/game';
 import { buildOf } from '@/lib/stats';
-import { flameGuards, NO_GEAR, type FogGear, salvageValue, setGuard, takeOffToVault, vaultSize, wearFromVault } from '@/lib/fog-gear';
+import { NO_GEAR, salvageValue, takeOffToVault, vaultSize, wearFromVault } from '@/lib/fog-gear';
 import { canUpgrade, embersOf, findItem, matsOf, matsShort, REROLL_COST, reroll, rested, salvage, tryUpgrade, upgradeCost, upgradeMats, upgradeOdds, type Forged } from '@/lib/forge';
 import { bandOf, boostAt, BONUSES, canWear, ITEM_SLOTS, MAX_PLUS, nameOf, safeFloor, SLOT_NAME, starterKit, type Item } from '@/game/dungeon/items';
 import { BANDS, FORGE_RISK, MAT_IDS, MATS, SAFE_POINTS, type MatId } from '@/balance';
@@ -13,8 +13,8 @@ import { Sprite } from './Sprite';
 
 type Update = (fn: (s: GameState) => GameState) => void;
 
-/** Your gear for the Fog, on one card: the three slots you wear (the flame's mark on the one it
-    keeps if you fall), the vault at home, and Mira's forge for the item you tap. `land`: the Hero tab's
+/** Your gear for the Fog, on one card: the three slots you wear (they always come home, even from
+    a fall), the vault at home, and Mira's forge for the item you tap. `land`: the Hero tab's
     Gear part held sideways, where the card fills the height it is given, what you have on the left and the
     tapped item with the forge on the right. */
 export function FogGearCard({ state, update, land = false }: { state: GameState; update: Update; land?: boolean }) {
@@ -25,20 +25,17 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
     kit = starterKit(cls),
     level = heroLevel(state),
     can = (it: Item) => canWear(it, build, cls, level),
-    flame = state.profile.flame || 'Your flame',
-    fresh = flameGuards(state, new Date()),
     embers = embersOf(state);
   const [pick, setPick] = useState<string | null>(null);
   const [sure, setSure] = useState(false);
   const all = [...Object.values(gear.worn), ...gear.vault].filter((x): x is Item => !!x),
     item = all.find((x) => x.id === pick) ?? null,
-    worn = !!item && gear.worn[item.slot]?.id === item.id,
-    guarded = gear.guard ? gear.worn[gear.guard] : undefined;
+    worn = !!item && gear.worn[item.slot]?.id === item.id;
   const choose = (id: string | null) => {
     setPick(id === pick ? null : id);
     setSure(false);
   };
-  const hintText = `Tap an item to wear it, give it to ${flame === 'Your flame' ? 'your flame' : flame}, or take it to Mira's forge.`;
+  const hintText = "Tap an item to wear it, or take it to Mira's forge.";
   const hint = <p className="text-center text-[11px] text-slate-500">{hintText}</p>;
   return (
     <section className={`rounded-2xl bg-ink-800 ${land ? 'flex h-full flex-col p-3' : 'p-4'}`}>
@@ -55,22 +52,16 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
       <div className={land ? 'flex justify-between' : 'mt-3 flex gap-3'}>
         {ITEM_SLOTS.map((slot) => {
           const it = gear.worn[slot],
-            off = !!it && !can(it),
-            kept = !!it && gear.guard === slot;
+            off = !!it && !can(it);
           return (
-            <button key={slot} onClick={() => it && choose(it.id)} className={`relative flex flex-col items-center gap-1 rounded-lg p-1 ${it && it.id === pick ? 'bg-ink-900' : ''}`} aria-label={it ? `${nameOf(it)}${kept ? `, kept by ${flame}` : ''}` : `${SLOT_NAME[slot]}: ${slot === 'weapon' ? kit.weapon.name : 'none'}`}>
+            <button key={slot} onClick={() => it && choose(it.id)} className={`relative flex flex-col items-center gap-1 rounded-lg p-1 ${it && it.id === pick ? 'bg-ink-900' : ''}`} aria-label={it ? nameOf(it) : `${SLOT_NAME[slot]}: ${slot === 'weapon' ? kit.weapon.name : 'none'}`}>
               {it ? <ItemTile item={it} size={48} dim={off} /> : <span className="grid h-12 w-12 place-items-center rounded-lg border border-dashed border-ink-700 px-1 text-center text-[8px] leading-tight text-slate-500">{slot === 'weapon' ? kit.weapon.name : 'none'}</span>}
-              {kept && (
-                <span className={`absolute -right-1 -top-1 grid h-5 w-5 place-items-center rounded-full ring-2 ring-ink-800 ${fresh ? 'bg-orange-500 text-ink-950' : 'bg-ink-700 text-slate-400'}`} aria-hidden>
-                  <Flame size={11} />
-                </span>
-              )}
               <span className="text-[9px] text-slate-500">{SLOT_NAME[slot]}</span>
             </button>
           );
         })}
       </div>
-      <FallLine gear={gear} flame={flame} fresh={fresh} guarded={guarded} />
+      <p className="mt-2 text-[11px] leading-snug text-slate-500">What you wear always comes home. Fall in a run and the Fog takes only what you found and carry in the bag; the stairs or a win bring that home too.</p>
       </Side>
 
       <Side on={land} className="w-[9.5rem] shrink-0 overflow-y-auto rounded-xl bg-ink-900/60 p-2.5 min-[800px]:w-[11.5rem]">
@@ -98,14 +89,9 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
         <div className={land ? 'space-y-2' : 'mt-3 space-y-2'}>
           <ItemCard item={item} build={build} level={level} cls={cls} than={gear.worn[item.slot] ?? 'none'}>
             {worn ? (
-              <>
-                <button onClick={() => update((s) => setGuard(s, gear.guard === item.slot ? null : item.slot))} className={`flex flex-1 items-center justify-center gap-1 rounded-lg py-2 text-xs ${gear.guard === item.slot ? 'bg-orange-500 font-semibold text-ink-950' : 'bg-ink-700 text-orange-200'}`}>
-                  <Flame size={12} aria-hidden /> {gear.guard === item.slot ? `${flame} keeps it` : `${flame}, keep this`}
-                </button>
-                <button onClick={() => update((s) => takeOffToVault(s, item.slot))} disabled={gear.vault.length >= size} className="flex-1 rounded-lg bg-ink-700 py-2 text-xs text-slate-200 disabled:opacity-40">
-                  Into the vault
-                </button>
-              </>
+              <button onClick={() => update((s) => takeOffToVault(s, item.slot))} disabled={gear.vault.length >= size} className="flex-1 rounded-lg bg-ink-700 py-2 text-xs text-slate-200 disabled:opacity-40">
+                Into the vault
+              </button>
             ) : (
               <button onClick={() => update((s) => wearFromVault(s, item.id))} disabled={!can(item)} className="flex-1 rounded-lg bg-gold-400 py-2 text-xs font-semibold text-ink-950 disabled:bg-ink-700 disabled:text-slate-500">
                 Wear
@@ -152,22 +138,6 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
 /** A column of the card held sideways; upright it adds nothing, so the card stays as it was. */
 function Side({ on, className, children }: { on: boolean; className: string; children: ReactNode }) {
   return on ? <div className={className}>{children}</div> : <>{children}</>;
-}
-
-/** What a fall would cost, in one line: what you'd lose and what the flame keeps. */
-function FallLine({ gear, flame, fresh, guarded }: { gear: FogGear; flame: string; fresh: boolean; guarded: Item | undefined }) {
-  const worn = ITEM_SLOTS.map((s) => gear.worn[s]).filter((x): x is Item => !!x);
-  if (!worn.length) return <p className="mt-2 text-[11px] leading-snug text-slate-500">Die in a run and the Fog takes what you wore and carried; the stairs or a win bring it all home.</p>;
-  const lost = worn.filter((x) => !(fresh && x === guarded)).length;
-  return (
-    <p className={`mt-2 rounded-lg px-3 py-2 text-[11px] leading-snug ${guarded && fresh ? 'bg-orange-950/50 text-orange-200' : 'bg-ink-900 text-slate-400'}`}>
-      {guarded
-        ? fresh
-          ? `If you fall, ${flame} keeps your ${nameOf(guarded)}. ${lost ? `The Fog takes the other ${lost === 1 ? 'one' : lost} and what you carry.` : 'The Fog takes what you carry.'}`
-          : `${flame} would keep your ${nameOf(guarded)} if you fall, but only for 2 days after a workout. Train to light it.`
-        : `If you fall, the Fog takes all ${worn.length === 1 ? 'of it' : worn.length} and what you carry. Tap one and give it to ${flame === 'Your flame' ? 'your flame' : flame} to keep.`}
-    </p>
-  );
 }
 
 /** The co-op materials you have, in a row (only once you have any). */

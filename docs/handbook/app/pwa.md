@@ -42,5 +42,5 @@ move where a picture rings the button, its case in `install.ts` under `src/sprit
 `public/data/exercises.json` is the exercise library as data for tools outside the app (not used
 by the app itself, which bundles the library), see [../game/exercise-library.md](../game/exercise-library.md).
 
-The game must keep working offline: the Fog's code is fetched while the Fog tab is idle
+The game must keep working offline: the Fog's code is fetched while the Play tab is idle
 (`PlayTab.tsx`) so a run can start with no network, and music is synthesized (no audio files).

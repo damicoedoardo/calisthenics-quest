@@ -105,7 +105,7 @@ every `GEAR_EVERY` workouts (`tiersAt`, `nextForge`); it doesn't any more. `migr
 it had made as the hero's look (`fogGear.kit`), and `gearOf` shows the finer of that and the
 item you wear from the Fog. A worn item's slot also carries that item's name and look (`Gear.item`:
 kind, rarity, seed, from `looksOf` in `src/game/dungeon/items.ts`), so the hero wears the very
-item everywhere the hero is drawn (Hero tab, the Fog tab's ready strip, the header, the Fog run's sheets); without
+item everywhere the hero is drawn (Hero tab, the Play tab's ready strip, the header, the Fog run's sheets); without
 one, the slot shows the tier look. Workouts now earn embers for Mira's forge on the Hero tab (Gear)
 ([forge.md](forge.md)). The art for each tier is in [sprites.md](sprites.md).
 

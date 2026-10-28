@@ -47,13 +47,8 @@ export const STEPS: { embers: number; mats: Partial<Record<MatId, number>>; odds
     that undoes weeks. */
 export const FORGE_RISK = { drop: 0.5, pity: 0.05, rested: 0.1, restedDays: 2 } as const;
 
-/** Plus levels an item never slips below once reached, by a miss or a fall. */
+/** Plus levels an item never slips below once reached, by a miss at the forge. */
 export const SAFE_POINTS = [6, 10, 13] as const;
-
-/** A fall in a run: an item at `from` or more isn't lost but comes home, slipped to the safe point
-    below it (a +10 to +6, a +12 to +10, a +15 to +13). Goal: the best gear is a long road, so a
-    fall costs some of it, never all of it. */
-export const FALL_KEEP = { from: 10 } as const;
 
 /** How often a co-op run's kills drop materials, per hero (each hero rolls their own). Solo runs
     drop none. Harder: lower. Goal: a co-op run of a whole zone finds 2-3 threads and now and

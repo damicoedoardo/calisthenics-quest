@@ -13,7 +13,7 @@ import { ZONES } from '@/lib/fog';
 import { embersOf, matsOf } from '@/lib/forge';
 import { coins } from '@/lib/sweat';
 import { giveSp, spOwned, spWorn } from '@/lib/sp';
-import { exportState, inSandbox, parseImport } from '@/lib/store';
+import { devSaveOn, exportState, inSandbox, parseImport, resetDevSave } from '@/lib/store';
 import {
   addFakeWorkouts,
   emptyVault,
@@ -62,7 +62,7 @@ interface Props {
   onGo: (to: DevGo) => void;
   /** Start a Fog run on this save, at a spot. */
   onRun: (zone: number, at?: RunStart) => void;
-  /** On the live app dev mode can be turned off again; previews always have it. */
+  /** Switch developer mode off: back to the real save (only while on the developer save). */
   onTurnOff?: () => void;
   onClose: () => void;
 }
@@ -164,7 +164,7 @@ export function DevPanel(props: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 pt-4">
-          <p className="font-pixel text-[10px] text-sky-300">Developer mode{inSandbox() ? ' · sandbox' : ''}</p>
+          <p className="font-pixel text-[10px] text-sky-300">Developer mode{inSandbox() ? ' · sandbox' : devSaveOn() ? ' · dev save' : ''}</p>
           <button aria-label="Close" onClick={() => onClose()} className="grid h-9 w-9 place-items-center rounded-lg bg-ink-800 text-slate-300">
             <X size={16} />
           </button>
@@ -239,7 +239,7 @@ function GoPane({ onGo, onClose }: Props) {
         <Row icon={<Film size={16} />} label="Story Lab" note="Any scene, any flame name and letter, every place" href="/lab/story" />
         <Row icon={<Sparkles size={16} />} label="Sprite Lab" note="Every sprite, item and look" href="/lab" />
         <Row icon={<Swords size={16} />} label="The sixteen SPs" note="Each class's four, boy and girl, idle, walk, attack" href="/lab/sp" />
-        <Row icon={<Compass size={16} />} label="The world picker" note="The Fog tab's worlds on made-up saves" href="/lab/worlds" />
+        <Row icon={<Compass size={16} />} label="The world picker" note="The Play tab's worlds on made-up saves" href="/lab/worlds" />
         <Row icon={<Music size={16} />} label="Music Lab" note="Every theme and sting" href="/lab/music" />
       </Section>
     </>
@@ -648,7 +648,7 @@ function SavePane({ state, update, onTurnOff, onClose }: Props) {
 
   return (
     <>
-      <Section title={`This save: ${state.sessions.length} workouts${inSandbox() ? ' (the sandbox; your real save is untouched)' : ''}`}>
+      <Section title={`This save: ${state.sessions.length} workouts${inSandbox() ? ' (the sandbox; your real save is untouched)' : devSaveOn() ? ' (the developer save; your real hero is untouched)' : ''}`}>
         <Chips>
           <button onClick={copy} className={`${chip} inline-flex items-center gap-1.5`}>
             <Copy size={14} /> Copy
@@ -699,15 +699,22 @@ function SavePane({ state, update, onTurnOff, onClose }: Props) {
         >
           {wipe ? 'Tap again to wipe this save' : 'Start over as a new player'}
         </button>
+        {devSaveOn() && (
+          <Chips>
+            <button onClick={() => resetDevSave(true)} className={chip}>
+              Copy my real hero in again
+            </button>
+          </Chips>
+        )}
         {onTurnOff && (
           <button
             onClick={() => {
               onClose();
               onTurnOff();
             }}
-            className="w-full py-2 text-xs text-slate-500"
+            className="w-full rounded-lg bg-ink-700 py-2.5 text-sm text-slate-200"
           >
-            Turn off developer mode
+            Turn off developer mode: back to my hero
           </button>
         )}
       </Section>

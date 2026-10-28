@@ -35,7 +35,7 @@ import { sawScene, scenesToPlay, storyState, type StoryState } from '@/story/eng
 import { withTodayPage } from '@/story/daily';
 import { heroVariant } from '@/story/flame';
 import type { Scene } from '@/story/types';
-import { inSandbox, useGameState } from '@/lib/store';
+import { inSandbox, offRecord, useGameState } from '@/lib/store';
 import { recordRun, ROAD_ZONES, ZONES, zoneByCode, type Zone } from '@/lib/fog';
 import { wonRoad } from '@/lib/road';
 import { settleGear } from '@/lib/fog-gear';
@@ -51,7 +51,7 @@ type Tab = 'today' | 'train' | 'play' | 'hero';
 const TABS: { id: Tab; label: string; icon: 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabHero' }[] = [
   { id: 'today', label: 'Today', icon: 'tabToday' },
   { id: 'train', label: 'Train', icon: 'tabTrain' },
-  { id: 'play', label: 'Fog', icon: 'tabPlay' },
+  { id: 'play', label: 'Play', icon: 'tabPlay' },
   { id: 'hero', label: 'Hero', icon: 'tabHero' },
 ];
 
@@ -95,14 +95,15 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   // The few seconds when the app opens (once per open, not in the sandbox or before the prologue).
   const [opening, setOpening] = useState(false);
   const jumped = useRef(false);
-  // The cloud backup, when signed in. Never before the save has loaded, never in the sandbox.
-  const cloud = useCloudSync(state, update, !ready || inSandbox());
+  // The cloud backup, when signed in. Never before the save has loaded, never in the sandbox or
+  // on the developer save.
+  const cloud = useCloudSync(state, update, !ready || offRecord());
   // Shows you online to your friends while the app is open, and in the Fog during a run.
-  useFriendsBeat(state, run?.name ?? null, !ready || inSandbox());
+  useFriendsBeat(state, run?.name ?? null, !ready || offRecord());
   // After the install step, an account: a hard rule, no playing on without one (SignInGate).
   const { signedIn } = useCloudStatus();
   // Parties: kept fresh while signed in; a start the leader made opens the run here too.
-  usePartyPoll(signedIn, !ready || inSandbox());
+  usePartyPoll(signedIn, !ready || offRecord());
   const { party } = usePartyView();
   const [partyRun, setPartyRun] = useState<{ seed: number; friends: FriendCard[] } | null>(null);
   useEffect(() => {
@@ -177,7 +178,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     setPartyRun({ seed: go.seed, friends: others(party, partyMe() ?? '') });
     setRun(zone);
   }, [party, busy]);
-  const { dev, live, toggle: setDev } = useDevMode();
+  const { dev, allowed: devAllowed, on: devOn, setOn: setDevOn } = useDevMode();
   // Play stats for balancing and to see who comes back (off until PostHog is set up).
   useAnalytics(state, ready, signedIn, dev);
   // While a screen is open over the tabs, the tabs underneath are out of reach: no keyboard focus
@@ -193,13 +194,6 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     applied.current = covered;
     root.current.querySelectorAll(':scope > header, :scope > main, :scope > nav').forEach((el) => el.toggleAttribute('inert', covered));
   });
-  // Seven quick taps on the FORMA name unlock developer mode on the live app.
-  const taps = useRef<number[]>([]);
-  const tapName = () => {
-    const now = Date.now();
-    taps.current = [...taps.current.filter((t) => now - t < 3000), now];
-    if (taps.current.length >= 7 && !dev) setDev(true);
-  };
   const lvl = levelInfo(totalXp(state));
   const gear = gearOf(state);
 
@@ -321,6 +315,16 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
             </a>
           </div>
         )}
+        {devOn && (
+          // The developer save: everything here stays off the real hero. Sideways, a small tag.
+          <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-dashed border-sky-400/60 px-3 py-1.5 text-[11px] text-sky-300 land:order-last land:mb-0 land:shrink-0 land:px-2 land:py-1">
+            <span className="land:hidden">Developer save: your hero is untouched</span>
+            <span className="hidden land:inline">Dev save</span>
+            <button onClick={() => setDevOn(false)} className="shrink-0 underline">
+              Turn off
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-3 land:min-w-0 land:flex-1">
           <button onClick={() => setYou(true)} aria-label="You: your letter, quest log and settings" className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800 active:scale-95 land:hidden desk:hidden">
             <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
@@ -328,7 +332,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           <div className="min-w-0 flex-1 land:flex land:items-center land:gap-4">
             <div className="flex items-baseline justify-between land:shrink-0 land:items-center land:gap-4">
               <div className="flex items-center gap-2">
-                <p onClick={tapName} className="font-pixel text-sm tracking-widest text-gold-400">
+                <p className="font-pixel text-sm tracking-widest text-gold-400">
                   FORMA
                 </p>
                 {dev && <DevButton onClick={() => setDevOpen(true)} />}
@@ -416,7 +420,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
             setRunStart(at);
             setRun(ZONES[zone]);
           }}
-          onTurnOff={live ? () => setDev(false) : undefined}
+          onTurnOff={devOn ? () => setDevOn(false) : undefined}
           onClose={() => setDevOpen(false)}
         />
       )}
@@ -473,7 +477,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           onCancel={() => setPicker(null)}
         />
       )}
-      {you && !busy && <YouPage state={state} update={update} onReplayOpening={() => setReplaying(true)} onClose={() => setYou(false)} />}
+      {you && !busy && <YouPage state={state} update={update} onReplayOpening={() => setReplaying(true)} onClose={() => setYou(false)} devSwitch={devAllowed ? { on: devOn, set: setDevOn } : undefined} />}
       <CloudChoice phone={state} onChoose={cloud.choose} />
       {opening && <Opening state={state} onDone={() => setOpening(false)} />}
     </div>

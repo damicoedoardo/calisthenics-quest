@@ -1,12 +1,12 @@
 ---
 type: conceptual
-title: Mira's forge and the flame
-description: What you do with Fog gear between runs, on the Hero tab's Gear part — embers from workouts, Mira's forge (upgrade +1..+15 with co-op materials from +6, misses from +7, safe marks, a new look every few pluses), reroll, melt down, the one item your flame keeps if you fall — rules in src/lib/forge.ts and fog-gear.ts, numbers in src/balance/upgrades.ts, screen FogGearCard.tsx.
+title: Mira's forge
+description: What you do with Fog gear between runs, on the Hero tab's Gear part — embers from workouts, Mira's forge (upgrade +1..+15 with co-op materials from +6, misses from +7, safe marks, a new look every few pluses), reroll, melt down; what you wear always comes home from a fall — rules in src/lib/forge.ts and fog-gear.ts, numbers in src/balance/upgrades.ts, screen FogGearCard.tsx.
 tags: [game, fog, forge, gear, co-op]
 timestamp: 2026-10-28
 ---
 
-# Mira's forge and the flame
+# Mira's forge
 
 Between runs your gear lives on the Hero tab's Gear part (`src/components/FogGearCard.tsx`): the
 three slots you wear, the vault, and, for the item you tap, what you can do with it. Each vault
@@ -53,16 +53,14 @@ camp was tried for this and dropped: Edoardo wanted it on the normal screens.)
   `RunEnd.mats` and `settleGear` keeps them however the run ends. Friends can give them to each
   other (`giveMats`, `takeGifts`; the server side is in
   [../backend/friends.md](../backend/friends.md)).
-- **The flame** (`src/lib/fog-gear.ts`): you give one worn slot to your flame (`setGuard`, saved
-  as `fogGear.guard`; a flame badge marks it). If you trained in the last 2 days (`flameGuards`)
-  and die, `settleGear` keeps that item (`out.held`); the rest is lost as usual.
-- **Forged too well to lose**: an item at `FALL_KEEP.from` (+10) or more isn't lost in a fall. It
-  comes home slipped to the safe mark under it (`afterFall`: +10 to +6, +12 to +10, +15 to +13),
-  worn ones on the hero and carried ones into the vault (`out.slipped`). `atRisk` lists them as
-  `slip`, and the run's bag says so.
+- **Forging is never wasted** (`src/lib/fog-gear.ts`, Edoardo 2026-10-28): a fall never takes
+  what you wear, nor anything you brought from home, so an upgraded item can't be lost in a run.
+  A fall takes only what you found that run and still carry in the bag (see [fog.md](fog.md)).
+  The flame used to keep one chosen item through a fall (`fogGear.guard`, with forged +10 gear
+  slipping home a few pluses lower); both are gone, and `migrate()` drops `guard` from old saves.
 - **After a run**: what a full vault can't take, Mira melts into embers (`out.embers`).
-  `fogGear.deaths` counts falls; on the first one the results show Mira's line (`GearRecap` in
-  `FogRun.tsx`), which also lists materials found and gear that slipped home.
+  `fogGear.deaths` counts falls that cost something; on the first one the results show Mira's line
+  (`GearRecap` in `FogRun.tsx`), which also lists materials found.
 - **The old forge is gone**: gear no longer forges itself every few workouts. `migrate()` froze
   what it had made as `fogGear.kit`, and `gearOf` (`src/lib/game.ts`) shows the finer of that
   look and the item you wear (`tierOf`). See [training.md](training.md).
@@ -77,11 +75,10 @@ per step, tries, materials per co-op run) is on the balance sheet ([balance.md](
 |---|---|
 | Change a step's embers, materials, odds or strength | `STEPS` in `src/balance/upgrades.ts`, then `pnpm balance` |
 | Change how harsh a miss is, pity, the training bonus | `FORGE_RISK` in `src/balance/upgrades.ts` |
-| Change the safe marks, or what a fall does to forged gear | `SAFE_POINTS`, `FALL_KEEP` in `src/balance/upgrades.ts` |
+| Change the safe marks a miss can't slip under | `SAFE_POINTS` in `src/balance/upgrades.ts` |
 | Change how often co-op runs drop materials | `MAT_DROPS` in `src/balance/upgrades.ts` (rolled by `findMats` in `engine.ts`) |
 | Change the materials' names, colors, where they come from | `MATS` in `src/balance/upgrades.ts` |
 | Change the look of each band | `BANDS` in `src/balance/upgrades.ts`; how it's drawn in `PlusGlow.tsx` and `wearLook` in `scene.ts` |
 | Change embers per workout, reroll price | `EMBERS`, `FORGE` in `src/balance/economy.ts` |
 | Change what melting gives | `MELT` in `src/balance/economy.ts` (`salvageValue` in `fog-gear.ts`) |
-| Change how long the flame's guard lasts | `FLAME_GUARD_DAYS` in `src/balance/economy.ts` |
 | Change the gear card, the forge's buttons or words | `src/components/FogGearCard.tsx` (`Forge`, `Mats`, Mira's lines in `SAID`) |

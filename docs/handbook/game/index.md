@@ -12,7 +12,7 @@ timestamp: 2026-10-28
 - [Story](story.md): the six chapters as data, scene format, daily lines, rules for the words
 - [Balance](balance.md): the design-for-balance rule, every balance number in `src/balance/`, the balance sheet, the changelog
 - [The Fog](fog.md): the rules around a run, zones, power from training, records, balance
-- [Mira's forge and the flame](forge.md): gear between runs: embers, upgrade, reroll, melt down, the item your flame keeps
+- [Mira's forge](forge.md): gear between runs: embers, upgrade, reroll, melt down; what you wear always comes home
 - [The Fog's dungeon](dungeon.md): content, the pure engine, the bot, the Phaser scene, how to change each
 - [The coach](coach.md): setup, the three-layer memory, the built-in coach that builds gym, calisthenics, running or mixed workouts, easier and swap, the guardrails, the coach brief
 - [Exercise library](exercise-library.md): 891 exercises with pixel demos, tips and mistakes, searchable by a coach

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { seeded } from './random';
-import { initialState, type GameState } from './game';
+import { initialState, migrate, type GameState } from './game';
 import { atRisk, discardItem, settleGear, takeOffToVault, vaultSize, wearFromVault, wornFor } from './fog-gear';
 import { rollItem, type Item } from '@/game/dungeon/items';
 
@@ -53,58 +53,55 @@ describe('Fog gear between runs', () => {
     expect(out.left).toHaveLength(2);
   });
 
-  it('dying loses what you wore and carried, but the vault is safe', () => {
-    const kept = item('charm');
-    const before: GameState = { ...strong(initialState()), fogGear: { worn: {}, vault: [kept] } };
+  it('a fall keeps what you wear and the vault, and loses what you found in the bag', () => {
+    const safe = item('charm'),
+      sword = item('weapon'),
+      found = item('armor');
+    const before: GameState = { ...strong(initialState()), fogGear: { worn: {}, vault: [safe] } };
+    const { state, out } = settleGear(before, { won: false, why: 'hp', gear: { worn: { weapon: sword }, bag: [found] } });
+    expect(out.kept).toBe(false);
+    expect(out.lost).toEqual([found]);
+    expect(state.fogGear?.worn).toEqual({ weapon: sword });
+    expect(state.fogGear?.vault).toEqual([safe]);
+    expect(state.fogGear?.deaths).toBe(1);
+  });
+
+  it('a fall keeps an item found in the run and worn when you fell', () => {
+    const found = item('armor');
+    const { state, out } = settleGear(strong(initialState()), { won: false, why: 'hp', gear: { worn: { armor: found }, bag: [] } });
+    expect(out.lost).toEqual([]);
+    expect(state.fogGear?.worn.armor).toBe(found);
+    expect(state.fogGear?.deaths ?? 0).toBe(0);
+  });
+
+  it('what you brought from home comes back from a fall, even taken off into the bag', () => {
+    const sword = { ...item('weapon'), plus: 9 },
+      better = item('weapon');
+    const before: GameState = { ...strong(initialState()), fogGear: { worn: { weapon: sword }, vault: [] } };
+    // Mid-run you wore a sword you found, so yours went into the bag.
+    const run = { worn: { weapon: better }, bag: [sword] };
+    expect(atRisk(before, run.bag)).toEqual([]);
+    const { state, out } = settleGear(before, { won: false, why: 'hp', gear: run });
+    expect(out.lost).toEqual([]);
+    expect(state.fogGear?.worn.weapon).toBe(better);
+    expect(state.fogGear?.vault).toEqual([sword]);
+  });
+
+  it('an old save drops the slot the flame used to keep', () => {
     const sword = item('weapon');
-    const { state, out } = settleGear(before, { won: false, why: 'hp', gear: { worn: { weapon: sword }, bag: [item('armor')] } });
-    expect(out.lost).toHaveLength(2);
-    expect(state.fogGear?.worn).toEqual({});
-    expect(state.fogGear?.vault).toEqual([kept]);
+    const old = { ...initialState(), fogGear: { worn: { weapon: sword }, vault: [], guard: 'weapon', kit: initialState().fogGear?.kit } };
+    expect(migrate(JSON.parse(JSON.stringify(old))).fogGear).not.toHaveProperty('guard');
   });
 
-  it('the flame holds one worn item through a fall, if you trained in the last 2 days', () => {
+  it('mid-run, shows what a fall would cost: what you found in the bag, never what you wear', () => {
     const sword = item('weapon'),
-      plate = item('armor'),
-      now = new Date(2026, 9, 27, 12),
-      trained = (daysAgo: number): GameState => ({
-        ...strong(initialState()),
-        sessions: [{ id: 'a', date: new Date(now.getTime() - daysAgo * 864e5).toISOString(), kind: 'full', day: 'A', xp: 100, breakdown: [], entries: [] }],
-        fogGear: { worn: { weapon: sword, armor: plate }, vault: [], guard: 'weapon' },
-      });
-    const fall = { won: false, why: 'hp', gear: { worn: { weapon: sword, armor: plate }, bag: [] } };
-    const fresh = settleGear(trained(1), fall, now);
-    expect(fresh.out.held).toBe(sword);
-    expect(fresh.out.lost).toEqual([plate]);
-    expect(fresh.state.fogGear?.worn).toEqual({ weapon: sword });
-    expect(fresh.state.fogGear?.deaths).toBe(1);
-    const stale = settleGear(trained(4), fall, now);
-    expect(stale.out.held).toBeUndefined();
-    expect(stale.state.fogGear?.worn).toEqual({});
-  });
-
-  it('mid-run, shows what a fall would cost: the flame holds the guarded item, the starter kit is safe', () => {
-    const sword = item('weapon'),
-      plate = item('armor'),
       found = item('charm'),
       kit: Item = { ...item('armor'), starter: true },
-      now = new Date(2026, 9, 27, 12),
-      trained = (daysAgo: number): GameState => ({
-        ...strong(initialState()),
-        sessions: [{ id: 'a', date: new Date(now.getTime() - daysAgo * 864e5).toISOString(), kind: 'full', day: 'A', xp: 100, breakdown: [], entries: [] }],
-        fogGear: { worn: { weapon: sword }, vault: [], guard: 'weapon' },
-      });
-    const fresh = atRisk(trained(1), { worn: { weapon: sword, armor: plate }, bag: [found] }, now);
-    expect(fresh.held).toBe(sword);
-    expect(fresh.cold).toBeUndefined();
-    expect(fresh.lost).toEqual([plate, found]);
+      s: GameState = { ...strong(initialState()), fogGear: { worn: { weapon: sword }, vault: [] } };
+    expect(atRisk(s, [found, kit])).toEqual([found]);
     // The same fall, settled, loses the same things.
-    expect(settleGear(trained(1), { won: false, why: 'hp', gear: { worn: { weapon: sword, armor: plate }, bag: [found] } }, now).out.lost).toEqual(fresh.lost);
-    const stale = atRisk(trained(4), { worn: { weapon: sword, armor: kit }, bag: [] }, now);
-    expect(stale.held).toBeUndefined();
-    expect(stale.cold).toBe(sword);
-    expect(stale.lost).toEqual([sword]);
-    expect(atRisk(initialState(), { worn: { armor: kit }, bag: [] }, now)).toEqual({ held: undefined, cold: undefined, lost: [], slip: [] });
+    expect(settleGear(s, { won: false, why: 'hp', gear: { worn: { weapon: sword }, bag: [found] } }).out.lost).toEqual([found]);
+    expect(atRisk(initialState(), [])).toEqual([]);
   });
 
   it('what the full vault leaves behind, Mira melts into embers', () => {

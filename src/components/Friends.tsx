@@ -149,7 +149,7 @@ function GiveMats({ f, state, update, done }: { f: FriendCard; state: GameState;
   );
 }
 
-/** The Fog tab, Together: your friend code, adding friends, and who is online, in the Fog, or trained today.
+/** The Play tab, Together: your friend code, adding friends, and who is online, in the Fog, or trained today.
     Friends can invite each other to a party and give each other forge materials. */
 export function FriendsCard({ state, update, sandbox }: { state: GameState; update: Update; sandbox: boolean }) {
   const [giving, setGiving] = useState<string | null>(null);

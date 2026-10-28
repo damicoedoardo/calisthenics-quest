@@ -10,14 +10,14 @@ import { ITEM_SLOTS, SLOT_NAME, starterKit, type Item, type ItemSlot } from '@/g
 import { chapterStart } from '@/story/engine';
 import { ROAD_BANNER, ROAD_CHAPTERS } from '@/story/road';
 import { ROAD_LENGTH, roadAt, startRoad } from '@/lib/road';
-import { inSandbox } from '@/lib/store';
+import { offRecord } from '@/lib/store';
 import { setLobbyOpen, usePartyView } from '@/lib/party-client';
 import { ItemTile } from './ItemCard';
 import { WorldPicker } from './WorldPicker';
 import { FriendsCard } from './Friends';
 import { useLand } from './useLand';
 
-/** The Fog tab's two doors: Story (alone, the six worlds that move the story) and Together
+/** The Play tab's two doors: Story (alone, the six worlds that move the story) and Together
     (online with friends, never moves the story). */
 export type FogMode = 'story' | 'together';
 
@@ -32,7 +32,7 @@ interface Props {
 }
 
 /**
- * While the Fog tab sits idle, get the newest open zone's run ready: download and load the game
+ * While the Play tab sits idle, get the newest open zone's run ready: download and load the game
  * code and draw its sprite sheets (both are cached), so tapping Play goes straight to the run.
  */
 function useWarmRun(state: GameState) {
@@ -168,7 +168,7 @@ function Ready({ state, onGear, land = false }: { state: GameState; onGear: () =
     materials for +6 and up drop only here. */
 function Together({ state, update, land = false }: { state: GameState; update: (fn: (s: GameState) => GameState) => void; land?: boolean }) {
   const { party } = usePartyView();
-  const sandbox = inSandbox();
+  const sandbox = offRecord();
   return (
     <div className={land ? 'grid grid-cols-2 gap-3' : 'space-y-4'}>
       <section className="self-start rounded-2xl bg-ink-800 p-4">
@@ -189,7 +189,7 @@ function Together({ state, update, land = false }: { state: GameState; update: (
       </section>
       <RoadCard state={state} update={update} />
       <FriendsCard state={state} update={update} sandbox={sandbox} />
-      {sandbox && <p className="rounded-2xl bg-ink-800 p-4 text-xs text-slate-500">Friends show here on your real save, once you&apos;re signed in.</p>}
+      {sandbox && <p className="rounded-2xl bg-ink-800 p-4 text-xs text-slate-500">Friends show here on your real save, once you&apos;re signed in (not in the sandbox or on the developer save).</p>}
     </div>
   );
 }

@@ -65,7 +65,7 @@ characters/moves.ts   the exercise library's 81 movements (lifts, machines, core
                       mobility) and the gear each can hold (`Kit`: barbell, dumbbell, cable, band...)
 engine/skeleton.ts    the jointed skeleton both use: IK elbows and knees, props (bench, bar, floor),
                       weights, cables and bands, and how the figure is drawn
-characters/worlds.ts  the Fog tab's world picker: the big padlock on a shut world (`worldLock`) and the
+characters/worlds.ts  the Play tab's world picker: the big padlock on a shut world (`worldLock`) and the
                       bank of fog that drifts over it (`fogBank`)
 characters/install.ts the install guide's pictures (`installStep`, opts { step }): a small phone with
                       the button to tap ringed in gold, drawn on a character grid

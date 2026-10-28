@@ -21,7 +21,7 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 | `devPoints` | Optional. Stat points given in developer mode's Hero tab, counted on top of the earned ones (`pointsEarned`) |
 | `buildAt`, `sweat` | Optional. Points as they stood at the last workout (what the free take-back is measured from), and sweat coins spent plus class changes made (`src/lib/sweat.ts`, see [../game/training.md](../game/training.md)) |
 | `sp` | Optional. The SPs: the workout count when the Wanderer gave the first, whether its trial's floor was reached, the later ones the story gave (`more`), the one picked to wear (`worn`), and `off` when taken off (`src/lib/sp.ts`, see [../game/fog.md](../game/fog.md)) |
-| `fogGear` | Optional. What you wear into the Fog and the vault at home (`src/lib/fog-gear.ts`, see [../game/fog.md](../game/fog.md)); embers found and spent, co-op materials for the forge (`mats`), the slot the flame holds (`guard`), `deaths`, and the starter kit's look (`kit`, set by `migrate()` from the old forge) ([../game/forge.md](../game/forge.md)) |
+| `fogGear` | Optional. What you wear into the Fog and the vault at home (`src/lib/fog-gear.ts`, see [../game/fog.md](../game/fog.md)); embers found and spent, co-op materials for the forge (`mats`), `deaths`, and the starter kit's look (`kit`, set by `migrate()` from the old forge) ([../game/forge.md](../game/forge.md)) |
 | `draft` | The workout in progress, or null (`runAt`: when the run on screen started). A draft left from an earlier day is closed onto that day (`closeStaleDraft`). `open` marks the workout screen as open (the app reopens on it) and `restUntil` is when the running rest ends (ms), both optional |
 | `seenScenes`, `sceneMark` | Story scenes already played, and how many played at the last story moment |
 | `answers` | What the player chose in the story (heart moments, villager stories, the Ember Road's three questions `road1`-`road3`) |
@@ -52,3 +52,10 @@ load. `parseImport` (You page Restore) accepts versions 1 to 3 and runs `migrate
 `?sandbox` in the URL switches the key to `forma-sandbox-v1` (`SANDBOX_KEY`), so the real save is
 never touched. `/lab/night` writes a sandbox save for a given moment and opens the app on it. See
 [../app/dev-mode-and-labs.md](../app/dev-mode-and-labs.md).
+
+## Developer save
+
+While developer mode is on (`forma-dev-on` is `1`, set by `switchDevSave`), the key is
+`forma-dev-save-v1` (`DEV_SAVE_KEY`): a copy of the real save the first time, kept after that.
+`offRecord()` (the sandbox or the developer save) keeps the cloud, friends, parties and play stats
+off. See [../app/dev-mode-and-labs.md](../app/dev-mode-and-labs.md).
