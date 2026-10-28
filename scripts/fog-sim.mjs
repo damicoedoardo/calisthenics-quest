@@ -14,6 +14,9 @@
 // hearts (a weaker boss and free skills at the start; edgeFor in src/lib/fog.ts). SP=2 wears the
 // class's second SP (3, 4 likewise) once the model player has one; NOSP=1 wears none. OUT=file.json
 // also writes every run (won, seconds, hits taken) per snapshot and class, to compare in a script.
+// BUILDS=even,glass,tank,quick plays each way of spending points (BUILD_PROFILES in
+// src/balance/dungeon.ts) with the save's points, the four classes averaged, and checks no build
+// runs away (BUILD_FAIR).
 import { readdirSync, readFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { register } from 'node:module';
@@ -48,6 +51,7 @@ if (!isMainThread) {
   const { buildOf } = await import(`${root}src/lib/stats.ts`);
   const { heroLevel } = await import(`${root}src/lib/game.ts`);
   const { seasonedKit } = await import(`${root}src/sim/seasoned.ts`);
+  const { buildFor } = await import(`${root}src/sim/builds.ts`);
   const { seeded } = await import(`${root}src/lib/random.ts`);
   // GEAR=0 plays in the starter kit; by default the bot walks in with what a player keeps (SEASONED).
   const geared = process.env.GEAR !== '0';
@@ -59,9 +63,10 @@ if (!isMainThread) {
   const now = Date.now();
   parentPort.on('message', (job) => {
     const state = JSON.parse(readFileSync(job.file, 'utf8'));
-    const power = powerOf(shift(state, now), new Date(now));
+
     // Every run starts in what a player keeps (seasonedKit; GEAR=0: the starter kit); the bot wears what drops if its points allow.
-    const build = buildOf(state),
+    const build = job.build ? buildFor(state, job.build) : buildOf(state),
+      power = powerOf(shift({ ...state, build }, now), new Date(now)),
       level = heroLevel(state);
     const z = ZONES[job.zone];
     const zone = { ...z, hp: z.hp * job.scale, dmg: z.dmg * job.scale };
@@ -115,12 +120,12 @@ if (!isMainThread) {
   const play = (job) => new Promise((done) => (queue.push({ job, done }), next()));
 
   /** Every class on one snapshot at a scale: the same seeds each time, so scales compare fairly. */
-  async function measure(snap, scale) {
+  async function measure(snap, scale, build) {
     const slice = Math.max(5, Math.ceil(runs / 4));
     const per = await Promise.all(
       classes.map(async (cls) => {
         const parts = [];
-        for (let i = 0; i < runs; i += slice) parts.push(play({ file: snap.file, zone: snap.zone, cls, scale, runs: Math.min(slice, runs - i), seed: 1 + i * 104729 }));
+        for (let i = 0; i < runs; i += slice) parts.push(play({ file: snap.file, zone: snap.zone, cls, scale, build, runs: Math.min(slice, runs - i), seed: 1 + i * 104729 }));
         return { cls, res: (await Promise.all(parts)).flat() };
       }),
     );
@@ -130,7 +135,30 @@ if (!isMainThread) {
   const pct = (x) => `${Math.round(x * 100)}%`.padStart(4);
   const t0 = performance.now();
 
-  if (!tune) {
+  if (process.env.BUILDS) {
+    // Each way of spending points, every class averaged, against the others.
+    const builds = process.env.BUILDS.split(',');
+    const { BUILD_FAIR } = await import(`${root}src/balance/dungeon.ts`);
+    console.log(`${'snapshot'.padEnd(12)} ${builds.map((b) => b.padStart(8)).join('')}   (${classes.join(', ')} averaged)`);
+    const table = [];
+    for (const snap of snaps) {
+      const rates = [];
+      for (const b of builds) {
+        const per = await measure(snap, scales[snap.zone] ?? 1, b);
+        rates.push(per.reduce((n, p) => n + rate(p.res), 0) / per.length);
+      }
+      table.push({ snap, rates });
+      console.log(`${snap.label.padEnd(12)} ${rates.map((r) => pct(r).padStart(8)).join('')}`);
+    }
+    for (const kind of ['open', 'later']) {
+      const rows = table.filter((t) => t.snap.label.endsWith(kind));
+      if (!rows.length) continue;
+      const avg = builds.map((_, i) => rows.reduce((n, t) => n + t.rates[i], 0) / rows.length),
+        mean = avg.reduce((a, b) => a + b, 0) / avg.length,
+        ok = avg.every((a) => Math.abs(a - mean) <= BUILD_FAIR);
+      console.log(`${`${kind} (average)`.padEnd(16)} ${avg.map((a, i) => `${builds[i]} ${pct(a)}`).join('  ')}   all ${pct(mean)}: ${ok ? 'fair' : `a build is more than ${pct(BUILD_FAIR)} off`}`);
+    }
+  } else if (!tune) {
     const mins = (res) => {
       const t = res.filter((r) => r.won).map((r) => r.seconds).sort((a, b) => a - b);
       return t.length ? `${(t[Math.floor(t.length / 2)] / 60).toFixed(1)}m` : '-';

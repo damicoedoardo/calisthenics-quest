@@ -715,8 +715,9 @@ function newHero(hs: HeroSetup, id: number): Hero {
   };
 }
 
-/** The heroes still standing. */
-const standing = (run: Run) => run.party.filter((h) => h.hp > 0);
+const NOBODY: Hero[] = [];
+/** The heroes still standing (read-only: solo, it's the party itself, so no new list every call). */
+const standing = (run: Run): Hero[] => (run.party.length === 1 ? (run.party[0].hp > 0 ? run.party : NOBODY) : run.party.filter((h) => h.hp > 0));
 /** Unseen (Vanish): monsters lose this hero. */
 const hidden = (run: Run, h: Hero) => run.t < h.hideUntil;
 /** The hero a monster at x, y goes for: the nearest one still standing (one in sight first). */
@@ -1048,7 +1049,8 @@ function enterRoom(run: Run, from: Side | null) {
 
 /** Whether a body of radius r at x, y would sit inside a pillar. */
 function inPillar(run: Run, x: number, y: number, r: number) {
-  for (const p of run.terrain.pillars) if (closer(p.x - x, p.y - y, p.r + r)) return true;
+  const ps = run.terrain.pillars;
+  for (let i = 0; i < ps.length; i++) if (closer(ps[i].x - x, ps[i].y - y, ps[i].r + r)) return true;
   return false;
 }
 
@@ -1953,9 +1955,14 @@ function outOfPillars(run: Run, o: { x: number; y: number }, r: number) {
 }
 
 function clearBullets(run: Run, x: number, y: number, r: number) {
-  // Only build a new list when a shot goes.
-  if (run.bullets.every((b) => farther(b.x - x, b.y - y, r))) return;
-  run.bullets = run.bullets.filter((b) => farther(b.x - x, b.y - y, r));
+  // Only build a new list when a shot goes (plain loops: this runs for every flame every step).
+  const list = run.bullets;
+  let i = 0;
+  while (i < list.length && farther(list[i].x - x, list[i].y - y, r)) i++;
+  if (i === list.length) return;
+  const out = list.slice(0, i);
+  for (; i < list.length; i++) if (farther(list[i].x - x, list[i].y - y, r)) out.push(list[i]);
+  run.bullets = out;
 }
 
 // ---------- monsters ----------
@@ -2199,7 +2206,23 @@ function moveBullets(run: Run) {
     up = standing(run),
     { w, h: H } = run.area,
     m = ROOM.wall;
-  run.bullets = run.bullets.filter((b) => {
+  // Kept in place, not a new list each step (this runs every step for every shot). As before, a
+  // shot added or a list swapped while the shots move (a barrel's blast) doesn't last the step.
+  const list = run.bullets,
+    n = list.length;
+  let keep = 0;
+  for (let i = 0; i < n; i++) {
+    const b = list[i];
+    if (moveBullet(run, b, now, up, w, H, m)) list[keep++] = b;
+  }
+  list.length = keep;
+  run.bullets = list;
+  moveMines(run, now, up);
+}
+
+/** One shot's step: false when it's gone (out of the room, into a pillar, a barrel, or you). */
+function moveBullet(run: Run, b: Bullet, now: number, up: Hero[], w: number, H: number, m: number): boolean {
+  {
     const age = now - b.born;
     if (b.style === 'homing' && age < HOMING.for) {
       // Turns toward you, but only so fast: a sidestep still beats it.
@@ -2241,8 +2264,11 @@ function moveBullets(run: Run) {
       return false;
     }
     return true;
-  });
-  // Bombs that land and burst.
+  }
+}
+
+/** Bombs that land and burst. */
+function moveMines(run: Run, now: number, up: Hero[]) {
   run.mines = run.mines.filter((mn) => {
     if (now < mn.at) return true;
     for (const h of up) if (Math.hypot(mn.x - h.x, mn.y - h.y) < mn.r + HERO_R - 4) hurt(run, h, mn.dmg, 'shot');
