@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { powerOf, ZONES } from '@/lib/fog';
 import { initialState } from '@/lib/game';
-import { HUMAN, SP_SKILL, SP_WEAPON } from '@/balance';
+import { CALM, HUMAN, PARTY, SP_SKILL, SP_WEAPON } from '@/balance';
 import { seeded } from '@/lib/random';
 import { botInput, playRun } from './bot';
 import { rollItem } from './items';
-import { ACROSS, attackKind, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, makeFloor, MIDS, mine, pickRelic, SAND, skipToBoss, skipToWarden, SP_NOS, SPLIT, stepRun, takeEvents, wardenFloor, type GameEvent, type Run, type Side, type SpNo } from './engine';
+import { ACROSS, attackKind, canOpen, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, makeFloor, MIDS, mine, pickRelic, SAND, skipToBoss, skipToWarden, SP_NOS, SPLIT, stepRun, takeEvents, wardenFloor, type GameEvent, type Run, type Side, type SpNo } from './engine';
 import type { ClassId } from '@/lib/gear';
 
 describe('mid-bosses', () => {
@@ -655,5 +655,98 @@ describe('a party (co-op)', () => {
     }
     expect(run.party[1].hp).toBe(0);
     expect(run.over).toBeNull();
+  });
+
+  // A party of two in a room with nobody left in it.
+  const cleared = (classId: ClassId = 'warrior') => {
+    const run = createRun({ zone: ZONES[0], power, classId, seed: 8, friends: [{ power, classId: 'archer' }] });
+    stepRun(run, []);
+    run.waves = [];
+    run.timers = [];
+    for (const f of run.foes) f.alive = false;
+    for (let i = 0; i < 5 && !run.cleared; i++) stepRun(run, []);
+    expect(run.cleared).toBe(true);
+    return run;
+  };
+  const idle = [{ x: 0, y: 0, ability: false }, { x: 0, y: 0, ability: false }];
+  const outAt = (run: Run, i: number, side: Side) => {
+    const d = run.doors.find((o) => o.side === side)!;
+    [run.party[i].x, run.party[i].y] = side === 'e' ? [d.x, -10] : side === 'w' ? [d.x, run.area.h + 10] : side === 'n' ? [-10, d.y] : [run.area.w + 10, d.y];
+  };
+
+  it('a door takes the party on only when everyone standing is in it', () => {
+    const run = cleared(),
+      side = run.doors[0].side,
+      at = run.map.at;
+    outAt(run, 0, side);
+    stepRun(run, idle);
+    expect(run.map.at).toBe(at);
+    expect(run.hero.waiting).toBe(true);
+    outAt(run, 1, side);
+    stepRun(run, idle);
+    expect(run.map.at).not.toBe(at);
+  });
+
+  it('a friend who is down is carried along: the door waits only for those standing', () => {
+    const run = cleared(),
+      side = run.doors[0].side,
+      at = run.map.at;
+    run.party[1].hp = 0;
+    outAt(run, 0, side);
+    stepRun(run, [idle[0]]);
+    expect(run.map.at).not.toBe(at);
+  });
+
+  it('the stairs wait for the whole party too', () => {
+    const run = cleared();
+    run.stairs = { x: run.area.w / 2, y: 110 };
+    [run.hero.x, run.hero.y] = [run.stairs.x, run.stairs.y];
+    stepRun(run, idle);
+    expect(run.stairsAsk).toBe(false);
+    [run.party[1].x, run.party[1].y] = [run.stairs.x + 4, run.stairs.y];
+    stepRun(run, idle);
+    expect(run.stairsAsk).toBe(true);
+  });
+
+  it('standing by a friend who is down brings them back up', () => {
+    const run = cleared(),
+      [me, friend] = run.party;
+    friend.hp = 0;
+    [me.x, me.y] = [friend.x + 20, friend.y];
+    for (let i = 0; i < 60 * (PARTY.revive.secs - 0.5); i++) stepRun(run, idle);
+    expect(friend.hp).toBe(0);
+    for (let i = 0; i < 60; i++) stepRun(run, idle);
+    expect(friend.hp).toBe(Math.round(friend.maxHp * PARTY.revive.hp));
+  });
+
+  it('each hero opens the chest once, for their own pick', () => {
+    const run = cleared(),
+      [me, friend] = run.party;
+    run.chest = { x: run.area.w / 2, y: run.area.h / 2, opened: false };
+    [me.x, me.y] = [run.chest.x, run.chest.y];
+    stepRun(run, idle);
+    expect(me.relicOffer).not.toBeNull();
+    expect(canOpen(run, me)).toBe(false);
+    expect(canOpen(run, friend)).toBe(true);
+    pickRelic(run, me.relicOffer![0], me);
+    [me.x, me.y] = [40, 40];
+    [friend.x, friend.y] = [run.chest.x, run.chest.y];
+    stepRun(run, idle);
+    expect(friend.relicOffer).not.toBeNull();
+  });
+
+  it('the shrine heals the whole party, and Stillness heals friends close by', () => {
+    const run = cleared('monk'),
+      [me, friend] = run.party;
+    run.terrain.shrine = { x: run.area.w / 2, y: run.area.h / 2, used: false };
+    me.hp = friend.hp = 10;
+    [me.x, me.y] = [run.terrain.shrine.x, run.terrain.shrine.y];
+    stepRun(run, idle);
+    expect(friend.hp).toBeGreaterThan(10);
+    friend.hp = 10;
+    [friend.x, friend.y] = [me.x + 60, me.y];
+    me.calm = CALM.full;
+    stepRun(run, [{ x: 0, y: 0, ability: true }, idle[1]]);
+    expect(friend.hp).toBeGreaterThan(10);
   });
 });

@@ -561,7 +561,7 @@ export const ABILITIES: Record<AbilityId, { name: string; text: string; cd: numb
   charge: { name: 'Charge', text: 'Rush ahead, untouchable, hitting everything you pass and cutting the shots in your way.', cd: ABILITY.charge.cd },
   volley: { name: 'Volley', text: 'Loose arrows all around you that pierce through.', cd: ABILITY.volley.cd },
   blink: { name: 'Blink', text: 'Vanish and appear ahead, bursting where you land and wiping shots nearby.', cd: ABILITY.blink.cd },
-  still: { name: 'Stillness', text: 'Breathe: heal some HP and push everything away. It fills as you fight: hits you land and hits you take.', cd: ABILITY.still.cd },
+  still: { name: 'Stillness', text: 'Breathe: heal some HP (friends beside you too) and push everything away. It fills as you fight: hits you land and hits you take.', cd: ABILITY.still.cd },
   shock: { name: 'Shockwave', text: 'Knock back everything near you and wipe the shots around you.', cd: ABILITY.shock.cd },
 };
 /** Which of a class's four SPs, in the order the story gives them. */
@@ -681,7 +681,7 @@ export const SP_MOVES: Record<SpMoveId, { name: string; text: string; shape: SpS
   // warrior
   leap: { name: 'Leap', shape: 'leap', text: 'Jump onto the monster nearest you and crash down in fire, hitting all around where you land.' },
   inferno: { name: 'Inferno', shape: 'field', text: 'Your final. Spin with the axe in a ring of fire that goes with you and keeps burning all it touches.' },
-  shieldwall: { name: 'Shield Wall', shape: 'guard', text: 'Raise the shield: for a moment nothing gets through, and what is close is pushed back.' },
+  shieldwall: { name: 'Shield Wall', shape: 'guard', text: 'Raise the shield: for a moment nothing gets through to you or friends beside you, and what is close is pushed back.' },
   judgment: { name: 'Judgment', shape: 'drop', aim: 'strongest', text: 'Your final. A hammer of light falls from the sky on the strongest monster in the room.' },
   harpoon: { name: 'Harpoon', shape: 'hook', text: 'Throw the lance: it hits the monster in front of you and drags it to you.' },
   tidalcharge: { name: 'Tidal Charge', shape: 'dash', text: 'Your final. Ride a wave right across the room, untouchable, hitting all you pass.' },
@@ -701,7 +701,7 @@ export const SP_MOVES: Record<SpMoveId, { name: string; text: string; shape: SpS
   meteor: { name: 'Meteor', shape: 'drop', text: 'Your final. A huge rock of fire falls on the monster nearest you and everything round it.' },
   bubble: { name: 'Bubble', shape: 'trap', text: 'Trap the monster nearest you in a bubble: it can\'t move or shoot until it pops.' },
   tsunami: { name: 'Tsunami', shape: 'all', text: 'Your final. A wave crosses the room, hits every monster and pushes them all back.' },
-  blessing: { name: 'Blessing', shape: 'guard', text: 'Light wraps round you: you heal, and for a moment nothing can touch you.' },
+  blessing: { name: 'Blessing', shape: 'guard', text: 'Light wraps round you and friends beside you: you all heal, and for a moment nothing can touch you.' },
   radiance: { name: 'Radiance', shape: 'all', text: 'Your final. A blinding light: every monster in the room is hit and all but stops.' },
   curse: { name: 'Curse', shape: 'mark', text: 'Curse the monster nearest you: for a while it takes more from every hit.' },
   voidedge: { name: 'Void Edge', shape: 'beam', text: 'Your final. A giant blade of shadow cuts through the room in front of you.' },
@@ -710,7 +710,7 @@ export const SP_MOVES: Record<SpMoveId, { name: string; text: string; shape: SpS
   dragonroar: { name: 'Dragon Roar', shape: 'beam', text: 'Your final. A dragon of fire flies out from you through everything in its way.' },
   pounce: { name: 'Pounce', shape: 'leap', text: 'Leap on a monster far away and rake it as you land.' },
   hundredclaws: { name: 'Hundred Claws', shape: 'drop', aim: 'strongest', text: 'Your final. A storm of claws on the strongest monster in the room.' },
-  tidespin: { name: 'Tide Spin', shape: 'guard', text: 'Spin the staff like a wheel: it stops every shot for a moment and pushes back what is close.' },
+  tidespin: { name: 'Tide Spin', shape: 'guard', text: 'Spin the staff like a wheel: it stops every shot for a moment, for you and friends beside you, and pushes back what is close.' },
   riverdance: { name: 'River Dance', shape: 'chain', text: 'Your final. Flow from monster to monster like water, striking each.' },
   kiwave: { name: 'Ki Wave', shape: 'beam', text: 'Push your ki out of both palms in a beam that goes through a whole line.' },
   spiritbomb: { name: 'Spirit Bomb', shape: 'drop', text: 'Your final. Lift a huge ball of ki and throw it on the monster nearest you.' },
