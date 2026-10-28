@@ -266,7 +266,7 @@ function Lobby({ state }: { state: GameState }) {
               </p>
               {!road.started && (
                 <p className="mt-2 text-xs text-orange-200">
-                  For a story together, set out on the Ember Road (Fog, Together). Its chapters then show up here.
+                  For a story together, set out on the Ember Road on the Friends tab. Its chapters then show up here.
                 </p>
               )}
               {zone.road && <p className="mt-2 text-xs text-orange-200">Beat {zone.bossName} together and the Ember Road goes on for everyone on this chapter.</p>}
@@ -297,7 +297,7 @@ function Lobby({ state }: { state: GameState }) {
           <section className="rounded-2xl bg-ink-800 p-4">
             <p className="text-[10px] uppercase tracking-wider text-slate-500">Invite</p>
             {friends.filter((f) => !inParty.has(f.id)).length === 0 ? (
-              <p className="mt-2 text-xs text-slate-500">Add friends in the Fog, under Together, to invite them here.</p>
+              <p className="mt-2 text-xs text-slate-500">Add friends on the Friends tab to invite them here.</p>
             ) : (
               <ul className="mt-1 divide-y divide-ink-700">
                 {friends

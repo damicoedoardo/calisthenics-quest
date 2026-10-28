@@ -3,7 +3,7 @@ type: landing
 title: FORMA Handbook
 description: The map of the FORMA codebase — the single entry point for every AI agent and engineer before they touch the code.
 tags: [handbook, navigation]
-timestamp: 2026-10-27
+timestamp: 2026-10-28
 ---
 
 # FORMA Handbook
@@ -19,7 +19,7 @@ than the code.
 
 ## First read
 
-1. [Product overview](product/overview.md): what FORMA is, the four tabs, where it's heading
+1. [Product overview](product/overview.md): what FORMA is, the five tabs, where it's heading
 2. [System map](architecture/system-map.md): the one-page tour of the code and its layers
 3. [Game state](architecture/game-state.md): the one save everything reads and writes
 4. [Workflow](dev/workflow.md): commands, branches, previews, the Vercel deploy limit

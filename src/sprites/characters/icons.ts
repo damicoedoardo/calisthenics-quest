@@ -1003,9 +1003,9 @@ export const ZONE_ICONS: PixelArt[] = [
 
 /** Small marks for the screens around the game: a heart (full or spent), a check, a padlock, a
     bookmark (kept or not), the Book of Days, an arrow on, a little flame (no face: that's Ember's),
-    play, and close; the tab bar's four (crossed swords, a skill tree, a game pad, a shield) and the
+    play, and close; the tab bar's five (crossed swords, a skill tree, a game pad, two friends, a shield) and the
     developer's wrench. */
-export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookmark' | 'bookmarkKept' | 'book' | 'chevron' | 'flame' | 'play' | 'close' | 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabHero' | 'wrench', PixelArt> = {
+export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookmark' | 'bookmarkKept' | 'book' | 'chevron' | 'flame' | 'play' | 'close' | 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabHero' | 'tabFriends' | 'wrench', PixelArt> = {
   heart: {
     rows: [
       '.rr.rr.',
@@ -1104,6 +1104,11 @@ export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookm
   tabHero: {
     rows: ['kkkkkkkkk', 'kBbbbYbbk', 'kBbbbYbbk', 'kYYYYYYYk', 'kbbbbYbbk', '.kbbbYbk.', '.kbbbYbk.', '..kbbYk..', '...kkk...'],
     palette: { k: '#cbd5e1', B: '#8ea2ef', b: '#4a5fc0', Y: '#fbbf24' },
+  },
+  // Two friends side by side.
+  tabFriends: {
+    rows: ['.hh...gg.', 'hssh.gssg', 'hssh.gssg', '.ss...ss.', '.........', 'bbbb.eeee', 'bbbb.eeee', 'bbbb.eeee'],
+    palette: { h: '#92400e', g: '#334155', s: '#fcd9b6', b: '#4a5fc0', e: '#10b981' },
   },
   wrench: {
     rows: ['.....xx..', '....x..x.', '....x...x', '.....x.x.', '....xxx..', '...xxx...', '..xxx....', '.xxx.....', '.xx......'],
