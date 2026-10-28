@@ -5,6 +5,7 @@ import type { HeroVariant } from '@/sprites/characters/hero';
 import type { FlameFace } from '@/sprites/characters/ember';
 import type { CastId } from './cast';
 import type { PlaceId } from './places';
+import type { SpNo } from '@/game/dungeon/content';
 
 /* The shapes every story file is written in. Story files are plain data: who speaks, what they
    say, where, when it plays, and how the camera moves. The engine (engine.ts) reads them. */
@@ -64,6 +65,8 @@ export interface Line {
   /** Something shown instead of a speaker: the SP card, sealed or awake, or the SP waking (the
       whole screen plays your class's transformation, then the scene goes on). */
   art?: 'sp-sealed' | 'sp-awake' | 'sp-transform';
+  /** Which of the class's SPs the art shows (1 to 4; left out: the first). */
+  spn?: SpNo;
 }
 
 /**
@@ -144,7 +147,7 @@ export type Ask =
   /** Pick a class. */
   | { kind: 'class' }
   /** The Wanderer hands over the first SP (src/lib/sp.ts): its trial starts. */
-  | { kind: 'sp' };
+  | { kind: 'sp'; n?: SpNo };
 
 export interface Scene {
   /** Saved once played, so it never plays twice. Never rename a live scene's id. */

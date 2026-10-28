@@ -15,7 +15,7 @@ import {
   type Ramp,
 } from "../engine/grid";
 import { DEFAULT_LOOK, drawHero } from "./hero";
-import { SP_LOOKS } from "./spLooks";
+import { spLook } from "./spLooks";
 
 /* The SP card the Wanderer hands you: a tall card with a window, and in it, you in the SP's look
    from the chest up. Sealed it is ash: you are a dark shape behind a crack of light. Awake it has
@@ -26,6 +26,8 @@ export interface SpCardOpts {
   awake?: boolean;
   gear?: Record<GearSlot, Gear>;
   look?: Look;
+  /** Which of the class's SPs (1 to 4). */
+  n?: number;
 }
 
 export const SP_CARD_W = 48;
@@ -41,7 +43,8 @@ const WIN = { x: 5, y: 9, w: 38, h: 41, fromX: 13, fromY: 0 };
 
 export function drawSpCard(o: SpCardOpts, f: number): Grid {
   const cls = o.classId ?? "warrior",
-    sp = SP_LOOKS[cls],
+    n = o.n ?? 1,
+    sp = spLook(cls, n),
     awake = !!o.awake,
     g = grid(SP_CARD_W, SP_CARD_H),
     p = painter(g),
@@ -87,7 +90,7 @@ export function drawSpCard(o: SpCardOpts, f: number): Grid {
         gear: o.gear ?? uniformGear(cls, 0),
         classId: cls,
         look: o.look ?? DEFAULT_LOOK,
-        sp: true,
+        sp: n,
       },
       {},
       0,

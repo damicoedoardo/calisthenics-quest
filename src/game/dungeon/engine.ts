@@ -23,9 +23,11 @@ import {
 } from '../rules';
 import {
   ABILITIES,
-  SP_CARDS,
+  SP_MOVES,
+  spDef,
   type AbilityId,
   type SpMoveId,
+  type SpNo,
   type SpPassiveId,
   type Ally,
   type AllyKind,
@@ -78,7 +80,7 @@ import {
   zoneDungeon,
 } from './content';
 import { seeded } from '@/lib/random';
-import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS, SP_FINAL, SP_PASSIVE, SP_SKILL, SURGE } from '@/balance';
+import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS, SP_FINAL, SP_PASSIVE, SP_SKILL, SURGE, type SpMoveNumbers } from '@/balance';
 import type { Build } from '@/lib/stats';
 import { canWear, ITEM_SLOTS, itemScore, itemTotals, otherClass, rollItem, rollRarity, shortOf, starterKit, type Item, type ItemSlot } from './items';
 
@@ -180,7 +182,25 @@ export interface Foe {
   hitAt: number;
   /** Burning from the Ember Knight's Embers: its next tick, when it stops, each tick's damage, and who lit it. */
   burn?: { next: number; until: number; dmg: number; by: Hero };
+  /** Slowed (Frostbite, Hourglass, Blizzard, Stop the Sands): moves `k` slower until then. */
+  slow?: { until: number; k: number };
   alive: boolean;
+}
+
+/** A patch an SP leaves on the floor: it hits everything in it every `every` s until `until`, and
+    can slow them. One that `follows` moves with whoever made it. */
+export interface SpField {
+  id: SpMoveId;
+  x: number;
+  y: number;
+  r: number;
+  until: number;
+  next: number;
+  every: number;
+  dmg: number;
+  slow: number;
+  by: Hero;
+  follows: boolean;
 }
 
 export interface Bullet {
@@ -253,7 +273,7 @@ export type GameEvent =
   | { type: 'chain'; points: { x: number; y: number }[] }
   | { type: 'ability'; id: AbilityId; x: number; y: number; toX: number; toY: number }
   /** An SP move: its own move or its final, a ring of size `r` at x, y. */
-  | { type: 'sp'; id: SpMoveId; x: number; y: number; r: number; final: boolean; angle?: number }
+  | { type: 'sp'; id: SpMoveId; x: number; y: number; r: number; final: boolean; angle?: number; points?: { x: number; y: number }[]; secs?: number }
   /** An SP's passive went off: a monster caught fire, a tailwind, a split star, the flow's heal. */
   | { type: 'passive'; id: SpPassiveId; x: number; y: number }
   | { type: 'dodge'; x: number; y: number; toX: number; toY: number }
@@ -311,8 +331,9 @@ export interface HeroSetup {
   build?: Build;
   /** The chapter's hearts are gone: a weaker boss and free skills at the start (`edgeFor` in src/lib/fog.ts). */
   edge?: Edge;
-  /** Wearing the class's SP: its own move and its final, on top of the class ability (src/lib/sp.ts). */
-  sp?: boolean;
+  /** Wearing one of the class's SPs (which one; `true` is the first): its own move, its final and
+      its passive, on top of the class ability (src/lib/sp.ts). */
+  sp?: SpNo | boolean;
 }
 
 /** A run: where, its seed, and you (the first hero). `friends` walk in with you, in co-op. */
@@ -407,7 +428,7 @@ export interface Hero {
   /** Untouchable until then (dodge, charge, blink). */
   ghostUntil: number;
   /** A rush in a straight line: the warrior's charge (it hits what it passes) or a dodge (it doesn't). */
-  charge: { until: number; x: number; y: number; hit: Set<Foe>; harm: boolean } | null;
+  charge: { until: number; x: number; y: number; hit: Set<Foe>; harm: boolean; dmg?: number } | null;
   /** The dodge is ready again then. */
   dodgeAt: number;
   /** The Gale's gust on you (px/s), added to how you walk. */
@@ -417,8 +438,8 @@ export interface Hero {
   abilityAt: number;
   /** The monk's calm: Stillness is ready when it reaches CALM.full (it fills by fighting). */
   calm: number;
-  /** The SP worn into the run (its moves, from SP_CARDS), or null. */
-  sp: { skill: SpMoveId; final: SpMoveId } | null;
+  /** The SP worn into the run (which one, its moves and passive, from SP_CARDS), or null. */
+  sp: { n: SpNo; skill: SpMoveId; final: SpMoveId; passive: SpPassiveId } | null;
   skillAt: number;
   /** The SP's final is ready when this reaches SURGE.full (it fills by fighting). */
   surge: number;
@@ -427,6 +448,15 @@ export interface Hero {
   shots: number;
   /** The River Monk's Flow heals again from then. */
   flow: number;
+  /** How long you've been moving, and standing still (Momentum, Bedrock); hits landed (Static,
+      Sunburst); Second Wind used on this floor; a Crystal Shell up until then; a guard (Sun Guard,
+      Lotus Bloom) up until then. */
+  moveFor: number;
+  stillFor: number;
+  landed: number;
+  windUsed: boolean;
+  shellUntil: number;
+  guardUntil: number;
   /** Hits taken this run (what the run's recap shows, to set the bot against people). */
   hits: number;
   cd: { attack: number; spark: number; nova: number; fireball: number };
@@ -491,6 +521,8 @@ export interface Run {
   dim: number | null;
   foes: Foe[];
   bullets: Bullet[];
+  /** Patches on the floor from an SP (Thorn Trap, Hourglass, Blizzard, Rift) that keep hitting. */
+  fields: SpField[];
   shots: Shot[];
   gems: Gem[];
   timers: { at: number; run: () => void }[];
@@ -549,6 +581,7 @@ export function createRun(setup: RunSetup): Run {
     dim: null,
     foes: [],
     bullets: [],
+    fields: [],
     shots: [],
     gems: [],
     timers: [],
@@ -568,6 +601,17 @@ export function createRun(setup: RunSetup): Run {
   for (const h of party) if (h.free.length) later(run, 0.7, () => offer(run, h, h.free.shift()!));
   return run;
 }
+
+/** The SP a hero walks in wearing, if any. */
+function spOn(hs: HeroSetup): Hero['sp'] {
+  if (!hs.sp) return null;
+  const n: SpNo = hs.sp === true ? 1 : hs.sp,
+    d = spDef(hs.classId, n);
+  return { n, skill: d.skill, final: d.final, passive: d.passive };
+}
+
+/** The passive of the SP a hero wears, if it is this one. */
+const has = (h: Hero, id: SpPassiveId) => h.sp?.passive === id;
 
 function newHero(hs: HeroSetup, id: number): Hero {
   const base = hs.power,
@@ -602,11 +646,17 @@ function newHero(hs: HeroSetup, id: number): Hero {
     ability: abilityOf(hs.classId),
     abilityAt: 0,
     calm: 0,
-    sp: hs.sp ? { skill: SP_CARDS[hs.classId ?? 'warrior'].skill, final: SP_CARDS[hs.classId ?? 'warrior'].final } : null,
+    sp: spOn(hs),
     skillAt: 0,
     surge: 0,
     tailwind: -99,
     flow: 0,
+    moveFor: 0,
+    stillFor: 0,
+    landed: 0,
+    windUsed: false,
+    shellUntil: 0,
+    guardUntil: 0,
     shots: 0,
     hits: 0,
     cd: { attack: 0.5, spark: 2, nova: 3, fireball: 2.5 },
@@ -889,6 +939,7 @@ function enterRoom(run: Run, from: Side | null) {
     back = c.kept;
   run.foes = [];
   run.bullets = [];
+  run.fields = [];
   run.shots = [];
   run.gems = [];
   run.mines = [];
@@ -1110,7 +1161,10 @@ function newFloor(run: Run, floor: number, toEnd = false) {
 /** Down the stairs, with a breath on the way. */
 function downStairs(run: Run) {
   const up = standing(run);
-  for (const h of up) h.hp = Math.min(h.maxHp, h.hp + Math.round(h.maxHp * DIALS.stairs));
+  for (const h of up) {
+    h.hp = Math.min(h.maxHp, h.hp + Math.round(h.maxHp * DIALS.stairs));
+    h.windUsed = false;
+  }
   emit(run, { type: 'floor', floor: run.floor + 1 });
   for (const h of up) emit(run, { type: 'heal', x: h.x, y: h.y, n: Math.round(h.maxHp * DIALS.stairs) });
   newFloor(run, run.floor + 1);
@@ -1150,8 +1204,9 @@ export function stepRun(run: Run, input: Input | Input[]) {
     moveHero(run, h, i);
     if (i.ability) useAbility(run, h, i);
     if (h.sp && i.skill) useSkill(run, h, i);
-    if (h.sp && i.final) useFinal(run, h);
+    if (h.sp && i.final) useFinal(run, h, i);
   }
+  stepFields(run);
   moveFoes(run);
   moveBullets(run);
   if (run.over) return;
@@ -1178,8 +1233,16 @@ function moveHero(run: Run, h: Hero, input: Input) {
     y /= len;
   }
   if (len > 0.05) h.facing = Math.atan2(y, x);
+  // For Momentum and Bedrock: how long you've been on the move, or standing.
+  if (len > 0.05) {
+    h.moveFor += STEP;
+    h.stillFor = 0;
+  } else {
+    h.moveFor = 0;
+    h.stillFor += STEP;
+  }
   // A cleared room is safe: cross it at a run, so the walk to the next fight is short.
-  const speed = heroSpeed(h.ups) * (1 + 0.1 * relic(h, 'boots') + h.gearFx.move + h.power.move) * bodyOf(h).move * (run.cleared ? CLEAR_RUN : 1) * (now < h.tailwind ? 1 + SP_PASSIVE.arrow.move : 1);
+  const speed = heroSpeed(h.ups) * (1 + 0.1 * relic(h, 'boots') + h.gearFx.move + h.power.move) * bodyOf(h).move * (run.cleared ? CLEAR_RUN : 1) * (now < h.tailwind ? 1 + SP_PASSIVE.tailwind.move : 1);
   if (h.charge && now < h.charge.until) {
     h.vx = h.charge.x;
     h.vy = h.charge.y;
@@ -1241,7 +1304,7 @@ function moveHero(run: Run, h: Hero, input: Input) {
     for (const f of run.foes) {
       if (!f.alive || h.charge.hit.has(f) || dist(f, h) > f.def.r + HERO_R + 12) continue;
       h.charge.hit.add(f);
-      damage(run, h, f, pow(h, ATTACK.slash.dmg * 2), 220);
+      damage(run, h, f, h.charge.dmg ?? pow(h, ATTACK.slash.dmg * 2), 220);
     }
   }
 }
@@ -1251,7 +1314,7 @@ function moveHero(run: Run, h: Hero, input: Input) {
 function dodge(run: Run, h: Hero, input: Input) {
   const now = run.t;
   if (now < h.dodgeAt || (h.charge && now < h.charge.until)) return;
-  h.dodgeAt = now + DODGE.cd;
+  h.dodgeAt = now + DODGE.cd * (has(h, 'quickstep') ? SP_PASSIVE.quickstep.cd : 1);
   let dx = input.x,
     dy = input.y;
   if (Math.hypot(dx, dy) < 0.1) [dx, dy] = [Math.cos(h.facing), Math.sin(h.facing)];
@@ -1260,10 +1323,15 @@ function dodge(run: Run, h: Hero, input: Input) {
   dy /= d;
   h.charge = { until: now + DODGE.secs, x: dx * DODGE.speed, y: dy * DODGE.speed, hit: new Set(), harm: false };
   h.ghostUntil = Math.max(h.ghostUntil, now + DODGE.ghost);
-  // Tailwind (the Wind Ranger's passive): the wind carries you on after a dodge.
-  if (h.sp && attackOf(h.classId) === 'arrow') {
-    h.tailwind = now + DODGE.secs + SP_PASSIVE.arrow.secs;
+  // Tailwind (the Wind Ranger's passive): the wind carries you on after a dodge. Crystal Shell:
+  // a shell forms round you.
+  if (has(h, 'tailwind')) {
+    h.tailwind = now + DODGE.secs + SP_PASSIVE.tailwind.secs;
     emit(run, { type: 'passive', id: 'tailwind', x: h.x, y: h.y });
+  }
+  if (has(h, 'shell')) {
+    h.shellUntil = now + SP_PASSIVE.shell.secs;
+    emit(run, { type: 'passive', id: 'shell', x: h.x, y: h.y });
   }
   emit(run, { type: 'dodge', x: h.x, y: h.y, toX: h.x + dx * DODGE.speed * DODGE.secs, toY: h.y + dy * DODGE.speed * DODGE.secs });
 }
@@ -1275,18 +1343,66 @@ export function abilityReady(run: Run, h: Hero): number {
 }
 
 /** The monk grows calm in a fight: hits landed and hits taken, quicker with the hourglass and cooldown gear.
-    The SP's final fills the same way (`surge`). */
+    The SP's final fills the same way (`surge`), faster with Swift Sands. */
 function calmer(run: Run, h: Hero, n: number, taken = false) {
   const quick = 1 + 0.25 * relic(h, 'hourglass') + h.gearFx.cooldown;
   if (h.ability === 'still') h.calm = Math.min(CALM.full, h.calm + n * quick);
   if (!h.sp) return;
-  h.surge = Math.min(SURGE.full, h.surge + (taken ? SURGE.taken : SURGE.hit) * quick);
+  h.surge = Math.min(SURGE.full, h.surge + (taken ? SURGE.taken : SURGE.hit) * quick * (has(h, 'swiftsurge') ? SP_PASSIVE.swiftsurge.fill : 1));
 }
+
+// ---------- the SP's passives ----------
+
+/** After a hit you landed: the passives that answer a hit. `dmg` is what it did. */
+function onLanded(run: Run, by: Hero, f: Foe, knight: boolean) {
+  if (!by.sp) return;
+  by.landed++;
+  const p = by.sp.passive;
+  if (p === 'embers' && !knight) kindle(run, by, f);
+  else if (p === 'flow') flow(run, by);
+  else if (p === 'frostbite' && f.alive && !knight && run.critRnd() < SP_PASSIVE.frostbite.chance) {
+    f.slow = { until: run.t + SP_PASSIVE.frostbite.secs, k: SP_PASSIVE.frostbite.slow };
+    emit(run, { type: 'passive', id: 'frostbite', x: f.x, y: f.y });
+  } else if (p === 'static' && by.landed % SP_PASSIVE.static.every === 0) {
+    // a spark jumps to another monster close by
+    const other = nearest(run, f.x, f.y, new Set([f]), SP_PASSIVE.static.reach);
+    if (other) {
+      emit(run, { type: 'passive', id: 'static', x: other.x, y: other.y });
+      echo(run, by, () => damage(run, by, other, pow(by, ATTACK[attackOf(by.classId)].dmg * SP_PASSIVE.static.dmg), 40));
+    }
+  } else if (p === 'sunburst' && by.landed % SP_PASSIVE.sunburst.every === 0) {
+    const k = SP_PASSIVE.sunburst;
+    emit(run, { type: 'passive', id: 'sunburst', x: by.x, y: by.y });
+    echo(run, by, () => burst(run, by, by.x, by.y, k.r, pow(by, ATTACK[attackOf(by.classId)].dmg * k.dmg), 'fire', undefined, 120));
+  }
+}
+
+/** A passive's own hit doesn't set off another one. */
+function echo(run: Run, h: Hero, f: () => void) {
+  if (!h.sp) return;
+  const sp = h.sp;
+  h.sp = null;
+  try {
+    f();
+  } finally {
+    h.sp = sp;
+  }
+}
+
+/** How much more your hits do: Momentum (moving builds it up). */
+function spMore(h: Hero): number {
+  if (!has(h, 'momentum')) return 1;
+  const k = SP_PASSIVE.momentum;
+  return 1 + k.dmg * Math.min(1, h.moveFor / k.secs);
+}
+
+/** More crits: Focus, while you're barely scratched. */
+const spCrit = (h: Hero) => (has(h, 'focus') && h.hp >= h.maxHp * SP_PASSIVE.focus.above ? SP_PASSIVE.focus.crit : 0);
 
 /** Flow (the River Monk's passive): a hit you land heals you a little, at most once every `every` s. */
 function flow(run: Run, by: Hero) {
-  const k = SP_PASSIVE.wave;
-  if (!k.heal || !by.sp || attackOf(by.classId) !== 'wave' || by.hp <= 0 || by.hp >= by.maxHp || run.t < by.flow) return;
+  const k = SP_PASSIVE.flow;
+  if (!k.heal || by.hp <= 0 || by.hp >= by.maxHp || run.t < by.flow) return;
   by.flow = run.t + k.every;
   by.hp = Math.min(by.maxHp, by.hp + Math.max(1, Math.round(by.maxHp * k.heal)));
   emit(run, { type: 'passive', id: 'flow', x: by.x, y: by.y });
@@ -1294,8 +1410,8 @@ function flow(run: Run, by: Hero) {
 
 /** Embers (the Ember Knight's passive): a hit can set a monster burning, if it isn't already. */
 function kindle(run: Run, by: Hero, f: Foe) {
-  if (!by.sp || attackOf(by.classId) !== 'slash' || !f.alive || (f.burn && run.t < f.burn.until)) return;
-  const k = SP_PASSIVE.slash;
+  if (!f.alive || (f.burn && run.t < f.burn.until)) return;
+  const k = SP_PASSIVE.embers;
   if (run.critRnd() >= k.chance) return;
   f.burn = { next: run.t + k.every, until: run.t + k.secs, dmg: Math.max(1, Math.round(pow(by, ATTACK.slash.dmg * k.dmg))), by };
   emit(run, { type: 'passive', id: 'embers', x: f.x, y: f.y });
@@ -1309,82 +1425,196 @@ function burnTick(run: Run, f: Foe) {
     f.burn = undefined;
     return;
   }
-  b.next += SP_PASSIVE.slash.every;
+  b.next += SP_PASSIVE.embers.every;
   f.hp -= b.dmg;
   f.hitAt = run.t;
   emit(run, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg: b.dmg, boss: f === run.boss });
   if (f.hp <= 0) kill(run, f, b.by);
 }
 
+/** Before a hit lands on you: Crystal Shell takes it; Bedrock makes it smaller. Returns what is left (0: none). */
+function spGuard(run: Run, h: Hero, dmg: number): number {
+  if (!h.sp) return dmg;
+  if (has(h, 'shell') && run.t < h.shellUntil) {
+    h.shellUntil = 0;
+    emit(run, { type: 'passive', id: 'shell', x: h.x, y: h.y });
+    return 0;
+  }
+  if (has(h, 'bedrock') && h.stillFor >= SP_PASSIVE.bedrock.after) {
+    emit(run, { type: 'passive', id: 'bedrock', x: h.x, y: h.y });
+    return dmg * (1 - SP_PASSIVE.bedrock.cut);
+  }
+  return dmg;
+}
+
+/** After a hit on you: Rebound hits back; Second Wind lifts you once a floor. */
+function spHurt(run: Run, h: Hero) {
+  if (!h.sp || h.hp <= 0) return;
+  if (has(h, 'rebound')) {
+    const k = SP_PASSIVE.rebound;
+    emit(run, { type: 'passive', id: 'rebound', x: h.x, y: h.y });
+    echo(run, h, () => burst(run, h, h.x, h.y, k.r, pow(h, ATTACK[attackOf(h.classId)].dmg * k.dmg), 'orb', undefined, 200));
+  }
+  if (has(h, 'secondwind') && !h.windUsed && h.hp < h.maxHp * SP_PASSIVE.secondwind.below) {
+    h.windUsed = true;
+    const heal = Math.round(h.maxHp * SP_PASSIVE.secondwind.heal);
+    h.hp = Math.min(h.maxHp, h.hp + heal);
+    emit(run, { type: 'passive', id: 'secondwind', x: h.x, y: h.y });
+    emit(run, { type: 'heal', x: h.x, y: h.y, n: heal });
+  }
+}
+
+/** A patch on the floor keeps hitting what stands in it, and slows it. */
+function stepFields(run: Run) {
+  if (!run.fields.length) return;
+  run.fields = run.fields.filter((fd) => run.t < fd.until && fd.by.hp > 0);
+  for (const fd of run.fields) {
+    if (fd.follows) [fd.x, fd.y] = [fd.by.x, fd.by.y];
+    if (run.t < fd.next) continue;
+    fd.next += fd.every;
+    for (const f of run.foes) {
+      if (!f.alive || Math.hypot(f.x - fd.x, f.y - fd.y) > fd.r + f.def.r) continue;
+      if (fd.slow) f.slow = { until: run.t + fd.every + 0.1, k: fd.slow };
+      damage(run, fd.by, f, fd.dmg, 0);
+    }
+  }
+}
+
+// ---------- the SP's moves ----------
+
 /** The SP's own move: 1 when ready (0 without an SP). */
 export function skillReady(run: Run, h: Hero): number {
   if (!h.sp) return 0;
-  return Math.min(1, 1 - (h.skillAt - run.t) / SP_SKILL[attackOf(h.classId)].cd);
+  return Math.min(1, 1 - (h.skillAt - run.t) / (SP_SKILL[h.sp.skill].cd ?? 8));
 }
 
 /** The SP's final: 1 when ready (0 without an SP). */
 export const finalReady = (h: Hero) => (h.sp ? Math.min(1, h.surge / SURGE.full) : 0);
 
-/** The SP's own move, by class: Whirl, Pin Shot, Starfall, Palm Wave. */
+/** The SP's own move. */
 function useSkill(run: Run, h: Hero, input: Input) {
   if (!h.sp || skillReady(run, h) < 1) return;
-  const kind = attackOf(h.classId),
-    id = h.sp.skill;
-  h.skillAt = run.t + SP_SKILL[kind].cd / (1 + 0.25 * relic(h, 'hourglass') + h.gearFx.cooldown);
-  if (kind === 'slash') {
-    const k = SP_SKILL.slash;
-    clearBullets(run, h.x, h.y, k.r * 0.7);
-    burst(run, h, h.x, h.y, k.r, pow(h, ATTACK.slash.dmg * k.dmg), 'ability', undefined, k.knock);
-    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: k.r, final: false });
-  } else if (kind === 'arrow') {
-    const k = SP_SKILL.arrow,
-      f = nearest(run, h.x, h.y, undefined, RANGE * 1.4),
-      a = f ? Math.atan2(f.y - h.y, f.x - h.x) : Math.hypot(input.x, input.y) > 0.1 ? Math.atan2(input.y, input.x) : h.facing;
-    for (let i = 0; i < k.arrows; i++) fire(run, h, 'arrow', a + (i - (k.arrows - 1) / 2) * k.spread, 520, pow(h, ATTACK.arrow.dmg * k.dmg), k.pierce, null);
-    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: 40, final: false, angle: a });
-  } else if (kind === 'orb') {
-    const k = SP_SKILL.orb,
-      f = nearest(run, h.x, h.y, undefined, k.reach),
-      at = f ?? { x: h.x + Math.cos(h.facing) * 120, y: h.y + Math.sin(h.facing) * 120 };
-    burst(run, h, at.x, at.y, k.r, pow(h, ATTACK.orb.dmg * k.dmg), 'orb');
-    emit(run, { type: 'sp', id, x: at.x, y: at.y, r: k.r, final: false });
-  } else {
-    const k = SP_SKILL.wave;
-    clearBullets(run, h.x, h.y, k.r);
-    burst(run, h, h.x, h.y, k.r, pow(h, ATTACK.wave.dmg * k.dmg), 'wave', undefined, k.knock);
-    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: k.r, final: false });
-  }
+  h.skillAt = run.t + (SP_SKILL[h.sp.skill].cd ?? 8) / (1 + 0.25 * relic(h, 'hourglass') + h.gearFx.cooldown);
+  spMove(run, h, h.sp.skill, SP_SKILL[h.sp.skill], false, input);
 }
 
-/** The SP's final, by class: Phoenix Blade, Arrow Rain, Falling Sky, Thousand Palms. */
-function useFinal(run: Run, h: Hero) {
+/** The SP's final. */
+function useFinal(run: Run, h: Hero, input: Input) {
   if (!h.sp || finalReady(h) < 1) return;
-  const kind = attackOf(h.classId),
-    id = h.sp.final;
   h.surge = 0;
   h.ghostUntil = Math.max(h.ghostUntil, run.t + 0.6);
-  if (kind === 'slash') {
-    const k = SP_FINAL.slash;
-    clearBullets(run, h.x, h.y, k.r);
-    burst(run, h, h.x, h.y, k.r, pow(h, ATTACK.slash.dmg * k.dmg), 'fire', undefined, 300);
-    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: k.r, final: true });
-  } else if (kind === 'arrow') {
-    const dmg = pow(h, ATTACK.arrow.dmg * SP_FINAL.arrow.dmg);
-    for (const f of run.foes.filter((o) => o.alive)) burst(run, h, f.x, f.y, f.def.r + 4, dmg, 'ability', undefined, 0);
-    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: Math.max(run.area.w, run.area.h), final: true });
-  } else if (kind === 'orb') {
-    const k = SP_FINAL.orb;
-    run.bullets = [];
-    burst(run, h, h.x, h.y, k.r, pow(h, ATTACK.orb.dmg * k.dmg), 'orb', undefined, 260);
-    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: k.r, final: true });
-  } else {
-    const k = SP_FINAL.wave,
-      heal = Math.round(h.maxHp * k.heal);
-    h.hp = Math.min(h.maxHp, h.hp + heal);
-    clearBullets(run, h.x, h.y, k.r);
-    burst(run, h, h.x, h.y, k.r, pow(h, ATTACK.wave.dmg * k.dmg), 'wave', undefined, k.knock);
-    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: k.r, final: true });
-    emit(run, { type: 'heal', x: h.x, y: h.y, n: heal });
+  spMove(run, h, h.sp.final, SP_FINAL[h.sp.final], true, input);
+}
+
+/** Which way a move goes: at the monster nearest you, or where you push the stick, or the way you face. */
+function aimOf(run: Run, h: Hero, input: Input, reach: number): number {
+  const f = nearest(run, h.x, h.y, undefined, reach);
+  return f ? Math.atan2(f.y - h.y, f.x - h.x) : Math.hypot(input.x, input.y) > 0.1 ? Math.atan2(input.y, input.x) : h.facing;
+}
+
+/** An SP move, played by its shape (SpShape in content.ts) with its numbers. */
+function spMove(run: Run, h: Hero, id: SpMoveId, k: SpMoveNumbers, final: boolean, input: Input) {
+  const kind = attackOf(h.classId),
+    dmg = pow(h, ATTACK[kind].dmg * k.dmg),
+    color: Extract<GameEvent, { type: 'burst' }>['color'] = final && kind === 'slash' ? 'fire' : kind === 'orb' ? 'orb' : kind === 'wave' ? 'wave' : 'ability',
+    shot: 'arrow' | 'orb' = kind === 'orb' ? 'orb' : 'arrow',
+    heal = () => {
+      if (!k.heal) return;
+      const n = Math.round(h.maxHp * k.heal);
+      h.hp = Math.min(h.maxHp, h.hp + n);
+      emit(run, { type: 'heal', x: h.x, y: h.y, n });
+    };
+  const r = k.r ?? 100;
+  switch (SP_MOVES[id].shape) {
+    case 'ring':
+      if (k.clear) clearBullets(run, h.x, h.y, r * k.clear);
+      burst(run, h, h.x, h.y, r, dmg, color, undefined, k.knock ?? 160);
+      heal();
+      emit(run, { type: 'sp', id, x: h.x, y: h.y, r, final });
+      return;
+    case 'fan': {
+      const n = k.arrows ?? 3,
+        a = aimOf(run, h, input, RANGE * 1.4);
+      for (let i = 0; i < n; i++) fire(run, h, shot, a + (i - (n - 1) / 2) * (k.spread ?? 0.15), 520, dmg, k.pierce ?? 1, null);
+      emit(run, { type: 'sp', id, x: h.x, y: h.y, r: 40, final, angle: a });
+      return;
+    }
+    case 'drop': {
+      const f = nearest(run, h.x, h.y, undefined, k.reach ?? 260),
+        at = f ?? { x: h.x + Math.cos(h.facing) * 120, y: h.y + Math.sin(h.facing) * 120 };
+      if (final) clearBullets(run, at.x, at.y, r);
+      burst(run, h, at.x, at.y, r, dmg, color, undefined, k.knock ?? 160);
+      emit(run, { type: 'sp', id, x: at.x, y: at.y, r, final });
+      return;
+    }
+    case 'all':
+      for (const f of run.foes.filter((o) => o.alive)) {
+        if (k.slow) f.slow = { until: run.t + (k.secs ?? 2), k: k.slow };
+        burst(run, h, f.x, f.y, f.def.r + 4, dmg, 'ability', undefined, 0);
+      }
+      // Stop the Sands puts every shot out; Solar Flare the ones near you.
+      if (k.slow) run.bullets = [];
+      else if (final && id !== 'rain') clearBullets(run, h.x, h.y, 220);
+      emit(run, { type: 'sp', id, x: h.x, y: h.y, r: Math.max(run.area.w, run.area.h), final, secs: k.secs });
+      return;
+    case 'nova':
+      run.bullets = [];
+      burst(run, h, h.x, h.y, r, dmg, color, undefined, k.knock ?? 260);
+      heal();
+      emit(run, { type: 'sp', id, x: h.x, y: h.y, r, final });
+      return;
+    case 'dash': {
+      const a = aimOf(run, h, input, RANGE * 1.2),
+        speed = k.speed ?? 700,
+        secs = k.secs ?? 0.2,
+        from = { x: h.x, y: h.y };
+      h.charge = { until: run.t + secs, x: Math.cos(a) * speed, y: Math.sin(a) * speed, hit: new Set(), harm: true, dmg };
+      h.ghostUntil = Math.max(h.ghostUntil, run.t + secs + 0.1);
+      emit(run, { type: 'sp', id, x: from.x, y: from.y, r: speed * secs, final, angle: a });
+      return;
+    }
+    case 'chain': {
+      // a bolt from you to the nearest monster, then on to the next nearest, and on
+      const hit = new Set<Foe>(),
+        points = [{ x: h.x, y: h.y }];
+      let at = { x: h.x, y: h.y };
+      for (let i = 0; i < (k.n ?? 6); i++) {
+        const f = nearest(run, at.x, at.y, hit, k.reach ?? 300);
+        if (!f) break;
+        hit.add(f);
+        points.push({ x: f.x, y: f.y });
+        at = f;
+        damage(run, h, f, dmg, 80);
+      }
+      if (final) clearBullets(run, h.x, h.y, 160);
+      emit(run, { type: 'sp', id, x: h.x, y: h.y, r: k.reach ?? 300, final, points });
+      return;
+    }
+    case 'guard':
+      h.ghostUntil = Math.max(h.ghostUntil, run.t + (k.secs ?? 1));
+      h.guardUntil = run.t + (k.secs ?? 1);
+      if (k.clear) clearBullets(run, h.x, h.y, r * k.clear);
+      burst(run, h, h.x, h.y, r, dmg, color, undefined, k.knock ?? 200);
+      heal();
+      emit(run, { type: 'sp', id, x: h.x, y: h.y, r, final, secs: k.secs });
+      return;
+    case 'field': {
+      const f = k.reach ? nearest(run, h.x, h.y, undefined, k.reach) : null,
+        at = k.reach ? (f ?? { x: h.x + Math.cos(h.facing) * 120, y: h.y + Math.sin(h.facing) * 120 }) : h,
+        every = k.every ?? 0.5;
+      if (final) clearBullets(run, h.x, h.y, r);
+      run.fields.push({ id, x: at.x, y: at.y, r, until: run.t + (k.secs ?? 3), next: run.t, every, dmg, slow: k.slow ?? 0, by: h, follows: !k.reach });
+      emit(run, { type: 'sp', id, x: at.x, y: at.y, r, final, secs: k.secs });
+      return;
+    }
+    case 'volley': {
+      const n = k.n ?? 12,
+        a0 = aimOf(run, h, input, RANGE);
+      for (let i = 0; i < n; i++) fire(run, h, shot, a0 + (i / n) * Math.PI * 2, 460, dmg, k.pierce ?? 1, null);
+      if (final) clearBullets(run, h.x, h.y, 160);
+      emit(run, { type: 'sp', id, x: h.x, y: h.y, r: 60, final });
+      return;
+    }
   }
 }
 
@@ -1472,7 +1702,7 @@ function moveFoes(run: Run) {
       else steer(run, f);
     }
     if (f === run.warden) stepMid(run, f);
-    const wade = f !== run.boss && run.terrain.water.some((q) => inRect(q, f.x, f.y)) ? WATER.foe : 1;
+    const wade = (f !== run.boss && run.terrain.water.some((q) => inRect(q, f.x, f.y)) ? WATER.foe : 1) * (f.slow && now < f.slow.until ? 1 - f.slow.k : 1);
     f.x = clamp(f.x + f.vx * STEP * wade, ROOM.wall + f.def.r, run.area.w - ROOM.wall - f.def.r);
     f.y = clamp(f.y + f.vy * STEP * wade, ROOM.wall + f.def.r, run.area.h - ROOM.wall - f.def.r);
     outOfPillars(run, f, f.def.r);
@@ -2074,8 +2304,9 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
   f.hitAt = run.t;
   if (f === run.warden && run.dim !== null) run.dim = Math.min(DIM.full, run.dim + DIM.back);
   // A crit: the hit does double (Crit points, src/lib/stats.ts).
-  const crit = !knight && by.power.crit > 0 && run.critRnd() < by.power.crit,
-    dmg = knight ? 1 : Math.max(1, Math.round(amount * (crit ? CRIT_HIT : 1)));
+  const critShare = by.power.crit + spCrit(by),
+    crit = !knight && critShare > 0 && run.critRnd() < critShare,
+    dmg = knight ? 1 : Math.max(1, Math.round(amount * spMore(by) * (crit ? CRIT_HIT : 1)));
   if (f.kind === 'reflection' || f.kind === 'image') {
     // A copy of you, or of the Mirror: it shatters, and you feel it.
     hitYourself(run, by, f.kind);
@@ -2084,8 +2315,7 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
   }
   f.hp -= dmg;
   calmer(run, by, CALM.hit);
-  if (!knight) kindle(run, by, f);
-  flow(run, by);
+  onLanded(run, by, f, knight);
   emit(run, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg, boss, crit });
   // The Plateau cracks, a little at a time, and shows nothing else.
   if (boss && run.setup.zone.boss === 'plateau') {
@@ -2113,6 +2343,11 @@ function kill(run: Run, f: Foe, by: Hero) {
   if (f.def.xp > 0) run.gems.push({ id: ++run.ids, x: f.x, y: f.y, value: f.def.xp, pulled: false });
   const fang = relic(by, 'fang') + by.gearFx.heal;
   if (fang && f !== run.boss) by.hp = Math.min(by.maxHp, by.hp + fang);
+  // Harvest (the Leaf Warden's passive): each one you bring down gives back a little.
+  if (has(by, 'harvest') && by.hp > 0 && f.def.xp > 0) {
+    by.hp = Math.min(by.maxHp, by.hp + Math.max(1, Math.round(by.maxHp * SP_PASSIVE.harvest.heal)));
+    emit(run, { type: 'passive', id: 'harvest', x: by.x, y: by.y });
+  }
   // Now and then a monster drops something to wear: elites and golems far more often.
   if (f !== run.boss && f !== run.warden && f.def.xp > 0 && run.rnd() < (f.elite ? DROPS.elite : f.kind === 'golem' ? DROPS.golem : DROPS.plain)) dropEach(run, f.x, f.y, f.elite || f.kind === 'golem' ? DROP_LUCK.elite : 0);
   if (f === run.warden) dropEach(run, f.x, f.y + 30, DROP_LUCK.midBoss);
@@ -2224,7 +2459,7 @@ function attack(run: Run, h: Hero) {
       fire(run, h, 'orb', Math.atan2(t.y - h.y, t.x - h.x) + (i - (n - 1) / 2) * 0.4, 250, dmg, 0, t);
     }
     // Split Star (the Star Sage's passive): every few attacks, one more orb at another monster.
-    if (h.sp && ++h.shots % SP_PASSIVE.orb.every === 0) {
+    if (has(h, 'splitstar') && ++h.shots % SP_PASSIVE.splitstar.every === 0) {
       const t = nearest(run, h.x, h.y, hit, RANGE) ?? target;
       fire(run, h, 'orb', Math.atan2(t.y - h.y, t.x - h.x) + 0.5, 250, dmg, 0, t);
       emit(run, { type: 'passive', id: 'splitstar', x: h.x, y: h.y });
@@ -2655,13 +2890,18 @@ function hurt(run: Run, h: Hero, dmg: number, by: 'shot' | 'touch') {
     emit(run, { type: 'ward', x: h.x, y: h.y });
     return;
   }
-  const taken = dmg * (1 - armorOf(h.power, h.ups)) / (1 + DIALS.relic * 0.14 * relic(h, 'iron'));
+  const taken = spGuard(run, h, dmg * (1 - armorOf(h.power, h.ups)) / (1 + DIALS.relic * 0.14 * relic(h, 'iron')));
+  if (taken <= 0) {
+    h.hurtUntil = now + INVULNERABLE;
+    return;
+  }
   h.hp -= taken;
   h.hits++;
   h.hurtUntil = now + INVULNERABLE;
   calmer(run, h, CALM.taken, true);
   emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: Math.round(taken), by });
   if (h.hp <= 0) fall(run, h);
+  else spHurt(run, h);
 }
 
 /** A hero at 0 HP is down. The run ends when the whole party is. */

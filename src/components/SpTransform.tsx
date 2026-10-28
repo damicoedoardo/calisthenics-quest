@@ -10,15 +10,15 @@ import {
 import { Hero } from "./Hero";
 import { Sprite } from "./Sprite";
 import { useLook } from "./Look";
-import { SP_CARDS } from "@/game/dungeon/content";
-import { SP_LOOKS } from "@/sprites/characters/spLooks";
+import { spDef, type SpElement, type SpNo } from "@/game/dungeon/content";
+import { spLook } from "@/sprites/characters/spLooks";
 import type { ClassId, Gear, GearSlot } from "@/lib/gear";
 import { fastStory } from "@/lib/dev";
 
-/* The SP waking: the card rises and turns, your element storms in (fire for the Ember Knight, wind
-   for the Wind Ranger, falling stars for the Star Sage, rings of water for the River Monk), you
-   burn white, a flash, and there you stand in the SP's look under its name. Tap moves on. With
-   reduced motion it goes straight to you in the new look. */
+/* The SP waking: the card rises and turns, its element storms in (fire rises, wind sweeps, stars
+   gather, water spreads in rings: STYLE), you burn white, a flash, and there you stand in the
+   SP's look under its name. Tap moves on. With reduced motion it goes straight to you in the new
+   look. */
 
 type Phase = "call" | "storm" | "flash" | "reveal";
 
@@ -36,10 +36,13 @@ const MOTION = "(prefers-reduced-motion: reduce)";
 
 export function SpTransform({
   classId,
+  n = 1,
   gear,
   onDone,
 }: {
   classId: ClassId;
+  /** Which of the class's SPs wakes. */
+  n?: SpNo;
   gear: Record<GearSlot, Gear>;
   onDone: () => void;
 }) {
@@ -48,8 +51,9 @@ export function SpTransform({
   // The scene behind re-renders as it likes: keep the timer on the latest callback, not a new one.
   const done = useRef(onDone);
   done.current = onDone;
-  const sp = SP_LOOKS[classId],
-    name = SP_CARDS[classId].name;
+  const sp = spLook(classId, n),
+    def = spDef(classId, n),
+    name = def.name;
 
   useEffect(() => {
     const still = fastStory() || window.matchMedia?.(MOTION).matches;
@@ -91,7 +95,7 @@ export function SpTransform({
       />
 
       {phase === "storm" && (
-        <Storm classId={classId} colors={sp.aura} spark={sp.spark} />
+        <Storm style={STYLE[def.element]} colors={sp.aura} spark={sp.spark} />
       )}
 
       <div
@@ -100,7 +104,7 @@ export function SpTransform({
         <div className="relative">
           {phase === "reveal" ? (
             <div className="animate-pop" style={{ filter: glow }}>
-              <Hero gear={gear} classId={classId} sp size={256} look={look} />
+              <Hero gear={gear} classId={classId} sp={n} size={256} look={look} />
             </div>
           ) : (
             // Before the flash it's still you, burning whiter as the element comes in.
@@ -119,7 +123,7 @@ export function SpTransform({
               <div className="animate-cardrise" style={{ filter: glow }}>
                 <Sprite
                   id="spCard"
-                  opts={{ classId, awake: true, gear, look }}
+                  opts={{ classId, awake: true, gear, look, n }}
                   size={96}
                   label=""
                 />
@@ -160,20 +164,42 @@ const bit = (style: CSSProperties, color: string, size = 8): CSSProperties => ({
   ...style,
 });
 
-/** The element coming in, each class its own way. Placements come from the index, so every
-    showing is the same. */
+/** How each element storms in: rising like fire, sweeping like wind, gathering like stars, or
+    spreading in rings like water. */
+type StormStyle = "rise" | "sweep" | "converge" | "rings";
+const STYLE: Record<SpElement, StormStyle> = {
+  fire: "rise",
+  dawn: "rise",
+  sun: "rise",
+  tiger: "rise",
+  wind: "sweep",
+  leaf: "sweep",
+  storm: "sweep",
+  moon: "sweep",
+  star: "converge",
+  crystal: "converge",
+  void: "converge",
+  sand: "converge",
+  water: "rings",
+  frost: "rings",
+  lotus: "rings",
+  stone: "rings",
+};
+
+/** The element coming in, each its own way. Placements come from the index, so every showing is
+    the same. */
 function Storm({
-  classId,
+  style,
   colors,
   spark,
 }: {
-  classId: ClassId;
+  style: StormStyle;
   colors: string[];
   spark: string;
 }) {
   const n = Array.from({ length: 40 }, (_, i) => i);
   const c = (i: number) => colors[i % 3 === 0 ? 2 : 1];
-  if (classId === "warrior")
+  if (style === "rise")
     // fire climbs from the ground all round you, and a ring of it burns at your feet
     return (
       <div className="pointer-events-none absolute inset-0">
@@ -204,7 +230,7 @@ function Storm({
         </div>
       </div>
     );
-  if (classId === "archer")
+  if (style === "sweep")
     // wind tears across in streaks, and leaves ride it
     return (
       <div className="pointer-events-none absolute inset-0">
@@ -234,7 +260,7 @@ function Storm({
         ))}
       </div>
     );
-  if (classId === "mage")
+  if (style === "converge")
     // stars fall in from every side and gather into you
     return (
       <div className="pointer-events-none absolute inset-0">

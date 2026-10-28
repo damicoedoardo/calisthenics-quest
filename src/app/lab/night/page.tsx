@@ -9,6 +9,7 @@ import { ZONES } from '@/lib/fog';
 import { SANDBOX_KEY } from '@/lib/store';
 import { withTodayPage } from '@/story/daily';
 import { midBoss } from '@/game/dungeon/engine';
+import { SP_NOS, spDef, type SpNo } from '@/game/dungeon/content';
 import { rollItem, type Item } from '@/game/dungeon/items';
 import { seeded } from '@/lib/random';
 import { spendEvenly } from '@/lib/stats';
@@ -93,11 +94,14 @@ function fused(): GameState {
   return s.seenScenes.includes('finale') ? s : { ...s, seenScenes: [...s.seenScenes, 'finale'] };
 }
 
-/** A veteran in a class, given the first SP; `awake`: its trial done (worn into the Fog). */
-function withSp(awake: boolean, classId: ClassId = 'warrior'): GameState {
+/** A veteran in a class, given the first SP; `awake`: its trial done (worn into the Fog). `worn`
+    above 1 gives all four SPs, wearing that one. */
+function withSp(awake: boolean, classId: ClassId = 'warrior', worn: SpNo = 1): GameState {
   const s = spendEvenly(veteran(14, 1));
+  const more: SpNo[] = worn > 1 ? [2, 3, 4] : [];
   // Its scenes already played, so the jump opens on the screen and not on them.
-  return { ...s, profile: { ...s.profile, classId }, sp: { givenAt: 3, ...(awake ? { floor: true } : {}) }, seenScenes: [...s.seenScenes, 'sp-gift', 'sp-awake'] };
+  const seen = [...s.seenScenes, 'sp-gift', 'sp-awake', ...(worn > 1 ? ['sp-second', 'sp-third', 'sp-fourth'] : [])];
+  return { ...s, profile: { ...s.profile, classId }, sp: { givenAt: 3, ...(awake ? { floor: true } : {}), ...(worn > 1 ? { more, worn } : {}) }, seenScenes: seen };
 }
 
 /** The SP's trial just done, its waking scene not yet played: the app opens on it. */
@@ -154,6 +158,8 @@ function Panel({ title, note, children }: { title: string; note?: string; childr
 }
 
 const chip = 'whitespace-nowrap rounded-lg bg-ink-800 px-1 py-2 text-[11px] text-slate-200 active:scale-95';
+/** A chip for a two-word name: it wraps. */
+const nameChip = chip.replace('whitespace-nowrap', 'leading-tight');
 
 function Row({ icon, label, note, onClick, href }: { icon: ReactNode; label: string; note?: string; onClick?: () => void; href?: string }) {
   const body = (
@@ -211,15 +217,21 @@ export default function NightLab() {
         </div>
         <Row icon={<Sparkles size={16} />} label="The SP, sealed" note="Hero tab: the card in ash, and its trial (train twice more, reach floor 5)" onClick={() => open(withSp(false), 'tab=hero')} />
         <Row icon={<Sparkles size={16} />} label="The SP, awake" note="Hero tab: you in its look, the card in color, its moves and the switch to wear it" onClick={() => open(withSp(true), 'tab=hero')} />
+        <Row icon={<Sparkles size={16} />} label="All four SPs" note="Hero tab: scroll the SPs you own with the arrows, and pick the one to wear" onClick={() => open(withSp(true, 'warrior', 2), 'tab=hero')} />
+        <Row icon={<Film size={16} />} label="The second SP" note="sp-second, after chapter 2: the Wanderer hands it over, awake" href="/lab/story?play=sp-second&back" />
+        <Row icon={<Film size={16} />} label="The third SP" note="sp-third, after chapter 4" href="/lab/story?play=sp-third&back" />
+        <Row icon={<Film size={16} />} label="The fourth SP" note="sp-fourth, after chapter 5, before the last" href="/lab/story?play=sp-fourth&back" />
         <div className="rounded-xl bg-ink-950 px-3 py-2.5">
           <p className="text-sm text-slate-200">The SP in a run</p>
-          <p className="text-[11px] text-slate-500">At the mid-boss, the final already full: its own move beside your ability (R on a keyboard), its final above it (F).</p>
+          <p className="text-[11px] text-slate-500">At the mid-boss, the final already full: its own move beside your ability (R on a keyboard), its final above it (F). One row a class, SP 1 to 4.</p>
           <div className="mt-2 grid grid-cols-4 gap-1">
-            {(['warrior', 'archer', 'mage', 'monk'] as const).map((c) => (
-              <button key={c} className={chip} onClick={() => open(withSp(true, c), 'run=1&at=sp')}>
-                {c}
-              </button>
-            ))}
+            {(['warrior', 'archer', 'mage', 'monk'] as const).flatMap((c) =>
+              SP_NOS.map((n) => (
+                <button key={c + n} className={nameChip} onClick={() => open(withSp(true, c, n), 'run=1&at=sp')}>
+                  {spDef(c, n).name}
+                </button>
+              )),
+            )}
           </div>
         </div>
         <Row icon={<Swords size={16} />} label="Change class with sweat coins" note="Hero tab, Change class: the first change is free, then 3 coins" onClick={() => open({ ...withSp(true), sweat: { spent: 0, changes: 1 } }, 'tab=hero')} />

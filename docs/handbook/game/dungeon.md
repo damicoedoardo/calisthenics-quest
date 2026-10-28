@@ -61,7 +61,7 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change how often co-op runs drop forge materials | `MAT_DROPS` in `src/balance/upgrades.ts` (`findMats` in `engine.ts`; see [forge.md](forge.md)) |
 | Add an item kind or a class's weapon | `WEAPONS`, `ARMORS`, `ItemIcon` (and `ItemArt`, `looksOf`) in `items.ts`; its art in `ITEM_ROWS` and `LEGEND_ROWS` (`src/sprites/characters/items.ts`), and how the hero wears it in `heroSpec` (`src/sprites/characters/hero.ts`), see [sprites.md](sprites.md) |
 | Change how an item looks (its kind, the seed that picks its colors) | `looksOf` and `seedOf` in `items.ts` (the seed comes from the name, so one name always looks the same) |
-| Change an SP's moves (its own move, its final, its passive) | numbers in `SP_SKILL`, `SP_FINAL`, `SURGE`, `SP_PASSIVE` (`src/balance/classes.ts`); names and words in `SP_CARDS`, `SP_MOVES`, `SP_PASSIVES` (`content.ts`); what they do in `useSkill`, `useFinal`, and the passives in `kindle`/`burnTick`, `dodge`, `attack`, `flow` (`engine.ts`); their icons in `SP_ICONS` (`src/sprites/characters/icons.ts`), their look in `spMove`, the final's `cutIn` and `passive` (`scene.ts`, `SP_COLOR`); the bot's use at the end of `decide` (`bot.ts`) |
+| Change an SP's moves (its own move, its final, its passive) | numbers in `SP_SKILL`, `SP_FINAL`, `SURGE`, `SP_PASSIVE` (`src/balance/classes.ts`); names and words in `SP_CARDS`, `SP_MOVES`, `SP_PASSIVES` (`content.ts`); what they do in `useSkill`, `useFinal`, and the passives in `kindle`/`burnTick`, `dodge`, `attack`, `flow` (`engine.ts`); what kind of move each is (`shape` in `SP_MOVES`: ring, fan, drop, all, nova, dash, chain, guard, field, volley), played by the generic `spMove` in `engine.ts`; their icons in `SP_ICONS` (`src/sprites/characters/icons.ts`, the later SPs' from `shaped(shape, element)`), their look in `spMove` and `spShape`, and `passive` (`scene.ts`, colors from `spLook`); the bot's use at the end of `decide` (`bot.ts`) |
 | Add something each hero has (a cooldown, a count, a buff for the run) | `Hero` in `engine.ts` and its start in `newHero` (see "The hero, and the party") |
 | Change the bag panel, the pickup note or the stairs card | `BagPanel` and the `stairs` card in `src/components/FogRun.tsx` |
 
@@ -74,18 +74,24 @@ gear on (`power`; `base` is without), gear, the tapped target (`lock`), the pick
 or the run stays on `Run`: the map, monsters, shots, loot on the floor, stairs, the boss, the clock.
 A new field about the player goes on `Hero`; one about the place goes on `Run`.
 
-With an SP on (`HeroSetup.sp`, see "The SP" in [fog.md](fog.md)) a hero has two more buttons
-(`Input.skill`, `Input.final`): the SP's own move on its own clock (`skillAt`, `skillReady`), and
-its final, which fills from hits landed and taken like the monk's calm (`surge`, `SURGE`,
-`finalReady`). Each emits an `sp` event (with the shot's `angle` for Pin Shot) that the scene
-draws in the SP's element (`spMove`): a fire spin and a phoenix, wind streaks and arrows raining on
-every monster, a falling star and a meteor shower, a ring of water and a flurry of water palms. A
-final first sweeps a cut-in across the screen, you big in a band with the move's name (`cutIn`;
-still with reduced motion). The SP's passive is always on (`SP_PASSIVE`): Embers can set a
-monster burning (`kindle`, `Foe.burn`, `burnTick`), Tailwind speeds you after a dodge
-(`Hero.tailwind`), Split Star throws one more orb every few attacks (`Hero.shots`), Flow heals a
-little on a hit at most once a second (`flow`, `Hero.flow`); each emits a `passive` event. Without
-an SP none of this does anything and nothing is rolled, so replays stay the same.
+With an SP on (`HeroSetup.sp`: which of the class's four, see "The SPs" in [fog.md](fog.md)) a
+hero has two more buttons (`Input.skill`, `Input.final`): the SP's own move on its own clock
+(`skillAt`, `skillReady`), and its final, which fills from hits landed and taken like the monk's
+calm (`surge`, `SURGE`, `finalReady`). Both go through `spMove(run, h, id, k, final, input)`, which
+plays the move by its kind (`shape`): a ring round you, a fan of shots, a drop on the nearest
+monster, a strike on every monster in the room, a nova that heals, a dash through them, a chain
+that jumps between them, a guard bubble, a field on the ground that keeps hitting and can slow
+(`Run.fields`, `stepFields`), or a volley all round. Each emits an `sp` event the scene draws in
+the SP's colors (`spMove`; the first SPs keep their own drawings, the rest use `spShape`). A final
+also shakes the room and bumps `finals`, which the HUD shows as a small badge with its name
+(`FinalBadge` in `FogRun.tsx`); nothing covers the fight. The SP's passive is always on
+(`SP_PASSIVE`; `has(h, id)` asks): Embers burns (`kindle`, `burnTick`), Frostbite slows
+(`Foe.slow`), Static and Sunburst hit on every few hits and Split Star on every few attacks,
+Rebound and Second Wind answer a hit (`spHurt`), Bedrock and Crystal Shell soften one (`spGuard`),
+Flow and Harvest heal, Focus and Momentum add crits and damage (`spCrit`, `spMore`), Tailwind and
+Quickstep change the dodge, Swift Sands fills the final faster; each emits a `passive` event.
+`echo` keeps a passive's own hit from setting off passives again. Without an SP none of this does
+anything and nothing is rolled, so replays stay the same.
 
 The class ability is ready on a clock (`abilityAt`), except the monk's Stillness: it fills `calm`
 from hits the monk lands and takes (`calmer`, numbers in `CALM`, `src/balance/classes.ts`), so

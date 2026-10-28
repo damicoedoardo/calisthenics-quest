@@ -564,35 +564,126 @@ export const ABILITIES: Record<AbilityId, { name: string; text: string; cd: numb
   still: { name: 'Stillness', text: 'Breathe: heal some HP and push everything away. It fills as you fight: hits you land and hits you take.', cd: ABILITY.still.cd },
   shock: { name: 'Shockwave', text: 'Knock back everything near you and wipe the shots around you.', cd: ABILITY.shock.cd },
 };
-/** The SP's two moves past the class ability: its own move (a second button) and its final. */
-export type SpMoveId = 'whirl' | 'pin' | 'starfall' | 'palm' | 'phoenix' | 'rain' | 'sky' | 'palms';
-/** Each SP's passive, always on while it's worn (numbers: SP_PASSIVE in src/balance/classes.ts). */
-export type SpPassiveId = 'embers' | 'tailwind' | 'splitstar' | 'flow';
+/** Which of a class's four SPs, in the order the story gives them. */
+export type SpNo = 1 | 2 | 3 | 4;
+export const SP_NOS: SpNo[] = [1, 2, 3, 4];
 
-/** Each class's first SP, like NosTale's specialist cards: a name, its own move and its final. */
-export const SP_CARDS: Record<ClassId, { name: string; skill: SpMoveId; final: SpMoveId; passive: SpPassiveId }> = {
-  warrior: { name: 'Ember Knight', skill: 'whirl', final: 'phoenix', passive: 'embers' },
-  archer: { name: 'Wind Ranger', skill: 'pin', final: 'rain', passive: 'tailwind' },
-  mage: { name: 'Star Sage', skill: 'starfall', final: 'sky', passive: 'splitstar' },
-  monk: { name: 'River Monk', skill: 'palm', final: 'palms', passive: 'flow' },
+/** The SP's two moves past the class ability: its own move (a second button) and its final. */
+export type SpMoveId =
+  | 'whirl' | 'phoenix' | 'quake' | 'mountain' | 'thunderdash' | 'thunderclap' | 'sunguard' | 'dawnbreak'
+  | 'pin' | 'rain' | 'frostarrow' | 'blizzard' | 'thorntrap' | 'wildvolley' | 'shadowstep' | 'moonfall'
+  | 'starfall' | 'sky' | 'shards' | 'prism' | 'hourglass' | 'stopsands' | 'voidstep' | 'rift'
+  | 'palm' | 'palms' | 'pounce' | 'hundredclaws' | 'lotus' | 'nirvana' | 'risingsun' | 'solarflare';
+
+/** Each SP's passive, always on while it's worn (numbers: SP_PASSIVE in src/balance/classes.ts). */
+export type SpPassiveId =
+  | 'embers' | 'bedrock' | 'static' | 'secondwind'
+  | 'tailwind' | 'frostbite' | 'harvest' | 'focus'
+  | 'splitstar' | 'shell' | 'swiftsurge' | 'rebound'
+  | 'flow' | 'momentum' | 'quickstep' | 'sunburst';
+
+/** What an SP's light is made of: its colors on screen, its card and its waking (src/sprites/characters/spLooks.ts). */
+export type SpElement = 'fire' | 'stone' | 'storm' | 'dawn' | 'wind' | 'frost' | 'leaf' | 'moon' | 'star' | 'crystal' | 'sand' | 'void' | 'water' | 'tiger' | 'lotus' | 'sun';
+
+export interface SpCardDef {
+  name: string;
+  element: SpElement;
+  skill: SpMoveId;
+  final: SpMoveId;
+  passive: SpPassiveId;
+}
+
+/** Each class's four SPs, like NosTale's specialist cards: the first after a few workouts, the
+    others as the story goes on. None is stronger than the others; each fights its own way. */
+export const SP_CARDS: Record<ClassId, readonly [SpCardDef, SpCardDef, SpCardDef, SpCardDef]> = {
+  warrior: [
+    { name: 'Ember Knight', element: 'fire', skill: 'whirl', final: 'phoenix', passive: 'embers' },
+    { name: 'Stone Warden', element: 'stone', skill: 'quake', final: 'mountain', passive: 'bedrock' },
+    { name: 'Storm Blade', element: 'storm', skill: 'thunderdash', final: 'thunderclap', passive: 'static' },
+    { name: 'Dawn Paladin', element: 'dawn', skill: 'sunguard', final: 'dawnbreak', passive: 'secondwind' },
+  ],
+  archer: [
+    { name: 'Wind Ranger', element: 'wind', skill: 'pin', final: 'rain', passive: 'tailwind' },
+    { name: 'Frost Hunter', element: 'frost', skill: 'frostarrow', final: 'blizzard', passive: 'frostbite' },
+    { name: 'Leaf Warden', element: 'leaf', skill: 'thorntrap', final: 'wildvolley', passive: 'harvest' },
+    { name: 'Moon Stalker', element: 'moon', skill: 'shadowstep', final: 'moonfall', passive: 'focus' },
+  ],
+  mage: [
+    { name: 'Star Sage', element: 'star', skill: 'starfall', final: 'sky', passive: 'splitstar' },
+    { name: 'Crystal Mage', element: 'crystal', skill: 'shards', final: 'prism', passive: 'shell' },
+    { name: 'Sand Oracle', element: 'sand', skill: 'hourglass', final: 'stopsands', passive: 'swiftsurge' },
+    { name: 'Void Seer', element: 'void', skill: 'voidstep', final: 'rift', passive: 'rebound' },
+  ],
+  monk: [
+    { name: 'River Monk', element: 'water', skill: 'palm', final: 'palms', passive: 'flow' },
+    { name: 'Tiger Fist', element: 'tiger', skill: 'pounce', final: 'hundredclaws', passive: 'momentum' },
+    { name: 'Lotus Sage', element: 'lotus', skill: 'lotus', final: 'nirvana', passive: 'quickstep' },
+    { name: 'Sun Fist', element: 'sun', skill: 'risingsun', final: 'solarflare', passive: 'sunburst' },
+  ],
 };
+
+/** One of your class's SPs. */
+export const spDef = (cls: ClassId | undefined, n: SpNo) => SP_CARDS[cls ?? 'warrior'][n - 1];
 
 export const SP_PASSIVES: Record<SpPassiveId, { name: string; text: string }> = {
   embers: { name: 'Embers', text: 'Always on. Your hits can set a monster burning for a moment.' },
+  bedrock: { name: 'Bedrock', text: 'Always on. Plant your feet: standing still, you take less from every hit.' },
+  static: { name: 'Static', text: 'Always on. Every few hits, a spark jumps to another monster close by.' },
+  secondwind: { name: 'Second Wind', text: 'Always on. Once a floor, when you fall low, the dawn lifts you back up.' },
   tailwind: { name: 'Tailwind', text: 'Always on. After a dodge, the wind carries you: you run faster for a moment.' },
+  frostbite: { name: 'Frostbite', text: 'Always on. Your arrows can chill a monster: it moves slower for a moment.' },
+  harvest: { name: 'Harvest', text: 'Always on. Each monster you bring down gives you back a little.' },
+  focus: { name: 'Focus', text: 'Always on. While you are barely scratched, your shots strike true more often.' },
   splitstar: { name: 'Split Star', text: 'Always on. Every fourth attack throws one more star at another monster.' },
+  shell: { name: 'Crystal Shell', text: 'Always on. After a dodge, a shell of crystal takes the next hit for you.' },
+  swiftsurge: { name: 'Swift Sands', text: 'Always on. Your final fills faster.' },
+  rebound: { name: 'Rebound', text: 'Always on. When something hits you, the void hits back at everything near.' },
   flow: { name: 'Flow', text: 'Always on. Every hit you land heals you a little.' },
+  momentum: { name: 'Momentum', text: 'Always on. Keep moving and your strikes grow heavier.' },
+  quickstep: { name: 'Quickstep', text: 'Always on. Your dodge comes back sooner.' },
+  sunburst: { name: 'Sunburst', text: 'Always on. Every few hits, the sun bursts out around you.' },
 };
 
-export const SP_MOVES: Record<SpMoveId, { name: string; text: string }> = {
-  whirl: { name: 'Whirl', text: 'Spin with your blade out: everything close is hit and thrown back, and the shots by you are cut.' },
-  pin: { name: 'Pin Shot', text: 'A tight fan of arrows at your target that go through a whole line of monsters.' },
-  starfall: { name: 'Starfall', text: 'A star drops on the monster nearest you and bursts.' },
-  palm: { name: 'Palm Wave', text: 'Push the air: everything near is hit and shoved away, and the shots near you go.' },
-  phoenix: { name: 'Phoenix Blade', text: 'Your final. Fire all around you hits everything in a wide ring and wipes the shots in it.' },
-  rain: { name: 'Arrow Rain', text: 'Your final. Arrows fall on every monster in the room.' },
-  sky: { name: 'Falling Sky', text: 'Your final. A great blast around you, and every shot in the room goes out.' },
-  palms: { name: 'Thousand Palms', text: 'Your final. Heal, wipe the shots near you, and hit and shove everything around you.' },
+/** How each move plays: the engine picks what to do from its `shape` (numbers: SP_SKILL and
+    SP_FINAL in src/balance/classes.ts). ring: all around you. fan: shots at your target. drop: on
+    the monster nearest you. all: every monster in the room. nova: a great blast that puts out every
+    shot. dash: you rush through them. chain: a bolt jumping between monsters. guard: nothing
+    touches you for a moment. field: a patch that keeps hitting. volley: shots all around you. */
+export type SpShape = 'ring' | 'fan' | 'drop' | 'all' | 'nova' | 'dash' | 'chain' | 'guard' | 'field' | 'volley';
+
+export const SP_MOVES: Record<SpMoveId, { name: string; text: string; shape: SpShape }> = {
+  whirl: { name: 'Whirl', shape: 'ring', text: 'Spin with your blade out: everything close is hit and thrown back, and the shots by you are cut.' },
+  phoenix: { name: 'Phoenix Blade', shape: 'ring', text: 'Your final. Fire all around you hits everything in a wide ring and wipes the shots in it.' },
+  quake: { name: 'Quake', shape: 'ring', text: 'Stamp the ground: everything near is hit and thrown far back.' },
+  mountain: { name: 'Mountain Fall', shape: 'drop', text: 'Your final. A mountain of stone drops on the monster nearest you and everything round it.' },
+  thunderdash: { name: 'Thunder Dash', shape: 'dash', text: 'Rush ahead as lightning: untouchable, hitting everything you pass.' },
+  thunderclap: { name: 'Thunderclap', shape: 'chain', text: 'Your final. A bolt jumps from monster to monster across the room.' },
+  sunguard: { name: 'Sun Guard', shape: 'guard', text: 'Raise the light: for a moment nothing can touch you, and it pushes away what is close.' },
+  dawnbreak: { name: 'Dawnbreak', shape: 'nova', text: 'Your final. The dawn breaks around you: it hits everything near, heals you, and puts out every shot.' },
+  pin: { name: 'Pin Shot', shape: 'fan', text: 'A tight fan of arrows at your target that go through a whole line of monsters.' },
+  rain: { name: 'Arrow Rain', shape: 'all', text: 'Your final. Arrows fall on every monster in the room.' },
+  frostarrow: { name: 'Frost Arrow', shape: 'fan', text: 'Three heavy arrows of ice at your target.' },
+  blizzard: { name: 'Blizzard', shape: 'field', text: 'Your final. A storm of snow around you hits again and again and slows everything in it.' },
+  thorntrap: { name: 'Thorn Trap', shape: 'field', text: 'Thorns burst up under the monster nearest you and keep biting.' },
+  wildvolley: { name: 'Wild Volley', shape: 'volley', text: 'Your final. Arrows fly out from you in every direction, through everything.' },
+  shadowstep: { name: 'Shadow Step', shape: 'dash', text: 'Slip through them like a shadow, cutting everything you pass.' },
+  moonfall: { name: 'Moonfall', shape: 'chain', text: 'Your final. Moonlight leaps from monster to monster, all over the room.' },
+  starfall: { name: 'Starfall', shape: 'drop', text: 'A star drops on the monster nearest you and bursts.' },
+  sky: { name: 'Falling Sky', shape: 'nova', text: 'Your final. A great blast around you, and every shot in the room goes out.' },
+  shards: { name: 'Crystal Shards', shape: 'volley', text: 'Crystals burst out from you in every direction.' },
+  prism: { name: 'Prism', shape: 'chain', text: 'Your final. A beam of light splits from monster to monster.' },
+  hourglass: { name: 'Hourglass', shape: 'field', text: 'Sand pours down on the monster nearest you: it slows everything there and keeps hitting.' },
+  stopsands: { name: 'Stop the Sands', shape: 'all', text: 'Your final. Time all but stops: every monster in the room is hit and slowed, and the shots go out.' },
+  voidstep: { name: 'Void Step', shape: 'dash', text: 'Step through the dark: untouchable, hitting everything on the way.' },
+  rift: { name: 'Rift', shape: 'field', text: 'Your final. The ground opens around you and keeps hitting all that stands in it.' },
+  palm: { name: 'Palm Wave', shape: 'ring', text: 'Push the air: everything near is hit and shoved away, and the shots near you go.' },
+  palms: { name: 'Thousand Palms', shape: 'ring', text: 'Your final. Heal, wipe the shots near you, and hit and shove everything around you.' },
+  pounce: { name: 'Tiger Pounce', shape: 'dash', text: 'Leap at them like a tiger, hitting everything you pass.' },
+  hundredclaws: { name: 'Hundred Claws', shape: 'chain', text: 'Your final. You strike from monster to monster faster than the eye.' },
+  lotus: { name: 'Lotus Bloom', shape: 'guard', text: 'A lotus opens round you: for a moment nothing touches you, it heals you a little and pushes them back.' },
+  nirvana: { name: 'Stillwater', shape: 'nova', text: 'Your final. Peace spreads out from you: it heals you a lot, hits everything near and puts out every shot.' },
+  risingsun: { name: 'Rising Sun', shape: 'drop', text: 'A sun bursts on the monster nearest you and throws them back.' },
+  solarflare: { name: 'Solar Flare', shape: 'all', text: 'Your final. The sun flares: every monster in the room is hit, and the shots near you go.' },
 };
 
 /** Every class can dodge: a short dash, untouchable for a moment, on its own short clock. */

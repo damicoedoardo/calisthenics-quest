@@ -11,7 +11,8 @@
 // snapshots, SCALE='{"2":1.2}' plays zone 2 with its hp and dmg 1.2x, DIALS='{"fire":1.5}' turns the
 // engine's dials, TARGET=0.33,0.67 sets what the tuner aims for (wins when a zone opens, and later
 // on), EDGE='{"bossHp":0.7,"picks":3}' plays every run as if the zone's chapter had run out of
-// hearts (a weaker boss and free skills at the start; edgeFor in src/lib/fog.ts).
+// hearts (a weaker boss and free skills at the start; edgeFor in src/lib/fog.ts). SP=2 wears the
+// class's second SP (3, 4 likewise) once the model player has one; NOSP=1 wears none.
 import { readdirSync, readFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { register } from 'node:module';
@@ -46,8 +47,10 @@ if (!isMainThread) {
   // GEAR=0 plays in the starter kit; by default the bot walks in with what a player keeps (SEASONED).
   const geared = process.env.GEAR !== '0';
   const { SP_MODEL_AT } = await import(`${root}src/lib/sp.ts`);
-  // NOSP=1 plays every run without the SP, to see what it adds.
+  // NOSP=1 plays every run without the SP, to see what it adds; SP=2 (to 4) wears that SP instead
+  // of the first, to check each SP wins about as often as the first.
   const noSp = !!process.env.NOSP;
+  const spNo = Number(process.env.SP || 1);
   const now = Date.now();
   parentPort.on('message', (job) => {
     const state = JSON.parse(readFileSync(job.file, 'utf8'));
@@ -62,7 +65,7 @@ if (!isMainThread) {
       const seed = job.seed + i * 7919;
       const worn = geared ? seasonedKit(seeded(seed ^ 0x5eed), ZONES, job.zone, state.sessions.length, job.cls, build) : undefined;
       // The model player wears the SP once its trial is done (SP_MODEL_AT workouts).
-      const sp = !noSp && state.sessions.length >= SP_MODEL_AT;
+      const sp = !noSp && state.sessions.length >= SP_MODEL_AT ? spNo : false;
       out.push({ ...playRun({ zone, power, classId: job.cls, seed, build, edge, worn, sp }), seed });
     }
     parentPort.postMessage(out);

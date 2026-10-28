@@ -1,6 +1,29 @@
 "use client";
 
-import { Check, Droplets, Flame, Lock, Sparkles, Wind } from "lucide-react";
+import { useState } from "react";
+import {
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Crosshair,
+  Droplets,
+  Flame,
+  Footprints,
+  Gem,
+  HeartPulse,
+  Hourglass,
+  Leaf,
+  Lock,
+  Mountain,
+  Shield,
+  Snowflake,
+  Sparkles,
+  Sun,
+  Swords,
+  Wind,
+  Zap,
+  type LucideIcon,
+} from "lucide-react";
 import { Sprite } from "./Sprite";
 import { useLook } from "./Look";
 import { gearOf } from "@/lib/game";
@@ -9,14 +32,28 @@ import {
   abilityOf,
   SP_MOVES,
   SP_PASSIVES,
+  type SpNo,
+  type SpPassiveId,
 } from "@/game/dungeon/engine";
 import type { GameState } from "@/lib/game";
-import { setSpOff, SP_FLOOR, spCard, spOpen, spTrial, spWorn } from "@/lib/sp";
+import {
+  setSpOff,
+  SP_FLOOR,
+  spCard,
+  spChosen,
+  spOpen,
+  spOwned,
+  spTrial,
+  spWorn,
+  wearSp,
+} from "@/lib/sp";
 
 type Update = (fn: (s: GameState) => GameState) => void;
 
-/** The first SP on the Hero tab: its card (ash while sealed, in color once awake), then the trial,
-    or its moves, its passive and a switch to wear it into the Fog. Nothing shows before the Wanderer gives it. */
+/** Your SPs on the Hero tab. Nothing shows before the Wanderer gives the first; only the ones you
+    have show after that, so each new one is a surprise. With more than one, the arrows turn
+    through them: each one's card (ash while the first is sealed), its trial or its moves and
+    passive, and a button to wear it into the Fog (one at a time). */
 export function SpCard({
   state,
   update,
@@ -27,12 +64,21 @@ export function SpCard({
   land?: boolean;
 }) {
   const look = useLook();
+  const owned = spOwned(state),
+    chosen = spChosen(state);
+  const [view, setView] = useState<SpNo | 0>(0);
   const trial = spTrial(state);
   if (!trial) return null;
-  const card = spCard(state),
-    open = spOpen(state),
-    worn = spWorn(state),
+  // Before the first wakes it's the only card; after, the one you look at (the worn one at first).
+  const n: SpNo = (view && owned.includes(view) ? view : chosen) || 1,
+    card = spCard(state, n),
+    open = n === 1 ? spOpen(state) : true,
+    worn = spWorn(state) === n,
+    at = owned.indexOf(n),
     ability = abilityOf(state.profile.classId);
+  const turn = (d: number) =>
+    owned.length > 1 &&
+    setView(owned[(at + d + owned.length) % owned.length]);
   const moves = [
     {
       icon: (
@@ -67,14 +113,36 @@ export function SpCard({
         land ? "rounded-xl bg-ink-900 p-2.5" : "rounded-2xl bg-ink-800 p-4"
       }
     >
-      <div className="flex items-baseline justify-between">
+      <div className="flex items-center justify-between gap-2">
         <p className="font-pixel text-[10px] text-violet-300">
           SP · {card.name}
         </p>
-        {!open && (
+        {!open ? (
           <p className="flex items-center gap-1 text-[11px] text-slate-500">
             <Lock size={11} aria-hidden /> Sealed
           </p>
+        ) : (
+          owned.length > 1 && (
+            <div className="flex items-center gap-1 text-[11px] text-slate-500">
+              <button
+                aria-label="The SP before"
+                onClick={() => turn(-1)}
+                className="grid h-6 w-6 place-items-center rounded-md bg-ink-700 text-slate-200"
+              >
+                <ChevronLeft size={14} aria-hidden />
+              </button>
+              <span className="w-8 text-center tabular-nums">
+                {at + 1}/{owned.length}
+              </span>
+              <button
+                aria-label="The SP after"
+                onClick={() => turn(1)}
+                className="grid h-6 w-6 place-items-center rounded-md bg-ink-700 text-slate-200"
+              >
+                <ChevronRight size={14} aria-hidden />
+              </button>
+            </div>
+          )
         )}
       </div>
       <div className="mt-2 flex gap-3">
@@ -86,6 +154,7 @@ export function SpCard({
               awake: open,
               gear: gearOf(state),
               look,
+              n,
             }}
             size={land ? 48 : 96}
           />
@@ -109,7 +178,9 @@ export function SpCard({
                 ))}
               </ul>
               <button
-                onClick={() => update((s) => setSpOff(s, worn))}
+                onClick={() =>
+                  update((s) => (worn ? setSpOff(s, true) : wearSp(s, n)))
+                }
                 className={`mt-3 w-full rounded-lg py-2 text-xs font-semibold ${worn ? "bg-violet-300 text-ink-950" : "bg-ink-700 text-slate-300"}`}
               >
                 {worn ? "Worn into the Fog" : "Wear it into the Fog"}
@@ -153,19 +224,27 @@ function Step({ done, text }: { done: boolean; text: string }) {
   );
 }
 
-/** The passive's mark: fire, wind, a star, water. */
-function PassiveIcon({ id }: { id: keyof typeof SP_PASSIVES }) {
-  const Icon = {
-    embers: Flame,
-    tailwind: Wind,
-    splitstar: Sparkles,
-    flow: Droplets,
-  }[id];
-  const color = {
-    embers: "text-orange-400",
-    tailwind: "text-emerald-300",
-    splitstar: "text-amber-200",
-    flow: "text-sky-300",
-  }[id];
+/** Each passive's mark, in its SP's color. */
+const PASSIVE_MARK: Record<SpPassiveId, [LucideIcon, string]> = {
+  embers: [Flame, "text-orange-400"],
+  bedrock: [Mountain, "text-amber-200"],
+  static: [Zap, "text-yellow-300"],
+  secondwind: [Sun, "text-amber-300"],
+  tailwind: [Wind, "text-emerald-300"],
+  frostbite: [Snowflake, "text-sky-300"],
+  harvest: [Leaf, "text-green-400"],
+  focus: [Crosshair, "text-indigo-300"],
+  splitstar: [Sparkles, "text-amber-200"],
+  shell: [Gem, "text-cyan-300"],
+  swiftsurge: [Hourglass, "text-amber-400"],
+  rebound: [Shield, "text-purple-400"],
+  flow: [Droplets, "text-sky-300"],
+  momentum: [Footprints, "text-orange-300"],
+  quickstep: [Swords, "text-pink-300"],
+  sunburst: [HeartPulse, "text-yellow-400"],
+};
+
+function PassiveIcon({ id }: { id: SpPassiveId }) {
+  const [Icon, color] = PASSIVE_MARK[id];
   return <Icon size={18} className={color} aria-hidden />;
 }

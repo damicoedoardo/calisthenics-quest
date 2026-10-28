@@ -1,4 +1,4 @@
-import { SP_TRIAL } from '@/balance';
+import { SP_GIFTS, SP_TRIAL } from '@/balance';
 import type { Scene } from './types';
 
 /* Scenes that can happen in any chapter. */
@@ -19,6 +19,10 @@ export const ANYTIME: Scene[] = [
       { who: 'flame', mood: 'happy', text: 'Ooh. Is that... is someone in there?' },
       { who: 'you', text: "It's me. Sort of. I can't see the face." },
       { who: 'wanderer', text: "Not yet. It shows the one you're becoming. It wakes when it believes you." },
+      { who: 'wanderer', text: 'Everyone who keeps training carries more than one of those. Other ways of being them. Forms, the old ones called them.' },
+      { who: 'wanderer', text: 'Most never meet theirs. You keep showing up, so yours are starting to show up for you.' },
+      { who: 'flame', mood: 'happy', text: 'More than one? So this is the first.' },
+      { who: 'wanderer', text: 'The first. The others come when they come. You never know which.' },
       { who: 'flame', mood: 'soft', text: 'How do you make a card believe you?' },
       { who: 'wanderer', text: 'Show up twice more. Then go down into the Fog, to where its guardian waits.', pause: 0.6 },
       { who: 'wanderer', text: "Don't look for it. Just keep going. It will know." },
@@ -41,6 +45,54 @@ export const ANYTIME: Scene[] = [
       { who: 'narrator', art: 'sp-awake', text: 'The card has its colors now. It belongs to you.' },
       { who: 'wanderer', text: 'Take it into the Fog. See what it wants to show you.' },
     ],
+  },
+  {
+    // The second SP: the story's gift after the second chapter (SP_GIFTS), awake from the start.
+    // Like each later one, it is a surprise: nothing shows it before this.
+    id: 'sp-second',
+    when: { beaten: SP_GIFTS[2], noClass: false },
+    music: 'camp',
+    lines: [
+      { who: 'narrator', text: "There's a second warmth in your pack. You didn't put anything there.", pause: 0.8, film: true },
+      { who: 'flame', mood: 'happy', text: "Another one? Is that allowed? I'm asking for us." },
+      { who: 'narrator', spn: 2, art: 'sp-awake', text: 'A new card. This one is already awake, its colors bright, like it got tired of waiting.' },
+      { who: 'wanderer', show: 'wanderer', text: 'I told you. They come when they come. That one has been watching you since the lake.' },
+      { who: 'narrator', spn: 2, art: 'sp-transform', text: 'The light takes you again. It feels different this time.' },
+      { who: 'you', text: "It's still me. Just... a different way of standing.", pause: 0.8 },
+      { who: 'wanderer', text: 'Wear the one the day asks for. None of them is more you than the others.' },
+    ],
+    ask: { kind: 'sp', n: 2 },
+  },
+  {
+    // The third SP, after the fourth chapter.
+    id: 'sp-third',
+    when: { beaten: SP_GIFTS[3], noClass: false },
+    music: 'camp',
+    lines: [
+      { who: 'narrator', text: 'You wake before the sun. Something on your chest is humming, softly, like it was waiting for you to notice.', film: true },
+      { who: 'flame', mood: 'soft', text: "It's been doing that all night. I didn't want to wake you. You looked like you'd earned it." },
+      { who: 'narrator', spn: 3, art: 'sp-awake', text: 'A third card, warm in your hand.' },
+      { who: 'wanderer', show: 'wanderer', text: "The plateau taught you to keep going when nothing seemed to change. That was this one's lesson too." },
+      { who: 'narrator', spn: 3, art: 'sp-transform', text: 'The light takes you.' },
+      { who: 'flame', mood: 'happy', text: "You keep surprising me. I keep pretending I'm not surprised." },
+    ],
+    ask: { kind: 'sp', n: 3 },
+  },
+  {
+    // The fourth and last SP, before the final chapter.
+    id: 'sp-fourth',
+    when: { beaten: SP_GIFTS[4], noClass: false },
+    music: 'camp',
+    lines: [
+      { who: 'narrator', show: 'wanderer', text: "The Wanderer is waiting at the edge of the camp. For once, they're the one holding something out.", pause: 0.6 },
+      { who: 'wanderer', text: "This one I've carried for a long time. It was never mine. I was keeping it until you got here." },
+      { who: 'narrator', spn: 4, art: 'sp-awake', text: 'The last card. It glows like it already knows you.' },
+      { who: 'you', text: 'Here? Where is here?', pause: 0.6 },
+      { who: 'wanderer', text: 'Here is the person who never stopped coming back.' },
+      { who: 'narrator', spn: 4, art: 'sp-transform', text: 'The light takes you, and this time you go to meet it.' },
+      { who: 'flame', mood: 'happy', text: "All of them. You found all of them. I'm going to need a bigger shelf." },
+    ],
+    ask: { kind: 'sp', n: 4 },
   },
   {
     // The first time a set beats the same set last time: one more rep, a few more seconds.

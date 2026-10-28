@@ -11,13 +11,14 @@ import { flameStage, DEFAULT_FLAME_NAME } from '@/story/flame';
 import { renderLines, scenePlace, storyWords } from '@/story/engine';
 import { spWorn } from '@/lib/sp';
 import type { AnswerId, Ask, Line, Scene, Words } from '@/story/types';
+import type { SpNo } from '@/game/dungeon/content';
 
 export interface SceneResult {
   answer?: { id: AnswerId; value: string };
   flame?: string;
   pickClass?: boolean;
-  /** The Wanderer gave the first SP. */
-  sp?: boolean;
+  /** The Wanderer gave an SP: which one. */
+  sp?: SpNo;
 }
 
 interface Props {
@@ -48,7 +49,7 @@ export function ScenePlayer({ scene, state, onDone }: Props) {
     const ask = scene.ask;
     if (!ask) return onDone({});
     if (ask.kind === 'class') return onDone({ pickClass: true });
-    if (ask.kind === 'sp') return onDone({ sp: true });
+    if (ask.kind === 'sp') return onDone({ sp: ask.n ?? 1 });
     setPhase('ask');
   };
 

@@ -164,7 +164,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
       run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast', worn: wornFor(state),
         build: buildOf(state),
         edge: edgeFor(state, zone),
-        sp: spWorn(state),
+        sp: spWorn(state) || undefined,
         // Only the first attempt shares the party's seed; "Try again" is a run of your own.
         seed: party && attempt === 0 ? party.seed : undefined,
         friends: party?.friends.map((f) => ({ name: f.name, classId: f.class_id ?? undefined, ...friendSheets({ classId: f.class_id ?? undefined, look: f.look, tiers: f.look?.gear }) })),
@@ -623,6 +623,22 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
   );
 }
 
+/** A final just went off: its icon and name, small, under the HP, for a moment (a new key per
+    final starts it over). */
+function FinalBadge({ id }: { id: SpMoveId }) {
+  const [on, setOn] = useState(true);
+  useEffect(() => {
+    const t = setTimeout(() => setOn(false), 1600);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div role="status" className={`mt-1 flex w-fit items-center gap-1 rounded-md bg-ink-950/80 px-1.5 py-0.5 ring-1 ring-orange-300/60 transition-opacity duration-500 ${on ? 'opacity-100' : 'opacity-0'}`}>
+      <Sprite id="spIcon" opts={{ name: id }} size={14} label="" />
+      <span className="font-pixel text-[7px] text-orange-200">{SP_MOVES[id].name}</span>
+    </div>
+  );
+}
+
 /** HP, level and XP, top left: a short pixel bar each, the numbers on the HP bar, and the chest
     items you hold under them. */
 function Vitals({ hud }: { hud: Hud }) {
@@ -650,6 +666,7 @@ function Vitals({ hud }: { hud: Hud }) {
           </div>
         </div>
       </div>
+      {hud.sp && hud.sp.finals > 0 && <FinalBadge key={hud.sp.finals} id={hud.sp.final} />}
       {relics.length > 0 && (
         <div className="mt-1 flex flex-wrap items-center gap-0.5">
           {relics.map(([id, n]) => (

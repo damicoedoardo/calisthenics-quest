@@ -19,8 +19,8 @@ interface HeroProps {
   look?: Look;
   /** Change this number to play the class attack once (swing, shot or cast). */
   action?: number;
-  /** Wearing the class's SP: its own look. */
-  sp?: boolean;
+  /** Wearing one of the class's SPs (1 to 4, 0 or left out: none): its own look. */
+  sp?: boolean | number;
 }
 
 /** Your hero. The art lives in src/sprites; this only decides when to attack. */

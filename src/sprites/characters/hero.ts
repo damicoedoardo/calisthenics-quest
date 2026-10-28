@@ -5,7 +5,7 @@ import { NIGHT, aura, grid, mix, painter, rampOf, tint, type Grid, type Ramp } f
 import { ARM_DOWN, bone, hangs, limbs, paintArm } from '../engine/drawn';
 import { drawBow, drawStaff, drawStick, drawSword, drawWand, type WeaponLook } from '../parts/weapons';
 import { itemColors, pick, type ItemColors } from './items';
-import { SP_LOOKS } from './spLooks';
+import { spLook } from './spLooks';
 import { BANDS } from '@/balance';
 import { bandOf } from '@/game/dungeon/items';
 import { CAPE, FLAME, GOLD_GHOST, HAIR, HOLLOW_EYES, LINEN, R, SHADOW, SKIN, TROUSERS } from '../palette';
@@ -23,8 +23,9 @@ export interface HeroOpts {
   look?: Look;
   /** The hand-drawn body (engine/drawn.ts) by default; 'block' is the old body, kept for the Lab. */
   body?: 'block' | 'drawn';
-  /** Wearing the class's SP: its own clothes and light (characters/spLooks.ts) over the armor. */
-  sp?: boolean;
+  /** Wearing one of the class's SPs (1 to 4; `true` is the first): its own clothes and light
+      (characters/spLooks.ts) over the armor. */
+  sp?: boolean | number;
 }
 
 export const DEFAULT_LOOK: Look = { sex: 'm', style: 'spiky', hair: 'brown', skin: 'light', head: 'manga' };
@@ -68,7 +69,7 @@ export function heroSpec({ gear, classId, variant, body, sp: spOn }: HeroOpts): 
   const drawn = body !== 'block';
   const cape = variant === 'best';
   // With the SP on, its look stands in for the armor (the weapon and charm stay yours).
-  const sp = spOn && classId ? SP_LOOKS[classId] : null;
+  const sp = spOn && classId ? spLook(classId, spOn === true ? 1 : spOn) : null;
   const armorTier = gear.armor.tier;
   // A Fog item worn in a slot dresses the hero in that very item (its kind, rarity and colors);
   // without one, the slot shows the forge's old tier look.

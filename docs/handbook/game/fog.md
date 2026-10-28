@@ -54,26 +54,45 @@ level or story.
 
 Tested in `src/lib/fog.test.ts` and `src/lib/fog-gear.test.ts`.
 
-## The SP (`src/lib/sp.ts`)
+## The SPs (`src/lib/sp.ts`)
 
-The first SP, like NosTale's specialist cards. At `SP_TRIAL.at` workouts (once you have a class)
-the Wanderer hands it over in the `sp-gift` scene (`src/story/anytime.ts`, its ask `sp` calls
-`giveSp`). It is sealed until its trial is done (`spTrial`, `spOpen`): `SP_TRIAL.workouts` more
-workouts, and a run that reaches the mid-boss's floor (`SP_FLOOR`; `spAfterRun` after each run, in
-`page.tsx`). Then `sp-awake` plays, and it is worn into every run (`spWorn`, `HeroSetup.sp`) until
-taken off on the Hero tab (`SpCard`, `setSpOff`). It takes the shape of your class (`SP_CARDS` in
-`src/game/dungeon/content.ts`): Ember Knight, Wind Ranger, Star Sage, River Monk, each with the
-class ability, its own move, a final and a passive that is always on (`SP_PASSIVES`: Embers sets
-monsters burning, Tailwind speeds you after a dodge, Split Star throws an extra orb, Flow heals a
-little on each hit; how they play: [dungeon.md](dungeon.md)). With the SP on you look the SP's
-way, but your weapon, its tier and its forge shine stay yours (`heroSpec`). In a run the
-own move sits left of the dodge and the final over the ability (`SpButton` in `FogRun.tsx`; R and F
-on a keyboard). Numbers: `SP_TRIAL`, `SP_SKILL`, `SP_FINAL`, `SURGE`, `SP_PASSIVE` in `src/balance/classes.ts`.
+Like NosTale's specialist cards: each class has four SPs (`SP_CARDS` in
+`src/game/dungeon/content.ts`), none stronger than another, each fighting its own way. At
+`SP_TRIAL.at` workouts (once you have a class) the Wanderer hands over the first in the `sp-gift`
+scene (`src/story/anytime.ts`; its ask `sp` calls `giveSp`) and says what they are: forms that
+training wakes in you, this the first. It is sealed until its trial is done (`spTrial`, `spOpen`):
+`SP_TRIAL.workouts` more workouts, and a run that reaches the mid-boss's floor (`SP_FLOOR`;
+`spAfterRun` after each run, in `page.tsx`); then `sp-awake` plays. The story gives the other three
+as surprises after chapters are beaten (`SP_GIFTS`: the scenes `sp-second`, `sp-third`,
+`sp-fourth`, each with an ask `{ kind: 'sp', n }`), awake and put on at once (`SpState.more`,
+`worn`). Nothing shows an SP before it is yours: the Hero tab lists only the ones you own
+(`spOwned`), and you scroll them there and pick the one to wear (`SpCard`, `wearSp`), or take it
+off (`setSpOff`). The one worn goes into every run (`spWorn`, a number 1 to 4 or 0;
+`HeroSetup.sp`).
+
+| Class | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|
+| Warrior | Ember Knight | Stone Warden | Storm Blade | Dawn Paladin |
+| Archer | Wind Ranger | Frost Hunter | Leaf Warden | Moon Stalker |
+| Mage | Star Sage | Crystal Mage | Sand Oracle | Void Seer |
+| Monk | River Monk | Tiger Fist | Lotus Sage | Sun Fist |
+
+Each has the class ability, its own move, a final and a passive that is always on (`SP_PASSIVES`:
+Embers burns, Bedrock hardens you standing still, Static sparks, Second Wind heals once a floor,
+Tailwind, Frostbite slows, Harvest heals on a kill, Focus crits at full health, Split Star, Crystal
+Shell blocks a hit after a dodge, Swift Sands fills the final faster, Rebound hits back, Flow heals
+on hits, Momentum builds while you move, Quickstep shortens the dodge, Sunburst bursts every few
+hits; how they play: [dungeon.md](dungeon.md)). With an SP on you look the SP's way, but your
+weapon, its tier and its forge shine stay yours (`heroSpec`). In a run the own move sits left of
+the dodge and the final over the ability (`SpButton` in `FogRun.tsx`; R and F on a keyboard); a
+final plays its sound and shows a small badge with its name under your HP (`FinalBadge`), nothing
+over the fight. Numbers: `SP_TRIAL`, `SP_GIFTS`, `SP_SKILL`, `SP_FINAL`, `SURGE`, `SP_PASSIVE` in
+`src/balance/classes.ts`.
 
 The scenes show the SP rather than explain it: the Wanderer holds up the card (a line with `art:
-'sp-sealed'`, the `spCard` sprite in ash, you a dark shape behind a crack), and when it wakes a line
-with `art: 'sp-transform'` plays `SpTransform` over the whole screen: the card rises and turns, the
-class's element storms in (fire, wind, falling stars, rings of water), you burn white, a flash, and
+'sp-sealed'` or `'sp-awake'`, `spn` naming which SP), and when one wakes a line with `art:
+'sp-transform'` plays `SpTransform` over the whole screen: the card rises and turns, the SP's
+element storms in (rising, sweeping, converging or in rings, `STYLE`), you burn white, a flash, and
 you stand in the SP's look under its name. Worn, you wear that look everywhere you are drawn: the
 Fog (`src/game/sheets.ts`), the Hero and Play tabs, the header, the story (`sp` on `<Hero>` and on
 `Dialogue`). The looks: `SP_LOOKS` in `src/sprites/characters/spLooks.ts` (see

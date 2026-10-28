@@ -35,19 +35,19 @@ characters/*.ts       one file per character: hero, wanderer, mira, ember, book,
 characters/pixel.ts   text-row art: paintRows (one character per pixel) and shifted
 characters/icons.ts   app icons as text rows: the six keepsakes (Hero tab, sprite `keepsake`) and
                       what a day held in the Book of Days (sprite `dayIcon`), the dungeon's
-                      relics (`relicIcon`), the ability and Dodge buttons (`abilityIcon`), the SP's moves and finals (`spIcon`), the run's
+                      relics (`relicIcon`), the ability and Dodge buttons (`abilityIcon`), the SP's moves and finals (`spIcon`; the later SPs' drawn from a kind of move and an element, `shaped`), the run's
                       level-up skills (`skillIcon`), and the floor track's Warden and boss (`markIcon`)
 characters/items.ts   the Fog's items (sprite `item`, opts `ItemLook` { art, rarity, seed }): one 24x24
                       text-row drawing per kind (`ITEM_ROWS`: sword, bow, staff, wand, heavy, light, robe,
                       ring, amulet, token, band) and one of its own for each kind's legendary
                       (`LEGEND_ROWS`), on a 32x32 frame; `itemColors` picks the colors from rarity
                       and seed (also drawn on the floor by the scene, and worn by the hero)
-characters/spLooks.ts  each class's SP look (`SP_LOOKS`): the dress it wears (plate, jerkin or robe) in its
+characters/spLooks.ts  each SP's look, four per class (`SP_LOOKS`, `spLook(classId, n)`): the dress it wears (plate, jerkin or robe) in its
                       colors, plus its own pieces (the Ember Knight's circlet and burning mantle, the Wind
                       Ranger's feather and scarf, the Star Sage's hat and circling star, the River Monk's
                       headband, sash and beads), and its element's colors for the transformation;
-                      the hero wears it with `sp: true`
-characters/spCard.ts  the SP card (sprite `spCard`, opts { classId, awake, gear, look }): a 48x64 card, you in
+                      the hero wears it with `sp: n` (`true` is the first)
+characters/spCard.ts  the SP card (sprite `spCard`, opts { classId, n, awake, gear, look }): a 48x64 card, you in
                       the SP's look from the chest up in its window; sealed it is ash with a crack of light
 characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look, kit }): you
                       doing each exercise of the program (hand-posed), one rep per loop of the

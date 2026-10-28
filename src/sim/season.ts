@@ -174,8 +174,8 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
         note('ask', `picks the ${id} class`);
         state = { ...state, sceneMark: mark, seenScenes: seen, profile: { ...state.profile, classId: id } };
       } else if (ask?.kind === 'sp') {
-        note('ask', 'gets the first SP');
-        state = giveSp({ ...state, sceneMark: mark, seenScenes: seen });
+        note('ask', `gets SP ${ask.n ?? 1}`);
+        state = giveSp({ ...state, sceneMark: mark, seenScenes: seen }, ask.n ?? 1);
       } else {
         state = { ...state, sceneMark: mark, seenScenes: seen };
       }

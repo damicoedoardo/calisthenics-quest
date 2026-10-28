@@ -205,7 +205,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           profile: r.flame ? { ...s.profile, flame: r.flame } : s.profile,
           answers: r.answer ? { ...s.answers, [r.answer.id]: r.answer.value } : s.answers,
         };
-        return r.sp ? giveSp(next) : next;
+        return r.sp ? giveSp(next, r.sp) : next;
       });
       if (r.pickClass) setPicker('story');
       setScene(null);

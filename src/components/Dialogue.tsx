@@ -37,7 +37,8 @@ interface Props {
   /** How grown the flame is, for its portrait. */
   flame?: FlameStage;
   /** You wear your SP's look (once it has woken). */
-  sp?: boolean;
+  /** The SP you wear (1 to 4), or 0: the hero's portraits show it. */
+  sp?: number;
 }
 
 /** One step of a scene: a camera beat on its own, or a line (which can carry a beat). */
@@ -82,24 +83,24 @@ function cameraAt(beats: Beat[], index: number, place?: PlaceId): Camera {
 }
 
 /** The SP card held up to the camera, sealed or awake. */
-function CardArt({ awake, gear, classId }: { awake: boolean; gear: Record<GearSlot, Gear>; classId?: ClassId }) {
+function CardArt({ awake, gear, classId, n }: { awake: boolean; gear: Record<GearSlot, Gear>; classId?: ClassId; n?: number }) {
   const look = useLook();
   return (
     <div className="animate-float" style={{ filter: 'drop-shadow(0 0 14px rgba(253,230,138,.35))' }}>
-      <Sprite id="spCard" opts={{ classId, awake, gear, look }} size={144} />
+      <Sprite id="spCard" opts={{ classId, awake, gear, look, n }} size={144} />
     </div>
   );
 }
 
-function Portrait({ line, gear, classId, flame, sp }: { line: Line; gear: Record<GearSlot, Gear>; classId?: ClassId; flame: FlameStage; sp?: boolean }) {
-  if (line.art === 'sp-sealed' || line.art === 'sp-awake') return <CardArt awake={line.art === 'sp-awake'} gear={gear} classId={classId} />;
+function Portrait({ line, gear, classId, flame, sp }: { line: Line; gear: Record<GearSlot, Gear>; classId?: ClassId; flame: FlameStage; sp?: number }) {
+  if (line.art === 'sp-sealed' || line.art === 'sp-awake') return <CardArt awake={line.art === 'sp-awake'} gear={gear} classId={classId} n={line.spn} />;
   const p = castMember(line.show ?? line.who).portrait;
   switch (p.kind) {
     case 'sprite':
       return <Sprite id={p.sprite} size={p.size} />;
     case 'hero':
       // Only you wear your SP: the Echo, the Hollow and the Best Self keep their own looks.
-      return <Hero gear={gear} classId={classId} size={p.size} variant={p.variant} sp={sp && (p.variant === 'normal' || p.variant === 'kindled')} />;
+      return <Hero gear={gear} classId={classId} size={p.size} variant={p.variant} sp={p.variant === 'normal' || p.variant === 'kindled' ? sp : 0} />;
     case 'hollow':
       return <Hollow size={p.size} />;
     case 'flame':
@@ -136,7 +137,7 @@ const TAG = { gold: 'text-gold-300', red: 'text-red-400', sky: 'text-sky-300', a
  * A scene: portrait above, a text box below, tap to reveal and advance. With a place it plays
  * over a backdrop, and shots move the camera, cut, fade, shake or bring someone in.
  */
-export function Dialogue({ lines, gear, classId, onDone, cinematic = false, backdrop, music = 'rise', words, place, shots = [], flame = 'candle', sp = false }: Props) {
+export function Dialogue({ lines, gear, classId, onDone, cinematic = false, backdrop, music = 'rise', words, place, shots = [], flame = 'candle', sp = 0 }: Props) {
   const beats = useMemo<Beat[]>(() => [...shots.map((shot) => ({ shot })), ...lines.map((line) => ({ line, shot: line.shot }))], [shots, lines]);
   const [index, setIndex] = useState(0);
   const [shown, setShown] = useState(0);
@@ -301,7 +302,7 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
 
         {!line && !(shot && 'title' in shot) && <div className="flex-1" />}
 
-        {line?.art === 'sp-transform' && classId && <SpTransform key={index} classId={classId} gear={gear} onDone={next} />}
+        {line?.art === 'sp-transform' && classId && <SpTransform key={index} classId={classId} n={line.spn} gear={gear} onDone={next} />}
 
         <div
           className={`pointer-events-none absolute inset-0 z-20 transition-opacity ${cam.fade === 'white' ? 'bg-white' : 'bg-black'}`}

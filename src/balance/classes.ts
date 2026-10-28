@@ -59,45 +59,116 @@ export const CLASS_LEAN = { warrior: 'damage', archer: 'crit', monk: 'health', m
 export const SECOND_LEAN = { warrior: 'armor', archer: 'move', monk: 'armor', mage: 'damage' } as const;
 export const SECOND_LEAN_POINTS = 2;
 
-/* The first SP, like NosTale's specialist cards: the Wanderer hands it over after `SP_TRIAL.at`
-   workouts, sealed; it wakes once you train `SP_TRIAL.workouts` more times and reach the mid-boss
-   floor in the Fog. Worn, a run has the class ability, the SP's own move and its final.
-   Goal: the SP feels like a new way to fight, not a new tier of power: with it, a zone's win rate
-   rises by about 10 points or less, and the classes stay within `CLASS_FAIR` (`pnpm fog:sheet`). */
+/* The SPs, like NosTale's specialist cards: each class has four. The Wanderer hands the first over
+   after `SP_TRIAL.at` workouts, sealed; it wakes once you train `SP_TRIAL.workouts` more times and
+   reach the mid-boss floor in the Fog. The others come with the story (`SP_GIFTS`), awake. Worn, a
+   run has the class ability, the SP's own move, its final and its passive.
+   Goal: an SP feels like a new way to fight; the game around it is tuned with the first one worn
+   (zones in src/story/chapters), so the pace stays the same. Every SP of a class wins about as
+   often as its first (within `CLASS_FAIR`), and the classes stay fair (`pnpm fog:sheet`, and
+   `SP=2 pnpm fog:sheet` for the others). */
 export const SP_TRIAL = { at: 3, workouts: 2 } as const;
 
-/** Each SP's own move (the second button): its clock (s) and size; damage is times the class's
-    base attack. Whirl (warrior), Pin Shot (archer), Starfall (mage), Palm Wave (monk). */
-export const SP_SKILL = {
-  slash: { cd: 7, r: 100, dmg: 1, knock: 260 },
-  arrow: { cd: 6, arrows: 5, spread: 0.12, dmg: 2.4, pierce: 6 },
-  orb: { cd: 8, reach: 260, r: 90, dmg: 1.3 },
-  wave: { cd: 9, r: 120, dmg: 0.7, knock: 320 },
-} as const;
+/** When the story gives the 2nd, 3rd and 4th SP: after this many chapters beaten. Goal: one every
+    month or two, the last before the final chapter. */
+export const SP_GIFTS = { 2: 2, 3: 4, 4: 5 } as const;
+
+/** One SP move's numbers. Damage is times the class's base attack; `cd` is the own move's clock
+    (s); `r` a radius, `reach` how far it looks for a monster, `knock` how far it throws them,
+    `clear` how much of `r` it wipes shots in (1 = all of it), `heal` a share of your HP, `slow` how
+    much slower monsters move (for `secs`), `n` how many shots or jumps, `every` a field's beat (s). */
+export interface SpMoveNumbers {
+  dmg: number;
+  cd?: number;
+  r?: number;
+  reach?: number;
+  knock?: number;
+  clear?: number;
+  heal?: number;
+  slow?: number;
+  secs?: number;
+  speed?: number;
+  arrows?: number;
+  spread?: number;
+  pierce?: number;
+  n?: number;
+  every?: number;
+}
+
+/** Each SP's own move (the second button). */
+export const SP_SKILL: Record<string, SpMoveNumbers> = {
+  // warrior: Whirl, Quake, Thunder Dash, Sun Guard
+  whirl: { cd: 7, r: 100, dmg: 1, knock: 260, clear: 0.7 },
+  quake: { cd: 8, r: 130, dmg: 0.8, knock: 460 },
+  thunderdash: { cd: 6, speed: 720, secs: 0.22, dmg: 1.6 },
+  sunguard: { cd: 9, secs: 1.4, r: 90, dmg: 0.5, knock: 260, clear: 1 },
+  // archer: Pin Shot, Frost Arrow, Thorn Trap, Shadow Step
+  pin: { cd: 6, arrows: 5, spread: 0.12, dmg: 2.4, pierce: 6 },
+  frostarrow: { cd: 6, arrows: 3, spread: 0.18, dmg: 3.4, pierce: 2 },
+  thorntrap: { cd: 8, reach: 300, r: 80, secs: 3, every: 0.5, dmg: 0.7 },
+  shadowstep: { cd: 6, speed: 660, secs: 0.22, dmg: 1.9 },
+  // mage: Starfall, Crystal Shards, Hourglass, Void Step
+  starfall: { cd: 8, reach: 260, r: 90, dmg: 1.3 },
+  shards: { cd: 7, n: 10, dmg: 1.1, pierce: 1 },
+  hourglass: { cd: 9, reach: 260, r: 100, secs: 3, every: 0.5, dmg: 0.45, slow: 0.6 },
+  voidstep: { cd: 6, speed: 760, secs: 0.2, dmg: 1.4 },
+  // monk: Palm Wave, Tiger Pounce, Lotus Bloom, Rising Sun
+  palm: { cd: 9, r: 120, dmg: 0.7, knock: 320, clear: 1 },
+  pounce: { cd: 6, speed: 680, secs: 0.22, dmg: 1.1 },
+  lotus: { cd: 10, secs: 1.4, r: 110, dmg: 0.4, knock: 280, heal: 0.04, clear: 1 },
+  risingsun: { cd: 8, reach: 220, r: 110, dmg: 1, knock: 320 },
+};
 
 /** The SP's final fills by fighting, like the monk's calm: points for each hit landed and taken.
     Goal: about one final in a long fight (a mid-boss, a boss), not one a room. */
 export const SURGE = { hit: 1, taken: 2, full: 300 } as const;
 
-/** Each SP's passive, always on while it's worn, NosTale style: it changes how you play more than
-    how hard you hit. Embers (warrior): a hit can set a monster burning, `dmg` times your slash
-    every `every` s for `secs`. Tailwind (archer): after a dodge you run `move` faster for `secs`.
-    Split Star (mage): every `every`th attack throws one more orb at another monster. Flow (monk):
-    a hit you land heals `heal` of your HP, at most once every `every` s. Goal: the SP with its passive wins no more
-    often than before (the fog sheet), each class still fair. */
-export const SP_PASSIVE = {
-  slash: { chance: 0.2, secs: 2, every: 0.5, dmg: 0.1 },
-  arrow: { secs: 1.5, move: 0.4 },
-  orb: { every: 4 },
-  wave: { heal: 0.004, every: 1 },
-} as const;
+/** Each SP's final; a final always wipes the shots in its reach. */
+export const SP_FINAL: Record<string, SpMoveNumbers> = {
+  phoenix: { r: 220, dmg: 4, knock: 300, clear: 1 },
+  mountain: { reach: 300, r: 170, dmg: 4.2, knock: 420 },
+  thunderclap: { n: 8, reach: 340, dmg: 3.6 },
+  dawnbreak: { r: 240, dmg: 2.4, heal: 0.15 },
+  rain: { dmg: 4.5 },
+  blizzard: { r: 230, secs: 4, every: 0.5, dmg: 0.9, slow: 0.6 },
+  wildvolley: { n: 28, dmg: 2.4, pierce: 4 },
+  moonfall: { n: 10, reach: 380, dmg: 3.8 },
+  sky: { r: 260, dmg: 3 },
+  prism: { n: 8, reach: 340, dmg: 2.8 },
+  stopsands: { dmg: 1.8, slow: 0.8, secs: 3 },
+  rift: { r: 240, secs: 3, every: 0.4, dmg: 0.7 },
+  palms: { r: 200, dmg: 2, heal: 0.1, knock: 400, clear: 1 },
+  hundredclaws: { n: 10, reach: 320, dmg: 1.9 },
+  nirvana: { r: 240, dmg: 1.6, heal: 0.25 },
+  solarflare: { dmg: 2.2 },
+};
 
-/** Each SP's final: Phoenix Blade (warrior, all around you), Arrow Rain (archer, every monster in
-    the room), Falling Sky (mage, a wide blast that wipes every shot), Thousand Palms (monk, heals
-    and pushes). Damage is times the class's base attack. */
-export const SP_FINAL = {
-  slash: { r: 220, dmg: 4 },
-  arrow: { dmg: 4.5 },
-  orb: { r: 260, dmg: 3 },
-  wave: { r: 200, dmg: 2, heal: 0.1, knock: 400 },
+/** Each SP's passive, always on while it's worn, NosTale style: it changes how you play more than
+    how hard you hit. Embers: a hit can set a monster burning, `dmg` times your attack every
+    `every` s for `secs`. Bedrock: standing still for `after` s, you take `cut` less. Static and
+    Sunburst: every `every`th hit, a spark (to another monster) or a burst (round you) of `dmg`.
+    Second Wind: once a floor, under `below` of your HP, heal `heal`. Tailwind: after a dodge you
+    run `move` faster for `secs`. Frostbite: a hit can slow a monster by `slow` for `secs`. Harvest:
+    a kill heals `heal`. Focus: above `above` of your HP, `crit` more crits. Split Star: every
+    `every`th attack one more orb. Crystal Shell: after a dodge, a shell takes the next hit within
+    `secs`. Swift Sands: the final fills `fill` times as fast. Rebound: a hit on you hits back `dmg`
+    in `r`. Flow: a hit you land heals `heal`, at most every `every` s. Momentum: moving builds up
+    to `dmg` more damage over `secs`. Quickstep: the dodge's clock is `cd` times as long. */
+export const SP_PASSIVE = {
+  embers: { chance: 0.2, secs: 2, every: 0.5, dmg: 0.1 },
+  bedrock: { after: 0.4, cut: 0.35 },
+  static: { every: 4, reach: 160, dmg: 0.8 },
+  secondwind: { below: 0.3, heal: 0.3 },
+  tailwind: { secs: 1.5, move: 0.4 },
+  frostbite: { chance: 0.3, slow: 0.4, secs: 1.5 },
+  harvest: { heal: 0.015 },
+  focus: { above: 0.8, crit: 0.15 },
+  splitstar: { every: 4 },
+  shell: { secs: 3 },
+  swiftsurge: { fill: 1.35 },
+  rebound: { r: 120, dmg: 1.2 },
+  flow: { heal: 0.004, every: 1 },
+  momentum: { secs: 1.5, dmg: 0.25 },
+  quickstep: { cd: 0.65 },
+  sunburst: { every: 5, r: 90, dmg: 0.6 },
 } as const;

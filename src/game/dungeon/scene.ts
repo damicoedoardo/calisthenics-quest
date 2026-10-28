@@ -13,7 +13,7 @@ import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_
 import { THEMES, themeFor, type Theme } from './themes';
 import { bandOf, glowOf } from './items';
 import { BANDS, MATS, SURGE } from '@/balance';
-import { SP_LOOKS } from '@/sprites/characters/spLooks';
+import { spLook } from '@/sprites/characters/spLooks';
 import {
   ABILITIES,
   DODGE,
@@ -60,6 +60,8 @@ import {
   winNow,
   type AbilityId,
   type SpMoveId,
+  type SpNo,
+  type SpPassiveId,
   SP_MOVES,
   type CellKind,
   type Door,
@@ -99,8 +101,6 @@ function recap(run: Run): RunEnd {
   return { ...over, relics: { ...run.hero.relics }, warden };
 }
 
-/** Each SP move's color on screen. */
-const SP_COLOR: Record<SpMoveId, number> = { whirl: 0xfbbf24, phoenix: 0xf97316, pin: 0x86efac, rain: 0x86efac, starfall: 0xc4b5fd, sky: 0xa78bfa, palm: 0x7dd3fc, palms: 0x67e8f9 };
 
 /** Most particles and drawn effects alive at once. Measured fights peak far below this (bits 38,
     sparks 16, puffs 72, effects 3); the caps only stop a freak pile-up from stalling a slow phone. */
@@ -148,7 +148,7 @@ export interface RunSetup {
   /** The chapter's hearts are gone: a weaker boss and free skills at the start. */
   edge?: Edge;
   /** Wearing the class's SP: its own move and its final (src/lib/sp.ts). */
-  sp?: boolean;
+  sp?: SpNo | boolean;
   /** A party's run: the seed every phone shares. */
   seed?: number;
   /** Friends in the run (a practice run: bots play them), each with their own sheets
@@ -193,7 +193,7 @@ export interface Hud {
   /** The class ability: 1 when ready. */
   ability: { id: AbilityId; ready: number };
   /** With an SP on: its own move and its final, each 1 when ready. */
-  sp: { skill: SpMoveId; skillReady: number; final: SpMoveId; finalReady: number } | null;
+  sp: { skill: SpMoveId; skillReady: number; final: SpMoveId; finalReady: number; finals: number } | null;
   /** The dodge: 1 when ready. */
   dodge: number;
   cleared: boolean;
@@ -413,8 +413,10 @@ class DungeonScene extends Phaser.Scene {
   private stopUntil = 0;
   /** Small hit-stops don't come back before then, so a flurry of hits doesn't stutter. */
   private stopCool = 0;
-  /** When Flow's last drop showed (it comes with almost every hit). */
-  private flowAt = 0;
+  /** When each frequent passive last showed (they come with almost every hit). */
+  private passiveAt: Partial<Record<SpPassiveId, number>> = {};
+  /** Finals used this run: the HUD shows a small badge with the final's name when it goes up. */
+  private finals = 0;
   /** Hit-stop spent in the current second: capped at STOP_BUDGET, so a burst of hits never stacks
       into stutter. */
   private stopSpent = { from: 0, ms: 0 };
@@ -1413,7 +1415,7 @@ class DungeonScene extends Phaser.Scene {
       floor: r.floor + 1,
       floors: r.layout.floors,
       ability: { id: r.hero.ability, ready: abilityReady(r, r.hero) },
-      sp: r.hero.sp ? { skill: r.hero.sp.skill, skillReady: skillReady(r, r.hero), final: r.hero.sp.final, finalReady: finalReady(r.hero) } : null,
+      sp: r.hero.sp ? { skill: r.hero.sp.skill, skillReady: skillReady(r, r.hero), final: r.hero.sp.final, finalReady: finalReady(r.hero), finals: this.finals } : null,
       dodge: Math.min(1, 1 - (r.hero.dodgeAt - r.t) / DODGE.cd),
       cleared: r.cleared,
       relics: { ...r.hero.relics },
@@ -1999,19 +2001,19 @@ class DungeonScene extends Phaser.Scene {
         break;
       }
       case 'sp': {
-        // An SP move, each its own: fire, wind, stars or water. A final first flashes its name
-        // across the screen with you in it (cutIn), then shakes the room.
+        // An SP move, each its own: fire, wind, stars or water. A final shakes the room; its name
+        // shows as a small badge in the HUD (finals), so nothing covers the fight.
         const { x, y, r, final } = e,
-          color = SP_COLOR[e.id];
-        this.sfx(final ? 'nova' : e.id === 'pin' ? 'arrow' : 'nova', final ? 0.8 : 1.15);
+          shape = SP_MOVES[e.id].shape;
+        this.sfx(final ? 'nova' : shape === 'fan' || shape === 'volley' ? 'arrow' : shape === 'dash' ? 'dash' : shape === 'chain' ? 'spark' : 'nova', final ? 0.8 : 1.15);
         this.shake(final ? 260 : 120, final ? 0.01 : 0.005);
         if (final) {
           buzz(30);
-          this.cutIn(e.id);
+          this.finals++;
           this.hitStop(120);
           this.cameras.main.flash(250, 255, 236, 200);
         }
-        this.spMove(e.id, x, y, r, e.angle ?? 0, color);
+        this.spMove(e, this.spAura());
         break;
       }
       case 'passive':
@@ -2358,8 +2360,11 @@ class DungeonScene extends Phaser.Scene {
 
   /** How each SP move looks. Fire for the Ember Knight, wind for the Wind Ranger, stars for the
       Star Sage, water for the River Monk; the final is the same element, bigger. */
-  private spMove(id: SpMoveId, x: number, y: number, r: number, angle: number, color: number) {
-    const [X, Y] = this.P(x, y);
+  private spMove(e: Extract<GameEvent, { type: 'sp' }>, aura: number[]) {
+    const { id, x, y, r } = e,
+      angle = e.angle ?? 0,
+      color = aura[1],
+      [X, Y] = this.P(x, y);
     switch (id) {
       case 'whirl':
         // three blades of fire spin round you and fling embers out
@@ -2555,93 +2560,229 @@ class DungeonScene extends Phaser.Scene {
         });
         break;
       }
+      default:
+        this.spShape(e, aura);
     }
   }
 
-  /** A final's cut-in, like in an anime: a band of the SP's colors sweeps across the screen with
-      you in it, big, and the move's name. With reduced motion it only shows, still, then goes. */
-  private cutIn(id: SpMoveId) {
-    const cam = this.cameras.main,
-      cls = this.setup.classId ?? 'warrior',
-      aura = SP_LOOKS[cls].aura.map((c) => parseInt(c.slice(1), 16)),
-      vw = cam.width / cam.zoom,
-      vh = cam.height / cam.zoom,
-      cx = cam.width / 2,
-      cy = cam.height / 2,
-      bandH = Math.min(120, vh * 0.34),
-      still = reducedMotion();
-    const band = this.add.graphics().setScrollFactor(0).setDepth(260000);
-    // the band, leaning, with stripes of the element's color at its edges and speed lines in it
-    band.fillStyle(0x0b0d14, 0.88).fillPoints([new Phaser.Math.Vector2(-vw, -bandH / 2 + 10), new Phaser.Math.Vector2(vw, -bandH / 2 - 10), new Phaser.Math.Vector2(vw, bandH / 2 - 10), new Phaser.Math.Vector2(-vw, bandH / 2 + 10)], true);
-    band.fillStyle(aura[1], 1).fillRect(-vw, -bandH / 2 - 4, vw * 2, 4);
-    band.fillStyle(aura[2], 1).fillRect(-vw, bandH / 2 - 2, vw * 2, 4);
-    for (let i = 0; i < 14; i++) {
-      const ly = -bandH / 2 + 10 + ((i * 37) % (bandH - 20)),
-        lx = -vw / 2 + ((i * 113) % vw);
-      band.lineStyle(i % 3 ? 1 : 2, aura[i % 2 ? 1 : 2], 0.5).lineBetween(lx, ly, lx + 50 + (i % 4) * 20, ly);
-    }
-    const you = this.add
-        .image(0, 0, this.hero.texture.key, this.hero.frame.name)
-        .setScrollFactor(0)
-        .setDepth(260001)
-        .setScale((bandH * 1.5) / 64)
-        .setOrigin(0.5, 0.42),
-      name = this.add
-        .text(0, 0, SP_MOVES[id].name.toUpperCase(), { fontFamily: '"Press Start 2P", monospace', fontSize: '16px', color: `#${aura[2].toString(16).padStart(6, '0')}`, stroke: '#0b0d14', strokeThickness: 5 })
-        .setScrollFactor(0)
-        .setDepth(260002)
-        .setOrigin(0, 0.5);
-    const place = (dx: number) => {
-      band.setPosition(cx + dx, cy);
-      you.setPosition(cx - vw * 0.28 + dx * 1.3, cy);
-      name.setPosition(cx - vw * 0.1 - dx * 0.6, cy + bandH * 0.18);
-    };
-    const all = [band, you, name],
-      done = () => all.forEach((o) => o.destroy());
-    if (still) {
-      place(0);
-      this.time.delayedCall(700, done);
-      return;
-    }
-    // in fast, a held beat drifting a little, out fast the other way
-    const IN = 180,
-      HOLD = 650,
-      OUT = 180;
-    place(-vw);
-    this.tweens.addCounter({
-      from: 0,
-      to: IN + HOLD + OUT,
-      duration: IN + HOLD + OUT,
-      onUpdate: (tw) => {
-        const t = tw.getValue() ?? 0;
-        if (t < IN) place(-vw * Math.pow(1 - t / IN, 3));
-        else if (t < IN + HOLD) place((18 * (t - IN)) / HOLD);
-        else place(18 + (vw - 18) * Math.pow((t - IN - HOLD) / OUT, 3));
-      },
-      onComplete: done,
-    });
+  /** The colors of the SP you wear (dark, middle, light), for its moves on screen. */
+  private spAura(): number[] {
+    return spLook(this.setup.classId ?? 'warrior', this.run.hero.sp?.n ?? 1).aura.map(hex);
   }
 
-  /** An SP's passive going off: a monster catching fire, a tailwind, a split star, the flow. */
-  private passive(id: 'embers' | 'tailwind' | 'splitstar' | 'flow', x: number, y: number) {
-    if (id === 'embers') {
-      this.bits.particleTint = 0xf97316;
-      this.burst(this.bits, 6, x, y, -4);
-      this.fade(260, (g, p) => g.lineStyle(2, 0xfb923c, 0.9 * (1 - p)).strokeCircle(x, y, 10 + 16 * p));
-    } else if (id === 'tailwind') {
-      this.fade(320, (g, p) => g.lineStyle(3 * (1 - p) + 1, 0x9fe0d0, 0.8 * (1 - p)).strokeCircle(x, y, 14 + 40 * p));
-    } else if (id === 'splitstar') {
-      this.fade(260, (g, p) => this.star(g, ...this.P(x, y), 5 + 8 * p, 0xfff3b0, 1 - p), true);
-    } else {
-      // Flow comes with almost every hit: show a drop of it at most a few times a second
-      if (this.time.now < this.flowAt) return;
-      this.flowAt = this.time.now + 450;
-      const [X, Y] = this.P(x, y);
-      this.fade(500, (g, p) => {
-        g.fillStyle(0x7dd3fc, 0.9 * (1 - p)).fillCircle(X + 8, Y - 18 - 22 * p, 3);
-        g.fillTriangle(X + 5, Y - 18 - 22 * p, X + 11, Y - 18 - 22 * p, X + 8, Y - 25 - 22 * p);
-        g.lineStyle(2, 0x60b0f0, 0.6 * (1 - p)).strokeEllipse(X, Y + 18, 26 + 16 * p, 8 + 4 * p);
-      }, true);
+  /** The later SPs' moves, drawn by their shape in their SP's colors. */
+  private spShape(e: Extract<GameEvent, { type: 'sp' }>, aura: number[]) {
+    const { x, y, r, final } = e,
+      [c0, c1, c2] = aura,
+      [X, Y] = this.P(x, y),
+      angle = e.angle ?? 0;
+    this.bits.particleTint = c1;
+    switch (SP_MOVES[e.id].shape) {
+      case 'ring':
+        this.fade(final ? 650 : 420, (g, p) => {
+          const R = r * (0.25 + 0.75 * p);
+          g.lineStyle((final ? 12 : 8) * (1 - p) + 2, c1, 0.9 * (1 - p)).strokeCircle(x, y, R);
+          g.lineStyle(3, c2, 0.9 * (1 - p)).strokeCircle(x, y, R * 0.8);
+          g.fillStyle(c0, 0.18 * (1 - p)).fillCircle(x, y, R);
+        });
+        // the ground cracks: short lines out from you
+        this.fade(500, (g, p) => {
+          g.lineStyle(3, c0, 0.8 * (1 - p));
+          for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * Math.PI * 2 + 0.3;
+            g.lineBetween(x + Math.cos(a) * 14, y + Math.sin(a) * 14, x + Math.cos(a) * r * 0.7 * Math.min(1, p * 3), y + Math.sin(a) * r * 0.7 * Math.min(1, p * 3));
+          }
+        });
+        this.burst(this.bits, final ? 36 : 18, x, y);
+        break;
+      case 'drop':
+        // something heavy falls from high up onto the mark, then bursts
+        this.fade(final ? 700 : 520, (g, p) => {
+          const q = Math.min(1, p / 0.35);
+          if (q < 1) {
+            const sy = Y - 220 * (1 - q),
+              rr = final ? 26 : 12;
+            g.lineStyle(rr, c1, 0.35).lineBetween(X, sy - 70, X, sy);
+            g.fillStyle(c1, 1).fillCircle(X, sy, rr);
+            g.fillStyle(c2, 1).fillCircle(X - rr * 0.3, sy - rr * 0.3, rr * 0.45);
+          } else {
+            const t = (p - 0.35) / 0.65;
+            g.lineStyle(6 * (1 - t) + 1, c1, 0.9 * (1 - t)).strokeCircle(X, Y, (r + 10) * (0.3 + 0.9 * t));
+            g.fillStyle(c2, 0.5 * (1 - t)).fillCircle(X, Y, (r * 0.6) * (1 - t * 0.5));
+          }
+        }, true);
+        this.time.delayedCall(final ? 240 : 180, () => {
+          this.burst(this.bits, final ? 40 : 16, x, y);
+          this.burst(this.sparks, final ? 20 : 8, x, y, -6);
+          if (final) this.shake(200, 0.012);
+        });
+        break;
+      case 'dash': {
+        // you as a streak of the element: afterimages and a bright line
+        const toX = x + Math.cos(angle) * r,
+          toY = y + Math.sin(angle) * r;
+        this.ghosts(x, y, toX, toY, c1, 4);
+        this.fade(320, (g, p) => {
+          g.lineStyle(12 * (1 - p) + 2, c1, 0.6 * (1 - p)).lineBetween(x, y, toX, toY);
+          g.lineStyle(3, c2, 0.9 * (1 - p)).lineBetween(x, y, toX, toY);
+        });
+        this.burst(this.bits, 10, x, y);
+        break;
+      }
+      case 'chain': {
+        // a bolt from one to the next, jagged, flickering
+        const pts = (e.points ?? []).map((q, i) => (i === 0 ? q : { x: q.x + Phaser.Math.Between(-5, 5), y: q.y + Phaser.Math.Between(-5, 5) }));
+        this.fade(final ? 420 : 300, (g, p) => {
+          for (let i = 1; i < pts.length; i++) {
+            const a = pts[i - 1],
+              b = pts[i],
+              mx = (a.x + b.x) / 2 + Math.sin(i * 7 + p * 30) * 10,
+              my = (a.y + b.y) / 2 + Math.cos(i * 5 + p * 30) * 10;
+            g.lineStyle(7 * (1 - p) + 1, c1, 0.6 * (1 - p)).lineBetween(a.x, a.y, mx, my).lineBetween(mx, my, b.x, b.y);
+            g.lineStyle(2, c2, 1 - p).lineBetween(a.x, a.y, mx, my).lineBetween(mx, my, b.x, b.y);
+          }
+        });
+        pts.slice(1).forEach((q) => this.burst(this.sparks, 4, q.x, q.y, -6));
+        break;
+      }
+      case 'guard':
+        // a bubble of light round you while nothing can touch you (drawFx keeps it), and a push
+        this.fade(380, (g, p) => {
+          g.lineStyle(6 * (1 - p) + 1, c1, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.3 + 0.7 * p));
+          g.fillStyle(c2, 0.2 * (1 - p)).fillCircle(x, y, r * (0.3 + 0.7 * p));
+        });
+        this.burst(this.sparks, 10, x, y, -6);
+        break;
+      case 'nova':
+        this.fade(final ? 800 : 500, (g, p) => {
+          g.lineStyle(14 * (1 - p) + 1, c1, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.15 + 0.85 * p));
+          g.lineStyle(5 * (1 - p) + 1, c2, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.08 + 0.7 * p));
+          g.fillStyle(c2, 0.3 * (1 - p)).fillCircle(x, y, r * (0.15 + 0.85 * p));
+        });
+        // rays going out
+        this.fade(600, (g, p) => {
+          g.lineStyle(3, c2, 0.7 * (1 - p));
+          for (let i = 0; i < 12; i++) {
+            const a = (i / 12) * Math.PI * 2,
+              r0 = 20 + r * p;
+            g.lineBetween(x + Math.cos(a) * r0, y + Math.sin(a) * r0, x + Math.cos(a) * (r0 + 40), y + Math.sin(a) * (r0 + 40));
+          }
+        });
+        this.burst(this.bits, 40, x, y);
+        this.burst(this.sparks, 24, x, y, -6);
+        break;
+      case 'field':
+        // the patch opens (drawFx keeps it while it lasts)
+        this.fade(360, (g, p) => g.lineStyle(5 * (1 - p) + 1, c2, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.4 + 0.6 * p)));
+        this.burst(this.bits, final ? 30 : 12, x, y);
+        break;
+      case 'volley':
+        this.fade(320, (g, p) => {
+          g.lineStyle(3, c2, 0.8 * (1 - p));
+          for (let i = 0; i < 16; i++) {
+            const a = (i / 16) * Math.PI * 2,
+              r0 = 16 + 90 * p;
+            g.lineBetween(x + Math.cos(a) * r0, y + Math.sin(a) * r0, x + Math.cos(a) * (r0 + 26), y + Math.sin(a) * (r0 + 26));
+          }
+          g.fillStyle(c1, 0.25 * (1 - p)).fillCircle(x, y, 30 * (1 - p) + 10);
+        });
+        this.burst(this.sparks, 12, x, y, -6);
+        break;
+      case 'all': {
+        // every monster struck from above at once, and the element washes over the room
+        const at = this.spots(x, y, Infinity, 12);
+        this.fade(800, (g, p) => {
+          at.forEach(([fx, fy], i) => {
+            const q = (p - (i / at.length) * 0.3) / 0.25;
+            if (q < 0 || q > 2.4) return;
+            const [AX, AY] = this.P(fx, fy);
+            if (q < 1) {
+              const ty = AY - 200 * (1 - q);
+              g.lineStyle(5, c1, 0.6).lineBetween(AX, ty - 50, AX, ty);
+              g.fillStyle(c2, 1).fillCircle(AX, ty, 5);
+            } else {
+              const t = (q - 1) / 1.4;
+              g.lineStyle(3 * (1 - t) + 1, c1, 0.9 * (1 - t)).strokeEllipse(AX, AY + 6, 26 + 40 * t, 9 + 14 * t);
+              g.fillStyle(c2, 0.4 * (1 - t)).fillCircle(AX, AY, 12 * (1 - t));
+            }
+          });
+        }, true);
+        this.fade(700, (g, p) => g.fillStyle(c0, 0.22 * Math.sin(p * Math.PI)).fillCircle(x, y, 600));
+        break;
+      }
+    }
+  }
+
+  /** An SP's passive going off: a monster catching fire, a tailwind, a split star, the flow, and the rest. */
+  private passive(id: SpPassiveId, x: number, y: number) {
+    const [c0, c1, c2] = this.spAura(),
+      [X, Y] = this.P(x, y),
+      ring = (ms: number, color: number, from: number, to: number) => this.fade(ms, (g, p) => g.lineStyle(3 * (1 - p) + 1, color, 0.9 * (1 - p)).strokeCircle(x, y, from + (to - from) * p));
+    // Some come with almost every hit: show those at most a few times a second.
+    const often = id === 'flow' || id === 'bedrock' || id === 'static' || id === 'frostbite' || id === 'harvest';
+    if (often) {
+      if (this.time.now < (this.passiveAt[id] ?? 0)) return;
+      this.passiveAt[id] = this.time.now + (id === 'static' || id === 'frostbite' ? 150 : 450);
+    }
+    switch (id) {
+      case 'embers':
+        this.bits.particleTint = 0xf97316;
+        this.burst(this.bits, 6, x, y, -4);
+        ring(260, 0xfb923c, 10, 26);
+        break;
+      case 'tailwind':
+        ring(320, 0x9fe0d0, 14, 54);
+        break;
+      case 'splitstar':
+        this.fade(260, (g, p) => this.star(g, X, Y, 5 + 8 * p, 0xfff3b0, 1 - p), true);
+        break;
+      case 'flow':
+        this.fade(500, (g, p) => {
+          g.fillStyle(0x7dd3fc, 0.9 * (1 - p)).fillCircle(X + 8, Y - 18 - 22 * p, 3);
+          g.fillTriangle(X + 5, Y - 18 - 22 * p, X + 11, Y - 18 - 22 * p, X + 8, Y - 25 - 22 * p);
+          g.lineStyle(2, 0x60b0f0, 0.6 * (1 - p)).strokeEllipse(X, Y + 18, 26 + 16 * p, 8 + 4 * p);
+        }, true);
+        break;
+      case 'harvest':
+        // a leaf drifts up off you
+        this.fade(600, (g, p) => {
+          g.fillStyle(0x4ade80, 1 - p).fillEllipse(X - 8 + 6 * Math.sin(p * 6), Y - 20 - 26 * p, 7, 4);
+        }, true);
+        break;
+      case 'frostbite':
+        ring(300, 0xbfdbfe, 8, 24);
+        this.bits.particleTint = 0xe0f2fe;
+        this.burst(this.bits, 4, x, y, -4);
+        break;
+      case 'static':
+        this.fade(200, (g, p) => {
+          g.lineStyle(2, c2, 1 - p).lineBetween(X - 8, Y - 14, X, Y - 4).lineBetween(X, Y - 4, X - 4, Y + 2).lineBetween(X - 4, Y + 2, X + 6, Y + 12);
+        }, true);
+        break;
+      case 'sunburst':
+        ring(360, c1, 20, 90);
+        this.fade(360, (g, p) => g.fillStyle(c2, 0.2 * (1 - p)).fillCircle(x, y, 90 * p));
+        break;
+      case 'rebound':
+        ring(320, c1, 20, 120);
+        this.burst(this.sparks, 6, x, y, -6);
+        break;
+      case 'secondwind':
+        // the dawn lifts you: a column of gold light and a ring
+        this.fade(900, (g, p) => {
+          g.fillStyle(c2, 0.35 * (1 - p)).fillRect(X - 18, Y - 140, 36, 150);
+          g.lineStyle(4 * (1 - p) + 1, c1, 1 - p).strokeEllipse(X, Y + 16, 50 + 40 * p, 14 + 10 * p);
+        }, true);
+        this.burst(this.sparks, 20, x, y, -10);
+        break;
+      case 'shell':
+        ring(260, 0x67e8f9, 30, 18);
+        break;
+      case 'bedrock':
+        ring(240, c0, 18, 26);
+        break;
+      default:
+        break;
     }
   }
 
@@ -2726,6 +2867,39 @@ class DungeonScene extends Phaser.Scene {
       for (let i = 0; i < 4; i++) {
         const o = (now / 3 + i * 23) % 60;
         mk.lineBetween(X - 26 - o, Y - 16 + i * 10, X - 12 - o, Y - 16 + i * 10);
+      }
+    }
+    // The SP's patches on the floor (Thorn Trap, Hourglass, Blizzard, Rift), while they last.
+    if (r.fields.length) {
+      const [c0, c1, c2] = this.spAura();
+      for (const fd of r.fields) {
+        const left = Math.min(1, (fd.until - r.t) / 0.4),
+          beat = (Math.sin(now / 90) + 1) / 2;
+        this.fx.fillStyle(c0, 0.18 * left).fillCircle(fd.x, fd.y, fd.r);
+        this.fx.lineStyle(2 + beat * 2, c1, 0.7 * left).strokeCircle(fd.x, fd.y, fd.r);
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 + now / 600,
+            d = fd.r * (0.3 + 0.6 * ((now / 400 + i * 0.37) % 1));
+          this.fx.fillStyle(c2, 0.8 * left).fillCircle(fd.x + Math.cos(a) * d, fd.y + Math.sin(a) * d, 3);
+        }
+      }
+    }
+    // Slowed monsters: a ring of frost at their feet.
+    for (const f of r.foes) {
+      if (!f.alive || !f.slow || r.t >= f.slow.until) continue;
+      const [X, Y] = this.P(f.x, f.y);
+      mk.lineStyle(2, 0xbfdbfe, 0.8).strokeEllipse(X, Y + f.def.r * 0.8, f.def.r * 2.4, f.def.r * 0.8);
+    }
+    // A guard of light (Sun Guard, Lotus Bloom) or a Crystal Shell round you.
+    {
+      const h = r.hero;
+      if (h.hp > 0 && (h.guardUntil > r.t || h.shellUntil > r.t)) {
+        const [X, Y] = this.P(h.x, h.y),
+          guard = h.guardUntil > r.t,
+          [, c1, c2] = this.spAura(),
+          wob = Math.sin(now / 80) * 2;
+        mk.fillStyle(guard ? c2 : 0x67e8f9, 0.15).fillCircle(X, Y - 4, 30 + wob);
+        mk.lineStyle(2, guard ? c1 : 0xa5f3fc, 0.85).strokeCircle(X, Y - 4, 30 + wob);
       }
     }
     // Tomorrow's reach, so it's clear where waiting starts.
