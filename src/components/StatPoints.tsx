@@ -11,7 +11,7 @@ import { Sprite } from './Sprite';
 
 export const STAT_ICON = { health: 'vital', armor: 'guard', damage: 'power', speed: 'haste', move: 'swift', crit: 'spark' } as const;
 
-/** `land`: the Hero tab held sideways, where the card is the first tab of a panel and fills it. */
+/** `land`: the Hero tab held sideways, where the card sits in the Stats part's panel. */
 export function StatPoints({ state, update, land = false }: { state: GameState; update: (fn: (s: GameState) => GameState) => void; land?: boolean }) {
   const [why, setWhy] = useState(false);
   const build = buildOf(state);

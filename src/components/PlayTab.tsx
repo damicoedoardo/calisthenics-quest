@@ -1,31 +1,36 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Sprite } from './Sprite';
-import { Ember } from './Characters';
-import { Hero } from './Hero';
+import { ChevronRight, Swords, Users } from 'lucide-react';
 import { warmRunSheets } from '@/game/sheets';
-import { gearOf, type GameState } from '@/lib/game';
-import { EDGE, FLAME_AT, ZONES, edgeFor, nextGrowth, powerOf, workoutsPastHearts, zoneStatus, type Zone } from '@/lib/fog';
+import type { GameState } from '@/lib/game';
+import { EDGE, ZONES, edgeFor, powerOf, workoutsPastHearts, zoneStatus, type Zone } from '@/lib/fog';
+import { NO_GEAR } from '@/lib/fog-gear';
+import { ITEM_SLOTS, SLOT_NAME, starterKit, type Item, type ItemSlot } from '@/game/dungeon/items';
 import { chapterStart } from '@/story/engine';
-import { STATS, pointsFree } from '@/lib/stats';
-import { STAT_ICON } from './StatPoints';
-import { FogGearCard } from './FogGearCard';
+import { inSandbox } from '@/lib/store';
+import { setLobbyOpen, usePartyView } from '@/lib/party-client';
+import { ItemTile } from './ItemCard';
 import { WorldPicker } from './WorldPicker';
+import { FriendsCard } from './Friends';
 import { useLand } from './useLand';
-import { flameMood } from '@/story/daily';
-import { FLAME_STAGES, flameStage, heroVariant } from '@/story/flame';
+
+/** The Fog tab's two doors: Story (alone, the six worlds that move the story) and Together
+    (online with friends, never moves the story). */
+export type FogMode = 'story' | 'together';
 
 interface Props {
   state: GameState;
   onPlay: (zone: Zone) => void;
   update: (fn: (s: GameState) => GameState) => void;
+  /** Open Hero > Gear (the ready strip's worn items). */
+  onGear: () => void;
+  /** Which door is open when the tab opens (the /lab/night jumps). */
+  start?: FogMode;
 }
 
-/** The game between workouts: your power from training, and the zones of the Fog. */
-
 /**
- * While the Play tab sits idle, get the newest open zone's run ready: download and load the game
+ * While the Fog tab sits idle, get the newest open zone's run ready: download and load the game
  * code and draw its sprite sheets (both are cached), so tapping Play goes straight to the run.
  */
 function useWarmRun(state: GameState) {
@@ -51,153 +56,147 @@ function useWarmRun(state: GameState) {
   }, [id]);
 }
 
-export function PlayTab({ state, onPlay, update }: Props) {
+/** The game between workouts: the worlds of the Fog, alone or with friends. Your gear, vault and
+    forge are on the Hero tab; this tab only plays. */
+export function PlayTab({ state, onPlay, update, onGear, start = 'story' }: Props) {
   useWarmRun(state);
-  const now = new Date();
-  const power = powerOf(state, now);
-  const workouts = state.sessions.length;
-  const nextFlame = FLAME_AT.find((n) => workouts < n);
-  const stage = flameStage(workouts);
-  const bonfire = FLAME_STAGES.find((s) => s.id === 'bonfire')!.at,
-    fairy = FLAME_STAGES.find((s) => s.id === 'fairy')!.at;
-  const toGo = (n: number) => `${n - workouts} more workout${n - workouts === 1 ? '' : 's'}`;
-  const rows = [
-    ...STATS.map((st) => ({ icon: STAT_ICON[st.id], name: st.name, from: 'Points', value: st.show(power[st.id]), hint: null })),
-    {
-      icon: 'flame' as const,
-      name: power.flameName ? `${power.flameName}'s fire` : 'Your flame',
-      from: 'Workouts',
-      value: `${power.flames} flame${power.flames === 1 ? '' : 's'}`,
-      hint: nextFlame ? `${toGo(nextFlame)}: one more flame` : null,
-    },
-    {
-      icon: 'nova' as const,
-      name: power.fairy ? 'Fire fairy' : 'Fireballs',
-      from: stage.name,
-      value: power.fairy ? 'Fireballs, heals you' : power.fireballs ? 'Fireballs' : 'Not yet',
-      hint: !power.fireballs ? `${toGo(bonfire)}: a bonfire that throws fireballs` : !power.fairy ? `${toGo(fairy)}: a fire fairy that heals you when you're low` : null,
-    },
-  ];
-
   const land = useLand();
-  const [view, setView] = useState<'worlds' | 'gear' | 'power'>('worlds');
-  const intro = 'Dungeon runs between workouts. Find gear down there; training lets you wear it, makes you stronger and opens the road.';
-  const warm = power.fresh ? 'Warmed up: you trained in the last two days, so runs start with a free skill.' : 'Train, and for two days your runs start with a free skill.';
-  const rest = power.rested
-    ? `Rested: ${power.flameName || 'your flame'} has had air, so runs today start with one more free skill.`
-    : 'Rest days count too: after a full day off, or a minute by the fire, runs start with one more free skill.';
-  const row = ({ icon, name, from, value, hint }: (typeof rows)[number], tile: boolean) => (
-    <li key={name} className={`flex gap-3 ${tile ? 'items-center rounded-xl bg-ink-900 px-2.5 py-1' : 'items-start'}`}>
-      <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-gold-300 ${tile ? 'bg-ink-800' : 'bg-ink-900'}`}>
-        <Sprite id="skillIcon" opts={{ name: icon }} size={28} label="" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="flex items-baseline justify-between gap-2 text-sm">
-          <span className="text-slate-100">
-            {name} <span className="text-[11px] text-slate-500">· {from}</span>
-          </span>
-          <span className="font-mono text-xs text-slate-200">{value}</span>
-        </p>
-        {hint && <p className={`mt-0.5 text-[11px] text-sky-300 ${tile ? 'leading-tight' : ''}`}>{hint}</p>}
-      </div>
-    </li>
+  const [mode, setMode] = useState<FogMode>(start);
+  useEffect(() => setMode(start), [start]);
+
+  const doors = (
+    <div role="tablist" aria-label="The Fog" className={`grid shrink-0 grid-cols-2 gap-1 rounded-xl bg-ink-900 p-1 ${land ? 'w-64' : ''}`}>
+      {(
+        [
+          { id: 'story', label: 'Story', icon: <Swords size={14} aria-hidden /> },
+          { id: 'together', label: 'Together', icon: <Users size={14} aria-hidden /> },
+        ] as const
+      ).map((d) => (
+        <button
+          key={d.id}
+          role="tab"
+          aria-selected={mode === d.id}
+          onClick={() => setMode(d.id)}
+          className={`flex items-center justify-center gap-1.5 rounded-lg py-2 text-xs font-semibold transition active:scale-95 ${mode === d.id ? 'bg-gold-400 text-ink-950' : 'text-slate-300'}`}
+        >
+          {d.icon} {d.label}
+        </button>
+      ))}
+    </div>
   );
 
-  // Sideways, one screen: a bar with you, your flame and three views, and under it the worlds
-  // (the picker as big as the screen allows), your gear, or your power.
-  if (land) {
-    const VIEWS = [
-      { id: 'worlds', label: 'Worlds', dot: false },
-      { id: 'gear', label: 'Gear', dot: false },
-      { id: 'power', label: 'Power', dot: pointsFree(state) > 0 },
-    ] as const;
+  if (land)
     return (
       <div className="flex h-full flex-col gap-3">
-        <section className="flex shrink-0 items-center gap-3 rounded-2xl bg-ink-800 py-1.5 pl-2 pr-1.5">
-          <Hero gear={gearOf(state)} classId={state.profile.classId} size={40} />
-          <Ember size={stage.id === 'spark' ? 44 : 30} stage={stage.id} mood={flameMood(state, now)} />
-          <div className="min-w-0 flex-1">
-            <p className="font-pixel text-[10px] text-gold-300">The Fog</p>
-            <p className="mt-0.5 text-[11px] leading-snug text-slate-400">{intro}</p>
-          </div>
-          <div role="tablist" aria-label="The Fog" className="flex shrink-0 gap-1 rounded-xl bg-ink-900 p-1">
-            {VIEWS.map((v) => (
-              <button
-                key={v.id}
-                role="tab"
-                aria-selected={view === v.id}
-                onClick={() => setView(v.id)}
-                className={`relative rounded-lg px-3 py-1.5 text-xs font-semibold transition active:scale-95 min-[800px]:px-4 ${view === v.id ? 'bg-gold-400 text-ink-950' : 'text-slate-300'}`}
-              >
-                {v.label}
-                {v.dot && <span aria-hidden className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-gold-300 ring-2 ring-ink-900" />}
-              </button>
-            ))}
-          </div>
-        </section>
-
+        <div className="flex shrink-0 items-center gap-3">
+          {doors}
+          {mode === 'story' && <Ready state={state} onGear={onGear} land />}
+        </div>
         <div role="tabpanel" className="min-h-0 flex-1">
-          {view === 'worlds' ? (
+          {mode === 'story' ? (
             <WorldPicker state={state} onPlay={onPlay} land />
-          ) : view === 'gear' ? (
-            <FogGearCard state={state} update={update} land />
           ) : (
-            <section className="flex h-full flex-col rounded-2xl bg-ink-800 p-3">
-              <div className="flex items-baseline justify-between gap-3">
-                <p className="font-pixel text-[10px] text-slate-400">Your power, from your training</p>
-                <p className={`text-[11px] ${pointsFree(state) ? 'font-semibold text-gold-300' : 'text-sky-300'}`}>{nextGrowth(state)}</p>
-              </div>
-              {/* The six powers two by three, sharing the height; on the shortest phones the panel scrolls. */}
-              <div className="mt-2 flex min-h-0 flex-1 flex-col overflow-y-auto">
-                <ul className="grid grid-cols-2 gap-1.5 [@media(min-height:371px)]:flex-1 [@media(min-height:371px)]:auto-rows-fr">{rows.map((r) => row(r, true))}</ul>
-                <div className="mt-2 grid shrink-0 grid-cols-2 gap-2">
-                  <p className={`rounded-lg px-3 py-1.5 text-[11px] leading-snug ${power.fresh ? 'bg-emerald-950/60 text-emerald-300' : 'bg-ink-900 text-slate-400'}`}>{warm}</p>
-                  <p className={`rounded-lg px-3 py-1.5 text-[11px] leading-snug ${power.rested ? 'bg-orange-950/50 text-orange-200' : 'bg-ink-900 text-slate-400'}`}>{rest}</p>
-                </div>
-                <BossEdge state={state} land />
-              </div>
-            </section>
+            <div className="h-full overflow-y-auto">
+              <Together state={state} update={update} land />
+            </div>
           )}
         </div>
       </div>
     );
-  }
 
   return (
     <div className="space-y-4">
-      <section className="rounded-2xl bg-ink-800 p-4 pixel-border">
-        <div className="flex items-center gap-3">
-          <Hero gear={gearOf(state)} classId={state.profile.classId} size={72} variant={heroVariant(state)} />
-          <Ember size={stage.id === 'spark' ? 64 : 44} stage={stage.id} mood={flameMood(state, now)} />
-          <div className="min-w-0 flex-1">
-            <p className="font-pixel text-xs text-gold-300">The Fog</p>
-            <p className="mt-1 text-xs text-slate-400">{intro}</p>
-          </div>
-        </div>
+      {doors}
+      {mode === 'story' ? (
+        <>
+          <WorldPicker state={state} onPlay={onPlay} />
+          <Ready state={state} onGear={onGear} />
+        </>
+      ) : (
+        <Together state={state} update={update} />
+      )}
+    </div>
+  );
+}
+
+/** Ready for the Fog, in one strip: what you wear (tap: Hero > Gear), warmed up, rested, and the
+    boss's hearts. */
+function Ready({ state, onGear, land = false }: { state: GameState; onGear: () => void; land?: boolean }) {
+  const power = powerOf(state, new Date());
+  const worn = (state.fogGear ?? NO_GEAR).worn,
+    // The plain pieces you start with, for an empty slot.
+    kit: Partial<Record<ItemSlot, Item>> = starterKit(state.profile.classId);
+  const tile = land ? 30 : 40;
+  const chips = [
+    power.fresh ? { on: 'bg-emerald-950/60 text-emerald-300', text: 'Warmed up: a free skill' } : { on: 'bg-ink-900 text-slate-400', text: 'Train for a free skill' },
+    power.rested ? { on: 'bg-orange-950/50 text-orange-200', text: 'Rested: one more' } : null,
+  ].filter((c): c is { on: string; text: string } => !!c);
+  return (
+    <section className={land ? 'flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-ink-800 py-1.5 pl-2 pr-3' : 'rounded-2xl bg-ink-800 p-4'}>
+      <button onClick={onGear} aria-label="Your gear, on the Hero tab" className={`flex shrink-0 items-center gap-2 ${land ? '' : 'w-full'}`}>
+        {ITEM_SLOTS.map((slot) => {
+          const it = worn[slot];
+          return it ? (
+            <ItemTile key={slot} item={it} size={tile} />
+          ) : (
+            <span key={slot} className="grid place-items-center rounded-lg border border-dashed border-ink-700 px-0.5 text-center text-[8px] leading-tight text-slate-500" style={{ width: tile, height: tile }}>
+              {kit[slot]?.name ?? SLOT_NAME[slot]}
+            </span>
+          );
+        })}
+        {!land && (
+          <span className="ml-auto flex items-center gap-1 text-xs text-slate-400">
+            Gear, vault, forge <ChevronRight size={14} />
+          </span>
+        )}
+      </button>
+      <div className={`flex flex-wrap gap-1.5 ${land ? 'min-w-0' : 'mt-3'}`}>
+        {chips.map((c) => (
+          <span key={c.text} className={`rounded-lg px-2.5 py-1 text-[11px] ${c.on}`}>
+            {c.text}
+          </span>
+        ))}
+      </div>
+      {!land && <BossEdge state={state} />}
+    </section>
+  );
+}
+
+/** Together: friends, invites and the party lobby. Runs here never move the story, and the forge's
+    materials for +6 and up drop only here. */
+function Together({ state, update, land = false }: { state: GameState; update: (fn: (s: GameState) => GameState) => void; land?: boolean }) {
+  const { party } = usePartyView();
+  const sandbox = inSandbox();
+  return (
+    <div className={land ? 'grid grid-cols-2 gap-3' : 'space-y-4'}>
+      <section className="self-start rounded-2xl bg-ink-800 p-4">
+        <p className="flex items-center gap-2 font-pixel text-[10px] text-gold-300">
+          <Users size={14} /> Play with friends
+        </p>
+        <ul className="mt-2 space-y-1.5 text-xs text-slate-300">
+          <li>Up to four of you, online. Invite a friend below, then pick a world in the lobby.</li>
+          <li>Your hero, gear, vault and stats are the same as in Story.</li>
+          <li>Runs together never move your story, so nobody sees what&apos;s ahead.</li>
+          <li className="text-sky-300">The forge materials for +6 and up only drop here.</li>
+        </ul>
+        {party && (
+          <button onClick={() => setLobbyOpen(true)} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gold-400 py-2.5 text-sm font-semibold text-ink-950">
+            <Swords size={15} /> Back to your party · {party.members.length}
+          </button>
+        )}
       </section>
-
-      <WorldPicker state={state} onPlay={onPlay} />
-
-      <FogGearCard state={state} update={update} />
-
-      <section className="rounded-2xl bg-ink-800 p-4">
-        <p className="font-pixel text-[10px] text-slate-400">Your power, from your training</p>
-        <p className={`mt-1 text-[11px] ${pointsFree(state) ? 'font-semibold text-gold-300' : 'text-sky-300'}`}>{nextGrowth(state)}</p>
-        <ul className="mt-3 space-y-2.5">{rows.map((r) => row(r, false))}</ul>
-        <p className={`mt-3 rounded-lg px-3 py-2 text-xs ${power.fresh ? 'bg-emerald-950/60 text-emerald-300' : 'bg-ink-900 text-slate-400'}`}>{warm}</p>
-        <p className={`mt-2 rounded-lg px-3 py-2 text-xs ${power.rested ? 'bg-orange-950/50 text-orange-200' : 'bg-ink-900 text-slate-400'}`}>{rest}</p>
-        <BossEdge state={state} />
-      </section>
+      <FriendsCard state={state} update={update} sandbox={sandbox} />
+      {sandbox && <p className="rounded-2xl bg-ink-800 p-4 text-xs text-slate-500">Friends show here on your real save, once you&apos;re signed in.</p>}
     </div>
   );
 }
 
 /** The boss you're up against: how close it is to running out of hearts, and what that gives you. */
-function BossEdge({ state, land = false }: { state: GameState; land?: boolean }) {
+function BossEdge({ state }: { state: GameState }) {
   const zone = ZONES[state.fog?.cleared ?? 0];
   if (!zone || zone.boss === 'summit' || zoneStatus(state, zone).state !== 'open') return null;
   const past = workoutsPastHearts(state, zone);
-  const box = land ? 'mt-2 shrink-0 rounded-lg px-3 py-1.5 text-[11px] leading-snug' : 'mt-2 rounded-lg px-3 py-2 text-xs';
+  const box = 'mt-2 rounded-lg px-3 py-2 text-xs';
   if (past === null) {
     const left = chapterStart(zone.chapter + 1) - state.sessions.length;
     return (

@@ -8,7 +8,7 @@ timestamp: 2026-10-28
 
 # The Fog
 
-The Play tab's game: a short dungeon crawl where class, skills and gear matter and you can lose.
+The Fog tab's game: a short dungeon crawl where class, skills and gear matter and you can lose.
 It follows the rule "training earns, play spends" (see [../product/overview.md](../product/overview.md)):
 runs are free to replay, gear comes only from the dungeon, and only real training makes you
 stronger and lets you wear what you find. Dying costs what you wore and carried, never points,
@@ -32,7 +32,7 @@ level or story.
   chapter's hearts are gone (all its workouts done) and its boss still stands, `edgeFor` gives the
   run an `Edge`: the boss fights with `EDGE.bossHp` of its HP (the Knight with that share of his
   plates), and each workout since starts a run with one more free skill (`'past'` picks, up to
-  `EDGE.picks`). Playing well still beats it sooner. The Play tab says how many hearts are left,
+  `EDGE.picks`). Playing well still beats it sooner. The Fog tab's ready strip says how many hearts are left,
   or what the edge gives (`BossEdge` in `PlayTab.tsx`).
 - **Run skills**: `UPGRADES` and `rollUpgrades` (three random choices per level-up), `xpToNext`.
 - **Records**: `recordRun` saves runs, clears and each zone's bests (deepest, most monsters,

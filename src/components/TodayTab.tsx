@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import { BookOfDays } from './BookOfDays';
+import { Keepsakes } from './Keepsakes';
 import { Ember, Enemy, Hollow } from './Characters';
 import { SitByFire } from './SitByFire';
 import { Sprite } from './Sprite';
@@ -218,6 +219,9 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
         <Sprite id="uiIcon" opts={{ name: 'play' }} size={14} label="" />
         {startLabel}
       </button>
+
+      {/* The story so far: one keepsake per Fog boss beaten. */}
+      <Keepsakes cleared={state.fog?.cleared ?? 0} />
 
       {overlays}
     </div>
@@ -460,6 +464,9 @@ function LandToday(p: LandProps) {
             <QuoteCard state={state} now={now} update={p.update} onOpenBook={p.onOpenBook} land />
           </div>
         )}
+        <div className="w-40 shrink-0">
+          <Keepsakes cleared={state.fog?.cleared ?? 0} land />
+        </div>
       </div>
 
       <section className="flex min-h-0 flex-1 flex-col rounded-2xl bg-ink-800 p-3">

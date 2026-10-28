@@ -248,7 +248,7 @@ function Lobby({ state }: { state: GameState }) {
           <section className="rounded-2xl bg-ink-800 p-4">
             <p className="text-[10px] uppercase tracking-wider text-slate-500">Invite</p>
             {friends.filter((f) => !inParty.has(f.id)).length === 0 ? (
-              <p className="mt-2 text-xs text-slate-500">Add friends on the Hero tab to invite them here.</p>
+              <p className="mt-2 text-xs text-slate-500">Add friends in the Fog, under Together, to invite them here.</p>
             ) : (
               <ul className="mt-1 divide-y divide-ink-700">
                 {friends
