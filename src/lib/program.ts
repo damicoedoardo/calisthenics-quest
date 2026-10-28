@@ -12,8 +12,12 @@ export type DayType = 'A' | 'B';
 export type SlotRole = 'warmup' | 'main' | 'core' | 'stretch';
 
 export interface Slot {
-  /** The exercise's demo id: the same id the library and its coaching use. */
-  id: ExerciseId;
+  /** The built-in plan's moves use their demo id; a coach's workout uses library ids. */
+  id: string;
+  /** The pixel demo, when it isn't the id. */
+  demo?: ExerciseId;
+  /** The line of form, when it isn't the demo's first tip. */
+  cue?: string;
   name: string;
   role: SlotRole;
   unit: 'reps' | 'sec';
@@ -79,8 +83,8 @@ export const PLAN: Record<Kit, Record<DayType, Slot[]>> = {
 };
 
 /** The one line of form shown while training: the exercise's first coaching tip. */
-export function cueOf(id: ExerciseId): string {
-  return COACHING[id]?.tips[0] ?? '';
+export function cueOf(id: string): string {
+  return COACHING[id as ExerciseId]?.tips[0] ?? '';
 }
 
 /** Every exercise the built-in plan can ask for. */

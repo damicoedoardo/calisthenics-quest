@@ -16,16 +16,17 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 | `version` | 3. Older saves go through `migrate()`; version 3 dropped the calisthenics skill tree and max tests (a v2 save keeps its sessions, story, Fog and Book of Days) |
 | `profile` | `onboarded`, the `letter` (why, want, forWho, remind), the Hollow's `voice`, `classId`, `look`, the flame's name, `kit` (gym or home), the hero's `name` (asked after the look; what friends see) |
 | `reps` | Current per-set target by exercise id |
-| `sessions` | Every finished workout: entries, sets with reps in reserve, XP breakdown, raises, `heavier`, `better` |
+| `sessions` | Every finished workout: entries (with name and family), sets with reps in reserve (optional kg, km), XP breakdown, raises, `heavier`, `better`; from a coach workout also `mode`, `plannedBy`, `skipped`, `changed`, and `felt` and `comment` |
 | `build` | Stat points spent on the champion, per stat (earned points are counted from `sessions`) |
 | `buildAt`, `sweat` | Optional. Points as they stood at the last workout (what the free take-back is measured from), and sweat coins spent plus class changes made (`src/lib/sweat.ts`, see [../game/training.md](../game/training.md)) |
 | `sp` | Optional. The SPs: the workout count when the Wanderer gave the first, whether its trial's floor was reached, the later ones the story gave (`more`), the one picked to wear (`worn`), and `off` when taken off (`src/lib/sp.ts`, see [../game/fog.md](../game/fog.md)) |
 | `fogGear` | Optional. What you wear into the Fog and the vault at home (`src/lib/fog-gear.ts`, see [../game/fog.md](../game/fog.md)); embers found and spent, co-op materials for the forge (`mats`), the slot the flame holds (`guard`), `deaths`, and the starter kit's look (`kit`, set by `migrate()` from the old forge) ([../game/forge.md](../game/forge.md)) |
-| `draft` | The workout in progress, or null. A draft left from an earlier day is closed onto that day (`closeStaleDraft`). `open` marks the workout screen as open (the app reopens on it) and `restUntil` is when the running rest ends (ms), both optional |
+| `draft` | The workout in progress, or null (`runAt`: when the run on screen started). A draft left from an earlier day is closed onto that day (`closeStaleDraft`). `open` marks the workout screen as open (the app reopens on it) and `restUntil` is when the running rest ends (ms), both optional |
 | `seenScenes`, `sceneMark` | Story scenes already played, and how many played at the last story moment |
 | `answers` | What the player chose in the story (heart moments, villager stories) |
 | `fog` | Zones cleared, runs, best records per zone, the last run |
 | `days` | The Book of Days: one page per day the app was opened (`dayNumber` in `src/lib/days.ts` counts them, today included) |
+| `coach` | Optional. The coach's memory: `profile` (setup answers, levels, history), `notes`, and `plan`, the next workout it built ([../game/coach.md](../game/coach.md)) |
 
 ## Saving
 

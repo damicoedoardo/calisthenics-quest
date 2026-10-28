@@ -7,7 +7,7 @@ Installable as an app: open the site on your phone, then **Share → Add to Home
 ## How the game works
 
 - **The story**: you wake in the Ashlands next to the sword you put down. A hooded Wanderer walks with you; on day one you write a letter to your future self. Five chapters open as you keep showing up (sessions, not strength), and the ending reads your letter back to you. The story is data in `src/story/` (see [docs/handbook/game/story.md](docs/handbook/game/story.md)).
-- **Today's quest**: a check-in (Rough, Normal, Strong), then Day A or Day B of the built-in plan, for the gym or for home (picked in the opening, changed on the Train tab): a warm-up, three main exercises, core, and a stretch. Rough means a minimum quest (warm-up, one exercise, stretch) that still counts. Later, a workout planner will build sessions from the exercise library.
+- **Today's quest**: a check-in (Rough, Normal, Strong), then Day A or Day B of the built-in plan, for the gym or for home (picked in the opening, changed on the Train tab): a warm-up, three main exercises, core, and a stretch. Rough means a minimum quest (warm-up, one exercise, stretch) that still counts. Set up the coach on the Train tab (8 taps: gym, calisthenics, running or a mix, your gear, where you start) and it builds every workout from the exercise library instead; every exercise has an easier one and a swap, and you can reorder or skip.
 - **Logging a set**: one tap on how many reps were left in the tank (4+, 2-3, 0-1), then a 90-second rest timer. Every set done at target with reps to spare raises the target by one rep (or 5 seconds) next time; at the top of a lift's range it says to add a little weight and start again. A set that beats last time is noted.
 - **Stat points**: every workout earns points for your champion (3 for a full one, 1 for a short one, 2 more for a week at your goal, 1 for beating last time). Put them into Health, Damage, Reach or Speed on the Hero tab, and take them back any time for free.
 - **Classes and gear**: Warrior, Archer, Monk, Mage only change how you fight in the Fog (attack style and a small lean to one stat). One gear slot is forged a tier higher every 4 workouts.
@@ -24,6 +24,6 @@ pnpm test     # game logic tests
 pnpm build
 ```
 
-Next.js (App Router) + TypeScript + Tailwind, deployed on Vercel. Game rules live in `src/lib/game.ts`, the built-in plan in `src/lib/program.ts`, stat points in `src/lib/stats.ts`, the Fog in `src/lib/fog.ts` and `src/game/dungeon/` (Phaser 3).
+Next.js (App Router) + TypeScript + Tailwind, deployed on Vercel. Game rules live in `src/lib/game.ts`, the built-in plan in `src/lib/program.ts`, the coach in `src/lib/coach/`, stat points in `src/lib/stats.ts`, the Fog in `src/lib/fog.ts` and `src/game/dungeon/` (Phaser 3).
 
 **Developer mode** is on in every preview and on localhost (on the live app, tap the FORMA name 7 times). It adds "Skip the intro" on the title screen, a wrench button with fake workouts, class and skill-tree switches, Fog boss clears and a save wipe, and "Skip to the boss" / "Win this run" in a Fog run's pause menu. Helpers live in `src/lib/dev.ts`.

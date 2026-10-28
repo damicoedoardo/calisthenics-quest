@@ -104,7 +104,7 @@ export function YouPage({ state, update, onReplayOpening, onClose }: Props) {
                           <span className="font-mono font-semibold text-gold-300">+{s.xp}</span>
                         </div>
                         {s.better && <p className="text-xs text-emerald-400">Better than last time</p>}
-                        {!!s.heavier?.length && <p className="text-xs text-sky-300">Next time a little heavier: {s.heavier.map(exerciseName).join(', ')}</p>}
+                        {!!s.heavier?.length && <p className="text-xs text-sky-300">Next time a little heavier: {s.heavier.map((id) => s.entries.find((e) => e.exerciseId === id)?.name ?? exerciseName(id)).join(', ')}</p>}
                       </li>
                     ))}
                 </ul>

@@ -28,7 +28,7 @@
   "stretch",
   "mobility"
  ],
- "count": 887,
+ "count": 891,
  "exercises": [
   {
    "id": "3_4_Sit-Up",
@@ -10208,6 +10208,45 @@
    "source": "catalog"
   },
   {
+   "id": "forma:easy-run",
+   "name": "Easy run",
+   "kind": "cardio",
+   "family": "cardio",
+   "region": "full",
+   "level": "beginner",
+   "equipment": "body only",
+   "kit": "none",
+   "category": "cardio",
+   "force": null,
+   "mechanic": null,
+   "primary": [
+    "quadriceps"
+   ],
+   "secondary": [
+    "calves",
+    "hamstrings",
+    "glutes"
+   ],
+   "steps": [
+    "Run at a pace where you could still talk in full sentences.",
+    "If you have to stop, walk for a minute and go again."
+   ],
+   "tips": [
+    "Stand tall, lean slightly from the ankles.",
+    "Land under the hips, quick light steps.",
+    "Relaxed shoulders, arms swing forward and back.",
+    "Easy pace most days: you can talk while you go."
+   ],
+   "mistakes": [
+    "Over-striding with the heel far ahead.",
+    "Tense shoulders up by the ears.",
+    "Arms crossing the body.",
+    "Every run hard."
+   ],
+   "demo": "run",
+   "source": "forma"
+  },
+  {
    "id": "Elbow_Circles",
    "name": "Elbow Circles",
    "kind": "mobility",
@@ -14321,6 +14360,46 @@
    "source": "catalog"
   },
   {
+   "id": "forma:interval-run",
+   "name": "Interval run",
+   "kind": "cardio",
+   "family": "cardio",
+   "region": "full",
+   "level": "intermediate",
+   "equipment": "body only",
+   "kit": "none",
+   "category": "cardio",
+   "force": null,
+   "mechanic": null,
+   "primary": [
+    "quadriceps"
+   ],
+   "secondary": [
+    "calves",
+    "hamstrings",
+    "glutes"
+   ],
+   "steps": [
+    "Warm up with easy running.",
+    "Run fast but in control for the fast parts, then jog or walk easy until the next one.",
+    "Cool down with easy running."
+   ],
+   "tips": [
+    "Stand tall, lean slightly from the ankles.",
+    "Land under the hips, quick light steps.",
+    "Relaxed shoulders, arms swing forward and back.",
+    "Easy pace most days: you can talk while you go."
+   ],
+   "mistakes": [
+    "Over-striding with the heel far ahead.",
+    "Tense shoulders up by the ears.",
+    "Arms crossing the body.",
+    "Every run hard."
+   ],
+   "demo": "run",
+   "source": "forma"
+  },
+  {
    "id": "Inverted_Row",
    "name": "Inverted Row",
    "kind": "strength",
@@ -17398,6 +17477,45 @@
    ],
    "demo": "bridge",
    "source": "catalog"
+  },
+  {
+   "id": "forma:long-run",
+   "name": "Long run",
+   "kind": "cardio",
+   "family": "cardio",
+   "region": "full",
+   "level": "intermediate",
+   "equipment": "body only",
+   "kit": "none",
+   "category": "cardio",
+   "force": null,
+   "mechanic": null,
+   "primary": [
+    "quadriceps"
+   ],
+   "secondary": [
+    "calves",
+    "hamstrings",
+    "glutes"
+   ],
+   "steps": [
+    "Slower than your easy pace, for longer.",
+    "Drink water if it is warm. Walk breaks are fine."
+   ],
+   "tips": [
+    "Stand tall, lean slightly from the ankles.",
+    "Land under the hips, quick light steps.",
+    "Relaxed shoulders, arms swing forward and back.",
+    "Easy pace most days: you can talk while you go."
+   ],
+   "mistakes": [
+    "Over-striding with the heel far ahead.",
+    "Tense shoulders up by the ears.",
+    "Arms crossing the body.",
+    "Every run hard."
+   ],
+   "demo": "run",
+   "source": "forma"
   },
   {
    "id": "Looking_At_Ceiling",
@@ -24864,6 +24982,45 @@
    ],
    "demo": "rower",
    "source": "catalog"
+  },
+  {
+   "id": "forma:run-walk",
+   "name": "Run-walk",
+   "kind": "cardio",
+   "family": "cardio",
+   "region": "full",
+   "level": "beginner",
+   "equipment": "body only",
+   "kit": "none",
+   "category": "cardio",
+   "force": null,
+   "mechanic": null,
+   "primary": [
+    "quadriceps"
+   ],
+   "secondary": [
+    "calves",
+    "hamstrings",
+    "glutes"
+   ],
+   "steps": [
+    "Run easy for a few minutes, then walk one minute. Repeat.",
+    "The walks are part of the plan, not a failure."
+   ],
+   "tips": [
+    "Stand tall, lean slightly from the ankles.",
+    "Land under the hips, quick light steps.",
+    "Relaxed shoulders, arms swing forward and back.",
+    "Easy pace most days: you can talk while you go."
+   ],
+   "mistakes": [
+    "Over-striding with the heel far ahead.",
+    "Tense shoulders up by the ears.",
+    "Arms crossing the body.",
+    "Every run hard."
+   ],
+   "demo": "run",
+   "source": "forma"
   },
   {
    "id": "Runners_Stretch",

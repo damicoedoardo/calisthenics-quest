@@ -1,8 +1,13 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ChevronLeft, ChevronRight, Minus, Plus, Undo2, X } from 'lucide-react';
-import { REST_SECONDS, gearOf, isTap, todaysQuest, type GameState, type Rir } from '@/lib/game';
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ListOrdered, Minus, Plus, Shuffle, TrendingDown, Undo2, X } from 'lucide-react';
+import { REST_SECONDS, gearOf, isTap, todaysQuest, type GameState, type QuestExercise, type Rir } from '@/lib/game';
+import { canMove, changeItem, moveItem, skipItem } from '@/lib/coach/plan';
+import { minutesOf } from '@/lib/coach/validate';
+import type { Choice, RunStep } from '@/lib/coach/types';
+import { ensurePlan } from './useCoach';
+import { doseOf } from './CoachPanel';
 import { ROLE_COLOR, ROLE_LABEL } from '@/lib/program';
 import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
 import { useLook } from './Look';
@@ -47,6 +52,18 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   const exerciseDone = logged.length >= q.sets;
   const unit = q.unit === 'sec' ? 's' : '';
   const tap = isTap(q);
+  // Before the first set: the whole workout, to reorder, make easier, swap or skip.
+  const [overview, setOverview] = useState(() => Object.values(sets).every((l) => l.length === 0));
+  const [choices, setChoices] = useState<'easier' | 'swap' | null>(null);
+  const hasPlan = !!state.coach?.plan;
+  useEffect(() => {
+    // The built-in plan becomes a plan with choices, so it can be changed too.
+    if (!hasPlan) ensurePlan(update);
+  }, [hasPlan, update]);
+  const pick = (c: Choice, how: 'easier' | 'swap') => {
+    update((s) => changeItem(s, q.id, c, how));
+    setChoices(null);
+  };
 
   useEffect(() => {
     setReps(q.reps);
@@ -98,6 +115,8 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
     setRestUntil(null);
   };
 
+  if (overview) return <Overview state={state} update={update} quest={quest} onClose={close} onStart={() => setOverview(false)} />;
+
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-ink-950">
       <header className="safe-top land-safe-x flex items-center justify-between px-4 pb-2 [@media(orientation:landscape)_and_(max-height:600px)]:pb-1">
@@ -114,9 +133,9 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
             />
           ))}
         </div>
-        <span className="w-10 text-right font-mono text-xs text-slate-500">
-          {index + 1}/{quest.length}
-        </span>
+        <button onClick={() => setOverview(true)} aria-label="The whole workout" className="grid h-10 w-10 place-items-center rounded-lg bg-ink-800 text-slate-300">
+          <ListOrdered size={18} />
+        </button>
       </header>
 
       {/* Held sideways: the exercise on the left, its log on the right. */}
@@ -143,11 +162,25 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         </div>
         <p className="mt-1 text-center text-sm text-slate-400">{q.cue}</p>
 
-        <Demo state={state} exercise={q.id} name={q.name} cue={q.cue} />
+        <Demo state={state} exercise={q.demo} name={q.name} cue={q.cue} />
+        {!tap && !exerciseDone && q.item && (q.item.easier.length > 0 || q.item.swaps.length > 0) && (
+          <div className="mt-3 flex justify-center gap-2">
+            {q.item.easier.length > 0 && (
+              <button onClick={() => setChoices('easier')} className="flex items-center gap-1.5 rounded-lg bg-ink-800 px-3 py-2 text-xs font-semibold text-slate-200 active:scale-95">
+                <TrendingDown size={14} className="text-sky-300" /> Too hard? Easier
+              </button>
+            )}
+            {q.item.swaps.length > 0 && (
+              <button onClick={() => setChoices('swap')} className="flex items-center gap-1.5 rounded-lg bg-ink-800 px-3 py-2 text-xs font-semibold text-slate-200 active:scale-95">
+                <Shuffle size={14} className="text-gold-300" /> Swap
+              </button>
+            )}
+          </div>
+        )}
         </div>
 
         <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:flex-col [@media(orientation:landscape)_and_(max-height:600px)]:justify-center">
-        <div className={`mt-5 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0 flex justify-center gap-2 ${tap ? 'hidden' : ''}`}>
+        <div className={`mt-5 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0 flex justify-center gap-2 ${tap || q.run ? 'hidden' : ''}`}>
           {Array.from({ length: q.sets }).map((_, i) => (
             <div
               key={i}
@@ -171,6 +204,22 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
               {tap ? (q.role === 'warmup' ? 'Warm and ready.' : 'Good. Your body thanks you.') : `${logged.reduce((a, s) => a + s.reps, 0)}${unit ? ' seconds' : ' reps'} total. Clean work.`}
             </p>
           </div>
+        ) : q.run ? (
+          <RunView
+            steps={q.run}
+            runAt={state.draft?.runAt ?? null}
+            onStart={() => update((s) => (s.draft ? { ...s, draft: { ...s.draft, runAt: Date.now() } } : s))}
+            onDone={(sec, km) => {
+              update((s) => {
+                const draft = s.draft ?? { startedAt: new Date().toISOString(), checkin: 'normal' as const, sets: {} };
+                const list = [...(draft.sets[q.id] ?? []), { reps: sec, rir: '2-3' as Rir, ...(km ? { km } : {}) }];
+                return { ...s, draft: { ...draft, runAt: null, sets: { ...draft.sets, [q.id]: list } } };
+              });
+              setHistory((h) => [...h, q.id]);
+              const next = quest.findIndex((e, i) => i !== index && (sets[e.id]?.length ?? 0) < e.sets);
+              if (next !== -1) setIndex(next);
+            }}
+          />
         ) : tap ? (
           <div className="mt-6 text-center [@media(orientation:landscape)_and_(max-height:600px)]:mt-0">
             <p className="font-mono text-5xl font-bold text-slate-50">
@@ -242,6 +291,16 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         )}
       </footer>
 
+      {choices && q.item && (
+        <Choices
+          title={choices === 'easier' ? `Easier than ${q.name}` : `Instead of ${q.name}`}
+          hint={choices === 'easier' ? 'The same movement, a step down. Sets you logged stay.' : 'Trains the same thing. Machine taken, or not for you today.'}
+          list={choices === 'easier' ? q.item.easier : q.item.swaps}
+          state={state}
+          onPick={(c) => pick(c, choices)}
+          onClose={() => setChoices(null)}
+        />
+      )}
       {restUntil && <Rest stage={flameStage(state.sessions.length).id} until={restUntil} next={exerciseDone ? null : `Set ${logged.length + 1} of ${q.name}`} onDone={() => setRestUntil(null)} />}
     </div>
   );
@@ -356,6 +415,229 @@ function Rest({ stage, until, next, onDone }: { stage: ReturnType<typeof flameSt
       <p className="mt-1 text-xs text-slate-500">Breathe. Shake out your arms.</p>
       <button className="mt-8 rounded-xl bg-ink-800 px-6 py-3 text-sm font-semibold text-slate-200 [@media(orientation:landscape)_and_(max-height:600px)]:mt-5">Skip rest</button>
       </div>
+    </div>
+  );
+}
+
+/** The whole workout before the first set: move, make easier, swap or skip any exercise. */
+function Overview({ state, update, quest, onClose, onStart }: { state: GameState; update: Props['update']; quest: QuestExercise[]; onClose: () => void; onStart: () => void }) {
+  const plan = state.coach?.plan;
+  const [open, setOpen] = useState<{ id: string; kind: 'easier' | 'swap' } | null>(null);
+  const items = plan?.items ?? [];
+  const opened = items.find((i) => i.id === open?.id);
+  const rough = state.draft?.checkin === 'rough';
+  return (
+    <div className="fixed inset-0 z-40 flex flex-col bg-ink-950">
+      <header className="safe-top land-safe-x flex items-center justify-between gap-3 px-4 pb-2">
+        <button onClick={onClose} aria-label="Back to Today" className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-ink-800">
+          <X size={18} />
+        </button>
+        <div className="min-w-0 flex-1 text-center">
+          <p className="truncate font-pixel text-[10px] text-gold-300">{rough ? 'Minimum quest' : (plan?.title ?? "Today's workout")}</p>
+          {plan && <p className="mt-1 text-xs text-slate-400">About {minutesOf(items.filter((i) => quest.some((q) => q.id === i.id)))} min</p>}
+        </div>
+        <span className="w-10 shrink-0" />
+      </header>
+      <main className="land-safe-x mx-auto w-full max-w-md flex-1 overflow-y-auto px-4 pb-4 [@media(orientation:landscape)_and_(max-height:600px)]:max-w-3xl">
+        {!plan && <p className="mt-6 text-center text-sm text-slate-400">Getting your workout ready…</p>}
+        <ul className="space-y-2 [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:600px)]:gap-2 [@media(orientation:landscape)_and_(max-height:600px)]:space-y-0">
+          {items.map((it) => {
+            const end = it.role === 'warmup' || it.role === 'stretch';
+            const inToday = quest.some((q) => q.id === it.id);
+            return (
+              <li key={it.id} className={`rounded-xl bg-ink-800 p-2.5 ${it.skipped || (!inToday && !it.skipped) ? 'opacity-50' : ''}`}>
+                <div className="flex items-center gap-2.5">
+                  <MiniDemo state={state} exercise={it.demo} name={it.name} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[it.role] }}>
+                      {ROLE_LABEL[it.role]}
+                      {it.changed && <span className="ml-1.5 normal-case tracking-normal text-sky-300">was {it.changed.fromName}</span>}
+                    </p>
+                    <p className={`truncate text-sm font-semibold ${it.skipped ? 'line-through' : ''}`}>{it.name}</p>
+                    <p className="font-mono text-xs text-slate-400">{doseOf(it, it.run ? undefined : state.reps[it.id])}</p>
+                  </div>
+                  {!end && (
+                    <div className="flex shrink-0 flex-col gap-1">
+                      <button aria-label="Move up" disabled={!canMove(plan!, it.id, -1)} onClick={() => update((s) => moveItem(s, it.id, -1))} className="grid h-7 w-7 place-items-center rounded-md bg-ink-700 disabled:opacity-20">
+                        <ArrowUp size={14} />
+                      </button>
+                      <button aria-label="Move down" disabled={!canMove(plan!, it.id, 1)} onClick={() => update((s) => moveItem(s, it.id, 1))} className="grid h-7 w-7 place-items-center rounded-md bg-ink-700 disabled:opacity-20">
+                        <ArrowDown size={14} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {!end && (
+                  <div className="mt-2 flex gap-1.5">
+                    {it.easier.length > 0 && !it.skipped && (
+                      <button onClick={() => setOpen({ id: it.id, kind: 'easier' })} className="flex items-center gap-1 rounded-md bg-ink-900 px-2 py-1.5 text-[11px] font-semibold text-slate-200">
+                        <TrendingDown size={12} className="text-sky-300" /> Easier
+                      </button>
+                    )}
+                    {it.swaps.length > 0 && !it.skipped && (
+                      <button onClick={() => setOpen({ id: it.id, kind: 'swap' })} className="flex items-center gap-1 rounded-md bg-ink-900 px-2 py-1.5 text-[11px] font-semibold text-slate-200">
+                        <Shuffle size={12} className="text-gold-300" /> Swap
+                      </button>
+                    )}
+                    <button onClick={() => update((s) => skipItem(s, it.id, !it.skipped))} className="ml-auto rounded-md bg-ink-900 px-2 py-1.5 text-[11px] font-semibold text-slate-400">
+                      {it.skipped ? 'Bring back' : 'Skip'}
+                    </button>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </main>
+      <footer className="safe-bottom land-safe-x mx-auto w-full max-w-md px-4 pt-2">
+        <button
+          onClick={onStart}
+          disabled={!quest.some((q) => !isTap(q))}
+          className="w-full rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none disabled:opacity-30 [@media(orientation:landscape)_and_(max-height:600px)]:py-3"
+        >
+          {Object.values(state.draft?.sets ?? {}).some((l) => l.length) ? 'Back to it' : "Let's go"}
+        </button>
+      </footer>
+      {open && opened && (
+        <Choices
+          title={open.kind === 'easier' ? `Easier than ${opened.name}` : `Instead of ${opened.name}`}
+          hint={open.kind === 'easier' ? 'The same movement, a step down.' : 'Trains the same thing.'}
+          list={open.kind === 'easier' ? opened.easier : opened.swaps}
+          state={state}
+          onPick={(c) => {
+            update((s) => changeItem(s, opened.id, c, open.kind));
+            setOpen(null);
+          }}
+          onClose={() => setOpen(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/** A small still of the demo. */
+function MiniDemo({ state, exercise, name }: { state: GameState; exercise: ExerciseId; name: string }) {
+  const look = useLook();
+  if (!(EXERCISES as string[]).includes(exercise)) return <span className="h-12 w-12 shrink-0 rounded-lg bg-ink-900" />;
+  return (
+    <span className="shrink-0 rounded-lg bg-ink-900 p-0.5">
+      <Sprite id="exercise" opts={{ exercise, gear: gearOf(state), classId: state.profile.classId, look }} size={44} label={`${name}, demo`} />
+    </span>
+  );
+}
+
+/** The easier or swap choices for an exercise, as a sheet from the bottom. */
+function Choices({ title, hint, list, state, onPick, onClose }: { title: string; hint: string; list: Choice[]; state: GameState; onPick: (c: Choice) => void; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink-950/80" onClick={onClose}>
+      <div className="safe-bottom land-safe-x max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-ink-800 p-4" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="font-pixel text-[10px] leading-relaxed text-gold-300">{title}</p>
+            <p className="mt-1 text-xs text-slate-400">{hint}</p>
+          </div>
+          <button onClick={onClose} aria-label="Close" className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-ink-700">
+            <X size={16} />
+          </button>
+        </div>
+        <ul className="mt-3 space-y-2">
+          {list.map((c) => (
+            <li key={c.id}>
+              <button onClick={() => onPick(c)} className="flex w-full items-center gap-3 rounded-xl bg-ink-900 p-2 text-left active:scale-[.98]">
+                <MiniDemo state={state} exercise={c.demo} name={c.name} />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-semibold text-slate-100">{c.name}</span>
+                  <span className="block truncate text-xs text-slate-400">{c.cue}</span>
+                  {c.equipment && <span className="block text-[11px] text-slate-500">{c.equipment}</span>}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
+const EFFORT: Record<RunStep['effort'], { label: string; color: string; hint: string }> = {
+  walk: { label: 'Walk', color: '#94a3b8', hint: 'Walk and breathe.' },
+  easy: { label: 'Easy', color: '#34d399', hint: 'You could talk in full sentences.' },
+  steady: { label: 'Steady', color: '#38bdf8', hint: 'A pace you can hold, a few words at a time.' },
+  fast: { label: 'Fast', color: '#fb923c', hint: 'Fast but in control. Not a sprint.' },
+};
+
+/** A run, step by step: a big clock for the step you are on, and what comes next. */
+function RunView({ steps, runAt, onStart, onDone }: { steps: RunStep[]; runAt: number | null; onStart: () => void; onDone: (sec: number, km?: number) => void }) {
+  const [now, setNow] = useState(Date.now());
+  const [km, setKm] = useState('');
+  useEffect(() => {
+    if (!runAt) return;
+    const t = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(t);
+  }, [runAt]);
+  const total = steps.reduce((a, s) => a + s.sec, 0);
+  const elapsed = runAt ? Math.max(0, Math.floor((now - runAt) / 1000)) : 0;
+  let at = 0,
+    i = 0;
+  while (i < steps.length && at + steps[i].sec <= elapsed) at += steps[i++].sec;
+  const step = steps[Math.min(i, steps.length - 1)];
+  const left = i < steps.length ? at + step.sec - elapsed : 0;
+  const finished = elapsed >= total;
+  const [lastStep, setLastStep] = useState(i);
+  useEffect(() => {
+    if (i !== lastStep) {
+      navigator.vibrate?.([80, 60, 80]);
+      setLastStep(i);
+    }
+  }, [i, lastStep]);
+  const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+  const effort = EFFORT[step.effort];
+  const distance = Number(km.replace(',', '.'));
+  return (
+    <div className="mt-4 text-center [@media(orientation:landscape)_and_(max-height:600px)]:mt-0">
+      <div className="flex h-3 overflow-hidden rounded-sm" aria-hidden>
+        {steps.map((s, k) => (
+          <span key={k} style={{ flex: s.sec, background: EFFORT[s.effort].color, opacity: k < i ? 0.35 : k === i && runAt ? 1 : 0.6 }} className="border-r border-ink-950 last:border-0" />
+        ))}
+      </div>
+      {!runAt ? (
+        <>
+          <p className="mt-4 font-mono text-5xl font-bold text-slate-50">{clock(total)}</p>
+          <p className="mt-2 text-sm text-slate-400">{steps.length > 1 ? `${steps.length} parts. The phone buzzes when the next one starts.` : effort.hint}</p>
+          <button onClick={onStart} className="mt-5 w-full rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
+            Start the run
+          </button>
+        </>
+      ) : finished ? (
+        <>
+          <p className="mt-4 font-pixel text-xs text-emerald-400">Run done</p>
+          <input
+            value={km}
+            onChange={(e) => setKm(e.target.value)}
+            inputMode="decimal"
+            placeholder="How far, in km? (optional)"
+            className="mt-3 w-full rounded-xl bg-ink-800 px-3 py-3 text-center text-sm text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-gold-400"
+          />
+          <button onClick={() => onDone(total, distance > 0 ? distance : undefined)} className="mt-3 w-full rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
+            Log the run
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="mt-4 font-pixel text-sm" style={{ color: effort.color }}>
+            {effort.label}
+          </p>
+          <p className="mt-2 font-mono text-6xl font-bold text-slate-50">{clock(left)}</p>
+          <p className="mt-2 text-sm text-slate-400">{effort.hint}</p>
+          {steps[i + 1] && <p className="mt-1 text-xs text-slate-500">Next: {EFFORT[steps[i + 1].effort].label.toLowerCase()} {clock(steps[i + 1].sec)}</p>}
+          <p className="mt-3 font-mono text-xs text-slate-500">
+            {clock(elapsed)} / {clock(total)}
+          </p>
+          <button onClick={() => onDone(elapsed, undefined)} className="mt-4 text-xs text-slate-400 underline">
+            Stop here (what you ran still counts)
+          </button>
+        </>
+      )}
     </div>
   );
 }

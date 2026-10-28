@@ -8,6 +8,9 @@ import type { Look } from '@/sprites/engine/figure';
 import type { FogProgress } from './fog';
 import type { FogGear } from './fog-gear';
 import type { AnswerId } from '@/story/types';
+import type { ExerciseId } from '@/sprites/characters/exercise';
+import type { CoachState, Mode, PlanItem, RunStep } from './coach/types';
+import { shiftLevels } from './coach/levels';
 import { XP, WEEKLY_GOAL, PROGRESSION } from '@/balance';
 
 // The numbers live in src/balance/training.ts; these names stay for the code that reads them.
@@ -28,15 +31,23 @@ export type Checkin = 'rough' | 'normal' | 'strong';
 export type { DayType, Kit } from './program';
 
 export interface SetLog {
+  /** Reps, or seconds for a hold or a run. */
   reps: number;
   /** Reps left in the tank when the set ended. */
   rir: Rir;
+  /** The weight, when you noted it. */
+  kg?: number;
+  /** A run's distance, when you noted it. */
+  km?: number;
 }
 
 export interface SessionEntry {
   exerciseId: string;
   target: number;
   sets: SetLog[];
+  /** The exercise's name and movement family, for the coach (missing on older saves). */
+  name?: string;
+  family?: string;
 }
 
 export interface XpLine {
@@ -58,6 +69,14 @@ export interface Session {
   heavier?: string[];
   /** A set beat the best set of the same exercise last time (one more rep, a longer hold). */
   better?: boolean;
+  /** What kind of workout, who planned it, and what you changed (for the coach). */
+  mode?: Mode;
+  plannedBy?: 'built-in' | 'coach';
+  skipped?: string[];
+  changed?: { from: string; to: string; how: 'easier' | 'swap' }[];
+  /** How it felt, and a word about it, asked after the workout. */
+  felt?: 'easy' | 'right' | 'hard';
+  comment?: string;
 }
 
 export interface Draft {
@@ -69,6 +88,8 @@ export interface Draft {
   open?: boolean;
   /** When the running rest ends (ms since epoch), so it keeps counting while the app is closed. */
   restUntil?: number | null;
+  /** When the run on screen started (ms since epoch), so its clock keeps going while the app is closed. */
+  runAt?: number | null;
 }
 
 export interface Letter {
@@ -136,6 +157,8 @@ export interface GameState {
   answers?: Partial<Record<AnswerId, string>>;
   /** The Book of Days, oldest first. */
   days?: DayPage[];
+  /** The coach: your training profile, its notes, and the next workout it built (src/lib/coach/). */
+  coach?: CoachState;
 }
 
 export function initialState(): GameState {
@@ -264,7 +287,13 @@ export interface QuestExercise {
   id: string;
   role: SlotRole;
   name: string;
+  demo: ExerciseId;
   cue: string;
+  family?: string;
+  /** A run: its steps. */
+  run?: RunStep[];
+  /** The coach's item it came from, with its easier and swap choices. */
+  item?: PlanItem;
   unit: 'reps' | 'sec';
   sets: number;
   reps: number;
@@ -275,7 +304,14 @@ export interface QuestExercise {
 export const isTap = (q: Pick<QuestExercise, 'role'>) => q.role === 'warmup' || q.role === 'stretch';
 
 function exercise(state: GameState, slot: Slot): QuestExercise {
-  return { id: slot.id, role: slot.role, name: slot.name, cue: cueOf(slot.id), unit: slot.unit, sets: slot.sets, reps: repsFor(state, slot), slot };
+  return { id: slot.id, role: slot.role, name: slot.name, demo: slot.demo ?? (slot.id as ExerciseId), cue: slot.cue ?? cueOf(slot.id), unit: slot.unit, sets: slot.sets, reps: repsFor(state, slot), slot };
+}
+
+function fromItem(state: GameState, it: PlanItem): QuestExercise {
+  const slot: Slot = { id: it.id, demo: it.demo, cue: it.cue, name: it.name, role: it.role, unit: it.unit, sets: it.sets, low: it.low, high: it.high, ...(it.weighted ? { weighted: true } : {}) };
+  // A run's length is the coach's to set, not a target that creeps up.
+  const q = exercise(state, slot);
+  return { ...q, family: it.family, item: it, ...(it.run ? { run: it.run, reps: it.low } : {}) };
 }
 
 /**
@@ -283,8 +319,8 @@ function exercise(state: GameState, slot: Slot): QuestExercise {
  * a Rough day keeps those and one exercise of at most 3 sets.
  */
 export function todaysQuest(state: GameState, checkin: Checkin = state.draft?.checkin ?? 'normal'): QuestExercise[] {
-  const day = PLAN[state.profile.kit ?? 'gym'][dayType(state)];
-  const list = day.map((s) => exercise(state, s));
+  const plan = state.coach?.plan;
+  const list = plan ? plan.items.filter((it) => !it.skipped).map((it) => fromItem(state, it)) : PLAN[state.profile.kit ?? 'gym'][dayType(state)].map((s) => exercise(state, s));
   if (checkin !== 'rough') return list;
   const lead = list.find((q) => !isTap(q));
   return list.filter((q) => isTap(q) || q === lead).map((q) => (q === lead ? { ...q, sets: Math.min(q.sets, 3) } : q));
@@ -320,7 +356,7 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
   if (!draft) return null;
   const quest = todaysQuest(state, draft.checkin);
   const entries: SessionEntry[] = quest
-    .map((q) => ({ exerciseId: q.id, target: q.reps, sets: (draft.sets[q.id] ?? []).slice(0, q.sets) }))
+    .map((q) => ({ exerciseId: q.id, target: q.reps, sets: (draft.sets[q.id] ?? []).slice(0, q.sets), name: q.name, ...(q.family ? { family: q.family } : {}) }))
     .filter((e) => e.sets.length > 0);
   if (!entries.some((e) => !isTap(quest.find((q) => q.id === e.exerciseId)!))) return null;
 
@@ -338,7 +374,7 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
 
   for (const q of quest) {
     const entry = entries.find((e) => e.exerciseId === q.id);
-    if (!entry || isTap(q)) continue;
+    if (!entry || isTap(q) || q.run) continue;
     const best = lastBest(state, q.id);
     if (best !== null && entry.sets.some((x) => x.reps > best)) better = true;
     // Every set done at target with reps to spare: ask for a little more next time. At most twice a
@@ -369,8 +405,20 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
 
   const before = levelInfo(totalXp(state)).level;
   const gearBefore = gearOf(state);
-  const session: Session = { id: idGen(), date: now.toISOString(), kind, day: dayType(state), xp, breakdown, entries, raised, heavier, better };
-  const next: GameState = { ...state, reps, sessions: [...state.sessions, session], draft: null };
+  const plan = state.coach?.plan;
+  const coachLog: Partial<Session> = plan
+    ? {
+        mode: plan.mode,
+        plannedBy: plan.by,
+        ...(plan.items.some((i) => i.skipped) ? { skipped: plan.items.filter((i) => i.skipped).map((i) => i.id) } : {}),
+        ...(plan.items.some((i) => i.changed) ? { changed: plan.items.filter((i) => i.changed).map((i) => ({ from: i.changed!.from, to: i.id, how: i.changed!.how })) } : {}),
+      }
+    : {};
+  const session: Session = { id: idGen(), date: now.toISOString(), kind, day: dayType(state), xp, breakdown, entries, raised, heavier, better, ...coachLog };
+  const sessions = [...state.sessions, session];
+  // The workout is done: the coach builds the next one, and your levels follow how it felt.
+  const coach = state.coach && { ...state.coach, plan: null, ...(state.coach.profile ? { profile: shiftLevels(state.coach.profile, sessions, now) } : {}) };
+  const next: GameState = { ...state, reps, sessions, draft: null, ...(coach ? { coach } : {}) };
   const gearAfter = gearOf(next);
   const newGear = (['weapon', 'armor', 'shield'] as const).filter((s) => gearAfter[s].tier > gearBefore[s].tier).map((s) => gearAfter[s]);
   return { state: next, session, levelBefore: before, levelAfter: levelInfo(totalXp(next)).level, newGear };

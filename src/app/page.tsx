@@ -13,6 +13,7 @@ import { Opening, openingDue } from '@/components/Opening';
 import { useMenuTrack } from '@/components/Sound';
 import { Workout } from '@/components/Workout';
 import { AfterSession } from '@/components/AfterSession';
+import { useCoachPlan } from '@/components/useCoach';
 import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
 import { giveSp, spAfterRun, spWorn } from '@/lib/sp';
 import { changeClass, classCost, coins } from '@/lib/sweat';
@@ -229,6 +230,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     [scene, update],
   );
 
+  useCoachPlan(state, update);
+
   const start = (checkin: Checkin) => {
     update((s) => {
       const hasSets = !!s.draft && Object.values(s.draft.sets).some((l) => l.length > 0);
@@ -407,7 +410,15 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         </>
       )}
       {training && <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />}
-      {after && <AfterSession result={after.result} before={after.before} after={after.after} onClose={() => setAfter(null)} />}
+      {after && (
+        <AfterSession
+          result={after.result}
+          before={after.before}
+          after={after.after}
+          onClose={() => setAfter(null)}
+          onFelt={(felt, comment) => update((s) => ({ ...s, sessions: s.sessions.map((x) => (x.id === after.result.session.id ? { ...x, felt, ...(comment ? { comment } : {}) } : x)) }))}
+        />
+      )}
       {scene && <ScenePlayer key={scene.id} scene={scene} state={state} onDone={endScene} />}
       {picker && (
         <ClassPicker
