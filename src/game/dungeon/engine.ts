@@ -83,7 +83,7 @@ import {
   zoneDungeon,
 } from './content';
 import { seeded } from '@/lib/random';
-import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS, SP_FINAL, SP_PASSIVE, SP_SKILL, SP_WEAPON, SURGE, type SpMoveNumbers } from '@/balance';
+import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS, LEECH_CAP, MAX_EVADE, SP_FINAL, SP_PASSIVE, SP_SKILL, SP_WEAPON, SURGE, type SpMoveNumbers } from '@/balance';
 import type { Build } from '@/lib/stats';
 import { canWear, ITEM_SLOTS, itemScore, itemTotals, otherClass, rollItem, rollRarity, shortOf, starterKit, type Item, type ItemSlot } from './items';
 
@@ -321,6 +321,8 @@ export type GameEvent =
   | { type: 'chest'; x: number; y: number }
   | { type: 'relic'; id: RelicId }
   | { type: 'ward'; x: number; y: number }
+  /** A hit on you missed: Evade, from what you wear. */
+  | { type: 'evade'; x: number; y: number }
   | { type: 'crack'; x: number; y: number; n: number }
   /** Tomorrow splits, or the Mirror splits into its images. */
   | { type: 'split' }
@@ -353,6 +355,8 @@ export interface HeroSetup {
   worn?: Partial<Record<ItemSlot, Item>>;
   /** Stat points spent, which items ask for. */
   build?: Build;
+  /** Hero level from training XP, which items ask for too (unset: no level asked, as in old replays). */
+  heroLevel?: number;
   /** The chapter's hearts are gone: a weaker boss and free skills at the start (`edgeFor` in src/lib/fog.ts). */
   edge?: Edge;
   /** Wearing one of the class's SPs (which one; `true` is the first): its own move, its final and
@@ -421,6 +425,8 @@ export interface Hero {
   classId: ClassId | undefined;
   /** Stat points spent, which items ask for. */
   build: Build;
+  /** Hero level from training XP (not the run's `level`), which items ask for too. */
+  heroLevel: number;
   /** Power from training with what you wear on top (see applyGear). */
   power: Power;
   /** Where you stand (px), how you're moving, and which way you face. */
@@ -436,7 +442,10 @@ export interface Hero {
   base: Power;
   gear: { worn: Partial<Record<ItemSlot, Item>>; bag: Item[] };
   /** What worn items add that Power has no field for. */
-  gearFx: { move: number; heal: number; cooldown: number };
+  gearFx: { move: number; heal: number; cooldown: number; critDmg: number; slayer: number; leech: number; evade: number; power: number };
+  /** Life steal healed since `leechAt` (it heals at most LEECH_CAP of max HP a second). */
+  leechHp: number;
+  leechAt: number;
   /** Max HP that comes from your power and gear (the rest is relics and skills). */
   gearMax: number;
   /** Three items to pick from, from an opened chest: the run holds still until one is taken. */
@@ -656,13 +665,16 @@ function newHero(hs: HeroSetup, id: number): Hero {
     id,
     classId: hs.classId,
     build: hs.build ?? {},
+    heroLevel: hs.heroLevel ?? Infinity,
     power: base,
     x: ROOM.w / 2, y: ROOM.h - 70, vx: 0, vy: 0, facing: -Math.PI / 2,
     lock: null,
     relics: {},
     base,
     gear: { worn: { weapon: hs.worn?.weapon && !otherClass(hs.worn.weapon, hs.classId) ? hs.worn.weapon : kit.weapon, ...(hs.worn?.armor ? { armor: hs.worn.armor } : {}), ...(hs.worn?.charm ? { charm: hs.worn.charm } : {}) }, bag: [] },
-    gearFx: { move: 0, heal: 0, cooldown: 0 },
+    gearFx: { move: 0, heal: 0, cooldown: 0, critDmg: 0, slayer: 0, leech: 0, evade: 0, power: 0 },
+    leechHp: 0,
+    leechAt: 0,
     gearMax: 0,
     relicOffer: null,
     wardAt: 0,
@@ -710,8 +722,9 @@ function newHero(hs: HeroSetup, id: number): Hero {
   };
 }
 
-/** The heroes still standing. */
-const standing = (run: Run) => run.party.filter((h) => h.hp > 0);
+const NOBODY: Hero[] = [];
+/** The heroes still standing (read-only: solo, it's the party itself, so no new list every call). */
+const standing = (run: Run): Hero[] => (run.party.length === 1 ? (run.party[0].hp > 0 ? run.party : NOBODY) : run.party.filter((h) => h.hp > 0));
 /** Unseen (Vanish): monsters lose this hero. */
 const hidden = (run: Run, h: Hero) => run.t < h.hideUntil;
 /** The hero a monster at x, y goes for: the nearest one still standing (one in sight first). */
@@ -1061,7 +1074,8 @@ function enterRoom(run: Run, from: Side | null) {
 
 /** Whether a body of radius r at x, y would sit inside a pillar. */
 function inPillar(run: Run, x: number, y: number, r: number) {
-  for (const p of run.terrain.pillars) if (closer(p.x - x, p.y - y, p.r + r)) return true;
+  const ps = run.terrain.pillars;
+  for (let i = 0; i < ps.length; i++) if (closer(ps[i].x - x, ps[i].y - y, ps[i].r + r)) return true;
   return false;
 }
 
@@ -1642,7 +1656,7 @@ interface MoveCtx {
 function spMove(run: Run, h: Hero, id: SpMoveId, k: SpMoveNumbers, final: boolean, input: Input) {
   const kind = attackOf(h.classId),
     color: BurstColor = final && kind === 'slash' ? 'fire' : kind === 'orb' ? 'orb' : kind === 'wave' ? 'wave' : 'ability';
-  SHAPES[SP_MOVES[id].shape]({ run, h, id, k, final, input, dmg: pow(h, ATTACK[kind].dmg * k.dmg), r: k.r ?? 100, color });
+  SHAPES[SP_MOVES[id].shape]({ run, h, id, k, final, input, dmg: abilityPow(h, ATTACK[kind].dmg * k.dmg), r: k.r ?? 100, color });
 }
 
 /** The `sp` event for the scene: the move, where, and how big. */
@@ -1956,6 +1970,9 @@ const SHAPES: Record<SpShape, (m: MoveCtx) => void> = {
   beam: beamMove,
 };
 
+/** A move's hit, with Ability power from what you wear on top (the class ability and the SP's moves). */
+const abilityPow = (h: Hero, dmg: number) => pow(h, dmg) * (1 + h.gearFx.power);
+
 function useAbility(run: Run, h: Hero, input: Input) {
   const now = run.t;
   if (abilityReady(run, h) < 1) return;
@@ -1979,7 +1996,7 @@ function useAbility(run: Run, h: Hero, input: Input) {
     emit(run, { type: 'ability', id: a, x: from.x, y: from.y, toX: from.x + dx * speed * secs, toY: from.y + dy * speed * secs });
   } else if (a === 'volley') {
     const v = ABILITY.volley,
-      dmg = pow(h, ATTACK.arrow.dmg * v.dmg);
+      dmg = abilityPow(h, ATTACK.arrow.dmg * v.dmg);
     for (let i = 0; i < v.arrows; i++) fire(run, h, 'arrow', Math.atan2(dy, dx) + (i / v.arrows) * Math.PI * 2, 430, dmg, v.pierce, null);
     emit(run, { type: 'ability', id: a, x: h.x, y: h.y, toX: h.x, toY: h.y });
   } else if (a === 'blink') {
@@ -1988,18 +2005,18 @@ function useAbility(run: Run, h: Hero, input: Input) {
     outOfPillars(run, h, HERO_R);
     h.ghostUntil = now + 0.3;
     clearBullets(run, h.x, h.y, 90);
-    burst(run, h, h.x, h.y, ABILITY.blink.r, pow(h, ATTACK.orb.dmg * ABILITY.blink.dmg), 'ability');
+    burst(run, h, h.x, h.y, ABILITY.blink.r, abilityPow(h, ATTACK.orb.dmg * ABILITY.blink.dmg), 'ability');
     emit(run, { type: 'ability', id: a, x: from.x, y: from.y, toX: h.x, toY: h.y });
   } else if (a === 'shock') {
     clearBullets(run, h.x, h.y, ABILITY.shock.r);
-    burst(run, h, h.x, h.y, ABILITY.shock.r, pow(h, ATTACK.slash.dmg * ABILITY.shock.dmg), 'ability', undefined, 300);
+    burst(run, h, h.x, h.y, ABILITY.shock.r, abilityPow(h, ATTACK.slash.dmg * ABILITY.shock.dmg), 'ability', undefined, 300);
     emit(run, { type: 'ability', id: a, x: h.x, y: h.y, toX: h.x, toY: h.y });
   } else {
     const heal = Math.round(h.maxHp * ABILITY.still.heal);
     h.hp = Math.min(h.maxHp, h.hp + heal);
     healFriends(run, h, ABILITY.still.heal);
     clearBullets(run, h.x, h.y, ABILITY.still.r);
-    burst(run, h, h.x, h.y, ABILITY.still.r, pow(h, ATTACK.wave.dmg * ABILITY.still.dmg), 'ability', undefined, 260);
+    burst(run, h, h.x, h.y, ABILITY.still.r, abilityPow(h, ATTACK.wave.dmg * ABILITY.still.dmg), 'ability', undefined, 260);
     // Its own blast doesn't count toward the next one.
     h.calm = 0;
     emit(run, { type: 'ability', id: a, x: h.x, y: h.y, toX: h.x, toY: h.y });
@@ -2022,9 +2039,14 @@ function outOfPillars(run: Run, o: { x: number; y: number }, r: number) {
 }
 
 function clearBullets(run: Run, x: number, y: number, r: number) {
-  // Only build a new list when a shot goes.
-  if (run.bullets.every((b) => farther(b.x - x, b.y - y, r))) return;
-  run.bullets = run.bullets.filter((b) => farther(b.x - x, b.y - y, r));
+  // Only build a new list when a shot goes (plain loops: this runs for every flame every step).
+  const list = run.bullets;
+  let i = 0;
+  while (i < list.length && farther(list[i].x - x, list[i].y - y, r)) i++;
+  if (i === list.length) return;
+  const out = list.slice(0, i);
+  for (; i < list.length; i++) if (farther(list[i].x - x, list[i].y - y, r)) out.push(list[i]);
+  run.bullets = out;
 }
 
 // ---------- monsters ----------
@@ -2268,7 +2290,23 @@ function moveBullets(run: Run) {
     up = standing(run),
     { w, h: H } = run.area,
     m = ROOM.wall;
-  run.bullets = run.bullets.filter((b) => {
+  // Kept in place, not a new list each step (this runs every step for every shot). As before, a
+  // shot added or a list swapped while the shots move (a barrel's blast) doesn't last the step.
+  const list = run.bullets,
+    n = list.length;
+  let keep = 0;
+  for (let i = 0; i < n; i++) {
+    const b = list[i];
+    if (moveBullet(run, b, now, up, w, H, m)) list[keep++] = b;
+  }
+  list.length = keep;
+  run.bullets = list;
+  moveMines(run, now, up);
+}
+
+/** One shot's step: false when it's gone (out of the room, into a pillar, a barrel, or you). */
+function moveBullet(run: Run, b: Bullet, now: number, up: Hero[], w: number, H: number, m: number): boolean {
+  {
     const age = now - b.born;
     if (b.style === 'homing' && age < HOMING.for) {
       // Turns toward you, but only so fast: a sidestep still beats it.
@@ -2310,8 +2348,11 @@ function moveBullets(run: Run) {
       return false;
     }
     return true;
-  });
-  // Bombs that land and burst.
+  }
+}
+
+/** Bombs that land and burst. */
+function moveMines(run: Run, now: number, up: Hero[]) {
   run.mines = run.mines.filter((mn) => {
     if (now < mn.at) return true;
     for (const h of up) if (Math.hypot(mn.x - h.x, mn.y - h.y) < mn.r + HERO_R - 4) hurt(run, h, mn.dmg, 'shot');
@@ -2651,10 +2692,11 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
   }
   f.hitAt = run.t;
   if (f === run.warden && run.dim !== null) run.dim = Math.min(DIM.full, run.dim + DIM.back);
-  // A crit: the hit does double (Crit points, src/lib/stats.ts).
+  // A crit: the hit does CRIT_HIT times, plus crit damage from what you wear (CRIT in src/balance/stats.ts).
   const critShare = by.power.crit + spCrit(by),
     crit = !knight && critShare > 0 && run.critRnd() < critShare,
-    dmg = knight ? 1 : Math.max(1, Math.round(amount * spMore(by) * spMark(run, by, f) * (crit ? CRIT_HIT : 1)));
+    slay = f.elite || f.kind === 'golem' || boss || f === run.warden ? 1 + by.gearFx.slayer : 1,
+    dmg = knight ? 1 : Math.max(1, Math.round(amount * slay * spMore(by) * spMark(run, by, f) * (crit ? CRIT_HIT + by.gearFx.critDmg : 1)));
   if (f.kind === 'reflection' || f.kind === 'image') {
     // A copy of you, or of the Mirror: it shatters, and you feel it.
     hitYourself(run, by, f.kind);
@@ -2662,6 +2704,7 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
     return kill(run, f, by);
   }
   f.hp -= dmg;
+  leech(run, by, dmg);
   calmer(run, by, CALM.hit);
   onLanded(run, by, f, knight);
   emit(run, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg, boss, crit });
@@ -2682,6 +2725,19 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
     f.knockUntil = run.t + 0.14;
   }
   if (f.hp <= 0) kill(run, f, by);
+}
+
+/** Life steal: a share of the damage dealt comes back, at most LEECH_CAP of max HP a second. */
+function leech(run: Run, h: Hero, dmg: number) {
+  if (!h.gearFx.leech || h.hp <= 0 || h.hp >= h.maxHp) return;
+  if (run.t - h.leechAt >= 1) {
+    h.leechAt = run.t;
+    h.leechHp = 0;
+  }
+  const n = Math.min(dmg * h.gearFx.leech, h.maxHp * LEECH_CAP - h.leechHp);
+  if (n <= 0) return;
+  h.leechHp += n;
+  h.hp = Math.min(h.maxHp, h.hp + n);
 }
 
 function kill(run: Run, f: Foe, by: Hero) {
@@ -3240,8 +3296,8 @@ function applyGear(run: Run, h: Hero) {
   const t = itemTotals(ITEM_SLOTS.map((s) => h.gear.worn[s])),
     b = h.base,
     body = bodyOf(h);
-  h.power = { ...b, health: b.health + (t.health ?? 0), armor: b.armor + body.armor + (t.armor ?? 0), damage: (1 + b.damage + (t.damage ?? 0)) * body.dmg - 1, speed: b.speed + (t.speed ?? 0), reach: b.reach + (t.pickup ?? 0) };
-  h.gearFx = { move: t.move ?? 0, heal: t.heal ?? 0, cooldown: t.cooldown ?? 0 };
+  h.power = { ...b, health: b.health + (t.health ?? 0), armor: b.armor + body.armor + (t.armor ?? 0), damage: (1 + b.damage + (t.damage ?? 0)) * body.dmg - 1, speed: b.speed + (t.speed ?? 0), crit: b.crit + (t.crit ?? 0) };
+  h.gearFx = { move: t.move ?? 0, heal: t.heal ?? 0, cooldown: t.cooldown ?? 0, critDmg: t.critDmg ?? 0, slayer: t.slayer ?? 0, leech: t.leech ?? 0, evade: Math.min(MAX_EVADE, t.evade ?? 0), power: t.power ?? 0 };
   const max = Math.round(heroMaxHp(h.power) * body.hp),
     d = max - h.gearMax;
   h.gearMax = max;
@@ -3251,8 +3307,8 @@ function applyGear(run: Run, h: Hero) {
 
 /** Points short of what an item asks (0: you can wear it). */
 export const shortFor = (h: Pick<Hero, 'build'>, it: Item) => shortOf(it, h.build);
-/** Whether this hero can wear it: their class's (for a weapon), and the points it asks. */
-export const wearsIt = (h: Pick<Hero, 'build' | 'classId'>, it: Item) => canWear(it, h.build, h.classId);
+/** Whether this hero can wear it: their class's (for a weapon), the level and the points it asks. */
+export const wearsIt = (h: Pick<Hero, 'build' | 'classId' | 'heroLevel'>, it: Item) => canWear(it, h.build, h.classId, h.heroLevel);
 
 /** Wear an item from the bag; what you wore goes into the bag (the starter kit just goes). */
 export function wear(run: Run, id: string, h: Hero = run.hero) {
@@ -3314,6 +3370,12 @@ function hurt(run: Run, h: Hero, dmg: number, by: 'shot' | 'touch') {
     h.wardAt = now + WARD_EVERY;
     h.hurtUntil = now + INVULNERABLE;
     emit(run, { type: 'ward', x: h.x, y: h.y });
+    return;
+  }
+  // Evade (from what you wear): the hit misses you entirely.
+  if (h.gearFx.evade && run.critRnd() < h.gearFx.evade) {
+    h.hurtUntil = now + INVULNERABLE;
+    emit(run, { type: 'evade', x: h.x, y: h.y });
     return;
   }
   const taken = spGuard(run, h, dmg * (1 - armorOf(h.power, h.ups)) / (1 + DIALS.relic * 0.14 * relic(h, 'iron')));

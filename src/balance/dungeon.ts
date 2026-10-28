@@ -81,6 +81,18 @@ export const SEASONED = {
   meltEach: 4,
 };
 
+/** Ways to spend stat points the Fog simulator plays (`BUILDS=even,glass,tank,quick pnpm fog:sim`):
+    each stat's share. Goal: no way of spending wins much more than the others (`BUILD_FAIR`), so
+    any build is a fair choice and only how you like to play decides. */
+export const BUILD_PROFILES = {
+  even: { health: 1, armor: 1, damage: 1, speed: 1, move: 1 },
+  glass: { damage: 1, speed: 1 },
+  tank: { health: 1, armor: 1 },
+  quick: { move: 1, speed: 1, damage: 1 },
+} as const;
+
+/** How far a build's average win rate may be from the average of all builds (0.15 = 15 points). */
+export const BUILD_FAIR = 0.15;
 /** Playing together (a party of 2 to 4). Goal: the party moves as one, a friend who falls can be
     brought back, and moves that heal or guard help whoever stands close, so playing together
     never feels like playing side by side. A solo run never reads these. */

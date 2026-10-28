@@ -51,8 +51,9 @@ export const CALM = {
 } as const;
 
 /** The stat each class leans to, as if it had `CLASS_LEAN_POINTS` more points there (the class's
-    weapon asks for this stat too). */
-export const CLASS_LEAN = { warrior: 'damage', archer: 'crit', monk: 'health', mage: 'speed' } as const;
+    weapon asks for this stat too). The archer leaned to Crit until crit left the stats: its crits
+    come from the bow now (WEAPON_CRIT in items.ts). */
+export const CLASS_LEAN = { warrior: 'damage', archer: 'speed', monk: 'health', mage: 'speed' } as const;
 
 /** The second stat each class leans to, as if it had `SECOND_LEAN_POINTS` more points there: the
     warrior and monk take hits, the archer keeps its distance, the mage hits harder. */

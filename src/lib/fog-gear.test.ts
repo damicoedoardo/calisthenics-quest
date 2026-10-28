@@ -8,7 +8,8 @@ const rnd = seeded(21);
 const item = (slot: Item['slot']): Item => {
   for (;;) {
     const it = rollItem(rnd, { zone: 1, workouts: 10, floor: 4, cls: 'warrior' }, 'magic');
-    if (it.slot === slot) return it;
+    // No level asked here: the level gate has its own test below.
+    if (it.slot === slot) return { ...it, needLevel: undefined };
   }
 };
 const strong = (s: GameState): GameState => ({ ...s, build: { damage: 99, health: 99, armor: 99 } });
@@ -131,5 +132,15 @@ describe('Fog gear between runs', () => {
     expect(s.fogGear).toEqual({ worn: {}, vault: [sword] });
     s = discardItem(s, sword.id);
     expect(s.fogGear).toEqual({ worn: {}, vault: [] });
+  });
+
+  it('an item that asks for a higher hero level waits in the vault until training gets you there', () => {
+    const sword = { ...item('weapon'), needLevel: 3 };
+    const at = (xp: number): GameState => ({ ...strong(initialState()), sessions: [{ id: 'a', date: new Date().toISOString(), kind: 'full', day: 'A', xp, breakdown: [], entries: [] }], fogGear: { worn: { weapon: sword }, vault: [sword] } });
+    // Level 2 (500 XP): not yet, so it isn't worn into a run either.
+    expect(wearFromVault({ ...at(500), fogGear: { worn: {}, vault: [sword] } }, sword.id).fogGear?.worn).toEqual({});
+    expect(wornFor(at(500))).toEqual({});
+    // Level 3 (1000 XP): it fits.
+    expect(wornFor(at(1000))).toEqual({ weapon: sword });
   });
 });

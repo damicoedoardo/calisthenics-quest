@@ -164,7 +164,7 @@ export interface Power {
   speed: number;
   /** Extra walk speed, from Speed points. */
   move: number;
-  /** The chance a hit does double, from Crit points. */
+  /** The chance a hit is a crit, before what you wear (weapons and bonuses add in the run). */
   crit: number;
   /** Your flame's fire circling you, one more at each step of your workout count. */
   flames: number;

@@ -1,17 +1,18 @@
 import type { ClassId } from './gear';
 import type { GameState } from './game';
 import { weekKey, WEEKLY_GOAL } from './game';
-import { ARMOR_PER_POINT, CLASS_LEAN as BALANCE_LEAN, CLASS_LEAN_POINTS, SECOND_LEAN as BALANCE_SECOND, SECOND_LEAN_POINTS, FALLOFF, MAX_ARMOR, POINT_WORTH, POINTS, STARTING_POINTS, STAT_BASE } from '@/balance';
+import { ARMOR_PER_POINT, CLASS_LEAN as BALANCE_LEAN, CLASS_LEAN_POINTS, CRIT, SECOND_LEAN as BALANCE_SECOND, SECOND_LEAN_POINTS, FALLOFF, MAX_ARMOR, POINT_WORTH, POINTS, STARTING_POINTS, STAT_BASE } from '@/balance';
 
 /* Stat points: training earns them, the champion spends them. Every workout gives points whatever it
    was (gym, a run, a stretch day), so the reward never depends on what the plan asked for. The
-   player puts them into six stats and can take them all back for free at any time. Each point in
+   player puts them into five stats and can take them all back for free at any time. Each point in
    the same stat gives a little less than the one before, so spreading pays and six months of points
    don't break the Fog. */
 
 /** `speed` is attack speed (named Haste on screen) and `move` walk speed (named Speed): the ids
-    stayed so the points saves already hold keep their meaning. */
-export type StatId = 'health' | 'armor' | 'damage' | 'speed' | 'move' | 'crit';
+    stayed so the points saves already hold keep their meaning. Crit was a sixth stat; it comes
+    from weapons and item bonuses now (old saves get those points back, `noCrit` in game.ts). */
+export type StatId = 'health' | 'armor' | 'damage' | 'speed' | 'move';
 
 export interface Stat {
   id: StatId;
@@ -34,7 +35,6 @@ export const STATS: Stat[] = [
   { id: 'damage', name: 'Damage', text: 'Every hit lands harder', per: POINT_WORTH.damage, show: pct('damage') },
   { id: 'speed', name: 'Haste', text: 'You attack faster', per: POINT_WORTH.speed, show: pct('attack speed') },
   { id: 'move', name: 'Speed', text: 'You walk faster', per: POINT_WORTH.move, show: pct('walk speed') },
-  { id: 'crit', name: 'Crit', text: 'A chance for a hit to do double', per: POINT_WORTH.crit, show: (v) => `${Math.round(v * 100)}% crit chance` },
 ];
 
 /** What every champion has before any point: the old skill tree's starting steps. */
@@ -109,7 +109,7 @@ export function resetBuild(state: GameState): GameState {
   return { ...state, build: {} };
 }
 
-/** Spread every free point over the six stats, each to the one with the fewest (the simulator's players, and dev mode). */
+/** Spread every free point over the five stats, each to the one with the fewest (the simulator's players, and dev mode). */
 export function spendEvenly(state: GameState): GameState {
   let s = state;
   while (pointsFree(s) > 0) {
@@ -132,7 +132,7 @@ export interface StatPower {
   speed: number;
   /** Extra walk speed. */
   move: number;
-  /** The chance a hit does `CRIT_HIT` times its damage. */
+  /** The chance a hit is a crit, before items (everyone's `CRIT.base`; weapons and bonuses add). */
   crit: number;
 }
 
@@ -147,7 +147,7 @@ export function statPower(build: Build, classId?: ClassId): StatPower {
     damage: v('damage'),
     speed: v('speed'),
     move: v('move'),
-    crit: v('crit'),
+    crit: CRIT.base,
   };
 }
 

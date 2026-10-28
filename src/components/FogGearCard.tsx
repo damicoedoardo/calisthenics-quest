@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from 'react';
 import { Flame } from 'lucide-react';
-import type { GameState } from '@/lib/game';
+import { heroLevel, type GameState } from '@/lib/game';
 import { buildOf } from '@/lib/stats';
 import { flameGuards, NO_GEAR, type FogGear, salvageValue, setGuard, takeOffToVault, vaultSize, wearFromVault } from '@/lib/fog-gear';
 import { canUpgrade, embersOf, findItem, matsOf, matsShort, REROLL_COST, reroll, rested, salvage, tryUpgrade, upgradeCost, upgradeMats, upgradeOdds, type Forged } from '@/lib/forge';
@@ -23,7 +23,8 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
     size = vaultSize(state.sessions.length),
     cls = state.profile.classId,
     kit = starterKit(cls),
-    can = (it: Item) => canWear(it, build, cls),
+    level = heroLevel(state),
+    can = (it: Item) => canWear(it, build, cls, level),
     flame = state.profile.flame || 'Your flame',
     fresh = flameGuards(state, new Date()),
     embers = embersOf(state);
@@ -95,7 +96,7 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
       <Side on={land} className={`flex min-w-0 flex-1 flex-col overflow-y-auto rounded-xl ${item ? '' : 'items-center justify-center gap-2 bg-ink-900/60 p-4'}`}>
       {item ? (
         <div className={land ? 'space-y-2' : 'mt-3 space-y-2'}>
-          <ItemCard item={item} build={build} cls={cls} than={gear.worn[item.slot] ?? 'none'}>
+          <ItemCard item={item} build={build} level={level} cls={cls} than={gear.worn[item.slot] ?? 'none'}>
             {worn ? (
               <>
                 <button onClick={() => update((s) => setGuard(s, gear.guard === item.slot ? null : item.slot))} className={`flex flex-1 items-center justify-center gap-1 rounded-lg py-2 text-xs ${gear.guard === item.slot ? 'bg-orange-500 font-semibold text-ink-950' : 'bg-ink-700 text-orange-200'}`}>

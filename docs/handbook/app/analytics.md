@@ -68,7 +68,7 @@ Every event carries the hero context: `workouts`, `hero_level`, `chapter`, `stor
 | `quote_kept`, `sat_by_fire` | Today and rest days | |
 
 "Build" is the worn weapon, armor and charm (`*_rarity`, `*_level`, `*_plus`; `starter` for the
-kit) and the points per stat (`pts_health` ... `pts_crit`).
+kit) and the points per stat (`pts_health` ... `pts_move`; crit left the stats on 2026-10-28, so older events also have `pts_crit`).
 
 ## Adding an event
 

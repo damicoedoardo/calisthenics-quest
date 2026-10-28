@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { Backpack, Pause, Smartphone } from 'lucide-react';
-import type { GameState } from '@/lib/game';
+import { heroLevel, type GameState } from '@/lib/game';
 import { fill, storyWords } from '@/story/engine';
 import type { FogLines } from '@/story/types';
 import { edgeFor, getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
@@ -167,6 +167,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
       track(runStartEvent(state, zone.id, how));
       run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast', worn: wornFor(state),
         build: buildOf(state),
+        heroLevel: heroLevel(state),
         edge: edgeFor(state, zone),
         sp: spWorn(state) || undefined,
         // Only the first attempt shares the party's seed; "Try again" is a run of your own.
@@ -423,7 +424,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
               <p className="text-xs font-semibold" style={{ color: RARITY[found.item.rarity].color }}>
                 {nameOf(found.item)}
               </p>
-              <p className="text-[10px] text-slate-400">{otherClass(found.item, state.profile.classId) ? 'Into the bag. Not for your class.' : !canWear(found.item, buildOf(state), state.profile.classId) ? 'Into the bag. Train to wear it.' : 'Into the bag. Open it to wear.'}</p>
+              <p className="text-[10px] text-slate-400">{otherClass(found.item, state.profile.classId) ? 'Into the bag. Not for your class.' : !canWear(found.item, buildOf(state), state.profile.classId, heroLevel(state)) ? 'Into the bag. Train to wear it.' : 'Into the bag. Open it to wear.'}</p>
             </div>
           </div>
         </div>
@@ -433,6 +434,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
         <BagPanel
           gear={hud.gear}
           build={buildOf(state)}
+          level={heroLevel(state)}
           cls={state.profile.classId}
           risk={risk}
           flame={flameName || 'your flame'}
@@ -1140,7 +1142,7 @@ function Results({ state, zone, end, broken, gear, keys, onAgain, onLeave }: { s
 /** The bag over the run: what you wear (three slots) and what you carry, with the flame's mark on
     the item a fall would leave you and what a fall would cost. Tap an item to see it, then wear it,
     take it off or leave it on the floor. */
-function BagPanel({ gear, build, cls, risk, flame, onWear, onTakeOff, onDrop, onClose }: { gear: Hud['gear']; build: ReturnType<typeof buildOf>; cls: ClassId | undefined; risk: AtRisk; flame: string; onWear: (id: string) => void; onTakeOff: (slot: ItemSlot) => void; onDrop: (id: string) => void; onClose: () => void }) {
+function BagPanel({ gear, build, level, cls, risk, flame, onWear, onTakeOff, onDrop, onClose }: { gear: Hud['gear']; build: ReturnType<typeof buildOf>; level: number; cls: ClassId | undefined; risk: AtRisk; flame: string; onWear: (id: string) => void; onTakeOff: (slot: ItemSlot) => void; onDrop: (id: string) => void; onClose: () => void }) {
   const [pick, setPick] = useState<{ from: 'worn' | 'bag'; id: string } | null>(null);
   const all = [...Object.values(gear.worn), ...gear.bag].filter((x): x is Item => !!x),
     item = pick && all.find((x) => x.id === pick.id);
@@ -1189,7 +1191,7 @@ function BagPanel({ gear, build, cls, risk, flame, onWear, onTakeOff, onDrop, on
                   const it = gear.bag[i];
                   return it ? (
                     <button key={it.id} data-bag-item="" onClick={() => setPick({ from: 'bag', id: it.id })} className={`grid place-items-center rounded-lg p-1 ${pick?.id === it.id ? 'bg-ink-800' : ''}`} aria-label={nameOf(it)}>
-                      <ItemTile item={it} size={36} dim={!canWear(it, build, cls)} than={gear.worn[it.slot] ?? 'none'} />
+                      <ItemTile item={it} size={36} dim={!canWear(it, build, cls, level)} than={gear.worn[it.slot] ?? 'none'} />
                     </button>
                   ) : (
                     <span key={i} className="mx-auto my-1 h-9 w-9 rounded-lg border border-dashed border-ink-800" />
@@ -1208,7 +1210,7 @@ function BagPanel({ gear, build, cls, risk, flame, onWear, onTakeOff, onDrop, on
         <div className="w-56 shrink-0">
           {item ? (
             <>
-              <ItemCard item={item} build={build} cls={cls} than={gear.worn[item.slot] ?? 'none'}>
+              <ItemCard item={item} build={build} level={level} cls={cls} than={gear.worn[item.slot] ?? 'none'}>
                 {wornNow ? (
                   !item.starter && (
                     <button onClick={() => onTakeOff(item.slot)} disabled={gear.bag.length >= BAG} className="flex-1 rounded-lg bg-ink-700 py-2 text-xs text-slate-200 disabled:opacity-40">
@@ -1217,7 +1219,7 @@ function BagPanel({ gear, build, cls, risk, flame, onWear, onTakeOff, onDrop, on
                   )
                 ) : (
                   <>
-                    <button onClick={() => onWear(item.id)} disabled={!canWear(item, build, cls)} className="flex-1 rounded-lg bg-gold-400 py-2 text-xs font-semibold text-ink-950 disabled:bg-ink-700 disabled:text-slate-500">
+                    <button onClick={() => onWear(item.id)} disabled={!canWear(item, build, cls, level)} className="flex-1 rounded-lg bg-gold-400 py-2 text-xs font-semibold text-ink-950 disabled:bg-ink-700 disabled:text-slate-500">
                       Wear
                     </button>
                     <button

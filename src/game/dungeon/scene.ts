@@ -143,9 +143,10 @@ export interface RunSetup {
   autopilot?: boolean;
   /** Play the whole run at once without drawing it (balance tests). */
   fast?: boolean;
-  /** What you wear into the Fog (from the save), and your points, which items ask for. */
+  /** What you wear into the Fog (from the save), and your points and hero level, which items ask for. */
   worn?: Partial<Record<ItemSlot, Item>>;
   build?: Build;
+  heroLevel?: number;
   /** The chapter's hearts are gone: a weaker boss and free skills at the start. */
   edge?: Edge;
   /** Wearing the class's SP: its own move and its final (src/lib/sp.ts). */
@@ -486,6 +487,7 @@ class DungeonScene extends Phaser.Scene {
       autoPick: setup.fast,
       worn: setup.worn,
       build: setup.build,
+      heroLevel: setup.heroLevel,
       edge: setup.edge,
       sp: setup.sp,
       // A practice run: friends come with your strength in their own class and starter kit.
@@ -2197,6 +2199,12 @@ class DungeonScene extends Phaser.Scene {
         const { x, y } = e;
         this.sfx('bossHit', 1.6);
         this.fade(400, (g, p) => g.lineStyle(4 * (1 - p) + 1, 0x7dd3fc, 1 - p).strokeCircle(x, y, 22 + 30 * p));
+        break;
+      }
+      case 'evade': {
+        // A hit that missed: a quick pale blur where you stood.
+        const { x, y } = e;
+        this.fade(260, (g, p) => g.lineStyle(2, 0xe2e8f0, 0.8 * (1 - p)).strokeCircle(x, y, 14 + 12 * p));
         break;
       }
       case 'floor':

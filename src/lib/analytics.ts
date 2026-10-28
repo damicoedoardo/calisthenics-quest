@@ -4,7 +4,7 @@ import type { RunResult } from './fog';
 import { NO_FOG } from './fog';
 import { NO_GEAR, wornFor } from './fog-gear';
 import { spChosen, spOwned } from './sp';
-import type { StatId } from './stats';
+import { STATS, type StatId } from './stats';
 import { storyState } from '@/story/engine';
 import { powerScore } from '@/game/power';
 import type { Item, ItemSlot } from '@/game/dungeon/items';
@@ -60,7 +60,7 @@ function itemProps(it: Item | undefined, prefix: string): Props {
 export function buildProps(state: GameState): Props {
   const w = wornFor(state);
   const build = state.build ?? {};
-  const stats: StatId[] = ['health', 'armor', 'damage', 'speed', 'move', 'crit'];
+  const stats = STATS.map((s) => s.id);
   return {
     ...itemProps(w.weapon, 'weapon'),
     ...itemProps(w.armor, 'armor'),
