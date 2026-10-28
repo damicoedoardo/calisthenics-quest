@@ -62,3 +62,15 @@ once the Google provider is turned on in the Supabase `forma` project (it isn't 
 
 "Remove copy" deletes the cloud copy and signs out; the phone's save stays. The api side is in
 [api.md](api.md).
+
+## Starting over
+
+The You page's Settings ends with **Start over from scratch** (`src/components/StartOver.tsx`,
+Edoardo 2026-10-28: friends who picked a random name or skipped the story want a clean start). It
+asks once, then shows a six-letter code (`startOverCode` in `src/lib/restart.ts`, no letters that
+read alike) to type back. Then it holds every upload (`holdCloudWrites`), deletes the cloud copy
+(`deleteCloud`), forgets the last rev, drops this page's save (`wipeSave` in `store.ts`) and reloads
+onto the opening. The account, friends and settings stay. With no connection it stops before
+touching anything, since a cloud copy left behind would come back on the fresh phone (`plan()` →
+use-cloud). Signed out (rare: sign-in is required) it waits for a sign-in. In the sandbox and on
+the developer save it only drops that save.

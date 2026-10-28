@@ -62,6 +62,17 @@ export function resetDevSave(fromReal: boolean) {
 
 const key = () => (inSandbox() ? SANDBOX_KEY : devSaveOn() ? DEV_SAVE_KEY : KEY);
 
+/** Start over from scratch: drop the save this page plays (the real one, or the sandbox or
+    developer save), then reload onto the opening. Settings and sign-in stay. */
+export function wipeSave() {
+  try {
+    localStorage.removeItem(key());
+  } catch {
+    // Storage blocked: there was no save to drop.
+  }
+  window.location.reload();
+}
+
 function load(): GameState {
   try {
     const raw = localStorage.getItem(key());
