@@ -135,7 +135,7 @@ export const VILLAGE: Chapter = {
       when: { workouts: 30 },
       place: 'lit-forges',
       lines: [
-        { who: 'narrator', show: 'flame', text: '{flame} roars up into a bonfire. All over the village, doors open and people come out to look.', shot: { zoom: 'in', seconds: 1.6 } },
+        { who: 'narrator', show: 'flame', text: '{flame} roars up bright as a bonfire. When the light settles it is dressed in flame, and its wings are real wings now. All over the village, doors open and people come out to look.', shot: { zoom: 'in', seconds: 1.6 } },
         { who: 'flame', mood: 'happy', text: "I'm not a candle any more. Tell everyone." },
         { who: 'flame', text: "In the Fog I can throw fire now. Stand back. Or don't, I'll aim." },
         { who: 'flame', mood: 'soft', text: "Here's what I believe about you now. You're someone who finishes. Not perfectly. Finishes." },

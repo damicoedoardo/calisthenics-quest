@@ -36,7 +36,7 @@ Helpers are pure functions on `GameState` and tested in `src/lib/dev.test.ts`.
 | Page | What |
 |---|---|
 | `/lab` | Sprite Lab: every sprite and animation, with class, gear tier, variant and look controls; every Fog item kind at every rarity (two seeds), the hero of each class in a whole set of items of each rarity, and "The hand-drawn body": the old block body beside the hero's hand-drawn one, standing and walking. Check art changes here on a phone |
-| `/lab/story` | Story Lab: play any scene with any flame name and letter (your hero is your own: the class and gear from this phone's save, read only), every place (held sideways, drawn wide as in a scene), every look of the flame. `?play=<scene id>&back` plays one scene and returns |
+| `/lab/story` | Story Lab: play any scene with any flame name and letter (your hero is your own: the class and gear from this phone's save, read only), every place (held sideways, drawn wide as in a scene), every look of the flame (each stage as a girl's flame and a boy's, their fairy forms differ). `?play=<scene id>&back` plays one scene and returns |
 | `/lab/sp` | The sixteen SPs: each class's four, as a boy and as a girl, with the element's mark, its name, who it is, its weapon and attack clip; filter by element; Idle, Walk or Attack (a tap replays the attack). Linked from the Sprite Lab header and `/lab/night` |
 | `/lab/music` | Music Lab: every theme and sting |
 | `/lab/worlds` | The Fog tab's world picker (`WorldPicker`) on made-up saves: a fresh hero, mid-way (one boss down, two worlds open), waiting on training (the next world opens with a later chapter), all open. Play only shows what it would start; nothing is saved. Linked from the Sprite Lab header |

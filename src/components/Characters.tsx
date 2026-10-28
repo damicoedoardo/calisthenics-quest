@@ -3,6 +3,7 @@ import { Sprite } from './Sprite';
 import { useLook } from './Look';
 import { makeGear, uniformGear, type ClassId, type Gear, type GearSlot } from '@/lib/gear';
 import type { FlameFace, FlameStage } from '@/sprites/characters/ember';
+import type { FlameSex } from '@/sprites/characters/fairy';
 
 /* The story's cast as components. The art for each lives in src/sprites. */
 
@@ -16,11 +17,14 @@ interface EmberProps {
   /** How grown the flame is; the candle is the classic look. */
   stage?: FlameStage;
   mood?: FlameFace;
+  /** Boy's or girl's flame (its fairy forms differ); the player's own by default. */
+  sex?: FlameSex;
 }
 
-/** Your flame: it grows with your workouts and shows how it feels. */
-export function Ember({ size = 48, dim = false, stage = 'candle', mood = 'happy' }: EmberProps) {
-  return <Sprite id="ember" size={size} opts={{ stage, mood }} className={`animate-flicker ${dim ? 'opacity-50' : ''}`} />;
+/** Your flame: it grows with your workouts and shows how it feels. Its fairy forms follow your look. */
+export function Ember({ size = 48, dim = false, stage = 'candle', mood = 'happy', sex }: EmberProps) {
+  const look = useLook();
+  return <Sprite id="ember" size={size} opts={{ stage, mood, sex: sex ?? look.sex }} className={`animate-flicker ${dim ? 'opacity-50' : ''}`} />;
 }
 
 /** The flame's true form: a kid made of fire, with the player's hair as flame. */

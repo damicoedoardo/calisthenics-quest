@@ -26,7 +26,7 @@ export function FlamePowers({ state, land = false }: { state: GameState; land?: 
       icon: 'nova' as const,
       name: power.fairy ? 'Fire fairy' : 'Fireballs',
       value: power.fairy ? 'Fireballs, heals you' : power.fireballs ? 'Fireballs' : 'Not yet',
-      hint: !power.fireballs ? `${toGo(bonfire)}: a bonfire that throws fireballs` : !power.fairy ? `${toGo(fairy)}: a fire fairy that heals you when you're low` : null,
+      hint: !power.fireballs ? `${toGo(bonfire)}: a fairy that throws fireballs` : !power.fairy ? `${toGo(fairy)}: a fire fairy that heals you when you're low` : null,
     },
   ];
   return (

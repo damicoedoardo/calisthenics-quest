@@ -240,16 +240,21 @@ export default function StoryLab() {
           <Chips label="MOOD" options={MOODS} value={mood} onChange={setMood} />
           <p className="text-xs text-slate-500">{FLAME_STAGES.find((s) => s.id === stage)!.gives}</p>
         </div>
-        <div className="mt-4 grid grid-cols-5 gap-1">
-          {FLAME_STAGES.map((s) => (
-            <div key={s.id} className="flex flex-col items-center gap-1 rounded-lg bg-ink-950 py-2">
-              <div className="flex h-14 items-end">
-                <Ember size={56} stage={s.id} mood={mood} />
+        {/* every stage, the girl's flame and the boy's (their fairy forms differ) */}
+        {(['f', 'm'] as const).map((sex) => (
+          <div key={sex} className="mt-4 grid grid-cols-5 gap-1">
+            {FLAME_STAGES.map((s) => (
+              <div key={s.id} className="flex flex-col items-center gap-1 rounded-lg bg-ink-950 py-2">
+                <div className="flex h-20 items-end">
+                  <Ember size={80} stage={s.id} mood={mood} sex={sex} />
+                </div>
+                <p className="text-[9px] text-slate-500">
+                  {sex === 'f' ? 'girl' : 'boy'} · {s.at}+
+                </p>
               </div>
-              <p className="text-[9px] text-slate-500">{s.at}+</p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ))}
       </Panel>
 
       <Panel title="Places">

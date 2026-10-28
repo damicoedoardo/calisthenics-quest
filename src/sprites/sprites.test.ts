@@ -212,6 +212,8 @@ describe('sprite registry', () => {
     prints['hero girl'] = hash(framesFor('hero', 'idle', { look: STARTER_LOOKS.f }));
     for (const stage of ['spark', 'candle', 'torch', 'bonfire', 'fairy'] as const)
       for (const mood of ['happy', 'bright', 'soft', 'sleepy', 'smoky', 'scared', 'dim'] as const) prints[`flame ${stage} ${mood}`] = hash(framesFor('ember', 'idle', { stage, mood }));
+    // the fairy stages differ for a girl's flame (a princess) and a boy's (a prince, the default above)
+    for (const stage of ['torch', 'bonfire', 'fairy'] as const) prints[`flame ${stage} girl`] = hash(framesFor('ember', 'idle', { stage, mood: 'happy', sex: 'f' }));
     for (const id of ['lia', 'sol', 'vela'] as const) prints[`${id} after`] = hash(framesFor(id, 'idle', { after: true }));
     for (const id of ZONED) for (const zone of [1, 2, 3, 4, 5]) prints[`${id} zone ${zone}`] = hash([...framesFor(id, 'idle', { zone }), ...framesFor(id, 'attack', { zone })]);
     for (const exercise of EXERCISES) prints[`exercise ${exercise}`] = hash(framesFor('exercise', 'idle', { exercise }));

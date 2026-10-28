@@ -165,6 +165,15 @@ Creatures (Ember, the Book, the enemies) read the same frames their own way: `ho
 eight-frame float where `bob` is the breath, and `lunge` is their attack, a wind-up
 (`right: 'up'`) and then the hit (`fx: 'impact'`).
 
+Ember (`ember.ts`) has five stages. The spark and the candle are plain flames. From the torch on
+it is a fairy that grows (`fairy.ts`): little (torch, a wisp of fire with no legs yet), proper
+(bonfire) and the grandest (fairy, with a crown). The fairy follows the player's look (`sex`,
+passed by the `Ember` component from `useLook`): girls get a fairy princess (long flame hair, a
+dress of flame, round see-through wings), boys her brother, a fairy prince (short swept-up flame
+hair, a doublet with gold trim, a cape, a flame scepter at the end; `PRINCE_WINGS` picks his wing
+cut). Both keep Ember's face, bob on their wings and drop fairy dust; wings, body and crown are
+separate layers so each keeps its outline. `/lab/story` shows every stage for both.
+
 ### Fog items
 
 Each item kind is one hand-drawn text-row drawing; the letters are roles, not colors (`D M L W` the
