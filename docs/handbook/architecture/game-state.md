@@ -45,7 +45,8 @@ When the player is signed in, a copy also goes to the server a few seconds after
 
 Add new fields as optional (`fog?`, `answers?`, `days?` are examples), or bump `version` and
 teach `migrate()` (`src/lib/game.ts`) to upgrade old saves. A save from the live app must always
-load. `parseImport` (You page Restore) accepts versions 1 to 3 and runs `migrate` too.
+load. `parseImport` (You page Restore) accepts versions 1 to 3 and runs `migrate` too. `wipeSave()`
+(You page, Start over) drops the save this page plays and reloads onto the opening.
 
 ## Sandbox
 

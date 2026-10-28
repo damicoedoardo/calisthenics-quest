@@ -124,10 +124,19 @@ export async function getCloud(): Promise<CloudCopy | null> {
   return (await r.json()) as CloudCopy;
 }
 
+// Set while starting over: the old hero must never go back up after its cloud copy is gone.
+let writesStopped = false;
+
+/** Hold every upload from this page (true), or let them go again (false). */
+export function holdCloudWrites(on: boolean) {
+  writesStopped = on;
+}
+
 export type PutResult = { ok: true; copy: CloudCopy } | { ok: false; current: CloudCopy | null };
 
 /** Write this save over the cloud's `baseRev`; a clash returns the cloud copy instead. */
 export async function putCloud(state: GameState, baseRev: number | null): Promise<PutResult> {
+  if (writesStopped) throw new Error('Starting over');
   const r = await call('PUT', { data: state, base_rev: baseRev });
   if (r.status === 409) return { ok: false, current: ((await r.json()) as { current: CloudCopy | null }).current };
   if (!r.ok) throw new Error(`Cloud save failed (${r.status})`);

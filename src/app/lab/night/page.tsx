@@ -258,7 +258,8 @@ export default function NightLab() {
         <Row icon={<Gem size={16} />} label="Hero > Gear" note="What you wear, the vault, and Mira's forge for the item you tap: the only place for them" onClick={() => open(forged(7), 'tab=hero&hero=gear')} />
         <Row icon={<Sparkles size={16} />} label="Hero > Stats" note="Your champion's points, and what your flame gives you" onClick={() => open(veteran(30, 2), 'tab=hero&hero=stats')} />
         <Row icon={<Swords size={16} />} label="Hero > Class" note="Your class and Change class" onClick={() => open(veteran(30, 2), 'tab=hero&hero=class')} />
-        <Row icon={<BookOpen size={16} />} label="The You page" note="Tap your hero at the top: letter, quest log, settings, backup, cloud save" onClick={() => open(veteran(30, 2), 'you')} />
+        <Row icon={<BookOpen size={16} />} label="The You page" note="Tap your hero at the top: letter, quest log, settings (your name), backup, cloud save" onClick={() => open(veteran(30, 2), 'you')} />
+        <Row icon={<Play size={16} />} label="Start over from scratch" note="You page > Settings, at the bottom: asked once, then a code to type; here it wipes only the sandbox save and the opening plays" onClick={() => open(veteran(30, 2), 'you')} />
         <Row icon={<Gem size={16} />} label="Today with keepsakes" note="Three keepsakes won, at the end of Today" onClick={() => open(veteran(40, 3), 'tab=today')} />
       </Panel>
 

@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Film, Mail, Upload, X } from 'lucide-react';
+import { Check, Download, Film, Mail, Upload, X } from 'lucide-react';
 import { SoundToggle, useMenuMusic } from './Sound';
 import { CloudSave } from './Cloud';
+import { StartOver } from './StartOver';
 import { useModal } from './useModal';
 import { music } from '@/lib/music';
 import { setStatsShared, statsConfigured, useStatsShared } from '@/lib/analytics-client';
@@ -34,6 +35,8 @@ export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: 
   const story = storyState(state);
   const [backupMsg, setBackupMsg] = useState('');
   const [letterOpen, setLetterOpen] = useState(false);
+  const [name, setName] = useState(state.profile.name ?? '');
+  const renamed = name.trim() && name.trim() !== (state.profile.name ?? '');
   const letter = state.profile.letter;
   const hasLetter = !!(letter.why || letter.want || letter.forWho || letter.remind);
 
@@ -129,6 +132,31 @@ export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: 
               Music in the menus
               <input type="checkbox" checked={menuMusic} onChange={(e) => music.setMenuMusic(e.target.checked)} className="h-5 w-5 accent-gold-400" />
             </label>
+            {/* The hero's name, what friends see; the look changes on the Hero tab. */}
+            <form
+              className="flex min-h-[44px] items-center gap-2 text-sm text-slate-300"
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (renamed) update((s) => ({ ...s, profile: { ...s.profile, name: name.trim() } }));
+              }}
+            >
+              <label htmlFor="hero-name" className="shrink-0">
+                Your name
+              </label>
+              <input
+                id="hero-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                maxLength={24}
+                placeholder="Your name"
+                className="min-w-0 flex-1 rounded-lg bg-ink-900 px-3 py-2 text-right text-slate-100 placeholder:text-slate-500"
+              />
+              {renamed && (
+                <button type="submit" aria-label="Save the name" className="rounded-lg bg-gold-400 p-2 text-ink-950">
+                  <Check size={16} />
+                </button>
+              )}
+            </form>
             {statsConfigured && (
               <label className="flex min-h-[44px] items-center justify-between text-sm text-slate-300">
                 <span>
@@ -177,6 +205,7 @@ export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: 
             </div>
             {backupMsg && <p className="mt-2 text-center text-xs text-gold-300">{backupMsg}</p>}
             <CloudSave sandbox={offRecord()} />
+            <StartOver />
           </section>
         </div>
       </div>
