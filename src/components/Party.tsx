@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Crown, Headphones, LogOut, Mic, MicOff, Swords, Volume2, VolumeX, X } from 'lucide-react';
 import type { GameState } from '@/lib/game';
-import { ZONES, zoneStatus } from '@/lib/fog';
+import { partyCode, ROAD_ZONES, ZONES, zoneByCode, zoneStatus } from '@/lib/fog';
+import { roadAt } from '@/lib/road';
 import { getClass } from '@/lib/gear';
 import type { FriendCard } from '@/lib/friends';
 import { getFriends } from '@/lib/friends-client';
@@ -178,8 +179,10 @@ function Lobby({ state }: { state: GameState }) {
   const leading = !!party && party.leader === me;
   const inParty = new Set([...(party?.members.map((m) => m.id) ?? []), ...(party?.invited.map((f) => f.id) ?? [])]);
   const room = party ? MAX_PARTY - party.members.length - party.invited.length : MAX_PARTY - 1;
-  const zones = ZONES.filter((z) => zoneStatus(state, z).state !== 'locked');
-  const zone = ZONES.find((z) => z.id === party?.zone) ?? ZONES[0];
+  // The story zones you've opened, and the Ember Road's chapters up to the one you're on.
+  const road = roadAt(state);
+  const zones = [...ZONES.filter((z) => zoneStatus(state, z).state !== 'locked'), ...ROAD_ZONES.filter((z) => road.started && z.road! <= road.open)];
+  const zone = (party && zoneByCode(party.zone)) ?? ZONES[0];
 
   return (
     <div ref={box} role="dialog" aria-modal="true" aria-label="Your party" className="safe-top fixed inset-0 z-40 overflow-y-auto bg-ink-950/95 outline-none land-safe-x">
@@ -242,20 +245,25 @@ function Lobby({ state }: { state: GameState }) {
                 <div className="mt-2 flex flex-wrap gap-2">
                   {zones.map((z) => (
                     <button
-                      key={z.id}
-                      onClick={() => act(() => setPartyZone(z.id))}
-                      className={`rounded-xl px-3 py-2 text-sm ${z.id === party.zone ? 'bg-gold-400 font-semibold text-ink-950' : 'bg-ink-600'}`}
+                      key={partyCode(z)}
+                      onClick={() => act(() => setPartyZone(partyCode(z)))}
+                      className={`rounded-xl px-3 py-2 text-sm ${partyCode(z) === party.zone ? 'bg-gold-400 font-semibold text-ink-950' : z.road ? 'bg-orange-950/70 text-orange-200' : 'bg-ink-600'}`}
                     >
+                      {z.road ? `Ember Road ${z.road}: ` : ''}
                       {z.name}
                     </button>
                   ))}
                 </div>
               ) : (
-                <p className="mt-1 text-sm font-semibold text-slate-100">{zone.name}</p>
+                <p className="mt-1 text-sm font-semibold text-slate-100">
+                  {zone.road ? `Ember Road ${zone.road}: ` : ''}
+                  {zone.name}
+                </p>
               )}
               <p className="mt-3 text-xs text-slate-400">
                 A practice run for now: you play your hero, and your friends&apos; heroes fight beside you, played by the game. Playing live together comes next.
               </p>
+              {zone.road && <p className="mt-2 text-xs text-orange-200">Beat {zone.bossName} together and the Ember Road goes on for everyone on this chapter.</p>}
             </section>
 
             {leading ? (

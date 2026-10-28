@@ -20,6 +20,7 @@ cast.ts               everyone who speaks: name, portrait (sprite), name color
 places.ts             where scenes happen: painted backdrops (src/sprites/places.ts draws them)
 chapters/1-6          one file per month: the chapter, its Fog zone, its scenes
 anytime.ts            scenes that can happen in any chapter (beating last time, coming back)
+road.ts               the Ember Road, the story walked with friends: its chapters, their runs, its scenes
 flame.ts              the flame's stages (spark to fire fairy), the default name, and heroVariant:
                       after the finale the flame has fused with you and your hero burns red
 opening.ts            the opening, before the first workout
@@ -87,6 +88,31 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
 - Play a whole season in a second with `SIM_OUT=sim-out npx vitest run src/sim`: seven kinds of
   player, a timeline each in sim-out/, and a list of anything that looks wrong.
 
+## The Ember Road (walked with friends)
+
+A second, shorter story apart from the six months: three chapters and a finale about friendship
+(friends push each other to be the best; friends are there even when you don't talk every day; we
+rely on each other). Tamsin (`cast.ts`, her sprite in `villagers.ts`) walks it ahead of you and
+leaves fires and notes. The data is `road.ts`; the rules are `src/lib/road.ts`.
+
+- **Setting out:** the Ember Road card in the Fog's Together door (`RoadCard` in
+  `src/components/PlayTab.tsx`). That saves `road: { from, beaten }` and its first scene plays.
+- **Each chapter** ends in a boss the party beats in a run Together. A chapter's run borrows a
+  story zone's dungeon and boss fight (`base`), with the road's own names, rule text, words and
+  keepsake (`ROAD_ZONES` in `src/lib/fog.ts`; the lobby sends it as zone `20 + chapter`). A win
+  moves the road on (`wonRoad`, called from `onEnd` in `page.tsx`).
+- **Pacing:** chapter n opens once boss n-1 fell and you've done `ROAD.gap` workouts per chapter
+  since setting out; the finale the same after chapter 3 (`ROAD` in `src/balance/training.ts`:
+  9, so 27 workouts, about two months at the weekly goal; the balance sheet checks it). A fast party
+  waits on training, a slow one on the boss.
+- **Scenes** play like the main story's (they're in `ALL_SCENES`), on `when.road`: `{ open: n }`
+  (chapter n opens), `{ note: n }` (halfway through chapter n: Tamsin's note), `{ won: n }` (its
+  boss fell; asks `road1`-`road3`, kept like heart answers and never shared) and `{ end: true }`
+  (the hearth; the road is done once `road-end` is seen).
+- Its places are `whetstone-pass`, `quiet-miles`, `long-bridge` and `road-hearth` (`places.ts`).
+- Not yet: each boss's own fight (the Lull's doze, the Distance's fog lanes, the Bridge's plates)
+  and art, and the Road Banner on the friend card.
+
 ## How to change things
 
 | I want to... | Edit |
@@ -94,6 +120,7 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
 | Change what someone says | the line in its chapter file |
 | Move a scene to another workout | its `when` |
 | Add a scene | a new entry in the chapter's `scenes` (a new, unique `id`) |
+| Change the Ember Road (words, bosses' names, which zone a chapter borrows) | `road.ts`; how long it takes: `ROAD` in `src/balance/training.ts` |
 | Add a character | an entry in `cast.ts` (and a sprite in `src/sprites/registry.ts` if it's new art) |
 | Change a portrait's size or name color | its entry in `cast.ts` |
 | Add or repaint a place | `places.ts` (sky colors, kind of land, props, weather) |

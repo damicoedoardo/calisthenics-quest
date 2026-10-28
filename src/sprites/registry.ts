@@ -20,7 +20,7 @@ import { drawPlateau } from './characters/plateau';
 import { drawSummit } from './characters/summit';
 import { drawTomorrow } from './characters/tomorrow';
 import { drawWanderer } from './characters/wanderer';
-import { drawKid, drawLia, drawSol, type VillagerOpts } from './characters/villagers';
+import { drawKid, drawLia, drawSol, drawTamsin, type VillagerOpts } from './characters/villagers';
 import { drawVela } from './characters/vela';
 import { drawKindled, type KindledOpts } from './characters/kindled';
 import { drawWisp } from './characters/wisp';
@@ -176,6 +176,7 @@ export const SPRITES = {
   }),
   mira: drawn<NoOpts>({ label: () => 'Mira the Smith', defaults: {}, clips: () => ({ idle: 'idle', attack: 'swing' }), draw: drawMira, look: () => ({ shadow: true }) }),
   knight: drawn<NoOpts>({ label: () => 'The Perfect Knight', defaults: {}, clips: () => ({ idle: 'idle', attack: 'swing' }), draw: drawKnight, look: () => ({ shadow: true }) }),
+  tamsin: drawn<NoOpts>({ label: () => 'Tamsin, on the Ember Road', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawTamsin, look: () => ({ shadow: true }) }),
   kid: drawn<NoOpts>({ label: () => 'The kid inside the armor', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawKid, look: () => ({ shadow: true }) }),
   // Villagers: { after: true } is how they look once you've helped them.
   lia: drawn<VillagerOpts>({ label: ({ after }) => (after ? 'Lia, dancing again' : 'Lia the dancer'), defaults: { after: false }, clips: () => ({ idle: 'idle' }), draw: drawLia, look: () => ({ shadow: true }) }),

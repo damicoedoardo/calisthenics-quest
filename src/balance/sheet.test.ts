@@ -10,7 +10,8 @@ import { powerOf, ZONES, xpToNext } from '@/lib/fog';
 import { seeded } from '@/lib/random';
 import { powerScore } from '@/game/power';
 import { CLASSES, type ClassId } from '@/lib/gear';
-import { POINTS, POWER_SPLIT, POWER_SPLIT_SLACK, STORY_MONTHS } from '@/balance';
+import { POINTS, POWER_SPLIT, POWER_SPLIT_SLACK, ROAD, STORY_MONTHS } from '@/balance';
+import { ROAD_LENGTH, roadOpensAt } from '@/lib/road';
 import { CHAPTERS } from '@/story/chapters';
 import type { Build } from '@/lib/stats';
 import { createRun, stepRun } from '@/game/dungeon/engine';
@@ -308,6 +309,15 @@ function goals(): string {
           `${story} workouts, ${months.toFixed(1)} months (the last zone opens at ${lastOpens}, month ${(lastOpens / WEEKLY_GOAL / (52 / 12)).toFixed(1)})`,
           check(months >= STORY_MONTHS.min - 0.05 && months <= STORY_MONTHS.max + 0.05),
         ],
+        (() => {
+          const road = roadOpensAt(ROAD_LENGTH + 1),
+            rm = road / WEEKLY_GOAL / (52 / 12);
+          return [
+            `The Ember Road (with friends) lasts ${ROAD.months.min} to ${ROAD.months.max} months at ${WEEKLY_GOAL} workouts a week`,
+            `the finale ${road} workouts after setting out, ${rm.toFixed(1)} months (a chapter every ${ROAD.gap})`,
+            check(rm >= ROAD.months.min && rm <= ROAD.months.max),
+          ];
+        })(),
         (() => {
           const gaps = ZONES.slice(0, -1).map((z, i) => ZONES[i + 1].workouts - z.workouts - wearAfter('legendary', 9));
           return [

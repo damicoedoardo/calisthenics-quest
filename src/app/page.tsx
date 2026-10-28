@@ -36,7 +36,8 @@ import { withTodayPage } from '@/story/daily';
 import { heroVariant } from '@/story/flame';
 import type { Scene } from '@/story/types';
 import { inSandbox, useGameState } from '@/lib/store';
-import { recordRun, ZONES, type Zone } from '@/lib/fog';
+import { recordRun, ROAD_ZONES, ZONES, zoneByCode, type Zone } from '@/lib/fog';
+import { wonRoad } from '@/lib/road';
 import { settleGear } from '@/lib/fog-gear';
 import { skipIntro, useDevMode } from '@/lib/dev';
 import { useAnalytics } from '@/lib/analytics-client';
@@ -116,7 +117,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     if (part === 'gear' || part === 'stats' || part === 'class') setHeroPart(part);
     if (q.get('fog') === 'together') setFogMode('together');
     if (q.has('you')) setYou(true);
-    const zone = ZONES.find((z) => String(z.id) === q.get('run'));
+    // ?run=road1: an Ember Road run (try it with &party).
+    const zone = ZONES.find((z) => String(z.id) === q.get('run')) ?? ROAD_ZONES.find((z) => `road${z.road}` === q.get('run'));
     if (zone) {
       const at = q.get('at');
       setRunStart(at === 'mid' || at === 'boss' || at === 'win' || at === 'sp' ? at : undefined);
@@ -164,7 +166,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       // Storage blocked: a start may be offered twice, which is harmless.
     }
     const go = startToJoin(party, played, new Date());
-    const zone = go && ZONES.find((z) => z.id === go.zone);
+    const zone = go && zoneByCode(go.zone);
     if (!go || !zone) return;
     try {
       localStorage.setItem(PLAYED_KEY, go.at);
@@ -207,7 +209,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     const next = scenesToPlay(state, new Date())[0];
     if (next) setScene(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, state.profile.onboarded, state.sessions.length, opening, replaying, training, after, scene, picker, run]);
+  }, [ready, state.profile.onboarded, state.sessions.length, state.road, opening, replaying, training, after, scene, picker, run]);
 
   // A page in the Book of Days for every day the app is opened (and today's line follows the day).
   const today = new Date().toDateString();
@@ -425,8 +427,14 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           dev={dev}
           startAt={runStart}
           party={partyRun ?? undefined}
-          // A run Together keeps its loot but never moves the story: only Story runs clear zones.
-          onEnd={(r) => update((s) => spAfterRun(settleGear(partyRun ? s : recordRun(s, r), r).state, r))}
+          // A run Together keeps its loot but never moves the story: only Story runs clear zones. An
+          // Ember Road boss beaten together moves the road on.
+          onEnd={(r) =>
+            update((s) => {
+              const moved = partyRun ? (run.road && r.won ? wonRoad(s, run.road) : s) : recordRun(s, r);
+              return spAfterRun(settleGear(moved, r).state, r);
+            })
+          }
           onLeave={() => {
             setRun(null);
             setRunStart(undefined);
