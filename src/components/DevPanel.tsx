@@ -216,7 +216,7 @@ function GoPane({ onGo, onClose }: Props) {
     ['today', 'Today'],
     ['train', 'Train'],
     ['fog', 'Fog: Story'],
-    ['together', 'Fog: Together'],
+    ['together', 'Friends'],
     ['gear', 'Hero > Gear'],
     ['stats', 'Hero > Stats'],
     ['class', 'Hero > Class'],

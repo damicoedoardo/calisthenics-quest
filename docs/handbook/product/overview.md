@@ -17,17 +17,18 @@ an account (email), which keeps a cloud copy and is who you are to friends; the 
 ## The rule the game is built on
 
 **Training earns, play spends.** A workout always "wins": it gives XP, raises the next targets,
-moves the story on and makes the hero really stronger. The Fog (its own tab, Story alone or Together with friends) is a short action
+moves the story on and makes the hero really stronger. The Fog (the Play tab alone, the Friends tab with friends) is a short action
 game where you can lose, played with the phone held sideways, exploring a dungeon floor by floor; what you bring into it is what your
 training gave you. Gear comes from the dungeon, each item with its own art (legendaries burn), shows on your hero as you wear it, and needs a hero level and stat points to wear (crit comes from weapons and item bonuses, not points); dying in a run loses only what you found and carry in the bag, never what you wear, points, level or story, and a vault at home keeps items safe. Between runs Mira's forge spends embers from workouts to upgrade (+1 to +15, a new shine every few pluses, full at +15; from +6 it also needs materials that only drop when you play with friends, who can also give them to you) and reroll what you found.
 
-## The four tabs
+## The five tabs
 
 | Tab | What it is | Code |
 |---|---|---|
 | Today | The flame and its line for the day, today's quest (the plan's Day A or B: warm-up, main lifts, core, stretch), the rest card on rest days, the Book of Days | `src/components/TodayTab.tsx` |
 | Train | The coach: your flame, which you chat with (it asks where you start, plans your week and changes it when you say, pushes back when something isn't wise, and speaks first when there's something to say), the week as day chips and each day's workout as cards with demos, easier and swap (tap a card for how to do it); the exercise library (891 exercises, pixel demos, tips and mistakes); before setup, gym or home and the built-in plan | `src/components/TrainTab.tsx`, `CoachChat.tsx` |
 | Play | The Fog: your power from training, the zones, a run | `src/components/PlayTab.tsx`, `FogRun.tsx` |
+| Friends | Who is online (tap to invite), your party, the Ember Road, every friend with your code | `src/components/FriendsTab.tsx`, `Friends.tsx` |
 | Hero | Gear, class, look, the champion's stat points, keepsakes, friends (who is online, in the Fog, trained today), settings (sound, music in the menus), backup | `src/components/HeroTab.tsx` |
 
 Every time the app opens, a three-second splash: the flame catches, FORMA lands one letter per note, and the day's number in the Book of Days (`Opening`; on an iPhone it starts with "Tap to start", since sound needs a tap). Over the tabs: the opening story (first run only), the workout logger, the after-session fight and
