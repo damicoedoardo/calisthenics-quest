@@ -18,7 +18,7 @@ export const ATTACK = {
     move speed and attack speed. Up close you have to walk in and back out, so the sword and open
     hands are quicker on their feet and swing faster. */
 export const CLASS_BODY = {
-  slash: { hp: 1.1, armor: 0.1, dmg: 1.04, move: 1.2, haste: 1.1 },
+  slash: { hp: 1.0, armor: 0.04, dmg: 0.85, move: 1.2, haste: 1.1 },
   wave: { hp: 1.25, armor: 0.12, dmg: 1.03, move: 1.15, haste: 1.1 },
   arrow: { hp: 1.05, armor: 0, dmg: 1.22, move: 1, haste: 1 },
   orb: { hp: 0.9, armor: 0, dmg: 0.67, move: 1, haste: 1 },

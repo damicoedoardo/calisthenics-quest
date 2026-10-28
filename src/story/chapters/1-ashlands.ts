@@ -19,8 +19,8 @@ export const ASHLANDS: Chapter = {
     after: "It only grows while you wait. You didn't wait.",
     firstTry: 'Tomorrow is stronger than it looks. Try anyway: losing here costs nothing.',
     keepsake: { name: 'The Nightcap', text: "Tomorrow's sleepy hat. It never got to wear it again." },
-    hp: 1.28,
-    dmg: 1.28,
+    hp: 1.0,
+    dmg: 1.0,
     ground: '#231d2e',
     fog: '#4a3f63',
     // stages: [Tomorrow splits]

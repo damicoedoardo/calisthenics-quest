@@ -1,7 +1,11 @@
-import { attackOf, clamp, RANGE } from '../rules';
+import { HUMAN } from '@/balance';
+import { attackOf, clamp, HERO_SPEED, RANGE } from '../rules';
 import { abilityReady, BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup } from './engine';
 
-/* The bot: a steady, careful player, not a great one. It sidesteps shots on course to hit it,
+/* The bot: a steady, careful player on a phone, not a great one (how human: HUMAN in
+   src/balance/dungeon.ts). It notices a shot only after a reaction of its own, misses more of them
+   when the room is busy or they fly fast, decides about ten times a second, and its thumb is a
+   little off. It sidesteps shots on course to hit it,
    keeps its class's distance from monsters (a sword goes close, the rest stay back), plays each
    boss by its rule, explores the floor's map room by room once a room is clear (then takes the
    stairs), and uses the ability when it
@@ -23,13 +27,21 @@ function outOf(q: Rect, x: number, y: number): [number, number] {
 const SEE = 0.7;
 /** The bot dodges a shot it sees will land within this long (s). */
 const DODGE_SEE = 0.18;
-/** A person needs this long (s) to notice a new shot; the bot doesn't see it before. */
-export const REACTION = 0.25;
-/** Share of shots a person keeps track of in a busy room; the rest the bot doesn't see coming. */
-export const ATTENTION = { share: 0.75 };
 
-/** Whether this shot is one the bot watches: fixed per shot, so it doesn't flicker. */
-const noticed = (id: number) => ((Math.imul(id, 2654435761) >>> 0) % 1000) / 1000 < ATTENTION.share;
+/** A number in [0, 1) from two others, the same every time (so a replay plays the same). */
+const hash = (a: number, b: number) => ((Math.imul(Math.imul(a, 2654435761) ^ Math.imul(b + 1, 2246822519), 3266489917) >>> 0) % 10007) / 10007;
+
+/** Whether the bot has seen this shot by now: after the shot's own reaction time, and only if it
+    caught its eye (less likely in a busy room, or for a shot faster than you walk). */
+function noticed(id: number, age: number, speed: number, busy: number): boolean {
+  const [lo, hi] = HUMAN.reaction;
+  if (age < lo + hash(id, 1) * (hi - lo)) return false;
+  const chance = clamp(HUMAN.notice - HUMAN.busy * Math.max(0, busy - HUMAN.calm) - HUMAN.fast * Math.max(0, speed / HERO_SPEED - 0.8), HUMAN.floor, 1);
+  return hash(id, 2) < chance;
+}
+
+/** What the bot pushed at its last decision, held until the next one. */
+const held = new WeakMap<Hero, { at: number; input: Input }>();
 
 /** Where the bot goes when a room is clear: the nearest room it hasn't been in (a shrine when
     hurt, an elite room when healthy, a chest before a plain fight), or the stairs once it has seen
@@ -85,8 +97,17 @@ function idle(run: Run): number {
   return run.t - p.since;
 }
 
-/** What the bot pushes this step, playing hero `h` (you, unless told). */
+/** What the bot pushes this step, playing hero `h` (you, unless told): a new decision every
+    HUMAN.think seconds, the stick held in between. */
 export function botInput(run: Run, h: Hero = run.hero): Input {
+  const last = held.get(h);
+  if (last && run.t >= last.at && run.t - last.at < HUMAN.think) return { ...last.input, ability: false, dodge: false };
+  const input = decide(run, h);
+  held.set(h, { at: run.t, input });
+  return input;
+}
+
+function decide(run: Run, h: Hero): Input {
   const melee = attackOf(h.classId) === 'slash',
     still = idle(run) > STALL,
     stuck = still && !run.cleared,
@@ -103,12 +124,14 @@ export function botInput(run: Run, h: Hero = run.hero): Input {
   // Shots on course to hit within SEE seconds: step off their line. In the fog, only the ones
   // close enough to see.
   const see = Math.min(220, zoneDungeon(run.setup.zone).sight ?? run.dim ?? 220);
+  let busy = 0;
+  for (const b of run.bullets) if ((h.x - b.x) ** 2 + (h.y - b.y) ** 2 < 400 * 400) busy++;
   for (const b of run.bullets) {
-    if (now - b.born < REACTION || !noticed(b.id)) continue;
     const rx = h.x - b.x,
       ry = h.y - b.y,
       v2 = b.vx * b.vx + b.vy * b.vy;
     if (rx * rx + ry * ry > see * see || !v2) continue;
+    if (!noticed(b.id, now - b.born, Math.sqrt(v2), busy)) continue;
     const tc = (rx * b.vx + ry * b.vy) / v2;
     if (tc < 0 || tc > SEE) continue;
     const cx = b.x + b.vx * tc - h.x,
@@ -308,8 +331,12 @@ export function botInput(run: Run, h: Hero = run.hero): Input {
     if (h.y > run.area.h - m) y -= (h.y - (run.area.h - m)) / m;
   }
 
+  // The thumb is a little off: the push turns a bit, a new bit each decision.
   const len = Math.hypot(x, y),
-    [mx, my] = len < 0.05 ? [0, 0] : [x / len, y / len];
+    tick = Math.floor(now / HUMAN.think),
+    off = (hash(tick, 3) - 0.5) * 2 * HUMAN.aim,
+    [ux, uy] = len < 0.05 ? [0, 0] : [x / len, y / len],
+    [mx, my] = [ux * Math.cos(off) - uy * Math.sin(off), ux * Math.sin(off) + uy * Math.cos(off)];
 
   // The ability, when it helps.
   let ability = false;
@@ -334,7 +361,8 @@ export function botInput(run: Run, h: Hero = run.hero): Input {
     }
   }
   // The dodge: through a shot that's about to land, along the way it was already stepping.
-  const dodge = imminent && now >= h.dodgeAt && !(h.charge && now < h.charge.until);
+  // Sometimes it misses the moment.
+  const dodge = imminent && hash(tick, 4) >= HUMAN.dodgeMiss && now >= h.dodgeAt && !(h.charge && now < h.charge.until);
   return { x: mx, y: my, ability, dodge };
 }
 

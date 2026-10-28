@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { powerOf, ZONES } from '@/lib/fog';
 import { initialState } from '@/lib/game';
+import { HUMAN } from '@/balance';
 import { botInput, playRun } from './bot';
 import { ACROSS, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, makeFloor, MIDS, mine, pickRelic, SAND, skipToBoss, skipToWarden, SPLIT, stepRun, takeEvents, wardenFloor, type Side } from './engine';
 
@@ -237,10 +238,14 @@ describe('dungeon', () => {
     const run = createRun({ ...setup, seed: 9 });
     for (let i = 0; i < 30; i++) stepRun(run, { x: 0, y: 0, ability: false });
     const h = run.hero;
-    // A shot fired a moment ago (the bot has had time to see it), a few steps away and coming.
-    const id = [...Array(50).keys()].map((k) => 20000 + k).find((k) => ((Math.imul(k, 2654435761) >>> 0) % 1000) / 1000 < 0.5)!;
-    run.bullets = [{ id, x: h.x - 30, y: h.y, vx: 240, vy: 0, r: 5, dmg: 10, born: run.t - 0.5, boss: false, style: 'plain', ang: 0, spd: 240, bounce: 0 }];
-    expect(botInput(run).dodge).toBe(true);
+    // A shot fired a moment ago (the bot has had time to see it), a few steps away and coming. The
+    // bot's human slips (shots it misses, a dodge it times wrong) set aside for this one.
+    const was = { ...HUMAN };
+    Object.assign(HUMAN, { floor: 1, dodgeMiss: 0 });
+    run.bullets = [{ id: 20000, x: h.x - 30, y: h.y, vx: 240, vy: 0, r: 5, dmg: 10, born: run.t - 0.6, boss: false, style: 'plain', ang: 0, spd: 240, bounce: 0 }];
+    const dodge = botInput(run).dodge;
+    Object.assign(HUMAN, was);
+    expect(dodge).toBe(true);
   });
 
   it('the bot walks up to a monster it can\'t hit from afar, so a room never holds it forever', () => {

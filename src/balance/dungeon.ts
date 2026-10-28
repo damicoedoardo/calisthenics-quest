@@ -13,9 +13,13 @@ export const DIALS = {
   /** Monster HP, on top of the zone's. */
   hp: 1.3,
   /** How often monsters shoot (2 = twice as often). */
-  fire: 3,
-  /** How fast their shots fly. */
-  speed: 1.5,
+  fire: 2,
+  /** How fast their shots fly. Goal: most shots slower than you walk (150), so you can step out of
+      their way and feel in control, as in RotMG. */
+  speed: 0.95,
+  /** How hard a monster's shot hits (on top of the zone's damage). Goal: slow shots still matter:
+      fewer, slower and harder hitting, so the room reads clearly and a hit is a mistake you saw. */
+  shot: 1.5,
   /** How many monsters a room holds. */
   crowd: 1,
   /** Share of HP back on the stairs to each new floor. */
@@ -35,3 +39,27 @@ export const ELITE = { hp: 2.4, dmg: 1.25, r: 1.25, xp: 1.5, crowd: 0.5 };
 
 /** Light (XP) to the next level in a run: base + level * perLevel + level² / squareEvery (rounded down). */
 export const RUN_LEVELS = { base: 5, perLevel: 4, squareEvery: 4 } as const;
+
+/** The bot that measures the zones plays like a person on a phone, not a machine (`src/game/dungeon/bot.ts`).
+    Goal: its win rates are what a steady, careful player gets, so ZONE_WINS means the same for people.
+    Modeled on how game bots are made human: a reaction that varies, fewer shots seen when the room
+    is busy or a shot is fast, a few decisions a second, a thumb that is a little off. */
+export const HUMAN = {
+  /** Time to notice a new shot (s): each shot gets its own, between these two. */
+  reaction: [0.28, 0.5] as [number, number],
+  /** Chance to see a shot coming in a calm room. */
+  notice: 0.92,
+  /** Shots on screen before the room counts as busy, and the chance lost per shot past that. */
+  calm: 12,
+  busy: 0.01,
+  /** Chance lost per walk-speed (150) a shot flies faster than 0.8 of your walk. */
+  fast: 0.7,
+  /** The chance never drops below this. */
+  floor: 0.35,
+  /** Seconds between decisions: the bot holds its stick in between (about 10 a second). */
+  think: 0.1,
+  /** How far off its thumb pushes (radians, either way). */
+  aim: 0.3,
+  /** Chance it misses the moment to dodge a shot it saw. */
+  dodgeMiss: 0.25,
+};
