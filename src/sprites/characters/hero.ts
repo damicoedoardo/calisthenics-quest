@@ -50,8 +50,13 @@ export function normalizeLook(look?: Partial<Look> | null): Look {
   };
 }
 
-/** The clip each class attacks with. Until you hold a real weapon, everyone swings a stick. */
-export function heroAttack(gear: Record<GearSlot, Gear>, classId?: ClassId): ClipId {
+/** Which SP is worn (1 to 4), from HeroOpts.sp, or 0 for none. */
+const spNo = (sp: HeroOpts['sp']) => (sp === true ? 1 : sp || 0);
+
+/** The clip each class attacks with. Until you hold a real weapon, everyone swings a stick. With an
+    SP on, its own weapon's attack (SP_WEAPON_ART in parts/spWeapons.ts). */
+export function heroAttack(gear: Record<GearSlot, Gear>, classId?: ClassId, sp?: HeroOpts['sp']): ClipId {
+  if (classId && spNo(sp)) return SP_WEAPON_ART[spWeapon(classId, spNo(sp))].clip;
   if (gear.weapon.tier === 0) return 'swing';
   if (classId === 'archer') return 'shoot';
   if (classId === 'mage') return 'cast';
@@ -70,7 +75,7 @@ export function heroSpec({ gear, classId, variant, body, sp: spOn }: HeroOpts): 
   const drawn = body !== 'block';
   const cape = variant === 'best';
   // With the SP on, its look stands in for the armor (the weapon and charm stay yours).
-  const spN = spOn === true ? 1 : spOn || 0,
+  const spN = spNo(spOn),
     sp = spN && classId ? spLook(classId, spN) : null,
     spw = spN && classId ? SP_WEAPON_ART[spWeapon(classId, spN)] : null;
   const armorTier = gear.armor.tier;
@@ -93,7 +98,7 @@ export function heroSpec({ gear, classId, variant, body, sp: spOn }: HeroOpts): 
   const glow = wc?.glow ? wc.glow[1] : gear.weapon.glow ?? (gear.weapon.tier >= 3 ? W[2] : '#9fd3ff');
   // an SP with its own weapon carries nothing else: no shield, quiver, orb or gloves
   const off = gear.shield.tier > 0 && !sp ? classId ?? 'warrior' : null;
-  const attack = heroAttack(gear, classId);
+  const attack = heroAttack(gear, classId, spOn);
   const wl = weaponLook(wc, weaponLegend);
   const legs = sp?.legs ?? (dress === 'heavy' ? [mix(A[0], NIGHT, 0.4), A[0], A[1]] : dress ? TROUSERS : armorTier >= 3 ? [mix(A[0], NIGHT, 0.4), A[0], A[1]] : TROUSERS);
   const T = sp?.trim ?? ac?.trim ?? R.gold,
@@ -102,7 +107,8 @@ export function heroSpec({ gear, classId, variant, body, sp: spOn }: HeroOpts): 
   return {
     id: 'hero',
     attack,
-    stance: attack === 'shoot' ? { left: 'out' } : undefined,
+    // an SP's weapon holds its own stance; a class bow is held out
+    stance: spw ? spw.stance : attack === 'shoot' ? { left: 'out' } : undefined,
     a: A,
     legs,
     glove: off === 'monk' ? Sh : undefined,

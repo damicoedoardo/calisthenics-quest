@@ -10,6 +10,8 @@ import { tint, type Grid } from './engine/grid';
 import { planExercises } from '@/lib/program';
 import { EXERCISES, type ExerciseId } from './characters/exercise';
 import { SPRITES, clipFor, framesFor, imageSheet, type SpriteId } from './registry';
+import { SP_WEAPON_ART } from './parts/spWeapons';
+import { spWeapon } from './characters/spLooks';
 
 const painted = (g: Grid) => g.flat().filter(Boolean).length;
 const hash = (frames: Grid[]) => createHash('sha1').update(JSON.stringify(frames)).digest('hex').slice(0, 12);
@@ -83,6 +85,21 @@ describe('sprite registry', () => {
     expect(clipFor('vela', 'attack')).toBe('raise');
     // The true form waves (the finale's last line).
     expect(clipFor('kindled', 'attack')).toBe('wave');
+  });
+
+  it('an SP attacks with its own weapon, and each weapon has its own clip', () => {
+    const seen = new Set<string>();
+    for (const cls of ['warrior', 'archer', 'mage', 'monk'] as ClassId[])
+      for (const n of [1, 2, 3, 4]) {
+        const clip = SP_WEAPON_ART[spWeapon(cls, n)].clip;
+        // even before a real weapon: the SP brings its own
+        expect(clipFor('hero', 'attack', { gear: uniformGear(cls, 0), classId: cls, sp: n })).toBe(clip);
+        expect(CLIPS[clip].loop).toBe(false);
+        seen.add(clip);
+      }
+    expect(seen.size).toBe(16);
+    // without an SP nothing changes
+    expect(clipFor('hero', 'attack', { gear: uniformGear('archer', 2), classId: 'archer' })).toBe('shoot');
   });
 
   it('the idle loop bobs and the attack moves', () => {

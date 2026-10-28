@@ -89,12 +89,14 @@ const RIGHT_ARM: Record<ArmRight, (s: Pt, ax: number) => Arm> = {
   up: (s) => ({ rect: [s.x + 1, s.y - 6, 2, 7], hand: [s.x + 1, s.y - 8] }),
   fwd: (s) => ({ rect: [s.x, s.y + 2, 5, 2], hand: [s.x + 5, s.y + 2] }),
   pull: (s, ax) => ({ rect: [ax + 2, s.y + 2, s.x - ax, 2], hand: [ax, s.y + 2] }),
+  tuck: (s) => ({ rect: [s.x, s.y, 2, 4], hand: [s.x - 1, s.y + 3] }),
 };
 /** Off-hand shapes. */
 const LEFT_ARM: Record<ArmLeft, (s: Pt) => Arm> = {
   down: (s) => ({ rect: [s.x, s.y, 2, 6], hand: [s.x, s.y + 6] }),
   out: (s) => ({ rect: [s.x - 4, s.y + 2, 6, 2], hand: [s.x - 6, s.y + 2] }),
   up: (s) => ({ rect: [s.x - 1, s.y - 6, 2, 7], hand: [s.x - 1, s.y - 8] }),
+  fwd: (s) => ({ rect: [s.x, s.y + 2, 8, 2], hand: [s.x + 8, s.y + 2] }),
 };
 
 export interface Pose {
@@ -110,6 +112,13 @@ export interface Pose {
   step: number;
   /** Where a drawn bow string ends (x), or null. */
   drawX: number | null;
+  /** Where a held weapon points, when the frame says (right and left hand), or null. */
+  aim: [number, number] | null;
+  aimL: [number, number] | null;
+  /** How far up a held weapon the right hand has slid, in sprite pixels. */
+  grip: number;
+  /** How far a thrown weapon has flown, in sprite pixels (0: in the hand). */
+  fly: number;
   /** Arm rects and hand positions in sprite pixels, bob included. */
   arms: { R: Arm; L: Arm };
 }
@@ -135,6 +144,10 @@ export function poseFor(frame: ClipFrame, stance: ClipFrame, look: Look, f: numb
     bob: bob * 2,
     step: fr.step ?? 0,
     drawX: draw != null ? (lhx + draw) * 2 : null,
+    aim: fr.aim ?? null,
+    aimL: fr.aimL ?? null,
+    grip: fr.grip ?? 0,
+    fly: fr.fly ?? 0,
     arms: { R: up2(RIGHT_ARM[right](RS, lhx + (draw ?? 0))), L: up2(LEFT_ARM[left](LS)) },
   };
 }
