@@ -3,7 +3,7 @@ type: conceptual
 title: API
 description: The FastAPI app in backend/ — Supabase token check (JWKS), the save backup routes (GET/PUT/DELETE /save) and the rev rule that stops a stale phone overwriting newer progress.
 tags: [backend, api, auth, saves]
-timestamp: 2026-10-27
+timestamp: 2026-10-28
 ---
 
 # API
@@ -22,6 +22,7 @@ the workout planner (the LLM key must live on a server).
 | `backend/app/routes/save.py` | `GET`, `PUT`, `DELETE /save` |
 | `backend/app/friends.py`, `routes/friends.py` | Friend cards and friendships: `PUT /me`, `/friends` ([friends.md](friends.md)); creates its tables on start |
 | `backend/app/party.py`, `routes/party.py` | Parties: invite, join, ready, zone, start (`/party...`, [friends.md](friends.md#parties)); creates its tables on start |
+| `backend/app/voice.py` | The party voice pass for `POST /party/voice` ([friends.md](friends.md#party-voice)) |
 | `backend/app/gifts.py`, `routes/gifts.py` | Forge materials friends give each other: `POST /gifts`, `GET /gifts`, `POST /gifts/claim` ([friends.md](friends.md)); creates its table on start |
 | `backend/db/init.sql` | The schema, run by Postgres on first boot |
 | `backend/tests/` | pytest: the save rules and the token check, no database needed |

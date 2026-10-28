@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Crown, LogOut, Swords, X } from 'lucide-react';
+import { Crown, Headphones, LogOut, Mic, MicOff, Swords, Volume2, VolumeX, X } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { ZONES, zoneStatus } from '@/lib/fog';
 import { getClass } from '@/lib/gear';
@@ -24,6 +24,7 @@ import {
   useLobbyOpen,
   usePartyView,
 } from '@/lib/party-client';
+import { joinVoice, leaveVoice, setMic, silence, useVoice } from '@/lib/voice-client';
 import { FriendHero } from './Friends';
 import { useModal } from './useModal';
 
@@ -41,6 +42,10 @@ const visible = () => typeof document === 'undefined' || document.visibilityStat
 export function usePartyPoll(signedIn: boolean, off: boolean) {
   const { party } = usePartyView();
   const inParty = !!party;
+  // Out of the party, out of its voice.
+  useEffect(() => {
+    if (!inParty) void leaveVoice();
+  }, [inParty]);
   useEffect(() => {
     if (off || !signedIn) {
       setPartyMe(null);
@@ -117,14 +122,26 @@ export function PartyInviteCard() {
 export function PartyButton() {
   const { party } = usePartyView();
   const open = useLobbyOpen();
+  const voice = useVoice();
   if (!party || open) return null;
   return (
-    <button
-      onClick={() => setLobbyOpen(true)}
-      className="fixed bottom-24 right-4 z-30 flex items-center gap-2 rounded-full bg-gold-400 px-4 py-2.5 text-sm font-semibold text-ink-950 shadow-[0_3px_0_#b45309] land:bottom-4"
-    >
-      <Swords size={16} /> Party · {party.members.length}
-    </button>
+    <div className="fixed bottom-24 right-4 z-30 flex items-center gap-2 land:bottom-4">
+      {voice.status === 'on' && (
+        <button
+          onClick={() => void setMic(!voice.mic)}
+          aria-label={voice.mic ? 'Turn your mic off' : 'Turn your mic on'}
+          className={`rounded-full p-3 shadow-[0_3px_0_#0b1020] ${voice.mic ? 'bg-emerald-500 text-ink-950' : 'bg-ink-600 text-slate-300'}`}
+        >
+          {voice.mic ? <Mic size={16} /> : <MicOff size={16} />}
+        </button>
+      )}
+      <button
+        onClick={() => setLobbyOpen(true)}
+        className="flex items-center gap-2 rounded-full bg-gold-400 px-4 py-2.5 text-sm font-semibold text-ink-950 shadow-[0_3px_0_#b45309]"
+      >
+        <Swords size={16} /> Party · {party.members.length}
+      </button>
+    </div>
   );
 }
 
@@ -138,6 +155,7 @@ function Lobby({ state }: { state: GameState }) {
   const [friends, setFriends] = useState<FriendCard[]>([]);
   const [msg, setMsg] = useState('');
   const box = useModal<HTMLDivElement>(() => setLobbyOpen(false));
+  const voice = useVoice();
 
   useEffect(() => {
     void getFriends()
@@ -181,7 +199,22 @@ function Lobby({ state }: { state: GameState }) {
           <>
             <ul className="grid grid-cols-2 gap-2 land:grid-cols-4">
               {party.members.map((m) => (
-                <li key={m.id} className="flex flex-col items-center rounded-2xl bg-ink-800 p-3 text-center">
+                <li
+                  key={m.id}
+                  className={`relative flex flex-col items-center rounded-2xl bg-ink-800 p-3 text-center ${voice.talking.includes(m.id) ? 'ring-2 ring-emerald-400' : ''}`}
+                >
+                  {voice.here.includes(m.id) && m.id !== me && (
+                    <button
+                      onClick={() => silence(m.id, !voice.silenced.includes(m.id))}
+                      aria-label={voice.silenced.includes(m.id) ? `Hear ${m.name || 'them'} again` : `Turn ${m.name || 'them'} down`}
+                      className="absolute right-1.5 top-1.5 rounded-lg bg-ink-900/70 p-1.5 text-slate-300"
+                    >
+                      {voice.silenced.includes(m.id) ? <VolumeX size={14} /> : <Volume2 size={14} />}
+                    </button>
+                  )}
+                  {voice.here.includes(m.id) && (m.id === me ? !voice.mic : voice.quiet.includes(m.id)) && (
+                    <MicOff size={14} className="absolute left-2 top-2 text-slate-500" aria-label="Mic off" />
+                  )}
                   <FriendHero f={m} size={64} />
                   <p className="mt-1 flex items-center gap-1 truncate text-sm font-semibold text-slate-100">
                     {m.leader && <Crown size={12} className="text-gold-300" />}
@@ -200,6 +233,8 @@ function Lobby({ state }: { state: GameState }) {
                 </li>
               ))}
             </ul>
+
+            <VoiceBar voice={voice} />
 
             <section className="rounded-2xl bg-ink-800 p-4">
               <p className="text-[10px] uppercase tracking-wider text-slate-500">Where</p>
@@ -285,5 +320,38 @@ function Lobby({ state }: { state: GameState }) {
         )}
       </div>
     </div>
+  );
+}
+
+/** Talk to your party: join voice, your mic, leave voice. Who's talking glows on their card. */
+function VoiceBar({ voice }: { voice: ReturnType<typeof useVoice> }) {
+  return (
+    <section className="rounded-2xl bg-ink-800 p-4">
+      <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-slate-500">
+        <Headphones size={12} /> Voice
+      </p>
+      {voice.status === 'on' ? (
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <button
+            onClick={() => void setMic(!voice.mic)}
+            className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold ${voice.mic ? 'bg-emerald-500 text-ink-950' : 'bg-ink-600 text-slate-200'}`}
+          >
+            {voice.mic ? <Mic size={15} /> : <MicOff size={15} />} {voice.mic ? 'Mic on' : 'Mic off'}
+          </button>
+          <button onClick={() => void leaveVoice()} className="rounded-xl bg-ink-600 py-2.5 text-sm font-semibold text-slate-200">
+            Leave voice
+          </button>
+        </div>
+      ) : (
+        <button
+          disabled={voice.status === 'joining'}
+          onClick={() => void joinVoice()}
+          className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          <Mic size={15} /> {voice.status === 'joining' ? 'Joining…' : 'Talk with your party'}
+        </button>
+      )}
+      {voice.error && <p className="mt-2 text-xs text-sky-300">{voice.error}</p>}
+    </section>
   );
 }

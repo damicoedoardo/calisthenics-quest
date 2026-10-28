@@ -20,6 +20,13 @@ class Settings(BaseSettings):
     # The biggest save we keep, in bytes of JSON. A real save is a few hundred KB at most.
     max_save_bytes: int = 2_000_000
 
+    # Party voice (LiveKit on this server). Empty: voice is off and /party/voice says so.
+    livekit_url: str = ""
+    livekit_api_key: str = ""
+    livekit_api_secret: str = ""
+    # How long a voice pass lasts; the app asks for a new one each time it joins.
+    voice_pass_seconds: int = 6 * 3600
+
     model_config = {"env_prefix": "FORMA_"}
 
 

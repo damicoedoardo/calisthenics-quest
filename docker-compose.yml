@@ -38,6 +38,10 @@ services:
       - FORMA_SUPABASE_ISSUER=${SUPABASE_ISSUER:-}
       - FORMA_SUPABASE_JWKS_URL=${SUPABASE_JWKS_URL:-}
       - FORMA_CORS_ORIGINS=${CORS_ORIGINS:-https://forma-nu-red.vercel.app,http://localhost:3000}
+      # Party voice: the address phones join, and the key pair LiveKit trusts (same as LIVEKIT_KEYS).
+      - FORMA_LIVEKIT_URL=${LIVEKIT_URL:-}
+      - FORMA_LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-}
+      - FORMA_LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -49,6 +53,22 @@ services:
       start_period: 15s
     restart: unless-stopped
 
+  livekit:
+    # Party voice. Talk goes straight to the phones over UDP 7882 (TCP 7881 as a fallback); the
+    # join itself comes through Caddy at VOICE_DOMAIN as livekit:7880.
+    image: livekit/livekit-server:v1.13.10
+    command: --config /etc/livekit.yaml
+    environment:
+      - "LIVEKIT_KEYS=${LIVEKIT_API_KEY:-devkey}: ${LIVEKIT_API_SECRET:-forma_dev_secret_change_me_0000000}"
+    volumes:
+      - ./livekit/livekit.yaml:/etc/livekit.yaml:ro
+    expose:
+      - "7880"
+    ports:
+      - "7881:7881/tcp"
+      - "7882:7882/udp"
+    restart: unless-stopped
+
   caddy:
     image: caddy:2-alpine
     ports:
@@ -56,6 +76,7 @@ services:
       - "443:443"
     environment:
       - DOMAIN=${DOMAIN:-localhost}
+      - VOICE_DOMAIN=${VOICE_DOMAIN:-voice.localhost}
     volumes:
       # A directory mount, so a `git pull` that replaces the Caddyfile is seen after a reload.
       - ./caddy:/etc/caddy
