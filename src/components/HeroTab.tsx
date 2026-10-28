@@ -10,6 +10,7 @@ import { useLook } from './Look';
 import { LookEditor } from './LookEditor';
 import { useModal } from './useModal';
 import { StatPoints } from './StatPoints';
+import { SpCard } from './SpCard';
 import { CloudSave } from './Cloud';
 import { useLand } from './useLand';
 import { FriendsCard } from './Friends';
@@ -255,7 +256,10 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
           </div>
           <div role="tabpanel" className="min-h-0 flex-1 space-y-3 overflow-y-auto p-3">
             {part === 'champion' ? (
-              <StatPoints state={state} update={update} land />
+              <>
+                <StatPoints state={state} update={update} land />
+                <SpCard state={state} update={update} land />
+              </>
             ) : part === 'log' ? (
               <>
                 {stats}
@@ -294,6 +298,8 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
       </section>
 
       <StatPoints state={state} update={update} />
+
+      <SpCard state={state} update={update} />
 
       {lookEditor}
 

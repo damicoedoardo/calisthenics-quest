@@ -38,3 +38,17 @@ export const VAULT = {
 
 /** Trained in the last this-many days: the flame keeps your guarded item if you fall. */
 export const FLAME_GUARD_DAYS = 2;
+
+/** Sweat coins (Edoardo 2026-10-28): every workout earns them, and changing who you are spends
+    them. Goal: a new build or a new class is a choice you train for, never a free toggle, and the
+    first class you try isn't a trap. */
+export const SWEAT = {
+  /** Coins a workout earns (any workout, full or short). */
+  perWorkout: 1,
+  /** Take all your stat points back to spend again. Points spent since your last workout come back free. */
+  respec: 1,
+  /** Change class. */
+  classChange: 3,
+  /** Class changes that are free (after the pick in the opening, which always is). */
+  freeChanges: 1,
+} as const;

@@ -105,6 +105,8 @@ export interface When {
   better?: number;
   /** No class picked yet. */
   noClass?: boolean;
+  /** The first SP's trial is done (src/lib/sp.ts). */
+  spReady?: boolean;
   /** The player gave this answer (or any answer when `is` is left out). */
   answer?: { id: AnswerId; is?: string };
   /** Only when the player gave this word (a part of the letter, a heart answer). */
@@ -137,7 +139,9 @@ export type Ask =
   /** Pick an answer, or write your own when `write` is given (its text is the placeholder). */
   | { kind: 'choice'; id: AnswerId; prompt: string; choices: Choice[]; write?: string; after?: Line[] }
   /** Pick a class. */
-  | { kind: 'class' };
+  | { kind: 'class' }
+  /** The Wanderer hands over the first SP (src/lib/sp.ts): its trial starts. */
+  | { kind: 'sp' };
 
 export interface Scene {
   /** Saved once played, so it never plays twice. Never rename a live scene's id. */

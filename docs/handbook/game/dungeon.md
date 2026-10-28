@@ -15,7 +15,8 @@ items.ts            the things you wear, as data: slots, rarity, bonuses, class 
                     names, requirements, the pure rolls (rollRarity, rollItem), and the forge's
                     plus and reroll (boostOf, nameOf, rerollBonus; see forge.md), and what a
                     card says: foundAt (level 1-60, zone, floor) and betterBy (% against what you
-                    wear, from itemScore; an empty weapon or armor slot counts as the starter kit)
+                    wear, from itemScore; an empty weapon slot counts as the plain weapon),
+                    and who can wear what: otherClass and canWear (a weapon is its class's own)
 content.ts          what a dungeon is made of, as data: ground, rooms, chest items, monsters and how they
                     shoot, each zone's dungeon and mid-boss, the bosses, the classes' abilities
 engine.ts           plays it: a pure step function (60 a second, seeded), no Phaser
@@ -59,6 +60,7 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change how often co-op runs drop forge materials | `MAT_DROPS` in `src/balance/upgrades.ts` (`findMats` in `engine.ts`; see [forge.md](forge.md)) |
 | Add an item kind or a class's weapon | `WEAPONS`, `ARMORS`, `ItemIcon` (and `ItemArt`, `looksOf`) in `items.ts`; its art in `ITEM_ROWS` and `LEGEND_ROWS` (`src/sprites/characters/items.ts`), and how the hero wears it in `heroSpec` (`src/sprites/characters/hero.ts`), see [sprites.md](sprites.md) |
 | Change how an item looks (its kind, the seed that picks its colors) | `looksOf` and `seedOf` in `items.ts` (the seed comes from the name, so one name always looks the same) |
+| Change an SP's moves (its own move and its final) | numbers in `SP_SKILL`, `SP_FINAL`, `SURGE` (`src/balance/classes.ts`); names and words in `SP_CARDS`, `SP_MOVES` (`content.ts`); what they do in `useSkill`, `useFinal` (`engine.ts`); their icons in `SP_ICONS` (`src/sprites/characters/icons.ts`), their look in the `sp` case of `react` (`scene.ts`, `SP_COLOR`); the bot's use at the end of `decide` (`bot.ts`) |
 | Add something each hero has (a cooldown, a count, a buff for the run) | `Hero` in `engine.ts` and its start in `newHero` (see "The hero, and the party") |
 | Change the bag panel, the pickup note or the stairs card | `BagPanel` and the `stairs` card in `src/components/FogRun.tsx` |
 
@@ -70,6 +72,12 @@ gear on (`power`; `base` is without), gear, the tapped target (`lock`), the pick
 (`offer`, `relicOffer`, `free`) and what's pushing them (`wind`, `shove`). What belongs to the room
 or the run stays on `Run`: the map, monsters, shots, loot on the floor, stairs, the boss, the clock.
 A new field about the player goes on `Hero`; one about the place goes on `Run`.
+
+With an SP on (`HeroSetup.sp`, see "The SP" in [fog.md](fog.md)) a hero has two more buttons
+(`Input.skill`, `Input.final`): the SP's own move on its own clock (`skillAt`, `skillReady`), and
+its final, which fills from hits landed and taken like the monk's calm (`surge`, `SURGE`,
+`finalReady`). Each emits an `sp` event the scene draws as a ring in the move's color. Without an
+SP neither does anything and nothing is rolled, so replays stay the same.
 
 The class ability is ready on a clock (`abilityAt`), except the monk's Stillness: it fills `calm`
 from hits the monk lands and takes (`calmer`, numbers in `CALM`, `src/balance/classes.ts`), so
@@ -147,9 +155,13 @@ draws each with its own art (`itemTexture`: the item's drawing from
 `src/sprites/characters/items.ts`, made into a texture once), its name in its rarity's color, and a
 beam over rare ones (`syncLoot`). Walking over one puts it in the bag (`run.hero.gear.bag`, `BAG` slots), unless it's full.
 
-You wear three things: a weapon and armor made for your class, and a charm. A run starts in what
-the save says you wear (`RunSetup.worn`), the starter kit (`starterKit`) filling an empty weapon or
-armor slot. An item asks for stat points (`need`, checked against `RunSetup.build` by `shortOf`):
+You wear three things: a weapon and armor made for your class, and a charm. A weapon belongs to
+its class: no other class can wear it (`otherClass`, `canWear` in `items.ts`; `wear` and `wearsIt`
+in the engine, `wornFor` and `wearFromVault` in `src/lib/fog-gear.ts`), and the cards say
+"Archer only" in red. Changing class leaves the old weapon at home, safe, until you switch back. A run
+starts in what the save says you wear (`RunSetup.worn`); with no weapon (or another class's) the
+starter kit (`starterKit`) gives a plain weapon, and nothing else: an empty armor slot stays empty
+(`STARTER` in `src/balance/items.ts`). An item asks for stat points (`need`, checked against `RunSetup.build` by `shortOf`):
 weapons the class's own stat, armor Armor, charms nothing. How many: what a player who hits the
 weekly goal and spreads points has in each stat `wearAfter(rarity, floor)` workouts after the
 zone opens (`WEAR_AFTER`, `evenPoints` in `items.ts`). `wear`, `takeOff` and `dropFromBag`

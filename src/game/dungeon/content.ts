@@ -80,6 +80,8 @@ export interface Layout {
   side?: number;
 }
 export const LAYOUT: Layout = { floors: 10, rooms: 3, side: 2 };
+/** The floor (from 0) whose last room holds the Warden, or -1 when the dungeon is too short for one. */
+export const wardenFloor = (layout: Layout) => (layout.floors >= 4 ? Math.floor(layout.floors / 2) - 1 : -1);
 
 /** How much faster you move once a room is cleared: nothing left to fight, so cross it quickly. */
 export const CLEAR_RUN = 2.5;
@@ -562,6 +564,28 @@ export const ABILITIES: Record<AbilityId, { name: string; text: string; cd: numb
   still: { name: 'Stillness', text: 'Breathe: heal some HP and push everything away. It fills as you fight: hits you land and hits you take.', cd: ABILITY.still.cd },
   shock: { name: 'Shockwave', text: 'Knock back everything near you and wipe the shots around you.', cd: ABILITY.shock.cd },
 };
+/** The SP's two moves past the class ability: its own move (a second button) and its final. */
+export type SpMoveId = 'whirl' | 'pin' | 'starfall' | 'palm' | 'phoenix' | 'rain' | 'sky' | 'palms';
+
+/** Each class's first SP, like NosTale's specialist cards: a name, its own move and its final. */
+export const SP_CARDS: Record<ClassId, { name: string; skill: SpMoveId; final: SpMoveId }> = {
+  warrior: { name: 'Ember Knight', skill: 'whirl', final: 'phoenix' },
+  archer: { name: 'Wind Ranger', skill: 'pin', final: 'rain' },
+  mage: { name: 'Star Sage', skill: 'starfall', final: 'sky' },
+  monk: { name: 'River Monk', skill: 'palm', final: 'palms' },
+};
+
+export const SP_MOVES: Record<SpMoveId, { name: string; text: string }> = {
+  whirl: { name: 'Whirl', text: 'Spin with your blade out: everything close is hit and thrown back, and the shots by you are cut.' },
+  pin: { name: 'Pin Shot', text: 'A tight fan of arrows at your target that go through a whole line of monsters.' },
+  starfall: { name: 'Starfall', text: 'A star drops on the monster nearest you and bursts.' },
+  palm: { name: 'Palm Wave', text: 'Push the air: everything near is hit and shoved away, and the shots near you go.' },
+  phoenix: { name: 'Phoenix Blade', text: 'Your final. Fire all around you hits everything in a wide ring and wipes the shots in it.' },
+  rain: { name: 'Arrow Rain', text: 'Your final. Arrows fall on every monster in the room.' },
+  sky: { name: 'Falling Sky', text: 'Your final. A great blast around you, and every shot in the room goes out.' },
+  palms: { name: 'Thousand Palms', text: 'Your final. Heal, wipe the shots near you, and hit and shove everything around you.' },
+};
+
 /** Every class can dodge: a short dash, untouchable for a moment, on its own short clock. */
 export const DODGE = { cd: 2.5, speed: 480, secs: 0.17, ghost: 0.27 };
 

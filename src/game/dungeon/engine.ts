@@ -23,7 +23,9 @@ import {
 } from '../rules';
 import {
   ABILITIES,
+  SP_CARDS,
   type AbilityId,
+  type SpMoveId,
   type Ally,
   type AllyKind,
   type CellKind,
@@ -44,6 +46,7 @@ import {
   GALE,
   HOMING,
   LAYOUT,
+  wardenFloor,
   LIGHT,
   type Layout,
   MEET,
@@ -74,9 +77,9 @@ import {
   zoneDungeon,
 } from './content';
 import { seeded } from '@/lib/random';
-import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS } from '@/balance';
+import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS, SP_FINAL, SP_SKILL, SURGE } from '@/balance';
 import type { Build } from '@/lib/stats';
-import { ITEM_SLOTS, itemScore, itemTotals, rollItem, rollRarity, shortOf, starterKit, type Item, type ItemSlot } from './items';
+import { canWear, ITEM_SLOTS, itemScore, itemTotals, otherClass, rollItem, rollRarity, shortOf, starterKit, type Item, type ItemSlot } from './items';
 
 export * from './items';
 
@@ -132,8 +135,6 @@ export const BOSS_LIMIT = 180;
 /** A run can't last longer than this (s), so a stuck run still ends. */
 const RUN_LIMIT = 2400;
 
-/** The floor (from 0) whose last room holds the Warden, or -1 when the dungeon is too short for one. */
-export const wardenFloor = (layout: Layout) => (layout.floors >= 4 ? Math.floor(layout.floors / 2) - 1 : -1);
 /** The room of the map you're in. */
 export const cellOf = (r: Pick<Run, 'map'>) => r.map.cells[r.map.at];
 export const isWardenRoom = (r: Pick<Run, 'map'>) => cellOf(r).kind === 'warden';
@@ -248,6 +249,8 @@ export type GameEvent =
   | { type: 'burst'; x: number; y: number; r: number; color: 'nova' | 'orb' | 'wave' | 'fire' | 'ability' }
   | { type: 'chain'; points: { x: number; y: number }[] }
   | { type: 'ability'; id: AbilityId; x: number; y: number; toX: number; toY: number }
+  /** An SP move: its own move or its final, a ring of size `r` at x, y. */
+  | { type: 'sp'; id: SpMoveId; x: number; y: number; r: number; final: boolean }
   | { type: 'dodge'; x: number; y: number; toX: number; toY: number }
   | { type: 'warden' }
   | { type: 'phase'; x: number; y: number }
@@ -303,6 +306,8 @@ export interface HeroSetup {
   build?: Build;
   /** The chapter's hearts are gone: a weaker boss and free skills at the start (`edgeFor` in src/lib/fog.ts). */
   edge?: Edge;
+  /** Wearing the class's SP: its own move and its final, on top of the class ability (src/lib/sp.ts). */
+  sp?: boolean;
 }
 
 /** A run: where, its seed, and you (the first hero). `friends` walk in with you, in co-op. */
@@ -326,6 +331,9 @@ export interface Input {
   y: number;
   /** The ability button went down this step. */
   ability: boolean;
+  /** The SP's own move, and its final (only with an SP on). */
+  skill?: boolean;
+  final?: boolean;
   /** The dodge button went down this step. */
   dodge?: boolean;
   /** A monster tapped this step: your attacks go to it while it's in reach (null lets go). */
@@ -404,6 +412,11 @@ export interface Hero {
   abilityAt: number;
   /** The monk's calm: Stillness is ready when it reaches CALM.full (it fills by fighting). */
   calm: number;
+  /** The SP worn into the run (its moves, from SP_CARDS), or null. */
+  sp: { skill: SpMoveId; final: SpMoveId } | null;
+  skillAt: number;
+  /** The SP's final is ready when this reaches SURGE.full (it fills by fighting). */
+  surge: number;
   /** Hits taken this run (what the run's recap shows, to set the bot against people). */
   hits: number;
   cd: { attack: number; spark: number; nova: number; fireball: number };
@@ -560,7 +573,7 @@ function newHero(hs: HeroSetup, id: number): Hero {
     lock: null,
     relics: {},
     base,
-    gear: { worn: { weapon: hs.worn?.weapon ?? kit.weapon, armor: hs.worn?.armor ?? kit.armor, ...(hs.worn?.charm ? { charm: hs.worn.charm } : {}) }, bag: [] },
+    gear: { worn: { weapon: hs.worn?.weapon && !otherClass(hs.worn.weapon, hs.classId) ? hs.worn.weapon : kit.weapon, ...(hs.worn?.armor ? { armor: hs.worn.armor } : {}), ...(hs.worn?.charm ? { charm: hs.worn.charm } : {}) }, bag: [] },
     gearFx: { move: 0, heal: 0, cooldown: 0 },
     gearMax: 0,
     relicOffer: null,
@@ -579,6 +592,9 @@ function newHero(hs: HeroSetup, id: number): Hero {
     ability: abilityOf(hs.classId),
     abilityAt: 0,
     calm: 0,
+    sp: hs.sp ? { skill: SP_CARDS[hs.classId ?? 'warrior'].skill, final: SP_CARDS[hs.classId ?? 'warrior'].final } : null,
+    skillAt: 0,
+    surge: 0,
     hits: 0,
     cd: { attack: 0.5, spark: 2, nova: 3, fireball: 2.5 },
     ups: {},
@@ -1120,6 +1136,8 @@ export function stepRun(run: Run, input: Input | Input[]) {
     if (i.dodge) dodge(run, h, i);
     moveHero(run, h, i);
     if (i.ability) useAbility(run, h, i);
+    if (h.sp && i.skill) useSkill(run, h, i);
+    if (h.sp && i.final) useFinal(run, h);
   }
   moveFoes(run);
   moveBullets(run);
@@ -1238,9 +1256,84 @@ export function abilityReady(run: Run, h: Hero): number {
   return Math.min(1, 1 - (h.abilityAt - run.t) / ABILITIES[h.ability].cd);
 }
 
-/** The monk grows calm in a fight: hits landed and hits taken, quicker with the hourglass and cooldown gear. */
-function calmer(h: Hero, n: number) {
-  if (h.ability === 'still') h.calm = Math.min(CALM.full, h.calm + n * (1 + 0.25 * relic(h, 'hourglass') + h.gearFx.cooldown));
+/** The monk grows calm in a fight: hits landed and hits taken, quicker with the hourglass and cooldown gear.
+    The SP's final fills the same way (`surge`). */
+function calmer(h: Hero, n: number, taken = false) {
+  const quick = 1 + 0.25 * relic(h, 'hourglass') + h.gearFx.cooldown;
+  if (h.ability === 'still') h.calm = Math.min(CALM.full, h.calm + n * quick);
+  if (h.sp) h.surge = Math.min(SURGE.full, h.surge + (taken ? SURGE.taken : SURGE.hit) * quick);
+}
+
+/** The SP's own move: 1 when ready (0 without an SP). */
+export function skillReady(run: Run, h: Hero): number {
+  if (!h.sp) return 0;
+  return Math.min(1, 1 - (h.skillAt - run.t) / SP_SKILL[attackOf(h.classId)].cd);
+}
+
+/** The SP's final: 1 when ready (0 without an SP). */
+export const finalReady = (h: Hero) => (h.sp ? Math.min(1, h.surge / SURGE.full) : 0);
+
+/** The SP's own move, by class: Whirl, Pin Shot, Starfall, Palm Wave. */
+function useSkill(run: Run, h: Hero, input: Input) {
+  if (!h.sp || skillReady(run, h) < 1) return;
+  const kind = attackOf(h.classId),
+    id = h.sp.skill;
+  h.skillAt = run.t + SP_SKILL[kind].cd / (1 + 0.25 * relic(h, 'hourglass') + h.gearFx.cooldown);
+  if (kind === 'slash') {
+    const k = SP_SKILL.slash;
+    clearBullets(run, h.x, h.y, k.r * 0.7);
+    burst(run, h, h.x, h.y, k.r, pow(h, ATTACK.slash.dmg * k.dmg), 'ability', undefined, k.knock);
+    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: k.r, final: false });
+  } else if (kind === 'arrow') {
+    const k = SP_SKILL.arrow,
+      f = nearest(run, h.x, h.y, undefined, RANGE * 1.4),
+      a = f ? Math.atan2(f.y - h.y, f.x - h.x) : Math.hypot(input.x, input.y) > 0.1 ? Math.atan2(input.y, input.x) : h.facing;
+    for (let i = 0; i < k.arrows; i++) fire(run, h, 'arrow', a + (i - (k.arrows - 1) / 2) * k.spread, 520, pow(h, ATTACK.arrow.dmg * k.dmg), k.pierce, null);
+    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: 40, final: false });
+  } else if (kind === 'orb') {
+    const k = SP_SKILL.orb,
+      f = nearest(run, h.x, h.y, undefined, k.reach),
+      at = f ?? { x: h.x + Math.cos(h.facing) * 120, y: h.y + Math.sin(h.facing) * 120 };
+    burst(run, h, at.x, at.y, k.r, pow(h, ATTACK.orb.dmg * k.dmg), 'orb');
+    emit(run, { type: 'sp', id, x: at.x, y: at.y, r: k.r, final: false });
+  } else {
+    const k = SP_SKILL.wave;
+    clearBullets(run, h.x, h.y, k.r);
+    burst(run, h, h.x, h.y, k.r, pow(h, ATTACK.wave.dmg * k.dmg), 'wave', undefined, k.knock);
+    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: k.r, final: false });
+  }
+}
+
+/** The SP's final, by class: Phoenix Blade, Arrow Rain, Falling Sky, Thousand Palms. */
+function useFinal(run: Run, h: Hero) {
+  if (!h.sp || finalReady(h) < 1) return;
+  const kind = attackOf(h.classId),
+    id = h.sp.final;
+  h.surge = 0;
+  h.ghostUntil = Math.max(h.ghostUntil, run.t + 0.6);
+  if (kind === 'slash') {
+    const k = SP_FINAL.slash;
+    clearBullets(run, h.x, h.y, k.r);
+    burst(run, h, h.x, h.y, k.r, pow(h, ATTACK.slash.dmg * k.dmg), 'fire', undefined, 300);
+    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: k.r, final: true });
+  } else if (kind === 'arrow') {
+    const dmg = pow(h, ATTACK.arrow.dmg * SP_FINAL.arrow.dmg);
+    for (const f of run.foes.filter((o) => o.alive)) burst(run, h, f.x, f.y, f.def.r + 4, dmg, 'ability', undefined, 0);
+    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: Math.max(run.area.w, run.area.h), final: true });
+  } else if (kind === 'orb') {
+    const k = SP_FINAL.orb;
+    run.bullets = [];
+    burst(run, h, h.x, h.y, k.r, pow(h, ATTACK.orb.dmg * k.dmg), 'orb', undefined, 260);
+    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: k.r, final: true });
+  } else {
+    const k = SP_FINAL.wave,
+      heal = Math.round(h.maxHp * k.heal);
+    h.hp = Math.min(h.maxHp, h.hp + heal);
+    clearBullets(run, h.x, h.y, k.r);
+    burst(run, h, h.x, h.y, k.r, pow(h, ATTACK.wave.dmg * k.dmg), 'wave', undefined, k.knock);
+    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: k.r, final: true });
+    emit(run, { type: 'heal', x: h.x, y: h.y, n: heal });
+  }
 }
 
 function useAbility(run: Run, h: Hero, input: Input) {
@@ -2435,11 +2528,13 @@ function applyGear(run: Run, h: Hero) {
 
 /** Points short of what an item asks (0: you can wear it). */
 export const shortFor = (h: Pick<Hero, 'build'>, it: Item) => shortOf(it, h.build);
+/** Whether this hero can wear it: their class's (for a weapon), and the points it asks. */
+export const wearsIt = (h: Pick<Hero, 'build' | 'classId'>, it: Item) => canWear(it, h.build, h.classId);
 
 /** Wear an item from the bag; what you wore goes into the bag (the starter kit just goes). */
 export function wear(run: Run, id: string, h: Hero = run.hero) {
   const it = h.gear.bag.find((o) => o.id === id);
-  if (!it || shortFor(h, it) > 0) return;
+  if (!it || !wearsIt(h, it)) return;
   const old = h.gear.worn[it.slot];
   h.gear.bag = h.gear.bag.filter((o) => o !== it);
   if (old && !old.starter) h.gear.bag.push(old);
@@ -2447,13 +2542,13 @@ export function wear(run: Run, id: string, h: Hero = run.hero) {
   applyGear(run, h);
 }
 
-/** Take a worn item off into the bag (a weapon or armor slot gets the starter kit back). */
+/** Take a worn item off into the bag (the weapon slot gets the plain weapon back). */
 export function takeOff(run: Run, slot: ItemSlot, h: Hero = run.hero) {
   const it = h.gear.worn[slot];
   if (!it || it.starter || h.gear.bag.length >= BAG) return;
   h.gear.bag.push(it);
-  if (slot === 'charm') delete h.gear.worn.charm;
-  else h.gear.worn[slot] = starterKit(h.classId)[slot];
+  if (slot === 'weapon') h.gear.worn.weapon = starterKit(h.classId).weapon;
+  else delete h.gear.worn[slot];
   applyGear(run, h);
 }
 
@@ -2470,7 +2565,7 @@ export function dropFromBag(run: Run, id: string, h: Hero = run.hero) {
 
 /** The bot wears what it picks up when it can and it's better than what it has. */
 function botWear(run: Run, h: Hero, it: Item) {
-  if (shortFor(h, it) === 0 && itemScore(it) > itemScore(h.gear.worn[it.slot])) wear(run, it.id, h);
+  if (wearsIt(h, it) && itemScore(it) > itemScore(h.gear.worn[it.slot])) wear(run, it.id, h);
   // It keeps room in the bag by leaving what it won't wear.
   if (h.gear.bag.length >= BAG) h.gear.bag.shift();
 }
@@ -2502,7 +2597,7 @@ function hurt(run: Run, h: Hero, dmg: number, by: 'shot' | 'touch') {
   h.hp -= taken;
   h.hits++;
   h.hurtUntil = now + INVULNERABLE;
-  calmer(h, CALM.taken);
+  calmer(h, CALM.taken, true);
   emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: Math.round(taken), by });
   if (h.hp <= 0) fall(run, h);
 }

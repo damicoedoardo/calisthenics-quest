@@ -18,8 +18,8 @@ export const MIRROR_LAKE: Chapter = {
     hint: 'Hitting your reflections hurts you. Walk past them. When the lake shows many Mirrors, only the real one shoots.',
     after: "Every time you fight who you were, you're the one who gets hurt. Walk past.",
     keepsake: { name: 'A Shard of the Mirror', text: 'It only shows week one. Look how far that is.' },
-    hp: 1.18,
-    dmg: 1.7,
+    hp: 1.31,
+    dmg: 1.88,
     ground: '#101826',
     fog: '#253a5c',
     // stages: [the Mirror splits into images of itself]

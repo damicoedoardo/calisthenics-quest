@@ -13,6 +13,8 @@ import { useMenuTrack } from '@/components/Sound';
 import { Workout } from '@/components/Workout';
 import { AfterSession } from '@/components/AfterSession';
 import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
+import { giveSp, spAfterRun } from '@/lib/sp';
+import { changeClass, classCost, coins } from '@/lib/sweat';
 import { ClassPicker } from '@/components/ClassPicker';
 import { DevButton, DevPanel } from '@/components/DevPanel';
 import { Sprite } from '@/components/Sprite';
@@ -197,11 +199,14 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const endScene = useCallback(
     (r: SceneResult) => {
       if (!scene) return;
-      update((s) => ({
-        ...sawScene(s, scene.id, new Date()),
-        profile: r.flame ? { ...s.profile, flame: r.flame } : s.profile,
-        answers: r.answer ? { ...s.answers, [r.answer.id]: r.answer.value } : s.answers,
-      }));
+      update((s) => {
+        const next = {
+          ...sawScene(s, scene.id, new Date()),
+          profile: r.flame ? { ...s.profile, flame: r.flame } : s.profile,
+          answers: r.answer ? { ...s.answers, [r.answer.id]: r.answer.value } : s.answers,
+        };
+        return r.sp ? giveSp(next) : next;
+      });
       if (r.pickClass) setPicker('story');
       setScene(null);
     },
@@ -236,8 +241,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         onExit={replaying ? () => setReplaying(false) : undefined}
         onSkip={dev && !replaying ? () => update((s) => skipIntro(s, new Date())) : undefined}
         onLook={(look) => update((s) => ({ ...s, profile: { ...s.profile, look } }))}
-        onFinish={({ letter, voice, kit, name }) => {
-          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, letter, voice, kit: kit ?? s.profile.kit, name: name ?? s.profile.name } }));
+        onFinish={({ letter, voice, kit, name, classId }) => {
+          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, letter, voice, kit: kit ?? s.profile.kit, name: name ?? s.profile.name, classId: classId ?? s.profile.classId } }));
           setReplaying(false);
         }}
         // On iPhones each browser and the installed app keep their own saves: a hero copied in
@@ -364,7 +369,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           startAt={runStart}
           party={partyRun ?? undefined}
           // A party run in a zone you haven't opened yet keeps its loot but not the clear: the story still opens zones.
-          onEnd={(r) => update((s) => settleGear(partyRun && zoneStatus(s, run).state === 'locked' ? s : recordRun(s, r), r).state)}
+          onEnd={(r) => update((s) => spAfterRun(settleGear(partyRun && zoneStatus(s, run).state === 'locked' ? s : recordRun(s, r), r).state, r))}
           onLeave={() => {
             setRun(null);
             setRunStart(undefined);
@@ -386,8 +391,10 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         <ClassPicker
           workouts={state.sessions.length}
           current={state.profile.classId}
+          cost={classCost(state)}
+          coins={coins(state)}
           onPick={(id) => {
-            update((s) => ({ ...s, profile: { ...s.profile, classId: id } }));
+            update((s) => changeClass(s, id));
             setPicker(null);
           }}
           onCancel={() => setPicker(null)}

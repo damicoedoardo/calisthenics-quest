@@ -67,7 +67,8 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
   no text box) and `music` (switch songs from this line on, or `'none'` to let the music drop out).
   Use them sparingly: a scene with a hold on every line has no holds.
 - **ask**: `name` (name the flame), `choice` (saved under its id; `write` adds a free-text box),
-  or `class` (opens the class picker).
+  `class` (opens the class picker), or `sp` (the Wanderer gives the first SP, see
+  [fog.md](fog.md)). `spReady: true` in a `when` waits for the SP's trial to be done.
 
 ## When scenes play
 

@@ -1,8 +1,43 @@
+import { SP_TRIAL } from '@/balance';
 import type { Scene } from './types';
 
 /* Scenes that can happen in any chapter. */
 
 export const ANYTIME: Scene[] = [
+  {
+    // The first SP (src/lib/sp.ts): sealed until you train a little more and walk to the
+    // middle of the Fog. Waits for a class, so a hero who picked late still gets it, and any
+    // chapter can be the one it comes in.
+    id: 'sp-gift',
+    when: { workouts: SP_TRIAL.at, noClass: false },
+    music: 'camp',
+    lines: [
+      { who: 'narrator', show: 'wanderer', text: 'The Wanderer is waiting by the fire, turning something over in their fingers. A card, dark as ash, warm at the edges.' },
+      { who: 'wanderer', text: "This was in the ash where you trained. It's been waiting for someone who keeps coming back." },
+      { who: 'flame', mood: 'happy', text: "Ooh. What is it? Can I touch it? I'm touching it." },
+      { who: 'wanderer', text: 'A spirit card. It holds a way of fighting you haven\'t found yet. It takes the shape of whoever holds it.' },
+      { who: 'you', text: "It's cold in the middle." },
+      { who: 'wanderer', text: "It's sealed. It wakes when it believes you. Not before.", pause: 0.8 },
+      { who: 'wanderer', text: 'Train twice more. Then go down into the Fog, as deep as the floor where its guardian waits.' },
+      { who: 'flame', mood: 'soft', text: "Twice more, and one walk in the dark. We can do that. We've done harder." },
+      { who: 'wanderer', text: 'When it wakes, it gives you two things: a move of your own, and a last one, for when the fight is long.' },
+      { who: 'narrator', text: 'You put the card away. It sits there, quiet, like a promise you made to someone you haven\'t met yet.', film: true },
+    ],
+    ask: { kind: 'sp' },
+  },
+  {
+    id: 'sp-awake',
+    when: { spReady: true },
+    music: 'camp',
+    lines: [
+      { who: 'narrator', text: 'The card is warm. Then it is hot. Then it is light.', pause: 0.6, film: true },
+      { who: 'flame', mood: 'happy', text: "It's awake! And it looks like... you? A braver you." },
+      { who: 'wanderer', text: "It always looked like you. You just hadn't met that one yet." },
+      { who: 'narrator', show: 'flame', text: 'Two new things sit in your hands now: a move of your own, and a final that fills as you fight.' },
+      { who: 'wanderer', text: "Wear it into the Fog, or don't. It's yours either way." },
+      { who: 'flame', mood: 'happy', text: 'Wear it. Obviously. Wear it.' },
+    ],
+  },
   {
     // The first time a set beats the same set last time: one more rep, a few more seconds.
     id: 'first-better',

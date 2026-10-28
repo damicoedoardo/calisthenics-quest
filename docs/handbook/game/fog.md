@@ -54,6 +54,19 @@ level or story.
 
 Tested in `src/lib/fog.test.ts` and `src/lib/fog-gear.test.ts`.
 
+## The SP (`src/lib/sp.ts`)
+
+The first SP, like NosTale's specialist cards. At `SP_TRIAL.at` workouts (once you have a class)
+the Wanderer hands it over in the `sp-gift` scene (`src/story/anytime.ts`, its ask `sp` calls
+`giveSp`). It is sealed until its trial is done (`spTrial`, `spOpen`): `SP_TRIAL.workouts` more
+workouts, and a run that reaches the mid-boss's floor (`SP_FLOOR`; `spAfterRun` after each run, in
+`page.tsx`). Then `sp-awake` plays, and it is worn into every run (`spWorn`, `HeroSetup.sp`) until
+taken off on the Hero tab (`SpCard`, `setSpOff`). It takes the shape of your class (`SP_CARDS` in
+`src/game/dungeon/content.ts`): Ember Knight, Wind Ranger, Star Sage, River Monk, each with the
+class ability, its own move and a final (how they play: [dungeon.md](dungeon.md)). In a run the
+own move sits left of the dodge and the final over the ability (`SpButton` in `FogRun.tsx`; R and F
+on a keyboard). Numbers: `SP_TRIAL`, `SP_SKILL`, `SP_FINAL`, `SURGE` in `src/balance/classes.ts`.
+
 ## The run itself
 
 A run is a dungeon of ten floors per zone, each a map of rooms to explore down to the stairs (a
@@ -74,7 +87,7 @@ fills the whole screen and the camera follows you in it; the HUD is small and ke
 
 On a computer (mouse or trackpad: `useKeyboardPlay` in `src/components/useDesk.ts`) the run is
 played with keys and never asks you to turn anything. The scene's own keys: WASD or the arrows
-move, Q is the class ability, Space (or E, or Shift) dodges, a click on a monster aims at it; they
+move, Q is the class ability, R and F the SP's move and final, Space (or E, or Shift) dodges, a click on a monster aims at it; they
 do nothing while a card or the bag holds the run. `FogRun`'s keys: Esc or P pauses (and closes
 whatever is open), B or I the bag, M the map, 1 2 3 pick a skill, chest or stairs choice, Enter
 runs again at the end. Each button shows its key (`Key`), the pause menu lists them all
@@ -90,5 +103,6 @@ The rule for every balance number, and the changelog, are in [balance.md](balanc
 bot takes a minute (the run recap in `FogRun` shows a person's, to check the bot against people;
 `HUMAN='{"notice":0.8}'` turns how human it plays). `DIALS` in `src/balance/dungeon.ts` are the
 main knobs. The sim starts every run in the starter kit with
-the snapshot's points (as after a death); the bot wears what drops. Zones are tuned so that run
+the snapshot's points (as after a death); the bot wears what drops, and wears the SP from
+`SP_MODEL_AT` workouts on (`NOSP=1` plays without it, to see what it adds). Zones are tuned so that run
 is about where the game was before items, so the gear you keep is strength on top.

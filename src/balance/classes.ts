@@ -58,3 +58,33 @@ export const CLASS_LEAN = { warrior: 'damage', archer: 'crit', monk: 'health', m
     warrior and monk take hits, the archer keeps its distance, the mage hits harder. */
 export const SECOND_LEAN = { warrior: 'armor', archer: 'move', monk: 'armor', mage: 'damage' } as const;
 export const SECOND_LEAN_POINTS = 2;
+
+/* The first SP, like NosTale's specialist cards: the Wanderer hands it over after `SP_TRIAL.at`
+   workouts, sealed; it wakes once you train `SP_TRIAL.workouts` more times and reach the mid-boss
+   floor in the Fog. Worn, a run has the class ability, the SP's own move and its final.
+   Goal: the SP feels like a new way to fight, not a new tier of power: with it, a zone's win rate
+   rises by about 10 points or less, and the classes stay within `CLASS_FAIR` (`pnpm fog:sheet`). */
+export const SP_TRIAL = { at: 3, workouts: 2 } as const;
+
+/** Each SP's own move (the second button): its clock (s) and size; damage is times the class's
+    base attack. Whirl (warrior), Pin Shot (archer), Starfall (mage), Palm Wave (monk). */
+export const SP_SKILL = {
+  slash: { cd: 7, r: 100, dmg: 1, knock: 260 },
+  arrow: { cd: 7, arrows: 5, spread: 0.12, dmg: 1.8, pierce: 6 },
+  orb: { cd: 8, reach: 260, r: 90, dmg: 1.3 },
+  wave: { cd: 9, r: 120, dmg: 0.7, knock: 320 },
+} as const;
+
+/** The SP's final fills by fighting, like the monk's calm: points for each hit landed and taken.
+    Goal: about one final in a long fight (a mid-boss, a boss), not one a room. */
+export const SURGE = { hit: 1, taken: 2, full: 300 } as const;
+
+/** Each SP's final: Phoenix Blade (warrior, all around you), Arrow Rain (archer, every monster in
+    the room), Falling Sky (mage, a wide blast that wipes every shot), Thousand Palms (monk, heals
+    and pushes). Damage is times the class's base attack. */
+export const SP_FINAL = {
+  slash: { r: 220, dmg: 4 },
+  arrow: { dmg: 3 },
+  orb: { r: 260, dmg: 3 },
+  wave: { r: 200, dmg: 2, heal: 0.1, knock: 400 },
+} as const;

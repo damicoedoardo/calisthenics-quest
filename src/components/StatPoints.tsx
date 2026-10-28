@@ -1,13 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { Minus, Plus, RotateCcw } from 'lucide-react';
+import { Droplet, Minus, Plus, RotateCcw } from 'lucide-react';
 import type { GameState } from '@/lib/game';
-import { STATS, buildOf, nextPoint, pointsEarned, pointsFree, refundPoint, resetBuild, spendPoint, statPower } from '@/lib/stats';
+import { STATS, buildOf, nextPoint, pointsEarned, pointsFree, statPower } from '@/lib/stats';
+import { SWEAT } from '@/balance';
+import { coins, freeBack, putPoint, respec, respecCost, takeBack } from '@/lib/sweat';
 import { Sprite } from './Sprite';
 
 /* The champion's stats: every workout earns points, and here they go into Health, Armor, Damage,
-   Haste, Speed or Crit. Taking them back is free, any time. */
+   Haste, Speed or Crit. Points spent since your last workout come back free; taking back the rest
+   is a respec, for a sweat coin (src/lib/sweat.ts). */
 
 export const STAT_ICON = { health: 'vital', armor: 'guard', damage: 'power', speed: 'haste', move: 'swift', crit: 'spark' } as const;
 
@@ -18,7 +21,9 @@ export function StatPoints({ state, update, land = false }: { state: GameState; 
   const free = pointsFree(state);
   const power = statPower(build, state.profile.classId);
   const earned = pointsEarned(state);
-  const spent = Object.values(build).some((n) => (n ?? 0) > 0);
+  const spent = Object.values(build).some((n) => (n ?? 0) > 0),
+    cost = respecCost(state),
+    purse = coins(state);
 
   return (
     <section className={land ? 'flex h-full flex-col' : 'rounded-2xl bg-ink-800 p-4'}>
@@ -28,7 +33,7 @@ export function StatPoints({ state, update, land = false }: { state: GameState; 
           {free ? `${free} point${free === 1 ? '' : 's'} to spend` : 'Every workout earns points'}
         </p>
       </div>
-      <p className={`mt-1 text-slate-400 ${land ? 'text-[11px] leading-snug' : 'text-xs'}`}>Your training makes your champion stronger in the Fog. Put your points where you like; you can take them back any time.</p>
+      <p className={`mt-1 text-slate-400 ${land ? 'text-[11px] leading-snug' : 'text-xs'}`}>Your training makes your champion stronger in the Fog. Put your points where you like. Points spent since your last workout come back free; to move the rest, start over for {cost || 1} sweat coin{(cost || 1) === 1 ? '' : 's'}.</p>
 
       {/* Sideways the six stats are six tiles, two by three, that share the panel's height. */}
       <ul className={land ? 'mt-3 grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-2' : 'mt-3 space-y-2'}>
@@ -36,8 +41,8 @@ export function StatPoints({ state, update, land = false }: { state: GameState; 
           const n = build[st.id] ?? 0;
           const minus = (
             <button
-              onClick={() => update((s) => refundPoint(s, st.id))}
-              disabled={n === 0}
+              onClick={() => update((s) => takeBack(s, st.id))}
+              disabled={n === 0 || !freeBack(state, st.id)}
               aria-label={`Take a point out of ${st.name}`}
               className={`grid place-items-center rounded-lg bg-ink-700 active:scale-95 disabled:opacity-30 ${land ? 'h-8 w-8 shrink-0' : 'h-9 w-9'}`}
             >
@@ -46,7 +51,7 @@ export function StatPoints({ state, update, land = false }: { state: GameState; 
           );
           const plus = (
             <button
-              onClick={() => update((s) => spendPoint(s, st.id))}
+              onClick={() => update((s) => putPoint(s, st.id))}
               disabled={free === 0}
               aria-label={`Put a point into ${st.name} (${nextPoint(build, st.id, state.profile.classId)})`}
               className={`grid place-items-center rounded-lg bg-gold-400 text-ink-950 active:scale-95 disabled:bg-ink-700 disabled:text-slate-500 ${land ? 'h-8 w-8 shrink-0' : 'h-9 w-9'}`}
@@ -78,9 +83,12 @@ export function StatPoints({ state, update, land = false }: { state: GameState; 
         <button onClick={() => setWhy(!why)} className="text-slate-400 underline-offset-2 hover:underline">
           {earned.total} points earned {why ? '' : '(how?)'}
         </button>
+        <span className="flex items-center gap-1 font-mono text-slate-300" aria-label={`${purse} sweat coins`}>
+          <Droplet size={12} className="text-sky-300" aria-hidden /> {purse}
+        </span>
         {spent && (
-          <button onClick={() => update(resetBuild)} className="flex items-center gap-1 text-slate-400">
-            <RotateCcw size={12} /> Take all back
+          <button onClick={() => update(respec)} disabled={purse < cost} className="flex items-center gap-1 text-slate-400 disabled:opacity-40">
+            <RotateCcw size={12} /> {cost ? `Start over · ${cost} sweat coin` : 'Take all back'}
           </button>
         )}
       </div>
@@ -93,6 +101,9 @@ export function StatPoints({ state, update, land = false }: { state: GameState; 
             </li>
           ))}
           <li className="pt-1 text-[11px] text-slate-500">A full workout gives 3, a short one 1, a week at your goal 2 more, and beating last time 1 more. Each point in the same stat gives a little less than the one before.</li>
+          <li className="text-[11px] text-slate-500">
+            Every workout also earns {SWEAT.perWorkout} sweat coin: {SWEAT.respec} starts your points over, {SWEAT.classChange} changes your class (the first change is free).
+          </li>
         </ul>
       )}
     </section>

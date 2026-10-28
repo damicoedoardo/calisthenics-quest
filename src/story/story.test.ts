@@ -24,7 +24,7 @@ const WORDS: WordKey[] = Object.keys(storyWords(initialState())) as WordKey[];
 /** Every line in a scene: its own, and the ones played after its question. */
 function linesOf(scene: (typeof ALL_SCENES)[number]['scene']): Line[] {
   const ask = scene.ask;
-  const after = ask && ask.kind !== 'class' ? [...(ask.after ?? []), ...(ask.kind === 'choice' ? ask.choices.flatMap((c) => c.after ?? []) : [])] : [];
+  const after = ask && ask.kind !== 'class' && ask.kind !== 'sp' ? [...(ask.after ?? []), ...(ask.kind === 'choice' ? ask.choices.flatMap((c) => c.after ?? []) : [])] : [];
   return [...scene.lines, ...after];
 }
 

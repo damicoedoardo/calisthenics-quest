@@ -1,5 +1,6 @@
 import { finishSession, initialState, levelInfo, todaysQuest, totalXp, type Checkin, type GameState, type Letter, type Rir } from '@/lib/game';
 import { recordRun, zoneStatus, ZONES } from '@/lib/fog';
+import { giveSp, SP_FLOOR, spAfterRun } from '@/lib/sp';
 import { dayKey, daysApart, isRestDay } from '@/lib/days';
 import { seeded } from '@/lib/random';
 import { MAX_SCENES_AT_ONCE, sawScene, sceneMoment, scenesToPlay, renderLines, speakerName, storyState, storyWords } from '@/story/engine';
@@ -172,6 +173,9 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
         const id = kind.class ?? 'warrior';
         note('ask', `picks the ${id} class`);
         state = { ...state, sceneMark: mark, seenScenes: seen, profile: { ...state.profile, classId: id } };
+      } else if (ask?.kind === 'sp') {
+        note('ask', 'gets the first SP');
+        state = giveSp({ ...state, sceneMark: mark, seenScenes: seen });
       } else {
         state = { ...state, sceneMark: mark, seenScenes: seen };
       }
@@ -208,12 +212,17 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
 
   /** Plays the open Fog zone; the boss falls on the player's lucky try. */
   const fog = () => {
-    if (!kind.bossOnTry) return;
+    // Every kind walks into the Fog now and then: once the SP is given, deep enough for its trial.
+    if (!kind.bossOnTry) {
+      if (state.sp) state = spAfterRun(state, { floor: SP_FLOOR });
+      return;
+    }
     const zone = ZONES.find((z) => zoneStatus(state, z).state === 'open');
     if (!zone) return;
     tries[zone.id] = (tries[zone.id] ?? 0) + 1;
     const won = tries[zone.id] >= kind.bossOnTry;
-    state = recordRun(state, { zone: zone.id, won, seconds: won ? 260 : 120, kills: 80, level: 8, floor: won ? 10 : 3 + (tries[zone.id] % 5), room: 2 }, now);
+    const floor = won ? 10 : 3 + (tries[zone.id] % 5);
+    state = spAfterRun(recordRun(state, { zone: zone.id, won, seconds: won ? 260 : 120, kills: 80, level: 8, floor, room: 2 }, now), { floor });
     // Back on Today, the flame talks about the run.
     const said = runLine(state, now);
     check('flame line after a run', said ?? '');

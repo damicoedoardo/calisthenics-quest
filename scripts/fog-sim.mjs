@@ -41,6 +41,9 @@ if (!isMainThread) {
   const { ZONES, powerOf, edgeFor } = await import(`${root}src/lib/fog.ts`);
   const forced = process.env.EDGE ? JSON.parse(process.env.EDGE) : null;
   const { buildOf } = await import(`${root}src/lib/stats.ts`);
+  const { SP_MODEL_AT } = await import(`${root}src/lib/sp.ts`);
+  // NOSP=1 plays every run without the SP, to see what it adds.
+  const noSp = !!process.env.NOSP;
   const now = Date.now();
   parentPort.on('message', (job) => {
     const state = JSON.parse(readFileSync(job.file, 'utf8'));
@@ -53,7 +56,9 @@ if (!isMainThread) {
     const out = [];
     for (let i = 0; i < job.runs; i++) {
       const seed = job.seed + i * 7919;
-      out.push({ ...playRun({ zone, power, classId: job.cls, seed, build, edge }), seed });
+      // The model player wears the SP once its trial is done (SP_MODEL_AT workouts).
+      const sp = !noSp && state.sessions.length >= SP_MODEL_AT;
+      out.push({ ...playRun({ zone, power, classId: job.cls, seed, build, edge, sp }), seed });
     }
     parentPort.postMessage(out);
   });

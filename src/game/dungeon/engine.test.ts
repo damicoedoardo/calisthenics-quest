@@ -314,6 +314,22 @@ describe('dungeon', () => {
     expect(run.over).toBeNull();
   });
 
+  it('an SP adds its own move and its final; without one, neither works', () => {
+    for (const classId of ['warrior', 'archer', 'mage', 'monk'] as const) {
+      const run = createRun({ ...setup, classId, power: tough, seed: 5, sp: true });
+      while (!run.foes.some((f) => f.alive && f.def.xp > 0)) stepRun(run, still);
+      run.hero.surge = 1e9;
+      takeEvents(run);
+      stepRun(run, { ...still, skill: true, final: true });
+      const sp = takeEvents(run).filter((e) => e.type === 'sp');
+      expect(sp.map((e) => e.type === 'sp' && e.final)).toEqual([false, true]);
+      expect(run.hero.surge).toBe(0);
+      const plain = createRun({ ...setup, classId, power: tough, seed: 5 });
+      stepRun(plain, { ...still, skill: true, final: true });
+      expect(takeEvents(plain).some((e) => e.type === 'sp')).toBe(false);
+    }
+  });
+
   it('after the boss falls, the drops on the floor can be picked up before the stairs home', () => {
     const run = createRun({ ...setup, power: tough, seed: 3 });
     skipToBoss(run);

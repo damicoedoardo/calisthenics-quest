@@ -15,6 +15,8 @@ export interface SceneResult {
   answer?: { id: AnswerId; value: string };
   flame?: string;
   pickClass?: boolean;
+  /** The Wanderer gave the first SP. */
+  sp?: boolean;
 }
 
 interface Props {
@@ -45,6 +47,7 @@ export function ScenePlayer({ scene, state, onDone }: Props) {
     const ask = scene.ask;
     if (!ask) return onDone({});
     if (ask.kind === 'class') return onDone({ pickClass: true });
+    if (ask.kind === 'sp') return onDone({ sp: true });
     setPhase('ask');
   };
 
@@ -55,7 +58,7 @@ export function ScenePlayer({ scene, state, onDone }: Props) {
     setPhase('after');
   };
 
-  if (phase === 'ask' && scene.ask && scene.ask.kind !== 'class')
+  if (phase === 'ask' && scene.ask && scene.ask.kind !== 'class' && scene.ask.kind !== 'sp')
     return <AskCard ask={scene.ask} place={place} music={music} stage={stage} onAnswer={answered} />;
 
   return (
@@ -84,7 +87,7 @@ function AskCard({
   stage,
   onAnswer,
 }: {
-  ask: Exclude<Ask, { kind: 'class' }>;
+  ask: Exclude<Ask, { kind: 'class' } | { kind: 'sp' }>;
   place: ReturnType<typeof scenePlace>;
   music: NonNullable<Scene['music']>;
   stage: ReturnType<typeof flameStage>['id'];

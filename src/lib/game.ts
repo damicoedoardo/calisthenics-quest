@@ -1,6 +1,8 @@
 import { PLAN, cueOf, type DayType, type Kit, type Slot, type SlotRole } from './program';
 import { makeGear, tiersAt, type ClassId, type Gear, type GearSlot, type Tier } from './gear';
-import { looksOf, nameOf, tierOf, type Item } from '@/game/dungeon/items';
+import { looksOf, nameOf, otherClass, tierOf, type Item } from '@/game/dungeon/items';
+import type { SpState } from './sp';
+import type { Sweat } from './sweat';
 import type { Build } from './stats';
 import type { Look } from '@/sprites/engine/figure';
 import type { FogProgress } from './fog';
@@ -111,6 +113,10 @@ export interface GameState {
   sessions: Session[];
   /** Stat points put into the champion (src/lib/stats.ts). Missing means none spent. */
   build?: Build;
+  /** Points as they stood at the last workout, noted on the first change after it (src/lib/sweat.ts). */
+  buildAt?: { workouts: number; build: Build };
+  /** Sweat coins spent, and class changes made (src/lib/sweat.ts). */
+  sweat?: Sweat;
   draft: Draft | null;
   /** Story scenes already played. */
   seenScenes: string[];
@@ -120,6 +126,8 @@ export interface GameState {
   fog?: FogProgress;
   /** What you wear into the Fog, and the vault that keeps items safe (src/lib/fog-gear.ts). */
   fogGear?: FogGear;
+  /** The first SP: given by the Wanderer, woken by a trial (src/lib/sp.ts). */
+  sp?: SpState;
   /** What the player answered in the story: heart moments, villager stories. */
   answers?: Partial<Record<AnswerId, string>>;
   /** The Book of Days, oldest first. */
@@ -226,7 +234,8 @@ export function repsFor(state: GameState, slot: Slot): number {
     sprite draws that item's kind, rarity and colors. */
 export function gearOf(state: GameState): Record<GearSlot, Gear> {
   const kit = state.fogGear?.kit ?? KIT_LOOK,
-    worn = state.fogGear?.worn ?? {},
+    // Another class's weapon waits at home: the hero carries the plain one.
+    worn = Object.fromEntries(Object.entries(state.fogGear?.worn ?? {}).filter(([, it]) => it && !otherClass(it, state.profile.classId))) as NonNullable<GameState['fogGear']>['worn'],
     tier = (slot: GearSlot): Tier => {
       const it = worn[slot === 'shield' ? 'charm' : slot];
       return Math.max(kit[slot], it ? tierOf(it) : 0) as Tier;

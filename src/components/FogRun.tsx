@@ -10,16 +10,18 @@ import { music } from '@/lib/music';
 import { zoneMusic } from '@/lib/music-zones';
 import { friendSheets, runSheets } from '@/game/sheets';
 import type { FriendCard } from '@/lib/friends';
+import type { ClassId } from '@/lib/gear';
 import { buildOf } from '@/lib/stats';
 import { MATS, type MatId } from '@/balance';
+import { spWorn } from '@/lib/sp';
 import { atRisk, settleGear, vaultSize, wornFor, type AtRisk, type GearOutcome } from '@/lib/fog-gear';
-import { ITEM_SLOTS, nameOf, RARITY, SLOT_NAME, shortOf, type Item, type ItemSlot } from '@/game/dungeon/items';
+import { canWear, ITEM_SLOTS, nameOf, otherClass, RARITY, SLOT_NAME, type Item, type ItemSlot } from '@/game/dungeon/items';
 import { ItemCard, ItemTile } from './ItemCard';
 import { Sprite } from './Sprite';
 import { SoundToggle, useMusic } from './Sound';
 import { useKeyboardPlay } from './useDesk';
 import type { FreePick, Hud, MiniMap, RunEnd, RunHandle } from '@/game/dungeon/scene';
-import { ABILITIES, BAG, DODGE, RELICS, ROOM_KINDS, midBoss, type AbilityId, type CellKind, type RelicId } from '@/game/dungeon/engine';
+import { ABILITIES, BAG, DODGE, RELICS, ROOM_KINDS, SP_MOVES, midBoss, type AbilityId, type CellKind, type RelicId, type SpMoveId } from '@/game/dungeon/engine';
 
 interface Props {
   state: GameState;
@@ -162,6 +164,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
       run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast', worn: wornFor(state),
         build: buildOf(state),
         edge: edgeFor(state, zone),
+        sp: spWorn(state),
         // Only the first attempt shares the party's seed; "Try again" is a run of your own.
         seed: party && attempt === 0 ? party.seed : undefined,
         friends: party?.friends.map((f) => ({ name: f.name, classId: f.class_id ?? undefined, ...friendSheets({ classId: f.class_id ?? undefined, look: f.look, tiers: f.look?.gear }) })),
@@ -376,7 +379,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
       )}
 
       {hud?.ability && !end && (
-        <AbilityButton id={hud.ability.id} ready={hud.ability.ready} dodge={hud.dodge ?? 1} keys={keys} onUse={() => run.current?.ability?.()} onDodge={() => run.current?.dodge?.()} />
+        <AbilityButton id={hud.ability.id} ready={hud.ability.ready} dodge={hud.dodge ?? 1} sp={hud.sp} keys={keys} onUse={() => run.current?.ability?.()} onDodge={() => run.current?.dodge?.()} onSkill={() => run.current?.skill?.()} onFinal={() => run.current?.final?.()} />
       )}
 
       {floorShown && !end && (
@@ -410,7 +413,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
               <p className="text-xs font-semibold" style={{ color: RARITY[found.item.rarity].color }}>
                 {nameOf(found.item)}
               </p>
-              <p className="text-[10px] text-slate-400">{shortOf(found.item, buildOf(state)) > 0 ? 'Into the bag. Train to wear it.' : 'Into the bag. Open it to wear.'}</p>
+              <p className="text-[10px] text-slate-400">{otherClass(found.item, state.profile.classId) ? 'Into the bag. Not for your class.' : !canWear(found.item, buildOf(state), state.profile.classId) ? 'Into the bag. Train to wear it.' : 'Into the bag. Open it to wear.'}</p>
             </div>
           </div>
         </div>
@@ -420,6 +423,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
         <BagPanel
           gear={hud.gear}
           build={buildOf(state)}
+          cls={state.profile.classId}
           risk={risk}
           flame={flameName || 'your flame'}
           onWear={(id) => run.current?.wear(id)}
@@ -697,6 +701,7 @@ function KeyList() {
     ['WASD', 'Move (or the arrows)'],
     ['Click', 'Aim at a monster'],
     ['Q', 'Class ability'],
+    ['R F', "Your SP's move and final"],
     ['Space', 'Dodge (or E, Shift)'],
     ['B', 'Bag'],
     ['M', 'Map'],
@@ -916,12 +921,14 @@ function BossBar({ name, hp, max, ember }: { name: string; hp: number; max: numb
 }
 
 /** The class ability: a big round button under your right thumb, filling up while it recharges.
-    The dodge sits to its left, smaller, on its own short clock. */
-function AbilityButton({ id, ready, dodge, keys, onUse, onDodge }: { id: AbilityId; ready: number; dodge: number; keys: boolean; onUse: () => void; onDodge: () => void }) {
+    The dodge sits to its left, smaller, on its own short clock. With an SP on, its own move sits
+    between them and its final over the ability, glowing once it's full. */
+function AbilityButton({ id, ready, dodge, sp, keys, onUse, onDodge, onSkill, onFinal }: { id: AbilityId; ready: number; dodge: number; sp: Hud['sp']; keys: boolean; onUse: () => void; onDodge: () => void; onSkill: () => void; onFinal: () => void }) {
   const up = ready >= 1,
     dodgeUp = dodge >= 1;
   return (
     <div className="run-b run-r absolute flex items-end gap-3 desk:[zoom:1.4]">
+      {sp && <SpButton id={sp.skill} ready={sp.skillReady} k="R" keys={keys} onUse={onSkill} />}
       <div className="mb-1 flex flex-col items-center">
         <button
           aria-label={`Dodge, every ${DODGE.cd} s`}
@@ -939,7 +946,7 @@ function AbilityButton({ id, ready, dodge, keys, onUse, onDodge }: { id: Ability
           Dodge
         </span>
       </div>
-      <div className="flex flex-col items-center">
+      <div className="relative flex flex-col items-center">
         <button
           aria-label={ABILITIES[id].name}
           onPointerDown={(e) => {
@@ -951,11 +958,43 @@ function AbilityButton({ id, ready, dodge, keys, onUse, onDodge }: { id: Ability
           {!up && <span className="absolute inset-x-0 bottom-0 bg-gold-400/30" style={{ height: `${ready * 100}%` }} />}
           <Sprite id="abilityIcon" opts={{ name: id }} size={42} label="" className={up ? '' : 'opacity-50 grayscale'} />
         </button>
+        {sp && (
+          <div className="absolute -top-[4.5rem]">
+            <SpButton id={sp.final} ready={sp.finalReady} k="F" keys={keys} onUse={onFinal} final />
+          </div>
+        )}
         <span className="mt-1 flex items-center gap-1 font-pixel text-[8px] text-slate-300">
           {keys && <Key k="Q" />}
           {ABILITIES[id].name}
         </span>
       </div>
+    </div>
+  );
+}
+
+/** One of the SP's buttons: its own move (a clock) or its final (fills as you fight, and glows
+    orange when it's ready). */
+function SpButton({ id, ready, k, keys, final = false, onUse }: { id: SpMoveId; ready: number; k: string; keys: boolean; final?: boolean; onUse: () => void }) {
+  const up = ready >= 1,
+    on = final ? 'bg-orange-400 text-ink-950 ring-orange-200 shadow-[0_0_14px_rgba(251,146,60,.8)] active:scale-95' : 'bg-violet-300 text-ink-950 ring-violet-100 active:scale-95';
+  return (
+    <div className="mb-1 flex flex-col items-center">
+      <button
+        aria-label={SP_MOVES[id].name}
+        onPointerDown={(e) => {
+          e.stopPropagation();
+          if (up) onUse();
+        }}
+        className={`relative grid h-12 w-12 place-items-center overflow-hidden rounded-full ring-2 ${up ? on : 'bg-ink-800/90 text-slate-500 ring-ink-700'}`}
+      >
+        {!up && <span className={`absolute inset-x-0 bottom-0 ${final ? 'bg-orange-400/30' : 'bg-violet-300/30'}`} style={{ height: `${ready * 100}%` }} />}
+        <Sprite id="spIcon" opts={{ name: id }} size={30} label="" className={up ? '' : 'opacity-50 grayscale'} />
+      </button>
+      <span className="mt-1 flex items-center gap-1 whitespace-nowrap font-pixel text-[8px] text-slate-300">
+        {keys && <Key k={k} />}
+        {/* The final sits over the ability at the screen's edge: a short word, its name on the button. */}
+        {final ? 'Final' : SP_MOVES[id].name}
+      </span>
     </div>
   );
 }
@@ -1072,7 +1111,7 @@ function Results({ state, zone, end, broken, gear, keys, onAgain, onLeave }: { s
 /** The bag over the run: what you wear (three slots) and what you carry, with the flame's mark on
     the item a fall would leave you and what a fall would cost. Tap an item to see it, then wear it,
     take it off or leave it on the floor. */
-function BagPanel({ gear, build, risk, flame, onWear, onTakeOff, onDrop, onClose }: { gear: Hud['gear']; build: ReturnType<typeof buildOf>; risk: AtRisk; flame: string; onWear: (id: string) => void; onTakeOff: (slot: ItemSlot) => void; onDrop: (id: string) => void; onClose: () => void }) {
+function BagPanel({ gear, build, cls, risk, flame, onWear, onTakeOff, onDrop, onClose }: { gear: Hud['gear']; build: ReturnType<typeof buildOf>; cls: ClassId | undefined; risk: AtRisk; flame: string; onWear: (id: string) => void; onTakeOff: (slot: ItemSlot) => void; onDrop: (id: string) => void; onClose: () => void }) {
   const [pick, setPick] = useState<{ from: 'worn' | 'bag'; id: string } | null>(null);
   const all = [...Object.values(gear.worn), ...gear.bag].filter((x): x is Item => !!x),
     item = pick && all.find((x) => x.id === pick.id);
@@ -1121,7 +1160,7 @@ function BagPanel({ gear, build, risk, flame, onWear, onTakeOff, onDrop, onClose
                   const it = gear.bag[i];
                   return it ? (
                     <button key={it.id} data-bag-item="" onClick={() => setPick({ from: 'bag', id: it.id })} className={`grid place-items-center rounded-lg p-1 ${pick?.id === it.id ? 'bg-ink-800' : ''}`} aria-label={nameOf(it)}>
-                      <ItemTile item={it} size={36} dim={shortOf(it, build) > 0} than={gear.worn[it.slot] ?? 'none'} />
+                      <ItemTile item={it} size={36} dim={!canWear(it, build, cls)} than={gear.worn[it.slot] ?? 'none'} />
                     </button>
                   ) : (
                     <span key={i} className="mx-auto my-1 h-9 w-9 rounded-lg border border-dashed border-ink-800" />
@@ -1140,7 +1179,7 @@ function BagPanel({ gear, build, risk, flame, onWear, onTakeOff, onDrop, onClose
         <div className="w-56 shrink-0">
           {item ? (
             <>
-              <ItemCard item={item} build={build} than={gear.worn[item.slot] ?? 'none'}>
+              <ItemCard item={item} build={build} cls={cls} than={gear.worn[item.slot] ?? 'none'}>
                 {wornNow ? (
                   !item.starter && (
                     <button onClick={() => onTakeOff(item.slot)} disabled={gear.bag.length >= BAG} className="flex-1 rounded-lg bg-ink-700 py-2 text-xs text-slate-200 disabled:opacity-40">
@@ -1149,7 +1188,7 @@ function BagPanel({ gear, build, risk, flame, onWear, onTakeOff, onDrop, onClose
                   )
                 ) : (
                   <>
-                    <button onClick={() => onWear(item.id)} disabled={shortOf(item, build) > 0} className="flex-1 rounded-lg bg-gold-400 py-2 text-xs font-semibold text-ink-950 disabled:bg-ink-700 disabled:text-slate-500">
+                    <button onClick={() => onWear(item.id)} disabled={!canWear(item, build, cls)} className="flex-1 rounded-lg bg-gold-400 py-2 text-xs font-semibold text-ink-950 disabled:bg-ink-700 disabled:text-slate-500">
                       Wear
                     </button>
                     <button

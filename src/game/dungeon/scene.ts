@@ -53,9 +53,12 @@ import {
   stepRun,
   takeEvents,
   abilityReady,
+  finalReady,
+  skillReady,
   wardenFloor,
   winNow,
   type AbilityId,
+  type SpMoveId,
   type CellKind,
   type Door,
   type Foe,
@@ -93,6 +96,9 @@ function recap(run: Run): RunEnd {
   const warden = wf < 0 ? null : over.won || run.floor > wf || (run.floor === wf && !!run.warden && !run.warden.alive);
   return { ...over, relics: { ...run.hero.relics }, warden };
 }
+
+/** Each SP move's color on screen. */
+const SP_COLOR: Record<SpMoveId, number> = { whirl: 0xfbbf24, phoenix: 0xf97316, pin: 0x86efac, rain: 0x86efac, starfall: 0xc4b5fd, sky: 0xa78bfa, palm: 0x7dd3fc, palms: 0x67e8f9 };
 
 /** Most particles and drawn effects alive at once. Measured fights peak far below this (bits 38,
     sparks 16, puffs 72, effects 3); the caps only stop a freak pile-up from stalling a slow phone. */
@@ -139,6 +145,8 @@ export interface RunSetup {
   build?: Build;
   /** The chapter's hearts are gone: a weaker boss and free skills at the start. */
   edge?: Edge;
+  /** Wearing the class's SP: its own move and its final (src/lib/sp.ts). */
+  sp?: boolean;
   /** A party's run: the seed every phone shares. */
   seed?: number;
   /** Friends in the run (a practice run: bots play them), each with their own sheets
@@ -182,6 +190,8 @@ export interface Hud {
   floors: number;
   /** The class ability: 1 when ready. */
   ability: { id: AbilityId; ready: number };
+  /** With an SP on: its own move and its final, each 1 when ready. */
+  sp: { skill: SpMoveId; skillReady: number; final: SpMoveId; finalReady: number } | null;
   /** The dodge: 1 when ready. */
   dodge: number;
   cleared: boolean;
@@ -211,6 +221,9 @@ export interface RunEvents {
 export interface RunHandle {
   pick: (id: UpgradeId) => void;
   ability: () => void;
+  /** The SP's own move, and its final. */
+  skill: () => void;
+  final: () => void;
   dodge: () => void;
   pause: () => void;
   resume: () => void;
@@ -387,6 +400,8 @@ class DungeonScene extends Phaser.Scene {
   private fading: { draw: (g: Phaser.GameObjects.Graphics, p: number) => void; start: number; ms: number; up: boolean }[] = [];
   private acc = 0;
   private wantAbility = false;
+  private wantSkill = false;
+  private wantFinal = false;
   private wantDodge = false;
   /** A monster tapped since the last step (null: tapped again, let go). */
   private wantLock: number | null | undefined = undefined;
@@ -428,6 +443,7 @@ class DungeonScene extends Phaser.Scene {
       worn: setup.worn,
       build: setup.build,
       edge: setup.edge,
+      sp: setup.sp,
       // A practice run: friends come with your strength in their own class and starter kit.
       friends: setup.friends?.map((f) => ({ power: setup.power, classId: f.classId })),
     });
@@ -573,13 +589,16 @@ class DungeonScene extends Phaser.Scene {
     const kb = this.input.keyboard;
     if (kb) {
       const k = Phaser.Input.Keyboard.KeyCodes;
-      // On a computer: WASD or the arrows move, Q is the class ability, Space (or E, or Shift) dodges.
+      // On a computer: WASD or the arrows move, Q is the class ability, Space (or E, or Shift) dodges,
+      // R and F are the SP's move and final.
       this.keys = kb.addKeys({ up: k.UP, down: k.DOWN, left: k.LEFT, right: k.RIGHT, w: k.W, a: k.A, s: k.S, d: k.D }) as DungeonScene['keys'];
       // Ignored while the run holds still (a card or the bag is open), so nothing fires on the way back.
       const on = (codes: number[], act: () => void) => {
         for (const c of codes) kb.addKey(c).on('down', () => !this.paused && !this.run.hero.offer && !this.run.hero.relicOffer && !this.run.stairsAsk && act());
       };
       on([k.Q], () => (this.wantAbility = true));
+      on([k.R], () => (this.wantSkill = true));
+      on([k.F], () => (this.wantFinal = true));
       on([k.SPACE, k.E, k.SHIFT], () => (this.wantDodge = true));
     }
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
@@ -1162,10 +1181,12 @@ class DungeonScene extends Phaser.Scene {
     while (this.acc >= STEP * 1000 && steps < 6) {
       this.acc -= STEP * 1000;
       steps++;
-      const mine = this.bot ? botInput(run) : { ...this.stickInput(), ability: this.wantAbility, dodge: this.wantDodge, lock: this.wantLock };
+      const mine = this.bot ? botInput(run) : { ...this.stickInput(), ability: this.wantAbility, skill: this.wantSkill, final: this.wantFinal, dodge: this.wantDodge, lock: this.wantLock };
       // Friends in a practice run are played by the bot.
       const input = run.party.length > 1 ? [mine, ...run.party.slice(1).map((h) => botInput(run, h))] : mine;
       this.wantAbility = false;
+      this.wantSkill = false;
+      this.wantFinal = false;
       this.wantDodge = false;
       this.wantLock = undefined;
       stepRun(run, input);
@@ -1386,6 +1407,7 @@ class DungeonScene extends Phaser.Scene {
       floor: r.floor + 1,
       floors: r.layout.floors,
       ability: { id: r.hero.ability, ready: abilityReady(r, r.hero) },
+      sp: r.hero.sp ? { skill: r.hero.sp.skill, skillReady: skillReady(r, r.hero), final: r.hero.sp.final, finalReady: finalReady(r.hero) } : null,
       dodge: Math.min(1, 1 - (r.hero.dodgeAt - r.t) / DODGE.cd),
       cleared: r.cleared,
       relics: { ...r.hero.relics },
@@ -1936,6 +1958,24 @@ class DungeonScene extends Phaser.Scene {
             g.fillStyle(0x7dd3fc, 0.15 * (1 - p)).fillCircle(x, y, 20 + 90 * p);
           });
         }
+        break;
+      }
+      case 'sp': {
+        // An SP move: a ring in the SP's color; a final shakes the screen and fills it with light.
+        const { x, y, r, final } = e,
+          color = SP_COLOR[e.id];
+        this.sfx(final ? 'nova' : e.id === 'pin' ? 'arrow' : 'nova', final ? 0.8 : 1.15);
+        this.cameras.main.shake(final ? 260 : 120, final ? 0.01 : 0.005);
+        if (final) {
+          buzz(30);
+          this.cameras.main.flash(250, 255, 236, 200);
+        }
+        this.burst(this.sparks, final ? 30 : 12, x, y, -6);
+        if (e.id !== 'pin' && e.id !== 'rain')
+          this.fade(final ? 650 : 380, (g, p) => {
+            g.lineStyle((final ? 10 : 6) * (1 - p) + 1, color, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.3 + 0.7 * p));
+            g.fillStyle(color, (final ? 0.25 : 0.15) * (1 - p)).fillCircle(x, y, r * (0.3 + 0.7 * p));
+          });
         break;
       }
       case 'dodge': {
@@ -2558,6 +2598,14 @@ class DungeonScene extends Phaser.Scene {
     this.wantAbility = true;
   }
 
+  skill() {
+    this.wantSkill = true;
+  }
+
+  final() {
+    this.wantFinal = true;
+  }
+
   dodge() {
     this.wantDodge = true;
   }
@@ -2650,6 +2698,8 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
   return {
     pick: (id) => scene.pick(id),
     ability: () => scene.ability(),
+    skill: () => scene.skill(),
+    final: () => scene.final(),
     dodge: () => scene.dodge(),
     pause: () => scene.setPaused(true),
     resume: () => scene.setPaused(false),

@@ -4,6 +4,7 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { Headphones } from 'lucide-react';
 import { Dialogue } from './Dialogue';
 import { Book, Ember, Enemy, Hollow, Wanderer } from './Characters';
+import { ClassPicker } from './ClassPicker';
 import { Hero } from './Hero';
 import { FirstFight } from './FirstFight';
 import { useLook } from './Look';
@@ -13,18 +14,19 @@ import { SoundToggle, useMusic } from './Sound';
 import { Weather } from './Weather';
 import { PixelSnap } from './sideways';
 import type { GameState, Kit, Letter } from '@/lib/game';
-import { equippedGear, type Gear, type GearSlot } from '@/lib/gear';
+import { equippedGear, type ClassId, type Gear, type GearSlot } from '@/lib/gear';
 import { music } from '@/lib/music';
+import { SWEAT } from '@/balance';
 import { COLD_OPEN, FADING, FIRST_QUEST, HOLLOW_MEET, LETTER_PROMPTS, MEET, SEALED, VOICES } from '@/story/opening';
 import { renderLines, storyWords } from '@/story/engine';
 import { STARTER_LOOKS } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
 
-type Step = 'title' | 'cold' | 'fading' | 'voice' | 'hollow' | 'fight' | 'fallen' | 'meet' | 'letter' | 'sealed' | 'kit' | 'quest' | 'look' | 'name';
+type Step = 'title' | 'cold' | 'fading' | 'voice' | 'hollow' | 'fight' | 'fallen' | 'meet' | 'letter' | 'sealed' | 'kit' | 'quest' | 'look' | 'name' | 'class';
 
 interface Props {
   state: GameState;
-  onFinish: (patch: { letter: Letter; voice: string; kit?: Kit; name?: string }) => void;
+  onFinish: (patch: { letter: Letter; voice: string; kit?: Kit; name?: string; classId?: ClassId }) => void;
   /** Saves the player's look right away (the boy/girl pick, then the editor after the story). */
   onLook: (look: Look) => void;
   /** Shown on the title screen when the opening is replayed. */
@@ -85,6 +87,8 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, bring }: Props
   const [custom, setCustom] = useState(!!state.profile.voice && !VOICES.includes(state.profile.voice));
   const [kit, setKit] = useState<Kit>(state.profile.kit ?? 'gym');
   const [name, setName] = useState(state.profile.name ?? '');
+  // A new hero picks a class right after the name; anyone with one keeps it.
+  const asksClass = !state.profile.classId;
   const gear = equippedGear(undefined, state.sessions.length);
   // A dull, cracked blade for the first fight.
   const fightGear: Record<GearSlot, Gear> = { ...gear, weapon: { ...gear.weapon, tier: 1, color: '#6b7280', glow: undefined } };
@@ -94,7 +98,7 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, bring }: Props
   const words = { ...storyWords(state), ...letter, voice: voice.trim() || "You're not enough.", flame: state.profile.flame ?? '' };
   const go = useCallback((s: Step) => () => setStep(s), []);
 
-  const finish = () => onFinish({ letter, voice: voice.trim(), kit: asksKit ? kit : undefined, name: name.trim() || undefined });
+  const finish = (classId?: ClassId) => onFinish({ letter, voice: voice.trim(), kit: asksKit ? kit : undefined, name: name.trim() || undefined, classId });
   const begin = () => {
     music.unlock();
     setStep('cold');
@@ -233,14 +237,16 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, bring }: Props
       );
     case 'quest':
       return (
-        <Dialogue key="quest" lines={FIRST_QUEST} gear={gear} flame="spark" cinematic backdrop={() => <Enemy id="slime" size={110} />} onDone={firstRun ? go('look') : finish} />
+        <Dialogue key="quest" lines={FIRST_QUEST} gear={gear} flame="spark" cinematic backdrop={() => <Enemy id="slime" size={110} />} onDone={firstRun ? go('look') : () => finish()} />
       );
     case 'kit':
       return <KitPick kit={kit} setKit={setKit} onDone={go('quest')} />;
     case 'look':
       return <MakeItYours look={look} setLook={onLook} gear={gear} onDone={go('name')} />;
     case 'name':
-      return <NameIt name={name} setName={setName} onDone={finish} />;
+      return <NameIt name={name} setName={setName} onDone={asksClass ? go('class') : () => finish()} />;
+    case 'class':
+      return <ClassPicker workouts={state.sessions.length} onPick={finish} note={`Don't worry, you can change it later. Your first change is free; after that it costs ${SWEAT.classChange} sweat coins, and every workout earns one.`} />;
   }
 }
 

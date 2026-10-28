@@ -1,4 +1,4 @@
-import type { AbilityId, RelicId } from '@/game/dungeon/engine';
+import type { AbilityId, RelicId, SpMoveId } from '@/game/dungeon/engine';
 import type { UpgradeId } from '@/lib/fog';
 import type { PixelArt } from './pixel';
 
@@ -537,6 +537,154 @@ export const ABILITY_ICONS: Record<AbilityId | 'dodge', PixelArt> = {
       '...kkkkkk...',
       '..kSSSSSSk..',
       '...kkkkkk...',
+    ],
+    palette: KIT,
+  },
+};
+
+/** Each SP's own move and final, 12x12 (the run's SP buttons and the Hero tab's SP card). */
+export const SP_ICONS: Record<SpMoveId, PixelArt> = {
+  // a blade spun in a ring
+  whirl: {
+    rows: [
+      '....kkkk....',
+      '..kkGGGGkk..',
+      '.kGg....gGk.',
+      '.kg..kk..gk.',
+      'kG..kWlk..Gk',
+      'kg.kWlk...gk',
+      'kg.klk....gk',
+      'kG.kk.....Gk',
+      '.kg......gk.',
+      '.kGg....gGk.',
+      '..kkGGGGkk..',
+      '....kkkk....',
+    ],
+    palette: KIT,
+  },
+  // arrows in a tight line
+  pin: {
+    rows: [
+      '..........k.',
+      '.........kWk',
+      '........kWk.',
+      '...k...klk..',
+      '..kWk.kbk...',
+      '.kWk.kbk....',
+      '..klkbk.....',
+      '...kbk......',
+      '..kbk.......',
+      '.kSk........',
+      'kSSk........',
+      '.kk.........',
+    ],
+    palette: KIT,
+  },
+  // a star falling
+  starfall: {
+    rows: [
+      'k...........',
+      '.kv.........',
+      '..kv........',
+      '...kv..k....',
+      '....kvkVk...',
+      '...kkVWVkk..',
+      '..kVWWWWWVk.',
+      '...kkVWVkk..',
+      '....kVkVk...',
+      '....kk.kk...',
+      '............',
+      '............',
+    ],
+    palette: KIT,
+  },
+  // an open hand pushing air
+  palm: {
+    rows: [
+      '...k.k.k....',
+      '..kSkSkSk...',
+      '..kSkSkSk.k.',
+      '..kSkSkSkkSk',
+      '..kSSSSSkSk.',
+      '..kSSSSSSSk.',
+      '..kSSSSSSk..',
+      '...kSSSSk...',
+      '...kSSSSk...',
+      's..kkkkkk..s',
+      '.s.......s..',
+      '..ssssssss..',
+    ],
+    palette: KIT,
+  },
+  // a blade in a ring of fire
+  phoenix: {
+    rows: [
+      '..k..kk..k..',
+      '.kok.kok.kok',
+      '.kook..kook.',
+      'koyok.kWkyok',
+      'kok..kWlk.ok',
+      'ko..kWlk..ok',
+      'ko.kWlk...ok',
+      'kokbkk...yok',
+      '.kBk.....ok.',
+      'kBk.ookooko.',
+      'kk..kkoyok..',
+      '.....kkkk...',
+    ],
+    palette: KIT,
+  },
+  // arrows falling from the sky
+  rain: {
+    rows: [
+      '.k...k...k..',
+      '.b...b...b..',
+      '.b...b...b..',
+      'kWk.kWk.kWk.',
+      '.k...k...k..',
+      '...k...k...k',
+      '...b...b...b',
+      '...b...b...b',
+      '..kWk.kWk.kW',
+      '...k...k...k',
+      'e.e.e.e.e.e.',
+      'eeeeeeeeeeee',
+    ],
+    palette: KIT,
+  },
+  // the sky cracking open
+  sky: {
+    rows: [
+      'vvvvvvvvvvvv',
+      'VVkVVVVVkVVV',
+      '..kv....kv..',
+      '...kv..kv...',
+      '....kWWk....',
+      '...kWWWWk...',
+      '..kWWWWWWk..',
+      '...kWWWWk...',
+      '....kWWk....',
+      '..kv....vk..',
+      '.kv......vk.',
+      'kv........vk',
+    ],
+    palette: KIT,
+  },
+  // many hands at once
+  palms: {
+    rows: [
+      '.k.k...k.k..',
+      'kSkSk.kSkSk.',
+      'kSSSk.kSSSk.',
+      '.kSk...kSk..',
+      '.....k.k....',
+      '....kSkSk...',
+      '....kSSSk...',
+      '.k.k.kSk.k.k',
+      'kSkSk...kSkS',
+      'kSSSk...kSSS',
+      '.kSk.....kSk',
+      'sssssssssss.',
     ],
     palette: KIT,
   },

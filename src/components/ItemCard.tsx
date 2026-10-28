@@ -2,7 +2,8 @@
 
 import { useSyncExternalStore } from 'react';
 import { getStat, type Build } from '@/lib/stats';
-import { bandOf, betterBy, foundAt, itemLines, looksOf, nameOf, RARITY, SLOT_NAME, shortOf, type Item, type Rarity } from '@/game/dungeon/items';
+import { bandOf, betterBy, foundAt, itemLines, looksOf, nameOf, otherClass, RARITY, SLOT_NAME, shortOf, type Item, type Rarity } from '@/game/dungeon/items';
+import { getClass, type ClassId } from '@/lib/gear';
 import { BANDS } from '@/balance';
 import { PlusGlow } from './PlusGlow';
 import { Sprite } from './Sprite';
@@ -73,8 +74,9 @@ export function needLine(item: Item, build: Build): { text: string; ok: boolean 
 /** An item on one card: its art on a stage lit in its rarity's color, the name in that color,
     where it was found, what it gives, how it compares with what you wear (`than`: that item, or
     'none' when the slot is empty), what it asks. */
-export function ItemCard({ item, build, than, children }: { item: Item; build: Build; than?: Item | 'none'; children?: React.ReactNode }) {
+export function ItemCard({ item, build, cls, than, children }: { item: Item; build: Build; cls?: ClassId; than?: Item | 'none'; children?: React.ReactNode }) {
   const need = needLine(item, build),
+    other = otherClass(item, cls),
     at = foundAt(item),
     pct = than ? betterBy(item, than === 'none' ? undefined : than) : null,
     f = FRAME[item.rarity],
@@ -115,6 +117,7 @@ export function ItemCard({ item, build, than, children }: { item: Item; build: B
             <li key={i}>{l}</li>
           ))}
         </ul>
+        {other && <p className="mt-1 text-xs font-semibold text-red-300">{getClass(other)?.name ?? other} only</p>}
         {need && <p className={`mt-1 text-xs ${need.ok ? 'text-slate-500' : 'text-red-300'}`}>{need.text}</p>}
         {children && <div className="mt-3 flex gap-2">{children}</div>}
       </div>

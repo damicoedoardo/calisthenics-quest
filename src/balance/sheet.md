@@ -15,9 +15,9 @@ Each goal is written next to its numbers in `src/balance/`. The sheet measures i
 | One item +0 to +15 in about a year of training (embers; materials from co-op) | 62 weeks | on target |
 | 70 points a stat gives about +80% damage, +65% attack speed, +105 HP, 20% blocked, +25% walk speed, 20% crit | +79%, +64%, +103 HP, 21% blocked, +25% walk, 20% crit | on target |
 | A comeback after 14 days away earns a bonus | +50 XP | on target |
-| 40% of power growth from training (± 7%) | 42% (39%-45%) | on target |
-| 40% of power growth from gear (± 7%) | 39% (37%-45%) | on target |
-| 20% of power growth from upgrades (± 7%) | 19% (11%-24%) | on target |
+| 40% of power growth from training (± 7%) | 40% (38%-42%) | on target |
+| 40% of power growth from gear (± 7%) | 42% (38%-50%) | on target |
+| 20% of power growth from upgrades (± 7%) | 18% (10%-23%) | on target |
 
 ## Power by workouts
 
@@ -28,26 +28,26 @@ Model player: 3 full workouts a week, every week at the goal, points spread even
 | Workouts | Power | From training | From gear | From upgrades | Gear from |
 | --- | --- | --- | --- | --- | --- |
 | 0 | 100 | - | - | - | - |
-| 6 | 122 | 38% | 55% | 6% | zone 1, floor 7 |
-| 12 | 138 | 44% | 45% | 11% | zone 2, floor 1 |
-| 18 | 157 | 45% | 43% | 12% | zone 2, floor 7 |
-| 24 | 174 | 43% | 40% | 16% | zone 3, floor 1 |
-| 30 | 195 | 43% | 40% | 17% | zone 3, floor 7 |
-| 37 | 218 | 42% | 38% | 20% | zone 4, floor 1 |
-| 43 | 244 | 41% | 38% | 22% | zone 4, floor 7 |
-| 50 | 266 | 41% | 37% | 23% | zone 5, floor 1 |
-| 56 | 293 | 40% | 37% | 23% | zone 5, floor 7 |
-| 64 | 319 | 40% | 37% | 23% | zone 6, floor 1 |
-| 70 | 344 | 39% | 37% | 24% | zone 6, floor 7 |
-| 100 | 422 | 44% | 34% | 22% | zone 6, floor 10 |
+| 6 | 127 | 32% | 62% | 6% | zone 1, floor 7 |
+| 12 | 143 | 40% | 50% | 10% | zone 2, floor 1 |
+| 18 | 163 | 42% | 47% | 11% | zone 2, floor 7 |
+| 24 | 181 | 41% | 44% | 16% | zone 3, floor 1 |
+| 30 | 202 | 41% | 43% | 16% | zone 3, floor 7 |
+| 37 | 226 | 40% | 40% | 20% | zone 4, floor 1 |
+| 43 | 253 | 39% | 40% | 21% | zone 4, floor 7 |
+| 50 | 276 | 39% | 39% | 22% | zone 5, floor 1 |
+| 56 | 304 | 38% | 39% | 23% | zone 5, floor 7 |
+| 64 | 331 | 39% | 38% | 23% | zone 6, floor 1 |
+| 70 | 357 | 38% | 39% | 23% | zone 6, floor 7 |
+| 100 | 438 | 42% | 36% | 22% | zone 6, floor 10 |
 
 Each class with the same model (and how far above or below the four's average). The simulator's win rates are the real check; this shows the gap before abilities:
 
 | Workouts | Warrior | Archer | Monk | Mage |
 | --- | --- | --- | --- | --- |
-| 0 | 107 (+0%) | 125 (+17%) | 103 (-4%) | 93 (-13%) |
-| 24 | 174 (+0%) | 203 (+17%) | 167 (-4%) | 150 (-13%) |
-| 64 | 319 (+0%) | 370 (+17%) | 310 (-3%) | 273 (-14%) |
+| 0 | 112 (+0%) | 130 (+17%) | 107 (-4%) | 97 (-13%) |
+| 24 | 181 (+0%) | 211 (+17%) | 173 (-4%) | 156 (-13%) |
+| 64 | 331 (+0%) | 384 (+17%) | 322 (-3%) | 283 (-14%) |
 
 ## Training over time
 

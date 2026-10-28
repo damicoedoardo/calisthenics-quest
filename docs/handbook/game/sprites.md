@@ -3,7 +3,7 @@ type: reference
 title: Sprites and animation
 description: All pixel art is code in src/sprites — the 64x64 figure engine, manga head, text-row art, clips, the registry, PNG sheets, fingerprint tests, and where to edit what.
 tags: [game, sprites, pixel-art]
-timestamp: 2026-10-27
+timestamp: 2026-10-28
 ---
 # Sprites
 
@@ -35,7 +35,7 @@ characters/*.ts       one file per character: hero, wanderer, mira, ember, book,
 characters/pixel.ts   text-row art: paintRows (one character per pixel) and shifted
 characters/icons.ts   app icons as text rows: the six keepsakes (Hero tab, sprite `keepsake`) and
                       what a day held in the Book of Days (sprite `dayIcon`), the dungeon's
-                      relics (`relicIcon`), the ability and Dodge buttons (`abilityIcon`), the run's
+                      relics (`relicIcon`), the ability and Dodge buttons (`abilityIcon`), the SP's moves and finals (`spIcon`), the run's
                       level-up skills (`skillIcon`), and the floor track's Warden and boss (`markIcon`)
 characters/items.ts   the Fog's items (sprite `item`, opts `ItemLook` { art, rarity, seed }): one 24x24
                       text-row drawing per kind (`ITEM_ROWS`: sword, bow, staff, wand, heavy, light, robe,

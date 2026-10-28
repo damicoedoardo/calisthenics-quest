@@ -12,6 +12,7 @@ import { midBoss } from '@/game/dungeon/engine';
 import { rollItem, type Item } from '@/game/dungeon/items';
 import { seeded } from '@/lib/random';
 import { spendEvenly } from '@/lib/stats';
+import type { ClassId } from '@/lib/gear';
 
 /* What's new tonight: one tap to try each change. Everything that opens the app does it on a
    sandbox save (SANDBOX_KEY, chosen by ?sandbox), so the real save on this phone is never touched.
@@ -92,6 +93,22 @@ function fused(): GameState {
   return s.seenScenes.includes('finale') ? s : { ...s, seenScenes: [...s.seenScenes, 'finale'] };
 }
 
+/** A veteran in a class, given the first SP; `awake`: its trial done (worn into the Fog). */
+function withSp(awake: boolean, classId: ClassId = 'warrior'): GameState {
+  const s = spendEvenly(veteran(14, 1));
+  // Its scenes already played, so the jump opens on the screen and not on them.
+  return { ...s, profile: { ...s.profile, classId }, sp: { givenAt: 3, ...(awake ? { floor: true } : {}) }, seenScenes: [...s.seenScenes, 'sp-gift', 'sp-awake'] };
+}
+
+/** The geared warrior with an archer's bow in the vault: it can't be worn. */
+function otherBow(): GameState {
+  const s = geared(),
+    rnd = seeded(31);
+  let bow = rollItem(rnd, { zone: 1, workouts: ZONES[1].workouts, floor: 2, cls: 'archer' }, 'magic');
+  while (bow.slot !== 'weapon') bow = rollItem(rnd, { zone: 1, workouts: ZONES[1].workouts, floor: 2, cls: 'archer' }, 'magic');
+  return { ...s, fogGear: { ...s.fogGear!, vault: [{ ...bow, need: null }, ...s.fogGear!.vault] } };
+}
+
 /** Write the sandbox save and open the app on it at `query`. */
 function open(state: GameState, query: string) {
   try {
@@ -169,6 +186,28 @@ export default function NightLab() {
       <p className="rounded-lg border border-dashed border-sky-400/60 px-3 py-2 text-xs text-sky-300">
         Everything here opens on a sandbox save. Your real progress on this phone is untouched; the app shows a blue bar while you&apos;re in the sandbox.
       </p>
+
+      <Panel title="CLASSES, SP AND SWEAT COINS" note="Your class at the start, weapons that belong to one class, the first SP with its trial, and sweat coins to change class or start your points over.">
+        <Row icon={<Swords size={16} />} label="After the boss: pick up, then go home" note="The boss's room goes quiet, HOME stairs come up; walk over what's left first" onClick={() => open(veteran(14, 1), 'run=0&at=boss')} />
+        <Row icon={<Play size={16} />} label="The opening, with the class pick" note="A new player: after the name, pick a class (you can change it later)" onClick={() => open(initialState(), '')} />
+        <Row icon={<Gem size={16} />} label="Another class's weapon" note="Play tab: an archer's bow in a warrior's vault says 'Archer only' and can't be worn" onClick={() => open(otherBow(), 'tab=play')} />
+        <Row icon={<Film size={16} />} label="The Wanderer gives the first SP" note="sp-gift, at 3 workouts" href="/lab/story?play=sp-gift&back" />
+        <Row icon={<Film size={16} />} label="The SP wakes" note="sp-awake, once its trial is done" href="/lab/story?play=sp-awake&back" />
+        <Row icon={<Sparkles size={16} />} label="The SP, sealed" note="Hero tab: its trial (train twice more, reach floor 5)" onClick={() => open(withSp(false), 'tab=hero')} />
+        <Row icon={<Sparkles size={16} />} label="The SP, awake" note="Hero tab: its three moves and the switch to wear it; sweat coins under your points" onClick={() => open(withSp(true), 'tab=hero')} />
+        <div className="rounded-xl bg-ink-950 px-3 py-2.5">
+          <p className="text-sm text-slate-200">The SP in a run</p>
+          <p className="text-[11px] text-slate-500">Its own move beside your ability (R on a keyboard), its final above it (F): the final fills as you fight.</p>
+          <div className="mt-2 grid grid-cols-4 gap-1">
+            {(['warrior', 'archer', 'mage', 'monk'] as const).map((c) => (
+              <button key={c} className={chip} onClick={() => open(withSp(true, c), 'run=1&at=mid')}>
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+        <Row icon={<Swords size={16} />} label="Change class with sweat coins" note="Hero tab, Change class: the first change is free, then 3 coins" onClick={() => open({ ...withSp(true), sweat: { spent: 0, changes: 1 } }, 'tab=hero')} />
+      </Panel>
 
       <Panel title="INSTALL THE APP" note="After the opening, a phone in a browser tab has to put FORMA on its home screen before playing on. Each guide is shown here whatever phone you hold.">
         <Row icon={<Smartphone size={16} />} label="iPhone, Safari" note="Copy your hero, Share, Add to Home Screen, open it" onClick={() => open(skipIntro(initialState(), new Date()), 'gate=ios-safari')} />
