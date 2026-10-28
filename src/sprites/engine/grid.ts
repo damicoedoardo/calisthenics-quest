@@ -287,16 +287,22 @@ function rgba(c: string): [number, number, number, number] {
  * ImageData: a fillRect per pixel was most of the time it took to open the app or start a run.
  */
 export function toSheet(frames: Grid[]): string {
-  const h = frames[0].length,
-    w = frames[0][0].length,
-    W = w * frames.length,
-    cv = document.createElement('canvas');
-  cv.width = W;
-  cv.height = h;
+  const cv = document.createElement('canvas');
+  cv.width = frames[0][0].length * frames.length;
+  cv.height = frames[0].length;
   // A canvas kept in memory, not on the graphics chip: reading a chip canvas back (toDataURL) waits
   // for the chip, and while a run is drawing that froze the game for a moment each new sprite.
   const ctx = cv.getContext('2d', { willReadFrequently: true });
   if (!ctx) return '';
+  paintFrames(ctx, frames);
+  return cv.toDataURL();
+}
+
+/** Puts frames side by side at the top left of a canvas, in one ImageData. */
+export function paintFrames(ctx: CanvasRenderingContext2D, frames: Grid[]) {
+  const h = frames[0].length,
+    w = frames[0][0].length,
+    W = w * frames.length;
   const img = ctx.createImageData(W, h),
     px = img.data;
   frames.forEach((g, f) => {
@@ -313,5 +319,4 @@ export function toSheet(frames: Grid[]): string {
       }
   });
   ctx.putImageData(img, 0, 0);
-  return cv.toDataURL();
 }
