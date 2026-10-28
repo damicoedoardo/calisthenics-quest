@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Download, Film, Mail, Upload, X } from 'lucide-react';
+import { ChevronDown, Download, Film, Mail, Upload, X } from 'lucide-react';
 import { SoundToggle, useMenuMusic } from './Sound';
 import { CloudSave } from './Cloud';
 import { useModal } from './useModal';
@@ -34,6 +34,8 @@ export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: 
   const story = storyState(state);
   const [backupMsg, setBackupMsg] = useState('');
   const [letterOpen, setLetterOpen] = useState(false);
+  // The quest log shows the last five, then the last twelve on More.
+  const [allLog, setAllLog] = useState(false);
   const letter = state.profile.letter;
   const hasLetter = !!(letter.why || letter.want || letter.forWho || letter.remind);
 
@@ -72,14 +74,14 @@ export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: 
           <div className="space-y-4">
             <section className="grid grid-cols-3 gap-2">
               <Stat label="Quests" value={state.sessions.length} />
-              <Stat label="Beat last time" value={state.sessions.filter((s) => s.better).length} />
+              <Stat label="Better" value={state.sessions.filter((s) => s.better).length} />
               <Stat label="Chapter" value={story.finished ? 'Done' : story.index + 1} />
             </section>
 
             {hasLetter && (
               <section className="rounded-2xl bg-ink-800 p-4">
                 <button onClick={() => setLetterOpen(!letterOpen)} className="flex w-full items-center gap-2 font-pixel text-[10px] text-gold-300">
-                  <Mail size={14} /> Your letter {letterOpen ? '' : '(tap to read)'}
+                  <Mail size={14} /> <span className="flex-1 text-left">Your letter</span> <ChevronDown size={14} className={`transition ${letterOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {letterOpen && (
                   <div className="mt-3 space-y-2 rounded-xl bg-[#f5ecd7] p-4 text-sm text-[#3b2a1a]">
@@ -98,7 +100,7 @@ export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: 
                 <ul className="mt-3 divide-y divide-ink-700 text-sm">
                   {[...state.sessions]
                     .reverse()
-                    .slice(0, 12)
+                    .slice(0, allLog ? 12 : 5)
                     .map((s) => (
                       <li key={s.id} className="py-2">
                         <div className="flex items-center justify-between">
@@ -114,6 +116,11 @@ export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: 
                 </ul>
               ) : (
                 <p className="mt-2 text-xs text-slate-500">Your quests land here.</p>
+              )}
+              {!allLog && state.sessions.length > 5 && (
+                <button onClick={() => setAllLog(true)} className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg bg-ink-900 py-2 text-xs text-slate-400">
+                  More <ChevronDown size={14} />
+                </button>
               )}
             </section>
           </div>
@@ -187,8 +194,8 @@ export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: 
 function Stat({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="rounded-2xl bg-ink-800 p-3">
-      <p className="text-[11px] uppercase tracking-wider text-slate-400">{label}</p>
-      <p className="mt-1 font-mono text-2xl font-semibold">{value}</p>
+      <p className="font-pixel text-[7px] uppercase leading-relaxed text-slate-500">{label}</p>
+      <p className="mt-1.5 font-pixel text-base text-slate-100">{value}</p>
     </div>
   );
 }

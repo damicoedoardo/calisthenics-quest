@@ -33,7 +33,7 @@ export function StatPoints({ state, update, land = false }: { state: GameState; 
           {free ? `${free} point${free === 1 ? '' : 's'} to spend` : 'Every workout earns points'}
         </p>
       </div>
-      <p className={`mt-1 text-slate-400 ${land ? 'text-[11px] leading-snug' : 'text-xs'}`}>Your training makes your champion stronger in the Fog. Put your points where you like. Points spent since your last workout come back free; to move the rest, start over for {cost || 1} sweat coin{(cost || 1) === 1 ? '' : 's'}.</p>
+      <p className={`mt-1 text-slate-400 ${land ? 'text-[11px] leading-snug' : 'text-xs'}`}>Spent since your last workout: free to take back. Start over: {cost || 1} sweat coin{(cost || 1) === 1 ? '' : 's'}.</p>
 
       {/* Sideways the six stats are six tiles, two by three, that share the panel's height. */}
       <ul className={land ? 'mt-3 grid min-h-0 flex-1 auto-rows-fr grid-cols-2 gap-2' : 'mt-3 space-y-2'}>
