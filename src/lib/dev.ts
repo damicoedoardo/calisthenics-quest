@@ -22,8 +22,13 @@ import { SP_TRIAL, type MatId } from '@/balance';
    Settings), and while it is on the app plays a separate developer save (src/lib/store.ts), so the
    real hero is never touched; switching it off goes back to the real save as it was. */
 
-/** SHA-256 of each developer's email, trimmed and lower-cased: the repo is public, the addresses stay out of it. */
-export const DEV_EMAILS = ['ca4d1083bd88ad457c76dbfa9d8b88cce00c3a376c32d1e705559f821b162de9'];
+/** SHA-256 of each developer's email, trimmed and lower-cased: the repo is public, the addresses stay out of it.
+    Edoardo's own, then two test accounts of his (for trying friends and parties with two windows). */
+export const DEV_EMAILS = [
+  'ca4d1083bd88ad457c76dbfa9d8b88cce00c3a376c32d1e705559f821b162de9',
+  'e2cbbfdb4f16402b1413541976100b5a1315cef0443b31c94e726a7a16e6998c',
+  '85f57681d3010ffe2708fee1539109a2960e18dc57a25094766a456863a54485',
+];
 
 const LIVE_HOSTS = ['formaquest.app', 'www.formaquest.app', 'forma-nu-red.vercel.app'];
 const onLocalhost = () => ['localhost', '127.0.0.1'].includes(window.location.hostname);

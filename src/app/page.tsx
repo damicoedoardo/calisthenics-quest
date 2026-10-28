@@ -21,14 +21,14 @@ import { ClassPicker } from '@/components/ClassPicker';
 import { DevButton, DevPanel, type DevGo } from '@/components/DevPanel';
 import { Sprite } from '@/components/Sprite';
 import { LookProvider } from '@/components/Look';
-import { CloudChoice, useCloudSync } from '@/components/Cloud';
+import { useCloudSync } from '@/components/Cloud';
 import { useFriendsBeat } from '@/components/Friends';
 import { SignInGate, signInDue } from '@/components/SignInGate';
 import { PartyButton, PartyInviteCard, PartyLobby, usePartyPoll } from '@/components/Party';
 import { others, startToJoin } from '@/lib/party';
 import { partyMe, setLobbyOpen, usePartyView } from '@/lib/party-client';
 import type { FriendCard } from '@/lib/friends';
-import { useCloudStatus } from '@/lib/cloud-client';
+import { cloudConfigured, useCloudStatus } from '@/lib/cloud-client';
 import { BringHero, InstallGate } from '@/components/InstallGate';
 import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { sawScene, scenesToPlay, storyState, type StoryState } from '@/story/engine';
@@ -97,7 +97,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const jumped = useRef(false);
   // The cloud backup, when signed in. Never before the save has loaded, never in the sandbox or
   // on the developer save.
-  const cloud = useCloudSync(state, update, !ready || offRecord());
+  useCloudSync(state, update, !ready || offRecord());
   // Shows you online to your friends while the app is open, and in the Fog during a run.
   useFriendsBeat(state, run?.name ?? null, !ready || offRecord());
   // After the install step, an account: a hard rule, no playing on without one (SignInGate).
@@ -290,6 +290,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         onExit={replaying ? () => setReplaying(false) : undefined}
         onSkip={dev && !replaying ? () => update((s) => skipIntro(s, new Date())) : undefined}
         dev={dev}
+        askLogin={!replaying && cloudConfigured && !inSandbox() && !offRecord()}
         onLook={(look) => update((s) => ({ ...s, profile: { ...s.profile, look } }))}
         onPause={({ voice }) => update((s) => ({ ...s, profile: { ...s.profile, voice, opening: 'class' } }))}
         onFinish={({ letter, voice, kit, name, classId }) => {
@@ -497,7 +498,6 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         />
       )}
       {you && !busy && <YouPage state={state} update={update} onReplayOpening={() => setReplaying(true)} onClose={() => setYou(false)} devSwitch={devAllowed ? { on: devOn, set: setDevOn } : undefined} />}
-      <CloudChoice phone={state} onChoose={cloud.choose} />
       {opening && <Opening state={state} onDone={() => setOpening(false)} />}
     </div>
   );

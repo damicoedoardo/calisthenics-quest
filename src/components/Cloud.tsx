@@ -23,8 +23,8 @@ import {
   useCloudStatus,
 } from '@/lib/cloud-client';
 
-/* The cloud backup on screen: the sync that runs while signed in (useCloudSync, in page.tsx), the
-   which-save-to-keep question (CloudChoice), and the card in Hero > Settings (CloudSave). */
+/* The cloud backup on screen: the sync that runs while signed in (useCloudSync, in page.tsx) and
+   the card in Hero > Settings (CloudSave). */
 
 /** How long after a change the save goes up, so a burst of taps is one upload. */
 const PUSH_AFTER_MS = 3000;
@@ -37,7 +37,6 @@ export function useCloudSync(state: GameState, update: (fn: (s: GameState) => Ga
   // The save as last sent or taken, so an unchanged save is never sent again.
   const synced = useRef<string | null>(null);
   const busy = useRef(false);
-  const asking = useRef(false);
 
   // meet and push call each other (a clash on push means meeting the cloud again), so they live in refs.
   const meet = useRef(async (_known?: CloudCopy | null) => {});
@@ -48,18 +47,17 @@ export function useCloudSync(state: GameState, update: (fn: (s: GameState) => Ga
     if (!id) return;
     const cloud = known !== undefined ? known : await getCloud();
     const p = plan(latest.current, cloud, lastRev(id));
-    if (p.kind === 'use-cloud' && cloud) {
-      const s = cloudState(cloud);
-      if (!s) return;
+    if (p.kind === 'use-cloud') {
+      const s = cloud && cloudState(cloud);
+      if (!cloud || !s) return;
       synced.current = JSON.stringify(s);
       rememberRev(id, cloud.rev);
       update(() => s);
       setCloudStatus({ phase: 'saved', savedAt: cloud.updated_at, workouts: cloud.workouts });
-    } else if (p.kind === 'ask') {
-      asking.current = true;
-      setCloudStatus({ phase: 'ask', cloud: p.cloud });
-    } else if (p.kind === 'upload') {
+    } else if (JSON.stringify(latest.current) !== synced.current || p.baseRev !== lastRev(id)) {
       await push.current(p.baseRev);
+    } else {
+      setCloudStatus({ phase: 'saved', savedAt: cloud?.updated_at, workouts: cloud?.workouts });
     }
   };
 
@@ -108,8 +106,7 @@ export function useCloudSync(state: GameState, update: (fn: (s: GameState) => Ga
           void run(() => meet.current());
         }
         if (!id) {
-          asking.current = false;
-          setCloudStatus({ phase: 'idle', cloud: undefined, savedAt: undefined });
+          setCloudStatus({ phase: 'idle', savedAt: undefined });
         }
       });
       stop = () => data.subscription.unsubscribe();
@@ -125,12 +122,12 @@ export function useCloudSync(state: GameState, update: (fn: (s: GameState) => Ga
 
   // Every change goes up a few seconds later; offline, it waits for the signal.
   useEffect(() => {
-    if (off || !user.current || asking.current) return;
+    if (off || !user.current) return;
     const body = JSON.stringify(state);
     if (body === synced.current) return;
     const t = window.setTimeout(() => {
       const id = user.current;
-      if (id && !asking.current) void run(() => push.current(lastRev(id)));
+      if (id) void run(() => push.current(lastRev(id)));
     }, PUSH_AFTER_MS);
     return () => window.clearTimeout(t);
   }, [state, off, run]);
@@ -138,70 +135,30 @@ export function useCloudSync(state: GameState, update: (fn: (s: GameState) => Ga
   useEffect(() => {
     if (off) return;
     const retry = () => {
-      if (user.current && !asking.current && JSON.stringify(latest.current) !== synced.current) void run(() => meet.current());
+      if (user.current && JSON.stringify(latest.current) !== synced.current) void run(() => meet.current());
+    };
+    // Back to the front: look for a newer save from another device. To the back: send what's waiting now.
+    const flip = () => {
+      if (!user.current) return;
+      if (document.visibilityState === 'visible') void run(() => meet.current());
+      else if (JSON.stringify(latest.current) !== synced.current) {
+        const id = user.current;
+        void run(() => push.current(lastRev(id)));
+      }
     };
     window.addEventListener('online', retry);
-    return () => window.removeEventListener('online', retry);
+    document.addEventListener('visibilitychange', flip);
+    return () => {
+      window.removeEventListener('online', retry);
+      document.removeEventListener('visibilitychange', flip);
+    };
   }, [off, run]);
-
-  /** The player's answer to the which-save question. */
-  const choose = useCallback(
-    async (keep: 'phone' | 'cloud', cloud: CloudCopy) => {
-      const id = user.current;
-      asking.current = false;
-      if (!id) return;
-      if (keep === 'cloud') {
-        const s = cloudState(cloud);
-        if (s) {
-          synced.current = JSON.stringify(s);
-          rememberRev(id, cloud.rev);
-          update(() => s);
-        }
-        setCloudStatus({ phase: 'saved', cloud: undefined, savedAt: cloud.updated_at, workouts: cloud.workouts });
-      } else {
-        setCloudStatus({ cloud: undefined });
-        await run(() => push.current(cloud.rev));
-      }
-    },
-    [run, update],
-  );
-
-  return { choose };
-}
-
-/** Both the phone and the cloud have progress the other hasn't seen: which one to keep. */
-export function CloudChoice({ phone, onChoose }: { phone: GameState; onChoose: (keep: 'phone' | 'cloud', cloud: CloudCopy) => void }) {
-  const { phase, cloud } = useCloudStatus();
-  if (phase !== 'ask' || !cloud) return null;
-  return <Choice phone={phone} cloud={cloud} onChoose={onChoose} />;
-}
-
-function Choice({ phone, cloud, onChoose }: { phone: GameState; cloud: CloudCopy; onChoose: (keep: 'phone' | 'cloud', cloud: CloudCopy) => void }) {
-  const box = useModal<HTMLDivElement>(() => {});
-  const last = phone.sessions.at(-1)?.date;
-  return (
-    <div ref={box} role="dialog" aria-modal="true" aria-label="Which save to keep" className="fixed inset-0 z-50 !mt-0 flex items-center justify-center bg-ink-950/90 p-4 outline-none">
-      <div className="w-full max-w-sm space-y-3 rounded-2xl bg-ink-800 p-4">
-        <h2 className="font-pixel text-xs text-gold-300">Which save to keep?</h2>
-        <p className="text-sm text-slate-300">This phone and your cloud backup have both moved on. Pick one; the other is replaced.</p>
-        <button onClick={() => onChoose('phone', cloud)} className="w-full rounded-xl bg-ink-600 p-3 text-left">
-          <span className="block text-sm font-semibold">This phone</span>
-          <span className="block text-xs text-slate-400">{describe(phone.sessions.length, last)}</span>
-        </button>
-        <button onClick={() => onChoose('cloud', cloud)} className="w-full rounded-xl bg-ink-600 p-3 text-left">
-          <span className="block text-sm font-semibold">Cloud backup</span>
-          <span className="block text-xs text-slate-400">{describe(cloud.workouts, cloud.updated_at)}</span>
-        </button>
-      </div>
-    </div>
-  );
 }
 
 const PHASE: Record<string, string> = {
   saving: 'Saving…',
   offline: 'Offline: it saves when you are back online.',
   error: "Couldn't reach the backup. It tries again on the next change.",
-  ask: 'Waiting for you to pick a save.',
 };
 
 /** Hero > Settings: sign in to keep a copy of the hero in the cloud. Hidden until the backend is set up. */
