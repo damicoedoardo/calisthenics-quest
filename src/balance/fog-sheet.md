@@ -8,8 +8,8 @@ Each class's win rate, averaged over the zones, against the four's average (fair
 
 | When | archer | mage | warrior | monk | All four |  |
 | --- | --- | --- | --- | --- | --- | --- |
-| The day a zone opens | 29% | 27% | 22% | 23% | 25% | fair |
-| Six workouts later | 70% | 64% | 71% | 70% | 69% | fair |
+| The day a zone opens | 25% | 22% | 18% | 18% | 21% | fair |
+| Six workouts later | 68% | 62% | 69% | 68% | 67% | fair |
 
 ## Zones
 
@@ -17,15 +17,15 @@ Win rate by zone and class, against `ZONE_WINS`: 33% the day a zone opens, 67% l
 
 | Zone | When | archer | mage | warrior | monk | All four |  |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | opens (the first run, 0 workouts: at most 5%) | 2% | 4% | 2% | 0% | 2% | on target |
+| 1 | opens (the first run, 0 workouts: at most 5%) | 4% | 0% | 0% | 0% | 1% | on target |
 | 1 | +6 workouts | 71% | 73% | 83% | 58% | 71% | on target |
-| 2 | opens | 35% | 33% | 19% | 15% | 26% | on target |
-| 2 | +6 workouts | 75% | 69% | 73% | 60% | 69% | on target |
-| 3 | opens | 33% | 40% | 27% | 19% | 30% | on target |
+| 2 | opens | 27% | 33% | 23% | 8% | 23% | on target |
+| 2 | +6 workouts | 67% | 65% | 65% | 63% | 65% | on target |
+| 3 | opens | 29% | 27% | 27% | 19% | 26% | on target |
 | 3 | +6 workouts | 67% | 67% | 77% | 77% | 72% | on target |
-| 4 | opens | 27% | 44% | 48% | 52% | 43% | on target |
-| 4 | +6 workouts | 56% | 54% | 69% | 69% | 62% | on target |
-| 5 | opens | 42% | 23% | 15% | 31% | 28% | on target |
+| 4 | opens | 33% | 38% | 23% | 35% | 32% | on target |
+| 4 | +6 workouts | 52% | 46% | 65% | 56% | 55% | on target |
+| 5 | opens | 33% | 19% | 19% | 27% | 24% | on target |
 | 5 | +18 workouts | 83% | 58% | 46% | 83% | 68% | on target |
-| 6 | opens | 33% | 21% | 23% | 21% | 24% | on target |
+| 6 | opens | 21% | 13% | 19% | 17% | 17% | **off** |
 | 6 | +18 workouts | 71% | 65% | 79% | 73% | 72% | on target |

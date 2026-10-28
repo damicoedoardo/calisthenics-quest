@@ -1756,7 +1756,7 @@ class DungeonScene extends Phaser.Scene {
         this.foes.delete(id);
       }
     this.syncSpeech();
-    if (this.bossLabel && r.boss) {
+    if (this.bossLabel && r.boss?.alive) {
       const [bx, by] = this.P(r.boss.x, r.boss.y);
       this.bossLabel.setPosition(bx, by - 34 * BOSS_LOOKS[this.setup.zone.boss].scale);
       if (this.setup.zone.boss === 'tomorrow') {
@@ -1956,7 +1956,12 @@ class DungeonScene extends Phaser.Scene {
           });
         }
         this.sfx('kill', big ? 0.6 : e.kind === 'wisp' ? 1.3 : 1);
-        if (boss) this.bossLabel?.destroy();
+        if (boss) {
+          // Gone for good: the room stays up after the boss (the stairs home), and sync must not
+          // write to a destroyed label (that froze the game after Tomorrow fell).
+          this.bossLabel?.destroy();
+          this.bossLabel = null;
+        }
         if (boss && this.setup.zone.boss === 'mirror') this.bossGone('mirrorBossShatter', x, y);
         if (MID_KINDS.has(e.kind)) this.cameras.main.flash(300, 255, 180, 90);
         break;
