@@ -3,7 +3,7 @@ type: reference
 title: Workflow
 description: Commands, branches and PRs, Vercel previews and production, the free plan's 100 deploys a day, and who says ship.
 tags: [dev, workflow, git, vercel]
-timestamp: 2026-10-27
+timestamp: 2026-10-28
 ---
 
 # Workflow
@@ -36,6 +36,10 @@ Project "forma" deploys every pushed branch as a preview
 (`forma-git-<branch>-edoardo-damicos-projects.vercel.app`) and `main` to
 https://formaquest.app (the domain is on Vercel, which also holds its DNS) and
 https://forma-nu-red.vercel.app.
+
+Public settings the app reads (Vercel env, never committed): the cloud's `NEXT_PUBLIC_SUPABASE_*`
+and `NEXT_PUBLIC_API_URL` ([../backend/cloud-sync.md](../backend/cloud-sync.md)), and PostHog's
+`NEXT_PUBLIC_POSTHOG_KEY` / `NEXT_PUBLIC_POSTHOG_HOST` ([../app/analytics.md](../app/analytics.md)).
 
 **The team is on Vercel Pro since 2026-10-27; the free plan's 100 deployments a day ran out twice.** So: commit locally as much
 as you like, push a branch once when it is ready, and batch fixes into one push.

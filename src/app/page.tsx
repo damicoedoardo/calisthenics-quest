@@ -39,6 +39,7 @@ import { inSandbox, useGameState } from '@/lib/store';
 import { recordRun, ZONES, type Zone } from '@/lib/fog';
 import { settleGear } from '@/lib/fog-gear';
 import { skipIntro, useDevMode } from '@/lib/dev';
+import { useAnalytics } from '@/lib/analytics-client';
 import { mustInstall, needsCarry } from '@/lib/install';
 import { useInstall } from '@/lib/install-client';
 import { freshNudge } from '@/lib/coach/nudge';
@@ -175,6 +176,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     setRun(zone);
   }, [party, busy]);
   const { dev, live, toggle: setDev } = useDevMode();
+  // Play stats for balancing and to see who comes back (off until PostHog is set up).
+  useAnalytics(state, ready, signedIn, dev);
   // While a screen is open over the tabs, the tabs underneath are out of reach: no keyboard focus
   // and nothing for a screen reader to wander into. (React 18 has no inert prop, so it's set here.)
   const root = useRef<HTMLDivElement>(null);
