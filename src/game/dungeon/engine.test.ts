@@ -411,7 +411,8 @@ describe('a party (co-op)', () => {
   });
 
   it('drops co-op materials for the forge, each hero their own, and a solo run none', () => {
-    const run = party(25);
+    // A seed where the party lives long enough on the first floors to find threads (zone 1 is tuned hard for untrained heroes).
+    const run = party(27);
     const [me, friend] = run.party;
     expect(me.mats.thread ?? 0).toBeGreaterThan(0);
     expect(friend.mats.thread ?? 0).toBeGreaterThan(0);
