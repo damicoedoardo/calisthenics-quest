@@ -44,6 +44,15 @@ describe('the week', () => {
     expect(dayLabel('2026-10-30', NOW)).toBe('Fri');
   });
 
+  it('runs Monday to Sunday: late in the week fewer workouts fit, and Monday starts a new one', () => {
+    expect(weekDates(new Date(2026, 9, 26, 12), 3)).toEqual(['2026-10-26', '2026-10-28', '2026-10-30']);
+    expect(weekDates(new Date(2026, 9, 30, 12), 3)).toEqual(['2026-10-30', '2026-11-01']);
+    expect(weekDates(new Date(2026, 10, 1, 12), 4)).toEqual(['2026-11-01']);
+    const s = withWeek();
+    expect(weekOver(s.coach!.week, new Date(2026, 10, 1, 23))).toBe(false);
+    expect(weekOver(s.coach!.week, new Date(2026, 10, 2, 8))).toBe(true);
+  });
+
   it('is built with one workout a day, modes taking turns', () => {
     const s = withWeek(answers({ modes: ['gym', 'running'] }));
     const week = s.coach!.week!;
@@ -78,7 +87,8 @@ describe('the week', () => {
   it('every other day of the week is a rest day, kept by sitting by the fire', () => {
     const s = withWeek();
     const slots = weekSlots(s.coach!.week!);
-    expect(slots.map((x) => (x.day ? 'W' : 'r')).join('')).toBe('WrWrWrr');
+    // Monday to Sunday: planned on a Wednesday, Monday and Tuesday come before the plan.
+    expect(slots.map((x) => (x.day ? 'W' : x.before ? '-' : 'r')).join('')).toBe('--WrWrW');
     const thu = new Date(2026, 9, 29, 12);
     expect(restToday(s.coach, NOW)).toBe(false);
     expect(restToday(s.coach, thu)).toBe(true);
@@ -87,8 +97,9 @@ describe('the week', () => {
     expect(restKept(kept, '2026-10-29')).toBe(true);
     const text = weekText(kept.coach!.week, thu, (d) => restKept(kept, d));
     expect(text).toHaveLength(7);
-    expect(text[1]).toBe('- Thu 2026-10-29 (Today): rest day, KEPT');
-    expect(text[3]).toBe('- Sat 2026-10-31 (Sat): rest day');
+    expect(text[0]).toBe('- Mon 2026-10-26 (Mon): before this plan');
+    expect(text[3]).toBe('- Thu 2026-10-29 (Today): rest day, KEPT');
+    expect(text[5]).toBe('- Sat 2026-10-31 (Sat): rest day');
   });
 
   it('setDay writes the day asked for, never a done one', () => {
@@ -125,11 +136,12 @@ describe('the week', () => {
 });
 
 describe('the coach plans the week', () => {
-  it('resolveDay takes weekdays, today, tomorrow and dates in the next 7 days', () => {
+  it('resolveDay takes weekdays, today, tomorrow and dates from today to Sunday', () => {
     expect(resolveDay('today', NOW)).toBe('2026-10-28');
     expect(resolveDay('Tomorrow', NOW)).toBe('2026-10-29');
     expect(resolveDay('Friday', NOW)).toBe('2026-10-30');
-    expect(resolveDay('tue', NOW)).toBe('2026-11-03');
+    expect(resolveDay('tue', NOW)).toBeUndefined();
+    expect(resolveDay('sun', NOW)).toBe('2026-11-01');
     expect(resolveDay('2026-11-01', NOW)).toBe('2026-11-01');
     expect(resolveDay('2026-12-01', NOW)).toBeUndefined();
     expect(resolveDay('someday', NOW)).toBeUndefined();
@@ -169,6 +181,39 @@ describe('the coach plans the week', () => {
     const r = run(s, 'set_workout', { day: 'sun', title: 'Sunday legs', items: [{ id: 'Barbell_Squat', role: 'main' }] });
     expect(r.state.coach!.week!.days[2].plan.title).toBe('Sunday legs');
     expect(r.state.coach!.week!.days[0]).toEqual(s.coach!.week!.days[0]);
+  });
+
+  it('move_workout moves onto a rest day or swaps two days, never a done one or a past day', () => {
+    const s = withWeek();
+    const [wed, fri] = s.coach!.week!.days;
+    const moved = run(s, 'move_workout', { from: 'today', to: 'tomorrow' });
+    expect(moved.state.coach!.week!.days.map((d) => d.date)).toEqual(['2026-10-29', '2026-10-30', '2026-11-01']);
+    expect(moved.state.coach!.week!.days[0].plan).toBe(wed.plan);
+    const swapped = run(s, 'move_workout', { from: 'wed', to: 'fri' });
+    expect(swapped.state.coach!.week!.days[0].plan).toBe(fri.plan);
+    expect(swapped.state.coach!.week!.days[1].plan).toBe(wed.plan);
+    expect(run(s, 'move_workout', { from: 'thu', to: 'sat' }).result).toMatch(/no workout to move/);
+    expect(run(s, 'move_workout', { from: 'wed', to: 'mon' }).state).toBe(s);
+    const done = trainAll(s, NOW);
+    expect(run(done, 'move_workout', { from: 'wed', to: 'thu' }).result).toMatch(/done already/);
+  });
+
+  it('a heads-up when the same muscles land on days in a row', () => {
+    const s = withWeek();
+    const push = { mode: 'gym', title: 'Push', items: [{ id: 'Pushups', role: 'main' }] };
+    const r = run(s, 'set_week', { days: [{ day: 'wed', ...push }, { day: 'thu', ...push }] });
+    expect(r.result).toMatch(/Heads-up.*Wed and Thu are back to back and both train push/);
+    expect(run(s, 'set_week', { days: [{ day: 'wed', ...push }, { day: 'fri', ...push }] }).result).not.toMatch(/Heads-up/);
+  });
+
+  it('rest_day takes a workout off, and set_workout on a rest day adds one', () => {
+    const s = withWeek();
+    const r = run(s, 'rest_day', { day: 'fri' });
+    expect(r.state.coach!.week!.days.map((d) => d.date)).toEqual(['2026-10-28', '2026-11-01']);
+    expect(r.result).toMatch(/2 workouts this week, fewer than their 3/);
+    const added = run(s, 'set_workout', { day: 'sat', title: 'Extra', items: [{ id: 'Pushups', role: 'main' }] });
+    expect(added.state.coach!.week!.days.map((d) => d.date)).toEqual(['2026-10-28', '2026-10-30', '2026-10-31', '2026-11-01']);
+    expect(added.state.coach!.week!.days[0]).toEqual(s.coach!.week!.days[0]);
   });
 
   it('the brief shows the week, the flame form and the story', () => {

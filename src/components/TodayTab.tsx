@@ -24,7 +24,7 @@ import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
 import { dayKey, daysApart, daysSinceTraining, isRestDay, trainedToday } from '@/lib/days';
 import { storyState, storyWords } from '@/story/engine';
 import { flameStage } from '@/story/flame';
-import { currentPlan, dayLabel, nextDay, restToday, weekdayOf } from '@/lib/coach/week';
+import { currentPlan, dayLabel, nextDay, nextMonday, restToday, weekdayOf } from '@/lib/coach/week';
 import { ExerciseSheet } from './ExerciseDetail';
 import { fireLine, flameLine, flameMood, restTruth, todayPage, updateTodayPage } from '@/story/daily';
 
@@ -573,7 +573,7 @@ function LandToday(p: LandProps) {
 function NoPlan({ state, now, onTrain, land }: { state: GameState; now: Date; onTrain: () => void; land?: boolean }) {
   const name = storyWords(state).flame;
   const week = state.coach?.week;
-  const ends = week ? new Date(new Date(`${week.start}T12:00:00`).getTime() + 7 * 86_400_000) : null;
+  const ends = week ? nextMonday(week) : null;
   return (
     <section className={`rounded-2xl bg-ink-800 text-center pixel-border ${land ? 'flex min-h-0 flex-1 flex-col items-center justify-center p-3' : 'p-5'}`}>
       <Ember size={48} stage={flameStage(state.sessions.length).id} />

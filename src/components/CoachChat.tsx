@@ -114,18 +114,18 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
       <ul className="mt-2 grid grid-cols-7 gap-1">
         {slots.map((s) => {
           const on = s === slot;
-          const done = s.day ? !!s.day.done : restKept(state, s.date);
+          const done = s.day ? !!s.day.done : !s.before && restKept(state, s.date);
           const lit = s.day && s.day === next;
           return (
             <li key={s.date}>
               <button
                 onClick={() => setPicked(s.date)}
                 aria-pressed={on}
-                aria-label={`${weekdayOf(s.date)}: ${s.day ? s.day.plan.title : 'rest day'}${done ? ', done' : ''}`}
-                className={`flex w-full flex-col items-center rounded-lg py-1.5 ${on ? 'bg-ink-600 ring-1 ring-gold-400' : s.day ? 'bg-ink-900' : 'bg-ink-900/50'} ${lit ? 'text-gold-300' : done ? 'text-emerald-300' : s.day ? 'text-slate-200' : 'text-orange-200/70'}`}
+                aria-label={`${weekdayOf(s.date)}: ${s.day ? s.day.plan.title : s.before ? 'before the plan' : 'rest day'}${done ? ', done' : ''}`}
+                className={`flex w-full flex-col items-center rounded-lg py-1.5 ${on ? 'bg-ink-600 ring-1 ring-gold-400' : s.day ? 'bg-ink-900' : 'bg-ink-900/50'} ${lit ? 'text-gold-300' : done ? 'text-emerald-300' : s.day ? 'text-slate-200' : s.before ? 'text-slate-600' : 'text-orange-200/70'}`}
               >
                 <span className="font-pixel text-[8px]">{weekdayOf(s.date)}</span>
-                <span className="mt-1 text-[10px] leading-none">{done ? '✓' : lit ? 'next' : s.day ? MODE_SHORT[s.day.plan.mode] : 'rest'}</span>
+                <span className="mt-1 text-[10px] leading-none">{done ? '✓' : lit ? 'next' : s.day ? MODE_SHORT[s.day.plan.mode] : s.before ? '–' : 'rest'}</span>
               </button>
             </li>
           );
@@ -152,6 +152,10 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
             !day.done && next && <p className="mt-3 text-center text-xs text-slate-400">Comes after {weekdayOf(next.date)}&apos;s workout.</p>
           )}
         </>
+      ) : slot.before ? (
+        <p className="mt-2 rounded-xl bg-ink-900 p-3 text-sm text-slate-400">
+          <span className="text-slate-500">{dayLabel(slot.date, now)} · </span>Before this week&apos;s plan. Weeks run Monday to Sunday; the next one starts on Monday.
+        </p>
       ) : (
         <div className="mt-2 rounded-xl bg-gradient-to-b from-[#1d1527] to-ink-900 p-3 ring-1 ring-orange-300/20">
           <p className="text-sm font-semibold text-orange-200">
