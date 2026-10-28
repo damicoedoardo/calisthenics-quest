@@ -166,10 +166,13 @@ eight-frame float where `bob` is the breath, and `lunge` is their attack, a wind
 (`right: 'up'`) and then the hit (`fx: 'impact'`).
 
 Ember (`ember.ts`) has five stages. The spark and the candle are plain flames. From the torch on
-it is a fire fairy that grows: little (torch: tiny wings, a wisp of a tail), proper (bonfire:
-butterfly wings, a flame dress) and the grandest (fairy: gold swallowtail wings, a longer dress, a
-crown). The fairies bob on their wings and drop fairy dust; wings and crown are drawn on their own
-layers so each keeps its outline. `BUILD` sizes each stage and `FAIRY` says which fairy it is.
+it is a fairy that grows (`fairy.ts`): little (torch, a wisp of fire with no legs yet), proper
+(bonfire) and the grandest (fairy, with a crown). The fairy follows the player's look (`sex`,
+passed by the `Ember` component from `useLook`): girls get a fairy princess (long flame hair, a
+dress of flame, round see-through wings), boys her brother, a fairy prince (short swept-up flame
+hair, a doublet with gold trim, a cape, a flame scepter at the end; `PRINCE_WINGS` picks his wing
+cut). Both keep Ember's face, bob on their wings and drop fairy dust; wings, body and crown are
+separate layers so each keeps its outline. `/lab/story` shows every stage for both.
 
 ### Fog items
 
