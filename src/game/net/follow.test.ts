@@ -118,6 +118,21 @@ describe('following a live run', () => {
     expect(ana.x).toBe(from.ana);
   });
 
+  it('shows your own moves when you press, not again when the server sends them', () => {
+    const room = new Room(['ana', 'ben'], 0, 3);
+    room.join('ana', hero('warrior'), 0);
+    room.join('ben', hero('archer'), 0);
+    const f = new Follower(runFromStart(room.begin(), 0), 0);
+    const now = f.press({ x: 0, y: 1, ability: true }, 0);
+    expect(now.some((e) => e.type === 'ability')).toBe(true);
+    room.take('ana', { t: 'in', steps: f.outgoing(0)! });
+    room.tick(0);
+    const later = f.take([room.snapshot()], 120);
+    expect(later.some((e) => e.type === 'ability')).toBe(false);
+    // And it timed the line: pressed at 0, played by the server by 120.
+    expect(f.ping).toBe(120);
+  });
+
   it('ends up where the server has you', () => {
     const { room, phones } = play(8.8, 70, 30);
     const server = room.run!.party[0],

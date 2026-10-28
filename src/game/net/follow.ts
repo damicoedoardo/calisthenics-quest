@@ -1,4 +1,4 @@
-import { stepRun, type GameEvent, type Input, type Run } from '../dungeon/engine';
+import { byOf, stepRun, type GameEvent, type Input, type Run } from '../dungeon/engine';
 import { applySnapshot, type Press } from './wire';
 
 /* A phone's side of a live run, without the drawing (the scene in src/game/dungeon/scene.ts draws
@@ -45,6 +45,10 @@ export class Follower {
   /** How far your hero is drawn from where the rules have it, while a correction glides away. */
   readonly off = { x: 0, y: 0 };
   private offAt = 0;
+  /** When each step still waiting was pressed (ms), to time the line. */
+  private pressedAt = new Map<number, number>();
+  /** From pressing to the server playing it, smoothed (ms), or null before the first answer. */
+  ping: number | null = null;
 
   constructor(run: Run, me: number) {
     this.run = run;
@@ -60,9 +64,13 @@ export class Follower {
     let ack = 0;
     for (const t of texts) {
       const got = applySnapshot(run, t, this.me);
-      events.push(...got.events);
+      // Your own moves were played when you pressed them (`press`): not again.
+      events.push(...got.events.filter((e) => byOf(e) !== this.me));
       ack = got.ack[this.me] ?? 0;
     }
+    const at = this.pressedAt.get(ack);
+    if (at !== undefined) this.ping = this.ping === null ? now - at : this.ping + (now - at - this.ping) * 0.2;
+    for (const k of this.pressedAt.keys()) if (k <= ack) this.pressedAt.delete(k);
     this.remember(now);
     // Your steps the server hasn't played yet, again, on top of what it sent.
     this.pending = this.pending.filter((p) => p.seq > ack);
@@ -78,13 +86,15 @@ export class Follower {
     return events;
   }
 
-  /** One of your steps, pressed now: played here at once, and queued for the server. */
-  press(input: Input) {
+  /** One of your steps, pressed at `now` (ms): played here at once, and queued for the server.
+      Returns your own moves it made (a swing, an ability, a dodge) to show now, not a line later. */
+  press(input: Input, now = 0): GameEvent[] {
     const p: Press = { seq: ++this.seq, ...input };
     this.pending.push(p);
     this.outbox.push(p);
-    if (this.pending.length > FOLLOW.pending) this.pending.shift();
-    this.step(p);
+    this.pressedAt.set(p.seq, now);
+    if (this.pending.length > FOLLOW.pending) this.pressedAt.delete(this.pending.shift()!.seq);
+    return this.step(p).filter((e) => byOf(e) === this.me);
   }
 
   /** Your steps to send now, if it's time. */
@@ -127,14 +137,14 @@ export class Follower {
 
   /** One step: you as pressed; the others stand where the server last had them (`place` moves
       them between its runs), so nothing they do here is a guess that has to be taken back. */
-  private step(p: Press) {
+  private step(p: Press): GameEvent[] {
     const run = this.run,
       // The engine reads each hero's input by its id (its place in the server's run), not by
       // where it stands in this phone's party (you're first here).
       inputs = run.party.map(() => still);
     inputs[this.me] = p;
     stepRun(run, inputs);
-    run.events.length = 0;
+    return run.events.splice(0);
   }
 
   /** Where everything that moves was in the run just put in. A new room starts the memory over. */

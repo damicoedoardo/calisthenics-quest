@@ -63,7 +63,11 @@ message (`runFromStart`: same setup, same seed, you first) and hands it to a `Fo
 take 30) and checks that your hero is almost never pulled back, and that a friend moves the same
 small way every frame.
 
-Only the server's events are played (sounds, hits, new rooms, loot), so nothing happens twice.
+Only the server's events are played (sounds, hits, new rooms, loot), so nothing happens twice,
+except your own moves: a swing, an ability, an SP move or a dodge shows the moment you press
+(`press` returns it), and the server's copy is skipped. The engine tags those events with the hero
+whose turn made them (`byOf` in `engine.ts`). In developer mode the run shows `ping`: from pressing
+a step to the server playing it.
 Picks, chests and the stairs are sent and applied at once; the server's next few snapshots may
 still ask, so they're ignored for `ANSWER_MS`. A card the server no longer asks (someone else took
 the stairs, the bot picked for you) closes (`dismiss`). Pausing or opening the bag doesn't stop a

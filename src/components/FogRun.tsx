@@ -394,6 +394,9 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
       )}
 
       {!hud && !end && !failed && !waiting && <p className="absolute inset-x-0 top-1/2 text-center font-pixel text-[10px] text-slate-400">Into the Fog...</p>}
+      {dev && hud?.ping != null && !end && (
+        <p className="pointer-events-none absolute left-1/2 top-12 -translate-x-1/2 font-pixel text-[9px] text-slate-500">{Math.round(hud.ping)} ms</p>
+      )}
       {waiting && <PartyWait waiting={waiting} friends={party?.friends ?? []} onLeave={onLeave} />}
       {failed && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">

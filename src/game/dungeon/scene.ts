@@ -182,6 +182,8 @@ export interface MiniMap {
 }
 
 export interface Hud {
+  /** A live run: from pressing to the server playing it (ms), for developer mode. */
+  ping?: number | null;
   hp: number;
   maxHp: number;
   xp: number;
@@ -1354,7 +1356,7 @@ class DungeonScene extends Phaser.Scene {
     while (this.acc >= STEP * 1000 && steps < 6) {
       this.acc -= STEP * 1000;
       steps++;
-      f.press(this.myInput());
+      for (const e of f.press(this.myInput(), now)) this.react(e);
     }
     const out = f.outgoing(now);
     if (out) net.send({ t: 'in', steps: out });
@@ -1517,6 +1519,7 @@ class DungeonScene extends Phaser.Scene {
   private hud(): Hud {
     const r = this.run;
     return {
+      ping: this.follow?.ping ?? null,
       hp: Math.max(0, Math.ceil(r.hero.hp)),
       maxHp: r.hero.maxHp,
       xp: r.hero.xp,

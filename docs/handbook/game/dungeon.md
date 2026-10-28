@@ -151,7 +151,8 @@ party order. The rules treat every hero the same:
   the door or stairs you wait at.
 
 **A live party run**: the game server plays the run and the scene follows it (`RunSetup.net`,
-`live()` in `scene.ts`, which hands the following to `Follower` in `src/game/net/follow.ts`); see [../backend/live-runs.md](../backend/live-runs.md).
+`live()` in `scene.ts`, which hands the following to `Follower` in `src/game/net/follow.ts`; your own moves' events carry
+the hero who made them, `byOf(e)`, so a live run shows them at once); see [../backend/live-runs.md](../backend/live-runs.md).
 
 **A practice party run** (no game server, or "Try again"): the scene takes `RunSetup.friends`
 (name, class and their own hero sheets from `friendSheets` in `src/game/sheets.ts`) and `seed`,
