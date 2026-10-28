@@ -1,7 +1,7 @@
 ---
 type: conceptual
 title: API
-description: The FastAPI app in backend/ — Supabase token check (JWKS), the save backup routes (GET/PUT/DELETE /save) and the rev rule that stops a stale phone overwriting newer progress.
+description: The FastAPI app in backend/ — Supabase token check (JWKS), the save backup routes (GET/PUT/DELETE /save) and the rev rule that stops a stale phone overwriting newer progress, and POST /coach, the relay to the coach's LLM.
 tags: [backend, api, auth, saves]
 timestamp: 2026-10-28
 ---
@@ -10,8 +10,8 @@ timestamp: 2026-10-28
 
 `backend/` is a small FastAPI app (Python 3.12, uv), the same shape as minlit's backend and
 partly copied from it. The game itself never needs it: FORMA plays offline with the save on the
-phone. The api adds what a phone can't do alone: a backup of the save tied to a login, and later
-the workout planner (the LLM key must live on a server).
+phone. The api adds what a phone can't do alone: a backup of the save tied to a login, and the coach's LLM (its keys must
+live on a server).
 
 | File | What |
 |---|---|
@@ -24,8 +24,28 @@ the workout planner (the LLM key must live on a server).
 | `backend/app/party.py`, `routes/party.py` | Parties: invite, join, ready, zone, start (`/party...`, [friends.md](friends.md#parties)); creates its tables on start |
 | `backend/app/voice.py` | The party voice pass for `POST /party/voice` ([friends.md](friends.md#party-voice)) |
 | `backend/app/gifts.py`, `routes/gifts.py` | Forge materials friends give each other: `POST /gifts`, `GET /gifts`, `POST /gifts/claim` ([friends.md](friends.md)); creates its table on start |
+| `backend/app/coach.py`, `routes/coach.py` | `POST /coach`: the coach's rules (`SYSTEM`), its tools (`TOOLS`), the call to the LLM through the LiteLLM proxy, and a daily cap per player; creates its table on start (below) |
 | `backend/db/init.sql` | The schema, run by Postgres on first boot |
 | `backend/tests/` | pytest: the save rules and the token check, no database needed |
+
+## The coach
+
+`POST /coach` takes `{brief, messages}` and returns `{message, finish_reason, left_today}`. The
+phone keeps all the coach's memory and the chat (OpenAI style messages) and sends a short brief
+with each call ([../game/coach.md](../game/coach.md)); the server adds the fixed rules and the tool
+list, asks the model once, and hands its message back. When that message calls tools, the phone
+runs them and calls again with the results. So the server keeps no chat and no save.
+
+- **Model**: `LiteLLMModel` posts to the LiteLLM proxy on the server (`FORMA_LITELLM_URL`, under
+  `FORMA_LITELLM_KEY`, the proxy's master key) for the alias `forma-coach` (`FORMA_COACH_MODEL`).
+  `litellm-config.yaml` maps the alias to the real model on OpenRouter, the same setup as minlit
+  ([server.md](server.md)). No key: the route answers 503 and the app says the coach is off.
+- **Cap**: `coach_usage` counts each player's messages (`turns`, a `user` message) and model calls
+  (`calls`, tool results included) per UTC day; past `coach_turns_per_day` (40) or
+  `coach_calls_per_day` (200) it answers 429. A chat over `max_coach_bytes` is 413.
+- **Errors**: a provider error is logged and answered 502 with a plain line, never the provider's
+  text; a `content_filter` finish becomes a kind line from the coach.
+- Tests use a fake model (`tests/test_coach.py`), as other routes use memory stores.
 
 ## Login
 

@@ -516,18 +516,18 @@ function Overview({ state, update, quest, onClose, onStart }: { state: GameState
 }
 
 /** A small still of the demo. */
-function MiniDemo({ state, exercise, name }: { state: GameState; exercise: ExerciseId; name: string }) {
+export function MiniDemo({ state, exercise, name, size = 44 }: { state: GameState; exercise: ExerciseId; name: string; size?: number }) {
   const look = useLook();
-  if (!(EXERCISES as string[]).includes(exercise)) return <span className="h-12 w-12 shrink-0 rounded-lg bg-ink-900" />;
+  if (!(EXERCISES as string[]).includes(exercise)) return <span className="shrink-0 rounded-lg bg-ink-900" style={{ width: size + 4, height: size + 4 }} />;
   return (
     <span className="shrink-0 rounded-lg bg-ink-900 p-0.5">
-      <Sprite id="exercise" opts={{ exercise, gear: gearOf(state), classId: state.profile.classId, look }} size={44} label={`${name}, demo`} />
+      <Sprite id="exercise" opts={{ exercise, gear: gearOf(state), classId: state.profile.classId, look }} size={size} label={`${name}, demo`} />
     </span>
   );
 }
 
 /** The easier or swap choices for an exercise, as a sheet from the bottom. */
-function Choices({ title, hint, list, state, onPick, onClose }: { title: string; hint: string; list: Choice[]; state: GameState; onPick: (c: Choice) => void; onClose: () => void }) {
+export function Choices({ title, hint, list, state, onPick, onClose }: { title: string; hint: string; list: Choice[]; state: GameState; onPick: (c: Choice) => void; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink-950/80" onClick={onClose}>
       <div className="safe-bottom land-safe-x max-h-[85dvh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-ink-800 p-4" onClick={(e) => e.stopPropagation()}>

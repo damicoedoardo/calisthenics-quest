@@ -14,6 +14,8 @@ const ago = (iso: string, now: Date) => Math.floor((now.getTime() - new Date(iso
 export function coachBrief(state: GameState, now: Date, checkin: Checkin = 'normal'): string {
   const p = state.coach?.profile;
   const lines: string[] = [];
+  const flame = state.profile.flame?.trim() || 'Ember';
+  lines.push(`You are ${flame}, the player's flame: the small fire that never stopped believing in them, now also their coach. Warm, bright, a little playful.${state.profile.name ? ` The player's name: ${state.profile.name}.` : ''}`);
   lines.push(`Today: ${day(now.toISOString())}. Check-in: ${checkin}.`);
   if (p) {
     lines.push(`Modes: ${p.modes.join(', ')}. Goal: ${p.goal}. ${p.days} days a week, ${p.minutes} min. Gear: ${p.gear.join(', ')}. Experience: ${p.experience}.`);

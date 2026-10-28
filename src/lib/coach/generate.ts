@@ -55,7 +55,7 @@ export function buildWorkout(input: BuildInput): CoachPlan | null {
   return validate(plan, { all: input.all, profile }).plan;
 }
 
-function excluded(profile: CoachProfile, notes: CoachNote[]): (x: LibraryExercise) => boolean {
+export function excluded(profile: CoachProfile, notes: CoachNote[]): (x: LibraryExercise) => boolean {
   const spare = spares(profile);
   // "No burpees", "hate lunges": the words of a dislike note keep matching exercises out.
   const words = notes
@@ -114,7 +114,7 @@ function strength(input: BuildInput, profile: CoachProfile, mode: Exclude<Mode, 
 }
 
 /** Sets and reps for an exercise: a weight follows your goal, your body weight follows your level. */
-function dosed(x: LibraryExercise, role: SlotRole, profile: CoachProfile, all: LibraryExercise[], gear: CoachProfile['gear']): PlanItem {
+export function dosed(x: LibraryExercise, role: SlotRole, profile: CoachProfile, all: LibraryExercise[], gear: CoachProfile['gear']): PlanItem {
   const level = profile.levels[patternOf(x.family) ?? 'core'].level;
   const hold = x.force === 'static' || HOLDS.includes(x.demo);
   const dose = DOSE[profile.goal];
@@ -174,7 +174,7 @@ function running(input: BuildInput, profile: CoachProfile, avoid: (x: LibraryExe
 }
 
 /** Run a few minutes, walk one, until the time is up. */
-function runWalk(min: number): RunStep[] {
+export function runWalk(min: number): RunStep[] {
   const steps: RunStep[] = [];
   let left = min * 60;
   while (left > 0) {

@@ -109,8 +109,25 @@ export interface CoachPlan {
   title: string;
 }
 
+/** A tool call the model made: its name and its input as JSON text (OpenAI style). */
+export interface ToolCall {
+  id: string;
+  type: 'function';
+  function: { name: string; arguments: string };
+}
+
+/** One message of the chat with the coach, as the LLM reads it (OpenAI style). */
+export type ChatMessage =
+  | { role: 'user'; content: string }
+  | { role: 'assistant'; content: string; tool_calls?: ToolCall[] }
+  | { role: 'tool'; tool_call_id: string; content: string };
+
 export interface CoachState {
   profile?: CoachProfile;
   notes: CoachNote[];
   plan?: CoachPlan | null;
+  /** The chat with the coach, the recent part only (`trimChat`). */
+  chat?: ChatMessage[];
+  /** Replies the coach offered to tap, for its last message. */
+  replies?: string[];
 }

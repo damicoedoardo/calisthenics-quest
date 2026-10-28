@@ -34,7 +34,7 @@ no row: give a new folder its row (and a page if no page fits).
 |---|---|
 | `src/app/page.tsx`, `src/components/**`, `src/app/globals.css`, `tailwind.config.ts`, `postcss.config.js` | `app/screens.md` |
 | `src/lib/game*.ts`, `src/lib/program.ts`, `src/lib/stats*.ts`, `src/lib/gear.ts`, `src/lib/days.ts` | `game/training.md`, `architecture/game-state.md` |
-| `src/lib/coach/**`, `src/components/{CoachPanel,CoachSetup}.tsx`, `src/components/useCoach.ts` | `game/coach.md` |
+| `src/lib/coach/**`, `src/lib/coach-client.ts`, `src/components/{CoachChat,CoachPanel,CoachSetup}.tsx`, `src/components/useCoach.ts`, `backend/app/coach.py`, `backend/app/routes/coach.py` | `game/coach.md` |
 | `src/lib/store.ts` | `architecture/game-state.md` |
 | `src/balance/**` | `game/balance.md` |
 | `src/lib/fog*.ts`, `src/game/*.ts`, `src/components/FogRun.tsx`, `src/components/PlayTab.tsx` | `game/fog.md` |
@@ -56,7 +56,7 @@ no row: give a new folder its row (and a page if no page fits).
 | `backend/**`, `.github/workflows/backend.yml` | `backend/api.md` |
 | `src/lib/cloud*.ts`, `src/components/Cloud.tsx` | `backend/cloud-sync.md` |
 | `src/lib/friends*.ts`, `src/lib/party*.ts`, `src/lib/voice-client.ts`, `src/components/{Friends,Party}.tsx`, `backend/app/{friends,party,gifts,voice}.py`, `backend/app/routes/{friends,party,gifts}.py` | `backend/friends.md` |
-| `docker-compose*.yml`, `caddy/**`, `livekit/**`, `.env.example`, `scripts/deploy/**`, `.github/workflows/deploy-backend.yml` | `backend/server.md` |
+| `docker-compose*.yml`, `caddy/**`, `livekit/**`, `litellm-config.yaml`, `.env.example`, `scripts/deploy/**`, `.github/workflows/deploy-backend.yml` | `backend/server.md` |
 
 Also update `product/overview.md` for any change a player would notice (a new tab, a new feature,
 a change of direction), and `architecture/system-map.md` for a new top-level folder or a new

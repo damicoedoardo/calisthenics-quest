@@ -1,22 +1,47 @@
 ---
 type: reference
 title: The coach (workout planner)
-description: The coach in src/lib/coach — setup questions, the three-layer memory (profile, training log, notes), the built-in coach that builds workouts from the library for gym, calisthenics, running or a mix, easier and swap choices, the guardrails every workout passes, the coach brief an LLM will read, and the screens that play it.
+description: The coach in src/lib/coach — your flame as an LLM coach you chat with (the chat loop, its tools run on the phone, the fuzzy exercise search, the server relay), the three-layer memory (profile, training log, notes), the built-in coach that builds workouts for gym, calisthenics, running or a mix, easier and swap choices, the guardrails every workout passes, and the screens that play it.
 tags: [game, training, coach, planner, memory, llm]
 timestamp: 2026-10-28
 ---
 
 # The coach
 
-The coach builds your next workout. Version 0.1 is all code (the **built-in coach**); an LLM
-planner on the server comes next and plugs into the same pieces: it reads the coach brief, picks
-exercises from the library, and its workout passes the same checks. The rule for both: **the coach
-chooses, the code keeps the facts and the numbers.** XP, stat points and story never depend on
-what the coach planned.
+The coach is your flame (Ember, or the name you gave it). You chat with it: it asks where you
+start and what you want, builds your workouts, and changes them when you say so. It is an LLM (on
+the server, [../backend/api.md](../backend/api.md)) that works through tools here on the phone:
+it may only pick exercises from the library, and every workout it makes passes the same checks as
+the **built-in coach**, the plain-rules builder that runs offline, before setup and as its
+starting draft. The rule for both: **the coach chooses, the code keeps the facts and the
+numbers.** XP, stat points and story never depend on what the coach planned.
 
-Code: `src/lib/coach/` (pure, tested in `coach.test.ts`). Numbers: `src/balance/coach.ts`.
-Screens: `CoachSetup`, `CoachPanel`, the workout's overview and choices in `Workout.tsx`,
-`useCoach.ts` (keeps a workout ready).
+Code: `src/lib/coach/` (pure, tested in `coach.test.ts` and `chat.test.ts`). Numbers:
+`src/balance/coach.ts`. Screens: `CoachChat.tsx` (the Train tab's coach and the chat),
+`CoachSetup` (the quick taps), the workout's overview and choices in `Workout.tsx`, `useCoach.ts`
+(keeps a workout ready, runs the chat).
+
+## The chat (`chat.ts`, `tools.ts`)
+
+- **One turn** (`coachTurn`): your words go into `coach.chat`; the phone sends the coach brief and
+  the chat to `POST /coach` (`coach-client.ts`); the model answers, maybe calling tools; the phone
+  runs them (`runTool`), adds their results, and asks again, at most `MAX_ROUNDS` times, until the
+  model answers in words. An empty chat starts with `OPENER` (never shown), so the flame speaks first.
+- **The chat in the save**: OpenAI style messages, the last `CHAT_KEEP` (`trimChat`, always from
+  something you said). Older talk lives on as notes and the log.
+- **Tools** (the list and the rules are on the server, `backend/app/coach.py`; they run here):
+  `find_exercises` (the fuzzy search below, only what your gear and sore spots allow),
+  `draft_workout` (the built-in coach's plan, a start to change), `set_workout` (ids, roles, sets,
+  reps or seconds, run minutes; the app fills names, demos, easier and swap, builds run steps, and
+  runs `validate`, then says what it fixed), `save_profile` (setup, or one change with `why`,
+  written to `history`), `add_note` / `remove_note`, and `suggest_replies` (the taps under its
+  message; it ends the turn). Every input is checked again; bad values are dropped and said.
+- **Search** (`search.ts`): words in any order, typos and plurals forgiven ("pushups", "dumbell
+  row"), everyday words mapped to the library's ("abs", "chest", "legs"); staples first.
+- **Who it is**: the brief's first line names the flame and the player; the rules (warm, short,
+  one question at a time, no body talk, not a doctor) are fixed on the server.
+- **Sign-in**: talking needs the cloud sign-in (Hero > Settings); signed out, the chat offers the
+  quick taps (`CoachSetup`) instead.
 
 ## Memory: three layers
 
@@ -24,9 +49,9 @@ All of it lives in the save (`state.coach`, optional: saves without it play the 
 
 | Layer | Where | Who writes it |
 |---|---|---|
-| **Profile**: modes, goal, days, minutes, gear, experience, a level 1-5 per pattern (push, pull, squat, hinge, core, run), what to spare, and `history` of every change | `coach.profile` (`CoachProfile` in `types.ts`) | setup; levels move with your workouts (`levels.ts`); later the LLM may *propose* a change to a named field |
+| **Profile**: modes, goal, days, minutes, gear, experience, a level 1-5 per pattern (push, pull, squat, hinge, core, run), what to spare, and `history` of every change | `coach.profile` (`CoachProfile` in `types.ts`) | setup (the chat or the taps); levels move with your workouts (`levels.ts`); the coach changes a named field with a reason (`save_profile`) |
 | **Training log**: sessions with sets (reps or seconds, reps in the tank, optional kg and km), each entry's name and family, the mode, who planned it, what you skipped or changed, how it felt | `state.sessions` | only the app |
-| **Notes**: short typed sentences (`like`, `dislike`, `pain`, `life`, `goal`, `other`), dated, optionally until a date, at most `MAX_NOTES` (a pain note is never dropped for room) | `coach.notes` (`notes.ts`) | you at setup; later the LLM |
+| **Notes**: short typed sentences (`like`, `dislike`, `pain`, `life`, `goal`, `other`), dated, optionally until a date, at most `MAX_NOTES` (a pain note is never dropped for room) | `coach.notes` (`notes.ts`) | you at setup; the coach in the chat |
 
 Plus `coach.plan`: the next workout (`CoachPlan`). Today's quest (`todaysQuest` in `game.ts`)
 plays it when there is one, else the built-in plan. `finishSession` writes the plan's mode, changes
@@ -38,7 +63,7 @@ up one, most very hard (0-1) down one. A level from your workouts shows a ✓ on
 
 **The coach brief** (`brief.ts`): one plain-text page built from the save on every call — profile,
 notes with ids, the last 10 workouts in a line each, days since each pattern, this week's count.
-This is what an LLM will read; it never reads or writes the save itself.
+This is what the LLM reads; it never reads or writes the save itself, only through the tools.
 
 ## Building a workout (`generate.ts`)
 
@@ -82,12 +107,15 @@ an LLM gets back to do better.
 
 ## Screens
 
-- **Setup** (`CoachSetup.tsx`): eight tap screens (modes, goal, days and minutes, gear,
-  experience, where you start, what to spare, anything else). From the Train tab's "New: your
-  coach" card, and "Redo setup" (keeps the log and notes).
-- **Train tab** (`CoachPanel.tsx`): once set up, the next workout with its minutes, "Another one",
-  "<mode> instead" for a mix, and "What your coach knows": profile, levels, notes (each can be
-  forgotten). Before setup the built-in plan shows as before.
+- **Train tab** (`CoachScreen` in `CoachChat.tsx`): the flame with its last words, "Let's start"
+  or "Talk", and "What I know" (`CoachKnows`: profile, levels, notes, each note can be forgotten,
+  "Redo setup"). Under it today's workout as cards: the exercise's pixel demo, its dose, Easier and
+  Swap (the choices sheet), and Start. Sideways the two sit side by side.
+- **The chat** (`CoachChat`): the camp fire at the top with the flame, the talk below in the
+  story's dialogue boxes, the taps it offers, and a box to type. A workout it just built shows in
+  the chat as a strip of demos.
+- **Quick taps** (`CoachSetup.tsx`): eight tap screens (modes, goal, days and minutes, gear,
+  experience, where you start, what to spare, anything else), for setup without the chat.
 - **Workout** (`Workout.tsx`): an overview before the first set (move up and down, Easier, Swap,
   Skip; the list button brings it back), "Too hard? Easier" and "Swap" under the demo, and a run
   view: a bar of the steps, a big clock for the step you're on, a buzz at each change, distance at
@@ -106,3 +134,7 @@ an LLM gets back to do better.
 | Change what a sore spot spares | `SPARE` in `src/lib/coach/options.ts` |
 | Add a setup question | `SetupAnswers` and `profileFrom` (`setup.ts`), a step in `CoachSetup.tsx` |
 | Add a guardrail | `validate.ts`, with a test |
+| Change how the coach talks | `SYSTEM` in `backend/app/coach.py` (a server deploy) |
+| Give the coach a tool | `TOOLS` in `backend/app/coach.py` and a case in `runTool` (`tools.ts`), with tests on both sides |
+| Change the model | `litellm-config.yaml` on the server ([../backend/server.md](../backend/server.md)) |
+| Teach the search a word | `SAME` in `src/lib/coach/search.ts` |

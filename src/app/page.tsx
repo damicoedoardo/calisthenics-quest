@@ -332,7 +332,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         {tab === 'today' ? (
           <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook} />
         ) : tab === 'train' ? (
-          <TrainTab state={state} update={update} />
+          <TrainTab state={state} update={update} onStart={start} />
         ) : tab === 'play' ? (
           <PlayTab
             state={state}

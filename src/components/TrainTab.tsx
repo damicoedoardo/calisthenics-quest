@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import dynamic from 'next/dynamic';
 import { BookOpen, ChevronRight } from 'lucide-react';
-import { dayType, repsFor, type GameState } from '@/lib/game';
+import { dayType, repsFor, type Checkin, type GameState } from '@/lib/game';
 import { PLAN, ROLE_LABEL, type DayType, type Kit } from '@/lib/program';
 import { useLand } from './useLand';
-import { CoachPanel } from './CoachPanel';
+import { CoachScreen } from './CoachChat';
 
 // The library carries the whole exercise catalog, so it loads only when opened.
 const ExerciseLibrary = dynamic(() => import('./ExerciseLibrary').then((m) => m.ExerciseLibrary), { ssr: false });
@@ -16,8 +16,8 @@ const KITS: { id: Kit; label: string; note: string }[] = [
   { id: 'home', label: 'Home', note: 'No kit: a chair and a table' },
 ];
 
-/** Training: the exercise library, what you train with, and the plan your workouts follow. */
-export function TrainTab({ state, update }: { state: GameState; update: (fn: (s: GameState) => GameState) => void }) {
+/** Training: the coach (your flame, its chat and the workout it built), the exercise library, and before the coach the built-in plan. */
+export function TrainTab({ state, update, onStart }: { state: GameState; update: (fn: (s: GameState) => GameState) => void; onStart: (c: Checkin) => void }) {
   const [library, setLibrary] = useState(false);
   const kit = state.profile.kit ?? 'gym';
   const next = dayType(state);
@@ -36,11 +36,11 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
     </button>
   );
 
-  // Once the coach is set up it builds the workouts: its panel takes the place of the built-in plan.
+  // Once the coach is set up it builds the workouts: the coach screen takes the place of the built-in plan.
   if (state.coach?.profile)
     return (
       <div className="space-y-4">
-        <CoachPanel state={state} update={update} />
+        <CoachScreen state={state} update={update} onStart={onStart} />
         {libraryButton}
         {library && <ExerciseLibrary state={state} onClose={() => setLibrary(false)} />}
       </div>
@@ -77,7 +77,7 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
             </div>
           </section>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            <CoachPanel state={state} update={update} />
+            <CoachScreen state={state} update={update} onStart={onStart} />
           </div>
         </div>
         {library && <ExerciseLibrary state={state} onClose={() => setLibrary(false)} />}
@@ -99,7 +99,7 @@ export function TrainTab({ state, update }: { state: GameState; update: (fn: (s:
 
   return (
     <div className="space-y-6">
-      <CoachPanel state={state} update={update} />
+      <CoachScreen state={state} update={update} onStart={onStart} />
       {libraryButton}
       {library && <ExerciseLibrary state={state} onClose={() => setLibrary(false)} />}
 
