@@ -18,8 +18,8 @@ export const VILLAGE: Chapter = {
     hint: 'Every hit breaks one plate, however small. Keep hitting, even when he shouts.',
     after: 'He counted how strong each hit was. The fight only counted how many.',
     keepsake: { name: "The Knight's Visor", text: 'Polished, perfect, and empty. You never needed it.' },
-    hp: 2.82,
-    dmg: 2.93,
+    hp: 3.09,
+    dmg: 3.21,
     ground: '#1c1916',
     fog: '#4b4038',
     // stages: [plates falling (art stage 1), helm off (art stage 2)]
