@@ -239,7 +239,7 @@ function GoPane({ onGo, onClose }: Props) {
         <Row icon={<Film size={16} />} label="Story Lab" note="Any scene, any flame name and letter, every place" href="/lab/story" />
         <Row icon={<Sparkles size={16} />} label="Sprite Lab" note="Every sprite, item and look" href="/lab" />
         <Row icon={<Swords size={16} />} label="The sixteen SPs" note="Each class's four, boy and girl, idle, walk, attack" href="/lab/sp" />
-        <Row icon={<Compass size={16} />} label="The world picker" note="The Fog tab's worlds on made-up saves" href="/lab/worlds" />
+        <Row icon={<Compass size={16} />} label="The world picker" note="The Play tab's worlds on made-up saves" href="/lab/worlds" />
         <Row icon={<Music size={16} />} label="Music Lab" note="Every theme and sting" href="/lab/music" />
       </Section>
     </>

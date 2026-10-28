@@ -278,8 +278,7 @@ export function emptyVault(state: GameState): GameState {
 
 /** Take everything off (the run hands out the starter weapon again). */
 export function takeAllOff(state: GameState): GameState {
-  const { guard: _guard, ...g } = gearOf(state);
-  return { ...state, fogGear: { ...g, worn: {} } };
+  return { ...state, fogGear: { ...gearOf(state), worn: {} } };
 }
 
 // ---------- SP ----------

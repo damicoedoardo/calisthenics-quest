@@ -17,7 +17,7 @@ import { WorldPicker } from './WorldPicker';
 import { FriendsCard } from './Friends';
 import { useLand } from './useLand';
 
-/** The Fog tab's two doors: Story (alone, the six worlds that move the story) and Together
+/** The Play tab's two doors: Story (alone, the six worlds that move the story) and Together
     (online with friends, never moves the story). */
 export type FogMode = 'story' | 'together';
 
@@ -32,7 +32,7 @@ interface Props {
 }
 
 /**
- * While the Fog tab sits idle, get the newest open zone's run ready: download and load the game
+ * While the Play tab sits idle, get the newest open zone's run ready: download and load the game
  * code and draw its sprite sheets (both are cached), so tapping Play goes straight to the run.
  */
 function useWarmRun(state: GameState) {

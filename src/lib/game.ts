@@ -485,7 +485,9 @@ export function migrate(raw: unknown): GameState {
     const fogGear = s.fogGear?.kit ? s.fogGear : { worn: {}, vault: [], ...s.fogGear, kit: tiersAt((s.sessions ?? []).length) };
     const old = noReach(s.build, fogGear);
     const kept = noCrit(old.build, old.fogGear);
-    return { ...fresh, ...s, profile: profileOf(s.profile), build: kept.build, fogGear: armorAsksNoPoints(kept.fogGear), ...(s.coach ? { coach: fromLegacy(s.coach) } : {}) };
+    // The flame used to keep one chosen item through a fall (`guard`); now all you wear comes home.
+    const { guard: _guard, ...gear } = armorAsksNoPoints(kept.fogGear) as FogGear & { guard?: unknown };
+    return { ...fresh, ...s, profile: profileOf(s.profile), build: kept.build, fogGear: gear, ...(s.coach ? { coach: fromLegacy(s.coach) } : {}) };
   }
   if (r.version === 2) {
     const { progress: _progress, tests: _tests, reps: _reps, ...s } = r as unknown as GameState & { progress?: unknown; tests?: unknown };
