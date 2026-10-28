@@ -11,7 +11,10 @@ timestamp: 2026-10-28
 The whole app is one page, `src/app/page.tsx`. It holds the save (`useGameState`) and a few
 pieces of screen state, and decides what is on screen:
 
-1. **Not onboarded** (or replaying the opening): `Prologue` takes the whole screen.
+1. **Not onboarded** (or replaying the opening): `Prologue` takes the whole screen. A new
+   player's opening pauses after the first dungeon and the Wanderer (`profile.opening`, `'class'`)
+   for the install step on a phone in a browser (`InstallGate` with `midway`); the installed app
+   opens the `Prologue` again at the class pick (it is keyed by `profile.opening`).
    Otherwise, once per app open (`openingDue`, a `sessionStorage` flag; never in the sandbox),
    `Opening` plays over everything for about three seconds, and story scenes wait for it.
    If the workout was left open (`draft.open`, today's), the app opens straight back on `Workout`
@@ -74,8 +77,8 @@ upright layout inside it. Add computer changes only as `desk:` classes. The Fog'
 | Component | Job |
 |---|---|
 | `Opening` | The splash when the app opens: the small flame (always the spark) catches, FORMA lands one letter per note of the `opening` sting, "Day N · the fire's lit" (`dayNumber`). Sound starts by itself where the browser allows it; where it needs a tap first (iPhones, even installed), the flame waits on a blinking "Tap to start" and that tap plays the jingle with the letters. A tap while it plays skips. Muted means no sound at all; reduced motion shows it still |
-| `Prologue` | First run: boy or girl pick (on iPhones with "Bring your hero" under it, `BringHero`), the story opens, the first fight (`FirstFight`) you can't win, `RiseUp` (hold to stand), the letter, gym or home, then the `LookEditor`, then the hero's name (`NameIt`, kept in `profile.name`, what friends see), then the class (`ClassPicker`, "Don't worry, you can change it later", free; only for a hero with no class yet) |
-| `InstallGate`, `BringHero` | After the prologue, the guide to put FORMA on the home screen; and on an installed iPhone app's first screen, pasting in the hero copied in Safari. See [pwa.md](pwa.md#install-before-playing) |
+| `Prologue` | First run: boy or girl pick (on iPhones with "Bring your hero" under it, `BringHero`), the story opens, the voice pick, then the first dungeon (`FogRun` with `tutorial`, three small floors you can't fall on, see [../game/fog.md](../game/fog.md)) and at its bottom the Hollow, who strikes you down; the Hollow talks over you, `RiseUp` (hold to stand), the Wanderer ("I'll help you"), then, for a hero with no class yet, the install step (`onPause` saves `profile.opening`; on a phone in a browser `page.tsx` shows `InstallGate`) and the class (`ClassPicker`, "Don't worry, you can change it later", free), then the letter, gym or home, the `LookEditor`, and the hero's name (`NameIt`, kept in `profile.name`, what friends see) |
+| `InstallGate`, `BringHero` | In the opening after the Wanderer (`midway`: the Wanderer asks, "Keep me close"), or after it for older saves, the guide to put FORMA on the home screen; and on an installed iPhone app's first screen, pasting in the hero copied in Safari. See [pwa.md](pwa.md#install-before-playing) |
 | `SignInGate` | After the install step, an account, always (no skip): email, then the code from the email (the way in on an installed iPhone app, where the link opens Safari) |
 | `PartyInviteCard`, `PartyButton`, `PartyLobby` | A friend's invite (join or not now), the button back to your party's lobby, and the lobby: who's in and ready, the zone (the leader picks), Into the Fog, invite more, leave. See [../backend/friends.md](../backend/friends.md#parties) |
 | `TodayTab` | The flame card and its line, today's quest list with exercise stills (tap one for how to do it, `ExerciseSheet`), the rest-day card and `SitByFire`, the quote of the day, the Book of Days, the install nudge, and at the end the keepsakes (`Keepsakes`) as a reminder of the story so far; no quest without a planned workout (`NoPlan`: talk to the flame, or the week's workouts are all done), and on a planned rest day the rest card and the next workout marked as ahead |
@@ -124,7 +127,7 @@ edges clear of the notch, which is on the left or the right then.
 | `Dialogue` | Whoever is on screen on the left, the words beside them; narration with nothing to show stays centered. The backdrop is drawn wide for the screen at a whole-number scale (sky, horizon and ground all show) and the shade at the bottom is shorter |
 | `ScenePlayer` | The question card puts the question beside its answers; naming the flame puts the flame beside the name box |
 | `Prologue` | Title and boy or girl side by side; the voice pick with the Hollow on the left and the answers in two columns; the letter (two columns of prompts), the gym or home pick and the look editor with who speaks and the button on the left |
-| `FirstFight`, `RiseUp`, `SitByFire` | The figures on the left, the words and the button on the right; `SitByFire`'s camp is drawn wide like `Dialogue`'s |
+| `RiseUp`, `SitByFire` | The figures on the left, the words and the button on the right; `SitByFire`'s camp is drawn wide like `Dialogue`'s |
 | `ClassPicker` | The hero you'd be on the left, the four classes and the button on the right |
 | `BookOfDays`, `ExerciseLibrary` | Wider, the pages and the list in two columns; the library's search and filters on one line, an exercise's demos and facts beside its how-to |
 | `DevPanel` | A wider sheet, the open tab's sections in two columns |
@@ -132,7 +135,7 @@ edges clear of the notch, which is on the left or the right then.
 | `Opening` | Fits as it is; the sound toggle keeps clear of the notch |
 
 Pixel art stays crisp sideways: the story's overlays (`Dialogue`, the question card, `SitByFire`,
-the whole `Prologue` with `FirstFight` and `RiseUp`) sit inside `<PixelSnap>`
+the whole `Prologue` with `RiseUp`) sit inside `<PixelSnap>`
 (`src/components/sideways.ts`), so every `<Sprite>` in them is drawn at a whole multiple of its
 64-pixel frame (140 becomes 128, 170 becomes 192), and a `PlaceBackdrop` given a `stage` is
 redrawn wider for the box instead of cropped from the tall upright picture (see

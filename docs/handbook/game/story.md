@@ -23,7 +23,9 @@ anytime.ts            scenes that can happen in any chapter (beating last time, 
 road.ts               the Ember Road, the story walked with friends: its chapters, their runs, its scenes
 flame.ts              the flame's stages (spark to fire fairy), the default name, and heroVariant:
                       after the finale the flame has fused with you and your hero burns red
-opening.ts            the opening, before the first workout
+opening.ts            the opening, before the first workout: the first dungeon's words (WAKE,
+                      FIRST_FOG, FIRST_FOG_TIPS), the Hollow over you after it (HOLLOW_MEET),
+                      and the Wanderer's offer of help before the class pick (HELP)
 daily/flame-lines.ts  what the flame says on Today, by kind of day, and its face
 daily/quotes.ts       words for the road, by chapter
 daily/rest.ts         rest-day truths, and what the flame says after a minute by the fire

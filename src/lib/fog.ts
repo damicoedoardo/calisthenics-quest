@@ -1,8 +1,9 @@
 import { daysSinceLastSession, type GameState } from './game';
 import { dayKey } from './days';
-import { PICKUP_REACH, RUN_LEVELS } from '@/balance';
+import { PICKUP_REACH, RUN_LEVELS, TUTORIAL } from '@/balance';
 import { buildOf, pointsFree, statPower } from './stats';
 import { CHAPTERS } from '@/story/chapters';
+import { FIRST_FOG } from '@/story/opening';
 import { ROAD_CHAPTERS } from '@/story/road';
 import { chapterStart, storyState } from '@/story/engine';
 import { isRested } from '@/story/daily';
@@ -40,6 +41,10 @@ export const BOSS_NAME: Record<FogBoss, string> = {
 };
 
 export const ZONES: Zone[] = CHAPTERS.map((c, i) => ({ ...c.fog, id: i, chapter: c.n, workouts: chapterStart(c.n), bossName: BOSS_NAME[c.fog.boss] }));
+
+/** The opening's first dungeon: the first zone's ground, monsters, look and music, gentler (TUTORIAL
+    in src/balance/dungeon.ts), with the Hollow at the bottom. Played with `RunSetup.tutorial`. */
+export const FIRST_FOG_ZONE: Zone = { ...ZONES[0], ...FIRST_FOG, firstTry: undefined, boss: 'hollow', bossName: BOSS_NAME.hollow, hp: TUTORIAL.hp, dmg: TUTORIAL.dmg };
 
 /** The Ember Road's runs, one per chapter: each borrows a story zone's dungeon and boss fight (and
     its id, which the dungeon, look, music and loot go by), with the road's own names and words. */

@@ -1,5 +1,5 @@
 import type { ClassId } from '@/lib/gear';
-import { MAT_DROPS, MAT_IDS, PARTY, type MatId } from '@/balance';
+import { MAT_DROPS, MAT_IDS, PARTY, TUTORIAL, type MatId } from '@/balance';
 import { rollUpgrades, xpToNext, type Edge, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import {
   ATTACK,
@@ -374,6 +374,10 @@ export interface RunSetup extends HeroSetup {
   layout?: Layout;
   /** More heroes in the party, after you (co-op). */
   friends?: HeroSetup[];
+  /** The opening's first dungeon (TUTORIAL in src/balance/dungeon.ts): a few small floors of
+      slimes, no drops, the stairs always go deeper, you can't fall (HP stops at 1), and at the
+      bottom the Hollow says your line (`voice`) and strikes you down: a loss the story needs. */
+  tutorial?: { voice: string };
 }
 
 /** How many items the bag holds, and how often things drop (src/balance/items.ts). */
@@ -593,7 +597,7 @@ const depth = (run: Run) => (run.layout.floors > 1 ? run.floor / (run.layout.flo
 
 export function createRun(setup: RunSetup): Run {
   const party = [setup, ...(setup.friends ?? [])].map((hs, id) => newHero(hs, id));
-  const layout = setup.layout ?? LAYOUT;
+  const layout = setup.layout ?? (setup.tutorial ? TUTORIAL.layout : LAYOUT);
   const run: Run = {
     setup,
     layout,
@@ -901,6 +905,7 @@ export function makeFloor(layout: Layout, floor: number, seed: number): FloorMap
     waves; each floor ends with a golem. New kinds join deeper down, and show up more on the floor
     they first appear. */
 function fillRoom(run: Run): MonsterKind[][] {
+  if (run.setup.tutorial) return tutorialWaves(run);
   const room = cellOf(run).dist,
     deep = depth(run),
     fl = floorOf10(run),
@@ -925,6 +930,12 @@ function fillRoom(run: Run): MonsterKind[][] {
   const waves = [wave(budget * 0.4), wave(budget * 0.3), wave(budget * 0.3)];
   if (run.climb !== null ? run.climb % 2 === 1 : cellOf(run).kind === 'stairs') waves[2].push('golem');
   return waves;
+}
+
+/** The first dungeon's rooms: a few slimes in each wave, and a wisp from TUTORIAL.wispFrom on. */
+function tutorialWaves(run: Run): MonsterKind[][] {
+  const waves = TUTORIAL.waves[Math.min(run.floor, TUTORIAL.waves.length - 1)];
+  return waves.map((n) => [...Array<MonsterKind>(n).fill('slime'), ...(run.floor >= TUTORIAL.wispFrom ? (['wisp'] as MonsterKind[]) : [])]);
 }
 
 /** How big a room is: never smaller than a phone screen, taller deeper down. The boss's is fixed. */
@@ -1147,7 +1158,7 @@ function summonBoss(run: Run) {
     def = BOSSES[which],
     { zone } = run.setup;
   const weak = run.setup.edge?.bossHp ?? 1;
-  const hp = def.plates ? Math.round(def.plates * weak) : Math.round(def.hp * zone.hp * BOSS_HP * weak);
+  const hp = run.setup.tutorial ? TUTORIAL.bossHp : def.plates ? Math.round(def.plates * weak) : Math.round(def.hp * zone.hp * BOSS_HP * weak);
   const b: Foe = {
     id: ++run.ids,
     kind: 'boss',
@@ -1180,7 +1191,7 @@ function summonBoss(run: Run) {
   run.bossSummon = which === 'mirror' ? 2 : 6;
   run.bossClock = which === 'knight' ? 6 : which === 'mirror' ? SPLIT.first : 0;
   // The Hollow's light first opens a few seconds in.
-  if (which === 'hollow') b.act = run.t + LIGHT.first;
+  if (which === 'hollow' && !run.setup.tutorial) b.act = run.t + LIGHT.first;
   emit(run, { type: 'boss' });
 }
 
@@ -1378,7 +1389,7 @@ function moveHero(run: Run, h: Hero, input: Input) {
   if (onStairs(run, h)) {
     if (!standing(run).every((o) => onStairs(run, o))) return wait(run, h);
     if (run.home) return end(run, true, 'boss');
-    if (run.setup.autoPick) return downStairs(run);
+    if (run.setup.autoPick || run.setup.tutorial) return downStairs(run);
     run.stairsAsk = true;
     return;
   }
@@ -2413,6 +2424,7 @@ function steerBoss(run: Run, b: Foe) {
     dx = h.x - b.x,
     dy = h.y - b.y,
     d = Math.hypot(dx, dy) || 1;
+  if (run.setup.tutorial) return scripted(run, b, dx / d, dy / d);
   if (which === 'tomorrow') {
     b.vx = (dx / d) * b.speed;
     b.vy = (dy / d) * b.speed;
@@ -2531,12 +2543,33 @@ function steerBoss(run: Run, b: Foe) {
   }
 }
 
+/** The first dungeon's Hollow: it walks at you, says your line, and then strikes you down, however
+    well you fight. `bossClock` counts what it has done: 1 once it has spoken. */
+function scripted(run: Run, b: Foe, ux: number, uy: number) {
+  b.vx = ux * b.speed;
+  b.vy = uy * b.speed;
+  const t = run.t - (run.bossAt ?? run.t);
+  if (run.bossClock < 1 && t >= TUTORIAL.voiceAt) {
+    run.bossClock = 1;
+    emit(run, { type: 'say', text: `"${run.setup.tutorial?.voice}"` });
+  }
+  if (t < TUTORIAL.lose) return;
+  run.bullets = [];
+  emit(run, { type: 'shout', x: b.x, y: b.y });
+  emit(run, { type: 'say', text: 'It doesn\'t even raise its sword.' });
+  for (const h of run.party) {
+    emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: Math.ceil(h.hp), by: 'shot' });
+    h.hp = 0;
+  }
+  end(run, false, 'hp');
+}
+
 // ---------- hitting ----------
 
 const pow = (h: Hero, base: number) => heroDamage(base, h.power, h.ups) * (1 + DIALS.relic * 0.12 * relic(h, 'whetstone'));
 
 /** The Hollow: nothing you throw at it lands. */
-const untouchable = (run: Run, f: Foe) => f === run.boss && run.setup.zone.boss === 'hollow';
+const untouchable = (run: Run, f: Foe) => f === run.boss && run.setup.zone.boss === 'hollow' && !run.setup.tutorial;
 
 // ---------- the mid-bosses ----------
 
@@ -2682,6 +2715,8 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
   if (!f.alive || run.t < f.bornUntil || untouchable(run, f)) return;
   const boss = f === run.boss;
   const knight = boss && run.setup.zone.boss === 'knight';
+  // The first dungeon's Hollow: every hit takes 1, and it never falls.
+  const scriptedBoss = boss && !!run.setup.tutorial;
   // A plate falls to any hit, however small, but only one at a time.
   if (knight && run.t < f.act) return;
   if (knight) f.act = run.t + PLATE_EVERY;
@@ -2694,9 +2729,9 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
   if (f === run.warden && run.dim !== null) run.dim = Math.min(DIM.full, run.dim + DIM.back);
   // A crit: the hit does CRIT_HIT times, plus crit damage from what you wear (CRIT in src/balance/stats.ts).
   const critShare = by.power.crit + spCrit(by),
-    crit = !knight && critShare > 0 && run.critRnd() < critShare,
+    crit = !knight && !scriptedBoss && critShare > 0 && run.critRnd() < critShare,
     slay = f.elite || f.kind === 'golem' || boss || f === run.warden ? 1 + by.gearFx.slayer : 1,
-    dmg = knight ? 1 : Math.max(1, Math.round(amount * slay * spMore(by) * spMark(run, by, f) * (crit ? CRIT_HIT + by.gearFx.critDmg : 1)));
+    dmg = knight || scriptedBoss ? 1 : Math.max(1, Math.round(amount * slay * spMore(by) * spMark(run, by, f) * (crit ? CRIT_HIT + by.gearFx.critDmg : 1)));
   if (f.kind === 'reflection' || f.kind === 'image') {
     // A copy of you, or of the Mirror: it shatters, and you feel it.
     hitYourself(run, by, f.kind);
@@ -2704,6 +2739,7 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
     return kill(run, f, by);
   }
   f.hp -= dmg;
+  if (scriptedBoss) f.hp = Math.max(1, f.hp);
   leech(run, by, dmg);
   calmer(run, by, CALM.hit);
   onLanded(run, by, f, knight);
@@ -2753,7 +2789,7 @@ function kill(run: Run, f: Foe, by: Hero) {
     emit(run, { type: 'passive', id: 'harvest', x: by.x, y: by.y });
   }
   // Now and then a monster drops something to wear: elites and golems far more often.
-  if (f !== run.boss && f !== run.warden && f.def.xp > 0 && run.rnd() < (f.elite ? DROPS.elite : f.kind === 'golem' ? DROPS.golem : DROPS.plain)) dropEach(run, f.x, f.y, f.elite || f.kind === 'golem' ? DROP_LUCK.elite : 0);
+  if (f !== run.boss && f !== run.warden && f.def.xp > 0 && !run.setup.tutorial && run.rnd() < (f.elite ? DROPS.elite : f.kind === 'golem' ? DROPS.golem : DROPS.plain)) dropEach(run, f.x, f.y, f.elite || f.kind === 'golem' ? DROP_LUCK.elite : 0);
   if (f === run.warden) dropEach(run, f.x, f.y + 30, DROP_LUCK.midBoss);
   if (f.def.xp > 0 || f === run.boss || f === run.warden) findMats(run, f === run.boss ? 'boss' : f === run.warden ? 'warden' : f.elite || f.kind === 'golem' ? 'elite' : 'plain', f.x, f.y);
   if (f.kind === 'splitter')
@@ -3235,7 +3271,7 @@ function offer(run: Run, h: Hero, free: FreePick | null) {
   }
   if (!free) h.pendingLevels--;
   h.offer = { choices, free };
-  if (run.setup.autoPick) pick(run, BOT_PICKS.find((id) => choices.includes(id)) ?? choices[0], h);
+  if (run.setup.autoPick || run.setup.tutorial) pick(run, BOT_PICKS.find((id) => choices.includes(id)) ?? choices[0], h);
 }
 
 export function pick(run: Run, id: UpgradeId, h: Hero = run.hero) {
@@ -3378,7 +3414,9 @@ function hurt(run: Run, h: Hero, dmg: number, by: 'shot' | 'touch') {
     emit(run, { type: 'evade', x: h.x, y: h.y });
     return;
   }
-  const taken = spGuard(run, h, dmg * (1 - armorOf(h.power, h.ups)) / (1 + DIALS.relic * 0.14 * relic(h, 'iron')));
+  const hit = spGuard(run, h, dmg * (1 - armorOf(h.power, h.ups)) / (1 + DIALS.relic * 0.14 * relic(h, 'iron')));
+  // In the first dungeon you can't fall: HP stops at 1.
+  const taken = run.setup.tutorial ? Math.min(hit, h.hp - 1) : hit;
   if (taken <= 0) {
     h.hurtUntil = now + INVULNERABLE;
     return;
