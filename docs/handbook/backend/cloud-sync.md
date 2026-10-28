@@ -17,7 +17,10 @@ so a new phone (or a wiped one) can get the hero back.
 The gate shows when the backend is set up, this phone isn't signed in (`signInDue`), and not in
 the sandbox. On an installed iPhone app the email's link opens Safari, which has its own storage,
 so the gate also takes the **code from the email** (`verifyEmailCode`, Supabase `verifyOtp`); the
-email template must show `{{ .Token }}` (`supabase/templates/magic-link.html`, custom SMTP needed).
+email shows the code: Supabase sends through Resend (custom SMTP: smtp.resend.com, sender
+login@formaquest.app, domain verified in Resend with its DNS on Vercel), and both the "Magic link or
+OTP" and "Confirm sign up" templates are `supabase/templates/magic-link.html` (subject "Your FORMA
+code: {{ .Token }}"). Change the file and paste it into both in the dashboard.
 Signing in on a fresh installed app takes the hero from the cloud (`plan()` → use-cloud).
 
 ## Files
