@@ -10,6 +10,7 @@ import { Weather } from '@/components/Weather';
 import { addFakeWorkouts } from '@/lib/dev';
 import { initialState, type GameState } from '@/lib/game';
 import { useGameState } from '@/lib/store';
+import { LookProvider } from '@/components/Look';
 import { CHAPTERS } from '@/story/chapters';
 import { ANYTIME } from '@/story/anytime';
 import { chapterStart, sceneFor } from '@/story/engine';
@@ -99,7 +100,17 @@ function stateFor(scene: Scene, chapter: number, flame: string, letter: boolean,
   return workouts > 0 ? addFakeWorkouts(state, workouts, now, false) : state;
 }
 
-export default function StoryLab() {
+/** The lab draws your hero and your flame (prince or princess) with your own look, like the app. */
+export default function StoryLabPage() {
+  const { state } = useGameState();
+  return (
+    <LookProvider look={state.profile.look}>
+      <StoryLab />
+    </LookProvider>
+  );
+}
+
+function StoryLab() {
   // Read only: the lab never writes your save.
   const { state: mine, ready } = useGameState();
   const [stage, setStage] = useState<FlameStage>('candle');
@@ -245,8 +256,8 @@ export default function StoryLab() {
           <div key={sex} className="mt-4 grid grid-cols-5 gap-1">
             {FLAME_STAGES.map((s) => (
               <div key={s.id} className="flex flex-col items-center gap-1 rounded-lg bg-ink-950 py-2">
-                <div className="flex h-20 items-end">
-                  <Ember size={80} stage={s.id} mood={mood} sex={sex} />
+                <div className="flex h-16 items-end">
+                  <Ember size={64} stage={s.id} mood={mood} sex={sex} />
                 </div>
                 <p className="text-[9px] text-slate-500">
                   {sex === 'f' ? 'girl' : 'boy'} · {s.at}+
