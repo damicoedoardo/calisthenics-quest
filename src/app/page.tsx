@@ -51,7 +51,7 @@ type Tab = 'today' | 'train' | 'play' | 'hero';
 const TABS: { id: Tab; label: string; icon: 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabHero' }[] = [
   { id: 'today', label: 'Today', icon: 'tabToday' },
   { id: 'train', label: 'Train', icon: 'tabTrain' },
-  { id: 'play', label: 'Fog', icon: 'tabPlay' },
+  { id: 'play', label: 'Play', icon: 'tabPlay' },
   { id: 'hero', label: 'Hero', icon: 'tabHero' },
 ];
 
