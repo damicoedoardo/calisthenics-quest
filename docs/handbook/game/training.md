@@ -28,17 +28,21 @@ demo id (so it has a pixel demo and coaching), with a role:
 A slot has a target range (`low`..`high`); `weighted` slots are done with a weight the player
 picks. `cueOf(id)` is the exercise's first coaching tip.
 
-Once the coach is set up it builds every workout instead (`state.coach.plan`, see
-[coach.md](coach.md)); the built-in plan is what plays before setup.
+The coach plans every workout, a week at a time (`state.coach.week`, see [coach.md](coach.md)).
+The app shows no built-in plan any more: before the coach has planned a week there is no quest
+(the built-in plan below still backs the rules, the simulators and old saves).
 
 ## Today's quest
 
-- `todaysQuest`: the coach's next workout when there is one (`state.coach.plan`, skipped items
+- `todaysQuest`: the coach's next workout when there is one (the week's first day not done,
+  `currentPlan`, skipped items
   left out), else the built-in day's slots; with their current targets (`state.reps[id]`, else
   `low`). A run's length is the coach's, not a target that rises.
 - The check-in: **Rough** keeps the warm-up and the stretch around one exercise of at most 3 sets,
   and counts as a minimum session; Normal and Strong are the full day.
 - The warm-up alone is not a workout: `finishSession` needs one logged set of real work.
+- No pausing: leaving a workout after a set throws it away (`draft: null`), after a warning. The
+  rest after a set is the coach's `rest` for that exercise, else 60 s for core, else `REST_SECONDS`.
 
 ## Logging and progression
 

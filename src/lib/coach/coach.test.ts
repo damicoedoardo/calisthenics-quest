@@ -6,7 +6,8 @@ import { applySetup, levelsFrom, type SetupAnswers } from './setup';
 import { buildWorkout, nextMode } from './generate';
 import { minutesOf, validate } from './validate';
 import { easierChoices, swapChoices, usable } from './options';
-import { changeItem, moveItem, planFromQuest, setPlan, skipItem } from './plan';
+import { changeItem, moveItem, planFromQuest, skipItem } from './plan';
+import { currentPlan, setPlan } from './week';
 import { addNote, liveNotes } from './notes';
 import { coachBrief } from './brief';
 import { MAX_NOTES } from '@/balance';
@@ -110,23 +111,24 @@ describe('changing the workout', () => {
   it('swap, easier, move and skip are kept and logged', () => {
     let s = withSetup(answers());
     s = setPlan(s, build(s));
-    const main = s.coach!.plan!.items.find((i) => i.role === 'main' && i.easier.length)!;
+    const main = currentPlan(s.coach)!.items.find((i) => i.role === 'main' && i.easier.length)!;
     s = { ...s, draft: { startedAt: NOW.toISOString(), checkin: 'normal', sets: { [main.id]: [{ reps: 8, rir: '2-3' }] } } };
     const to = main.easier[0];
     s = changeItem(s, main.id, to, 'easier');
     expect(s.draft!.sets[to.id]).toHaveLength(1);
-    const second = s.coach!.plan!.items.filter((i) => i.role === 'main')[1];
+    const second = currentPlan(s.coach)!.items.filter((i) => i.role === 'main')[1];
     s = moveItem(s, second.id, -1);
-    expect(s.coach!.plan!.items[1].id).toBe(second.id);
-    expect(moveItem(s, s.coach!.plan!.items[1].id, -1)).toBe(s); // never above the warm-up
-    const last = s.coach!.plan!.items.filter((i) => i.role === 'main').at(-1)!;
+    expect(currentPlan(s.coach)!.items[1].id).toBe(second.id);
+    expect(moveItem(s, currentPlan(s.coach)!.items[1].id, -1)).toBe(s); // never above the warm-up
+    const last = currentPlan(s.coach)!.items.filter((i) => i.role === 'main').at(-1)!;
     s = skipItem(s, last.id, true);
     expect(todaysQuest(s).some((q) => q.id === last.id)).toBe(false);
     const done = finishSession(s, NOW, () => 'id1')!;
     expect(done.session.changed).toEqual([{ from: main.id, to: to.id, how: 'easier' }]);
     expect(done.session.skipped).toEqual([last.id]);
     expect(done.session.mode).toBe('gym');
-    expect(done.state.coach!.plan).toBeNull();
+    expect(currentPlan(done.state.coach)).toBeUndefined();
+    expect(done.state.coach!.week!.days[0].done).toBe(NOW.toISOString());
   });
 
   it('the built-in plan can be turned into a plan with choices', () => {

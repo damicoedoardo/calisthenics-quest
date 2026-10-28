@@ -68,7 +68,7 @@ export async function coachTurn(opts: { text?: string; get: () => GameState; set
 /** A line of the chat as the screen shows it. */
 export type Shown = { who: 'coach' | 'you'; text: string; key: string } | { who: 'workout'; key: string };
 
-const SHOWN_TOOLS = new Set(['set_workout']);
+const SHOWN_TOOLS = new Set(['set_workout', 'set_week']);
 
 export function shownChat(chat: ChatMessage[] | undefined): Shown[] {
   const out: Shown[] = [];

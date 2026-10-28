@@ -6,6 +6,7 @@ import { SoundToggle, useMenuMusic } from './Sound';
 import { CloudSave } from './Cloud';
 import { useModal } from './useModal';
 import { music } from '@/lib/music';
+import { setStatsShared, statsConfigured, useStatsShared } from '@/lib/analytics-client';
 import type { GameState } from '@/lib/game';
 import { planExercises } from '@/lib/program';
 import { exportState, inSandbox, parseImport } from '@/lib/store';
@@ -27,6 +28,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { d
 export function YouPage({ state, update, onReplayOpening, onClose }: Props) {
   const box = useModal<HTMLDivElement>(onClose);
   const menuMusic = useMenuMusic();
+  const statsShared = useStatsShared();
   const story = storyState(state);
   const [backupMsg, setBackupMsg] = useState('');
   const [letterOpen, setLetterOpen] = useState(false);
@@ -125,6 +127,15 @@ export function YouPage({ state, update, onReplayOpening, onClose }: Props) {
               Music in the menus
               <input type="checkbox" checked={menuMusic} onChange={(e) => music.setMenuMusic(e.target.checked)} className="h-5 w-5 accent-gold-400" />
             </label>
+            {statsConfigured && (
+              <label className="flex min-h-[44px] items-center justify-between text-sm text-slate-300">
+                <span>
+                  Share play stats
+                  <span className="block text-xs text-slate-500">How far you get, never your words. Helps make the game fair.</span>
+                </span>
+                <input type="checkbox" checked={statsShared} onChange={(e) => setStatsShared(e.target.checked)} className="h-5 w-5 accent-gold-400" />
+              </label>
+            )}
             <button
               onClick={() => {
                 onClose();

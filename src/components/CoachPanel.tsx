@@ -1,11 +1,9 @@
 'use client';
 
-import { useState } from 'react';
 import { Trash2 } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { liveNotes, removeNote } from '@/lib/coach/notes';
 import { PATTERNS, type Mode, type PlanItem } from '@/lib/coach/types';
-import { CoachSetup } from './CoachSetup';
 
 /* Pieces of the coach screen (CoachChat.tsx): a workout item's dose, and what the coach knows about
    you (profile, levels, notes), each note deletable. */
@@ -24,10 +22,9 @@ export function doseOf(it: Pick<PlanItem, 'sets' | 'low' | 'high' | 'unit' | 'ru
   return `${it.sets}×${reps}${unit}`;
 }
 
-/** What the coach knows: profile, levels, and its notes, each one deletable. "Redo setup" asks the
-    quick taps again (keeps the log and notes). */
+/** What the coach knows: profile, levels, and its notes, each one deletable. To change the
+    profile, tell the coach in the chat. */
 export function CoachKnows({ state, update }: { state: GameState; update: Update }) {
-  const [setup, setSetup] = useState(false);
   const coach = state.coach;
   const profile = coach?.profile;
   const notes = liveNotes(coach, new Date());
@@ -35,12 +32,7 @@ export function CoachKnows({ state, update }: { state: GameState; update: Update
   return (
     <>
       <div className="rounded-xl bg-ink-900 p-3">
-        <div className="flex items-baseline justify-between gap-2">
-          <h2 className="font-pixel text-[10px] text-gold-300">What I know about you</h2>
-          <button onClick={() => setSetup(true)} className="text-xs font-semibold text-sky-300">
-            Redo setup
-          </button>
-        </div>
+        <h2 className="font-pixel text-[10px] text-gold-300">What I know about you</h2>
         <p className="mt-2 text-sm text-slate-200">
           {profile.modes.map((m) => MODE_LABEL[m]).join(' + ')}, to {GOAL_LABEL[profile.goal]}. {profile.days} a week, {profile.minutes} min.
         </p>
@@ -70,7 +62,6 @@ export function CoachKnows({ state, update }: { state: GameState; update: Update
           </ul>
         )}
       </div>
-      {setup && <CoachSetup state={state} update={update} onClose={() => setSetup(false)} />}
     </>
   );
 }

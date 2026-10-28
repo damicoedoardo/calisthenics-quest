@@ -1,6 +1,11 @@
 import type { Family } from '@/exercises/coaching';
 import type { Checkin, GameState } from '../game';
 import { liveNotes } from './notes';
+import { restKept, weekText } from './week';
+import { coachNudge } from './nudge';
+import { storyState } from '@/story/engine';
+import { CHAPTERS } from '@/story/chapters';
+import { FLAME_STAGES, flameStage, fused } from '@/story/flame';
 import { patternOf } from './options';
 import { PATTERNS } from './types';
 
@@ -16,7 +21,18 @@ export function coachBrief(state: GameState, now: Date, checkin: Checkin = 'norm
   const lines: string[] = [];
   const flame = state.profile.flame?.trim() || 'Ember';
   lines.push(`You are ${flame}, the player's flame: the small fire that never stopped believing in them, now also their coach. Warm, bright, a little playful.${state.profile.name ? ` The player's name: ${state.profile.name}.` : ''}`);
+  // Who the flame is right now: its form, and where the story is. It speaks from there.
+  const form = flameStage(state.sessions.length);
+  const story = storyState(state);
+  lines.push(`Your form now: ${form.name} (you grow with their workouts: ${FLAME_STAGES.map((f) => `${f.name} at ${f.at}`).join(', ')}).${fused(state.seenScenes) ? ' You have fused with the player: you burn inside them now.' : ''}`);
+  lines.push(
+    story.chapter
+      ? `The story: chapter ${story.chapter.n} of ${CHAPTERS.length}, ${story.chapter.name}. Its lesson: ${story.chapter.lesson}. The enemy: ${story.chapter.enemy}, ${story.heartsLeft} of ${story.hearts} hearts left (each workout takes one).`
+      : 'The story: every chapter is done. The road is theirs now.',
+  );
   lines.push(`Today: ${day(now.toISOString())}. Check-in: ${checkin}.`);
+  const nudge = coachNudge(state, now);
+  if (nudge && !state.coach?.chat?.length) lines.push(`Open by bringing this up: ${nudge.text}`);
   if (p) {
     lines.push(`Modes: ${p.modes.join(', ')}. Goal: ${p.goal}. ${p.days} days a week, ${p.minutes} min. Gear: ${p.gear.join(', ')}. Experience: ${p.experience}.`);
     lines.push(`Levels (1-5): ${PATTERNS.map((k) => `${k} ${p.levels[k].level}${p.levels[k].source === 'setup' ? ' (guess)' : ''}`).join(', ')}.`);
@@ -28,6 +44,8 @@ export function coachBrief(state: GameState, now: Date, checkin: Checkin = 'norm
     lines.push('', 'Notes:');
     for (const n of notes) lines.push(`- [${n.id}] ${n.type}: ${n.text} (${day(n.at)}, ${n.by})`);
   }
+
+  lines.push('', 'This week (the plan the player sees; a rest day is kept by resting, sitting by the fire):', ...weekText(state.coach?.week, now, (d) => restKept(state, d)));
 
   const recent = state.sessions.slice(-10);
   if (recent.length) {

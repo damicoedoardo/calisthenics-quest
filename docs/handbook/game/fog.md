@@ -130,7 +130,8 @@ on fire, `heroVariant` in `src/story/flame.ts`); `src/game/calm.ts` drops shake 
 `prefers-reduced-motion`.
 
 `src/components/FogRun.tsx` loads `src/game/dungeon/scene.ts` with `import()` only when a run
-starts (Phaser is big); `PlayTab.tsx` warms the code and sheets while the tab sits idle. A run is
+starts (Phaser is big), and sends each run's start and end to the play stats
+([../app/analytics.md](../app/analytics.md)); `PlayTab.tsx` warms the code and sheets while the tab sits idle. A run is
 played with the phone held sideways: held upright, `FogRun` holds the run behind a "turn your
 phone" card (`usePortrait`), and where the browser allows it (Android, installed) it turns the
 screen itself for the run (`useSideways`). The rest of the app stays upright. Sideways, the room

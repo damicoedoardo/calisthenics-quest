@@ -22,6 +22,8 @@ export interface BuildInput {
   rng: () => number;
   /** Build this mode instead of the one whose turn it is. */
   mode?: Mode;
+  /** Workouts planned before this one but not done yet (earlier days of the week), by mode. */
+  after?: Mode[];
 }
 
 /** The movement families of each day, per mode. Days alternate; the first few fit the minutes. */
@@ -40,15 +42,16 @@ const DAYS: Record<Exclude<Mode, 'running'>, [Family[], Family[]]> = {
 export const WARMUP: PlanItem = item('circles', 'Joint circles', 'circles', 'Start with small circles, get bigger.', 'mobility', 'warmup', 1, 90);
 
 /** Whose turn it is: of your modes, the one you did longest ago. */
-export function nextMode(profile: CoachProfile, sessions: Session[]): Mode {
-  const last = (m: Mode) => sessions.findLastIndex((s) => (s.mode ?? 'gym') === m);
+export function nextMode(profile: CoachProfile, sessions: Session[], after: Mode[] = []): Mode {
+  const order = [...sessions.map((s) => s.mode ?? 'gym'), ...after];
+  const last = (m: Mode) => order.lastIndexOf(m);
   return [...profile.modes].sort((a, b) => last(a) - last(b))[0] ?? 'gym';
 }
 
 export function buildWorkout(input: BuildInput): CoachPlan | null {
   const profile = input.coach.profile;
   if (!profile) return null;
-  const mode = input.mode ?? nextMode(profile, input.sessions);
+  const mode = input.mode ?? nextMode(profile, input.sessions, input.after);
   const notes = liveNotes(input.coach, input.now);
   const avoid = excluded(profile, notes);
   const plan = mode === 'running' ? running(input, profile, avoid) : strength(input, profile, mode, avoid);
@@ -68,7 +71,7 @@ export function excluded(profile: CoachProfile, notes: CoachNote[]): (x: Library
 
 function strength(input: BuildInput, profile: CoachProfile, mode: Exclude<Mode, 'running'>, avoid: (x: LibraryExercise) => boolean): CoachPlan {
   const { all, sessions, rng } = input;
-  const done = sessions.filter((s) => (s.mode ?? 'gym') === mode).length;
+  const done = sessions.filter((s) => (s.mode ?? 'gym') === mode).length + (input.after ?? []).filter((m) => m === mode).length;
   const day = done % 2;
   const used = new Set(sessions.slice(-12).flatMap((s) => s.entries.map((e) => e.exerciseId)));
   const gear = mode === 'calisthenics' ? profile.gear.filter((g) => g === 'bar' || g === 'bands' || g === 'none' || g === 'gym') : profile.gear;
@@ -145,7 +148,7 @@ function running(input: BuildInput, profile: CoachProfile, avoid: (x: LibraryExe
   const runs = sessions.filter((s) => s.mode === 'running');
   const level = profile.levels.run.level;
   const i = level - 1;
-  const kind = (['easy', level >= 2 ? 'interval' : 'easy', 'easy', 'long'] as const)[runs.length % 4];
+  const kind = (['easy', level >= 2 ? 'interval' : 'easy', 'easy', 'long'] as const)[(runs.length + (input.after ?? []).filter((m) => m === 'running').length) % 4];
   const roomMin = Math.max(10, profile.minutes - 8);
   let steps: RunStep[];
   if (kind === 'interval') {

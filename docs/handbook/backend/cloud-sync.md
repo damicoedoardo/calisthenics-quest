@@ -1,15 +1,16 @@
 ---
 type: reference
 title: Cloud backup in the app
-description: The app side of login and save backup — sign-in asked once after the opening (`SignInGate`: email link or code; Google behind a flag), the card on the You page's Settings (tap your hero at the top), the sync hook that uploads the save a few seconds after each change, the plan() rules for phone vs cloud, and the which-save-to-keep question. Hidden until the NEXT_PUBLIC_ env vars are set.
+description: The app side of login and save backup — sign-in required after the opening (`SignInGate`: email link or code; Google behind a flag), the card on the You page's Settings (tap your hero at the top), the sync hook that uploads the save a few seconds after each change, the plan() rules for phone vs cloud, and the which-save-to-keep question. Hidden until the NEXT_PUBLIC_ env vars are set.
 tags: [backend, app, sync, login, supabase]
 timestamp: 2026-10-28
 ---
 
 # Cloud backup in the app
 
-Sign-in is asked for once, after the opening and the install step (`SignInGate`, Edoardo's call
-2026-10-27: an account backs the hero up from day one and is who you are to friends). The app
+Sign-in is required, after the opening and the install step (`SignInGate`, Edoardo's calls
+2026-10-27 and 2026-10-28: an account backs the hero up from day one, is who you are to friends,
+and is how the coach talks to you; there is no skip, offline or in developer mode). The app
 still plays offline-first: the save in `localStorage` is the real one, and the cloud keeps a copy
 so a new phone (or a wiped one) can get the hero back.
 
