@@ -31,6 +31,11 @@ step for agents is the `designing-for-balance` skill (`.claude/skills/designing-
    commit message starts with `Balance:`.
 6. **Rules stay pure and seeded** (see [`AGENTS.md`](../../../AGENTS.md)): that is what lets the
    simulators play the same game the phone does.
+7. **The coach can explain it.** A number players meet (what something costs, gives or asks) is
+   read by a topic of the coach's game guide (`src/lib/coach/guide.ts`, see
+   [coach.md](coach.md#the-game-guide-guidets)), never typed into it, so a change shows there by
+   itself. A new mechanic gets a topic (with `opens` if it is a surprise); a new balance file
+   needs a topic or a reason in `BEHIND_THE_SCENES` (`guide.test.ts` checks).
 
 ## Where the numbers are (`src/balance/`)
 

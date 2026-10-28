@@ -24,7 +24,9 @@ export function coachBrief(state: GameState, now: Date, checkin: Checkin = 'norm
   // Who the flame is right now: its form, and where the story is. It speaks from there.
   const form = flameStage(state.sessions.length);
   const story = storyState(state);
-  lines.push(`Your form now: ${form.name} (you grow with their workouts: ${FLAME_STAGES.map((f) => `${f.name} at ${f.at}`).join(', ')}).${fused(state.seenScenes) ? ' You have fused with the player: you burn inside them now.' : ''}`);
+  // Only the next form: the ones after it are the story's to show.
+  const next = FLAME_STAGES.find((f) => f.at > state.sessions.length);
+  lines.push(`Your form now: ${form.name} (you grow with their workouts${next ? `; next, ${next.name} at ${next.at}` : ''}).${fused(state.seenScenes) ? ' You have fused with the player: you burn inside them now.' : ''}`);
   lines.push(
     story.chapter
       ? `The story: chapter ${story.chapter.n} of ${CHAPTERS.length}, ${story.chapter.name}. Its lesson: ${story.chapter.lesson}. The enemy: ${story.chapter.enemy}, ${story.heartsLeft} of ${story.hearts} hearts left (each workout takes one).`

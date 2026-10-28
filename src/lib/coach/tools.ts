@@ -9,6 +9,7 @@ import { REST } from '@/balance';
 import { addNote, liveNotes, removeNote } from './notes';
 import { HOLDS, isWeighted, patternOf, usable } from './options';
 import { searchExercises } from './search';
+import { askGuide } from './guide';
 import { answersOf, profileFrom } from './setup';
 import { validate } from './validate';
 import { PATTERNS, type Area, type CoachDay, type CoachPlan, type CoachProfile, type CoachState, type CoachWeek, type Experience, type Gear, type Goal, type Level, type Minutes, type Mode, type PlanItem, type RunStep } from './types';
@@ -324,6 +325,8 @@ export function runTool(state: GameState, name: string, args: string, ctx: ToolC
       if (!coach.notes.some((n) => n.id === id)) return { state, result: `No note ${id}.` };
       return { state: withCoach(state, removeNote(coach, id)), result: 'Forgotten.' };
     }
+    case 'game_guide':
+      return { state, result: askGuide(state, str(input.question, 200), ctx.now) };
     case 'suggest_replies': {
       const replies = (Array.isArray(input.replies) ? input.replies : []).map((r) => str(r, 60)).filter(Boolean).slice(0, 4);
       return { state: withCoach(state, { ...coachOf(state), replies }), result: 'Shown.', waits: true };
