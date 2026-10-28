@@ -18,7 +18,7 @@ import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
 import { giveSp, spAfterRun, spWorn } from '@/lib/sp';
 import { changeClass, classCost, coins } from '@/lib/sweat';
 import { ClassPicker } from '@/components/ClassPicker';
-import { DevButton, DevPanel } from '@/components/DevPanel';
+import { DevButton, DevPanel, type DevGo } from '@/components/DevPanel';
 import { Sprite } from '@/components/Sprite';
 import { LookProvider } from '@/components/Look';
 import { CloudChoice, useCloudSync } from '@/components/Cloud';
@@ -128,6 +128,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       setTraining(true);
     }
     if (q.has('book')) setOpenBook(true);
+    // ?dev: the developer panel open on top.
+    if (q.has('dev')) setDevOpen(true);
   }, [ready, update]);
   // Before the first paint, so the tabs never flash ahead of it.
   useLayoutEffect(() => {
@@ -249,6 +251,18 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     setAfter({ result: res, before, after: storyState(res.state) });
     setTraining(false);
     setTab('today');
+  };
+
+  // The dev panel's Go tab: a tab, a part of one, or a screen.
+  const devGo = (to: DevGo) => {
+    if (to === 'you') return setYou(true);
+    if (to === 'workout') return start('normal');
+    const hero = to === 'gear' || to === 'stats' || to === 'class';
+    if (hero) setHeroPart(to);
+    if (to === 'fog' || to === 'together') setFogMode(to === 'fog' ? 'story' : 'together');
+    setTab(hero ? 'hero' : to === 'fog' || to === 'together' ? 'play' : to);
+    window.scrollTo({ top: 0 });
+    main.current?.scrollTo({ top: 0 });
   };
 
   if (!ready) return <div className="min-h-dvh bg-ink-950" />;
@@ -386,7 +400,20 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       </nav>
 
       {dev && devOpen && !busy && (
-        <DevPanel state={state} update={update} onPlayScene={setScene} onPlayOpening={() => setOpening(true)} onTurnOff={live ? () => setDev(false) : undefined} onClose={() => setDevOpen(false)} />
+        <DevPanel
+          state={state}
+          update={update}
+          onPlayScene={setScene}
+          onPlayOpening={() => setOpening(true)}
+          onReplayPrologue={() => setReplaying(true)}
+          onGo={devGo}
+          onRun={(zone, at) => {
+            setRunStart(at);
+            setRun(ZONES[zone]);
+          }}
+          onTurnOff={live ? () => setDev(false) : undefined}
+          onClose={() => setDevOpen(false)}
+        />
       )}
       {run && (
         <FogRun

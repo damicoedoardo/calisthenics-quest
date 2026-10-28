@@ -139,6 +139,8 @@ export interface GameState {
   sessions: Session[];
   /** Stat points put into the champion (src/lib/stats.ts). Missing means none spent. */
   build?: Build;
+  /** Stat points given in developer mode, on top of the earned ones (src/lib/dev.ts). */
+  devPoints?: number;
   /** Points as they stood at the last workout, noted on the first change after it (src/lib/sweat.ts). */
   buildAt?: { workouts: number; build: Build };
   /** Sweat coins spent, and class changes made (src/lib/sweat.ts). */

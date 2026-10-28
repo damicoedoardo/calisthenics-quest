@@ -101,7 +101,7 @@ upright layout inside it. Add computer changes only as `desk:` classes. The Fog'
 | `Look`, `LookEditor` | The player's look, shared through `LookProvider`, and its editor |
 | `Place`, `Weather` | A story place's backdrop; rain, ash, snow, embers, fog over the screen |
 | `Sound` | `useMusic` (a track while a screen is on), the mute toggle |
-| `DevPanel` | Developer mode's wrench and panel, see [dev-mode-and-labs.md](dev-mode-and-labs.md) |
+| `DevPanel` | Developer mode's wrench and its tabbed panel (Go, Wallet, Gear, Hero, Story, Fog, Save), see [dev-mode-and-labs.md](dev-mode-and-labs.md) |
 | `ServiceWorker` | Registers the offline worker, see [pwa.md](pwa.md) |
 | `useModal` | Focus trap and inert background for overlays inside a tab |
 | `useDesk` | `useKeyboardPlay`: true on a computer (mouse or trackpad), so the Fog shows its keys |
@@ -127,7 +127,7 @@ edges clear of the notch, which is on the left or the right then.
 | `FirstFight`, `RiseUp`, `SitByFire` | The figures on the left, the words and the button on the right; `SitByFire`'s camp is drawn wide like `Dialogue`'s |
 | `ClassPicker` | The hero you'd be on the left, the four classes and the button on the right |
 | `BookOfDays`, `ExerciseLibrary` | Wider, the pages and the list in two columns; the library's search and filters on one line, an exercise's demos and facts beside its how-to |
-| `DevPanel` | A wider sheet with its sections in two columns |
+| `DevPanel` | A wider sheet, the open tab's sections in two columns |
 | `InstallGate` | The flame and the why on the left, the steps on the right |
 | `Opening` | Fits as it is; the sound toggle keeps clear of the notch |
 

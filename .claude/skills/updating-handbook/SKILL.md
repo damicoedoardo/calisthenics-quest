@@ -48,7 +48,7 @@ no row: give a new folder its row (and a page if no page fits).
 | `src/lib/music*.ts`, `src/components/Sound.tsx`, `src/app/lab/music/**` | `game/sound.md` |
 | `src/lib/dev*.ts`, `src/components/DevPanel.tsx`, `src/app/lab/**` | `app/dev-mode-and-labs.md` |
 | `src/lib/install*.ts`, `src/components/InstallGate.tsx` | `app/pwa.md` |
-| `public/**`, `src/components/ServiceWorker.tsx`, `src/app/layout.tsx`, `src/app/manifest.ts`, `src/app/*.{png,svg,json}`, `scripts/splash.cjs`, `next.config.ts` | `app/pwa.md` |
+| `public/**`, `src/components/ServiceWorker.tsx`, `src/app/layout.tsx`, `src/app/manifest.ts`, `src/app/*.{png,svg,json}`, `scripts/splash.cjs`, `scripts/icons.cjs`, `next.config.ts` | `app/pwa.md` |
 | `src/lib/random.ts`, `src/sim/**`, `scripts/fog-*`, `scripts/ts-hooks.mjs`, `vitest.config.ts` | `dev/testing.md` |
 | `package.json`, `tsconfig.json`, `vercel.json`, `.github/**` | `dev/workflow.md` |
 | `scripts/handbook.mjs`, `.githooks/**`, `.claude/**`, `.github/workflows/handbook.yml` | `dev/handbook.md` |

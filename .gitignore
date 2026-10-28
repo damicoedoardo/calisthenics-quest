@@ -9,3 +9,4 @@ sim-out
 
 # Server settings (docker-compose.yml); the template is .env.example
 .env
+/icons-sheet.png
