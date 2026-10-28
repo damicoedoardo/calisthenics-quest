@@ -3,7 +3,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ListOrdered, Minus, Plus, Shuffle, TrendingDown, Undo2, X } from 'lucide-react';
 import { REST_SECONDS, gearOf, isTap, todaysQuest, type GameState, type QuestExercise, type Rir } from '@/lib/game';
+import { REST } from '@/balance';
 import { canMove, changeItem, moveItem, skipItem } from '@/lib/coach/plan';
+import { currentPlan } from '@/lib/coach/week';
 import { minutesOf } from '@/lib/coach/validate';
 import type { Choice, RunStep } from '@/lib/coach/types';
 import { ensurePlan } from './useCoach';
@@ -55,7 +57,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   // Before the first set: the whole workout, to reorder, make easier, swap or skip.
   const [overview, setOverview] = useState(() => Object.values(sets).every((l) => l.length === 0));
   const [choices, setChoices] = useState<'easier' | 'swap' | null>(null);
-  const hasPlan = !!state.coach?.plan;
+  const hasPlan = !!currentPlan(state.coach);
   useEffect(() => {
     // The built-in plan becomes a plan with choices, so it can be changed too.
     if (!hasPlan) ensurePlan(update);
@@ -75,10 +77,21 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   }, [update]);
   useWakeLock();
 
+  // No pausing: leaving before the end throws the workout away (it doesn't count), so ask first
+  // once a set is logged.
+  const [leaving, setLeaving] = useState(false);
+  const started = Object.values(sets).some((l) => l.length > 0);
   const close = () => {
+    if (started) return setLeaving(true);
     update((s) => (s.draft ? { ...s, draft: { ...s.draft, open: false, restUntil: null } } : s));
     onClose();
   };
+  const leave = () => {
+    update((s) => ({ ...s, draft: null }));
+    setLeaving(false);
+    onClose();
+  };
+  const [restLen, setRestLen] = useState(REST_SECONDS);
 
   const log = (rir: Rir) => {
     update((s) => {
@@ -90,7 +103,11 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
     navigator.vibrate?.(30);
     const finishedExercise = logged.length + 1 >= q.sets;
     const lastOfAll = finishedExercise && quest.every((e) => e.id === q.id || (sets[e.id]?.length ?? 0) >= e.sets);
-    if (!lastOfAll && !tap) setRestUntil(Date.now() + REST_SECONDS * 1000);
+    if (!lastOfAll && !tap) {
+      const rest = restOf(q);
+      setRestLen(rest);
+      setRestUntil(Date.now() + rest * 1000);
+    }
     if (finishedExercise && !lastOfAll) {
       const next = quest.findIndex((e, i) => i !== index && (sets[e.id]?.length ?? 0) < e.sets);
       if (next !== -1) setIndex(next);
@@ -115,7 +132,14 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
     setRestUntil(null);
   };
 
-  if (overview) return <Overview state={state} update={update} quest={quest} onClose={close} onStart={() => setOverview(false)} />;
+  const leaveSheet = leaving && <LeaveSheet onStay={() => setLeaving(false)} onLeave={leave} />;
+  if (overview)
+    return (
+      <>
+        <Overview state={state} update={update} quest={quest} onClose={close} onStart={() => setOverview(false)} />
+        {leaveSheet}
+      </>
+    );
 
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-ink-950">
@@ -301,7 +325,33 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
           onClose={() => setChoices(null)}
         />
       )}
-      {restUntil && <Rest stage={flameStage(state.sessions.length).id} until={restUntil} next={exerciseDone ? null : `Set ${logged.length + 1} of ${q.name}`} onDone={() => setRestUntil(null)} />}
+      {restUntil && <Rest stage={flameStage(state.sessions.length).id} until={restUntil} total={restLen} next={exerciseDone ? null : `Set ${logged.length + 1} of ${q.name}`} onDone={() => setRestUntil(null)} />}
+      {leaveSheet}
+    </div>
+  );
+}
+
+/** The rest after a set: the coach's, else by role. */
+function restOf(q: QuestExercise): number {
+  return q.item?.rest ?? (q.role === 'core' ? REST.core : REST_SECONDS);
+}
+
+/** Leaving mid-workout: it won't count, and it starts over next time. */
+function LeaveSheet({ onStay, onLeave }: { onStay: () => void; onLeave: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end justify-center bg-ink-950/80" onClick={onStay}>
+      <div className="safe-bottom land-safe-x w-full max-w-md rounded-t-2xl bg-ink-800 p-4" role="alertdialog" aria-label="Leave the workout?" onClick={(e) => e.stopPropagation()}>
+        <p className="font-pixel text-[10px] text-gold-300">Leave the workout?</p>
+        <p className="mt-2 text-sm text-slate-200">A workout counts only when you finish it. If you leave now, the sets you did are lost, and it starts over next time.</p>
+        <div className="mt-4 flex gap-2">
+          <button onClick={onStay} className="flex-1 rounded-xl bg-gold-400 py-3 font-pixel text-[10px] text-ink-950 shadow-[0_3px_0_#b45309] active:translate-y-0.5 active:shadow-none">
+            Keep going
+          </button>
+          <button onClick={onLeave} className="flex-1 rounded-xl bg-ink-700 py-3 text-sm font-semibold text-rose-200">
+            Leave, don&apos;t count it
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -377,7 +427,7 @@ function Demo({ state, exercise, name, cue }: { state: GameState; exercise: stri
 /** The rest bar's cells: one lights every few seconds. */
 const REST_CELLS = 10;
 
-function Rest({ stage, until, next, onDone }: { stage: ReturnType<typeof flameStage>['id']; until: number; next: string | null; onDone: () => void }) {
+function Rest({ stage, until, total, next, onDone }: { stage: ReturnType<typeof flameStage>['id']; until: number; total: number; next: string | null; onDone: () => void }) {
   const [now, setNow] = useState(Date.now());
   const left = Math.max(0, Math.ceil((until - now) / 1000));
 
@@ -393,7 +443,7 @@ function Rest({ stage, until, next, onDone }: { stage: ReturnType<typeof flameSt
     }
   }, [left, onDone]);
 
-  const pct = 1 - left / REST_SECONDS;
+  const pct = 1 - left / Math.max(total, left, 1);
   return (
     // Held sideways: the flame on the left, the clock on the right.
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ink-950/95 px-6 text-center [@media(orientation:landscape)_and_(max-height:600px)]:flex-row [@media(orientation:landscape)_and_(max-height:600px)]:gap-12" onClick={onDone}>
@@ -421,7 +471,7 @@ function Rest({ stage, until, next, onDone }: { stage: ReturnType<typeof flameSt
 
 /** The whole workout before the first set: move, make easier, swap or skip any exercise. */
 function Overview({ state, update, quest, onClose, onStart }: { state: GameState; update: Props['update']; quest: QuestExercise[]; onClose: () => void; onStart: () => void }) {
-  const plan = state.coach?.plan;
+  const plan = currentPlan(state.coach);
   const [open, setOpen] = useState<{ id: string; kind: 'easier' | 'swap' } | null>(null);
   const items = plan?.items ?? [];
   const opened = items.find((i) => i.id === open?.id);

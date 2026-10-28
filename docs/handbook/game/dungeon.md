@@ -130,9 +130,23 @@ party order. The rules treat every hero the same:
   `Hero.mats` (a `mat` event for you) and handed home in `RunEnd.mats`. A solo run never calls
   the rng for them, so solo replays are unchanged ([forge.md](forge.md)).
 - A hero at 0 HP is down (`fall`) and stops acting; the run ends when the whole party is down.
-  `RunEnd` is still yours.
-- A pick (skill or chest item) by anyone still holds the whole run (`choosing`), and the stairs ask
-  once for everyone: changing that is the next co-op step. The Summit's friends walk beside you.
+  `RunEnd` is still yours. A friend standing within `PARTY.revive.r` of one who is down for
+  `PARTY.revive.secs` brings them back up (`revive`, a filling ring in the scene); anyone still
+  down gets up on the way down the stairs (`PARTY.stairsUp`). A hero who is down is carried
+  through doors with the party.
+- The party moves as one: a door (`outSide`) or the stairs (`onStairs`) take you on only when
+  every hero standing is in that doorway or on the stairs. Until then you wait there (`Hero.waiting`,
+  a line for you once). The stairs then ask once for everyone.
+- The chest opens once per hero in a party (`canOpen`, `chest.took`): each gets their own pick of
+  chest items, their own item roll and materials. The shrine heals the whole party.
+- Moves that heal or guard help friends within `PARTY.near` (`friendsNear`): Blessing, Soul
+  Harvest and Stillness heal them the same share of their own HP (`healFriends`); Shield Wall,
+  Blessing and Tide Spin make them untouchable and clear the shots round them too. Curse, Bubble
+  and Radiance already help everyone (any hit on a cursed monster lands harder).
+- A pick (skill or chest item) by anyone still holds the whole run (`choosing`): that changes with
+  the game server. The Summit's friends walk beside you.
+- The friend bots (`botInput` for a hero other than you) get a friend up first, then follow you to
+  the door or stairs you wait at.
 
 **A practice party run** (until the game server exists): the scene takes `RunSetup.friends`
 (name, class and their own hero sheets from `friendSheets` in `src/game/sheets.ts`) and `seed`,

@@ -71,7 +71,7 @@ export function profileFrom(a: SetupAnswers, now: Date, old?: CoachProfile): Coa
 
 /** Setup done: the profile, your own words as a note, and a fresh workout to come. */
 export function applySetup(coach: CoachState | undefined, a: SetupAnswers, now: Date, id: () => string): CoachState {
-  let next: CoachState = { notes: coach?.notes ?? [], ...coach, profile: profileFrom(a, now, coach?.profile), plan: null };
+  let next: CoachState = { notes: coach?.notes ?? [], ...coach, profile: profileFrom(a, now, coach?.profile), week: null };
   const said = a.note?.trim();
   if (said) next = addNote(next, { type: 'other', text: said, by: 'you' }, now, id);
   if (a.avoidText?.trim() && a.avoid.length) next = addNote(next, { type: 'pain', text: a.avoidText.trim(), by: 'you' }, now, id);
