@@ -7,18 +7,25 @@ import { ROLE_COLOR, ROLE_LABEL } from '@/lib/program';
 import { changeItem } from '@/lib/coach/plan';
 import { minutesOf } from '@/lib/coach/validate';
 import { shownChat } from '@/lib/coach/chat';
-import type { PlanItem } from '@/lib/coach/types';
+import type { Mode, PlanItem } from '@/lib/coach/types';
+import { dayLabel, nextDay, restKept, weekdayOf, weekSlots } from '@/lib/coach/week';
+import { dayKey } from '@/lib/days';
+import { fireLine, updateTodayPage } from '@/story/daily';
+import { SitByFire } from './SitByFire';
+import { Sprite } from './Sprite';
+import { freshNudge, hearNudge, type Nudge } from '@/lib/coach/nudge';
 import { cloudConfigured, maybeSignedIn, supabase, useCloudStatus } from '@/lib/cloud-client';
 import { flameStage } from '@/story/flame';
 import { Ember } from './Characters';
 import { PlaceBackdrop } from './Place';
 import { CoachKnows, doseOf } from './CoachPanel';
-import { CoachSetup } from './CoachSetup';
 import { Choices, MiniDemo } from './Workout';
+import { ExerciseSheet } from './ExerciseDetail';
 import { useCoachChat } from './useCoach';
 
-/* The coach is your flame. On the Train tab: its last words and today's workout as cards, each with
-   its pixel demo and an easier and a swap. Tap "Talk" and the chat opens at the camp fire, in the
+/* The coach is your flame. On the Train tab: what it says (it brings things up on its own, nudge.ts)
+   and the week it planned: a chip per day and that day's workout as cards, each with its pixel demo
+   (tap for how to do it) and an easier and a swap. Tap "Talk" and the chat opens at the camp fire, in the
    story's dialogue boxes: the flame asks, you tap a reply or type, and it builds and changes your
    workouts as you talk. */
 
@@ -26,35 +33,43 @@ type Update = (fn: (s: GameState) => GameState) => void;
 
 const nameOf = (s: GameState) => s.profile.flame?.trim() || 'Ember';
 
-/** What the flame says on the card: its last words, or a hello. */
-function lastWords(state: GameState): string {
+/** What the flame says on the card: something new it brings up, else its last words, else a hello. */
+function lastWords(state: GameState, nudge: Nudge | undefined): string {
+  if (nudge) return nudge.text;
   const said = shownChat(state.coach?.chat).filter((l) => l.who === 'coach');
   const last = said[said.length - 1];
   if (last && last.who === 'coach') return last.text;
-  return state.coach?.profile ? 'Want to change something about today? Just tell me.' : "Hey, it's me. Let's plan your training together. Tell me where you're at, and I'll build every workout for you.";
+  return state.coach?.profile ? 'Want to change something in your week? Just tell me.' : "Hey, it's me. Let's plan your training together. Tell me where you're at, and I'll plan every week for you.";
 }
 
 export function CoachScreen({ state, update, onStart }: { state: GameState; update: Update; onStart: (c: Checkin) => void }) {
   const [chat, setChat] = useState(false);
   const [knows, setKnows] = useState(false);
-  const plan = state.coach?.plan;
   const stage = flameStage(state.sessions.length).id;
-  const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
+  const nudge = freshNudge(state, new Date());
+  const open = () => {
+    // What the flame brought up is said in the chat too; an empty chat opens with it from the coach.
+    if (nudge) update((s) => hearNudge(s, nudge, !!s.coach?.chat?.length));
+    setChat(true);
+  };
   return (
     <div className="space-y-4 land:grid land:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] land:items-start land:gap-3 land:space-y-0">
       <section className="rounded-2xl bg-ink-800 p-3 pixel-border">
         <div className="flex items-end gap-3">
           <div className="grid h-20 w-16 shrink-0 place-items-end justify-center">
-            <Ember size={64} stage={stage} />
+            <Ember size={64} stage={stage} mood={nudge ? 'bright' : 'happy'} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="font-pixel text-[10px] text-gold-300">{nameOf(state)}</p>
-            <p className="mt-1.5 line-clamp-4 text-sm leading-snug text-slate-100">{lastWords(state)}</p>
+            <p className="flex items-center gap-1.5 font-pixel text-[10px] text-gold-300">
+              {nameOf(state)}
+              {nudge && <span aria-label="New" className="h-1.5 w-1.5 rounded-full bg-gold-300" />}
+            </p>
+            <p className="mt-1.5 line-clamp-4 text-sm leading-snug text-slate-100">{lastWords(state, nudge)}</p>
           </div>
         </div>
         <div className="mt-3 flex gap-2">
-          <button onClick={() => setChat(true)} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gold-400 py-3 font-pixel text-[10px] text-ink-950 shadow-[0_3px_0_#b45309] active:translate-y-0.5 active:shadow-none">
-            <MessageCircle size={14} /> {state.coach?.profile ? 'Talk' : "Let's start"}
+          <button onClick={open} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-gold-400 py-3 font-pixel text-[10px] text-ink-950 shadow-[0_3px_0_#b45309] active:translate-y-0.5 active:shadow-none">
+            <MessageCircle size={14} /> {!state.coach?.profile ? "Let's start" : nudge ? 'Answer' : 'Talk'}
           </button>
           {state.coach?.profile && (
             <button onClick={() => setKnows((k) => !k)} aria-expanded={knows} className="rounded-xl bg-ink-700 px-3 text-xs font-semibold text-slate-200">
@@ -69,36 +84,112 @@ export function CoachScreen({ state, update, onStart }: { state: GameState; upda
         )}
       </section>
 
-      {state.coach?.profile && (
-        <section className="rounded-2xl bg-ink-800 p-3">
-          <div className="flex items-baseline justify-between gap-2">
-            <h2 className="font-pixel text-[10px] text-gold-300">Today's workout</h2>
-            {plan && <span className="text-xs text-slate-400">about {minutesOf(plan.items)} min</span>}
-          </div>
-          {plan ? (
-            <>
-              <p className="mt-1.5 text-sm font-semibold text-slate-100">{plan.title}</p>
-              <WorkoutCards state={state} update={update} items={plan.items} />
-              <button
-                onClick={() => onStart(inProgress ? state.draft!.checkin : 'normal')}
-                className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 py-3 font-pixel text-[10px] text-ink-950 shadow-[0_3px_0_#047857] active:translate-y-0.5 active:shadow-none"
-              >
-                <Play size={14} /> {inProgress ? 'Back to it' : 'Start'}
-              </button>
-            </>
-          ) : (
-            <p className="mt-2 text-sm text-slate-400">Getting your workout ready…</p>
-          )}
-        </section>
+      {state.coach?.profile ? (
+        <WeekBoard state={state} update={update} onStart={onStart} />
+      ) : (
+        <p className="rounded-2xl border border-dashed border-ink-600 p-4 text-center text-sm text-slate-400">Your week shows here once we&apos;ve planned it together. Tap &quot;Let&apos;s start&quot; and tell {nameOf(state)} where you&apos;re at.</p>
       )}
       {chat && <CoachChat state={state} update={update} onClose={() => setChat(false)} />}
     </div>
   );
 }
 
-/** The workout as cards: the demo, the dose, and easier and swap right there. */
-export function WorkoutCards({ state, update, items }: { state: GameState; update: Update; items: PlanItem[] }) {
+/** The week: a chip for each of its seven days (workouts and rest days; done and kept ticked, the
+    next workout lit), and the chosen day: its workout as cards, or the rest day to keep. */
+function WeekBoard({ state, update, onStart }: { state: GameState; update: Update; onStart: (c: Checkin) => void }) {
+  const now = new Date();
+  const today = dayKey(now);
+  const week = state.coach?.week;
+  const next = nextDay(week);
+  const [picked, setPicked] = useState<string | null>(null);
+  const [fire, setFire] = useState(false);
+  const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
+  if (!week) return <p className="rounded-2xl bg-ink-800 p-3 text-sm text-slate-400">Getting your week ready…</p>;
+  const slots = weekSlots(week);
+  const slot = slots.find((s) => s.date === picked) ?? slots.find((s) => s.date === today) ?? slots[0];
+  const day = slot.day;
+  return (
+    <section className="rounded-2xl bg-ink-800 p-3">
+      <h2 className="font-pixel text-[10px] text-gold-300">This week</h2>
+      <ul className="mt-2 grid grid-cols-7 gap-1">
+        {slots.map((s) => {
+          const on = s === slot;
+          const done = s.day ? !!s.day.done : restKept(state, s.date);
+          const lit = s.day && s.day === next;
+          return (
+            <li key={s.date}>
+              <button
+                onClick={() => setPicked(s.date)}
+                aria-pressed={on}
+                aria-label={`${weekdayOf(s.date)}: ${s.day ? s.day.plan.title : 'rest day'}${done ? ', done' : ''}`}
+                className={`flex w-full flex-col items-center rounded-lg py-1.5 ${on ? 'bg-ink-600 ring-1 ring-gold-400' : s.day ? 'bg-ink-900' : 'bg-ink-900/50'} ${lit ? 'text-gold-300' : done ? 'text-emerald-300' : s.day ? 'text-slate-200' : 'text-orange-200/70'}`}
+              >
+                <span className="font-pixel text-[8px]">{weekdayOf(s.date)}</span>
+                <span className="mt-1 text-[10px] leading-none">{done ? '✓' : lit ? 'next' : s.day ? MODE_SHORT[s.day.plan.mode] : 'rest'}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {day ? (
+        <>
+          <div className="mt-2 flex items-baseline justify-between gap-2">
+            <p className="min-w-0 truncate text-sm font-semibold text-slate-100">
+              <span className="text-slate-400">{dayLabel(day.date, now)} · </span>
+              {day.plan.title}
+            </p>
+            <span className="shrink-0 text-xs text-slate-400">{day.done ? 'done' : `about ${minutesOf(day.plan.items)} min`}</span>
+          </div>
+          <WorkoutCards state={state} update={update} items={day.plan.items} date={day.done ? undefined : day.date} />
+          {day === next ? (
+            <button
+              onClick={() => onStart(inProgress ? state.draft!.checkin : 'normal')}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 py-3 font-pixel text-[10px] text-ink-950 shadow-[0_3px_0_#047857] active:translate-y-0.5 active:shadow-none"
+            >
+              <Play size={14} /> {inProgress ? 'Back to it' : 'Start'}
+            </button>
+          ) : (
+            !day.done && next && <p className="mt-3 text-center text-xs text-slate-400">Comes after {weekdayOf(next.date)}&apos;s workout.</p>
+          )}
+        </>
+      ) : (
+        <div className="mt-2 rounded-xl bg-gradient-to-b from-[#1d1527] to-ink-900 p-3 ring-1 ring-orange-300/20">
+          <p className="text-sm font-semibold text-orange-200">
+            <span className="text-slate-400">{dayLabel(slot.date, now)} · </span>Rest day
+          </p>
+          <p className="mt-1 text-sm text-slate-300">Resting is part of the plan: it&apos;s when you get stronger. Keep the day by sitting by the fire for a minute. It counts, and your Fog runs that day start Rested.</p>
+          {restKept(state, slot.date) ? (
+            <p className="mt-2 text-xs text-emerald-300">Kept ✓</p>
+          ) : slot.date === today ? (
+            <button onClick={() => setFire(true)} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-ink-800 py-3 text-sm text-orange-200 ring-1 ring-orange-300/25 active:scale-[.98]">
+              <Sprite id="uiIcon" opts={{ name: 'flame' }} size={18} label="" /> Sit by the fire · 1 minute
+            </button>
+          ) : slot.date < today ? (
+            <p className="mt-2 text-xs text-slate-500">Not kept.</p>
+          ) : null}
+        </div>
+      )}
+      {fire && (
+        <SitByFire
+          name={nameOf(state)}
+          stage={flameStage(state.sessions.length).id}
+          line={fireLine(state, now)}
+          onDone={(sat) => {
+            if (sat) update((s) => updateTodayPage(s, new Date(), { fire: true }));
+            setFire(false);
+          }}
+        />
+      )}
+    </section>
+  );
+}
+
+const MODE_SHORT: Record<Mode, string> = { gym: 'gym', calisthenics: 'body', running: 'run' };
+
+/** The workout as cards: tap one for how to do it; easier and swap right there on days still to do. */
+export function WorkoutCards({ state, update, items, date }: { state: GameState; update: Update; items: PlanItem[]; date?: string }) {
   const [open, setOpen] = useState<{ id: string; kind: 'easier' | 'swap' } | null>(null);
+  const [howTo, setHowTo] = useState<PlanItem | null>(null);
   const opened = items.find((i) => i.id === open?.id);
   return (
     <>
@@ -107,16 +198,21 @@ export function WorkoutCards({ state, update, items }: { state: GameState; updat
           const end = it.role === 'warmup' || it.role === 'stretch';
           return (
             <li key={it.id} className={`flex flex-col rounded-xl bg-ink-900 p-2 ${it.skipped ? 'opacity-40' : ''}`}>
-              <div className="flex justify-center">
-                <MiniDemo state={state} exercise={it.demo} name={it.name} size={end ? 48 : 64} />
-              </div>
-              <p className="mt-1.5 text-[9px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[it.role] }}>
-                {ROLE_LABEL[it.role]}
-                {it.changed && <span className="ml-1 normal-case tracking-normal text-sky-300">{it.changed.how === 'easier' ? 'easier' : 'swapped'}</span>}
-              </p>
-              <p className="line-clamp-2 text-xs font-semibold leading-tight text-slate-100">{it.name}</p>
-              <p className="mt-0.5 font-mono text-[11px] text-slate-400">{doseOf(it, it.run ? undefined : state.reps[it.id])}</p>
-              {!end && !it.run && (it.easier.length > 0 || it.swaps.length > 0) && (
+              <button onClick={() => setHowTo(it)} aria-label={`How to do ${it.name}`} className="flex flex-col text-left active:scale-[.98]">
+                <span className="flex w-full justify-center">
+                  <MiniDemo state={state} exercise={it.demo} name={it.name} size={end ? 48 : 64} />
+                </span>
+                <span className="mt-1.5 text-[9px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[it.role] }}>
+                  {ROLE_LABEL[it.role]}
+                  {it.changed && <span className="ml-1 normal-case tracking-normal text-sky-300">{it.changed.how === 'easier' ? 'easier' : 'swapped'}</span>}
+                </span>
+                <span className="line-clamp-2 text-xs font-semibold leading-tight text-slate-100">{it.name}</span>
+                <span className="mt-0.5 font-mono text-[11px] text-slate-400">
+                  {doseOf(it, it.run ? undefined : state.reps[it.id])}
+                  {it.rest ? ` · rest ${it.rest}s` : ''}
+                </span>
+              </button>
+              {date && !end && !it.run && (it.easier.length > 0 || it.swaps.length > 0) && (
                 <div className="mt-auto flex gap-1 pt-2">
                   {it.easier.length > 0 && (
                     <button onClick={() => setOpen({ id: it.id, kind: 'easier' })} className="flex flex-1 items-center justify-center gap-1 rounded-md bg-ink-700 py-1.5 text-[10px] font-semibold text-slate-200">
@@ -141,12 +237,13 @@ export function WorkoutCards({ state, update, items }: { state: GameState; updat
           list={open.kind === 'easier' ? opened.easier : opened.swaps}
           state={state}
           onPick={(c) => {
-            update((s) => changeItem(s, opened.id, c, open.kind));
+            update((s) => changeItem(s, opened.id, c, open.kind, date));
             setOpen(null);
           }}
           onClose={() => setOpen(null)}
         />
       )}
+      {howTo && <ExerciseSheet state={state} id={howTo.id} demo={howTo.demo} onClose={() => setHowTo(null)} />}
     </>
   );
 }
@@ -173,10 +270,9 @@ function CoachChat({ state, update, onClose }: { state: GameState; update: Updat
   const { send, busy, error } = useCoachChat(state, update);
   const canTalk = useSignedIn();
   const [text, setText] = useState('');
-  const [taps, setTaps] = useState(false);
   const end = useRef<HTMLDivElement>(null);
   const lines = shownChat(state.coach?.chat);
-  const plan = state.coach?.plan;
+  const week = state.coach?.week;
   const lastWorkout = lines.findLast((l) => l.who === 'workout')?.key;
   const replies = busy ? [] : (state.coach?.replies ?? []);
   const name = nameOf(state);
@@ -223,7 +319,7 @@ function CoachChat({ state, update, onClose }: { state: GameState; update: Updat
             <li className="rounded-xl bg-ink-800/95 p-3 pixel-border">
               <p className="mb-1.5 font-pixel text-[10px] text-gold-300">{name}</p>
               <p className="text-[15px] leading-snug text-slate-100">
-                To talk with me, sign in first: Hero tab, then Settings. It backs up your save too. Or answer a few quick taps and I'll start from those.
+                To talk with me, you need to be signed in, with signal.
               </p>
             </li>
           )}
@@ -239,22 +335,34 @@ function CoachChat({ state, update, onClose }: { state: GameState; update: Updat
               </li>
             ) : (
               <li key={l.key} className="animate-fadein rounded-xl bg-emerald-900/30 p-2.5 ring-1 ring-emerald-700/50">
-                {l.key === lastWorkout && plan ? (
+                {l.key === lastWorkout && week ? (
                   <>
-                    <p className="font-pixel text-[9px] text-emerald-200">{plan.title}</p>
-                    <ul className="mt-2 flex gap-2 overflow-x-auto pb-1">
-                      {plan.items.map((it) => (
-                        <li key={it.id} className="flex w-[76px] shrink-0 flex-col items-center text-center">
-                          <MiniDemo state={state} exercise={it.demo} name={it.name} size={52} />
-                          <span className="mt-1 line-clamp-2 text-[10px] leading-tight text-slate-200">{it.name}</span>
-                          <span className="font-mono text-[10px] text-slate-400">{doseOf(it)}</span>
+                    <p className="font-pixel text-[9px] text-emerald-200">Your week</p>
+                    <ul className="mt-2 space-y-2">
+                      {week.days.map((d) => (
+                        <li key={d.date} className={d.done ? 'opacity-50' : ''}>
+                          <p className="text-[11px] text-slate-300">
+                            <span className="font-semibold text-emerald-200">{dayLabel(d.date, new Date())}</span> · {d.plan.title}
+                            {d.done && ' ✓'}
+                          </p>
+                          <ul className="mt-1 flex gap-1.5 overflow-x-auto pb-1">
+                            {d.plan.items
+                              .filter((it) => it.role !== 'warmup' && it.role !== 'stretch')
+                              .map((it) => (
+                                <li key={it.id} className="flex w-[64px] shrink-0 flex-col items-center text-center">
+                                  <MiniDemo state={state} exercise={it.demo} name={it.name} size={44} />
+                                  <span className="mt-0.5 line-clamp-2 text-[9px] leading-tight text-slate-200">{it.name}</span>
+                                  <span className="font-mono text-[9px] text-slate-400">{doseOf(it)}</span>
+                                </li>
+                              ))}
+                          </ul>
                         </li>
                       ))}
                     </ul>
-                    <p className="mt-1 text-[11px] text-emerald-200/80">On the Train tab, each one has Easier and Swap.</p>
+                    <p className="mt-1 text-[11px] text-emerald-200/80">On the Train tab: tap a card for how to do it, or make it easier.</p>
                   </>
                 ) : (
-                  <p className="text-xs text-emerald-200/80">Workout changed.</p>
+                  <p className="text-xs text-emerald-200/80">Week changed.</p>
                 )}
               </li>
             ),
@@ -278,19 +386,13 @@ function CoachChat({ state, update, onClose }: { state: GameState; update: Updat
       </main>
 
       <footer className="safe-bottom land-safe-x mx-auto w-full max-w-md px-4 pt-2 land:max-w-2xl">
-        {(replies.length > 0 || !canTalk) && (
+        {canTalk && replies.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
-            {canTalk
-              ? replies.map((r) => (
-                  <button key={r} onClick={() => say(r)} className="rounded-full bg-ink-800 px-3 py-2 text-sm text-gold-300 ring-1 ring-gold-400/60 active:scale-95">
-                    {r}
-                  </button>
-                ))
-              : (
-                  <button onClick={() => setTaps(true)} className="rounded-full bg-ink-800 px-3 py-2 text-sm text-gold-300 ring-1 ring-gold-400/60 active:scale-95">
-                    Quick taps instead
-                  </button>
-                )}
+            {replies.map((r) => (
+              <button key={r} onClick={() => say(r)} className="rounded-full bg-ink-800 px-3 py-2 text-sm text-gold-300 ring-1 ring-gold-400/60 active:scale-95">
+                {r}
+              </button>
+            ))}
           </div>
         )}
         {canTalk && (
@@ -322,7 +424,6 @@ function CoachChat({ state, update, onClose }: { state: GameState; update: Updat
           </form>
         )}
       </footer>
-      {taps && <CoachSetup state={state} update={update} onClose={() => setTaps(false)} />}
     </div>
   );
 }

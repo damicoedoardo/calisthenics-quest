@@ -1,5 +1,5 @@
 import type { ClassId } from '@/lib/gear';
-import { MAT_DROPS, MAT_IDS, type MatId } from '@/balance';
+import { MAT_DROPS, MAT_IDS, PARTY, type MatId } from '@/balance';
 import { rollUpgrades, xpToNext, type Edge, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import {
   ATTACK,
@@ -495,6 +495,10 @@ export interface Hero {
       more your next hit does (0: none waiting). */
   hideUntil: number;
   sneak: number;
+  /** In a party: how long a friend has stood by while you're down (back up at PARTY.revive.secs),
+      and whether you're out at a door or on the stairs, waiting for the rest. */
+  reviving: number;
+  waiting: boolean;
   /** Hits taken this run (what the run's recap shows, to set the bot against people). */
   hits: number;
   cd: { attack: number; spark: number; nova: number; fireball: number };
@@ -535,7 +539,8 @@ export interface Run {
       clear), and the stairs down, once the floor's last room is clear. */
   kind: RoomKind;
   doors: Door[];
-  chest: { x: number; y: number; opened: boolean } | null;
+  /** In a party each hero opens the chest once for their own pick (`took`: who has). */
+  chest: { x: number; y: number; opened: boolean; took?: number[] } | null;
   stairs: { x: number; y: number } | null;
   /** Items on the floor here. */
   /** Items on the floor. In a party each one is for one hero (`for`, their id): only they see and take it. */
@@ -700,6 +705,8 @@ function newHero(hs: HeroSetup, id: number): Hero {
     guardUntil: 0,
     hideUntil: 0,
     sneak: 0,
+    reviving: 0,
+    waiting: false,
     shots: 0,
     hits: 0,
     cd: { attack: 0.5, spark: 2, nova: 3, fireball: 2.5 },
@@ -734,6 +741,24 @@ function prey(run: Run, x: number, y: number): Hero {
   }
   return best;
 }
+/** The side a hero has walked out of the room by (into an open door's gap), or null. */
+export function outSide(run: Pick<Run, 'area'>, h: Pick<Hero, 'x' | 'y'>): Side | null {
+  const { w, h: H } = run.area;
+  return h.y < 4 ? 'e' : h.y > H - 4 ? 'w' : h.x < 4 ? 'n' : h.x > w - 4 ? 's' : null;
+}
+
+/** Standing on the stairs down. */
+export const onStairs = (run: Pick<Run, 'stairs'>, h: Pick<Hero, 'x' | 'y'>) => !!run.stairs && Math.hypot(run.stairs.x - h.x, run.stairs.y - h.y) < 18 + HERO_R;
+
+/** Whether this hero can open the room's chest: once, or in a party once each. */
+export function canOpen(run: Pick<Run, 'chest' | 'party'>, h: Pick<Hero, 'id'>): boolean {
+  const c = run.chest;
+  return !!c && (run.party.length < 2 ? !c.opened : !c.took?.includes(h.id));
+}
+
+/** The friends of `h` still standing within `r` of x, y. */
+const friendsNear = (run: Run, h: Hero, x: number, y: number, r: number) => run.party.filter((o) => o !== h && o.hp > 0 && Math.hypot(o.x - x, o.y - y) <= r);
+
 /** A hero is choosing (a skill, a chest item): the run holds still. */
 const choosing = (run: Run) => run.party.some((h) => h.offer || h.relicOffer);
 
@@ -1214,6 +1239,8 @@ function downStairs(run: Run) {
   }
   emit(run, { type: 'floor', floor: run.floor + 1 });
   for (const h of up) emit(run, { type: 'heal', x: h.x, y: h.y, n: Math.round(h.maxHp * DIALS.stairs) });
+  // Anyone still down gets back up on the way down.
+  for (const h of run.party) if (h.hp <= 0) upAgain(run, h);
   newFloor(run, run.floor + 1);
 }
 
@@ -1253,6 +1280,7 @@ export function stepRun(run: Run, input: Input | Input[]) {
     if (h.sp && i.skill) useSkill(run, h, i);
     if (h.sp && i.final) useFinal(run, h, i);
   }
+  if (run.party.length > 1) revive(run);
   stepFields(run);
   moveFoes(run);
   moveBullets(run);
@@ -1268,6 +1296,35 @@ export function stepRun(run: Run, input: Input | Input[]) {
   pullGems(run);
   checkRoom(run);
   if (run.foes.length > 40) run.foes = run.foes.filter((f) => f.alive);
+}
+
+/** Out at a door or on the stairs before the rest of the party: say so once. */
+function wait(run: Run, h: Hero) {
+  if (h.waiting) return;
+  h.waiting = true;
+  if (h === run.hero) emit(run, { type: 'say', text: 'Waiting for your party. Everyone has to be here to go on.' });
+}
+
+/** In a party: a friend standing next to one who is down brings them back up, given a moment. */
+function revive(run: Run) {
+  const k = PARTY.revive;
+  for (const d of run.party) {
+    if (d.hp > 0) continue;
+    const by = run.party.find((o) => o.hp > 0 && Math.hypot(o.x - d.x, o.y - d.y) < k.r);
+    d.reviving = by ? d.reviving + STEP : 0;
+    if (!by || d.reviving < k.secs) continue;
+    d.reviving = 0;
+    upAgain(run, d, k.hp);
+    if (d === run.hero) emit(run, { type: 'say', text: 'A friend got you back up.' });
+    else if (by === run.hero) emit(run, { type: 'say', text: 'You got your friend back up.' });
+  }
+}
+
+/** A hero who was down stands up with `share` of their HP. */
+function upAgain(run: Run, h: Hero, share = PARTY.stairsUp) {
+  h.hp = Math.max(1, Math.round(h.maxHp * share));
+  h.hurtUntil = run.t + INVULNERABLE;
+  emit(run, { type: 'heal', x: h.x, y: h.y, n: h.hp });
 }
 
 function moveHero(run: Run, h: Hero, input: Input) {
@@ -1310,15 +1367,22 @@ function moveHero(run: Run, h: Hero, input: Input) {
     lane = (s: Side) => run.doorOpen && run.doors.some((d) => d.side === s && Math.abs(s === 'e' || s === 'w' ? h.x - d.x : h.y - d.y) < ROOM.door / 2 - HERO_R);
   h.x = clamp(h.x, lane('n') ? -40 : ROOM.wall + HERO_R, lane('s') ? w + 40 : w - ROOM.wall - HERO_R);
   h.y = clamp(h.y, lane('e') ? -40 : ROOM.wall + HERO_R, lane('w') ? H + 40 : H - ROOM.wall - HERO_R);
-  const out: Side | null = h.y < 4 ? 'e' : h.y > H - 4 ? 'w' : h.x < 4 ? 'n' : h.x > w - 4 ? 's' : null,
+  const out = outSide(run, h),
     door = out && run.doors.find((d) => d.side === out);
-  if (door) return throughDoor(run, door);
-  if (run.stairs && Math.hypot(run.stairs.x - h.x, run.stairs.y - h.y) < 18 + HERO_R) {
+  // In a party, a door or the stairs take you on only when everyone standing is there: until then
+  // you wait in the doorway (or on the stairs).
+  if (door) {
+    if (standing(run).every((o) => outSide(run, o) === out)) return throughDoor(run, door);
+    return wait(run, h);
+  }
+  if (onStairs(run, h)) {
+    if (!standing(run).every((o) => onStairs(run, o))) return wait(run, h);
     if (run.home) return end(run, true, 'boss');
     if (run.setup.autoPick) return downStairs(run);
     run.stairsAsk = true;
     return;
   }
+  h.waiting = false;
   // Loot: into the bag, while there's room.
   for (const l of run.loot) {
     if (!mine(l, h) || Math.hypot(l.x - h.x, l.y - h.y) > 20 + HERO_R) continue;
@@ -1335,16 +1399,19 @@ function moveHero(run: Run, h: Hero, input: Input) {
   }
   // A chest: open it and pick what's inside.
   const c = run.chest;
-  if (c && !c.opened && Math.hypot(c.x - h.x, c.y - h.y) < 22 + HERO_R) openChest(run, h);
+  if (c && canOpen(run, h) && Math.hypot(c.x - h.x, c.y - h.y) < 22 + HERO_R) openChest(run, h);
   // The ground under you.
   for (const q of run.terrain.spikes) if (inRect(q, h.x, h.y, HERO_R - 4) && spikeState(q, now) === 'up') hurt(run, h, SPIKES.dmg * run.setup.zone.dmg, 'touch');
   const sh = run.terrain.shrine;
   if (sh && !sh.used && Math.hypot(sh.x - h.x, sh.y - h.y) < SHRINE.r + HERO_R) {
     sh.used = true;
-    const heal = Math.round(h.maxHp * DIALS.shrine);
-    h.hp = Math.min(h.maxHp, h.hp + heal);
     emit(run, { type: 'shrine', x: sh.x, y: sh.y });
-    emit(run, { type: 'heal', x: h.x, y: h.y, n: heal });
+    // The shrine heals the whole party, wherever they stand.
+    for (const o of standing(run)) {
+      const heal = Math.round(o.maxHp * DIALS.shrine);
+      o.hp = Math.min(o.maxHp, o.hp + heal);
+      emit(run, { type: 'heal', x: o.x, y: o.y, n: heal });
+    }
   }
   if (h.charge?.harm) {
     clearBullets(run, h.x, h.y, HERO_R + 24);
@@ -1604,6 +1671,17 @@ function spHeal(m: MoveCtx, times = 1) {
   const n = Math.round(h.maxHp * k.heal * times);
   h.hp = Math.min(h.maxHp, h.hp + n);
   emit(run, { type: 'heal', x: h.x, y: h.y, n });
+  healFriends(run, h, k.heal * times);
+}
+
+/** In a party: friends close to you get a heal of `share` of their own HP too (PARTY). */
+function healFriends(run: Run, h: Hero, share: number) {
+  for (const o of friendsNear(run, h, h.x, h.y, PARTY.near)) {
+    const n = Math.round(o.maxHp * share * PARTY.share);
+    if (n <= 0) continue;
+    o.hp = Math.min(o.maxHp, o.hp + n);
+    emit(run, { type: 'heal', x: o.x, y: o.y, n });
+  }
 }
 
 /** A point `d` ahead of the hero, the way it faces (or at angle `a`). */
@@ -1726,6 +1804,11 @@ function guardMove(m: MoveCtx) {
   const { run, h, k, r } = m;
   h.ghostUntil = Math.max(h.ghostUntil, run.t + (k.secs ?? 1));
   h.guardUntil = run.t + (k.secs ?? 1);
+  // Friends close by are covered too: nothing touches them either, and the shots round them go.
+  for (const o of friendsNear(run, h, h.x, h.y, PARTY.near)) {
+    o.ghostUntil = Math.max(o.ghostUntil, run.t + (k.secs ?? 1));
+    if (k.clear) clearBullets(run, o.x, o.y, r * k.clear);
+  }
   if (k.clear) clearBullets(run, h.x, h.y, r * k.clear);
   burst(run, h, h.x, h.y, r, m.dmg, m.color, undefined, k.knock ?? 200);
   spHeal(m);
@@ -1931,6 +2014,7 @@ function useAbility(run: Run, h: Hero, input: Input) {
   } else {
     const heal = Math.round(h.maxHp * ABILITY.still.heal);
     h.hp = Math.min(h.maxHp, h.hp + heal);
+    healFriends(run, h, ABILITY.still.heal);
     clearBullets(run, h.x, h.y, ABILITY.still.r);
     burst(run, h, h.x, h.y, ABILITY.still.r, abilityPow(h, ATTACK.wave.dmg * ABILITY.still.dmg), 'ability', undefined, 260);
     // Its own blast doesn't count toward the next one.
@@ -3095,19 +3179,26 @@ function openDoors(run: Run) {
   if (c.kind === 'stairs' || c.kind === 'warden') run.stairs = { x: w / 2, y: 110 };
 }
 
+/** Open the chest: three chest items to pick from, maybe an item. In a party each hero opens it
+    once, for their own pick and their own item. */
 function openChest(run: Run, h: Hero) {
   const c = run.chest;
-  if (!c || c.opened) return;
+  if (!c || !canOpen(run, h)) return;
+  const solo = run.party.length < 2;
   c.opened = true;
+  if (!solo) (c.took ??= []).push(h.id);
   const ids = Object.keys(RELICS) as RelicId[];
   const choices: RelicId[] = [];
   while (choices.length < 3) {
     const id = ids[Math.floor(run.rnd() * ids.length)];
     if (!choices.includes(id)) choices.push(id);
   }
-  emit(run, { type: 'chest', x: c.x, y: c.y });
-  if (run.rnd() < DROPS.chest) dropEach(run, c.x, c.y + 34, DROP_LUCK.chest);
-  findMats(run, 'chest', c.x, c.y);
+  if (h === run.hero) emit(run, { type: 'chest', x: c.x, y: c.y });
+  if (run.rnd() < DROPS.chest) {
+    if (solo) dropEach(run, c.x, c.y + 34, DROP_LUCK.chest);
+    else dropItem(run, c.x, c.y + 34, DROP_LUCK.chest, h);
+  }
+  findMats(run, 'chest', c.x, c.y, solo ? undefined : [h]);
   h.relicOffer = choices;
   if (run.setup.autoPick) pickRelic(run, RELIC_BOT.find((id) => choices.includes(id)) ?? choices[0], h);
 }
@@ -3185,10 +3276,10 @@ function dropEach(run: Run, x: number, y: number, luck: number) {
 
 /** Co-op materials: in a party, each standing hero rolls their own from `from`'s odds. A solo run
     rolls nothing (so solo runs play exactly as before). */
-function findMats(run: Run, from: keyof typeof MAT_DROPS, x: number, y: number) {
+function findMats(run: Run, from: keyof typeof MAT_DROPS, x: number, y: number, who = standing(run)) {
   if (run.party.length < 2) return;
   const odds: Partial<Record<MatId, number>> = MAT_DROPS[from];
-  for (const h of standing(run))
+  for (const h of who)
     for (const mat of MAT_IDS) {
       const p = odds[mat];
       if (!p || run.rnd() >= p) continue;

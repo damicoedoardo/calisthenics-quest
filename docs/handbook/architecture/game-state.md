@@ -27,7 +27,7 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 | `answers` | What the player chose in the story (heart moments, villager stories) |
 | `fog` | Zones cleared, runs, best records per zone, the last run |
 | `days` | The Book of Days: one page per day the app was opened (`dayNumber` in `src/lib/days.ts` counts them, today included) |
-| `coach` | Optional. The coach's memory: `profile` (setup answers, levels, history), `notes`, `plan` (the next workout it built), `chat` (the recent chat, as the LLM reads it) and `replies` (taps it offered) ([../game/coach.md](../game/coach.md)) |
+| `coach` | Optional. The coach's memory: `profile` (setup answers, levels, history), `notes`, `week` (the planned week: days with their workout and `done`; the next workout is its first day not done; old saves' single `plan` migrates to a one-day week), `heard` (the last thing the flame brought up), `chat` (the recent chat, as the LLM reads it) and `replies` (taps it offered) ([../game/coach.md](../game/coach.md)) |
 
 ## Saving
 

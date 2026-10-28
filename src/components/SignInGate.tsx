@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { Ember } from './Characters';
 import { cloudConfigured, googleSignIn, maybeSignedIn, signInWithEmail, signInWithGoogle, verifyEmailCode } from '@/lib/cloud-client';
 
-/* After the opening and the install step, FORMA asks once for an account: it backs the hero up
-   from day one, and it's who you are to your friends. After that the game still plays offline.
+/* After the opening and the install step, FORMA needs an account: there is no playing on without
+   one. It backs the hero up from day one, it's who you are to your friends, and your coach talks to
+   you through it. Once signed in, the game still plays offline.
    On an installed iPhone app the email's link opens Safari, not the app, so the code in the email
    (6 or 8 digits, a Supabase setting) is the way in there. The backup and its rules are in Cloud.tsx and lib/cloud*.ts. */
 
@@ -17,13 +18,12 @@ export const signInDue = (signedIn: boolean) => cloudConfigured && !signedIn && 
 
 const begin = () => window.dispatchEvent(new Event('forma-cloud-start'));
 
-export function SignInGate({ onSkip }: { onSkip?: () => void }) {
+export function SignInGate() {
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
-  const [later, setLater] = useState(false);
   const offline = typeof navigator !== 'undefined' && !navigator.onLine;
 
   const send = async () => {
@@ -49,24 +49,17 @@ export function SignInGate({ onSkip }: { onSkip?: () => void }) {
     if (err) setMsg("That code didn't work. Check the newest email, or send a new one.");
   };
 
-  if (later) return null;
-
   return (
     <div className="safe-top fixed inset-0 z-40 overflow-y-auto bg-ink-950 land-safe-x">
       <div className="mx-auto flex min-h-full max-w-md flex-col items-center justify-center px-5 pb-10 pt-6 text-center">
         <Ember size={64} stage="spark" />
         <h1 className="mt-4 font-pixel text-sm leading-relaxed text-gold-400">Make your hero yours</h1>
         <p className="mt-3 text-sm text-slate-300">
-          Sign in once. Your hero is kept safe, comes with you to a new phone, and your friends can find you. After that FORMA works with no signal.
+          Sign in to play. Your hero is kept safe and comes with you to a new phone, your friends can find you, and your flame can coach you. After that FORMA works with no signal.
         </p>
 
         {offline ? (
-          <div className="mt-6 w-full space-y-3">
-            <p className="text-sm text-amber-300">You&apos;re offline. You can sign in next time you have signal.</p>
-            <button onClick={() => setLater(true)} className={goldButton}>
-              Play on
-            </button>
-          </div>
+          <p className="mt-6 text-sm text-amber-300">You&apos;re offline. Signing in needs signal once; come back when you have it.</p>
         ) : !sent ? (
           <form
             className="mt-6 w-full space-y-3"
@@ -140,11 +133,6 @@ export function SignInGate({ onSkip }: { onSkip?: () => void }) {
         )}
 
         {msg && <p className="mt-3 text-xs text-sky-300">{msg}</p>}
-        {onSkip && (
-          <button onClick={onSkip} className="mt-8 rounded-xl border border-dashed border-sky-400/60 px-4 py-2.5 text-sm text-sky-300">
-            Play without signing in (developer mode)
-          </button>
-        )}
       </div>
     </div>
   );

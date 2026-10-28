@@ -62,3 +62,17 @@ export const MAX_NOTES = 30;
 /** A level moves after this many recent workouts of a movement felt easy (4+ left) or very hard
     (0-1 left) on most sets. Goal: a wrong guess at setup fixes itself in about two weeks. */
 export const LEVEL_SHIFT = { window: 3, need: 2 } as const;
+
+/** Which days of the coming week hold a workout, by workouts a week: days after the week's first
+    day. Goal: a rest day between workouts where the week has room, never more than two in a row. */
+export const WEEK_SPREAD: Record<number, number[]> = {
+  2: [0, 3],
+  3: [0, 2, 4],
+  4: [0, 1, 3, 4],
+  5: [0, 1, 3, 4, 5],
+  6: [0, 1, 2, 3, 4, 5],
+};
+
+/** Rest after a set, seconds: core's default (other moves rest `REST_SECONDS`, 90), and the range
+    a coach may set per exercise. Goal: heavy sets get time to breathe, light ones keep moving. */
+export const REST = { core: 60, min: 30, max: 240 } as const;

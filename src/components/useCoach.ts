@@ -4,11 +4,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { loadLibrary } from '@/exercises/library';
 import type { GameState } from '@/lib/game';
 import { seeded } from '@/lib/random';
-import { buildWorkout } from '@/lib/coach/generate';
-import { planFromQuest, setPlan } from '@/lib/coach/plan';
+import { planFromQuest } from '@/lib/coach/plan';
+import { buildWeek, currentPlan, setPlan, weekOver } from '@/lib/coach/week';
 import { coachTurn, type Ask } from '@/lib/coach/chat';
 import { CoachError, askCoach } from '@/lib/coach-client';
-import type { Mode } from '@/lib/coach/types';
 
 type Update = (fn: (s: GameState) => GameState) => void;
 
@@ -16,18 +15,23 @@ const busy = (s: GameState) => !!s.draft && Object.values(s.draft.sets).some((l)
 /** Same save, same workout: the seed is the workouts done and the day of setup. */
 const seedOf = (s: GameState) => s.sessions.length * 7919 + new Date(s.coach?.profile?.setupAt ?? 0).getTime() / 1000;
 
-/** Keeps a next workout ready once the coach is set up: after setup, and after every workout. */
+/** Keeps a week ready once the coach is set up: after setup, and when the week is done or over.
+    The built-in coach plans it; ask the flame to change any of it. */
 export function useCoachPlan(state: GameState, update: Update) {
-  const want = !!state.coach?.profile && !state.coach.plan && !busy(state);
+  const coach = state.coach;
+  const want = !!coach?.profile && !busy(state) && weekOver(coach.week, new Date());
   useEffect(() => {
     if (!want) return;
     let gone = false;
     loadLibrary().then((all) => {
       if (gone) return;
       update((s) => {
-        if (!s.coach?.profile || s.coach.plan || busy(s)) return s;
-        const plan = buildWorkout({ all, coach: s.coach, sessions: s.sessions, now: new Date(), rng: seeded(seedOf(s)) });
-        return plan ? setPlan(s, plan) : s;
+        const c = s.coach;
+        if (!c?.profile || busy(s)) return s;
+        const now = new Date();
+        if (!weekOver(c.week, now)) return s;
+        const week = buildWeek({ all, coach: c, sessions: s.sessions, now, rng: seeded(seedOf(s)) });
+        return week ? { ...s, coach: { ...c, week } } : s;
       });
     });
     return () => {
@@ -38,7 +42,7 @@ export function useCoachPlan(state: GameState, update: Update) {
 
 /** Before changing the built-in plan's workout: turn it into a plan with choices. */
 export function ensurePlan(update: Update): Promise<void> {
-  return loadLibrary().then((all) => update((s) => (s.coach?.plan ? s : setPlan(s, planFromQuest(s, all, new Date())))));
+  return loadLibrary().then((all) => update((s) => (currentPlan(s.coach) ? s : setPlan(s, planFromQuest(s, all, new Date())))));
 }
 
 /** The chat with the coach: send a line (or nothing, for the coach to start), and whether it is

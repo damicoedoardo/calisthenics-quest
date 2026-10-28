@@ -11,6 +11,7 @@ import type { AnswerId } from '@/story/types';
 import type { ExerciseId } from '@/sprites/characters/exercise';
 import type { CoachState, Mode, PlanItem, RunStep } from './coach/types';
 import { shiftLevels } from './coach/levels';
+import { currentPlan, fromLegacy, markDone } from './coach/week';
 import { XP, WEEKLY_GOAL, PROGRESSION } from '@/balance';
 
 // The numbers live in src/balance/training.ts; these names stay for the code that reads them.
@@ -324,7 +325,7 @@ function fromItem(state: GameState, it: PlanItem): QuestExercise {
  * a Rough day keeps those and one exercise of at most 3 sets.
  */
 export function todaysQuest(state: GameState, checkin: Checkin = state.draft?.checkin ?? 'normal'): QuestExercise[] {
-  const plan = state.coach?.plan;
+  const plan = currentPlan(state.coach);
   const list = plan ? plan.items.filter((it) => !it.skipped).map((it) => fromItem(state, it)) : PLAN[state.profile.kit ?? 'gym'][dayType(state)].map((s) => exercise(state, s));
   if (checkin !== 'rough') return list;
   const lead = list.find((q) => !isTap(q));
@@ -410,7 +411,7 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
 
   const before = levelInfo(totalXp(state)).level;
   const gearBefore = gearOf(state);
-  const plan = state.coach?.plan;
+  const plan = currentPlan(state.coach);
   const coachLog: Partial<Session> = plan
     ? {
         mode: plan.mode,
@@ -421,8 +422,8 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
     : {};
   const session: Session = { id: idGen(), date: now.toISOString(), kind, day: dayType(state), xp, breakdown, entries, raised, heavier, better, ...coachLog };
   const sessions = [...state.sessions, session];
-  // The workout is done: the coach builds the next one, and your levels follow how it felt.
-  const coach = state.coach && { ...state.coach, plan: null, ...(state.coach.profile ? { profile: shiftLevels(state.coach.profile, sessions, now) } : {}) };
+  // The workout is done: its day of the week is ticked, the next day's is up, and your levels follow how it felt.
+  const coach = state.coach && { ...markDone(state.coach, now.toISOString()), ...(state.coach.profile ? { profile: shiftLevels(state.coach.profile, sessions, now) } : {}) };
   const next: GameState = { ...state, reps, sessions, draft: null, ...(coach ? { coach } : {}) };
   const gearAfter = gearOf(next);
   const newGear = (['weapon', 'armor', 'shield'] as const).filter((s) => gearAfter[s].tier > gearBefore[s].tier).map((s) => gearAfter[s]);
@@ -480,7 +481,7 @@ export function migrate(raw: unknown): GameState {
     // made by then stays as the hero's look (the starter kit), and finer gear comes from the Fog.
     const fogGear = s.fogGear?.kit ? s.fogGear : { worn: {}, vault: [], ...s.fogGear, kit: tiersAt((s.sessions ?? []).length) };
     const old = noReach(s.build, fogGear);
-    return { ...fresh, ...s, profile: profileOf(s.profile), ...noCrit(old.build, old.fogGear) };
+    return { ...fresh, ...s, profile: profileOf(s.profile), ...noCrit(old.build, old.fogGear), ...(s.coach ? { coach: fromLegacy(s.coach) } : {}) };
   }
   if (r.version === 2) {
     const { progress: _progress, tests: _tests, reps: _reps, ...s } = r as unknown as GameState & { progress?: unknown; tests?: unknown };

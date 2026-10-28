@@ -88,6 +88,8 @@ export interface PlanItem {
   low: number;
   high: number;
   weighted?: boolean;
+  /** Rest after each set, seconds (the coach's call; missing: the default). */
+  rest?: number;
   /** A run: its steps, in order. The item's `low` is their total seconds. */
   run?: RunStep[];
   /** Easier moves of the same kind, easiest last. */
@@ -99,7 +101,7 @@ export interface PlanItem {
   skipped?: boolean;
 }
 
-/** The next workout: built by the coach (or the built-in generator), played by today's quest. */
+/** One workout: built by the coach (or the built-in generator), kept on its day of the week. */
 export interface CoachPlan {
   mode: Mode;
   items: PlanItem[];
@@ -122,12 +124,32 @@ export type ChatMessage =
   | { role: 'assistant'; content: string; tool_calls?: ToolCall[] }
   | { role: 'tool'; tool_call_id: string; content: string };
 
+/** One day of the week's plan: its date and its workout; `done` once you trained it. */
+export interface CoachDay {
+  /** Local date, YYYY-MM-DD. */
+  date: string;
+  plan: CoachPlan;
+  /** When it was done (the session's date). */
+  done?: string;
+}
+
+/** The week the coach planned: the workout days of the seven days from `start`. The one place a
+    workout lives: the next workout is the first day not done yet (`currentPlan`). */
+export interface CoachWeek {
+  start: string;
+  days: CoachDay[];
+  by: 'built-in' | 'coach';
+}
+
 export interface CoachState {
   profile?: CoachProfile;
   notes: CoachNote[];
-  plan?: CoachPlan | null;
+  /** The planned week: every workout lives here, today's is its first day not done. */
+  week?: CoachWeek | null;
   /** The chat with the coach, the recent part only (`trimChat`). */
   chat?: ChatMessage[];
   /** Replies the coach offered to tap, for its last message. */
   replies?: string[];
+  /** The last thing the flame brought up on its own (a nudge id, nudge.ts), so it is said once. */
+  heard?: string;
 }

@@ -20,6 +20,8 @@ import { ItemCard, ItemTile } from './ItemCard';
 import { Sprite } from './Sprite';
 import { SoundToggle, useMusic } from './Sound';
 import { useKeyboardPlay } from './useDesk';
+import { track } from '@/lib/analytics-client';
+import { runEndEvent, runStartEvent } from '@/lib/analytics';
 import type { FreePick, Hud, MiniMap, RunEnd, RunHandle } from '@/game/dungeon/scene';
 import { ABILITIES, BAG, DODGE, RELICS, ROOM_KINDS, SP_MOVES, midBoss, type AbilityId, type CellKind, type RelicId, type SpMoveId } from '@/game/dungeon/engine';
 
@@ -159,8 +161,10 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
     // A touch on the game itself (not on a skill card or a button over it).
     el.addEventListener('pointerdown', moved, { once: true });
     let jump = 0;
+    const how = { party: !!party, bot: !!auto, start_at: startAt && attempt === 0 ? startAt : null };
     Promise.all([game, calm]).then(([{ startRun }]) => {
       if (cancelled) return;
+      track(runStartEvent(state, zone.id, how));
       run.current = startRun(el, { zone, lines: bossLines(zone, state), power: powerOf(state, new Date()), classId, sheets, autopilot: auto, fast: bot === 'fast', worn: wornFor(state),
         build: buildOf(state),
         heroLevel: heroLevel(state),
@@ -187,6 +191,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
         end: (r) => {
           music.sting(r.won ? (zoneMusic(zone.id).win ?? 'victory') : r.why === 'left' ? 'levelup' : 'defeat');
           const result: RunResult = { ...r, zone: zone.id };
+          track(runEndEvent(state, result, how));
           setBroken(recordsBroken(state.fog?.records?.[zone.id], result));
           setBag(false);
           setStairs(false);

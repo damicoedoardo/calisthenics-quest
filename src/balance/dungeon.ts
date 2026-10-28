@@ -93,3 +93,17 @@ export const BUILD_PROFILES = {
 
 /** How far a build's average win rate may be from the average of all builds (0.15 = 15 points). */
 export const BUILD_FAIR = 0.15;
+/** Playing together (a party of 2 to 4). Goal: the party moves as one, a friend who falls can be
+    brought back, and moves that heal or guard help whoever stands close, so playing together
+    never feels like playing side by side. A solo run never reads these. */
+export const PARTY = {
+  /** A friend down: stand within `r` of them for `secs` and they're back up with `hp` of their HP. */
+  revive: { r: 46, secs: 2.5, hp: 0.3 },
+  /** Down the stairs, anyone still down comes back up with this share of their HP. */
+  stairsUp: 0.3,
+  /** A heal or a guard (Blessing, Shield Wall, Tide Spin, Soul Harvest, Stillness) also covers
+      friends this close to you. */
+  near: 160,
+  /** The share of the heal a friend gets, as a share of their own HP (1 = the same as you). */
+  share: 1,
+};

@@ -39,8 +39,10 @@ import { inSandbox, useGameState } from '@/lib/store';
 import { recordRun, ZONES, type Zone } from '@/lib/fog';
 import { settleGear } from '@/lib/fog-gear';
 import { skipIntro, useDevMode } from '@/lib/dev';
+import { useAnalytics } from '@/lib/analytics-client';
 import { mustInstall, needsCarry } from '@/lib/install';
 import { useInstall } from '@/lib/install-client';
+import { freshNudge } from '@/lib/coach/nudge';
 
 type Tab = 'today' | 'train' | 'play' | 'hero';
 
@@ -96,9 +98,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const cloud = useCloudSync(state, update, !ready || inSandbox());
   // Shows you online to your friends while the app is open, and in the Fog during a run.
   useFriendsBeat(state, run?.name ?? null, !ready || inSandbox());
-  // After the install step, an account once (SignInGate); developer mode may play on without.
+  // After the install step, an account: a hard rule, no playing on without one (SignInGate).
   const { signedIn } = useCloudStatus();
-  const [skipSignIn, setSkipSignIn] = useState(false);
   // Parties: kept fresh while signed in; a start the leader made opens the run here too.
   usePartyPoll(signedIn, !ready || inSandbox());
   const { party } = usePartyView();
@@ -149,7 +150,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const inst = useInstall();
   const gated = inst.known && !inst.standalone && !inst.skipped && mustInstall(inst.platform) && (inst.forced || !inSandbox());
   // The menus' music, on the tabs only: the opening, story, workouts and runs have their own.
-  const askSignIn = !gated && !skipSignIn && !inSandbox() && signInDue(signedIn);
+  const askSignIn = !gated && !inSandbox() && signInDue(signedIn);
   useMenuTrack(ready && state.profile.onboarded && !opening && !replaying && !busy && !gated && !askSignIn);
   useEffect(() => {
     if (busy) setDevOpen(false);
@@ -175,6 +176,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     setRun(zone);
   }, [party, busy]);
   const { dev, live, toggle: setDev } = useDevMode();
+  // Play stats for balancing and to see who comes back (off until PostHog is set up).
+  useAnalytics(state, ready, signedIn, dev);
   // While a screen is open over the tabs, the tabs underneath are out of reach: no keyboard focus
   // and nothing for a screen reader to wander into. (React 18 has no inert prop, so it's set here.)
   const root = useRef<HTMLDivElement>(null);
@@ -297,7 +300,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       />
     );
 
-  if (askSignIn && !opening) return <SignInGate onSkip={dev ? () => setSkipSignIn(true) : undefined} />;
+  if (askSignIn && !opening) return <SignInGate />;
 
   return (
     // Held sideways (the `land` screen), the tab bar becomes a rail down the left, the header shrinks
@@ -344,7 +347,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
       <main ref={main} className="flex-1 px-4 pb-28 pt-2 land:min-h-0 land:overflow-y-auto land:pb-3 desk:mx-auto desk:w-full desk:max-w-2xl desk:px-6 desk:pb-12">
         {tab === 'today' ? (
-          <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook} />
+          <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook} onTrain={() => setTab('train')} />
         ) : tab === 'train' ? (
           <TrainTab state={state} update={update} onStart={start} />
         ) : tab === 'play' ? (
@@ -388,8 +391,10 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
               className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium land:mx-2 land:rounded-xl land:py-2 desk:flex-row desk:gap-3 desk:rounded-xl desk:px-4 desk:py-3 desk:text-sm desk:hover:bg-ink-800/60 ${tab === id ? 'text-gold-400 land:bg-ink-800 land:ring-1 land:ring-gold-400/30 desk:bg-ink-800 desk:ring-1 desk:ring-gold-400/30' : 'text-slate-500 desk:hover:text-slate-300'}`}
             >
               {/* Full color on the open tab; faded and grey on the others. */}
-              <span className="grid h-[22px] place-items-center">
+              <span className="relative grid h-[22px] place-items-center">
                 <Sprite id="uiIcon" opts={{ name: icon }} size={22} label="" className={tab === id ? '' : 'opacity-70 grayscale'} />
+                {/* The flame has something to say. */}
+                {id === 'train' && tab !== 'train' && state && freshNudge(state, new Date()) && <span aria-label="New from your flame" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-gold-300 ring-2 ring-ink-900" />}
               </span>
               {label}
             </button>

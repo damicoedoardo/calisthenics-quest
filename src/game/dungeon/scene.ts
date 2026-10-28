@@ -12,7 +12,7 @@ import type { Build } from '@/lib/stats';
 import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STAIRS, type Prop } from './props';
 import { THEMES, themeFor, type Theme } from './themes';
 import { bandOf, glowOf } from './items';
-import { BANDS, MATS, SURGE } from '@/balance';
+import { BANDS, MATS, PARTY, SURGE } from '@/balance';
 import { spLook } from '@/sprites/characters/spLooks';
 import { WEAPON_FX, attackFx, drawFields, shotTexture, spFx, star, type Aura, type FxKit, type SpEvent } from './spFx';
 import {
@@ -48,6 +48,7 @@ import {
   relic,
   spikeState,
   mine,
+  canOpen,
   pick,
   skipFloor,
   skipToBoss,
@@ -420,6 +421,8 @@ class DungeonScene extends Phaser.Scene {
   private spLast: Partial<Record<SpMoveId, SpEvent>> = {};
   /** The hero is drawn faint until then (Vanish). */
   private hiddenUntil = 0;
+  /** You were down (a party run) last frame. */
+  private heroDown = false;
   /** What the SP effects (spFx.ts) draw with. */
   private readonly kit: FxKit = {
     fade: (ms, draw, up) => this.fade(ms, draw, up),
@@ -1194,11 +1197,11 @@ class DungeonScene extends Phaser.Scene {
     }
     if (r.chest && !this.chest) {
       const [cx, cy] = this.P(r.chest.x, r.chest.y);
-      this.chest = this.add.image(cx, cy + 10, r.chest.opened ? 'chest-open' : 'chest').setOrigin(0.5, 1).setDepth(cy);
+      this.chest = this.add.image(cx, cy + 10, !canOpen(r, r.hero) ? 'chest-open' : 'chest').setOrigin(0.5, 1).setDepth(cy);
       this.roomBits.push(this.chest);
       if (fresh) this.puffs.explode(10, cx, cy);
       // The mid-boss's chest, called out over it until it's opened.
-      if (isWardenRoom(r) && !r.chest.opened) {
+      if (isWardenRoom(r) && canOpen(r, r.hero)) {
         this.chestCall = this.add
           .text(cx, cy - 34, 'CHEST', { fontFamily: '"Press Start 2P", monospace', fontSize: '9px', color: '#fde68a', backgroundColor: '#0b0d14cc', padding: { x: 5, y: 4 } })
           .setOrigin(0.5, 1)
@@ -1537,6 +1540,11 @@ class DungeonScene extends Phaser.Scene {
     const blink = r.t < r.hero.hurtUntil || r.t < r.hero.ghostUntil;
     // Unseen (Vanish): faint and still, over any blink.
     h.setAlpha(now < this.hiddenUntil ? 0.22 + 0.06 * Math.sin(now / 90) : blink ? (Math.floor(now / 80) % 2 ? 0.35 : 1) : 1);
+    // You, down in a party: grey on the ground until a friend gets you up.
+    const down = r.hero.hp <= 0 && r.party.length > 1;
+    if (down) h.setTint(0x6b7280).setAlpha(0.5).setAngle(90);
+    else if (this.heroDown) h.clearTint().setAngle(0);
+    this.heroDown = down;
     // Friends: where they are, walking or still; grey and faded while down.
     this.friends.forEach((f, i) => {
       const o = r.party[i + 1],
@@ -2502,6 +2510,16 @@ class DungeonScene extends Phaser.Scene {
       f.draw(f.up ? mk : this.fx, p);
       return true;
     });
+    // A friend down: a ring that fills while someone stands by them (PARTY.revive in the balance).
+    for (const o of r.party) {
+      if (o.hp > 0 || r.party.length < 2) continue;
+      this.fx.lineStyle(2, 0xffffff, 0.25).strokeCircle(o.x, o.y, PARTY.revive.r);
+      if (o.reviving > 0) {
+        this.fx.lineStyle(5, 0x34d399, 0.95).beginPath();
+        this.fx.arc(o.x, o.y, PARTY.revive.r, -Math.PI / 2, -Math.PI / 2 + Math.min(1, o.reviving / PARTY.revive.secs) * Math.PI * 2);
+        this.fx.strokePath();
+      }
+    }
     // The monster you tapped: a ring under it, and corner ticks round it.
     const lk = r.hero.lock === null ? undefined : r.foes.find((f) => f.id === r.hero.lock && f.alive);
     if (lk) {
@@ -2588,7 +2606,7 @@ class DungeonScene extends Phaser.Scene {
       } else this.fx.lineStyle(1, 0xfde68a, 0.12 + 0.1 * p).strokeCircle(hb.x, hb.y, LIGHT.r);
     }
     // The mid-boss's chest: a gold ring pulsing round it until it's opened.
-    if (this.chestCall && r.chest && !r.chest.opened) this.fx.lineStyle(3, 0xfbbf24, 0.35 + 0.35 * ((Math.sin(now / 180) + 1) / 2)).strokeCircle(r.chest.x, r.chest.y - 4, 26);
+    if (this.chestCall && r.chest && canOpen(r, r.hero)) this.fx.lineStyle(3, 0xfbbf24, 0.35 + 0.35 * ((Math.sin(now / 180) + 1) / 2)).strokeCircle(r.chest.x, r.chest.y - 4, 26);
     // The way out, once open.
     if (r.doorOpen) {
       const p = (Math.sin(now / 200) + 1) / 2;
@@ -2775,7 +2793,7 @@ class DungeonScene extends Phaser.Scene {
     for (const f of r.foes) if (f.alive) edge(...this.P(f.x, f.y), f === r.boss ? 0xa855f7 : 0xef4444, f === r.boss ? 14 : 8);
     if (r.doorOpen) for (const d of r.doors) if (!d.been) edge(...this.P(d.x + INWARD[d.side][0] * ROOM.wall, d.y + INWARD[d.side][1] * ROOM.wall), this.doorColor(d), 14);
     if (r.stairs) edge(...this.P(r.stairs.x, r.stairs.y), 0xfbbf24, 12);
-    if (r.chest && !r.chest.opened) edge(...this.P(r.chest.x, r.chest.y), 0xfbbf24, 10);
+    if (r.chest && canOpen(r, r.hero)) edge(...this.P(r.chest.x, r.chest.y), 0xfbbf24, 10);
     if (r.terrain.shrine && !r.terrain.shrine.used && r.hero.hp < r.hero.maxHp * 0.6) edge(...this.P(r.terrain.shrine.x, r.terrain.shrine.y), 0x86efac, 10);
     if (!this.stick) return;
     const [sx, sy] = this.onPad(this.stick.x, this.stick.y),
