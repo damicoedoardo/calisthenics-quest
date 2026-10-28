@@ -70,11 +70,13 @@ the goal, and "better than last time", plus `STARTING_POINTS`. `pointsEarned` de
 the sessions (plus `state.devPoints`, points given in developer mode); only what was spent is saved (`state.build`). The numbers (points, worth, base,
 falloff, armor, class lean) are in `src/balance/stats.ts`.
 
-- Six stats (`STATS`): **Health** (HP), **Armor** (a share of every hit blocked, up to
-  `MAX_ARMOR`), **Damage**, **Haste** (attack speed; its id is `speed`), **Speed** (walk speed;
-  its id is `move`) and **Crit** (the chance a hit does `CRIT_HIT` times its damage). Reach is gone
-  (loot comes to you): `migrate` hands its points back and turns items that asked for it into
-  items that ask for Crit (`noReach` in `game.ts`). On the Hero tab the plus spends a point and the
+- Five stats (`STATS`): **Health** (HP), **Armor** (a share of every hit blocked, up to
+  `MAX_ARMOR`), **Damage**, **Haste** (attack speed; its id is `speed`) and **Speed** (walk speed;
+  its id is `move`). Crit is not a stat: every hero has `CRIT.base` chance and weapons and item
+  bonuses add the rest (see [dungeon.md](dungeon.md)). Reach left first (loot comes to you), then
+  Crit (2026-10-28): `migrate` hands their points back, turns items that asked for them into
+  items that ask for Haste, and the old Pickup bonus into a crit bonus (Evade on armor)
+  (`noReach`, `noCrit` in `game.ts`). On the Hero tab the plus spends a point and the
   minus takes back one spent since your last workout, free (`putPoint`, `takeBack` in
   `src/lib/sweat.ts`, which note your points as they stood, `buildAt`). Moving older points is a
   start-over (`respec`) for a sweat coin.
@@ -93,7 +95,7 @@ falloff, armor, class lean) are in `src/balance/stats.ts`.
 Warrior (sword), Archer (bow), Monk (staff), Mage (wand). A class only changes how you fight in
 the Fog: its attack style there, and a small lean to two stats (`CLASS_LEAN` and `SECOND_LEAN` in
 `src/balance/classes.ts`, as if it had `CLASS_LEAN_POINTS` and `SECOND_LEAN_POINTS` more there:
-warrior Damage and Armor, archer Crit and Speed, monk Health and Armor, mage Haste and Damage). Each has its own ability in a
+warrior Damage and Armor, archer Haste and Speed, monk Health and Armor, mage Haste and Damage; the archer's crit comes from its bow). Each has its own ability in a
 run; the monk's Stillness fills by fighting, not by time (`CALM` in `src/balance/classes.ts`). Gear has a weapon, armor and shield slot. Mira's forge used to raise one slot a tier
 every `GEAR_EVERY` workouts (`tiersAt`, `nextForge`); it doesn't any more. `migrate()` froze what
 it had made as the hero's look (`fogGear.kit`), and `gearOf` shows the finer of that and the

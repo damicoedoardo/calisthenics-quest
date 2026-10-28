@@ -22,7 +22,7 @@ level or story.
   cleared.
 - **Power from training**: `powerOf(state, now)` turns the save into a run's power. The stat
   points the player put into the champion give Health, Armor, Damage, Haste (attack speed), Speed
-  (walk speed) and Crit, see `statPower` in `src/lib/stats.ts` and
+  (walk speed), see `statPower` in `src/lib/stats.ts` (crit comes from what you wear) and
   [training.md](training.md); each class's attack, body and ability numbers are in
   `src/balance/classes.ts`. The flame's fires circle you at `FLAME_AT` workouts (1, 6, 15, 30); a bonfire throws
   fireballs, a fire fairy heals when you're low. Training in the last two days gives a free run
@@ -41,7 +41,8 @@ level or story.
 
 - **Gear between runs** (`src/lib/fog-gear.ts`, saved as `state.fogGear`): what you wear
   (`worn`) and the vault at home (`vault`, `vaultSize` grows with workouts). `wornFor` is what you
-  walk in with: only what your points let you wear today; the rest stays home, safe.
+  walk in with: only what your hero level and points let you wear today (`heroLevel` in
+  `src/lib/game.ts`); the rest stays home, safe.
   `settleGear` runs after `recordRun`: a win or a walk out by the stairs keeps what you wore and
   puts the bag in the vault (the best first, the rest left behind if it's full); dying loses all
   of it, except the one item your flame holds and gear forged to +10 or more, which comes home a few pluses lower (see [forge.md](forge.md)). Mid-run, `atRisk` says

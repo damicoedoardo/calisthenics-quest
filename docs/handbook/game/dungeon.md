@@ -54,9 +54,10 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change how a floor is laid out (how many rooms, branches, shortcuts) | `LAYOUT` and `ROOM_ODDS` in `content.ts`, `makeFloor` in `engine.ts` |
 | Change the minimap | `FloorMap` in `src/components/FogRun.tsx` (it reads `Hud.map`, built by `miniMap` in `scene.ts`) |
 | Change what a door says | `doorLook` in `scene.ts` (unknown rooms show `UNKNOWN`) |
-| Change crits | `CRIT_HIT` in `src/balance/stats.ts`; the roll is in `damage` (`engine.ts`, its own `run.critRnd`), the gold number in `scene.ts` |
+| Change crits | `CRIT` in `src/balance/stats.ts` (everyone's chance, what a crit does), `WEAPON_CRIT` and the `crit`/`critDmg` sizes in `src/balance/items.ts`; the roll is in `damage` (`engine.ts`, its own `run.critRnd`, which Evade shares), the gold number in `scene.ts` |
+| Add or change an item bonus | its id in `BonusId` and its line in `BONUSES` (`items.ts`), its size in `BONUS_SIZE` and its slots in `BONUS_POOL` (`src/balance/items.ts`), its worth in `WORTH`, what it does in `applyGear`/`gearFx` (`engine.ts`), and in `powerScore` (`src/game/power.ts`) if it can be measured there |
 | Change where the bot goes on a floor | `route` in `bot.ts` |
-| Tune items (how strong, how much they ask, how rare) | `src/balance/items.ts`: `ITEM_POWER` (all finds next to the starter kit), `ITEM_BASE`, `BONUS_SIZE`, `RARITY_SIZE`, `RARITY_WEIGHTS`, `RARITY_LEAN`, `WEAR_AFTER` (how many workouts after its zone opens an item can be worn); then `pnpm balance` and `pnpm fog:tune` |
+| Tune items (how strong, how much they ask, how rare) | `src/balance/items.ts`: `ITEM_POWER` (all finds next to the starter kit), `ITEM_BASE`, `BONUS_SIZE`, `RARITY_SIZE`, `RARITY_WEIGHTS`, `RARITY_LEAN`, `WEAR_AFTER` (how many workouts after its zone opens an item can be worn), `LEVEL_NEED`; then `pnpm balance` and `pnpm fog:tune` |
 | Change how often things drop, or the bag's size | `DROPS`, `DROP_LUCK` and `BAG` in `src/balance/items.ts` (read by `kill`, `openChest` in `engine.ts`) |
 | Change how often co-op runs drop forge materials | `MAT_DROPS` in `src/balance/upgrades.ts` (`findMats` in `engine.ts`; see [forge.md](forge.md)) |
 | Add an item kind or a class's weapon | `WEAPONS`, `ARMORS`, `ItemIcon` (and `ItemArt`, `looksOf`) in `items.ts`; its art in `ITEM_ROWS` and `LEGEND_ROWS` (`src/sprites/characters/items.ts`), and how the hero wears it in `heroSpec` (`src/sprites/characters/hero.ts`), see [sprites.md](sprites.md) |
@@ -188,10 +189,24 @@ in the engine, `wornFor` and `wearFromVault` in `src/lib/fog-gear.ts`), and the 
 "Archer only" in red. Changing class leaves the old weapon at home, safe, until you switch back. A run
 starts in what the save says you wear (`RunSetup.worn`); with no weapon (or another class's) the
 starter kit (`starterKit`) gives a plain weapon, and nothing else: an empty armor slot stays empty
-(`STARTER` in `src/balance/items.ts`). An item asks for stat points (`need`, checked against `RunSetup.build` by `shortOf`):
-weapons the class's own stat, armor Armor, charms nothing. How many: what a player who hits the
-weekly goal and spreads points has in each stat `wearAfter(rarity, floor)` workouts after the
-zone opens (`WEAR_AFTER`, `evenPoints` in `items.ts`). `wear`, `takeOff` and `dropFromBag`
+(`STARTER` in `src/balance/items.ts`). An item asks for a hero level (`needLevel`, the level from
+training XP, checked against `RunSetup.heroLevel` by `levelShort`; items found before 2026-10-28
+have none) and for stat points (`need`, checked against `RunSetup.build` by `shortOf`): weapons
+the class's own stat, armor Armor, charms nothing. Both come from one clock: what a player who
+hits the weekly goal has `wearAfter(rarity, floor)` workouts after the zone opens (`WEAR_AFTER`;
+points spread over the five stats, `evenPoints`; the level, `levelAfter`, from `LEVEL_NEED.slack`
+workouts earlier so a short week doesn't block it). The level can't be met by piling points in
+one stat.
+
+What an item gives: a weapon damage plus its class's own crit (`WEAPON_CRIT`: chance and crit
+damage, the bow highest), armor HP and Armor, then its rolled bonuses (`BONUSES`), drawn from its
+slot's pool (`BONUS_POOL`: a weapon rolls attack, armor defence, a charm anything; the forge's
+reroll too): Damage, Attack speed, Health, Armor, Move speed, Heal on kill, Ability (faster
+cooldowns), Crit chance, Crit damage, Slayer (more to elites, golems, the mid-boss and the boss),
+Life steal (capped at `LEECH_CAP` of max HP a second), Evade (a hit misses entirely, at most
+`MAX_EVADE`; the scene shows a pale ring) and Ability power (the class ability and the SP's moves,
+`abilityPow`). `applyGear` puts them on the hero (`power.crit`, and `gearFx` for the rest);
+`damage` and `hurt` use them. Sizes are in `BONUS_SIZE`. `wear`, `takeOff` and `dropFromBag`
 change gear mid-run (the page pauses while the bag is open); `applyGear` puts what you wear on top
 of your power from training (`run.hero.base`). The run's end (`RunEnd.gear`) lists what you wore and
 carried, never the starter kit; `src/lib/fog-gear.ts` settles it into the save
