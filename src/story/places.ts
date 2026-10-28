@@ -127,6 +127,47 @@ export const PLACES = {
     props: ['stars'],
     weather: 'snow',
   },
+  // The Ember Road (road.ts), walked with friends.
+  'whetstone-pass': {
+    name: 'The Whetstone Pass',
+    sky: ['#0b0f1a', '#26304a', '#5c6a8a'],
+    land: 'peaks',
+    far: '#3a4258',
+    near: '#20253a',
+    ground: '#1e2232',
+    props: ['rocks', 'campfire'],
+    weather: 'snow',
+  },
+  'quiet-miles': {
+    name: 'The Quiet Miles',
+    sky: ['#0c1014', '#1f2a30', '#47585e'],
+    land: 'hills',
+    far: '#26343a',
+    near: '#172226',
+    ground: '#162024',
+    props: ['road', 'reeds'],
+    weather: 'fog',
+  },
+  'long-bridge': {
+    name: 'The Long Bridge',
+    sky: ['#120b1a', '#3a2440', '#8a4a4a'],
+    land: 'peaks',
+    far: '#3a2a3e',
+    near: '#211826',
+    ground: '#1d1520',
+    props: ['stars', 'road'],
+    weather: 'none',
+  },
+  'road-hearth': {
+    name: "The Hearth at the Road's End",
+    sky: ['#0a0710', '#2a1824', '#7a3a24'],
+    land: 'village',
+    far: '#2c1e26',
+    near: '#1c1318',
+    ground: '#21161a',
+    props: ['stars', 'chimneys', 'windows', 'campfire'],
+    weather: 'embers',
+  },
 } satisfies Record<string, PlaceSpec>;
 
 export type PlaceId = keyof typeof PLACES;

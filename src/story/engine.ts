@@ -6,6 +6,8 @@ import { CHAPTERS } from './chapters';
 import type { PlaceId } from './places';
 import { DEFAULT_FLAME_NAME } from './flame';
 import { spOpen } from '@/lib/sp';
+import { roadHolds } from '@/lib/road';
+import { ROAD_SCENES } from './road';
 import type { AnswerId, Ask, Chapter, Line, Scene, When, WordKey, Words } from './types';
 
 /* Reads the story files: which chapter you're in, which scenes are due, and how a line reads
@@ -87,6 +89,7 @@ export function holds(w: When, state: GameState, st: StoryState, now: Date): boo
     [w.helped, () => (helpedVillagers(state).length > 0) === w.helped],
     [w.away, () => (daysSinceTraining(state, now) ?? 0) >= w.away!],
     [w.finished, () => st.finished === w.finished],
+    [w.road, () => roadHolds(w.road!, state)],
   ];
   return checks.every(([given, test]) => given === undefined || test());
 }
@@ -97,8 +100,12 @@ interface Placed {
   chapter: number;
 }
 
-/** Every scene, in story order. */
-export const ALL_SCENES: Placed[] = [...CHAPTERS.flatMap((c) => c.scenes.map((scene) => ({ scene, chapter: c.n }))), ...ANYTIME.map((scene) => ({ scene, chapter: 0 }))];
+/** Every scene, in story order; the Ember Road's (road.ts) come with any chapter, like ANYTIME's. */
+export const ALL_SCENES: Placed[] = [
+  ...CHAPTERS.flatMap((c) => c.scenes.map((scene) => ({ scene, chapter: c.n }))),
+  ...ANYTIME.map((scene) => ({ scene, chapter: 0 })),
+  ...ROAD_SCENES.map((scene) => ({ scene, chapter: 0 })),
+];
 
 /** The id a scene is saved under: scenes that repeat after every absence get the workout count. */
 export function savedId(scene: Scene, state: GameState): string {
@@ -106,7 +113,7 @@ export function savedId(scene: Scene, state: GameState): string {
 }
 
 /** `when` fields that wait for something to happen (a rest day, a class...), not for a workout count. */
-const WAITS_FOR: (keyof When)[] = ['restDay', 'shortSession', 'roughRun', 'daysInRow', 'perfectWeek', 'better', 'noClass', 'spReady', 'away', 'beaten', 'finished'];
+const WAITS_FOR: (keyof When)[] = ['restDay', 'shortSession', 'roughRun', 'daysInRow', 'perfectWeek', 'better', 'noClass', 'spReady', 'away', 'beaten', 'finished', 'road'];
 
 /**
  * A story beat tied to a workout plays then, or a few workouts later while a chapter catches up.

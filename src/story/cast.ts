@@ -31,6 +31,8 @@ export const CAST = {
   'lia-after': { name: 'Lia', portrait: { kind: 'villager', sprite: 'lia', size: 140 }, tag: 'sky' },
   'sol-after': { name: 'Sol', portrait: { kind: 'villager', sprite: 'sol', size: 140 }, tag: 'sky' },
   'vela-after': { name: 'Vela', portrait: { kind: 'villager', sprite: 'vela', size: 140 }, tag: 'sky' },
+  // Tamsin walks the Ember Road (road.ts) ahead of you, leaving fires and notes.
+  tamsin: { name: 'Tamsin', portrait: { kind: 'sprite', sprite: 'tamsin', size: 140 }, tag: 'amber' },
   plateau: { name: 'The Plateau', portrait: { kind: 'boss', boss: 'plateau', size: 160 }, tag: 'slate' },
   'plateau-cracked': { name: 'The Plateau', portrait: { kind: 'boss', boss: 'plateau', stage: 1, size: 160 }, tag: 'slate' },
   'plateau-breaking': { name: 'The Plateau', portrait: { kind: 'boss', boss: 'plateau', stage: 2, size: 160 }, tag: 'slate' },

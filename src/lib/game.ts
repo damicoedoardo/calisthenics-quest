@@ -7,6 +7,7 @@ import type { Build } from './stats';
 import type { Look } from '@/sprites/engine/figure';
 import type { FogProgress } from './fog';
 import type { FogGear } from './fog-gear';
+import type { RoadProgress } from './road';
 import type { AnswerId } from '@/story/types';
 import type { ExerciseId } from '@/sprites/characters/exercise';
 import type { CoachState, Mode, PlanItem, RunStep } from './coach/types';
@@ -154,6 +155,8 @@ export interface GameState {
   fog?: FogProgress;
   /** What you wear into the Fog, and the vault that keeps items safe (src/lib/fog-gear.ts). */
   fogGear?: FogGear;
+  /** The Ember Road, the story walked with friends (src/lib/road.ts). */
+  road?: RoadProgress;
   /** The first SP: given by the Wanderer, woken by a trial (src/lib/sp.ts). */
   sp?: SpState;
   /** What the player answered in the story: heart moments, villager stories. */

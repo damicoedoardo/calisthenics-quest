@@ -30,6 +30,12 @@ export const WEEKLY_GOAL = 3;
     Edoardo's goal: the main story is done in five to six months. */
 export const STORY_MONTHS = { min: 5, max: 6 } as const;
 
+/** The Ember Road, the story you walk with friends (src/story/road.ts): each chapter opens `gap`
+    of your workouts after the one before (counted from the day you set out), once the boss before
+    fell to your party; the finale `gap` after the last chapter opens. Edoardo's goal: the road
+    lasts at least a couple of months at the weekly goal (`months`). */
+export const ROAD = { gap: 9, months: { min: 2, max: 2.5 } } as const;
+
 /** How fast the plan asks for more. Goal: strength comes with time, not just sessions. */
 export const PROGRESSION = {
   /** An exercise's goal goes up at most this often a week. */
