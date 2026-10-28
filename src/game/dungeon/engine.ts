@@ -24,9 +24,11 @@ import {
 import {
   ABILITIES,
   SP_MOVES,
+  SP_WEAPONS,
   spDef,
   type AbilityId,
   type SpMoveId,
+  type SpShape,
   type SpWeapon,
   type SpNo,
   type SpPassiveId,
@@ -81,7 +83,7 @@ import {
   zoneDungeon,
 } from './content';
 import { seeded } from '@/lib/random';
-import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS, SP_FINAL, SP_PASSIVE, SP_SKILL, SURGE, type SpMoveNumbers } from '@/balance';
+import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS, SP_FINAL, SP_PASSIVE, SP_SKILL, SP_WEAPON, SURGE, type SpMoveNumbers } from '@/balance';
 import type { Build } from '@/lib/stats';
 import { canWear, ITEM_SLOTS, itemScore, itemTotals, otherClass, rollItem, rollRarity, shortOf, starterKit, type Item, type ItemSlot } from './items';
 
@@ -183,18 +185,24 @@ export interface Foe {
   hitAt: number;
   /** Burning from the Blaze Reaver's Embers: its next tick, when it stops, each tick's damage, and who lit it. */
   burn?: { next: number; until: number; dmg: number; by: Hero };
-  /** Slowed (Frostbite, Hourglass, Blizzard, Stop the Sands): moves `k` slower until then. */
+  /** Slowed (Frostbite, Radiance): moves `k` slower until then. */
   slow?: { until: number; k: number };
+  /** Held in a bubble (Bubble): can't move, shoot or touch until then, and takes `dmg` from `by` when it pops. */
+  held?: { until: number; dmg: number; by: Hero };
+  /** Marked (Curse): takes `k` more from every hit until then. */
+  mark?: { until: number; k: number };
   alive: boolean;
 }
 
 /** A patch an SP leaves on the floor: it hits everything in it every `every` s until `until`, and
-    can slow them. One that `follows` moves with whoever made it. */
+    can slow them. One that `follows` moves with whoever made it. With `to` it is a line (a wall of
+    fire) from x, y to there, `r` each side of it. */
 export interface SpField {
   id: SpMoveId;
   x: number;
   y: number;
   r: number;
+  to?: { x: number; y: number };
   until: number;
   next: number;
   every: number;
@@ -255,6 +263,16 @@ export interface Shot {
   target: Foe | null;
   hit: Set<Foe>;
   dies: number;
+  /** How close it must pass to hit (past the monster's own size); 6 when not set. */
+  r?: number;
+  /** A burst this wide where it hits (a cannonball, a fireball). */
+  blast?: number;
+  /** A share of the thrower's HP healed on each hit (the bell staff). */
+  heal?: number;
+  /** A throw that comes back (a boomerang, Reap): it turns at `turn` (run seconds) or at a wall,
+      then flies to the thrower's hand, hitting each monster once each way; `out` is false on the
+      way back. */
+  back?: { turn: number; out: boolean };
 }
 
 export interface Gem {
@@ -433,8 +451,9 @@ export interface Hero {
   hurtUntil: number;
   /** Untouchable until then (dodge, charge, blink). */
   ghostUntil: number;
-  /** A rush in a straight line: the warrior's charge (it hits what it passes) or a dodge (it doesn't). */
-  charge: { until: number; x: number; y: number; hit: Set<Foe>; harm: boolean; dmg?: number } | null;
+  /** A rush in a straight line: the warrior's charge (it hits what it passes), an SP's dash (`w`:
+      how far each side it hits) or leap, or a dodge (it doesn't hit). */
+  charge: { until: number; x: number; y: number; hit: Set<Foe>; harm: boolean; dmg?: number; w?: number } | null;
   /** The dodge is ready again then. */
   dodgeAt: number;
   /** The Gale's gust on you (px/s), added to how you walk. */
@@ -463,6 +482,10 @@ export interface Hero {
   windUsed: boolean;
   shellUntil: number;
   guardUntil: number;
+  /** Unseen (Vanish) until then: monsters lose you and nothing touches you. `sneak` is how much
+      more your next hit does (0: none waiting). */
+  hideUntil: number;
+  sneak: number;
   /** Hits taken this run (what the run's recap shows, to set the bot against people). */
   hits: number;
   cd: { attack: number; spark: number; nova: number; fireball: number };
@@ -663,6 +686,8 @@ function newHero(hs: HeroSetup, id: number): Hero {
     windUsed: false,
     shellUntil: 0,
     guardUntil: 0,
+    hideUntil: 0,
+    sneak: 0,
     shots: 0,
     hits: 0,
     cd: { attack: 0.5, spark: 2, nova: 3, fireball: 2.5 },
@@ -680,13 +705,15 @@ function newHero(hs: HeroSetup, id: number): Hero {
 
 /** The heroes still standing. */
 const standing = (run: Run) => run.party.filter((h) => h.hp > 0);
-/** The hero a monster at x, y goes for: the nearest one still standing. */
+/** Unseen (Vanish): monsters lose this hero. */
+const hidden = (run: Run, h: Hero) => run.t < h.hideUntil;
+/** The hero a monster at x, y goes for: the nearest one still standing (one in sight first). */
 function prey(run: Run, x: number, y: number): Hero {
   let best = run.party[0],
     bd = Infinity;
   for (const h of run.party) {
     if (h.hp <= 0 && run.party.length > 1) continue;
-    const d = (h.x - x) ** 2 + (h.y - y) ** 2;
+    const d = (h.x - x) ** 2 + (h.y - y) ** 2 + (hidden(run, h) ? 1e12 : 0);
     if (d < bd) {
       bd = d;
       best = h;
@@ -1308,7 +1335,7 @@ function moveHero(run: Run, h: Hero, input: Input) {
   if (h.charge?.harm) {
     clearBullets(run, h.x, h.y, HERO_R + 24);
     for (const f of run.foes) {
-      if (!f.alive || h.charge.hit.has(f) || dist(f, h) > f.def.r + HERO_R + 12) continue;
+      if (!f.alive || h.charge.hit.has(f) || dist(f, h) > f.def.r + (h.charge.w ?? HERO_R + 12)) continue;
       h.charge.hit.add(f);
       damage(run, h, f, h.charge.dmg ?? pow(h, ATTACK.slash.dmg * 2), 220);
     }
@@ -1402,6 +1429,17 @@ function spMore(h: Hero): number {
   return 1 + k.dmg * Math.min(1, h.moveFor / k.secs);
 }
 
+/** How much more a hit does on a marked monster (Curse), and on the first hit after a Vanish. */
+function spMark(run: Run, by: Hero, f: Foe): number {
+  let k = 1;
+  if (f.mark && run.t < f.mark.until) k *= 1 + f.mark.k;
+  if (by.sneak) {
+    k *= 1 + by.sneak;
+    by.sneak = 0;
+  }
+  return k;
+}
+
 /** More crits: Focus, while you're barely scratched. */
 const spCrit = (h: Hero) => (has(h, 'focus') && h.hp >= h.maxHp * SP_PASSIVE.focus.above ? SP_PASSIVE.focus.crit : 0);
 
@@ -1479,7 +1517,7 @@ function stepFields(run: Run) {
     if (run.t < fd.next) continue;
     fd.next += fd.every;
     for (const f of run.foes) {
-      if (!f.alive || Math.hypot(f.x - fd.x, f.y - fd.y) > fd.r + f.def.r) continue;
+      if (!f.alive || (fd.to ? !inLine(f.x, f.y, fd.x, fd.y, Math.atan2(fd.to.y - fd.y, fd.to.x - fd.x), dist(fd, fd.to), fd.r, f.def.r) : Math.hypot(f.x - fd.x, f.y - fd.y) > fd.r + f.def.r)) continue;
       if (fd.slow) f.slow = { until: run.t + fd.every + 0.1, k: fd.slow };
       damage(run, fd.by, f, fd.dmg, 0);
     }
@@ -1518,90 +1556,322 @@ function aimOf(run: Run, h: Hero, input: Input, reach: number): number {
   return f ? Math.atan2(f.y - h.y, f.x - h.x) : Math.hypot(input.x, input.y) > 0.1 ? Math.atan2(input.y, input.x) : h.facing;
 }
 
+type BurstColor = Extract<GameEvent, { type: 'burst' }>['color'];
+
+/** What every move gets: who, which move, its numbers, and its damage (times the class's attack). */
+interface MoveCtx {
+  run: Run;
+  h: Hero;
+  id: SpMoveId;
+  k: SpMoveNumbers;
+  final: boolean;
+  input: Input;
+  dmg: number;
+  r: number;
+  color: BurstColor;
+}
+
 /** An SP move, played by its shape (SpShape in content.ts) with its numbers. */
 function spMove(run: Run, h: Hero, id: SpMoveId, k: SpMoveNumbers, final: boolean, input: Input) {
   const kind = attackOf(h.classId),
-    dmg = pow(h, ATTACK[kind].dmg * k.dmg),
-    color: Extract<GameEvent, { type: 'burst' }>['color'] = final && kind === 'slash' ? 'fire' : kind === 'orb' ? 'orb' : kind === 'wave' ? 'wave' : 'ability',
-    shot: 'arrow' | 'orb' = kind === 'orb' ? 'orb' : 'arrow',
-    heal = () => {
-      if (!k.heal) return;
-      const n = Math.round(h.maxHp * k.heal);
-      h.hp = Math.min(h.maxHp, h.hp + n);
-      emit(run, { type: 'heal', x: h.x, y: h.y, n });
-    };
-  const r = k.r ?? 100;
-  switch (SP_MOVES[id].shape) {
-    case 'ring':
-      if (k.clear) clearBullets(run, h.x, h.y, r * k.clear);
-      burst(run, h, h.x, h.y, r, dmg, color, undefined, k.knock ?? 160);
-      heal();
-      emit(run, { type: 'sp', id, x: h.x, y: h.y, r, final });
-      return;
-    case 'drop': {
-      const f = nearest(run, h.x, h.y, undefined, k.reach ?? 260),
-        at = f ?? { x: h.x + Math.cos(h.facing) * 120, y: h.y + Math.sin(h.facing) * 120 };
-      if (final) clearBullets(run, at.x, at.y, r);
-      burst(run, h, at.x, at.y, r, dmg, color, undefined, k.knock ?? 160);
-      emit(run, { type: 'sp', id, x: at.x, y: at.y, r, final });
-      return;
-    }
-    case 'all':
-      for (const f of run.foes.filter((o) => o.alive)) {
-        if (k.slow) f.slow = { until: run.t + (k.secs ?? 2), k: k.slow };
-        burst(run, h, f.x, f.y, f.def.r + 4, dmg, 'ability', undefined, 0);
-      }
-      // Stop the Sands puts every shot out; Solar Flare the ones near you.
-      if (k.slow) run.bullets = [];
-      else if (final) clearBullets(run, h.x, h.y, 220);
-      emit(run, { type: 'sp', id, x: h.x, y: h.y, r: Math.max(run.area.w, run.area.h), final, secs: k.secs });
-      return;
-    case 'dash': {
-      const a = aimOf(run, h, input, RANGE * 1.2),
-        speed = k.speed ?? 700,
-        secs = k.secs ?? 0.2,
-        from = { x: h.x, y: h.y };
-      h.charge = { until: run.t + secs, x: Math.cos(a) * speed, y: Math.sin(a) * speed, hit: new Set(), harm: true, dmg };
-      h.ghostUntil = Math.max(h.ghostUntil, run.t + secs + 0.1);
-      emit(run, { type: 'sp', id, x: from.x, y: from.y, r: speed * secs, final, angle: a });
-      return;
-    }
-    case 'chain': {
-      // a bolt from you to the nearest monster, then on to the next nearest, and on
-      const hit = new Set<Foe>(),
-        points = [{ x: h.x, y: h.y }];
-      let at = { x: h.x, y: h.y };
-      for (let i = 0; i < (k.n ?? 6); i++) {
-        const f = nearest(run, at.x, at.y, hit, k.reach ?? 300);
-        if (!f) break;
-        hit.add(f);
-        points.push({ x: f.x, y: f.y });
-        at = f;
-        damage(run, h, f, dmg, 80);
-      }
-      if (final) clearBullets(run, h.x, h.y, 160);
-      emit(run, { type: 'sp', id, x: h.x, y: h.y, r: k.reach ?? 300, final, points });
-      return;
-    }
-    case 'guard':
-      h.ghostUntil = Math.max(h.ghostUntil, run.t + (k.secs ?? 1));
-      h.guardUntil = run.t + (k.secs ?? 1);
-      if (k.clear) clearBullets(run, h.x, h.y, r * k.clear);
-      burst(run, h, h.x, h.y, r, dmg, color, undefined, k.knock ?? 200);
-      heal();
-      emit(run, { type: 'sp', id, x: h.x, y: h.y, r, final, secs: k.secs });
-      return;
-    case 'field': {
-      const f = k.reach ? nearest(run, h.x, h.y, undefined, k.reach) : null,
-        at = k.reach ? (f ?? { x: h.x + Math.cos(h.facing) * 120, y: h.y + Math.sin(h.facing) * 120 }) : h,
-        every = k.every ?? 0.5;
-      if (final) clearBullets(run, h.x, h.y, r);
-      run.fields.push({ id, x: at.x, y: at.y, r, until: run.t + (k.secs ?? 3), next: run.t, every, dmg, slow: k.slow ?? 0, by: h, follows: !k.reach });
-      emit(run, { type: 'sp', id, x: at.x, y: at.y, r, final, secs: k.secs });
-      return;
-    }
-  }
+    color: BurstColor = final && kind === 'slash' ? 'fire' : kind === 'orb' ? 'orb' : kind === 'wave' ? 'wave' : 'ability';
+  SHAPES[SP_MOVES[id].shape]({ run, h, id, k, final, input, dmg: pow(h, ATTACK[kind].dmg * k.dmg), r: k.r ?? 100, color });
 }
+
+/** The `sp` event for the scene: the move, where, and how big. */
+function spEvent(m: MoveCtx, x: number, y: number, more: Partial<Extract<GameEvent, { type: 'sp' }>> = {}) {
+  emit(m.run, { type: 'sp', id: m.id, x, y, r: m.r, final: m.final, ...more });
+}
+
+/** The move's heal, a share of your HP (Blessing; Soul Harvest, for each monster hit). */
+function spHeal(m: MoveCtx, times = 1) {
+  const { run, h, k } = m;
+  if (!k.heal || times <= 0) return;
+  const n = Math.round(h.maxHp * k.heal * times);
+  h.hp = Math.min(h.maxHp, h.hp + n);
+  emit(run, { type: 'heal', x: h.x, y: h.y, n });
+}
+
+/** A point `d` ahead of the hero, the way it faces (or at angle `a`). */
+const ahead = (h: Hero, d: number, a = h.facing) => ({ x: h.x + Math.cos(a) * d, y: h.y + Math.sin(a) * d });
+
+/** A boss can't be pulled or held: the mid-boss and the zone's boss. */
+const big = (run: Run, f: Foe) => f === run.boss || f === run.warden;
+
+/** The monster with the most HP left in the room (a boss first). */
+function strongest(run: Run): Foe | null {
+  let best: Foe | null = null;
+  for (const f of run.foes) {
+    if (!f.alive || run.t < f.bornUntil || untouchable(run, f) || f.kind === 'reflection' || f.kind === 'image') continue;
+    const rank = (o: Foe) => (big(run, o) ? 1e9 : 0) + o.hp;
+    if (!best || rank(f) > rank(best)) best = f;
+  }
+  return best;
+}
+
+/** The monster a move picks: the nearest within its reach, or the strongest in the room (`aim`). */
+const targetOf = (m: MoveCtx): Foe | null => (SP_MOVES[m.id].aim === 'strongest' ? strongest(m.run) : nearest(m.run, m.h.x, m.h.y, undefined, m.k.reach ?? 260));
+
+/** Is a point in the line from x, y at angle `a`, `len` long, `half` each side (plus `pad`)? */
+function inLine(px: number, py: number, x: number, y: number, a: number, len: number, half: number, pad: number) {
+  const dx = px - x,
+    dy = py - y,
+    along = dx * Math.cos(a) + dy * Math.sin(a);
+  return along >= -pad && along <= len + pad && Math.abs(-dx * Math.sin(a) + dy * Math.cos(a)) <= half + pad;
+}
+
+/** Everything in a line is hit (copies of you are pushed aside), and barrels in it go up. */
+function lineHit(run: Run, by: Hero, x: number, y: number, a: number, len: number, half: number, dmg: number, knock: number) {
+  for (const f of run.foes) {
+    if (!f.alive || !inLine(f.x, f.y, x, y, a, len, half, f.def.r)) continue;
+    if (f.kind === 'reflection' || f.kind === 'image') nudge(run, f, knock, x, y);
+    else damage(run, by, f, dmg, knock, x, y);
+  }
+  for (const br of run.terrain.barrels) if (br.alive && inLine(br.x, br.y, x, y, a, len, half, BARREL.r)) blowUp(run, br, by);
+}
+
+/** ring: a blast all around you. */
+function ringMove(m: MoveCtx) {
+  const { run, h, k, r } = m;
+  if (k.clear) clearBullets(run, h.x, h.y, r * k.clear);
+  burst(run, h, h.x, h.y, r, m.dmg, m.color, undefined, k.knock ?? 160);
+  spHeal(m);
+  spEvent(m, h.x, h.y);
+}
+
+/** drop: a blow from above on one monster (`aim`), or `n` of them in a quick storm, `every` s apart. */
+function dropMove(m: MoveCtx) {
+  const { run, h, k, r } = m,
+    f = targetOf(m),
+    at = f ? { x: f.x, y: f.y } : ahead(h, 120),
+    n = k.n ?? 1,
+    every = k.every ?? 0.08;
+  if (m.final) clearBullets(run, at.x, at.y, r);
+  const blow = () => {
+    // Each blow lands where the monster is now (or where it fell).
+    if (f?.alive) [at.x, at.y] = [f.x, f.y];
+    burst(run, h, at.x, at.y, r, m.dmg, m.color, undefined, k.knock ?? 160);
+  };
+  spEvent(m, at.x, at.y, n > 1 ? { secs: n * every } : {});
+  blow();
+  for (let i = 1; i < n; i++) later(run, i * every, blow);
+}
+
+/** all: every monster in the room is hit. With `knock` they are thrown away from you (Tsunami),
+    with `slow` they all but stop and every shot goes out (Radiance), with `heal` you heal for each
+    one hit (Soul Harvest). Any other final wipes the shots near you. */
+function allMove(m: MoveCtx) {
+  const { run, h, k } = m;
+  let hit = 0;
+  for (const f of run.foes.filter((o) => o.alive)) {
+    if (k.slow) f.slow = { until: run.t + (k.secs ?? 2), k: k.slow };
+    if (f.kind === 'reflection' || f.kind === 'image') nudge(run, f, k.knock ?? 120, h.x, h.y);
+    else if (run.t >= f.bornUntil && !untouchable(run, f)) {
+      damage(run, h, f, m.dmg, k.knock ?? 0, h.x, h.y);
+      hit++;
+    }
+    emit(run, { type: 'burst', x: f.x, y: f.y, r: f.def.r + 4, color: 'ability' });
+  }
+  spHeal(m, hit);
+  if (k.slow) run.bullets = [];
+  else if (m.final) clearBullets(run, h.x, h.y, 220);
+  spEvent(m, h.x, h.y, { r: Math.max(run.area.w, run.area.h), secs: k.secs });
+}
+
+/** dash: you rush through them, untouchable, hitting all you pass (`width` wide). */
+function dashMove(m: MoveCtx) {
+  const { run, h, k, input } = m,
+    a = aimOf(run, h, input, RANGE * 1.2),
+    speed = k.speed ?? 700,
+    secs = k.secs ?? 0.2;
+  h.charge = { until: run.t + secs, x: Math.cos(a) * speed, y: Math.sin(a) * speed, hit: new Set(), harm: true, dmg: m.dmg, ...(k.width ? { w: k.width / 2 } : {}) };
+  h.ghostUntil = Math.max(h.ghostUntil, run.t + secs + 0.1);
+  spEvent(m, h.x, h.y, { r: speed * secs, angle: a, to: ahead(h, speed * secs, a), width: k.width });
+}
+
+/** chain: from you to the nearest monster, then on to the next nearest, and on (`n` of them). */
+function chainMove(m: MoveCtx) {
+  const { run, h, k } = m,
+    hit = new Set<Foe>(),
+    points = [{ x: h.x, y: h.y }];
+  let at = { x: h.x, y: h.y };
+  for (let i = 0; i < (k.n ?? 6); i++) {
+    const f = nearest(run, at.x, at.y, hit, k.reach ?? 300);
+    if (!f) break;
+    hit.add(f);
+    points.push({ x: f.x, y: f.y });
+    at = f;
+    damage(run, h, f, m.dmg, 80);
+  }
+  if (m.final) clearBullets(run, h.x, h.y, 160);
+  spEvent(m, h.x, h.y, { r: k.reach ?? 300, points });
+}
+
+/** guard: nothing touches you for `secs`; what is close is pushed back, and you may heal. */
+function guardMove(m: MoveCtx) {
+  const { run, h, k, r } = m;
+  h.ghostUntil = Math.max(h.ghostUntil, run.t + (k.secs ?? 1));
+  h.guardUntil = run.t + (k.secs ?? 1);
+  if (k.clear) clearBullets(run, h.x, h.y, r * k.clear);
+  burst(run, h, h.x, h.y, r, m.dmg, m.color, undefined, k.knock ?? 200);
+  spHeal(m);
+  spEvent(m, h.x, h.y, { secs: k.secs });
+}
+
+/** field: a patch that keeps hitting every `every` s for `secs`: round you and going with you when
+    it has no `reach` (Inferno), else on the monster nearest you (Bomb, Rain of Arrows). */
+function fieldMove(m: MoveCtx) {
+  const { run, h, k, r } = m,
+    f = k.reach ? nearest(run, h.x, h.y, undefined, k.reach) : null,
+    at = k.reach ? (f ? { x: f.x, y: f.y } : ahead(h, 120)) : { x: h.x, y: h.y };
+  if (m.final) clearBullets(run, at.x, at.y, r);
+  run.fields.push({ id: m.id, x: at.x, y: at.y, r, until: run.t + (k.secs ?? 3), next: run.t, every: k.every ?? 0.5, dmg: m.dmg, slow: k.slow ?? 0, by: h, follows: !k.reach });
+  spEvent(m, at.x, at.y, { secs: k.secs });
+}
+
+/** wall: a line of fire on the floor from in front of you out to `reach`, `width` wide, burning
+    every `every` s for `secs`. */
+function wallMove(m: MoveCtx) {
+  const { run, h, k, input } = m,
+    len = k.reach ?? 160,
+    a = aimOf(run, h, input, len + 60),
+    from = ahead(h, HERO_R + 6, a),
+    to = ahead(h, HERO_R + 6 + len, a);
+  run.fields.push({ id: m.id, x: from.x, y: from.y, to, r: (k.width ?? 22) / 2, until: run.t + (k.secs ?? 3), next: run.t, every: k.every ?? 0.5, dmg: m.dmg, slow: k.slow ?? 0, by: h, follows: false });
+  spEvent(m, from.x, from.y, { r: len, to, angle: a, width: k.width, secs: k.secs });
+}
+
+/** leap: jump onto a monster within `reach`, untouchable for the `secs` in the air, and crash down
+    in a blast of `r`. */
+function leapMove(m: MoveCtx) {
+  const { run, h, k, r } = m,
+    f = targetOf(m),
+    a = f ? Math.atan2(f.y - h.y, f.x - h.x) : h.facing,
+    // Land beside it, not in it.
+    far = f ? Math.max(0, dist(f, h) - f.def.r - HERO_R) : Math.min(120, k.reach ?? 120),
+    secs = k.secs ?? 0.3,
+    to = ahead(h, far, a);
+  h.charge = { until: run.t + secs, x: (Math.cos(a) * far) / secs, y: (Math.sin(a) * far) / secs, hit: new Set(), harm: false };
+  h.ghostUntil = Math.max(h.ghostUntil, run.t + secs + 0.1);
+  spEvent(m, h.x, h.y, { to, angle: a, secs });
+  later(run, secs, () => {
+    if (h.hp <= 0) return;
+    if (m.final) clearBullets(run, h.x, h.y, r);
+    burst(run, h, h.x, h.y, r, m.dmg, m.color, undefined, k.knock ?? 160);
+  });
+}
+
+/** hook: hit the monster in front of you (the nearest within `reach`) and drag it to you. A boss is
+    only hit. */
+function hookMove(m: MoveCtx) {
+  const { run, h, k } = m,
+    reach = k.reach ?? 260,
+    f = targetOf(m);
+  if (!f) return spEvent(m, h.x, h.y, { r: reach, to: ahead(h, reach) });
+  const from = { x: f.x, y: f.y };
+  spEvent(m, h.x, h.y, { r: reach, to: from, angle: Math.atan2(from.y - h.y, from.x - h.x) });
+  damage(run, h, f, m.dmg, 0);
+  if (!f.alive || big(run, f)) return;
+  const a = Math.atan2(f.y - h.y, f.x - h.x),
+    d = HERO_R + f.def.r + 4;
+  f.x = clamp(h.x + Math.cos(a) * d, ROOM.wall + f.def.r, run.area.w - ROOM.wall - f.def.r);
+  f.y = clamp(h.y + Math.sin(a) * d, ROOM.wall + f.def.r, run.area.h - ROOM.wall - f.def.r);
+  outOfPillars(run, f, f.def.r);
+  f.vx = f.vy = 0;
+  // A moment to find its feet before it acts again.
+  f.knockUntil = run.t + 0.25;
+}
+
+/** boomerang: a throw (`width` wide) that flies out `reach` at `speed` and comes back to your
+    hand, hitting each monster once each way. */
+function boomerangMove(m: MoveCtx) {
+  const { run, h, k, input } = m,
+    reach = k.reach ?? 240,
+    a = aimOf(run, h, input, reach + 60);
+  throwBack(run, h, a, reach, k.speed ?? 520, m.dmg, { r: (k.width ?? 12) / 2, ...(h.sp ? { look: h.sp.weapon } : {}) });
+  spEvent(m, h.x, h.y, { r: reach, angle: a, width: k.width, to: ahead(h, reach, a) });
+}
+
+/** vanish: unseen and untouchable for `secs` (monsters lose you and hold their fire), and your next
+    hit lands `1 + boost` times. */
+function vanishMove(m: MoveCtx) {
+  const { run, h, k } = m,
+    secs = k.secs ?? 2;
+  h.hideUntil = run.t + secs;
+  h.ghostUntil = Math.max(h.ghostUntil, run.t + secs);
+  h.sneak = k.boost ?? 1;
+  spEvent(m, h.x, h.y, { r: 30, secs });
+}
+
+/** trap: hold the nearest monster still for `secs` (it can't move, shoot or touch), then it takes
+    the move's damage when it pops. A boss is only hit. */
+function trapMove(m: MoveCtx) {
+  const { run, h, k } = m,
+    secs = k.secs ?? 2,
+    f = targetOf(m);
+  if (!f) {
+    const at = ahead(h, 120);
+    return spEvent(m, at.x, at.y, { r: 20 });
+  }
+  const hold = !big(run, f);
+  spEvent(m, f.x, f.y, { r: f.def.r + 10, secs });
+  if (hold) f.held = { until: run.t + secs, dmg: m.dmg, by: h };
+  else damage(run, h, f, m.dmg, 0);
+}
+
+/** The bubble pops: the monster is free, and takes the trap's damage. */
+function pop(run: Run, f: Foe) {
+  const hd = f.held;
+  if (!hd) return;
+  f.held = undefined;
+  damage(run, hd.by, f, hd.dmg, 0);
+}
+
+/** mark: the nearest monster takes `1 + boost` times from every hit for `secs` (and a small hit now). */
+function markMove(m: MoveCtx) {
+  const { run, h, k } = m,
+    secs = k.secs ?? 5,
+    f = targetOf(m);
+  if (!f) {
+    const at = ahead(h, 120);
+    return spEvent(m, at.x, at.y, { r: 20 });
+  }
+  spEvent(m, f.x, f.y, { r: f.def.r + 8, secs });
+  f.mark = { until: run.t + secs, k: k.boost ?? 0.5 };
+  if (m.dmg > 0) damage(run, h, f, m.dmg, 0);
+}
+
+/** beam: everything in a line `reach` long and `width` wide, from you toward your aim. A final also
+    wipes the shots in it. */
+function beamMove(m: MoveCtx) {
+  const { run, h, k, input } = m,
+    len = k.reach ?? 360,
+    half = (k.width ?? 20) / 2,
+    a = aimOf(run, h, input, len),
+    to = ahead(h, len, a);
+  spEvent(m, h.x, h.y, { r: len, to, angle: a, width: k.width });
+  lineHit(run, h, h.x, h.y, a, len, half, m.dmg, k.knock ?? 120);
+  if (m.final) run.bullets = run.bullets.filter((b) => !inLine(b.x, b.y, h.x, h.y, a, len, half, b.r + 10));
+}
+
+/** How each shape plays (SpShape in content.ts). */
+const SHAPES: Record<SpShape, (m: MoveCtx) => void> = {
+  ring: ringMove,
+  drop: dropMove,
+  all: allMove,
+  dash: dashMove,
+  chain: chainMove,
+  guard: guardMove,
+  field: fieldMove,
+  wall: wallMove,
+  leap: leapMove,
+  hook: hookMove,
+  boomerang: boomerangMove,
+  vanish: vanishMove,
+  trap: trapMove,
+  mark: markMove,
+  beam: beamMove,
+};
 
 function useAbility(run: Run, h: Hero, input: Input) {
   const now = run.t;
@@ -1677,13 +1947,21 @@ function clearBullets(run: Run, x: number, y: number, r: number) {
 
 function moveFoes(run: Run) {
   const now = run.t,
-    up = standing(run);
+    up = standing(run),
+    // Someone is unseen (Vanish): the monsters going for them lose them.
+    lose = run.party.some((h) => hidden(run, h));
   for (const f of run.foes) {
     if (!f.alive) continue;
     burnTick(run, f);
+    if (f.held && now >= f.held.until) pop(run, f);
     if (!f.alive) continue;
-    if (now >= f.knockUntil) {
+    // Held in a bubble, it can't move, shoot or touch; a monster that lost you stands and holds its fire.
+    const held = !!f.held,
+      lost = lose && hidden(run, prey(run, f.x, f.y));
+    if (held) f.vx = f.vy = 0;
+    else if (now >= f.knockUntil) {
       if (f === run.boss) steerBoss(run, f);
+      else if (lost) f.vx = f.vy = 0;
       else steer(run, f);
     }
     if (f === run.warden) stepMid(run, f);
@@ -1696,6 +1974,7 @@ function moveFoes(run: Run) {
     f.def.shoots.forEach((p, i) => {
       if (p.on || now < f.next[i]) return;
       f.next[i] = now + p.every / (f === run.boss || f === run.warden ? 1 : DIALS.fire);
+      if (held || lost) return;
       if (p.below && f.hp > f.maxHp * p.below) return;
       if (p.above && f.hp <= f.maxHp * p.above) return;
       // The Hollow's light open: it turns its spiral instead (steerBoss).
@@ -1709,7 +1988,7 @@ function moveFoes(run: Run) {
       emit(run, { type: 'midSay', text: midBoss(run.setup.zone).hot });
     }
     // Touch (a charging ram hits harder).
-    if (f.def.dmg > 0) for (const h of up) if (dist(f, h) < f.def.r + HERO_R) hurt(run, h, f.def.dmg * (f !== run.warden && now < f.dashUntil ? 1.5 : 1), 'touch');
+    if (f.def.dmg > 0 && !held) for (const h of up) if (dist(f, h) < f.def.r + HERO_R) hurt(run, h, f.def.dmg * (f !== run.warden && now < f.dashUntil ? 1.5 : 1), 'touch');
     if (run.over) return;
   }
   // Monsters push each other apart.
@@ -2291,7 +2570,7 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
   // A crit: the hit does double (Crit points, src/lib/stats.ts).
   const critShare = by.power.crit + spCrit(by),
     crit = !knight && critShare > 0 && run.critRnd() < critShare,
-    dmg = knight ? 1 : Math.max(1, Math.round(amount * spMore(by) * (crit ? CRIT_HIT : 1)));
+    dmg = knight ? 1 : Math.max(1, Math.round(amount * spMore(by) * spMark(run, by, f) * (crit ? CRIT_HIT : 1)));
   if (f.kind === 'reflection' || f.kind === 'image') {
     // A copy of you, or of the Mirror: it shatters, and you feel it.
     hitYourself(run, by, f.kind);
@@ -2415,49 +2694,81 @@ function burst(run: Run, by: Hero, x: number, y: number, R: number, dmg: number,
   emit(run, { type: 'burst', x, y, r: R, color });
 }
 
-/** A shot of `by`'s, from them (or from `at`: a friend on the Summit). */
-function fire(run: Run, by: Hero, kind: 'arrow' | 'orb', angle: number, speed: number, dmg: number, pierce: number, target: Foe | null, at: { x: number; y: number } = by) {
-  run.shots.push({ id: ++run.ids, kind, by, x: at.x, y: at.y - 6, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, dmg, pierce, target, hit: new Set(), dies: run.t + 1.6 });
+/** A shot of `by`'s, from them (or from `at`: a friend on the Summit). `more`: what an SP weapon adds. */
+function fire(run: Run, by: Hero, kind: 'arrow' | 'orb', angle: number, speed: number, dmg: number, pierce: number, target: Foe | null, at: { x: number; y: number } = by, more?: Partial<Shot>) {
+  run.shots.push({ id: ++run.ids, kind, by, x: at.x, y: at.y - 6, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, dmg, pierce, target, hit: new Set(), dies: run.t + 1.6, ...more });
 }
 
+/** A throw that flies `reach` out and comes back to the thrower's hand (a boomerang, Reap). */
+function throwBack(run: Run, by: Hero, angle: number, reach: number, speed: number, dmg: number, more: Partial<Shot>) {
+  const turn = run.t + reach / speed;
+  fire(run, by, 'arrow', angle, speed, dmg, 0, null, by, { ...more, back: { turn, out: true }, dies: turn + reach / speed + 1 });
+}
+
+/** The attack a hero makes: its SP weapon's when one is worn (SP_WEAPONS), else its class's. */
+export const attackKind = (h: Pick<Hero, 'classId' | 'sp'>): AttackKind => (h.sp ? SP_WEAPONS[h.sp.weapon].attack : attackOf(h.classId));
+
+/** How wide a swing cuts when the weapon doesn't say (radians each side). */
+const SWING_ARC = 1.3;
+/** An arrow's and an orb's speed (px/s). */
+const SHOT_SPEED = { arrow: 430, orb: 250 };
+/** A wave's first ring (px). */
+const WAVE_R = 110;
+
+/** The basic attack, on its own clock. With an SP on, its weapon sets the kind (SP_WEAPONS) and
+    the numbers (SP_WEAPON: clock and damage times the class's, reach, arc, pierce, blast, a throw
+    that comes back, a heal on each hit). */
 function attack(run: Run, h: Hero) {
   h.cd.attack -= STEP;
   if (h.cd.attack > 0) return;
-  const kind = attackOf(h.classId),
-    reach = kind === 'slash' ? SLASH_REACH : RANGE,
+  const cls = attackOf(h.classId),
+    kind = attackKind(h),
+    w = h.sp ? SP_WEAPON[h.sp.weapon] : null,
+    reach = w?.reach ?? (kind === 'slash' ? SLASH_REACH : RANGE),
     b = run.boss?.alive && run.setup.zone.boss !== 'mirror' && !untouchable(run, run.boss) && run.t >= run.boss.bornUntil && dist(run.boss, h) <= reach ? run.boss : null,
     target = locked(run, h, reach) ?? b ?? nearest(run, h.x, h.y, undefined, reach);
   if (!target && kind !== 'wave') return;
   if (kind === 'wave' && !nearest(run, h.x, h.y, undefined, 150)) return;
-  h.cd.attack = attackCooldown(kind, h.power, h.ups) / (1 + DIALS.relic * 0.1 * relic(h, 'quick')) / bodyOf(h).haste;
+  h.cd.attack = (attackCooldown(cls, h.power, h.ups) * (w?.cd ?? 1)) / (1 + DIALS.relic * 0.1 * relic(h, 'quick')) / bodyOf(h).haste;
   const n = 1 + (h.ups.multi ?? 0),
-    dmg = pow(h, ATTACK[kind].dmg),
-    angle = target ? Math.atan2(target.y - h.y, target.x - h.x) : h.facing;
-  emit(run, { type: 'attack', kind, x: h.x, y: h.y, angle, n, r: kind === 'slash' ? SLASH_REACH - 10 : undefined });
+    dmg = pow(h, ATTACK[cls].dmg * (w?.dmg ?? 1)),
+    angle = target ? Math.atan2(target.y - h.y, target.x - h.x) : h.facing,
+    swing = reach - 10,
+    arc = w?.arc ?? SWING_ARC;
+  if (!h.sp || !w) emit(run, { type: 'attack', kind, x: h.x, y: h.y, angle, n, r: kind === 'slash' ? swing : undefined });
+  else emit(run, { type: 'attack', kind, x: h.x, y: h.y, angle, n, r: kind === 'slash' ? swing : kind === 'wave' ? WAVE_R : reach, weapon: h.sp.weapon, ...(kind === 'slash' ? { arc } : {}) });
+  // What an SP weapon's shots carry: their look, a blast where they hit, a heal on each hit.
+  const more: Partial<Shot> | undefined = h.sp && w ? { look: h.sp.weapon, ...(w.blast ? { blast: w.blast } : {}), ...(w.heal ? { heal: w.heal } : {}) } : undefined;
   if (kind === 'arrow') {
-    for (let i = 0; i < n; i++) fire(run, h, 'arrow', angle + (i - (n - 1) / 2) * 0.16, 430, dmg, 1, null);
+    for (let i = 0; i < n; i++) {
+      const a = angle + (i - (n - 1) / 2) * 0.16;
+      if (w?.back) throwBack(run, h, a, reach, SHOT_SPEED.arrow, dmg, more ?? {});
+      else fire(run, h, 'arrow', a, SHOT_SPEED.arrow, dmg, w?.pierce ?? (w?.blast ? 0 : 1), null, h, more);
+    }
   } else if (kind === 'orb' && target) {
     const hit = new Set<Foe>();
     for (let i = 0; i < n; i++) {
       const t = nearest(run, h.x, h.y, hit, RANGE) ?? target;
       hit.add(t);
-      fire(run, h, 'orb', Math.atan2(t.y - h.y, t.x - h.x) + (i - (n - 1) / 2) * 0.4, 250, dmg, 0, t);
+      fire(run, h, 'orb', Math.atan2(t.y - h.y, t.x - h.x) + (i - (n - 1) / 2) * 0.4, SHOT_SPEED.orb, dmg, 0, t, h, more);
     }
     // Split Star (the Ashcaller's passive): every few attacks, one more orb at another monster.
     if (has(h, 'splitstar') && ++h.shots % SP_PASSIVE.splitstar.every === 0) {
       const t = nearest(run, h.x, h.y, hit, RANGE) ?? target;
-      fire(run, h, 'orb', Math.atan2(t.y - h.y, t.x - h.x) + 0.5, 250, dmg, 0, t);
+      fire(run, h, 'orb', Math.atan2(t.y - h.y, t.x - h.x) + 0.5, SHOT_SPEED.orb, dmg, 0, t, h, more);
       emit(run, { type: 'passive', id: 'splitstar', x: h.x, y: h.y });
     }
   } else if (kind === 'wave') {
-    for (let i = 0; i < n; i++) later(run, i * 0.18, () => burst(run, h, h.x, h.y, 110 + i * 20, dmg, 'wave'));
+    for (let i = 0; i < n; i++) later(run, i * 0.18, () => burst(run, h, h.x, h.y, WAVE_R + i * 20, dmg, 'wave'));
   } else {
-    for (let i = 0; i < n; i++) slash(run, h, angle + (i * Math.PI * 2) / n, dmg);
+    for (let i = 0; i < n; i++) slash(run, h, angle + (i * Math.PI * 2) / n, dmg, swing, arc, w?.heal ?? 0, w ? (w.cut ?? 0) : arc);
   }
 }
 
-function slash(run: Run, h: Hero, angle: number, dmg: number) {
-  const R = SLASH_REACH - 10;
+/** A swing: everything within `R` and `arc` radians either side of `angle` is hit, and the shots
+    within `cut` radians either side are knocked out of the air. `heal`: a share of your HP back
+    for each monster hit. */
+function slash(run: Run, h: Hero, angle: number, dmg: number, R: number, arc: number, heal: number, cut: number) {
   for (const f of run.foes) {
     if (!f.alive) continue;
     const d = dist(f, h);
@@ -2467,54 +2778,93 @@ function slash(run: Run, h: Hero, angle: number, dmg: number) {
     if ((f.kind === 'reflection' || f.kind === 'image') && diff >= SPLIT.aim) {
       // Only a swing aimed at a copy (of you, or of the Mirror) shatters it: the edge of the arc
       // pushes it aside.
-      if (diff < 1.3 || d < 22) nudge(run, f, 140, h.x, h.y);
+      if (diff < arc || d < 22) nudge(run, f, 140, h.x, h.y);
       continue;
     }
-    if (diff < 1.3 || d < 22) damage(run, h, f, dmg, 140);
+    if (diff < arc || d < 22) {
+      damage(run, h, f, dmg, 140);
+      if (heal) mend(h, heal);
+    }
   }
   for (const br of run.terrain.barrels) {
     if (!br.alive || Math.hypot(br.x - h.x, br.y - h.y) > R + BARREL.r) continue;
     const diff = Math.atan2(br.y - h.y, br.x - h.x) - angle;
-    if (Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff))) < 1.3) blowUp(run, br, h);
+    if (Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff))) < arc) blowUp(run, br, h);
   }
-  // A sword swing also knocks shots out of the air.
+  // A swing also knocks shots out of the air.
+  if (cut <= 0) return;
   run.bullets = run.bullets.filter((b) => {
     const d = Math.hypot(b.x - h.x, b.y - h.y);
     if (d > R + 10) return true;
     const diff = Math.atan2(b.y - h.y, b.x - h.x) - angle;
-    return Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff))) >= 1.3;
+    return Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff))) >= cut;
   });
+}
+
+/** A weapon's heal on a hit: a share of max HP, at least 1. */
+function mend(h: Hero, share: number) {
+  if (h.hp <= 0 || h.hp >= h.maxHp) return;
+  h.hp = Math.min(h.maxHp, h.hp + Math.max(1, Math.round(h.maxHp * share)));
+}
+
+/** A throw that comes back turns round: it can hit each monster again on the way home. */
+function turnBack(s: Shot) {
+  if (!s.back?.out) return;
+  s.back.out = false;
+  s.hit.clear();
 }
 
 function moveShots(run: Run) {
   run.shots = run.shots.filter((s) => {
     if (run.t > s.dies) return false;
-    if (s.kind === 'orb') {
+    if (s.back) {
+      if (run.t >= s.back.turn) turnBack(s);
+      if (!s.back.out) {
+        // Home to the thrower's hand.
+        const dx = s.by.x - s.x,
+          dy = s.by.y - s.y,
+          d = Math.hypot(dx, dy) || 1,
+          v = Math.hypot(s.vx, s.vy);
+        if (d < HERO_R + 8) return false;
+        s.vx = (dx / d) * v;
+        s.vy = (dy / d) * v;
+      }
+    } else if (s.kind === 'orb') {
       if (!s.target?.alive) s.target = nearest(run, s.x, s.y, undefined, 300);
       if (s.target) {
         const a = Math.atan2(s.target.y - s.y, s.target.x - s.x);
-        s.vx = Math.cos(a) * 250;
-        s.vy = Math.sin(a) * 250;
+        s.vx = Math.cos(a) * SHOT_SPEED.orb;
+        s.vy = Math.sin(a) * SHOT_SPEED.orb;
       }
     }
     s.x += s.vx * STEP;
     s.y += s.vy * STEP;
-    if (s.x < ROOM.wall || s.x > run.area.w - ROOM.wall || s.y < ROOM.wall || s.y > run.area.h - ROOM.wall || inPillar(run, s.x, s.y, 2)) return false;
+    if (s.x < ROOM.wall || s.x > run.area.w - ROOM.wall || s.y < ROOM.wall || s.y > run.area.h - ROOM.wall || inPillar(run, s.x, s.y, 2)) {
+      // A throw that comes back turns at a wall; on its way home it flies over everything.
+      if (!s.back) return false;
+      turnBack(s);
+    }
     for (const br of run.terrain.barrels)
       if (br.alive && closer(br.x - s.x, br.y - s.y, BARREL.r + 4)) {
         blowUp(run, br, s.by);
-        return false;
+        if (!s.back) return false;
+        turnBack(s);
       }
     let f: Foe | null = null;
-    for (const o of run.foes) if (o.alive && !s.hit.has(o) && run.t >= o.bornUntil && !untouchable(run, o) && closer(o.x - s.x, o.y - s.y, o.def.r + 6)) f = o;
+    const near = s.r ?? 6;
+    for (const o of run.foes) if (o.alive && !s.hit.has(o) && run.t >= o.bornUntil && !untouchable(run, o) && closer(o.x - s.x, o.y - s.y, o.def.r + near)) f = o;
     if (!f) return true;
     s.hit.add(f);
+    if (s.heal) mend(s.by, s.heal);
     if (s.kind === 'orb') {
       damage(run, s.by, f, s.dmg, 60, s.x, s.y);
-      burst(run, s.by, s.x, s.y, 56, s.dmg * 0.5, 'orb', f);
+      burst(run, s.by, s.x, s.y, s.blast ?? 56, s.dmg * 0.5, 'orb', f);
       return false;
     }
     damage(run, s.by, f, s.dmg, 90, s.x, s.y);
+    if (s.blast) burst(run, s.by, s.x, s.y, s.blast, s.dmg * 0.5, 'fire', f);
+    // A throw that comes back hits everything it passes.
+    if (s.back) return true;
     return s.pierce-- > 0;
   });
 }
