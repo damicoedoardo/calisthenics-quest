@@ -548,13 +548,13 @@ const ELEMENT: Record<string, [string, string, string]> = {
   storm: ['#3b4fb8', '#facc15', '#fef08a'],
   dawn: ['#b45309', '#fbbf24', '#fff7d6'],
   frost: ['#1e40af', '#93c5fd', '#f0f9ff'],
-  leaf: ['#166534', '#4ade80', '#fbb0c8'],
+  leaf: ['#166534', '#4ade80', '#d9f99d'],
   moon: ['#312e81', '#a5b4fc', '#eef2ff'],
   crystal: ['#0e7490', '#67e8f9', '#f0abfc'],
   sand: ['#92400e', '#f59e0b', '#fef3c7'],
   void: ['#3b0764', '#a855f7', '#f3e8ff'],
   tiger: ['#9a3412', '#fb923c', '#ffedd5'],
-  lotus: ['#9d174d', '#f472b6', '#fdf2f8'],
+  lotus: ['#065f46', '#34d399', '#fde68a'],
   sun: ['#b45309', '#fbbf24', '#fffbeb'],
 };
 

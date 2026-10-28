@@ -455,20 +455,20 @@ const FROST_HUNTER: SpLook = {
 };
 
 const LEAF: Ramp = ['#2f5a1a', '#4f8a2a', '#8ac04a'];
-const BLOOM: Ramp = ['#7a2a4a', '#e05a8a', '#fbb0c8'];
+const BARK: Ramp = ['#3a2410', '#6a4420', '#a0703a'];
 
-/** Leaf Warden: a green and bark jerkin, a crown of leaves with a flower, leaves riding past. */
+/** Leaf Warden: a moss and bark jerkin, a crown of thorns and leaves, leaves riding past. */
 const LEAF_WARDEN: SpLook = {
   dress: 'light',
-  a: ['#3a4a1a', '#5a7a2a', '#8ab04a'],
-  trim: ['#5a3a1a', '#8a5a2a', '#c08a50'],
-  accent: BLOOM,
+  a: ['#2a3a14', '#46622a', '#6e8e3e'],
+  trim: BARK,
+  accent: ['#5a3a10', '#b07a2a', '#e0b060'],
   grand: false,
   mantle: true,
   legs: ['#2a2014', '#3e3020', '#56442e'],
   aura: ['#166534', '#4ade80', '#dcfce7'],
   glow: '#dcfce7',
-  spark: '#fbb0c8',
+  spark: '#86efac',
   back(c) {
     // leaves fall past you, turning
     const f = c.P.f;
@@ -486,16 +486,17 @@ const LEAF_WARDEN: SpLook = {
   },
   head(c) {
     const { u } = c;
-    // a ring of leaves round the head, and a flower over one ear
-    for (let x = 19; x <= 44; x += 3) {
-      const up = (x / 3) % 2 ? 1 : 0;
-      u.r(x, 9 - up, 3, 2, LEAF[1]);
-      u.p(x + 1, 9 - up, LEAF[2]);
-      u.p(x, 11, LEAF[0]);
+    // a band of bark round the head, with leaves and thorns sticking up from it
+    u.row(11, 19, 45, BARK[1]);
+    u.row(12, 19, 45, BARK[0]);
+    for (let x = 20; x <= 44; x += 4) {
+      const tall = (x / 4) % 2 ? 3 : 2;
+      u.r(x, 11 - tall, 2, tall, (x / 4) % 2 ? LEAF[1] : LEAF[0]);
+      u.p(x, 11 - tall, (x / 4) % 2 ? LEAF[2] : BARK[2]);
     }
-    u.ellipse(43, 9, 3, 3, BLOOM[1]);
-    u.p(43, 9, '#fde047');
-    u.p(42, 7, BLOOM[2]);
+    // a thorn at each side
+    u.p(18, 10, BARK[2]);
+    u.p(46, 10, BARK[2]);
   },
 };
 
@@ -730,22 +731,24 @@ const TIGER_FIST: SpLook = {
   },
 };
 
-const LOTUS: Ramp = ['#8a3a5a', '#e07aa0', '#fbc8dc'];
+const JADE: Ramp = ['#0f3a32', '#1f6a5a', '#3a9a82'];
+const GOLD: Ramp = ['#8a5a10', '#d4a017', '#fde68a'];
 
-/** Lotus Sage: a pink and white gi, a green sash, a lotus in the hair, petals drifting round you. */
+/** Lotus Sage: a deep jade gi with gold trim, a dark headband with a gold lotus sigil, gold motes
+    rising round you. */
 const LOTUS_SAGE: SpLook = {
   dress: 'light',
-  a: LOTUS,
-  trim: ['#9aa0a8', '#eef0f4', '#ffffff'],
-  accent: ['#166534', '#22c55e', '#bbf7d0'],
+  a: JADE,
+  trim: GOLD,
+  accent: GOLD,
   grand: false,
   mantle: false,
-  legs: ['#3a2430', '#56364a', '#744a64'],
-  aura: ['#9d174d', '#f472b6', '#fdf2f8'],
-  glow: '#fdf2f8',
-  spark: '#fbcfe8',
+  legs: ['#14201c', '#22302a', '#34463e'],
+  aura: ['#065f46', '#34d399', '#ecfdf5'],
+  glow: '#ecfdf5',
+  spark: '#fde68a',
   back(c) {
-    // petals drift up round you
+    // gold motes rise round you
     const f = c.P.f;
     [
       [9, 44],
@@ -754,36 +757,31 @@ const LOTUS_SAGE: SpLook = {
       [57, 24],
     ].forEach(([x, y], i) => {
       const yy = y - ((f * 2 + i * 4) % 14);
-      c.fx.p(x, yy, LOTUS[2]);
-      c.fx.p(x + 1, yy, LOTUS[1]);
+      c.fx.p(x, yy, GOLD[2]);
+      c.fx.p(x, yy + 1, GOLD[1]);
     });
   },
   outfit(c) {
     const { u } = c;
-    // a green sash, tied at the side
+    // a black belt, tied at the side
     const [b0, b1] = c.torsoRange(42);
-    u.row(42, b0, b1, '#22c55e');
-    u.row(43, b0, b1, '#166534');
-    u.r(24, 42, 3, 2, '#bbf7d0');
+    u.row(42, b0, b1, '#1c1c22');
+    u.row(43, b0, b1, '#0b0d14');
+    u.r(24, 42, 3, 2, GOLD[1]);
   },
   head(c) {
     const { u } = c;
-    // a lotus flower over one ear: petals round a gold heart
-    const x = 42,
-      y = 8;
-    u.ellipse(x, y, 4, 2, LOTUS[1]);
-    u.poly(
-      [
-        [x - 2, y],
-        [x, y - 4],
-        [x + 2, y],
-      ],
-      LOTUS[2],
-    );
-    u.p(x - 4, y - 1, LOTUS[2]);
-    u.p(x + 4, y - 1, LOTUS[2]);
-    u.p(x, y - 1, '#fde047');
-    u.row(y + 2, x - 2, x + 2, '#22c55e');
+    // a dark headband with a small gold lotus sigil at the brow, its tails out behind
+    u.row(12, 19, 45, '#1c1c22');
+    u.row(13, 19, 45, '#0b0d14');
+    const x = 32;
+    u.p(x, 10, GOLD[2]);
+    u.row(11, x - 1, x + 1, GOLD[1]);
+    u.row(12, x - 2, x + 2, GOLD[1]);
+    u.p(x, 12, GOLD[2]);
+    u.p(46, 13, '#1c1c22');
+    u.p(47, 14, '#1c1c22');
+    u.p(47, 15, '#0b0d14');
   },
 };
 
