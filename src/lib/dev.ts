@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import { cloudConfigured, maybeSignedIn, supabase, useCloudStatus } from './cloud-client';
+import { devSaveOn, inSandbox, switchDevSave } from './store';
 import type { GameState, Session } from './game';
 import { NO_FOG, ZONES } from './fog';
 import { NO_GEAR, type FogGear } from './fog-gear';
@@ -15,43 +17,64 @@ import type { SpNo } from '@/game/dungeon/content';
 import { SP_TRIAL, type MatId } from '@/balance';
 
 /* Developer mode: shortcuts for trying the app without training for real or replaying the
-   opening. It is always on in previews and on localhost. On the live app it is on too while
-   there are no other players (Edoardo's call); it can be turned off from its panel, and seven taps
-   on the FORMA name turn it back on. */
+   opening. Only the developer's account has it (Edoardo's call, 2026-10-28): signed in with an
+   email whose fingerprint is in DEV_EMAILS, or on localhost. It is off until switched on (You >
+   Settings), and while it is on the app plays a separate developer save (src/lib/store.ts), so the
+   real hero is never touched; switching it off goes back to the real save as it was. */
 
-const LIVE_HOST = 'forma-nu-red.vercel.app';
-const KEY = 'forma-dev';
+/** SHA-256 of each developer's email, trimmed and lower-cased: the repo is public, the addresses stay out of it. */
+export const DEV_EMAILS = ['ca4d1083bd88ad457c76dbfa9d8b88cce00c3a376c32d1e705559f821b162de9'];
 
+const LIVE_HOSTS = ['formaquest.app', 'www.formaquest.app', 'forma-nu-red.vercel.app'];
+const onLocalhost = () => ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+/** Whether this email belongs to a developer. */
+export async function isDeveloper(email: string | null | undefined): Promise<boolean> {
+  if (!email) return false;
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(email.trim().toLowerCase()));
+  const hex = Array.from(new Uint8Array(bytes), (b) => b.toString(16).padStart(2, '0')).join('');
+  return DEV_EMAILS.includes(hex);
+}
+
+/** The signed-in account's email, read from the stored Supabase session (null: signed out). */
+async function sessionEmail(): Promise<string | null> {
+  if (!cloudConfigured || !maybeSignedIn()) return null;
+  try {
+    const { data } = await (await supabase()).auth.getSession();
+    return data.session?.user.email ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * `allowed`: this phone may use developer mode (the developer's account, or localhost). `dev`:
+ * the tools show: allowed, and on (the developer save) or in a lab sandbox. `on`: the developer
+ * save is in use. `setOn` switches it and reloads the app onto the other save.
+ */
 export function useDevMode() {
-  const [dev, setDev] = useState(false);
-  const [live, setLive] = useState(true);
+  const { email } = useCloudStatus();
+  const [allowed, setAllowed] = useState(false);
+  const [on, setOnState] = useState(false);
 
   useEffect(() => {
-    const onLive = window.location.hostname === LIVE_HOST;
-    setLive(onLive);
-    let off = false;
-    try {
-      off = localStorage.getItem(KEY) === '0';
-    } catch {
-      // Storage blocked: dev mode just stays on.
-    }
-    setDev(!onLive || !off);
-  }, []);
+    let live = true;
+    setOnState(devSaveOn());
+    (async () => {
+      const ok = onLocalhost() || (await isDeveloper(email ?? (await sessionEmail())));
+      if (!live) return;
+      setAllowed(ok);
+      // Signed out, or someone else's account: back to the real save.
+      if (!ok && devSaveOn() && !maybeSignedIn()) switchDevSave(false);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [email]);
 
-  const toggle = useCallback(
-    (on: boolean) => {
-      try {
-        localStorage.setItem(KEY, on ? '1' : '0');
-      } catch {
-        // Not saved; it still applies for this visit.
-      }
-      setDev(on || !live);
-    },
-    [live],
-  );
+  const setOn = useCallback((next: boolean) => switchDevSave(next), []);
 
-  /** On previews dev mode can't be turned off. */
-  return { dev, live, toggle };
+  return { allowed, on, dev: allowed && (on || inSandbox()), setOn };
 }
 
 /**
@@ -59,7 +82,7 @@ export function useDevMode() {
  * (and impatient developers) can play through the story in a hurry. Never on the live app.
  */
 export function fastStory(): boolean {
-  if (typeof window === 'undefined' || window.location.hostname === LIVE_HOST) return false;
+  if (typeof window === 'undefined' || LIVE_HOSTS.includes(window.location.hostname)) return false;
   return new URLSearchParams(window.location.search).has('fast');
 }
 

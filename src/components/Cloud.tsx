@@ -29,7 +29,7 @@ import {
 /** How long after a change the save goes up, so a burst of taps is one upload. */
 const PUSH_AFTER_MS = 3000;
 
-/** Keeps the cloud copy in step with this phone while signed in. Off in the sandbox and when not set up. */
+/** Keeps the cloud copy in step with this phone while signed in. Off in the sandbox, on the developer save, and when not set up. */
 export function useCloudSync(state: GameState, update: (fn: (s: GameState) => GameState) => void, off: boolean) {
   const user = useRef<string | null>(null);
   const latest = useRef(state);
@@ -210,7 +210,7 @@ export function CloudSave({ sandbox }: { sandbox: boolean }) {
   const [email, setEmail] = useState('');
   const [msg, setMsg] = useState('');
   if (!cloudConfigured) return null;
-  if (sandbox) return <p className="mt-4 text-xs text-slate-500">Cloud backup is off in the sandbox.</p>;
+  if (sandbox) return <p className="mt-4 text-xs text-slate-500">Cloud backup is off in the sandbox and on the developer save; your real save keeps its own.</p>;
 
   const begin = () => window.dispatchEvent(new Event('forma-cloud-start'));
 
