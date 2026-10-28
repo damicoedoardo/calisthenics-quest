@@ -75,10 +75,11 @@ export const LEECH_CAP = 0.04;
 export const SLAYER_SHARE = 0.45;
 
 /** Items also ask for a hero level (the level from training XP), the one a player who hits the
-    weekly goal has when the item becomes wearable (`WEAR_AFTER`), less `slack` workouts so a short
-    week or two doesn't block it. Goal: a level need can't be met by piling points in one stat or
-    starting over; it counts every workout. */
-export const LEVEL_NEED = { slack: 2 } as const;
+    weekly goal has when the item becomes wearable (`WEAR_AFTER`), less `slack` workouts. No slack:
+    a level spans three or four workouts, so 2 let a fresh hero (level 1) wear a zone 1 legendary
+    with no training at all (Edoardo 2026-10-28). Goal: a level need can't be met by piling points
+    in one stat or starting over; it counts every workout. */
+export const LEVEL_NEED = { slack: 0 } as const;
 
 /** Per rarity: how many bonuses (from, to) and how strong (x every number). What it asks is `WEAR_AFTER`. */
 export const RARITY_SIZE = {

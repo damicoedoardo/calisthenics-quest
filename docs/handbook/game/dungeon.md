@@ -231,9 +231,9 @@ have none) and, for weapons only, stat points in the class's own stat (`need`, c
 points can wear them (Edoardo 2026-10-28; `armorAsksNoPoints` in `game.ts` clears older armor's
 need). Both come from one clock: what a player who
 hits the weekly goal has `wearAfter(rarity, floor)` workouts after the zone opens (`WEAR_AFTER`;
-points spread over the five stats, `evenPoints`; the level, `levelAfter`, from `LEVEL_NEED.slack`
-workouts earlier so a short week doesn't block it). The level can't be met by piling points in
-one stat.
+points spread over the five stats, `evenPoints`; the level, `levelAfter`, with `LEVEL_NEED.slack`
+0: a level spans three or four workouts, so any slack let a fresh hero wear a zone 1 legendary).
+The level can't be met by piling points in one stat.
 
 What an item gives: a weapon damage plus its class's own crit (`WEAPON_CRIT`: chance and crit
 damage, the bow highest), armor HP and Armor, then its rolled bonuses (`BONUSES`), drawn from its

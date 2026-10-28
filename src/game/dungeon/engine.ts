@@ -2829,12 +2829,14 @@ function kill(run: Run, f: Foe, by: Hero) {
     emit(run, { type: 'say', text: 'It all breaks at once. It had been breaking the whole time.' });
   }
   if (f === run.boss) {
-    // The boss's own drop goes straight into each hero's bag: you take it home.
-    for (const h of run.party) {
+    // The boss's own drop goes straight into each hero's bag: you take it home. A full bag gets
+    // it on the floor instead, to swap for something (the bag never holds more than BAG).
+    run.party.forEach((h, i) => {
+      if (h.gear.bag.length >= BAG) return dropItem(run, f.x + i * 26, f.y + 30, DROP_LUCK.boss, h);
       const it = newItem(run, DROP_LUCK.boss, h.classId);
       h.gear.bag.push(it);
       emitTo(run, h, { type: 'loot', item: it });
-    }
+    });
     bossDown(run);
   }
 }

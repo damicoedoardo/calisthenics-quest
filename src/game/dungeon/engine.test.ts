@@ -5,7 +5,7 @@ import { CALM, HUMAN, PARTY, SP_SKILL, SP_WEAPON, TUTORIAL } from '@/balance';
 import { seeded } from '@/lib/random';
 import { botInput, playRun } from './bot';
 import { rollItem } from './items';
-import { ACROSS, attackKind, canOpen, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, makeFloor, MIDS, mine, pickRelic, SAND, skipToBoss, skipToWarden, SP_NOS, SPLIT, stepRun, takeEvents, wardenFloor, type GameEvent, type Run, type Side, type SpNo } from './engine';
+import { ACROSS, BAG, attackKind, canOpen, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, makeFloor, MIDS, mine, pickRelic, SAND, skipToBoss, skipToWarden, SP_NOS, SPLIT, stepRun, takeEvents, wardenFloor, type GameEvent, type Run, type Side, type SpNo } from './engine';
 import type { ClassId } from '@/lib/gear';
 
 describe('mid-bosses', () => {
@@ -362,6 +362,22 @@ describe('dungeon', () => {
     stepRun(run, still);
     expect(run.over).toMatchObject({ won: true, why: 'boss' });
     expect(run.over!.gear.bag).toContain(it);
+  });
+
+  it("the boss's drop never overfills the bag: a full bag gets it on the floor", () => {
+    const run = createRun({ ...setup, power: tough, seed: 3 });
+    skipToBoss(run);
+    while (!run.boss) stepRun(run, still);
+    const rnd = seeded(2);
+    run.hero.gear.bag = Array.from({ length: BAG }, () => rollItem(rnd, { zone: 1, workouts: 0, floor: 9, cls: run.hero.classId }, 'magic'));
+    const boss = run.boss;
+    boss.hp = 1;
+    run.hero.x = boss.x;
+    run.hero.y = boss.y + 40;
+    for (let i = 0; i < 600 && !run.home; i++) stepRun(run, still);
+    expect(run.home).toBe(true);
+    expect(run.hero.gear.bag).toHaveLength(BAG);
+    expect(run.loot.some((l) => l.x === boss.x && l.y === boss.y + 30)).toBe(true);
   });
 
   it('the Summit is a climb with no boss: a ledge climbed is a win, scored by height', () => {
