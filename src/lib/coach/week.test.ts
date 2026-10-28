@@ -4,7 +4,7 @@ import { seeded } from '@/lib/random';
 import { finishSession, initialState, migrate, todaysQuest, type GameState } from '@/lib/game';
 import { applySetup, type SetupAnswers } from './setup';
 import { runTool, resolveDay, type ToolContext } from './tools';
-import { buildWeek, currentPlan, dayLabel, fromLegacy, markDone, nextDay, setDay, weekDates, weekOver } from './week';
+import { buildWeek, currentPlan, dayLabel, fromLegacy, markDone, nextDay, restKept, restToday, setDay, weekDates, weekOver, weekSlots, weekText } from './week';
 import { coachNudge, freshNudge, hearNudge } from './nudge';
 import { coachBrief } from './brief';
 import { changeItem } from './plan';
@@ -62,7 +62,7 @@ describe('the week', () => {
     expect(weekOver(s.coach!.week, NOW)).toBe(false);
   });
 
-  it('a missed day moves along, and the week ends after seven days or when all is done', () => {
+  it('a missed day moves along, and the week runs its seven days even with every workout done', () => {
     const s = withWeek();
     const later = new Date(2026, 9, 31, 12);
     expect(nextDay(s.coach!.week)!.date).toBe('2026-10-28');
@@ -70,8 +70,25 @@ describe('the week', () => {
     expect(weekOver(s.coach!.week, new Date(2026, 10, 4, 12))).toBe(true);
     let c = s.coach!;
     for (let i = 0; i < 3; i++) c = markDone(c, NOW.toISOString());
-    expect(weekOver(c.week, NOW)).toBe(true);
+    expect(currentPlan(c)).toBeUndefined();
+    expect(weekOver(c.week, NOW)).toBe(false);
     expect(markDone(c, NOW.toISOString())).toBe(c);
+  });
+
+  it('every other day of the week is a rest day, kept by sitting by the fire', () => {
+    const s = withWeek();
+    const slots = weekSlots(s.coach!.week!);
+    expect(slots.map((x) => (x.day ? 'W' : 'r')).join('')).toBe('WrWrWrr');
+    const thu = new Date(2026, 9, 29, 12);
+    expect(restToday(s.coach, NOW)).toBe(false);
+    expect(restToday(s.coach, thu)).toBe(true);
+    expect(restKept(s, '2026-10-29')).toBe(false);
+    const kept = { ...s, days: [{ day: '2026-10-29', line: '', quote: { text: '', by: '' }, fire: true }] };
+    expect(restKept(kept, '2026-10-29')).toBe(true);
+    const text = weekText(kept.coach!.week, thu, (d) => restKept(kept, d));
+    expect(text).toHaveLength(7);
+    expect(text[1]).toBe('- Thu 2026-10-29 (Today): rest day, KEPT');
+    expect(text[3]).toBe('- Sat 2026-10-31 (Sat): rest day');
   });
 
   it('setDay writes the day asked for, never a done one', () => {
@@ -177,6 +194,17 @@ describe('the flame speaks first', () => {
     expect(freshNudge(s, NOW)!.id).toBe('done:2026-10-28');
     // Friday's workout not done by Saturday.
     expect(coachNudge(s, new Date(2026, 9, 31, 12))!.id).toBe('missed:2026-10-30');
+  });
+
+  it('asks to keep a planned rest day, once', () => {
+    let s = withWeek();
+    s = { ...s, coach: { ...s.coach!, week: { ...s.coach!.week!, start: '2026-10-27' } } };
+    const thu = new Date(2026, 9, 29, 12);
+    // Wednesday's workout done, so nothing is missed on Thursday.
+    s = { ...s, coach: markDone(s.coach!, NOW.toISOString()) };
+    expect(coachNudge(s, thu)!.id).toBe('rest:2026-10-29');
+    const kept = { ...s, days: [{ day: '2026-10-29', line: '', quote: { text: '', by: '' }, fire: true }] };
+    expect(coachNudge(kept, thu)?.id).not.toBe('rest:2026-10-29');
   });
 
   it('no profile, nothing', () => {

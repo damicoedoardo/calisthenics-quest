@@ -20,7 +20,7 @@ numbers.** XP, stat points and story never depend on what the coach planned.
 
 Code: `src/lib/coach/` (pure, tested in `coach.test.ts`, `chat.test.ts` and `week.test.ts`). Numbers:
 `src/balance/coach.ts`. Screens: `CoachChat.tsx` (the Train tab's coach and the chat),
-`CoachSetup` (the quick taps), the workout's overview and choices in `Workout.tsx`, `useCoach.ts`
+the workout's overview and choices in `Workout.tsx`, `useCoach.ts`
 (keeps a week ready, runs the chat). How to do each exercise: `ExerciseDetail.tsx`.
 
 ## The week: the one place a workout lives (`week.ts`)
@@ -33,10 +33,17 @@ coach all read it; every change is written to a day (`setDay`, `setPlan` for the
 
 - **Planned**: `buildWeek` spreads your days a week over seven days (`WEEK_SPREAD`), each day's
   workout built knowing the days before it (modes and A/B days take turns). `useCoachPlan` plans a
-  new one once the coach is set up and the week is over (`weekOver`: every day done, or seven days
-  past its start). The coach replaces it with `set_week` or one day with `set_workout`.
+  new one once the coach is set up and the week is over (`weekOver`: seven days past its start). The coach replaces it with `set_week` or one day with `set_workout`.
 - **Done**: `finishSession` marks the next day done (`markDone`) and moves levels.
 - **Old saves** had one `coach.plan`; `migrate` turns it into a week of one day (`fromLegacy`).
+
+## Rest days
+
+Every day of the week without a workout is a rest day, and it is part of the plan: you keep it by
+sitting by the fire that day (the day's page, `restKept`; Today's rest card or the Train tab).
+A kept rest day shows ✓ in the week, the brief tells the coach which were kept, and that day's
+Fog runs start Rested (`isRested`). A week runs its seven days even when every workout is done
+(`weekOver`), so its rest days still come. No XP or story heart for a rest day yet.
 
 ## Rests
 
@@ -69,11 +76,11 @@ screen counts that down.
   talk, not a doctor, honest: push back on what isn't wise or doesn't match the log, and suggest
   better) are fixed on the server.
 - **It speaks first** (`nudge.ts`): `coachNudge` picks one thing worth saying from the save (a
-  missed day, a new week, the chapter's enemy one workout from beaten, a workout done, today's
+  missed day, a new week, a rest day to keep, the chapter's enemy one workout from beaten, a workout done, today's
   workout). Until heard it shows on the flame's card with a dot on the Train tab; opening the chat
   says it there (`hearNudge`, kept in `coach.heard`), or an empty chat opens on it from the coach.
-- **Sign-in**: talking needs the cloud sign-in (Hero > Settings); signed out, the chat offers the
-  quick taps (`CoachSetup`) instead.
+- **Sign-in**: the app can't be used without an account (`SignInGate`), so the chat always can
+  talk; setup happens only in the chat (the quick taps are gone).
 
 ## Memory: three layers
 
@@ -141,15 +148,14 @@ an LLM gets back to do better.
 
 - **Train tab** (`CoachScreen` in `CoachChat.tsx`): the flame with what it brings up or its last
   words, "Let's start", "Talk" or "Answer", and "What I know" (`CoachKnows`: profile, levels, notes,
-  each note can be forgotten, "Redo setup"). Under it the week (`WeekBoard`): a chip per workout day
-  (✓ done, "next" lit) and the chosen day's workout as cards: the pixel demo, dose and rest, Easier
-  and Swap (days still to do), and Start on the next day. Tap a card (here or on Today) for how to
+  each note can be forgotten; to change the profile, tell the flame). Under it the week (`WeekBoard`):
+  a chip for each of its seven days, workouts and rest days (✓ done or kept, "next" lit) and the chosen day's workout as cards: the pixel demo, dose and rest, Easier
+  and Swap (days still to do), and Start on the next day; a rest day says why rest counts and, on the
+  day, offers a minute by the fire. Before the first week: only a line that says to talk to the flame. Tap a card (here or on Today) for how to
   do it (`ExerciseSheet`: both demos, facts, steps, tips, mistakes). Sideways the two sit side by side.
 - **The chat** (`CoachChat`): the camp fire at the top with the flame, the talk below in the
   story's dialogue boxes, the taps it offers, and a box to type. A week or day it just set shows in
   the chat as the week, a strip of demos per day.
-- **Quick taps** (`CoachSetup.tsx`): eight tap screens (modes, goal, days and minutes, gear,
-  experience, where you start, what to spare, anything else), for setup without the chat.
 - **Workout** (`Workout.tsx`): no pausing. Closing it after a set asks first ("Leave, don't
   count it"): leaving throws the sets away and the workout starts over next time. An overview before the first set (move up and down, Easier, Swap,
   Skip; the list button brings it back), "Too hard? Easier" and "Swap" under the demo, and a run
@@ -168,7 +174,7 @@ an LLM gets back to do better.
 | Prefer other exercises | `STAPLES` in `src/lib/coach/staples.ts` |
 | Change an easier ladder | `LADDER` in `src/lib/coach/options.ts` |
 | Change what a sore spot spares | `SPARE` in `src/lib/coach/options.ts` |
-| Add a setup question | `SetupAnswers` and `profileFrom` (`setup.ts`), a step in `CoachSetup.tsx` |
+| Add something the coach asks at setup | `SYSTEM` in `backend/app/coach.py`, and `save_profile` (`TOOLS`, `tools.ts`) |
 | Add a guardrail | `validate.ts`, with a test |
 | Change how the coach talks | `SYSTEM` in `backend/app/coach.py` (a server deploy) |
 | Give the coach a tool | `TOOLS` in `backend/app/coach.py` and a case in `runTool` (`tools.ts`), with tests on both sides |

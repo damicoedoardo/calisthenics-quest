@@ -97,9 +97,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const cloud = useCloudSync(state, update, !ready || inSandbox());
   // Shows you online to your friends while the app is open, and in the Fog during a run.
   useFriendsBeat(state, run?.name ?? null, !ready || inSandbox());
-  // After the install step, an account once (SignInGate); developer mode may play on without.
+  // After the install step, an account: a hard rule, no playing on without one (SignInGate).
   const { signedIn } = useCloudStatus();
-  const [skipSignIn, setSkipSignIn] = useState(false);
   // Parties: kept fresh while signed in; a start the leader made opens the run here too.
   usePartyPoll(signedIn, !ready || inSandbox());
   const { party } = usePartyView();
@@ -148,7 +147,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const inst = useInstall();
   const gated = inst.known && !inst.standalone && !inst.skipped && mustInstall(inst.platform) && (inst.forced || !inSandbox());
   // The menus' music, on the tabs only: the opening, story, workouts and runs have their own.
-  const askSignIn = !gated && !skipSignIn && !inSandbox() && signInDue(signedIn);
+  const askSignIn = !gated && !inSandbox() && signInDue(signedIn);
   useMenuTrack(ready && state.profile.onboarded && !opening && !replaying && !busy && !gated && !askSignIn);
   useEffect(() => {
     if (busy) setDevOpen(false);
@@ -284,7 +283,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       />
     );
 
-  if (askSignIn && !opening) return <SignInGate onSkip={dev ? () => setSkipSignIn(true) : undefined} />;
+  if (askSignIn && !opening) return <SignInGate />;
 
   return (
     // Held sideways (the `land` screen), the tab bar becomes a rail down the left, the header shrinks
@@ -331,7 +330,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
       <main ref={main} className="flex-1 px-4 pb-28 pt-2 land:min-h-0 land:overflow-y-auto land:pb-3 desk:mx-auto desk:w-full desk:max-w-2xl desk:px-6 desk:pb-12">
         {tab === 'today' ? (
-          <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook} />
+          <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook} onTrain={() => setTab('train')} />
         ) : tab === 'train' ? (
           <TrainTab state={state} update={update} onStart={start} />
         ) : tab === 'play' ? (

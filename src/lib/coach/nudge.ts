@@ -2,9 +2,9 @@ import { dayKey } from '../days';
 import type { GameState } from '../game';
 import { storyState } from '@/story/engine';
 import { minutesOf } from './validate';
-import { dayLabel, nextDay, weekdayOf } from './week';
+import { dayLabel, nextDay, restKept, restToday, weekdayOf } from './week';
 
-/* The flame speaks first: one thing worth saying now (a missed day, a workout done, a new week, the
+/* The flame speaks first: one thing worth saying now (a missed day, a new week, a rest day to keep, a workout done, the
    chapter's enemy nearly beaten, today's workout), picked by code from the save. It shows on the
    flame's card with a dot on the Train tab, and once you open the chat it is said there too, so
    the coach can talk it through. Each nudge has an id and is said once. */
@@ -26,10 +26,12 @@ export function coachNudge(state: GameState, now: Date): Nudge | undefined {
   if (next && next.date < today)
     return { id: `missed:${next.date}`, text: `${weekdayOf(next.date)}'s workout is still waiting. That's fine, it happens. Do it today, or tell me and I'll move the week around.` };
   if (week && next && week.start === today && !week.days.some((d) => d.done))
-    return { id: `week:${week.start}`, text: `A new week is ready: ${week.days.length} workouts, ${week.days.map((d) => weekdayOf(d.date)).join(', ')}. Want to change anything? Just tell me.` };
+    return { id: `week:${week.start}`, text: `A new week is ready: workouts on ${week.days.map((d) => weekdayOf(d.date)).join(', ')}, and rest days between. The rest days count too. Want to change anything? Just tell me.` };
+  if (restToday(coach, now) && !restKept(state, today) && !doneToday)
+    return { id: `rest:${today}`, text: "Today is a rest day, and resting is part of the plan. Sit by the fire with me for a minute: that's how the day counts." };
   const story = storyState(state);
   if (doneToday && story.chapter && story.heartsLeft === 1) return { id: `enemy:${story.chapter.n}`, text: `One more workout and ${story.chapter.enemy} is beaten. I can feel it getting weaker.` };
-  if (doneToday) return { id: `done:${today}`, text: `That was a good one today. Rest well.${next ? ` Next: ${dayLabel(next.date, now).toLowerCase() === 'tomorrow' ? 'tomorrow' : weekdayOf(next.date)}, ${next.plan.title}.` : ''}` };
+  if (doneToday) return { id: `done:${today}`, text: next ? `That was a good one today. Rest well. Next: ${dayLabel(next.date, now) === 'Tomorrow' ? 'tomorrow' : weekdayOf(next.date)}, ${next.plan.title}.` : "That was the week's last workout. Now keep your rest days: they count too." };
   if (next && next.date === today) return { id: `today:${today}`, text: `Today: ${next.plan.title}, about ${minutesOf(next.plan.items)} minutes. Ready when you are. Tap any card to see how it's done.` };
   return undefined;
 }

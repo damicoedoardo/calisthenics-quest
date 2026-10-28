@@ -8,14 +8,17 @@ import { changeItem } from '@/lib/coach/plan';
 import { minutesOf } from '@/lib/coach/validate';
 import { shownChat } from '@/lib/coach/chat';
 import type { Mode, PlanItem } from '@/lib/coach/types';
-import { dayLabel, nextDay, weekdayOf } from '@/lib/coach/week';
+import { dayLabel, nextDay, restKept, weekdayOf, weekSlots } from '@/lib/coach/week';
+import { dayKey } from '@/lib/days';
+import { fireLine, updateTodayPage } from '@/story/daily';
+import { SitByFire } from './SitByFire';
+import { Sprite } from './Sprite';
 import { freshNudge, hearNudge, type Nudge } from '@/lib/coach/nudge';
 import { cloudConfigured, maybeSignedIn, supabase, useCloudStatus } from '@/lib/cloud-client';
 import { flameStage } from '@/story/flame';
 import { Ember } from './Characters';
 import { PlaceBackdrop } from './Place';
 import { CoachKnows, doseOf } from './CoachPanel';
-import { CoachSetup } from './CoachSetup';
 import { Choices, MiniDemo } from './Workout';
 import { ExerciseSheet } from './ExerciseDetail';
 import { useCoachChat } from './useCoach';
@@ -81,58 +84,101 @@ export function CoachScreen({ state, update, onStart }: { state: GameState; upda
         )}
       </section>
 
-      {state.coach?.profile && <WeekBoard state={state} update={update} onStart={onStart} />}
+      {state.coach?.profile ? (
+        <WeekBoard state={state} update={update} onStart={onStart} />
+      ) : (
+        <p className="rounded-2xl border border-dashed border-ink-600 p-4 text-center text-sm text-slate-400">Your week shows here once we&apos;ve planned it together. Tap &quot;Let&apos;s start&quot; and tell {nameOf(state)} where you&apos;re at.</p>
+      )}
       {chat && <CoachChat state={state} update={update} onClose={() => setChat(false)} />}
     </div>
   );
 }
 
-/** The week: a chip per workout day (done ticked, the next one lit), and the chosen day's cards. */
+/** The week: a chip for each of its seven days (workouts and rest days; done and kept ticked, the
+    next workout lit), and the chosen day: its workout as cards, or the rest day to keep. */
 function WeekBoard({ state, update, onStart }: { state: GameState; update: Update; onStart: (c: Checkin) => void }) {
   const now = new Date();
+  const today = dayKey(now);
   const week = state.coach?.week;
   const next = nextDay(week);
   const [picked, setPicked] = useState<string | null>(null);
-  const day = week?.days.find((d) => d.date === picked) ?? next ?? week?.days[week.days.length - 1];
+  const [fire, setFire] = useState(false);
   const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
-  if (!week || !day) return <p className="rounded-2xl bg-ink-800 p-3 text-sm text-slate-400">Getting your week ready…</p>;
+  if (!week) return <p className="rounded-2xl bg-ink-800 p-3 text-sm text-slate-400">Getting your week ready…</p>;
+  const slots = weekSlots(week);
+  const slot = slots.find((s) => s.date === picked) ?? slots.find((s) => s.date === today) ?? slots[0];
+  const day = slot.day;
   return (
     <section className="rounded-2xl bg-ink-800 p-3">
       <h2 className="font-pixel text-[10px] text-gold-300">This week</h2>
-      <ul className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
-        {week.days.map((d) => {
-          const on = d === day;
+      <ul className="mt-2 grid grid-cols-7 gap-1">
+        {slots.map((s) => {
+          const on = s === slot;
+          const done = s.day ? !!s.day.done : restKept(state, s.date);
+          const lit = s.day && s.day === next;
           return (
-            <li key={d.date} className="min-w-[3.25rem] flex-1">
+            <li key={s.date}>
               <button
-                onClick={() => setPicked(d.date)}
+                onClick={() => setPicked(s.date)}
                 aria-pressed={on}
-                className={`flex w-full flex-col items-center rounded-lg py-1.5 ${on ? 'bg-ink-600 ring-1 ring-gold-400' : 'bg-ink-900'} ${d === next ? 'text-gold-300' : d.done ? 'text-emerald-300' : 'text-slate-300'}`}
+                aria-label={`${weekdayOf(s.date)}: ${s.day ? s.day.plan.title : 'rest day'}${done ? ', done' : ''}`}
+                className={`flex w-full flex-col items-center rounded-lg py-1.5 ${on ? 'bg-ink-600 ring-1 ring-gold-400' : s.day ? 'bg-ink-900' : 'bg-ink-900/50'} ${lit ? 'text-gold-300' : done ? 'text-emerald-300' : s.day ? 'text-slate-200' : 'text-orange-200/70'}`}
               >
-                <span className="font-pixel text-[9px]">{weekdayOf(d.date)}</span>
-                <span className="mt-1 text-[10px] leading-none">{d.done ? '✓' : d === next ? 'next' : MODE_SHORT[d.plan.mode]}</span>
+                <span className="font-pixel text-[8px]">{weekdayOf(s.date)}</span>
+                <span className="mt-1 text-[10px] leading-none">{done ? '✓' : lit ? 'next' : s.day ? MODE_SHORT[s.day.plan.mode] : 'rest'}</span>
               </button>
             </li>
           );
         })}
       </ul>
-      <div className="mt-2 flex items-baseline justify-between gap-2">
-        <p className="min-w-0 truncate text-sm font-semibold text-slate-100">
-          <span className="text-slate-400">{dayLabel(day.date, now)} · </span>
-          {day.plan.title}
-        </p>
-        <span className="shrink-0 text-xs text-slate-400">{day.done ? 'done' : `about ${minutesOf(day.plan.items)} min`}</span>
-      </div>
-      <WorkoutCards state={state} update={update} items={day.plan.items} date={day.done ? undefined : day.date} />
-      {day === next ? (
-        <button
-          onClick={() => onStart(inProgress ? state.draft!.checkin : 'normal')}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 py-3 font-pixel text-[10px] text-ink-950 shadow-[0_3px_0_#047857] active:translate-y-0.5 active:shadow-none"
-        >
-          <Play size={14} /> {inProgress ? 'Back to it' : 'Start'}
-        </button>
+      {day ? (
+        <>
+          <div className="mt-2 flex items-baseline justify-between gap-2">
+            <p className="min-w-0 truncate text-sm font-semibold text-slate-100">
+              <span className="text-slate-400">{dayLabel(day.date, now)} · </span>
+              {day.plan.title}
+            </p>
+            <span className="shrink-0 text-xs text-slate-400">{day.done ? 'done' : `about ${minutesOf(day.plan.items)} min`}</span>
+          </div>
+          <WorkoutCards state={state} update={update} items={day.plan.items} date={day.done ? undefined : day.date} />
+          {day === next ? (
+            <button
+              onClick={() => onStart(inProgress ? state.draft!.checkin : 'normal')}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 py-3 font-pixel text-[10px] text-ink-950 shadow-[0_3px_0_#047857] active:translate-y-0.5 active:shadow-none"
+            >
+              <Play size={14} /> {inProgress ? 'Back to it' : 'Start'}
+            </button>
+          ) : (
+            !day.done && next && <p className="mt-3 text-center text-xs text-slate-400">Comes after {weekdayOf(next.date)}&apos;s workout.</p>
+          )}
+        </>
       ) : (
-        !day.done && <p className="mt-3 text-center text-xs text-slate-400">Comes after {weekdayOf(next!.date)}&apos;s workout.</p>
+        <div className="mt-2 rounded-xl bg-gradient-to-b from-[#1d1527] to-ink-900 p-3 ring-1 ring-orange-300/20">
+          <p className="text-sm font-semibold text-orange-200">
+            <span className="text-slate-400">{dayLabel(slot.date, now)} · </span>Rest day
+          </p>
+          <p className="mt-1 text-sm text-slate-300">Resting is part of the plan: it&apos;s when you get stronger. Keep the day by sitting by the fire for a minute. It counts, and your Fog runs that day start Rested.</p>
+          {restKept(state, slot.date) ? (
+            <p className="mt-2 text-xs text-emerald-300">Kept ✓</p>
+          ) : slot.date === today ? (
+            <button onClick={() => setFire(true)} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-ink-800 py-3 text-sm text-orange-200 ring-1 ring-orange-300/25 active:scale-[.98]">
+              <Sprite id="uiIcon" opts={{ name: 'flame' }} size={18} label="" /> Sit by the fire · 1 minute
+            </button>
+          ) : slot.date < today ? (
+            <p className="mt-2 text-xs text-slate-500">Not kept.</p>
+          ) : null}
+        </div>
+      )}
+      {fire && (
+        <SitByFire
+          name={nameOf(state)}
+          stage={flameStage(state.sessions.length).id}
+          line={fireLine(state, now)}
+          onDone={(sat) => {
+            if (sat) update((s) => updateTodayPage(s, new Date(), { fire: true }));
+            setFire(false);
+          }}
+        />
       )}
     </section>
   );
@@ -224,7 +270,6 @@ function CoachChat({ state, update, onClose }: { state: GameState; update: Updat
   const { send, busy, error } = useCoachChat(state, update);
   const canTalk = useSignedIn();
   const [text, setText] = useState('');
-  const [taps, setTaps] = useState(false);
   const end = useRef<HTMLDivElement>(null);
   const lines = shownChat(state.coach?.chat);
   const week = state.coach?.week;
@@ -274,7 +319,7 @@ function CoachChat({ state, update, onClose }: { state: GameState; update: Updat
             <li className="rounded-xl bg-ink-800/95 p-3 pixel-border">
               <p className="mb-1.5 font-pixel text-[10px] text-gold-300">{name}</p>
               <p className="text-[15px] leading-snug text-slate-100">
-                To talk with me, sign in first: Hero tab, then Settings. It backs up your save too. Or answer a few quick taps and I'll start from those.
+                To talk with me, you need to be signed in, with signal.
               </p>
             </li>
           )}
@@ -341,19 +386,13 @@ function CoachChat({ state, update, onClose }: { state: GameState; update: Updat
       </main>
 
       <footer className="safe-bottom land-safe-x mx-auto w-full max-w-md px-4 pt-2 land:max-w-2xl">
-        {(replies.length > 0 || !canTalk) && (
+        {canTalk && replies.length > 0 && (
           <div className="mb-2 flex flex-wrap gap-2">
-            {canTalk
-              ? replies.map((r) => (
-                  <button key={r} onClick={() => say(r)} className="rounded-full bg-ink-800 px-3 py-2 text-sm text-gold-300 ring-1 ring-gold-400/60 active:scale-95">
-                    {r}
-                  </button>
-                ))
-              : (
-                  <button onClick={() => setTaps(true)} className="rounded-full bg-ink-800 px-3 py-2 text-sm text-gold-300 ring-1 ring-gold-400/60 active:scale-95">
-                    Quick taps instead
-                  </button>
-                )}
+            {replies.map((r) => (
+              <button key={r} onClick={() => say(r)} className="rounded-full bg-ink-800 px-3 py-2 text-sm text-gold-300 ring-1 ring-gold-400/60 active:scale-95">
+                {r}
+              </button>
+            ))}
           </div>
         )}
         {canTalk && (
@@ -385,7 +424,6 @@ function CoachChat({ state, update, onClose }: { state: GameState; update: Updat
           </form>
         )}
       </footer>
-      {taps && <CoachSetup state={state} update={update} onClose={() => setTaps(false)} />}
     </div>
   );
 }

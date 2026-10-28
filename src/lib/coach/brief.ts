@@ -1,7 +1,7 @@
 import type { Family } from '@/exercises/coaching';
 import type { Checkin, GameState } from '../game';
 import { liveNotes } from './notes';
-import { weekText } from './week';
+import { restKept, weekText } from './week';
 import { coachNudge } from './nudge';
 import { storyState } from '@/story/engine';
 import { CHAPTERS } from '@/story/chapters';
@@ -45,7 +45,7 @@ export function coachBrief(state: GameState, now: Date, checkin: Checkin = 'norm
     for (const n of notes) lines.push(`- [${n.id}] ${n.type}: ${n.text} (${day(n.at)}, ${n.by})`);
   }
 
-  lines.push('', 'This week (the plan the player sees):', ...weekText(state.coach?.week, now));
+  lines.push('', 'This week (the plan the player sees; a rest day is kept by resting, sitting by the fire):', ...weekText(state.coach?.week, now, (d) => restKept(state, d)));
 
   const recent = state.sessions.slice(-10);
   if (recent.length) {

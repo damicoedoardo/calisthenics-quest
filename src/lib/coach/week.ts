@@ -5,12 +5,13 @@ import type { GameState, Session } from '../game';
 import { buildWorkout } from './generate';
 import type { CoachDay, CoachPlan, CoachState, CoachWeek, Mode } from './types';
 
-/* The week: the coach plans the workout days of the next seven days, so you see the whole week.
-   It is the one place a workout lives. The next workout (`currentPlan`) is the first day not done
-   yet, whatever its date: a missed day moves along rather than being lost. Today's quest, the
-   workout screen and the coach all read it from here, and every change is written to its day
-   (`setPlan`, `setDay`). A week ends seven days after its start, or when every day is done; then a
-   new one is planned. */
+/* The week: seven days from its start. The coach plans the workout days; every other day is a
+   rest day, and resting is part of the plan: you keep a rest day by sitting by the fire that day
+   (the day's page in the Book of Days, `restKept`). It is the one place a workout lives. The next
+   workout (`currentPlan`) is the first workout day not done yet, whatever its date: a missed day
+   moves along rather than being lost. Today's quest, the workout screen and the coach all read it
+   from here, and every change is written to its day (`setPlan`, `setDay`). A week ends seven days
+   after its start; then a new one is planned. */
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const dateOf = (key: string) => new Date(`${key}T12:00:00`);
@@ -34,9 +35,30 @@ export function nextDay(week: CoachWeek | null | undefined): CoachDay | undefine
   return week?.days.find((d) => !d.done);
 }
 
-/** The week is over: every day done, or seven days past its start. */
+/** The week is over: seven days past its start (its rest days count too, so it runs its course
+    even with every workout done). */
 export function weekOver(week: CoachWeek | null | undefined, now: Date): boolean {
-  return !week || !nextDay(week) || daysApart(dateOf(week.start), now) >= 7;
+  return !week || daysApart(dateOf(week.start), now) >= 7;
+}
+
+/** The week's seven days, each a workout day or (no `day`) a rest day. */
+export function weekSlots(week: CoachWeek): { date: string; day?: CoachDay }[] {
+  const start = dateOf(week.start);
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = dayKey(new Date(start.getFullYear(), start.getMonth(), start.getDate() + i, 12));
+    return { date, day: week.days.find((d) => d.date === date) };
+  });
+}
+
+/** A rest day kept: you sat by the fire that day. */
+export const restKept = (state: Pick<GameState, 'days'>, date: string) => !!state.days?.find((d) => d.day === date)?.fire;
+
+/** Today is one of the week's rest days. */
+export function restToday(coach: CoachState | undefined, now: Date): boolean {
+  const week = coach?.week;
+  if (!week || weekOver(week, now)) return false;
+  const today = dayKey(now);
+  return weekSlots(week).some((s) => s.date === today && !s.day);
 }
 
 /** A week of built-in workouts from today. Each day knows the days planned before it, so modes and
@@ -96,11 +118,13 @@ export function fromLegacy(coach: (CoachState & { plan?: CoachPlan | null }) | u
   return { ...rest, week: { start: day, days: [{ date: day, plan }], by: plan.by } };
 }
 
-/** The week as plain lines, for the coach brief. */
-export function weekText(week: CoachWeek | null | undefined, now: Date): string[] {
+/** The week as plain lines, for the coach brief: every day, workouts and rest days. */
+export function weekText(week: CoachWeek | null | undefined, now: Date, kept: (date: string) => boolean = () => false): string[] {
   if (!week) return ['No week planned yet.'];
-  return week.days.map((d) => {
+  return weekSlots(week).map(({ date, day: d }) => {
+    const head = `- ${weekdayOf(date)} ${date} (${dayLabel(date, now)})`;
+    if (!d) return `${head}: rest day${kept(date) ? ', KEPT' : ''}`;
     const items = d.plan.items.filter((i) => i.role !== 'warmup' && i.role !== 'stretch').map((i) => i.name);
-    return `- ${weekdayOf(d.date)} ${d.date} (${dayLabel(d.date, now)})${d.done ? ' DONE' : ''}: ${d.plan.mode}, ${d.plan.title}${items.length ? ` [${items.join(', ')}]` : ''}`;
+    return `${head}${d.done ? ' DONE' : ''}: ${d.plan.mode}, ${d.plan.title}${items.length ? ` [${items.join(', ')}]` : ''}`;
   });
 }

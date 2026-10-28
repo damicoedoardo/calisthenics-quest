@@ -71,6 +71,9 @@ first day not done. The brief shows the week. show_week gives the next workout i
 log) or build your own, then call set_week with every workout day (weekday names like "mon" or \
 dates, within the next 7 days; as many days as they train a week, with rest days between where \
 it fits). To change one day only, call set_workout with that day.
+- Every day you don't plan a workout on is a rest day. Rest days are part of the plan and count: \
+the player keeps one by resting (sitting by the fire in the app). Plan them on purpose, and if \
+the player wants no rest days at all, push back.
 - Use only exercise ids from the library: find them with find_exercises.
 - Each item: id, role (warmup, main, core, stretch), sets, low and high (reps, or seconds for a \
 hold), and rest (seconds after each set: about 120-180 for heavy lifts, 60-90 for most moves, \

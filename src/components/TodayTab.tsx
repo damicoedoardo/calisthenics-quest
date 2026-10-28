@@ -21,10 +21,10 @@ import {
 } from '@/lib/game';
 import { ROLE_COLOR, ROLE_LABEL } from '@/lib/program';
 import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
-import { daysSinceTraining, isRestDay, trainedToday } from '@/lib/days';
+import { dayKey, daysApart, daysSinceTraining, isRestDay, trainedToday } from '@/lib/days';
 import { storyState, storyWords } from '@/story/engine';
 import { flameStage } from '@/story/flame';
-import { currentPlan } from '@/lib/coach/week';
+import { currentPlan, dayLabel, nextDay, restToday, weekdayOf } from '@/lib/coach/week';
 import { ExerciseSheet } from './ExerciseDetail';
 import { fireLine, flameLine, flameMood, restTruth, todayPage, updateTodayPage } from '@/story/daily';
 
@@ -35,6 +35,8 @@ interface Props {
   onReplayOpening: () => void;
   /** Developer mode (/lab/night): open with the Book of Days showing. */
   openBook?: boolean;
+  /** No plan yet: go and plan the week with the flame. */
+  onTrain: () => void;
 }
 
 const CHECKINS: { id: Checkin; label: string; note: string }[] = [
@@ -44,7 +46,7 @@ const CHECKINS: { id: Checkin; label: string; note: string }[] = [
 ];
 
 
-export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: Props) {
+export function TodayTab({ state, update, onStart, onReplayOpening, openBook, onTrain }: Props) {
   const now = new Date();
   const [overlay, setOverlay] = useState<'fire' | 'book' | null>(openBook ? 'book' : null);
   // An exercise tapped in the quest: how to do it.
@@ -61,6 +63,13 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
   const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
   // After today's workout the quest below is the next one, not one still owed today.
   const doneToday = !inProgress && trainedToday(state, now);
+  // The week is the one place a workout comes from: none planned (or all done), no quest.
+  const plan = currentPlan(state.coach);
+  const noPlan = !plan && !inProgress;
+  const restDay = isRestDay(state, now) || restToday(state.coach, now);
+  // A planned rest day: the quest below is the next workout, for its own day.
+  const ahead = !inProgress && !doneToday && restToday(state.coach, now) && plan ? nextDay(state.coach?.week) : undefined;
+  const aheadNote = ahead ? `Today is a rest day. This is your next workout, for ${dayLabel(ahead.date, now).toLowerCase() === 'tomorrow' ? 'tomorrow' : weekdayOf(ahead.date)}.` : null;
   // You, in your gear and look, for the exercise stills in the quest list.
   const look = useLook();
   const hero = { gear: gearOf(state), classId: state.profile.classId, look };
@@ -85,7 +94,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
   );
   const items = inProgress ? todaysQuest(state) : quest;
   const startLabel = inProgress ? 'Continue quest' : doneToday ? 'Start the next quest' : 'Start quest';
-  const questTitle = checkin === 'rough' && !inProgress ? 'Minimum quest' : (currentPlan(state.coach)?.title ?? `Day ${day} quest`);
+  const questTitle = checkin === 'rough' && !inProgress ? 'Minimum quest' : (plan?.title ?? `Day ${day} quest`);
   const xp = previewXp(state, inProgress ? state.draft!.checkin : checkin, now);
   const reps = (q: (typeof items)[number]) => {
     const done = state.draft?.sets[q.id]?.length ?? 0;
@@ -102,6 +111,9 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
         hero={hero}
         story={story}
         items={items}
+        noPlan={noPlan ? <NoPlan state={state} now={now} onTrain={onTrain} land /> : null}
+        restDay={restDay}
+        aheadNote={aheadNote}
         onHowTo={(q) => setHowTo({ id: q.id, demo: q.demo })}
         reps={reps}
         title={questTitle}
@@ -165,13 +177,18 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
 
       <FlameCard state={state} now={now} week={week} streak={streak} />
 
-      {isRestDay(state, now) && <RestCard state={state} now={now} onSit={() => setOverlay('fire')} />}
+      {restDay && <RestCard state={state} now={now} onSit={() => setOverlay('fire')} />}
 
       <QuoteCard state={state} now={now} update={update} onOpenBook={() => setOverlay('book')} />
 
+      {noPlan ? (
+        <NoPlan state={state} now={now} onTrain={onTrain} />
+      ) : (
+        <>
       {!inProgress && (
         <section>
           {doneToday && <p className="mb-3 text-sm text-emerald-300">Today&apos;s quest is done. Here is the next one, for whenever you&apos;re ready.</p>}
+          {aheadNote && <p className="mb-3 text-sm text-orange-200">{aheadNote}</p>}
           <p className="mb-2 font-pixel text-[10px] text-slate-400">How do you feel today?</p>
           <div className="grid grid-cols-3 gap-2">
             {CHECKINS.map((c) => (
@@ -227,6 +244,9 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
         <Sprite id="uiIcon" opts={{ name: 'play' }} size={14} label="" />
         {startLabel}
       </button>
+
+        </>
+      )}
 
       {/* The story so far: one keepsake per Fog boss beaten. */}
       <Keepsakes cleared={state.fog?.cleared ?? 0} />
@@ -394,6 +414,10 @@ interface LandProps {
   story: ReturnType<typeof storyState>;
   items: ReturnType<typeof todaysQuest>;
   reps: (q: ReturnType<typeof todaysQuest>[number]) => string;
+  /** Shown in place of the quest board when no workout is planned. */
+  noPlan: ReactNode;
+  restDay: boolean;
+  aheadNote: string | null;
   /** An exercise tapped: open how to do it. */
   onHowTo: (q: ReturnType<typeof todaysQuest>[number]) => void;
   title: string;
@@ -464,7 +488,7 @@ function LandToday(p: LandProps) {
         <div className="min-w-[15rem] flex-[1.4] basis-0">
           <FlameCard state={state} now={now} week={p.week} streak={p.streak} land />
         </div>
-        {isRestDay(state, now) && (
+        {p.restDay && (
           <div className="min-w-[14rem] flex-1 basis-0">
             <RestCard state={state} now={now} onSit={p.onSit} land />
           </div>
@@ -479,11 +503,13 @@ function LandToday(p: LandProps) {
         </div>
       </div>
 
+      {p.noPlan ?? (
       <section className="flex min-h-0 flex-1 flex-col rounded-2xl bg-ink-800 p-3">
         <div className="flex items-baseline gap-3">
           <h3 className="shrink-0 font-pixel text-[10px] text-gold-300">{p.title}</h3>
           <p className="shrink-0 text-xs text-slate-400">+{p.xp} XP</p>
           {p.doneToday && <p className="min-w-0 flex-1 truncate text-xs text-emerald-300">Today&apos;s quest is done. Here is the next one, for whenever you&apos;re ready.</p>}
+          {p.aheadNote && <p className="min-w-0 flex-1 truncate text-xs text-orange-200">{p.aheadNote}</p>}
         </div>
 
         <div className="mt-2 flex min-h-0 flex-1 gap-3">
@@ -536,8 +562,35 @@ function LandToday(p: LandProps) {
           </div>
         </div>
       </section>
+      )}
 
       {p.overlays}
     </div>
+  );
+}
+
+/** No workout to do: no week planned yet (plan it with the flame), or every workout of the week done. */
+function NoPlan({ state, now, onTrain, land }: { state: GameState; now: Date; onTrain: () => void; land?: boolean }) {
+  const name = storyWords(state).flame;
+  const week = state.coach?.week;
+  const ends = week ? new Date(new Date(`${week.start}T12:00:00`).getTime() + 7 * 86_400_000) : null;
+  return (
+    <section className={`rounded-2xl bg-ink-800 text-center pixel-border ${land ? 'flex min-h-0 flex-1 flex-col items-center justify-center p-3' : 'p-5'}`}>
+      <Ember size={48} stage={flameStage(state.sessions.length).id} />
+      {week && ends ? (
+        <>
+          <p className="mt-2 font-pixel text-[10px] text-gold-300">Every workout this week is done</p>
+          <p className="mt-2 text-sm text-slate-300">Keep your rest days: they count too. Your next week starts {daysApart(now, ends) <= 1 ? 'tomorrow' : weekdayOf(dayKey(ends))}.</p>
+        </>
+      ) : (
+        <>
+          <p className="mt-2 font-pixel text-[10px] text-gold-300">No plan yet</p>
+          <p className="mt-2 text-sm text-slate-300">Talk to {name} and plan your week together. Your workouts show here once it&apos;s ready.</p>
+          <button onClick={onTrain} className="mt-4 w-full rounded-xl bg-gold-400 py-3 font-pixel text-[10px] text-ink-950 shadow-[0_3px_0_#b45309] active:translate-y-0.5 active:shadow-none">
+            Talk to {name}
+          </button>
+        </>
+      )}
+    </section>
   );
 }

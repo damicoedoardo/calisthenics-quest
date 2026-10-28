@@ -28,8 +28,9 @@ demo id (so it has a pixel demo and coaching), with a role:
 A slot has a target range (`low`..`high`); `weighted` slots are done with a weight the player
 picks. `cueOf(id)` is the exercise's first coaching tip.
 
-Once the coach is set up it plans every workout instead, a week at a time (`state.coach.week`, see
-[coach.md](coach.md)); the built-in plan is what plays before setup.
+The coach plans every workout, a week at a time (`state.coach.week`, see [coach.md](coach.md)).
+The app shows no built-in plan any more: before the coach has planned a week there is no quest
+(the built-in plan below still backs the rules, the simulators and old saves).
 
 ## Today's quest
 
