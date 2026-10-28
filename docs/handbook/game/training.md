@@ -67,7 +67,7 @@ old names (`XP_FULL_SESSION`, ...). Today: full session 100, minimum 30, perfect
 Training earns points; the champion spends them in the Fog. Every workout earns them whatever it
 was, so the reward never depends on the plan: `POINTS` per full workout, short workout, week at
 the goal, and "better than last time", plus `STARTING_POINTS`. `pointsEarned` derives them from
-the sessions; only what was spent is saved (`state.build`). The numbers (points, worth, base,
+the sessions (plus `state.devPoints`, points given in developer mode); only what was spent is saved (`state.build`). The numbers (points, worth, base,
 falloff, armor, class lean) are in `src/balance/stats.ts`.
 
 - Six stats (`STATS`): **Health** (HP), **Armor** (a share of every hit blocked, up to

@@ -199,6 +199,10 @@ export default function NightLab() {
         Everything here opens on a sandbox save. Your real progress on this phone is untouched; the app shows a blue bar while you&apos;re in the sandbox.
       </p>
 
+      <Panel title="DEVELOPER MODE, IN TABS" note="The wrench next to FORMA opens one menu with tabs: Go (any screen, every Lab), Wallet (embers, sweat coins, co-op materials), Gear (any item, any rarity, +0 to +15), Hero (class, SPs, stat points), Story (chapter jump, scenes, days), Fog (bosses beaten, a run in any zone at any spot), Save (copy, load, wipe).">
+        <Row icon={<Sparkles size={16} />} label="Open the developer menu" note="A hero 30 workouts in, the menu open on top" onClick={() => open(veteran(30, 2), 'tab=today&dev')} />
+      </Panel>
+
       <Panel title="YOUR COACH: THE FLAME" note="Your flame plans your training now. Train tab: its last words and today's workout as cards with demos, easier and swap on each. Tap Let's start and it chats with you at the camp fire. Talking needs a sign-in (Hero > Settings) on the real save.">
         <Row icon={<Sparkles size={16} />} label="Meet your coach" note="Train tab, no coach set up yet: Pip says hello" onClick={() => open(veteran(6, 0), 'tab=train')} />
       </Panel>

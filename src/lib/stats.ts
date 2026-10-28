@@ -72,6 +72,7 @@ export function pointsEarned(state: GameState): { total: number; lines: { label:
     { label: `Short workouts (${mini})`, points: mini * POINTS.mini },
     { label: `Weekly goals hit (${goals})`, points: goals * POINTS.week },
     { label: `Better than last time (${better})`, points: better * POINTS.better },
+    { label: 'Developer mode', points: state.devPoints ?? 0 },
   ].filter((l) => l.points > 0);
   return { total: lines.reduce((a, l) => a + l.points, 0), lines };
 }
