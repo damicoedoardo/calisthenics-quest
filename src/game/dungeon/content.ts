@@ -566,13 +566,22 @@ export const ABILITIES: Record<AbilityId, { name: string; text: string; cd: numb
 };
 /** The SP's two moves past the class ability: its own move (a second button) and its final. */
 export type SpMoveId = 'whirl' | 'pin' | 'starfall' | 'palm' | 'phoenix' | 'rain' | 'sky' | 'palms';
+/** Each SP's passive, always on while it's worn (numbers: SP_PASSIVE in src/balance/classes.ts). */
+export type SpPassiveId = 'embers' | 'tailwind' | 'splitstar' | 'flow';
 
 /** Each class's first SP, like NosTale's specialist cards: a name, its own move and its final. */
-export const SP_CARDS: Record<ClassId, { name: string; skill: SpMoveId; final: SpMoveId }> = {
-  warrior: { name: 'Ember Knight', skill: 'whirl', final: 'phoenix' },
-  archer: { name: 'Wind Ranger', skill: 'pin', final: 'rain' },
-  mage: { name: 'Star Sage', skill: 'starfall', final: 'sky' },
-  monk: { name: 'River Monk', skill: 'palm', final: 'palms' },
+export const SP_CARDS: Record<ClassId, { name: string; skill: SpMoveId; final: SpMoveId; passive: SpPassiveId }> = {
+  warrior: { name: 'Ember Knight', skill: 'whirl', final: 'phoenix', passive: 'embers' },
+  archer: { name: 'Wind Ranger', skill: 'pin', final: 'rain', passive: 'tailwind' },
+  mage: { name: 'Star Sage', skill: 'starfall', final: 'sky', passive: 'splitstar' },
+  monk: { name: 'River Monk', skill: 'palm', final: 'palms', passive: 'flow' },
+};
+
+export const SP_PASSIVES: Record<SpPassiveId, { name: string; text: string }> = {
+  embers: { name: 'Embers', text: 'Always on. Your hits can set a monster burning for a moment.' },
+  tailwind: { name: 'Tailwind', text: 'Always on. After a dodge, the wind carries you: you run faster for a moment.' },
+  splitstar: { name: 'Split Star', text: 'Always on. Every fourth attack throws one more star at another monster.' },
+  flow: { name: 'Flow', text: 'Always on. Every hit you land heals you a little.' },
 };
 
 export const SP_MOVES: Record<SpMoveId, { name: string; text: string }> = {

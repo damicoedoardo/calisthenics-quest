@@ -251,101 +251,226 @@ exports[`replays > every zone plays the same run as before 1`] = `
     "won": true,
   },
   {
-    "bossAt": 512,
+    "bossAt": 577,
     "floor": 10,
     "gear": {
       "bag": [
         {
           "base": [
             {
-              "id": "damage",
-              "v": 0.11999830557013162,
+              "id": "health",
+              "v": 21.67434385953611,
+            },
+            {
+              "id": "armor",
+              "v": 0.029925398955151443,
             },
           ],
           "bonuses": [
             {
-              "id": "armor",
-              "v": 0.02414846271885093,
-            },
-            {
-              "id": "health",
-              "v": 20.580258617466317,
-            },
-            {
-              "id": "cooldown",
-              "v": 0.08982230894861744,
+              "id": "move",
+              "v": 0.043809721391704866,
             },
           ],
           "cls": "archer",
-          "id": "1s8hff0e94ufq",
-          "level": 17,
-          "name": "Quiet Heart",
+          "id": "1xdt4bt1jypv1j",
+          "level": 15,
+          "name": "Drowned jerkin of Wind",
           "need": {
-            "n": 13,
-            "stat": "crit",
-          },
-          "rarity": "rare",
-          "slot": "weapon",
-        },
-        {
-          "base": [],
-          "bonuses": [
-            {
-              "id": "armor",
-              "v": 0.018477792156164255,
-            },
-            {
-              "id": "speed",
-              "v": 0.060740938098618774,
-            },
-          ],
-          "cls": null,
-          "id": "wnoo101yfyb5",
-          "level": 17,
-          "name": "Drowned amulet of Stone",
-          "need": null,
-          "rarity": "magic",
-          "slot": "charm",
-        },
-        {
-          "base": [
-            {
-              "id": "health",
-              "v": 17.703279822990297,
-            },
-            {
-              "id": "armor",
-              "v": 0.026160804071422666,
-            },
-          ],
-          "bonuses": [],
-          "cls": "archer",
-          "id": "1jsqymrt1ua2h",
-          "level": 18,
-          "name": "Drowned jerkin",
-          "need": {
-            "n": 11,
+            "n": 10,
             "stat": "armor",
           },
-          "rarity": "common",
+          "rarity": "magic",
           "slot": "armor",
         },
         {
           "base": [
             {
               "id": "damage",
-              "v": 0.09803496861741542,
+              "v": 0.08562672773820722,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "heal",
+              "v": 0.9830668779300528,
+            },
+          ],
+          "cls": "archer",
+          "id": "1cujm7p1kud2ej",
+          "level": 15,
+          "name": "Drowned bow of Embers",
+          "need": {
+            "n": 10,
+            "stat": "crit",
+          },
+          "rarity": "magic",
+          "slot": "weapon",
+        },
+        {
+          "base": [
+            {
+              "id": "damage",
+              "v": 0.10813798815323375,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "speed",
+              "v": 0.05360204821819069,
+            },
+          ],
+          "cls": "archer",
+          "id": "1vlb6gq1ks4n8i",
+          "level": 16,
+          "name": "Drowned bow of Haste",
+          "need": {
+            "n": 10,
+            "stat": "crit",
+          },
+          "rarity": "magic",
+          "slot": "weapon",
+        },
+        {
+          "base": [
+            {
+              "id": "health",
+              "v": 19.043853540994228,
+            },
+            {
+              "id": "armor",
+              "v": 0.029514480460634086,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "damage",
+              "v": 0.06454457061905043,
+            },
+          ],
+          "cls": "archer",
+          "id": "i5xh5dul26n4",
+          "level": 16,
+          "name": "Drowned jerkin of Fury",
+          "need": {
+            "n": 10,
+            "stat": "armor",
+          },
+          "rarity": "magic",
+          "slot": "armor",
+        },
+        {
+          "base": [
+            {
+              "id": "health",
+              "v": 23.224470011045923,
+            },
+            {
+              "id": "armor",
+              "v": 0.031251477715233345,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "damage",
+              "v": 0.07321722042734037,
+            },
+            {
+              "id": "pickup",
+              "v": 0.21226973354844378,
+            },
+          ],
+          "cls": "archer",
+          "id": "1qgwz2andd7im",
+          "level": 17,
+          "name": "Grave Thorn",
+          "need": {
+            "n": 13,
+            "stat": "armor",
+          },
+          "rarity": "rare",
+          "slot": "armor",
+        },
+        {
+          "base": [
+            {
+              "id": "health",
+              "v": 34.23007396869361,
+            },
+            {
+              "id": "armor",
+              "v": 0.039037948750215774,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "move",
+              "v": 0.07773153128242492,
+            },
+            {
+              "id": "speed",
+              "v": 0.08084359423440696,
+            },
+            {
+              "id": "heal",
+              "v": 1.5076618517947198,
+            },
+            {
+              "id": "pickup",
+              "v": 0.3115998232480287,
+            },
+          ],
+          "cls": "archer",
+          "id": "1us33scmxj02v",
+          "level": 18,
+          "name": "Still Water jerkin",
+          "need": {
+            "n": 15,
+            "stat": "armor",
+          },
+          "rarity": "legendary",
+          "slot": "armor",
+        },
+        {
+          "base": [
+            {
+              "id": "damage",
+              "v": 0.11072517084819397,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "speed",
+              "v": 0.06414504896826112,
+            },
+          ],
+          "cls": "archer",
+          "id": "8tybs0q2a6ej",
+          "level": 19,
+          "name": "Drowned bow of Haste",
+          "need": {
+            "n": 11,
+            "stat": "crit",
+          },
+          "rarity": "magic",
+          "slot": "weapon",
+        },
+        {
+          "base": [
+            {
+              "id": "damage",
+              "v": 0.12365496069297365,
             },
           ],
           "bonuses": [
             {
               "id": "pickup",
-              "v": 0.2106340589171704,
+              "v": 0.1922370219948292,
             },
           ],
           "cls": "archer",
-          "id": "1ka86swkqfwd2",
-          "level": 18,
+          "id": "3770sc20i6mw",
+          "level": 19,
           "name": "Drowned bow of Pull",
           "need": {
             "n": 11,
@@ -354,149 +479,38 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "rarity": "magic",
           "slot": "weapon",
         },
-        {
-          "base": [
-            {
-              "id": "damage",
-              "v": 0.1088863290277007,
-            },
-          ],
-          "bonuses": [
-            {
-              "id": "health",
-              "v": 21.85234113203595,
-            },
-            {
-              "id": "armor",
-              "v": 0.02037771245000884,
-            },
-            {
-              "id": "move",
-              "v": 0.05709514474429655,
-            },
-          ],
-          "cls": "archer",
-          "id": "f6eso51ioqu3o",
-          "level": 19,
-          "name": "Wild Spark",
-          "need": {
-            "n": 13,
-            "stat": "crit",
-          },
-          "rarity": "rare",
-          "slot": "weapon",
-        },
-        {
-          "base": [
-            {
-              "id": "damage",
-              "v": 0.11373244480209892,
-            },
-          ],
-          "bonuses": [
-            {
-              "id": "health",
-              "v": 22.326933793190406,
-            },
-            {
-              "id": "move",
-              "v": 0.059602665315370534,
-            },
-            {
-              "id": "armor",
-              "v": 0.02017344618339557,
-            },
-          ],
-          "cls": "archer",
-          "id": "18mohmz17usx9b",
-          "level": 19,
-          "name": "Bright Song",
-          "need": {
-            "n": 13,
-            "stat": "crit",
-          },
-          "rarity": "rare",
-          "slot": "weapon",
-        },
-        {
-          "base": [
-            {
-              "id": "damage",
-              "v": 0.0934363544539489,
-            },
-          ],
-          "bonuses": [
-            {
-              "id": "armor",
-              "v": 0.02134148779435996,
-            },
-          ],
-          "cls": "archer",
-          "id": "1xm50sd1q8nqpu",
-          "level": 19,
-          "name": "Drowned bow of Stone",
-          "need": {
-            "n": 11,
-            "stat": "crit",
-          },
-          "rarity": "magic",
-          "slot": "weapon",
-        },
-        {
-          "base": [
-            {
-              "id": "damage",
-              "v": 0.09561271468757652,
-            },
-          ],
-          "bonuses": [],
-          "cls": "archer",
-          "id": "1dsppvy5v6ymz",
-          "level": 19,
-          "name": "Drowned bow",
-          "need": {
-            "n": 11,
-            "stat": "crit",
-          },
-          "rarity": "common",
-          "slot": "weapon",
-        },
       ],
       "worn": {
         "charm": {
           "base": [],
           "bonuses": [
             {
-              "id": "health",
-              "v": 12.942860150844792,
-            },
-            {
-              "id": "cooldown",
-              "v": 0.08558558680674992,
+              "id": "pickup",
+              "v": 0.16694544450605664,
             },
             {
               "id": "armor",
-              "v": 0.019217362940087915,
+              "v": 0.018383263563316318,
             },
           ],
           "cls": null,
-          "id": "1nrwwik1iooblz",
-          "level": 12,
-          "name": "Quiet Song",
+          "id": "1ri39wwbei08x",
+          "level": 14,
+          "name": "Drowned ring of Pull",
           "need": null,
-          "rarity": "rare",
+          "rarity": "magic",
           "slot": "charm",
         },
       },
     },
     "height": null,
-    "hits": 42,
-    "hp": 251,
-    "kills": 385,
+    "hits": 28,
+    "hp": 228,
+    "kills": 412,
     "level": 14,
-    "maxHp": 393,
+    "maxHp": 464,
     "room": 5,
-    "seconds": 521,
+    "seconds": 587,
     "why": "boss",
     "won": true,
   },
@@ -574,31 +588,111 @@ exports[`replays > every zone plays the same run as before 1`] = `
       },
     },
     "height": null,
-    "hits": 19,
+    "hits": 18,
     "hp": 0,
     "kills": 60,
     "level": 5,
     "maxHp": 297,
     "room": 4,
-    "seconds": 158,
+    "seconds": 163,
     "why": "hp",
     "won": false,
   },
   {
     "bossAt": null,
-    "floor": 1,
+    "floor": 3,
     "gear": {
-      "bag": [],
+      "bag": [
+        {
+          "base": [
+            {
+              "id": "damage",
+              "v": 0.1271076279259622,
+            },
+          ],
+          "bonuses": [],
+          "cls": "monk",
+          "id": "1g1ja8m1sousnx",
+          "level": 31,
+          "name": "Sunworn staff",
+          "need": {
+            "n": 24,
+            "stat": "health",
+          },
+          "rarity": "common",
+          "slot": "weapon",
+        },
+        {
+          "base": [
+            {
+              "id": "damage",
+              "v": 0.1392620426293708,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "cooldown",
+              "v": 0.12539039897758664,
+            },
+          ],
+          "cls": "monk",
+          "id": "yx4k70vwz7lb",
+          "level": 31,
+          "name": "Sunworn staff of Focus",
+          "need": {
+            "n": 24,
+            "stat": "health",
+          },
+          "rarity": "magic",
+          "slot": "weapon",
+        },
+        {
+          "base": [
+            {
+              "id": "damage",
+              "v": 0.23341877617734078,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "speed",
+              "v": 0.12017094126796724,
+            },
+            {
+              "id": "cooldown",
+              "v": 0.14924286353781221,
+            },
+            {
+              "id": "armor",
+              "v": 0.039680467187029125,
+            },
+            {
+              "id": "move",
+              "v": 0.09253900321558714,
+            },
+          ],
+          "cls": "monk",
+          "id": "k39v2t8diu9y",
+          "level": 32,
+          "name": "Slow Fire",
+          "need": {
+            "n": 26,
+            "stat": "health",
+          },
+          "rarity": "legendary",
+          "slot": "weapon",
+        },
+      ],
       "worn": {},
     },
     "height": null,
-    "hits": 23,
+    "hits": 43,
     "hp": 0,
-    "kills": 23,
-    "level": 3,
-    "maxHp": 400,
-    "room": 5,
-    "seconds": 147,
+    "kills": 112,
+    "level": 7,
+    "maxHp": 370,
+    "room": 4,
+    "seconds": 323,
     "why": "hp",
     "won": false,
   },
@@ -616,13 +710,13 @@ exports[`replays > every zone plays the same run as before 1`] = `
     "level": 3,
     "maxHp": 300,
     "room": 4,
-    "seconds": 58,
+    "seconds": 52,
     "why": "hp",
     "won": false,
   },
   {
     "bossAt": null,
-    "floor": 1,
+    "floor": 2,
     "gear": {
       "bag": [
         {
@@ -649,17 +743,36 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "rarity": "magic",
           "slot": "weapon",
         },
+        {
+          "base": [
+            {
+              "id": "damage",
+              "v": 0.19686127291917802,
+            },
+          ],
+          "bonuses": [],
+          "cls": "archer",
+          "id": "ug97dd1lq6o05",
+          "level": 50,
+          "name": "Summit bow",
+          "need": {
+            "n": 40,
+            "stat": "crit",
+          },
+          "rarity": "common",
+          "slot": "weapon",
+        },
       ],
       "worn": {},
     },
     "height": null,
-    "hits": 5,
+    "hits": 6,
     "hp": 0,
-    "kills": 26,
-    "level": 3,
-    "maxHp": 319,
-    "room": 4,
-    "seconds": 60,
+    "kills": 34,
+    "level": 4,
+    "maxHp": 339,
+    "room": 2,
+    "seconds": 74,
     "why": "hp",
     "won": false,
   },

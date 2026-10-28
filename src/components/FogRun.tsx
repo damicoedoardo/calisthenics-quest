@@ -37,7 +37,7 @@ interface Props {
   party?: { seed: number; friends: FriendCard[] };
 }
 
-export type RunStart = 'mid' | 'boss' | 'win';
+export type RunStart = 'mid' | 'boss' | 'win' | 'sp';
 
 
 /* Every zone is a dungeon (src/game/dungeon), each with its own boss and ground. */
@@ -200,6 +200,11 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
         jump = window.setTimeout(() => {
           const h = run.current;
           if (startAt === 'mid') h?.skipToWarden();
+          else if (startAt === 'sp') {
+            // the SP's moves to try: at the mid-boss, the final already full
+            h?.skipToWarden();
+            h?.fillFinal();
+          }
           else if (startAt === 'boss') h?.skipToBoss();
           else {
             // The recap: let the bot play a little first, so it has something to show.

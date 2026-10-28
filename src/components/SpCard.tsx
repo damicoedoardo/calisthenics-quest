@@ -1,17 +1,22 @@
 "use client";
 
-import { Check, Lock } from "lucide-react";
+import { Check, Droplets, Flame, Lock, Sparkles, Wind } from "lucide-react";
 import { Sprite } from "./Sprite";
 import { useLook } from "./Look";
 import { gearOf } from "@/lib/game";
-import { ABILITIES, abilityOf, SP_MOVES } from "@/game/dungeon/engine";
+import {
+  ABILITIES,
+  abilityOf,
+  SP_MOVES,
+  SP_PASSIVES,
+} from "@/game/dungeon/engine";
 import type { GameState } from "@/lib/game";
 import { setSpOff, SP_FLOOR, spCard, spOpen, spTrial, spWorn } from "@/lib/sp";
 
 type Update = (fn: (s: GameState) => GameState) => void;
 
 /** The first SP on the Hero tab: its card (ash while sealed, in color once awake), then the trial,
-    or its three moves and a switch to wear it into the Fog. Nothing shows before the Wanderer gives it. */
+    or its moves, its passive and a switch to wear it into the Fog. Nothing shows before the Wanderer gives it. */
 export function SpCard({
   state,
   update,
@@ -49,6 +54,11 @@ export function SpCard({
       ),
       name: SP_MOVES[card.final].name,
       text: SP_MOVES[card.final].text,
+    },
+    {
+      icon: <PassiveIcon id={card.passive} />,
+      name: SP_PASSIVES[card.passive].name,
+      text: SP_PASSIVES[card.passive].text,
     },
   ];
   return (
@@ -141,4 +151,21 @@ function Step({ done, text }: { done: boolean; text: string }) {
       {text}
     </li>
   );
+}
+
+/** The passive's mark: fire, wind, a star, water. */
+function PassiveIcon({ id }: { id: keyof typeof SP_PASSIVES }) {
+  const Icon = {
+    embers: Flame,
+    tailwind: Wind,
+    splitstar: Sparkles,
+    flow: Droplets,
+  }[id];
+  const color = {
+    embers: "text-orange-400",
+    tailwind: "text-emerald-300",
+    splitstar: "text-amber-200",
+    flow: "text-sky-300",
+  }[id];
+  return <Icon size={18} className={color} aria-hidden />;
 }

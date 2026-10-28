@@ -213,10 +213,10 @@ export default function NightLab() {
         <Row icon={<Sparkles size={16} />} label="The SP, awake" note="Hero tab: you in its look, the card in color, its moves and the switch to wear it" onClick={() => open(withSp(true), 'tab=hero')} />
         <div className="rounded-xl bg-ink-950 px-3 py-2.5">
           <p className="text-sm text-slate-200">The SP in a run</p>
-          <p className="text-[11px] text-slate-500">Its own move beside your ability (R on a keyboard), its final above it (F): the final fills as you fight.</p>
+          <p className="text-[11px] text-slate-500">At the mid-boss, the final already full: its own move beside your ability (R on a keyboard), its final above it (F).</p>
           <div className="mt-2 grid grid-cols-4 gap-1">
             {(['warrior', 'archer', 'mage', 'monk'] as const).map((c) => (
-              <button key={c} className={chip} onClick={() => open(withSp(true, c), 'run=1&at=mid')}>
+              <button key={c} className={chip} onClick={() => open(withSp(true, c), 'run=1&at=sp')}>
                 {c}
               </button>
             ))}

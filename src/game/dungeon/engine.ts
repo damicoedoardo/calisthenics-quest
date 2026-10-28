@@ -26,6 +26,7 @@ import {
   SP_CARDS,
   type AbilityId,
   type SpMoveId,
+  type SpPassiveId,
   type Ally,
   type AllyKind,
   type CellKind,
@@ -77,7 +78,7 @@ import {
   zoneDungeon,
 } from './content';
 import { seeded } from '@/lib/random';
-import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS, SP_FINAL, SP_SKILL, SURGE } from '@/balance';
+import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS, SP_FINAL, SP_PASSIVE, SP_SKILL, SURGE } from '@/balance';
 import type { Build } from '@/lib/stats';
 import { canWear, ITEM_SLOTS, itemScore, itemTotals, otherClass, rollItem, rollRarity, shortOf, starterKit, type Item, type ItemSlot } from './items';
 
@@ -177,6 +178,8 @@ export interface Foe {
   phase: number;
   /** When you last hit it (run seconds). */
   hitAt: number;
+  /** Burning from the Ember Knight's Embers: its next tick, when it stops, each tick's damage, and who lit it. */
+  burn?: { next: number; until: number; dmg: number; by: Hero };
   alive: boolean;
 }
 
@@ -250,7 +253,9 @@ export type GameEvent =
   | { type: 'chain'; points: { x: number; y: number }[] }
   | { type: 'ability'; id: AbilityId; x: number; y: number; toX: number; toY: number }
   /** An SP move: its own move or its final, a ring of size `r` at x, y. */
-  | { type: 'sp'; id: SpMoveId; x: number; y: number; r: number; final: boolean }
+  | { type: 'sp'; id: SpMoveId; x: number; y: number; r: number; final: boolean; angle?: number }
+  /** An SP's passive went off: a monster caught fire, a tailwind, a split star, the flow's heal. */
+  | { type: 'passive'; id: SpPassiveId; x: number; y: number }
   | { type: 'dodge'; x: number; y: number; toX: number; toY: number }
   | { type: 'warden' }
   | { type: 'phase'; x: number; y: number }
@@ -417,6 +422,11 @@ export interface Hero {
   skillAt: number;
   /** The SP's final is ready when this reaches SURGE.full (it fills by fighting). */
   surge: number;
+  /** The Wind Ranger's Tailwind runs until then; the Star Sage's attacks, counted for Split Star. */
+  tailwind: number;
+  shots: number;
+  /** The River Monk's Flow heals again from then. */
+  flow: number;
   /** Hits taken this run (what the run's recap shows, to set the bot against people). */
   hits: number;
   cd: { attack: number; spark: number; nova: number; fireball: number };
@@ -595,6 +605,9 @@ function newHero(hs: HeroSetup, id: number): Hero {
     sp: hs.sp ? { skill: SP_CARDS[hs.classId ?? 'warrior'].skill, final: SP_CARDS[hs.classId ?? 'warrior'].final } : null,
     skillAt: 0,
     surge: 0,
+    tailwind: -99,
+    flow: 0,
+    shots: 0,
     hits: 0,
     cd: { attack: 0.5, spark: 2, nova: 3, fireball: 2.5 },
     ups: {},
@@ -1166,7 +1179,7 @@ function moveHero(run: Run, h: Hero, input: Input) {
   }
   if (len > 0.05) h.facing = Math.atan2(y, x);
   // A cleared room is safe: cross it at a run, so the walk to the next fight is short.
-  const speed = heroSpeed(h.ups) * (1 + 0.1 * relic(h, 'boots') + h.gearFx.move + h.power.move) * bodyOf(h).move * (run.cleared ? CLEAR_RUN : 1);
+  const speed = heroSpeed(h.ups) * (1 + 0.1 * relic(h, 'boots') + h.gearFx.move + h.power.move) * bodyOf(h).move * (run.cleared ? CLEAR_RUN : 1) * (now < h.tailwind ? 1 + SP_PASSIVE.arrow.move : 1);
   if (h.charge && now < h.charge.until) {
     h.vx = h.charge.x;
     h.vy = h.charge.y;
@@ -1247,6 +1260,11 @@ function dodge(run: Run, h: Hero, input: Input) {
   dy /= d;
   h.charge = { until: now + DODGE.secs, x: dx * DODGE.speed, y: dy * DODGE.speed, hit: new Set(), harm: false };
   h.ghostUntil = Math.max(h.ghostUntil, now + DODGE.ghost);
+  // Tailwind (the Wind Ranger's passive): the wind carries you on after a dodge.
+  if (h.sp && attackOf(h.classId) === 'arrow') {
+    h.tailwind = now + DODGE.secs + SP_PASSIVE.arrow.secs;
+    emit(run, { type: 'passive', id: 'tailwind', x: h.x, y: h.y });
+  }
   emit(run, { type: 'dodge', x: h.x, y: h.y, toX: h.x + dx * DODGE.speed * DODGE.secs, toY: h.y + dy * DODGE.speed * DODGE.secs });
 }
 
@@ -1258,10 +1276,44 @@ export function abilityReady(run: Run, h: Hero): number {
 
 /** The monk grows calm in a fight: hits landed and hits taken, quicker with the hourglass and cooldown gear.
     The SP's final fills the same way (`surge`). */
-function calmer(h: Hero, n: number, taken = false) {
+function calmer(run: Run, h: Hero, n: number, taken = false) {
   const quick = 1 + 0.25 * relic(h, 'hourglass') + h.gearFx.cooldown;
   if (h.ability === 'still') h.calm = Math.min(CALM.full, h.calm + n * quick);
-  if (h.sp) h.surge = Math.min(SURGE.full, h.surge + (taken ? SURGE.taken : SURGE.hit) * quick);
+  if (!h.sp) return;
+  h.surge = Math.min(SURGE.full, h.surge + (taken ? SURGE.taken : SURGE.hit) * quick);
+}
+
+/** Flow (the River Monk's passive): a hit you land heals you a little, at most once every `every` s. */
+function flow(run: Run, by: Hero) {
+  const k = SP_PASSIVE.wave;
+  if (!k.heal || !by.sp || attackOf(by.classId) !== 'wave' || by.hp <= 0 || by.hp >= by.maxHp || run.t < by.flow) return;
+  by.flow = run.t + k.every;
+  by.hp = Math.min(by.maxHp, by.hp + Math.max(1, Math.round(by.maxHp * k.heal)));
+  emit(run, { type: 'passive', id: 'flow', x: by.x, y: by.y });
+}
+
+/** Embers (the Ember Knight's passive): a hit can set a monster burning, if it isn't already. */
+function kindle(run: Run, by: Hero, f: Foe) {
+  if (!by.sp || attackOf(by.classId) !== 'slash' || !f.alive || (f.burn && run.t < f.burn.until)) return;
+  const k = SP_PASSIVE.slash;
+  if (run.critRnd() >= k.chance) return;
+  f.burn = { next: run.t + k.every, until: run.t + k.secs, dmg: Math.max(1, Math.round(pow(by, ATTACK.slash.dmg * k.dmg))), by };
+  emit(run, { type: 'passive', id: 'embers', x: f.x, y: f.y });
+}
+
+/** A burning monster takes its fire's damage each tick, until the fire goes out. */
+function burnTick(run: Run, f: Foe) {
+  const b = f.burn;
+  if (!b || run.t < b.next) return;
+  if (run.t > b.until || untouchable(run, f)) {
+    f.burn = undefined;
+    return;
+  }
+  b.next += SP_PASSIVE.slash.every;
+  f.hp -= b.dmg;
+  f.hitAt = run.t;
+  emit(run, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg: b.dmg, boss: f === run.boss });
+  if (f.hp <= 0) kill(run, f, b.by);
 }
 
 /** The SP's own move: 1 when ready (0 without an SP). */
@@ -1289,7 +1341,7 @@ function useSkill(run: Run, h: Hero, input: Input) {
       f = nearest(run, h.x, h.y, undefined, RANGE * 1.4),
       a = f ? Math.atan2(f.y - h.y, f.x - h.x) : Math.hypot(input.x, input.y) > 0.1 ? Math.atan2(input.y, input.x) : h.facing;
     for (let i = 0; i < k.arrows; i++) fire(run, h, 'arrow', a + (i - (k.arrows - 1) / 2) * k.spread, 520, pow(h, ATTACK.arrow.dmg * k.dmg), k.pierce, null);
-    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: 40, final: false });
+    emit(run, { type: 'sp', id, x: h.x, y: h.y, r: 40, final: false, angle: a });
   } else if (kind === 'orb') {
     const k = SP_SKILL.orb,
       f = nearest(run, h.x, h.y, undefined, k.reach),
@@ -1412,6 +1464,8 @@ function moveFoes(run: Run) {
   const now = run.t,
     up = standing(run);
   for (const f of run.foes) {
+    if (!f.alive) continue;
+    burnTick(run, f);
     if (!f.alive) continue;
     if (now >= f.knockUntil) {
       if (f === run.boss) steerBoss(run, f);
@@ -2029,7 +2083,9 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
     return kill(run, f, by);
   }
   f.hp -= dmg;
-  calmer(by, CALM.hit);
+  calmer(run, by, CALM.hit);
+  if (!knight) kindle(run, by, f);
+  flow(run, by);
   emit(run, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg, boss, crit });
   // The Plateau cracks, a little at a time, and shows nothing else.
   if (boss && run.setup.zone.boss === 'plateau') {
@@ -2166,6 +2222,12 @@ function attack(run: Run, h: Hero) {
       const t = nearest(run, h.x, h.y, hit, RANGE) ?? target;
       hit.add(t);
       fire(run, h, 'orb', Math.atan2(t.y - h.y, t.x - h.x) + (i - (n - 1) / 2) * 0.4, 250, dmg, 0, t);
+    }
+    // Split Star (the Star Sage's passive): every few attacks, one more orb at another monster.
+    if (h.sp && ++h.shots % SP_PASSIVE.orb.every === 0) {
+      const t = nearest(run, h.x, h.y, hit, RANGE) ?? target;
+      fire(run, h, 'orb', Math.atan2(t.y - h.y, t.x - h.x) + 0.5, 250, dmg, 0, t);
+      emit(run, { type: 'passive', id: 'splitstar', x: h.x, y: h.y });
     }
   } else if (kind === 'wave') {
     for (let i = 0; i < n; i++) later(run, i * 0.18, () => burst(run, h, h.x, h.y, 110 + i * 20, dmg, 'wave'));
@@ -2597,7 +2659,7 @@ function hurt(run: Run, h: Hero, dmg: number, by: 'shot' | 'touch') {
   h.hp -= taken;
   h.hits++;
   h.hurtUntil = now + INVULNERABLE;
-  calmer(h, CALM.taken, true);
+  calmer(run, h, CALM.taken, true);
   emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: Math.round(taken), by });
   if (h.hp <= 0) fall(run, h);
 }

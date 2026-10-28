@@ -63,9 +63,12 @@ workouts, and a run that reaches the mid-boss's floor (`SP_FLOOR`; `spAfterRun` 
 `page.tsx`). Then `sp-awake` plays, and it is worn into every run (`spWorn`, `HeroSetup.sp`) until
 taken off on the Hero tab (`SpCard`, `setSpOff`). It takes the shape of your class (`SP_CARDS` in
 `src/game/dungeon/content.ts`): Ember Knight, Wind Ranger, Star Sage, River Monk, each with the
-class ability, its own move and a final (how they play: [dungeon.md](dungeon.md)). In a run the
+class ability, its own move, a final and a passive that is always on (`SP_PASSIVES`: Embers sets
+monsters burning, Tailwind speeds you after a dodge, Split Star throws an extra orb, Flow heals a
+little on each hit; how they play: [dungeon.md](dungeon.md)). With the SP on you look the SP's
+way, but your weapon, its tier and its forge shine stay yours (`heroSpec`). In a run the
 own move sits left of the dodge and the final over the ability (`SpButton` in `FogRun.tsx`; R and F
-on a keyboard). Numbers: `SP_TRIAL`, `SP_SKILL`, `SP_FINAL`, `SURGE` in `src/balance/classes.ts`.
+on a keyboard). Numbers: `SP_TRIAL`, `SP_SKILL`, `SP_FINAL`, `SURGE`, `SP_PASSIVE` in `src/balance/classes.ts`.
 
 The scenes show the SP rather than explain it: the Wanderer holds up the card (a line with `art:
 'sp-sealed'`, the `spCard` sprite in ash, you a dark shape behind a crack), and when it wakes a line

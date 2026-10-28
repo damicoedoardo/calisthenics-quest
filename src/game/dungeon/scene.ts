@@ -12,7 +12,8 @@ import type { Build } from '@/lib/stats';
 import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STAIRS, type Prop } from './props';
 import { THEMES, themeFor, type Theme } from './themes';
 import { bandOf, glowOf } from './items';
-import { BANDS, MATS } from '@/balance';
+import { BANDS, MATS, SURGE } from '@/balance';
+import { SP_LOOKS } from '@/sprites/characters/spLooks';
 import {
   ABILITIES,
   DODGE,
@@ -59,6 +60,7 @@ import {
   winNow,
   type AbilityId,
   type SpMoveId,
+  SP_MOVES,
   type CellKind,
   type Door,
   type Foe,
@@ -232,6 +234,8 @@ export interface RunHandle {
   /** Developer mode: show the stairs card now. */
   askStairs: () => void;
   skipToWarden: () => void;
+  /** Developer mode: the SP's final ready now. */
+  fillFinal: () => void;
   /** Developer mode: show the next zone's dungeon theme; returns its name. */
   cycleTheme: () => string;
   pickRelic: (id: RelicId) => void;
@@ -409,6 +413,8 @@ class DungeonScene extends Phaser.Scene {
   private stopUntil = 0;
   /** Small hit-stops don't come back before then, so a flurry of hits doesn't stutter. */
   private stopCool = 0;
+  /** When Flow's last drop showed (it comes with almost every hit). */
+  private flowAt = 0;
   /** Hit-stop spent in the current second: capped at STOP_BUDGET, so a burst of hits never stacks
       into stutter. */
   private stopSpent = { from: 0, ms: 0 };
@@ -1947,10 +1953,42 @@ class DungeonScene extends Phaser.Scene {
         this.sfx(e.id === 'volley' ? 'arrow' : e.id === 'still' || e.id === 'shock' ? 'nova' : 'dash');
         this.cameras.main.shake(100, 0.004);
         if (e.id === 'charge' || e.id === 'blink') {
-          this.fade(300, (g, p) => g.lineStyle(10 * (1 - p) + 2, 0x7dd3fc, 0.6 * (1 - p)).lineBetween(x, y, toX, toY));
+          // the charge leaves a trail of you in steel blue; the blink, a violet you and a puff of stars where you land
+          const blink = e.id === 'blink';
+          this.ghosts(x, y, toX, toY, blink ? 0xc4b5fd : 0x7dd3fc, blink ? 2 : 4);
+          this.fade(300, (g, p) => g.lineStyle(10 * (1 - p) + 2, blink ? 0xc4b5fd : 0x7dd3fc, 0.6 * (1 - p)).lineBetween(x, y, toX, toY));
           this.burst(this.puffs, 10, x, y, 10);
+          if (blink) {
+            this.burst(this.sparks, 10, toX, toY, -6);
+            this.fade(320, (g, p) => this.star(g, ...this.P(toX, toY - 0), 6 + 14 * p, 0xe9d5ff, 1 - p), true);
+          }
         }
-        if (e.id === 'still') this.fade(500, (g, p) => g.lineStyle(4, 0x86efac, 0.8 * (1 - p)).strokeCircle(x, y, 30 + 120 * p));
+        if (e.id === 'volley') {
+          // the arrows leave a fan of streaks
+          this.fade(240, (g, p) => {
+            g.lineStyle(2, 0xe0f2fe, 0.7 * (1 - p));
+            for (let i = 0; i < 12; i++) {
+              const a = (i / 12) * Math.PI * 2,
+                r0 = 18 + 60 * p;
+              g.lineBetween(x + Math.cos(a) * r0, y + Math.sin(a) * r0, x + Math.cos(a) * (r0 + 22), y + Math.sin(a) * (r0 + 22));
+            }
+          });
+        }
+        if (e.id === 'still') {
+          // a lotus of light opens under you, then the ring goes out
+          this.fade(700, (g, p) => {
+            const open = Math.min(1, p * 2.5),
+              a = 0.8 * (1 - p);
+            for (let i = 0; i < 8; i++) {
+              const t = (i / 8) * Math.PI * 2 + p * 0.6,
+                px = x + Math.cos(t) * 16 * open,
+                py = y + Math.sin(t) * 16 * open;
+              g.fillStyle(i % 2 ? 0xbbf7d0 : 0x86efac, a).fillEllipse(px, py, 22 * open + 2, 9 * open + 2);
+            }
+            g.fillStyle(0xfef9c3, a).fillCircle(x, y, 6 * open);
+          });
+          this.fade(500, (g, p) => g.lineStyle(4, 0x86efac, 0.8 * (1 - p)).strokeCircle(x, y, 30 + 120 * p));
+        }
         if (e.id === 'shock') {
           this.burst(this.puffs, 14, x, y, 10);
           this.fade(380, (g, p) => {
@@ -1961,41 +1999,31 @@ class DungeonScene extends Phaser.Scene {
         break;
       }
       case 'sp': {
-        // An SP move: a ring in the SP's color; a final shakes the screen and fills it with light.
+        // An SP move, each its own: fire, wind, stars or water. A final first flashes its name
+        // across the screen with you in it (cutIn), then shakes the room.
         const { x, y, r, final } = e,
           color = SP_COLOR[e.id];
         this.sfx(final ? 'nova' : e.id === 'pin' ? 'arrow' : 'nova', final ? 0.8 : 1.15);
-        this.cameras.main.shake(final ? 260 : 120, final ? 0.01 : 0.005);
+        this.shake(final ? 260 : 120, final ? 0.01 : 0.005);
         if (final) {
           buzz(30);
+          this.cutIn(e.id);
+          this.hitStop(120);
           this.cameras.main.flash(250, 255, 236, 200);
         }
-        this.burst(this.sparks, final ? 30 : 12, x, y, -6);
-        if (e.id !== 'pin' && e.id !== 'rain')
-          this.fade(final ? 650 : 380, (g, p) => {
-            g.lineStyle((final ? 10 : 6) * (1 - p) + 1, color, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.3 + 0.7 * p));
-            g.fillStyle(color, (final ? 0.25 : 0.15) * (1 - p)).fillCircle(x, y, r * (0.3 + 0.7 * p));
-          });
+        this.spMove(e.id, x, y, r, e.angle ?? 0, color);
         break;
       }
+      case 'passive':
+        this.passive(e.id, e.x, e.y);
+        break;
       case 'dodge': {
         buzz(12);
         const { x, y, toX, toY } = e;
         this.sfx('dash', 1.3);
         this.burst(this.puffs, 6, x, y, 18);
         // Afterimages along the way: you were there, and now you're not.
-        for (let i = 0; i < 3; i++) {
-          const k = i / 3,
-            [gx, gy] = this.P(x + (toX - x) * k, y + (toY - y) * k),
-            ghost = this.add
-              .image(gx, gy, this.hero.texture.key, this.hero.frame.name)
-              .setScale(this.hero.scaleX, this.hero.scaleY)
-              .setFlipX(this.hero.flipX)
-              .setTintFill(0x7dd3fc)
-              .setAlpha(0.55 - i * 0.12)
-              .setDepth(gy - 1);
-          this.tweens.add({ targets: ghost, alpha: 0, duration: 260 + i * 60, onComplete: () => ghost.destroy() });
-        }
+        this.ghosts(x, y, toX, toY, 0x7dd3fc);
         this.fade(220, (g, p) => g.lineStyle(6 * (1 - p) + 1, 0xe0f2fe, 0.5 * (1 - p)).lineBetween(x, y, toX, toY));
         break;
       }
@@ -2287,7 +2315,337 @@ class DungeonScene extends Phaser.Scene {
     this.tweens.add({ targets: t, alpha: 0, delay: big ? 380 : 260, duration: 260, onComplete: () => t.setVisible(false) });
   }
 
-  /** Hold the world still for a moment. `minor` stops don't come back-to-back. */
+  /** Afterimages of you from one point to another, filled with one color. */
+  private ghosts(x: number, y: number, toX: number, toY: number, color: number, n = 3) {
+    for (let i = 0; i < n; i++) {
+      const k = i / n,
+        [gx, gy] = this.P(x + (toX - x) * k, y + (toY - y) * k),
+        ghost = this.add
+          .image(gx, gy, this.hero.texture.key, this.hero.frame.name)
+          .setScale(this.hero.scaleX, this.hero.scaleY)
+          .setFlipX(this.hero.flipX)
+          .setTintFill(color)
+          .setAlpha(0.55 - (i * 0.4) / n)
+          .setDepth(gy - 1);
+      this.tweens.add({ targets: ghost, alpha: 0, duration: 260 + i * 60, onComplete: () => ghost.destroy() });
+    }
+  }
+
+  /** A five-pointed star. */
+  private star(g: Phaser.GameObjects.Graphics, cx: number, cy: number, R: number, color: number, alpha: number) {
+    const pts: Phaser.Math.Vector2[] = [];
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5,
+        d = i % 2 ? R * 0.45 : R;
+      pts.push(new Phaser.Math.Vector2(cx + Math.cos(a) * d, cy + Math.sin(a) * d));
+    }
+    g.fillStyle(color, alpha).fillPoints(pts, true);
+  }
+
+  /** Where each final's flurry lands, round (x, y): the monsters in reach first, then spots near you. */
+  private spots(x: number, y: number, r: number, n: number): [number, number][] {
+    const out: [number, number][] = this.run.foes
+      .filter((f) => f.alive && Math.hypot(f.x - x, f.y - y) < r)
+      .slice(0, n)
+      .map((f) => [f.x, f.y]);
+    while (out.length < n) {
+      const a = Math.random() * Math.PI * 2,
+        d = 30 + Math.random() * (Math.min(r, 260) - 30);
+      out.push([x + Math.cos(a) * d, y + Math.sin(a) * d]);
+    }
+    return out;
+  }
+
+  /** How each SP move looks. Fire for the Ember Knight, wind for the Wind Ranger, stars for the
+      Star Sage, water for the River Monk; the final is the same element, bigger. */
+  private spMove(id: SpMoveId, x: number, y: number, r: number, angle: number, color: number) {
+    const [X, Y] = this.P(x, y);
+    switch (id) {
+      case 'whirl':
+        // three blades of fire spin round you and fling embers out
+        this.fade(420, (g, p) => {
+          const R = r * (0.45 + 0.55 * p);
+          for (let i = 0; i < 3; i++) {
+            const a0 = p * Math.PI * 3 + (i * Math.PI * 2) / 3;
+            g.lineStyle(9 * (1 - p) + 2, i === 1 ? 0xfde047 : 0xf97316, 0.95 * (1 - p));
+            g.beginPath();
+            g.arc(x, y, R, a0, a0 + 1.7);
+            g.strokePath();
+          }
+          g.fillStyle(0xf97316, 0.14 * (1 - p)).fillCircle(x, y, R);
+        });
+        this.bits.particleTint = 0xf97316;
+        this.burst(this.bits, 16, x, y);
+        this.burst(this.sparks, 10, x, y, -6);
+        break;
+      case 'phoenix': {
+        // a ring of fire rolls out, and a phoenix rises from you, wings beating
+        this.fade(650, (g, p) => {
+          g.lineStyle(12 * (1 - p) + 1, 0xf97316, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.2 + 0.8 * p));
+          g.lineStyle(5 * (1 - p) + 1, 0xfde047, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.1 + 0.75 * p));
+          g.fillStyle(0xf97316, 0.2 * (1 - p)).fillCircle(x, y, r * (0.2 + 0.8 * p));
+        });
+        this.fade(1000, (g, p) => {
+          const s = 1 + 1.4 * p,
+            by = Y - 24 - 90 * p,
+            flap = Math.sin(p * Math.PI * 5) * 12 * s,
+            a = 1 - p * p;
+          // tail
+          g.fillStyle(0xdc2626, 0.8 * a).fillTriangle(X - 9 * s, by + 4 * s, X + 9 * s, by + 4 * s, X, by + 50 * s);
+          g.fillStyle(0xf97316, 0.8 * a).fillTriangle(X - 5 * s, by + 4 * s, X + 5 * s, by + 4 * s, X, by + 36 * s);
+          // wings, outer fire then inner gold
+          for (const side of [-1, 1]) {
+            g.fillStyle(0xf97316, 0.9 * a).fillTriangle(X, by, X + side * 64 * s, by - 22 * s + flap, X + side * 18 * s, by + 14 * s);
+            g.fillStyle(0xfde047, 0.9 * a).fillTriangle(X, by - 3 * s, X + side * 36 * s, by - 14 * s + flap * 0.6, X + side * 10 * s, by + 8 * s);
+          }
+          // body and head
+          g.fillStyle(0xfb923c, a).fillEllipse(X, by, 12 * s, 22 * s);
+          g.fillStyle(0xfef3c7, a).fillCircle(X, by - 13 * s, 5 * s);
+          g.fillStyle(0xfde047, a).fillTriangle(X - 2 * s, by - 13 * s, X + 2 * s, by - 13 * s, X, by - 22 * s);
+        }, true);
+        this.bits.particleTint = 0xf97316;
+        this.burst(this.bits, 40, x, y);
+        this.burst(this.sparks, 30, x, y, -6);
+        break;
+      }
+      case 'pin': {
+        // the arrows ride a gust: streaks of wind run out along the shot, and leaves with them
+        const c = Math.cos(angle),
+          sn = Math.sin(angle);
+        this.fade(360, (g, p) => {
+          for (let i = -2; i <= 2; i++) {
+            const ox = -sn * i * 9,
+              oy = c * i * 9,
+              from = 20 + 380 * Math.max(0, p - 0.15 * Math.abs(i)),
+              len = 70 - 10 * Math.abs(i);
+            g.lineStyle(i === 0 ? 4 : 2, i === 0 ? 0xffffff : 0x9fe0d0, 0.85 * (1 - p));
+            g.lineBetween(x + ox + c * from, y + oy + sn * from, x + ox + c * (from + len), y + oy + sn * (from + len));
+          }
+        });
+        this.bits.particleTint = 0x86efac;
+        this.burst(this.bits, 8, x + c * 30, y + sn * 30);
+        break;
+      }
+      case 'rain': {
+        // the sky opens: arrows fall on every monster, one after another, each with its ring of wind
+        const at = this.spots(x, y, Infinity, 10);
+        this.fade(900, (g, p) => {
+          at.forEach(([fx, fy], i) => {
+            const d = (i / at.length) * 0.45,
+              q = (p - d) / 0.25;
+            if (q < 0 || q > 2.2) return;
+            const [AX, AY] = this.P(fx, fy);
+            if (q < 1) {
+              const ty = AY - 220 * (1 - q);
+              for (const k of [-10, 0, 10]) {
+                g.lineStyle(2, 0xe0fff6, 0.95).lineBetween(AX + k + 6, ty - 26, AX + k, ty);
+                g.fillStyle(0x86efac, 1).fillTriangle(AX + k - 3, ty - 2, AX + k + 3, ty - 2, AX + k, ty + 5);
+              }
+            } else {
+              const t = q - 1;
+              g.lineStyle(3 * (1 - t / 1.2) + 1, 0x9fe0d0, Math.max(0, 0.9 - t * 0.7)).strokeEllipse(AX, AY + 6, 24 + 40 * t, 8 + 14 * t);
+            }
+          });
+          // the wind over the room
+          g.lineStyle(2, 0xe0fff6, 0.5 * (1 - p));
+          for (let i = 0; i < 6; i++) {
+            const sy = Y - 160 + i * 18,
+              sx = X - 240 + ((p * 900 + i * 130) % 480);
+            g.lineBetween(sx, sy, sx + 60, sy - 6);
+          }
+        }, true);
+        break;
+      }
+      case 'starfall': {
+        // a star drops on the monster from high up, and bursts
+        this.fade(520, (g, p) => {
+          const q = Math.min(1, p / 0.35);
+          if (q < 1) {
+            const sx = X + 120 * (1 - q),
+              sy = Y - 200 * (1 - q);
+            g.lineStyle(6, 0xc4b5fd, 0.5).lineBetween(sx + 40, sy - 66, sx, sy);
+            g.lineStyle(2, 0xffffff, 0.9).lineBetween(sx + 20, sy - 33, sx, sy);
+            this.star(g, sx, sy, 10, 0xfff3b0, 1);
+          } else {
+            const t = (p - 0.35) / 0.65;
+            this.star(g, X, Y, 12 + 26 * t, 0xfff3b0, 0.9 * (1 - t));
+            g.lineStyle(4 * (1 - t) + 1, 0xa78bfa, 0.9 * (1 - t)).strokeCircle(X, Y, (r + 10) * (0.3 + 0.9 * t));
+          }
+        }, true);
+        this.time.delayedCall(180, () => {
+          this.burst(this.sparks, 14, x, y, -6);
+          this.bits.particleTint = 0xc4b5fd;
+          this.burst(this.bits, 12, x, y);
+        });
+        break;
+      }
+      case 'sky': {
+        // a meteor shower: stars rain down all over the room and burst where they land
+        const at = this.spots(x, y, 420, 12);
+        this.fade(1100, (g, p) => {
+          at.forEach(([mx, my], i) => {
+            const d = ((i * 7) % at.length) / at.length * 0.55,
+              q = (p - d) / 0.2;
+            if (q < 0 || q > 2.5) return;
+            const [MX, MY] = this.P(mx, my);
+            if (q < 1) {
+              const sx = MX + 90 * (1 - q),
+                sy = MY - 240 * (1 - q);
+              g.lineStyle(7, 0x818cf8, 0.45).lineBetween(sx + 34, sy - 90, sx, sy);
+              g.lineStyle(2, 0xffffff, 0.9).lineBetween(sx + 14, sy - 38, sx, sy);
+              g.fillStyle(0xfff3b0, 1).fillCircle(sx, sy, 5);
+            } else {
+              const t = (q - 1) / 1.5;
+              this.star(g, MX, MY, 10 + 18 * t, 0xfff3b0, 0.9 * (1 - t));
+              g.lineStyle(3 * (1 - t) + 1, 0xa78bfa, 0.9 * (1 - t)).strokeCircle(MX, MY, 14 + 44 * t);
+            }
+          });
+        }, true);
+        this.fade(900, (g, p) => g.fillStyle(0x4338ca, 0.18 * Math.sin(p * Math.PI)).fillCircle(x, y, 520));
+        this.time.delayedCall(250, () => this.burst(this.sparks, 30, x, y, -6));
+        break;
+      }
+      case 'palm': {
+        // you push the river out: a wobbling ring of water, white foam behind it, drops flung up
+        this.fade(420, (g, p) => {
+          const R = r * (0.25 + 0.75 * p),
+            pts: Phaser.Math.Vector2[] = [];
+          for (let i = 0; i <= 32; i++) {
+            const a = (i / 32) * Math.PI * 2,
+              w = R + Math.sin(a * 6 + p * 10) * 5;
+            pts.push(new Phaser.Math.Vector2(x + Math.cos(a) * w, y + Math.sin(a) * w));
+          }
+          g.lineStyle(8 * (1 - p) + 2, 0x1f6fae, 0.85 * (1 - p)).strokePoints(pts, true);
+          g.lineStyle(3, 0xdcefff, 0.9 * (1 - p)).strokeCircle(x, y, R * 0.82);
+          g.fillStyle(color, 0.12 * (1 - p)).fillCircle(x, y, R);
+        });
+        this.bits.particleTint = 0x60b0f0;
+        this.burst(this.bits, 16, x, y);
+        this.burst(this.puffs, 6, x, y, 10);
+        break;
+      }
+      case 'palms': {
+        // a flurry of palms strikes all round you, then the river breaks over the room
+        const at = this.spots(x, y, r, 14);
+        this.fade(900, (g, p) => {
+          at.forEach(([px, py], i) => {
+            const t = (p - (i / at.length) * 0.6) / 0.22;
+            if (t < 0 || t > 1) return;
+            const [PX, PY] = this.P(px, py),
+              a = 1 - t,
+              s = 1 + 0.6 * t;
+            // an open palm of water: the heel, four fingers and a thumb
+            g.fillStyle(0xdcefff, a).fillEllipse(PX, PY, 18 * s, 16 * s);
+            for (let k = 0; k < 4; k++) g.fillStyle(0xdcefff, a).fillRoundedRect(PX - 9 * s + k * 5 * s, PY - 18 * s - (k === 1 || k === 2 ? 3 * s : 0), 4 * s, 12 * s, 2 * s);
+            g.fillStyle(0xdcefff, a).fillRoundedRect(PX + 8 * s, PY - 6 * s, 9 * s, 4 * s, 2 * s);
+            g.lineStyle(2, 0x60b0f0, a).strokeCircle(PX, PY - 4 * s, 16 * s + 8 * t);
+          });
+        }, true);
+        this.fade(700, (g, p) => {
+          const q = Math.max(0, (p - 0.4) / 0.6);
+          if (q <= 0) return;
+          g.lineStyle(12 * (1 - q) + 1, 0x1f6fae, 0.9 * (1 - q)).strokeCircle(x, y, r * (0.2 + 0.8 * q));
+          g.lineStyle(4 * (1 - q) + 1, 0xffffff, 0.9 * (1 - q)).strokeCircle(x, y, r * (0.1 + 0.75 * q));
+          g.fillStyle(0x60b0f0, 0.2 * (1 - q)).fillCircle(x, y, r * (0.2 + 0.8 * q));
+        });
+        this.bits.particleTint = 0x60b0f0;
+        this.time.delayedCall(400, () => {
+          this.burst(this.bits, 30, x, y);
+          this.burst(this.puffs, 14, x, y, 10);
+        });
+        break;
+      }
+    }
+  }
+
+  /** A final's cut-in, like in an anime: a band of the SP's colors sweeps across the screen with
+      you in it, big, and the move's name. With reduced motion it only shows, still, then goes. */
+  private cutIn(id: SpMoveId) {
+    const cam = this.cameras.main,
+      cls = this.setup.classId ?? 'warrior',
+      aura = SP_LOOKS[cls].aura.map((c) => parseInt(c.slice(1), 16)),
+      vw = cam.width / cam.zoom,
+      vh = cam.height / cam.zoom,
+      cx = cam.width / 2,
+      cy = cam.height / 2,
+      bandH = Math.min(120, vh * 0.34),
+      still = reducedMotion();
+    const band = this.add.graphics().setScrollFactor(0).setDepth(260000);
+    // the band, leaning, with stripes of the element's color at its edges and speed lines in it
+    band.fillStyle(0x0b0d14, 0.88).fillPoints([new Phaser.Math.Vector2(-vw, -bandH / 2 + 10), new Phaser.Math.Vector2(vw, -bandH / 2 - 10), new Phaser.Math.Vector2(vw, bandH / 2 - 10), new Phaser.Math.Vector2(-vw, bandH / 2 + 10)], true);
+    band.fillStyle(aura[1], 1).fillRect(-vw, -bandH / 2 - 4, vw * 2, 4);
+    band.fillStyle(aura[2], 1).fillRect(-vw, bandH / 2 - 2, vw * 2, 4);
+    for (let i = 0; i < 14; i++) {
+      const ly = -bandH / 2 + 10 + ((i * 37) % (bandH - 20)),
+        lx = -vw / 2 + ((i * 113) % vw);
+      band.lineStyle(i % 3 ? 1 : 2, aura[i % 2 ? 1 : 2], 0.5).lineBetween(lx, ly, lx + 50 + (i % 4) * 20, ly);
+    }
+    const you = this.add
+        .image(0, 0, this.hero.texture.key, this.hero.frame.name)
+        .setScrollFactor(0)
+        .setDepth(260001)
+        .setScale((bandH * 1.5) / 64)
+        .setOrigin(0.5, 0.42),
+      name = this.add
+        .text(0, 0, SP_MOVES[id].name.toUpperCase(), { fontFamily: '"Press Start 2P", monospace', fontSize: '16px', color: `#${aura[2].toString(16).padStart(6, '0')}`, stroke: '#0b0d14', strokeThickness: 5 })
+        .setScrollFactor(0)
+        .setDepth(260002)
+        .setOrigin(0, 0.5);
+    const place = (dx: number) => {
+      band.setPosition(cx + dx, cy);
+      you.setPosition(cx - vw * 0.28 + dx * 1.3, cy);
+      name.setPosition(cx - vw * 0.1 - dx * 0.6, cy + bandH * 0.18);
+    };
+    const all = [band, you, name],
+      done = () => all.forEach((o) => o.destroy());
+    if (still) {
+      place(0);
+      this.time.delayedCall(700, done);
+      return;
+    }
+    // in fast, a held beat drifting a little, out fast the other way
+    const IN = 180,
+      HOLD = 650,
+      OUT = 180;
+    place(-vw);
+    this.tweens.addCounter({
+      from: 0,
+      to: IN + HOLD + OUT,
+      duration: IN + HOLD + OUT,
+      onUpdate: (tw) => {
+        const t = tw.getValue() ?? 0;
+        if (t < IN) place(-vw * Math.pow(1 - t / IN, 3));
+        else if (t < IN + HOLD) place((18 * (t - IN)) / HOLD);
+        else place(18 + (vw - 18) * Math.pow((t - IN - HOLD) / OUT, 3));
+      },
+      onComplete: done,
+    });
+  }
+
+  /** An SP's passive going off: a monster catching fire, a tailwind, a split star, the flow. */
+  private passive(id: 'embers' | 'tailwind' | 'splitstar' | 'flow', x: number, y: number) {
+    if (id === 'embers') {
+      this.bits.particleTint = 0xf97316;
+      this.burst(this.bits, 6, x, y, -4);
+      this.fade(260, (g, p) => g.lineStyle(2, 0xfb923c, 0.9 * (1 - p)).strokeCircle(x, y, 10 + 16 * p));
+    } else if (id === 'tailwind') {
+      this.fade(320, (g, p) => g.lineStyle(3 * (1 - p) + 1, 0x9fe0d0, 0.8 * (1 - p)).strokeCircle(x, y, 14 + 40 * p));
+    } else if (id === 'splitstar') {
+      this.fade(260, (g, p) => this.star(g, ...this.P(x, y), 5 + 8 * p, 0xfff3b0, 1 - p), true);
+    } else {
+      // Flow comes with almost every hit: show a drop of it at most a few times a second
+      if (this.time.now < this.flowAt) return;
+      this.flowAt = this.time.now + 450;
+      const [X, Y] = this.P(x, y);
+      this.fade(500, (g, p) => {
+        g.fillStyle(0x7dd3fc, 0.9 * (1 - p)).fillCircle(X + 8, Y - 18 - 22 * p, 3);
+        g.fillTriangle(X + 5, Y - 18 - 22 * p, X + 11, Y - 18 - 22 * p, X + 8, Y - 25 - 22 * p);
+        g.lineStyle(2, 0x60b0f0, 0.6 * (1 - p)).strokeEllipse(X, Y + 18, 26 + 16 * p, 8 + 4 * p);
+      }, true);
+    }
+  }
+
+  /** Hold the world still for a moment. the world still for a moment. `minor` stops don't come back-to-back. */
   private hitStop(ms: number, minor = false) {
     const now = this.time.now;
     if (reducedMotion() || (minor && now < this.stopCool)) return;
@@ -2348,6 +2706,27 @@ class DungeonScene extends Phaser.Scene {
         q = lk.def.r + 10 + 2 * Math.sin(now / 120);
       mk.lineStyle(2, 0xfde68a, 0.9).strokeEllipse(X, Y + lk.def.r + 4, lk.def.r * 3, lk.def.r);
       for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) mk.lineBetween(X + sx * q, Y + sy * q, X + sx * (q - 6), Y + sy * q).lineBetween(X + sx * q, Y + sy * q, X + sx * q, Y + sy * (q - 6));
+    }
+    // Monsters on fire from Embers: little flames dance on them till it goes out.
+    for (const f of r.foes) {
+      if (!f.alive || !f.burn || r.t >= f.burn.until) continue;
+      const [X, Y] = this.P(f.x, f.y);
+      for (let i = 0; i < 3; i++) {
+        const fx = X - 8 + i * 8,
+          h = 7 + 4 * Math.sin(now / 70 + i * 2),
+          fy = Y - f.def.r * 0.4 + (i % 2) * 4;
+        mk.fillStyle(0xf97316, 0.85).fillTriangle(fx - 4, fy, fx + 4, fy, fx, fy - h);
+        mk.fillStyle(0xfde047, 0.9).fillTriangle(fx - 2, fy, fx + 2, fy, fx, fy - h * 0.55);
+      }
+    }
+    // The Wind Ranger's Tailwind: wind streaks past you while it lasts.
+    if (r.hero.tailwind > r.t && r.hero.hp > 0) {
+      const [X, Y] = this.P(r.hero.x, r.hero.y);
+      mk.lineStyle(2, 0xe0fff6, 0.6);
+      for (let i = 0; i < 4; i++) {
+        const o = (now / 3 + i * 23) % 60;
+        mk.lineBetween(X - 26 - o, Y - 16 + i * 10, X - 12 - o, Y - 16 + i * 10);
+      }
     }
     // Tomorrow's reach, so it's clear where waiting starts.
     if (r.boss?.alive && this.setup.zone.boss === 'tomorrow') {
@@ -2665,6 +3044,10 @@ class DungeonScene extends Phaser.Scene {
     });
   }
 
+  fillFinal() {
+    this.whenBuilt(() => (this.run.hero.surge = SURGE.full));
+  }
+
   skipToWarden() {
     this.whenBuilt(() => {
       skipToWarden(this.run);
@@ -2707,6 +3090,7 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
     skipFloor: () => scene.skipFloor(),
     askStairs: () => scene.askStairs(),
     skipToWarden: () => scene.skipToWarden(),
+    fillFinal: () => scene.fillFinal(),
     cycleTheme: () => scene.cycleTheme(),
     pickRelic: (id) => scene.pickRelic(id),
     wear: (id) => scene.gear(() => wear(scene.run, id)),

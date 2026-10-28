@@ -107,7 +107,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     const zone = ZONES.find((z) => String(z.id) === q.get('run'));
     if (zone) {
       const at = q.get('at');
-      setRunStart(at === 'mid' || at === 'boss' || at === 'win' ? at : undefined);
+      setRunStart(at === 'mid' || at === 'boss' || at === 'win' || at === 'sp' ? at : undefined);
       // ?party: a practice party run with two made-up friends, to see it without a backend.
       if (q.has('party')) setPartyRun({ seed: 7, friends: LAB_FRIENDS });
       setRun(zone);

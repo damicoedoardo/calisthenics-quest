@@ -20,7 +20,7 @@ export const ATTACK = {
 export const CLASS_BODY = {
   slash: { hp: 1.0, armor: 0.04, dmg: 0.85, move: 1.2, haste: 1.1 },
   wave: { hp: 1.25, armor: 0.12, dmg: 1.03, move: 1.15, haste: 1.1 },
-  arrow: { hp: 1.05, armor: 0, dmg: 1.22, move: 1, haste: 1 },
+  arrow: { hp: 1.12, armor: 0.03, dmg: 1.22, move: 1, haste: 1 },
   orb: { hp: 0.9, armor: 0, dmg: 0.67, move: 1, haste: 1 },
 } as const;
 
@@ -70,7 +70,7 @@ export const SP_TRIAL = { at: 3, workouts: 2 } as const;
     base attack. Whirl (warrior), Pin Shot (archer), Starfall (mage), Palm Wave (monk). */
 export const SP_SKILL = {
   slash: { cd: 7, r: 100, dmg: 1, knock: 260 },
-  arrow: { cd: 7, arrows: 5, spread: 0.12, dmg: 1.8, pierce: 6 },
+  arrow: { cd: 6, arrows: 5, spread: 0.12, dmg: 2.4, pierce: 6 },
   orb: { cd: 8, reach: 260, r: 90, dmg: 1.3 },
   wave: { cd: 9, r: 120, dmg: 0.7, knock: 320 },
 } as const;
@@ -79,12 +79,25 @@ export const SP_SKILL = {
     Goal: about one final in a long fight (a mid-boss, a boss), not one a room. */
 export const SURGE = { hit: 1, taken: 2, full: 300 } as const;
 
+/** Each SP's passive, always on while it's worn, NosTale style: it changes how you play more than
+    how hard you hit. Embers (warrior): a hit can set a monster burning, `dmg` times your slash
+    every `every` s for `secs`. Tailwind (archer): after a dodge you run `move` faster for `secs`.
+    Split Star (mage): every `every`th attack throws one more orb at another monster. Flow (monk):
+    a hit you land heals `heal` of your HP, at most once every `every` s. Goal: the SP with its passive wins no more
+    often than before (the fog sheet), each class still fair. */
+export const SP_PASSIVE = {
+  slash: { chance: 0.2, secs: 2, every: 0.5, dmg: 0.1 },
+  arrow: { secs: 1.5, move: 0.4 },
+  orb: { every: 4 },
+  wave: { heal: 0.004, every: 1 },
+} as const;
+
 /** Each SP's final: Phoenix Blade (warrior, all around you), Arrow Rain (archer, every monster in
     the room), Falling Sky (mage, a wide blast that wipes every shot), Thousand Palms (monk, heals
     and pushes). Damage is times the class's base attack. */
 export const SP_FINAL = {
   slash: { r: 220, dmg: 4 },
-  arrow: { dmg: 3 },
+  arrow: { dmg: 4.5 },
   orb: { r: 260, dmg: 3 },
   wave: { r: 200, dmg: 2, heal: 0.1, knock: 400 },
 } as const;
