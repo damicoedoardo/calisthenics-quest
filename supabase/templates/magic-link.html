@@ -1,6 +1,7 @@
 <!-- Supabase > Authentication > Emails: paste into "Magic link or OTP" and "Confirm sign up".
      Subject: Your FORMA code: {{ .Token }}
-     Images are served from formaquest.app/email (drawn by scripts/email-art.mjs). Code only, no link:
+     Images are served from formaquest.app/email (drawn by scripts/email-art.mjs); the title is
+     a picture because email apps don't load web fonts. Code only, no link:
      the app asks for the code, and a link on an installed iPhone app opens Safari instead. -->
 <!doctype html>
 <html>
@@ -8,7 +9,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="dark">
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
 <body style="margin:0;padding:0;background:#0b0d14;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#0b0d14;">
@@ -16,14 +16,13 @@
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:558px;background:#121624;border:2px solid #1e2436;border-radius:12px;overflow:hidden;">
       <tr><td><img src="https://formaquest.app/email/camp.png" width="558" alt="The hero and Ember, your flame, at the camp by the lake" style="display:block;width:100%;height:auto;image-rendering:pixelated;border:0;"></td></tr>
       <tr><td align="center" style="padding:28px 24px 8px;">
-        <p style="margin:0;font-family:'Press Start 2P',ui-monospace,Menlo,monospace;font-size:24px;letter-spacing:3px;color:#fbbf24;text-shadow:0 3px 0 #b45309;">FORMA</p>
-        <p style="margin:12px 0 0;font-family:'Press Start 2P',ui-monospace,Menlo,monospace;font-size:10px;color:#94a3b8;">The Road Back</p>
+        <img src="https://formaquest.app/email/title.png" width="159" height="62" alt="FORMA, The Road Back" style="display:block;border:0;">
       </td></tr>
       <tr><td align="center" style="padding:24px 24px 4px;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:15px;color:#cbd5e1;">
         Your code to sign in:
       </td></tr>
       <tr><td align="center" style="padding:8px 24px 8px;">
-        <p style="margin:0;display:inline-block;padding:16px 22px;background:#0b0d14;border:2px solid #fbbf24;border-radius:8px;font-family:'Press Start 2P',ui-monospace,Menlo,monospace;font-size:22px;letter-spacing:5px;white-space:nowrap;color:#f8fafc;">{{ .Token }}</p>
+        <p style="margin:0;display:inline-block;padding:16px 22px;background:#0b0d14;border:2px solid #fbbf24;border-radius:8px;font-family:ui-monospace,Menlo,Consolas,'Courier New',monospace;font-size:30px;font-weight:700;letter-spacing:6px;white-space:nowrap;color:#f8fafc;">{{ .Token }}</p>
       </td></tr>
       <tr><td align="center" style="padding:8px 24px 24px;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;font-size:13px;color:#94a3b8;">
         Type it in the app. It works once, for a short while.
