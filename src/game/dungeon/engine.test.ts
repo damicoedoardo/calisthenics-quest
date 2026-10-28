@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { powerOf, ZONES } from '@/lib/fog';
 import { initialState } from '@/lib/game';
-import { HUMAN, SP_SKILL } from '@/balance';
+import { HUMAN, SP_SKILL, SP_WEAPON } from '@/balance';
 import { seeded } from '@/lib/random';
 import { botInput, playRun } from './bot';
 import { rollItem } from './items';
@@ -448,13 +448,15 @@ describe('SP moves and weapons', () => {
     expect(Math.hypot(f.x - h.x, f.y - h.y)).toBeLessThan(60);
   });
 
-  it('Harpoon hits the monster in front of you and drags it to you', () => {
+  it('Harpoon hits the monster in front of you and drags it into lance reach, not onto you', () => {
     const run = spRoom('warrior', 3, [[0, -200]]),
       f = run.foes[0],
       h = run.hero;
     stepRun(run, { ...still, skill: true });
     expect(f.hp).toBeLessThan(f.maxHp);
-    expect(Math.hypot(f.x - h.x, f.y - h.y)).toBeLessThan(45);
+    const d = Math.hypot(f.x - h.x, f.y - h.y);
+    expect(d).toBeGreaterThan(80);
+    expect(d).toBeLessThan(SP_WEAPON.lance.reach ?? 0);
     expect(takeEvents(run).find((e) => e.type === 'sp')).toMatchObject({ id: 'harpoon', to: { y: h.y - 200 } });
   });
 

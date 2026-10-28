@@ -34,7 +34,7 @@ Accept intended snapshot changes with `pnpm test -u`, and say in the PR why they
   ln of the scale) and usually lands in two or three measurements per zone, with all zones
   searched at once. Every measurement plays the same seeds, so two scales compare fairly. Each run
   starts with the snapshot's points (`build`) in what a player keeps by then (`seasonedKit`), so items the bot finds can be worn,
-  and from `SP_MODEL_AT` workouts on with the SP (`NOSP=1` plays without it, `SP=2` to `4` wears that SP instead of the first).
+  and from `SP_MODEL_AT` workouts on with the SP (`NOSP=1` plays without it, `SP=2` to `4` wears that SP instead of the first). `WEAPON='{"hammer":{"cut":0}}'` tries other numbers for an SP weapon, and `OUT=file.json` writes every run (won, seconds, hits taken) per snapshot and class, to compare SPs in a script.
 - **Keeping the sims fast**: a run is ~20 game minutes at 60 steps a second, so the engine's
   per-step loops are the cost. Distance checks go through `closer` / `farther` in `engine.ts`
   (a box test, then the exact `Math.hypot`), and lists are only rebuilt when something leaves.

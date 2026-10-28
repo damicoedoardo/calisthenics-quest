@@ -1,6 +1,6 @@
 import { HUMAN } from '@/balance';
 import { clamp, HERO_SPEED, RANGE } from '../rules';
-import { abilityReady, attackKind, finalReady, skillReady, BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup } from './engine';
+import { abilityReady, attackKind, finalReady, skillReady, BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup, type SpMoveId } from './engine';
 
 /* The bot: a steady, careful player on a phone, not a great one (how human: HUMAN in
    src/balance/dungeon.ts). It notices a shot only after a reaction of its own, misses more of them
@@ -365,13 +365,74 @@ function decide(run: Run, h: Hero): Input {
   // The dodge: through a shot that's about to land, along the way it was already stepping.
   // Sometimes it misses the moment.
   const dodge = imminent && hash(tick, 4) >= HUMAN.dodgeMiss && now >= h.dodgeAt && !(h.charge && now < h.charge.until);
-  // With an SP on: its own move when something is close, the final in a crowd or on a boss.
+  // With an SP on: each move when it helps (SP_USE below).
   if (!h.sp) return { x: mx, y: my, ability, dodge };
   const fight = !run.cleared,
-    skill = fight && skillReady(run, h) >= 1 && (nd < 150 || !!b),
-    final = fight && finalReady(h) >= 1 && (close >= 4 || !!b || h.hp < h.maxHp * 0.35);
+    seen: Sense = { nd, close, danger, imminent, boss: b ? Math.hypot(b.x - h.x, b.y - h.y) : Infinity, low: h.hp < h.maxHp * 0.4 },
+    skill = fight && skillReady(run, h) >= 1 && SP_USE[h.sp.skill](seen),
+    final = fight && finalReady(h) >= 1 && SP_USE[h.sp.final](seen);
   return { x: mx, y: my, ability, dodge, skill, final };
 }
+
+/** What the bot weighs before an SP move: the nearest monster (not the boss), how many are
+    within 170, how much is coming at it, a hit about to land, the boss (Infinity without one), and
+    low HP. */
+interface Sense {
+  nd: number;
+  close: number;
+  danger: number;
+  imminent: boolean;
+  boss: number;
+  low: boolean;
+}
+
+/** In reach: the nearest monster within `d`, or the boss. */
+const reach = (d: number) => (s: Sense) => s.nd < d || s.boss < d;
+/** A crowd, a boss in the room, or low HP: worth a final. */
+const big = (s: Sense) => s.close >= 3 || s.boss < Infinity || s.low;
+/** Shots or a charge about to land, or a crowd on you: worth a guard. */
+const pressed = (s: Sense) => s.imminent || s.danger > 2 || (s.close >= 3 && s.nd < 90);
+
+/** When the bot uses each SP move, as a player would: attacks when something is in reach, guards
+    just before a hit, heals when hurt, finals in a crowd or on the boss. */
+const SP_USE: Record<SpMoveId, (s: Sense) => boolean> = {
+  // warrior
+  leap: reach(240),
+  inferno: (s) => s.close >= 3 || s.boss < 140 || (s.low && s.close >= 1),
+  shieldwall: pressed,
+  judgment: (s) => s.boss < Infinity || s.close >= 3,
+  harpoon: (s) => s.nd > 100 && s.nd < 250,
+  tidalcharge: big,
+  reap: reach(220),
+  soulharvest: (s) => s.close >= 3 || s.boss < Infinity || (s.low && s.close >= 1),
+  // archer
+  piercing: reach(380),
+  arrowrain: (s) => s.close >= 3 || s.boss < 300,
+  bomb: reach(280),
+  barrage: big,
+  call: (s) => s.nd < 380 || s.boss < Infinity,
+  pack: big,
+  vanish: (s) => pressed(s) || s.low || s.boss < 120,
+  thousandcuts: big,
+  // mage
+  firewall: reach(150),
+  meteor: (s) => s.boss < 300 || s.close >= 3,
+  bubble: (s) => s.nd < 260 && (s.danger > 0.5 || s.nd < 110),
+  tsunami: (s) => big(s) || pressed(s),
+  blessing: (s) => s.low || (pressed(s) && s.danger > 3),
+  radiance: (s) => big(s) || pressed(s),
+  curse: (s) => s.boss < 240 || s.nd < 200,
+  voidedge: big,
+  // monk
+  risingdragon: (s) => s.nd < 100 || s.boss < 110,
+  dragonroar: big,
+  pounce: reach(340),
+  hundredclaws: (s) => s.boss < Infinity || s.close >= 2,
+  tidespin: pressed,
+  riverdance: big,
+  kiwave: reach(340),
+  spiritbomb: (s) => s.boss < 320 || s.close >= 3,
+};
 
 /** Plays one whole run with the bot, as fast as the computer goes. */
 export function playRun(setup: RunSetup): RunEnd {
