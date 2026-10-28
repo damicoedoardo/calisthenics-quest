@@ -1,0 +1,212 @@
+import { botInput } from '../dungeon/bot';
+import { createRun, dropFromBag, pick, pickRelic, stepRun, takeOff, takeStairs, wear, type Hero, type HeroSetup, type Input, type Run } from '../dungeon/engine';
+import { BOT_PICKS } from '../rules';
+import { zoneByCode } from '@/lib/fog';
+import { snapshot, type Press, type Start, type Up } from './wire';
+
+/* One party's live run on the game server: who's in, what each has pressed, and the one real run.
+   The server (play/server.ts) only moves messages; every rule is here, and tested without sockets.
+   A hero whose phone is gone (locked, closed) is played by the bot until it's back, so the run
+   never stops for the others. */
+
+interface Seat {
+  user: string;
+  hero: HeroSetup;
+  /** The phone is connected. */
+  online: boolean;
+  /** Steps pressed and not yet played. */
+  queue: Press[];
+  /** The stick as last pressed, held while nothing new comes. */
+  stick: { x: number; y: number };
+  /** The last of their steps the run has played. */
+  ack: number;
+  /** Since when their pick has waited (real seconds), or null. */
+  askedAt: number | null;
+}
+
+const still: Input = { x: 0, y: 0, ability: false };
+
+/** How the live run waits on people (real seconds), and how far ahead a phone may run (steps). */
+export const NET = {
+  /** After the first phone walks in, how long the rest have to join before the run starts without them. */
+  waitSeconds: 15,
+  /** A pick or the stairs hold the run for everyone; past this, the bot picks (deeper, for the stairs). */
+  pickSeconds: 15,
+  /** Steps kept from a phone that's ahead of the server. */
+  maxQueue: 8,
+};
+
+export class Room {
+  readonly users: string[];
+  readonly zone: number;
+  readonly seed: number;
+  private seats = new Map<string, Seat>();
+  private firstAt: number | null = null;
+  private order: string[] = [];
+  run: Run | null = null;
+  /** How the run began, for a phone that comes back to it. */
+  started: Start | null = null;
+  private stairsAt: number | null = null;
+
+  /** `users`: the party's members when the leader started, in the party's order. */
+  constructor(users: string[], zone: number, seed: number) {
+    this.users = users;
+    this.zone = zone;
+    this.seed = seed;
+  }
+
+  /** A phone says hello. Before the start anyone in the party sits down; after it, only a hero
+      already in the run comes back. */
+  join(user: string, hero: HeroSetup, now: number): boolean {
+    if (!this.users.includes(user)) return false;
+    const seat = this.seats.get(user);
+    if (this.run && !seat) return false;
+    if (seat) {
+      seat.online = true;
+      seat.queue = [];
+      if (!this.run) seat.hero = hero;
+    } else this.seats.set(user, { user, hero, online: true, queue: [], stick: { x: 0, y: 0 }, ack: 0, askedAt: null });
+    this.firstAt ??= now;
+    return true;
+  }
+
+  leave(user: string) {
+    const seat = this.seats.get(user);
+    if (!seat) return;
+    if (this.run) seat.online = false;
+    else this.seats.delete(user);
+  }
+
+  get here(): string[] {
+    return this.users.filter((u) => this.seats.get(u)?.online);
+  }
+
+  /** Everyone is here, or the wait is over and at least one is: time to begin. */
+  due(now: number): boolean {
+    if (this.run || this.firstAt === null || this.here.length === 0) return false;
+    return this.here.length === this.users.length || now - this.firstAt >= NET.waitSeconds;
+  }
+
+  /** Begin the run with whoever is here, in the party's order. */
+  begin(): Start {
+    this.order = this.users.filter((u) => this.seats.has(u));
+    const heroes = this.order.map((u) => this.seats.get(u)!.hero),
+      zone = zoneByCode(this.zone);
+    if (!zone) throw new Error(`No zone ${this.zone}`);
+    this.run = createRun({ ...heroes[0], zone, seed: this.seed, friends: heroes.slice(1) });
+    this.started = { zone: this.zone, seed: this.seed, heroes, users: this.order };
+    return this.started;
+  }
+
+  /** Your place in the run (its order), or -1. */
+  placeOf(user: string): number {
+    return this.order.indexOf(user);
+  }
+
+  /** What a phone sent, besides hello. */
+  take(user: string, m: Exclude<Up, { t: 'hello' }>) {
+    const seat = this.seats.get(user),
+      run = this.run,
+      h = run?.party[this.placeOf(user)];
+    if (!seat || !run || !h) return;
+    switch (m.t) {
+      case 'in':
+        seat.queue.push(...m.steps.slice(-NET.maxQueue));
+        // A phone far ahead of the server: keep the newest steps, and any button pressed in the rest.
+        if (seat.queue.length > NET.maxQueue) {
+          const gone = seat.queue.splice(0, seat.queue.length - NET.maxQueue),
+            first = seat.queue[0];
+          for (const g of gone) {
+            first.ability ||= g.ability;
+            first.skill ||= g.skill;
+            first.final ||= g.final;
+            first.dodge ||= g.dodge;
+            if (g.lock !== undefined && first.lock === undefined) first.lock = g.lock;
+          }
+        }
+        break;
+      case 'pick':
+        if (h.offer?.choices.includes(m.id)) pick(run, m.id, h);
+        break;
+      case 'relic':
+        if (h.relicOffer?.includes(m.id)) pickRelic(run, m.id, h);
+        break;
+      case 'stairs':
+        this.stairs(m.choice);
+        break;
+      case 'wear':
+        wear(run, m.id, h);
+        break;
+      case 'takeOff':
+        takeOff(run, m.slot, h);
+        break;
+      case 'drop':
+        dropFromBag(run, m.id, h);
+        break;
+    }
+  }
+
+  private stairs(choice: 'deeper' | 'leave' | 'stay') {
+    if (!this.run) return;
+    this.stairsAt = null;
+    takeStairs(this.run, choice);
+  }
+
+  /** One engine step for everyone, at `now` (real seconds). */
+  tick(now: number) {
+    const run = this.run;
+    if (!run || run.over) return;
+    const inputs = run.party.map((h, i) => this.inputFor(this.seats.get(this.order[i])!, h));
+    stepRun(run, inputs);
+    this.waitOnPicks(now);
+  }
+
+  private inputFor(seat: Seat, h: Hero): Input {
+    const run = this.run!;
+    if (!seat.online) return botInput(run, h);
+    const p = seat.queue.shift();
+    if (!p) return { ...still, ...seat.stick };
+    seat.ack = p.seq;
+    seat.stick = { x: p.x, y: p.y };
+    const { seq: _seq, ...input } = p;
+    return input;
+  }
+
+  /** A pick holds the run for everyone, so it can't wait long: a phone that's gone, or slow, gets
+      the bot's pick. The stairs likewise go deeper. (The run's own clock stands still meanwhile.) */
+  private waitOnPicks(t: number) {
+    const run = this.run!;
+    run.party.forEach((h, i) => {
+      const seat = this.seats.get(this.order[i])!;
+      if (!h.offer && !h.relicOffer) {
+        seat.askedAt = null;
+        return;
+      }
+      seat.askedAt ??= t;
+      if (seat.online && t - seat.askedAt < NET.pickSeconds) return;
+      if (h.offer) pick(run, BOT_PICKS.find((id) => h.offer!.choices.includes(id)) ?? h.offer.choices[0], h);
+      if (h.relicOffer) pickRelic(run, h.relicOffer[0], h);
+      seat.askedAt = null;
+    });
+    if (run.stairsAsk) {
+      this.stairsAt ??= t;
+      if (this.here.length === 0 || t - this.stairsAt >= NET.pickSeconds) this.stairs('deeper');
+    }
+  }
+
+  /** The run now, for every phone; the events go out with it once. */
+  snapshot(): string {
+    const run = this.run!,
+      text = snapshot(
+        run,
+        run.party.map((_, i) => this.seats.get(this.order[i])!.ack),
+      );
+    run.events = [];
+    return text;
+  }
+
+  /** The run is over and everyone has been told, or nobody is left. */
+  get done(): boolean {
+    return !!this.run?.over || (!!this.run && this.here.length === 0);
+  }
+}

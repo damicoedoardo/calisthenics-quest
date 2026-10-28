@@ -9,7 +9,7 @@ import { music } from '@/lib/music';
 import { setStatsShared, statsConfigured, useStatsShared } from '@/lib/analytics-client';
 import type { GameState } from '@/lib/game';
 import { planExercises } from '@/lib/program';
-import { exportState, inSandbox, parseImport } from '@/lib/store';
+import { exportState, offRecord, parseImport } from '@/lib/store';
 import { storyState } from '@/story/engine';
 
 /* The You page: what is about you, not the game. Opened by tapping your hero at the top of the
@@ -20,12 +20,14 @@ interface Props {
   update: (fn: (s: GameState) => GameState) => void;
   onReplayOpening: () => void;
   onClose: () => void;
+  /** Developer mode's switch: only on the developer's account. On, the app plays a separate developer save. */
+  devSwitch?: { on: boolean; set: (on: boolean) => void };
 }
 
 const exerciseName = (id: string) => planExercises().find((x) => x.id === id)?.name ?? id;
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
-export function YouPage({ state, update, onReplayOpening, onClose }: Props) {
+export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: Props) {
   const box = useModal<HTMLDivElement>(onClose);
   const menuMusic = useMenuMusic();
   const statsShared = useStatsShared();
@@ -136,6 +138,15 @@ export function YouPage({ state, update, onReplayOpening, onClose }: Props) {
                 <input type="checkbox" checked={statsShared} onChange={(e) => setStatsShared(e.target.checked)} className="h-5 w-5 accent-gold-400" />
               </label>
             )}
+            {devSwitch && (
+              <label className="flex min-h-[44px] items-center justify-between text-sm text-sky-300">
+                <span>
+                  Developer mode
+                  <span className="block text-xs text-slate-500">{devSwitch.on ? 'On: a separate developer save. Off takes you back to your hero as you left it.' : 'Only on your account. On, it plays a copy of your hero; your hero is never touched.'}</span>
+                </span>
+                <input type="checkbox" checked={devSwitch.on} onChange={(e) => devSwitch.set(e.target.checked)} className="h-5 w-5 accent-sky-400" />
+              </label>
+            )}
             <button
               onClick={() => {
                 onClose();
@@ -165,7 +176,7 @@ export function YouPage({ state, update, onReplayOpening, onClose }: Props) {
               </label>
             </div>
             {backupMsg && <p className="mt-2 text-center text-xs text-gold-300">{backupMsg}</p>}
-            <CloudSave sandbox={inSandbox()} />
+            <CloudSave sandbox={offRecord()} />
           </section>
         </div>
       </div>

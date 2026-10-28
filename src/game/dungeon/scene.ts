@@ -69,6 +69,8 @@ import {
   type Foe,
   type FreePick,
   type GameEvent,
+  type Hero,
+  type Input,
   type MonsterKind,
   type RelicId,
   type Run,
@@ -76,6 +78,8 @@ import {
   type RunEnd as EngineEnd,
   type ShotStyle,
 } from './engine';
+import { applySnapshot, runFromStart, type Press, type Up } from '../net/wire';
+import type { PlayLink } from '@/lib/play-client';
 
 /* Draws a dungeon run. The engine (engine.ts) plays the game; this scene only reads it each frame,
    keeps a sprite for everything in it, and turns what happened (its events) into flashes, sparks,
@@ -156,6 +160,9 @@ export interface RunSetup {
   /** Friends in the run (a practice run: bots play them), each with their own sheets
       (`friend<i>`, `friend<i>Walk`) and their name over their head. */
   friends?: { name: string; classId: ClassId | undefined; idle: Sheet; walk: Sheet }[];
+  /** A live party run: the game server plays the one real run (src/game/net), this phone shows it
+      and looks a few steps ahead with what you press. `friends` are the others, in the run's order. */
+  net?: PlayLink;
   /** The opening's first dungeon, and the line the Hollow says at its bottom. */
   tutorial?: { voice: string };
 }
@@ -221,6 +228,9 @@ export interface RunEvents {
   loot: (item: Item) => void;
   /** On the stairs: go deeper, leave with what you carry, or not yet (answer with `stairs`). */
   stairs: () => void;
+  /** A live run: someone else answered the stairs, or the server picked for you after a long wait;
+      close the card that asked. */
+  dismiss?: () => void;
   end: (r: RunEnd) => void;
 }
 
@@ -252,6 +262,13 @@ export interface RunHandle {
   autopilot: (on: boolean) => void;
   destroy: () => void;
 }
+
+/** A live run: after you pick or answer the stairs, the server's next few runs may still ask (they
+    left before your answer got there). They're not asked again for this long (ms). */
+const ANSWER_MS = 800;
+/** A live run: steps pressed are sent this often (ms), and at most this many wait for the server. */
+const SEND_MS = 50;
+const PENDING = 30;
 
 const SFX: Record<'slash' | 'arrow' | 'orb' | 'wave', SfxId> = { slash: 'slash', arrow: 'arrow', orb: 'orb', wave: 'wave' };
 const HEAL = '#86efac';
@@ -474,6 +491,14 @@ class DungeonScene extends Phaser.Scene {
   private paused = false;
   /** Friends' heroes on screen, in party order after you. */
   private friends: { sprite: Phaser.GameObjects.Sprite; name: Phaser.GameObjects.Text; key: string }[] = [];
+  /** A live run: the line to the server, your steps numbered, the ones it hasn't played yet, the
+      ones not sent yet, and when you last answered a card. */
+  private net: PlayLink | null = null;
+  private seq = 0;
+  private pending: Press[] = [];
+  private outbox: Press[] = [];
+  private sentAt = 0;
+  private answeredAt = -1e9;
 
   constructor(
     private setup: RunSetup,
@@ -481,6 +506,11 @@ class DungeonScene extends Phaser.Scene {
   ) {
     super('dungeon');
     this.theme = themeFor(setup.zone.id);
+    this.net = setup.net ?? null;
+    if (this.net) {
+      this.run = runFromStart(this.net.start, this.net.me);
+      return;
+    }
     this.run = createRun({
       zone: setup.zone,
       power: setup.power,
@@ -1218,10 +1248,12 @@ class DungeonScene extends Phaser.Scene {
   // ---------- the loop ----------
 
   update(_time: number, deltaMs: number) {
-    if (this.ended || this.paused) return;
+    // A live run goes on for the others while you look at the bag or the menu.
+    if (this.ended || (this.paused && !this.net)) return;
     const run = this.run;
     // Hit-stop: for a few frames nothing moves, so a big hit lands. The engine's steps just wait.
-    if (this.time.now < this.stopUntil) {
+    // (Not in a live run: the server's run doesn't wait.)
+    if (!this.net && this.time.now < this.stopUntil) {
       this.drawFx();
       this.drawPad();
       this.drawVignette();
@@ -1229,17 +1261,13 @@ class DungeonScene extends Phaser.Scene {
     }
     this.acc += Math.min(deltaMs, 100);
     let steps = 0;
-    while (this.acc >= STEP * 1000 && steps < 6) {
+    if (this.net) this.live();
+    while (!this.net && this.acc >= STEP * 1000 && steps < 6) {
       this.acc -= STEP * 1000;
       steps++;
-      const mine = this.bot ? botInput(run) : { ...this.stickInput(), ability: this.wantAbility, skill: this.wantSkill, final: this.wantFinal, dodge: this.wantDodge, lock: this.wantLock };
+      const mine = this.myInput();
       // Friends in a practice run are played by the bot.
       const input = run.party.length > 1 ? [mine, ...run.party.slice(1).map((h) => botInput(run, h))] : mine;
-      this.wantAbility = false;
-      this.wantSkill = false;
-      this.wantFinal = false;
-      this.wantDodge = false;
-      this.wantLock = undefined;
       stepRun(run, input);
       for (const e of takeEvents(run)) this.react(e);
       // Friends' picks are the bot's, so the run never waits on them.
@@ -1248,6 +1276,12 @@ class DungeonScene extends Phaser.Scene {
         if (h.relicOffer) pickRelic(run, h.relicOffer[0], h);
       }
       if (run.hero.offer || run.over || run.stairsAsk || this.time.now < this.stopUntil) break;
+    }
+    // A live run: a card the server no longer asks (someone else answered, or it picked for you).
+    if (this.net && ((this.asked && !run.stairsAsk) || (this.offered && !run.hero.offer && !run.hero.relicOffer))) {
+      this.asked = false;
+      this.offered = false;
+      this.bus.dismiss?.();
     }
     if (run.stairsAsk && !this.asked) {
       this.asked = true;
@@ -1282,6 +1316,7 @@ class DungeonScene extends Phaser.Scene {
     }
     if (run.over && !this.ended) {
       this.ended = true;
+      this.net?.close();
       // The boss's last words: beaten, at peace, or the mountain still above you.
       if ((run.over.won && !run.home) || run.climb !== null) {
         this.speak(this.setup.lines?.end, 3000);
@@ -1292,6 +1327,75 @@ class DungeonScene extends Phaser.Scene {
       else this.hero.setTint(0x6b7280);
       this.time.delayedCall(run.home ? 300 : run.over.won ? 1200 : 900, () => this.bus.end(recap(run)));
     }
+  }
+
+  /** What you press this step (the bot's, on autopilot). Buttons count once. */
+  private myInput(): Input {
+    const input: Input = this.bot ? botInput(this.run) : { ...this.stickInput(), ability: this.wantAbility, skill: this.wantSkill, final: this.wantFinal, dodge: this.wantDodge, lock: this.wantLock };
+    this.wantAbility = false;
+    this.wantSkill = false;
+    this.wantFinal = false;
+    this.wantDodge = false;
+    this.wantLock = undefined;
+    // A live run doesn't stop for your bag or menu: you just stand still.
+    return this.paused ? { x: 0, y: 0, ability: false } : input;
+  }
+
+  /** A live run, each frame: put in what the server sent, play your steps it hasn't yet on top of
+      it, then look ahead with what you press now, and send that. Only the server's events are
+      played (sounds, hits, new rooms), so nothing happens twice. */
+  private live() {
+    const net = this.net!,
+      run = this.run;
+    const texts = net.take();
+    if (texts.length) {
+      const events: GameEvent[] = [];
+      let ack = 0;
+      for (const t of texts) {
+        const got = applySnapshot(run, t, net.me);
+        events.push(...got.events);
+        ack = got.ack[net.me] ?? 0;
+      }
+      if (this.time.now - this.answeredAt < ANSWER_MS) {
+        run.hero.offer = null;
+        run.hero.relicOffer = null;
+        run.stairsAsk = false;
+      }
+      this.pending = this.pending.filter((p) => p.seq > ack);
+      for (const p of this.pending) this.ahead(p);
+      for (const e of events) this.react(e);
+    }
+    let steps = 0;
+    while (this.acc >= STEP * 1000 && steps < 6) {
+      this.acc -= STEP * 1000;
+      steps++;
+      const p: Press = { seq: ++this.seq, ...this.myInput() };
+      this.pending.push(p);
+      this.outbox.push(p);
+      if (this.pending.length > PENDING) this.pending.shift();
+      this.ahead(p);
+    }
+    if (this.outbox.length && this.time.now - this.sentAt >= SEND_MS) {
+      net.send({ t: 'in', steps: this.outbox.splice(0) });
+      this.sentAt = this.time.now;
+    }
+  }
+
+  /** One step of looking ahead: you as pressed, the others going on the way they were going. */
+  private ahead(p: Press) {
+    const run = this.run,
+      guess = (h: Hero): Input => {
+        const v = Math.hypot(h.vx, h.vy);
+        return v > 1e-3 ? { x: h.vx / v, y: h.vy / v, ability: false } : { x: 0, y: 0, ability: false };
+      };
+    stepRun(run, [p, ...run.party.slice(1).map(guess)]);
+    run.events.length = 0;
+  }
+
+  /** A live run: tell the server, and hold off its next few asks. */
+  private answer(m: Up) {
+    this.net!.send(m);
+    this.answeredAt = this.time.now;
   }
 
   private botPick(choices: UpgradeId[]): UpgradeId {
@@ -2817,6 +2921,8 @@ class DungeonScene extends Phaser.Scene {
 
   pick(id: UpgradeId) {
     this.offered = false;
+    if (this.net) this.answer({ t: 'pick', id });
+    if (!this.run.hero.offer?.choices.includes(id)) return;
     pick(this.run, id);
     const h = this.hero;
     this.fade(450, (g, p) => g.lineStyle(4 * (1 - p) + 1, 0xfbbf24, 0.9 * (1 - p)).strokeCircle(h.x, h.y, 24 + 80 * p));
@@ -2840,7 +2946,7 @@ class DungeonScene extends Phaser.Scene {
 
   setPaused(on: boolean) {
     this.paused = on;
-    this.run.paused = on;
+    if (!this.net) this.run.paused = on;
     // A key held down when the run stopped doesn't keep walking you once it goes on.
     this.input?.keyboard?.resetKeys();
   }
@@ -2858,6 +2964,8 @@ class DungeonScene extends Phaser.Scene {
 
   pickRelic(id: RelicId) {
     this.offered = false;
+    if (this.net) this.answer({ t: 'relic', id });
+    if (!this.run.hero.relicOffer?.includes(id)) return;
     pickRelic(this.run, id);
     for (const e of takeEvents(this.run)) this.react(e);
     const h = this.hero;
@@ -2865,9 +2973,14 @@ class DungeonScene extends Phaser.Scene {
   }
 
   /** The bag panel's buttons: the page pauses the run while it's open. */
-  gear(fn: () => void) {
+  gear(fn: () => void, m: Up) {
     fn();
     this.wearLook();
+    // A live run: the server does it too, and its events are the ones played.
+    if (this.net) {
+      this.net.send(m);
+      this.run.events.length = 0;
+    }
     for (const e of takeEvents(this.run)) this.react(e);
     this.syncLoot();
     this.bus.hud(this.hud());
@@ -2875,6 +2988,12 @@ class DungeonScene extends Phaser.Scene {
 
   stairsChoice(choice: 'deeper' | 'leave' | 'stay') {
     this.asked = false;
+    // A live run: the server takes everyone down (or not); its next run shows the new floor.
+    if (this.net) {
+      this.answer({ t: 'stairs', choice });
+      this.run.stairsAsk = false;
+      return;
+    }
     takeStairs(this.run, choice);
     for (const e of takeEvents(this.run)) this.react(e);
   }
@@ -2942,13 +3061,14 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
     fillFinal: () => scene.fillFinal(),
     cycleTheme: () => scene.cycleTheme(),
     pickRelic: (id) => scene.pickRelic(id),
-    wear: (id) => scene.gear(() => wear(scene.run, id)),
-    takeOff: (slot) => scene.gear(() => takeOff(scene.run, slot)),
-    dropItem: (id) => scene.gear(() => dropFromBag(scene.run, id)),
+    wear: (id) => scene.gear(() => wear(scene.run, id), { t: 'wear', id }),
+    takeOff: (slot) => scene.gear(() => takeOff(scene.run, slot), { t: 'takeOff', slot }),
+    dropItem: (id) => scene.gear(() => dropFromBag(scene.run, id), { t: 'drop', id }),
     stairs: (choice) => scene.stairsChoice(choice),
     winNow: () => scene.winNow(),
     autopilot: (on) => (scene.bot = on),
     destroy: () => {
+      setup.net?.close();
       sized?.disconnect();
       game.destroy(true);
     },

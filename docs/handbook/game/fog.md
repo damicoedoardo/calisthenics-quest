@@ -8,7 +8,7 @@ timestamp: 2026-10-28
 
 # The Fog
 
-The Fog tab's game: a short dungeon crawl where class, skills and gear matter and you can lose.
+The Play tab's game: a short dungeon crawl where class, skills and gear matter and you can lose.
 It follows the rule "training earns, play spends" (see [../product/overview.md](../product/overview.md)):
 runs are free to replay, gear comes only from the dungeon, and only real training makes you
 stronger and lets you wear what you find. Dying costs what you wore and carried, never points,
@@ -32,7 +32,7 @@ level or story.
   chapter's hearts are gone (all its workouts done) and its boss still stands, `edgeFor` gives the
   run an `Edge`: the boss fights with `EDGE.bossHp` of its HP (the Knight with that share of his
   plates), and each workout since starts a run with one more free skill (`'past'` picks, up to
-  `EDGE.picks`). Playing well still beats it sooner. The Fog tab's ready strip says how many hearts are left,
+  `EDGE.picks`). Playing well still beats it sooner. The Play tab's ready strip says how many hearts are left,
   or what the edge gives (`BossEdge` in `PlayTab.tsx`).
 - The Ember Road's runs (`ROAD_ZONES`, played Together) are story zones in other clothes: same
   `id`, dungeon and boss fight, the road's own names and words, and `guide: 'Tamsin'` speaks after
@@ -46,15 +46,16 @@ level or story.
   (`worn`) and the vault at home (`vault`, `vaultSize` grows with workouts). `wornFor` is what you
   walk in with: only what your hero level and points let you wear today (`heroLevel` in
   `src/lib/game.ts`); the rest stays home, safe.
-  `settleGear` runs after `recordRun`: a win or a walk out by the stairs keeps what you wore and
-  puts the bag in the vault (the best first, the rest left behind if it's full); dying loses all
-  of it, except the one item your flame holds and gear forged to +10 or more, which comes home a few pluses lower (see [forge.md](forge.md)). Mid-run, `atRisk` says
-  the same thing ahead of time (what a fall would take, what the flame would hold, or would hold
-  if you trained), for the HUD's bag, the bag panel and the stairs card. In the bag panel each item carries a green
+  `settleGear` runs after `recordRun`. What you wear always comes home, so forged gear is never
+  lost (see [forge.md](forge.md)). A win or a walk out by the stairs also puts the bag in the vault
+  (the best first, the rest left behind if it's full); a fall loses what you found that run and
+  still carry in the bag. Anything you brought from home comes back even if you took it off into
+  the bag mid-run. Mid-run, `atRisk` lists the same thing ahead of time (what a fall would take),
+  for the HUD's bag, the bag panel and the stairs card. In the bag panel each item carries a green
   ▲ or red ▼ against what you wear in its slot (`betterBy`), and its card says by how much. What a full vault can't take
   is melted into embers. `wearFromVault` and `takeOffToVault` are the vault's buttons
   (`FogGearCard`), and "Melt down" is the forge's `salvage`. The items themselves are in
-  [dungeon.md](dungeon.md); Mira's forge and the flame in [forge.md](forge.md).
+  [dungeon.md](dungeon.md); Mira's forge in [forge.md](forge.md).
 
 Tested in `src/lib/fog.test.ts` and `src/lib/fog-gear.test.ts`.
 

@@ -50,7 +50,7 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change how fast you cross a cleared room | `CLEAR_RUN` in `content.ts` (the engine multiplies the hero's speed by it once a room has no monsters; the scene quickens the steps and the dust) |
 | Change how much of the room the screen shows | `FIT` and `fitScreen` in `scene.ts` |
 | Change the run's HUD (HP and XP, floor and depth, bag, pause, ability buttons) | `Vitals`, `DepthMap`, `BagButton`, `AbilityButton` in `src/components/FogRun.tsx`; the safe-area classes `run-t`/`run-b`/`run-l`/`run-r`/`run-x` in `src/app/globals.css` |
-| Change what the run shows is at risk if you fall | `atRisk` in `src/lib/fog-gear.ts`; `RiskLine` and `Guarded` (the flame's badge) in `src/components/FogRun.tsx` |
+| Change what the run shows is at risk if you fall | `atRisk` in `src/lib/fog-gear.ts`; `RiskLine` in `src/components/FogRun.tsx` |
 | Change how a floor is laid out (how many rooms, branches, shortcuts) | `LAYOUT` and `ROOM_ODDS` in `content.ts`, `makeFloor` in `engine.ts` |
 | Change the minimap | `FloorMap` in `src/components/FogRun.tsx` (it reads `Hud.map`, built by `miniMap` in `scene.ts`) |
 | Change what a door says | `doorLook` in `scene.ts` (unknown rooms show `UNKNOWN`) |
@@ -157,12 +157,16 @@ party order. The rules treat every hero the same:
   Harvest and Stillness heal them the same share of their own HP (`healFriends`); Shield Wall,
   Blessing and Tide Spin make them untouchable and clear the shots round them too. Curse, Bubble
   and Radiance already help everyone (any hit on a cursed monster lands harder).
-- A pick (skill or chest item) by anyone still holds the whole run (`choosing`): that changes with
-  the game server. The Summit's friends walk beside you.
+- A pick (skill or chest item) by anyone holds the whole run (`choosing`); in a live run the
+  server picks for a phone that takes too long ([../backend/live-runs.md](../backend/live-runs.md)).
+  The Summit's friends walk beside you.
 - The friend bots (`botInput` for a hero other than you) get a friend up first, then follow you to
   the door or stairs you wait at.
 
-**A practice party run** (until the game server exists): the scene takes `RunSetup.friends`
+**A live party run**: the game server plays the run and the scene follows it (`RunSetup.net`,
+`live()` in `scene.ts`); see [../backend/live-runs.md](../backend/live-runs.md).
+
+**A practice party run** (no game server, or "Try again"): the scene takes `RunSetup.friends`
 (name, class and their own hero sheets from `friendSheets` in `src/game/sheets.ts`) and `seed`,
 gives each friend your strength in their own class, steps them with `botInput`, takes their picks
 for them, and draws them with their name over their head (grey while down). Started from a
@@ -243,11 +247,10 @@ carried, never the starter kit; `src/lib/fog-gear.ts` settles it into the save
 loot once a room is clear.
 
 What you'd lose is always on show: `atRisk` (`src/lib/fog-gear.ts`, the same rule as
-`settleGear`) says which worn item the flame would hold (`held`, the `guard` slot while you've
-trained in the last 2 days), which one it would hold if you trained (`cold`), and what the Fog
-would take (`lost`; never the starter kit). The bag button in the HUD has a red count of `lost`
-and a small flame while one is held; the bag panel and the stairs card show the tiles
-(`RiskLine`), with a flame badge (`Guarded`) on the kept one: "Kept by Pip if you fall".
+`settleGear`) lists what the Fog would take: items found this run and still in the bag (never
+what you wear, what you brought from home, or the starter kit). The bag button in the HUD has a
+red count of them; the bag panel and the stairs card show the tiles (`RiskLine`), and each item's
+card in the bag says whether a fall would take it.
 
 ## Sideways on screen
 

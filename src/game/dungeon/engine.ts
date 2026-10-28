@@ -413,7 +413,7 @@ export interface RunEnd {
   hits?: number;
   /** 'left' is walking out by the stairs: not a win, but you keep what you carry. */
   why: 'boss' | 'hp' | 'limit' | 'left';
-  /** What you wore and carried at the end (the starter kit left out). Lost unless you won or left. */
+  /** What you wore and carried at the end (the starter kit left out). A fall loses what you found in the bag. */
   gear: { worn: Partial<Record<ItemSlot, Item>>; bag: Item[] };
   /** How many ledges of the Summit's climb you went up, or null off the Summit. */
   height: number | null;

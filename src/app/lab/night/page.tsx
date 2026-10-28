@@ -55,12 +55,10 @@ function onRoad(beaten: number, walked: number): GameState {
   return s;
 }
 
-/** A veteran with points spent and Fog gear: a sword (the flame guards it) and a charm on, a few things in
-    the vault, one they can't wear yet. `idle` moves every workout that many days back, so the
-    flame has gone cold and can't hold the sword. */
-function geared(idle = 0): GameState {
-  const v = veteran(14, 1),
-    s = spendEvenly(idle ? { ...v, sessions: v.sessions.map((x) => ({ ...x, date: new Date(Date.parse(x.date) - idle * DAY).toISOString() })) } : v),
+/** A veteran with points spent and Fog gear: a sword and a charm on, a few things in
+    the vault, one they can't wear yet. */
+function geared(): GameState {
+  const s = spendEvenly(veteran(14, 1)),
     rnd = seeded(12),
     find = (slot: Item['slot'], rarity: Item['rarity'], floor: number) => {
       for (;;) {
@@ -68,7 +66,7 @@ function geared(idle = 0): GameState {
         if (it.slot === slot) return it;
       }
     };
-  return { ...s, fogGear: { worn: { weapon: find('weapon', 'magic', 1), charm: find('charm', 'magic', 2) }, vault: [find('armor', 'rare', 2), find('charm', 'magic', 3), find('weapon', 'legendary', 9)], guard: 'weapon' } };
+  return { ...s, fogGear: { worn: { weapon: find('weapon', 'magic', 1), charm: find('charm', 'magic', 2) }, vault: [find('armor', 'rare', 2), find('charm', 'magic', 3), find('weapon', 'legendary', 9)] } };
 }
 
 /** The geared player with embers to spare (as if melted down), co-op materials, and gear forged to
@@ -94,7 +92,7 @@ function legendWorn(): GameState {
   const s = forged(0),
     g = s.fogGear!,
     legend = g.vault[2];
-  return { ...s, fogGear: { ...g, worn: { ...g.worn, weapon: { ...legend, plus: 0, need: null } }, vault: [g.vault[0], g.vault[1], g.worn.weapon!], guard: 'weapon' } };
+  return { ...s, fogGear: { ...g, worn: { ...g.worn, weapon: { ...legend, plus: 0, need: null } }, vault: [g.vault[0], g.vault[1], g.worn.weapon!] } };
 }
 
 /** A player past the finale: the flame lives in them now. */
@@ -301,7 +299,7 @@ export default function NightLab() {
             </div>
           );
         })}
-        <Row icon={<Swords size={16} />} label="The Fog tab" note="Story: all six worlds open, the ready strip under them" onClick={() => open(veteran(78, 6), 'tab=play')} />
+        <Row icon={<Swords size={16} />} label="The Play tab" note="Story: all six worlds open, the ready strip under them" onClick={() => open(veteran(78, 6), 'tab=play')} />
         <Row icon={<Swords size={16} />} label="The Fog, sideways" note="Hold the phone across: rooms run left to right, tap a monster to aim at it" onClick={() => open(veteran(14, 1), 'run=0')} />
         <Row icon={<Swords size={16} />} label="The Ember Road, before setting out" note="Fog > Together: the road card; tap Set out and its first scene plays" onClick={() => open(geared(), 'tab=play&fog=together')} />
         <Row icon={<Swords size={16} />} label="The Ember Road, chapter 2" note="The Lull beaten, 10 workouts in: The Quiet Miles open, the road card shows what's next" onClick={() => open(onRoad(1, 10), 'tab=play&fog=together')} />
@@ -338,11 +336,10 @@ export default function NightLab() {
             </button>
           </div>
         </div>
-        <Row icon={<Gem size={16} />} label="Loot in a run" note="Monsters and chests drop gear; the bag button top right; the stairs ask: deeper or leave with it" onClick={() => open(geared(), 'run=1')} />
-        <Row icon={<Gem size={16} />} label="Loot in a run, the flame gone cold" note="No workout in 4 days: the bag says training would let the flame hold your sword" onClick={() => open(geared(4), 'run=1')} />
-        <Row icon={<Swords size={16} />} label="A boss with no hearts left" note="Fog tab: 15 workouts in, Tomorrow still standing. It fights weaker, and runs start with 3 free skills" onClick={() => open(veteran(15, 0), 'tab=play')} />
+        <Row icon={<Gem size={16} />} label="Loot in a run" note="Monsters and chests drop gear; the bag button top right (a fall loses only what is in the bag); the stairs ask: deeper or leave with it" onClick={() => open(geared(), 'run=1')} />
+        <Row icon={<Swords size={16} />} label="A boss with no hearts left" note="Play tab: 15 workouts in, Tomorrow still standing. It fights weaker, and runs start with 3 free skills" onClick={() => open(veteran(15, 0), 'tab=play')} />
         <Row icon={<Swords size={16} />} label="A boss with no hearts left, in a run" note="The 3 free skills at the start, then Tomorrow with less HP" onClick={() => open(veteran(15, 0), 'run=0&at=boss')} />
-        <Row icon={<Swords size={16} />} label="A boss with hearts left" note="Fog tab: how many workouts until Tomorrow runs out of hearts" onClick={() => open(veteran(8, 0), 'tab=play')} />
+        <Row icon={<Swords size={16} />} label="A boss with hearts left" note="Play tab: how many workouts until Tomorrow runs out of hearts" onClick={() => open(veteran(8, 0), 'tab=play')} />
         <Row icon={<Swords size={16} />} label="Exercise library" note="Train tab, top button: 870+ exercises, pixel demos for boy and girl" onClick={() => open(veteran(10, 1), 'tab=train')} />
       </Panel>
 

@@ -4,7 +4,7 @@ import { useEffect, useRef, useSyncExternalStore } from 'react';
 import type { PostHog } from 'posthog-js';
 import type { GameState } from './game';
 import { eventsBetween, heroContext, openEvent, type AnalyticsEvent } from './analytics';
-import { inSandbox } from './store';
+import { offRecord } from './store';
 import { supabase } from './cloud-client';
 
 /* The sending side of the play stats (what to send lives in analytics.ts). Off until
@@ -61,7 +61,7 @@ export function setStatsShared(on: boolean) {
 
 /** True when this phone may send play stats at all. */
 export const statsConfigured = !!KEY;
-const canSend = () => !!KEY && typeof window !== 'undefined' && shared && !inSandbox() && where() !== 'local';
+const canSend = () => !!KEY && typeof window !== 'undefined' && shared && !offRecord() && where() !== 'local';
 
 // ---------- PostHog ----------
 

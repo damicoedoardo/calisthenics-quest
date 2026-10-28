@@ -20,7 +20,9 @@ so the gate also takes the **code from the email** (`verifyEmailCode`, Supabase 
 email shows the code: Supabase sends through Resend (custom SMTP: smtp.resend.com, sender
 login@formaquest.app, domain verified in Resend with its DNS on Vercel), and both the "Magic link or
 OTP" and "Confirm sign up" templates are `supabase/templates/magic-link.html` (subject "Your FORMA
-code: {{ .Token }}"). Change the file and paste it into both in the dashboard.
+code: {{ .Token }}"). It is a note from Edoardo with the code only (no link) and the game's pixel
+art, served from `public/email/` (drawn from the sprites by `node scripts/email-art.mjs`). Change
+the file and paste it into both in the dashboard once the images are live.
 Signing in on a fresh installed app takes the hero from the cloud (`plan()` → use-cloud).
 
 ## Files
@@ -35,7 +37,7 @@ Signing in on a fresh installed app takes the hero from the cloud (`plan()` → 
 
 It shows only when all three are set at build time (Vercel env vars):
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_API_URL`. Without them
-the card is not drawn and no Supabase code is loaded. It is always off in `?sandbox`.
+the card is not drawn and no Supabase code is loaded. It is always off in `?sandbox` and on the developer save (`offRecord()`).
 
 Sign-in is by email link. The Google button shows only with `NEXT_PUBLIC_GOOGLE_SIGNIN=1`, set
 once the Google provider is turned on in the Supabase `forma` project (it isn't yet).

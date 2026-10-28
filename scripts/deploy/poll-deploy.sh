@@ -4,7 +4,8 @@
 #
 # Run every ~2 min by forma-deploy.timer. It pulls the api image from GHCR (a cheap manifest check
 # when nothing changed) and, when the pulled image differs from the running one, swaps it in with
-# a zero-downtime `docker rollout api`, then checks /health through Caddy.
+# a zero-downtime `docker rollout api`, then checks /health through Caddy. Once live party runs are
+# on, it also rebuilds the game server when its code changed on main.
 #
 # Failures: a pull that fails PULL_FAIL_THRESHOLD times in a row (likely a revoked GHCR token), a
 # failed rollout, or a failing smoke check fail the unit; see `journalctl -u forma-deploy`.
@@ -31,6 +32,18 @@ PULL_FAIL_FILE="/run/forma-deploy.pull-failures"
 log() { printf '%s forma-deploy: %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
 
 cd "$COMPOSE_DIR"
+
+# The game server (`play`) is built here from the repo, not pulled from GHCR, so it follows main by
+# a fast-forward pull when the code it runs changed. A rebuild ends the live runs going on; phones
+# fall back to bots. Never fails the unit: the api deploy below goes on either way.
+update_play() {
+  git fetch -q origin main || return 0
+  git diff --quiet HEAD origin/main -- play src scripts/ts-hooks.mjs && return 0
+  git merge --ff-only -q origin/main || { log "play: the repo can't fast-forward to main; update it by hand."; return 0; }
+  log "play: new code on main, rebuilding..."
+  docker compose up -d --build play 2>&1 | while IFS= read -r line; do log "play: $line"; done || log "play: rebuild failed"
+}
+if grep -qE '^PLAY_SECRET=.+' .env 2>/dev/null; then update_play || true; fi
 
 running_cid="$(docker compose ps -q "$SERVICE" 2>/dev/null | head -n1 || true)"
 running_img=""
