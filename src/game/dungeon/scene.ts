@@ -69,7 +69,6 @@ import {
   type Foe,
   type FreePick,
   type GameEvent,
-  type Hero,
   type Input,
   type MonsterKind,
   type RelicId,
@@ -78,7 +77,8 @@ import {
   type RunEnd as EngineEnd,
   type ShotStyle,
 } from './engine';
-import { applySnapshot, runFromStart, type Press, type Up } from '../net/wire';
+import { runFromStart, type Up } from '../net/wire';
+import { Follower } from '../net/follow';
 import type { PlayLink } from '@/lib/play-client';
 
 /* Draws a dungeon run. The engine (engine.ts) plays the game; this scene only reads it each frame,
@@ -184,6 +184,8 @@ export interface MiniMap {
 }
 
 export interface Hud {
+  /** A live run: from pressing to the server playing it (ms), for developer mode. */
+  ping?: number | null;
   hp: number;
   maxHp: number;
   xp: number;
@@ -266,9 +268,6 @@ export interface RunHandle {
 /** A live run: after you pick or answer the stairs, the server's next few runs may still ask (they
     left before your answer got there). They're not asked again for this long (ms). */
 const ANSWER_MS = 800;
-/** A live run: steps pressed are sent this often (ms), and at most this many wait for the server. */
-const SEND_MS = 50;
-const PENDING = 30;
 
 const SFX: Record<'slash' | 'arrow' | 'orb' | 'wave', SfxId> = { slash: 'slash', arrow: 'arrow', orb: 'orb', wave: 'wave' };
 const HEAL = '#86efac';
@@ -494,10 +493,7 @@ class DungeonScene extends Phaser.Scene {
   /** A live run: the line to the server, your steps numbered, the ones it hasn't played yet, the
       ones not sent yet, and when you last answered a card. */
   private net: PlayLink | null = null;
-  private seq = 0;
-  private pending: Press[] = [];
-  private outbox: Press[] = [];
-  private sentAt = 0;
+  private follow: Follower | null = null;
   private answeredAt = -1e9;
 
   constructor(
@@ -509,6 +505,7 @@ class DungeonScene extends Phaser.Scene {
     this.net = setup.net ?? null;
     if (this.net) {
       this.run = runFromStart(this.net.start, this.net.me);
+      this.follow = new Follower(this.run, this.net.me);
       return;
     }
     this.run = createRun({
@@ -1341,55 +1338,32 @@ class DungeonScene extends Phaser.Scene {
     return this.paused ? { x: 0, y: 0, ability: false } : input;
   }
 
-  /** A live run, each frame: put in what the server sent, play your steps it hasn't yet on top of
-      it, then look ahead with what you press now, and send that. Only the server's events are
-      played (sounds, hits, new rooms), so nothing happens twice. */
+  /** A live run, each frame: put in what the server sent, play your steps it hasn't yet on top
+      of it, then what you press now, and send that (src/game/net/follow.ts). Only the server's
+      events are played (sounds, hits, new rooms), so nothing happens twice. */
   private live() {
     const net = this.net!,
-      run = this.run;
-    const texts = net.take();
-    if (texts.length) {
-      const events: GameEvent[] = [];
-      let ack = 0;
-      for (const t of texts) {
-        const got = applySnapshot(run, t, net.me);
-        events.push(...got.events);
-        ack = got.ack[net.me] ?? 0;
-      }
-      if (this.time.now - this.answeredAt < ANSWER_MS) {
+      f = this.follow!,
+      run = this.run,
+      now = this.time.now;
+    const events = f.take(net.take(), now);
+    if (events.length || now - this.answeredAt < ANSWER_MS) {
+      if (now - this.answeredAt < ANSWER_MS) {
         run.hero.offer = null;
         run.hero.relicOffer = null;
         run.stairsAsk = false;
       }
-      this.pending = this.pending.filter((p) => p.seq > ack);
-      for (const p of this.pending) this.ahead(p);
       for (const e of events) this.react(e);
     }
     let steps = 0;
     while (this.acc >= STEP * 1000 && steps < 6) {
       this.acc -= STEP * 1000;
       steps++;
-      const p: Press = { seq: ++this.seq, ...this.myInput() };
-      this.pending.push(p);
-      this.outbox.push(p);
-      if (this.pending.length > PENDING) this.pending.shift();
-      this.ahead(p);
+      for (const e of f.press(this.myInput(), now)) this.react(e);
     }
-    if (this.outbox.length && this.time.now - this.sentAt >= SEND_MS) {
-      net.send({ t: 'in', steps: this.outbox.splice(0) });
-      this.sentAt = this.time.now;
-    }
-  }
-
-  /** One step of looking ahead: you as pressed, the others going on the way they were going. */
-  private ahead(p: Press) {
-    const run = this.run,
-      guess = (h: Hero): Input => {
-        const v = Math.hypot(h.vx, h.vy);
-        return v > 1e-3 ? { x: h.vx / v, y: h.vy / v, ability: false } : { x: 0, y: 0, ability: false };
-      };
-    stepRun(run, [p, ...run.party.slice(1).map(guess)]);
-    run.events.length = 0;
+    const out = f.outgoing(now);
+    if (out) net.send({ t: 'in', steps: out });
+    f.place(now);
   }
 
   /** A live run: tell the server, and hold off its next few asks. */
@@ -1549,6 +1523,7 @@ class DungeonScene extends Phaser.Scene {
   private hud(): Hud {
     const r = this.run;
     return {
+      ping: this.follow?.ping ?? null,
       hp: Math.max(0, Math.ceil(r.hero.hp)),
       maxHp: r.hero.maxHp,
       xp: r.hero.xp,
@@ -1623,7 +1598,9 @@ class DungeonScene extends Phaser.Scene {
     // The hero: steps while moving (the walk clip lifts each foot in turn), a slight lean into the
     // way it goes, blinking while untouchable after a hit. An attack plays over either.
     const moving = Math.hypot(r.hero.vx, r.hero.vy) > 5,
-      [hx, hy] = this.P(r.hero.x, r.hero.y),
+      // A live run: a small correction from the server glides away instead of a jump.
+      off = this.follow?.off ?? { x: 0, y: 0 },
+      [hx, hy] = this.P(r.hero.x + off.x, r.hero.y + off.y),
       // How fast you go across the screen: the engine's up is the screen's right.
       across = -r.hero.vy,
       playing = h.anims.currentAnim?.key;

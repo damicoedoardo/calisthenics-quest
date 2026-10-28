@@ -767,7 +767,16 @@ const friendsNear = (run: Run, h: Hero, x: number, y: number, r: number) => run.
 const choosing = (run: Run) => run.party.some((h) => h.offer || h.relicOffer);
 
 const later = (run: Run, s: number, fn: () => void) => run.timers.push({ at: run.t + s, run: fn });
-const emit = (run: Run, e: GameEvent) => run.events.push(e);
+/** The hero whose own turn this step is (moving, their buttons, their attacks), or null. Set only
+    inside stepRun, so a live run can tell your own moves from the rest (src/game/net/follow.ts). */
+let acting: number | null = null;
+const OWN: ReadonlySet<GameEvent['type']> = new Set(['attack', 'ability', 'sp', 'dodge', 'dash', 'passive']);
+const emit = (run: Run, e: GameEvent) => {
+  if (acting !== null && OWN.has(e.type)) (e as GameEvent & { by?: number }).by = acting;
+  run.events.push(e);
+};
+/** Whose own move an event shows (an attack, an ability, an SP move, a dodge), if it is one. */
+export const byOf = (e: GameEvent): number | undefined => (e as GameEvent & { by?: number }).by;
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
 // The same as Math.hypot(dx, dy) < r and > r, but most pairs are far apart, and a box test says so
 // without the square root. Same answers to the last bit, so replays don't move.
@@ -1284,12 +1293,14 @@ export function stepRun(run: Run, input: Input | Input[]) {
     up = standing(run);
   for (const h of up) {
     const i = inputs[h.id] ?? IDLE;
+    acting = h.id;
     if (i.lock !== undefined) h.lock = i.lock;
     if (i.dodge) dodge(run, h, i);
     moveHero(run, h, i);
     if (i.ability) useAbility(run, h, i);
     if (h.sp && i.skill) useSkill(run, h, i);
     if (h.sp && i.final) useFinal(run, h, i);
+    acting = null;
   }
   if (run.party.length > 1) revive(run);
   stepFields(run);
@@ -1297,8 +1308,10 @@ export function stepRun(run: Run, input: Input | Input[]) {
   moveBullets(run);
   if (run.over) return;
   for (const h of standing(run)) {
+    acting = h.id;
     attack(run, h);
     skills(run, h);
+    acting = null;
   }
   moveShots(run);
   if (run.over) return;
