@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Check, ChevronRight, Flame, Lock, Swords, Users } from 'lucide-react';
+import { BookLock, Check, ChevronRight, Flame, Lock, Shield, Sparkles, Swords, Users } from 'lucide-react';
 import { warmRunSheets } from '@/game/sheets';
 import type { GameState } from '@/lib/game';
 import { EDGE, ZONES, edgeFor, powerOf, workoutsPastHearts, zoneStatus, type Zone } from '@/lib/fog';
@@ -13,6 +13,7 @@ import { ROAD_LENGTH, roadAt, startRoad } from '@/lib/road';
 import { offRecord } from '@/lib/store';
 import { setLobbyOpen, usePartyView } from '@/lib/party-client';
 import { ItemTile } from './ItemCard';
+import { Sprite } from './Sprite';
 import { WorldPicker } from './WorldPicker';
 import { FriendsCard } from './Friends';
 import { useLand } from './useLand';
@@ -130,8 +131,8 @@ function Ready({ state, onGear, land = false }: { state: GameState; onGear: () =
     kit: Partial<Record<ItemSlot, Item>> = starterKit(state.profile.classId);
   const tile = land ? 30 : 40;
   const chips = [
-    power.fresh ? { on: 'bg-emerald-950/60 text-emerald-300', text: 'Warmed up: a free skill' } : { on: 'bg-ink-900 text-slate-400', text: 'Train for a free skill' },
-    power.rested ? { on: 'bg-orange-950/50 text-orange-200', text: 'Rested: one more' } : null,
+    power.fresh ? { on: 'bg-emerald-950/60 text-emerald-300', text: land ? 'Warmed up: a free skill' : 'Warmed up · +1 skill' } : { on: 'bg-ink-900 text-slate-400', text: land ? 'Train for a free skill' : 'Train · +1 skill' },
+    power.rested ? { on: 'bg-orange-950/50 text-orange-200', text: land ? 'Rested: one more' : 'Rested · +1 skill' } : null,
   ].filter((c): c is { on: string; text: string } => !!c);
   return (
     <section className={land ? 'flex min-w-0 flex-1 items-center gap-3 rounded-2xl bg-ink-800 py-1.5 pl-2 pr-3' : 'rounded-2xl bg-ink-800 p-4'}>
@@ -147,14 +148,14 @@ function Ready({ state, onGear, land = false }: { state: GameState; onGear: () =
           );
         })}
         {!land && (
-          <span className="ml-auto flex items-center gap-1 text-xs text-slate-400">
-            Gear, vault, forge <ChevronRight size={14} />
+          <span className="ml-auto flex items-center gap-1 font-pixel text-[8px] text-slate-400">
+            GEAR <ChevronRight size={14} />
           </span>
         )}
       </button>
       <div className={`flex flex-wrap gap-1.5 ${land ? 'min-w-0' : 'mt-3'}`}>
         {chips.map((c) => (
-          <span key={c.text} className={`rounded-lg px-2.5 py-1 text-[11px] ${c.on}`}>
+          <span key={c.text} className={`rounded-lg px-2.5 py-1 ${land ? 'text-[11px]' : 'font-pixel text-[8px] leading-relaxed'} ${c.on}`}>
             {c.text}
           </span>
         ))}
@@ -163,6 +164,14 @@ function Ready({ state, onGear, land = false }: { state: GameState; onGear: () =
     </section>
   );
 }
+
+/** Together's rules, short: who plays, what carries over, what it never touches, what drops only here. */
+const TOGETHER_FACTS: { icon: typeof Users; text: string; blue?: boolean }[] = [
+  { icon: Users, text: 'Up to 4, online' },
+  { icon: Shield, text: 'Same hero and gear' },
+  { icon: BookLock, text: 'Your story stays put' },
+  { icon: Sparkles, text: '+6 materials drop here', blue: true },
+];
 
 /** Together: friends, invites and the party lobby. Runs here never move the story, and the forge's
     materials for +6 and up drop only here. */
@@ -175,11 +184,12 @@ function Together({ state, update, land = false }: { state: GameState; update: (
         <p className="flex items-center gap-2 font-pixel text-[10px] text-gold-300">
           <Users size={14} /> Play with friends
         </p>
-        <ul className="mt-2 space-y-1.5 text-xs text-slate-300">
-          <li>Up to four of you, online. Invite a friend below, then pick a world in the lobby.</li>
-          <li>Your hero, gear, vault and stats are the same as in Story.</li>
-          <li>Runs together never move your story, so nobody sees what&apos;s ahead.</li>
-          <li className="text-sky-300">The forge materials for +6 and up only drop here.</li>
+        <ul className="mt-3 grid grid-cols-2 gap-1.5 text-[11px] leading-snug">
+          {TOGETHER_FACTS.map((f) => (
+            <li key={f.text} className={`flex items-center gap-2 rounded-lg bg-ink-900 px-2 py-1.5 ${f.blue ? 'text-sky-300' : 'text-slate-300'}`}>
+              <f.icon size={14} className="shrink-0" aria-hidden /> {f.text}
+            </li>
+          ))}
         </ul>
         {party && (
           <button onClick={() => setLobbyOpen(true)} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-gold-400 py-2.5 text-sm font-semibold text-ink-950">
@@ -207,7 +217,7 @@ function RoadCard({ state, update }: { state: GameState; update: (fn: (s: GameSt
       {!at.started ? (
         <>
           <p className="mt-2 text-xs text-slate-300">
-            A story you walk with friends, apart from your own: three chapters and a finale, about two months of training. Each chapter ends in a boss your party beats together.
+            A story for your party: three chapters and a finale, about two months. Each ends in a boss you beat together.
           </p>
           <button onClick={() => update(startRoad)} className="mt-3 w-full rounded-xl bg-orange-400 py-2.5 text-sm font-semibold text-ink-950">
             Set out on the road
@@ -228,7 +238,7 @@ function RoadCard({ state, update }: { state: GameState; update: (fn: (s: GameSt
                   {won ? (
                     <> · you keep {c.fog.keepsake.name}</>
                   ) : here ? (
-                    <> · beat {c.fog.bossName} with your party: pick {c.fog.name} in the lobby</>
+                    <> · beat {c.fog.bossName}: pick {c.fog.name} in the lobby</>
                   ) : at.open === c.n - 1 && at.beaten >= at.open && at.nextIn > 0 ? (
                     <> · opens in {plural(at.nextIn)}</>
                   ) : (
@@ -260,20 +270,33 @@ function BossEdge({ state }: { state: GameState }) {
   const zone = ZONES[state.fog?.cleared ?? 0];
   if (!zone || zone.boss === 'summit' || zoneStatus(state, zone).state !== 'open') return null;
   const past = workoutsPastHearts(state, zone);
-  const box = 'mt-2 rounded-lg px-3 py-2 text-xs';
   if (past === null) {
     const left = chapterStart(zone.chapter + 1) - state.sessions.length;
     return (
-      <p className={`${box} bg-ink-900 text-slate-400`}>
-        {`${zone.bossName} has ${left} heart${left === 1 ? '' : 's'} left. Each workout takes one. With none left it fights weaker, and every workout after that starts your runs with a free skill.`}
-      </p>
+      <div className="mt-3 rounded-lg bg-ink-900 px-3 py-2" aria-label={`${zone.bossName} has ${left} heart${left === 1 ? '' : 's'} left. Each workout takes one. With none left it fights weaker, and every workout after that starts your runs with a free skill.`}>
+        <div className="flex items-center gap-2">
+          <span className="shrink-0 text-xs font-semibold text-slate-200">{zone.bossName}</span>
+          <span className="flex flex-wrap">
+            {Array.from({ length: left }).map((_, i) => (
+              <Sprite key={i} id="uiIcon" opts={{ name: 'heart' }} size={12} label="" />
+            ))}
+          </span>
+        </div>
+        <p className="mt-1 text-[11px] text-slate-500">Each workout takes a heart. At zero it fights weaker.</p>
+      </div>
     );
   }
   const { picks } = edgeFor(state, zone);
   return (
-    <p className={`${box} bg-rose-950/50 text-rose-200`}>
-      {`${zone.bossName} has no hearts left: it fights with ${Math.round((1 - EDGE.bossHp) * 100)}% less HP. `}
-      {picks ? `Your runs start with ${picks} more free skill${picks === 1 ? '' : 's'}, one for each workout since${picks === EDGE.picks ? ' (that is the most)' : ''}.` : 'Each workout from now on starts your runs with one more free skill.'}
-    </p>
+    <div className="mt-3 rounded-lg bg-rose-950/50 px-3 py-2 text-rose-200">
+      <div className="flex items-center gap-2 text-xs">
+        <Sprite id="uiIcon" opts={{ name: 'heartEmpty' }} size={12} label="" />
+        <span className="font-semibold">{zone.bossName}: no hearts left</span>
+      </div>
+      <p className="mt-1 text-[11px] text-rose-200/80">
+        {`${Math.round((1 - EDGE.bossHp) * 100)}% less HP · `}
+        {picks ? `+${picks} free skill${picks === 1 ? '' : 's'}${picks === EDGE.picks ? ' (the most)' : ''}` : '+1 free skill per workout'}
+      </p>
+    </div>
   );
 }

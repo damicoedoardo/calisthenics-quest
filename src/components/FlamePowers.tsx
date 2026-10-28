@@ -32,7 +32,6 @@ export function FlamePowers({ state, land = false }: { state: GameState; land?: 
   return (
     <section className={land ? 'mt-3' : 'rounded-2xl bg-ink-800 p-4'}>
       <p className="font-pixel text-[10px] text-gold-300">Your flame · {stage.name}</p>
-      <p className="mt-1 text-xs text-slate-400">Every workout feeds it. It fights beside you in the Fog.</p>
       <ul className={`mt-3 ${land ? 'grid grid-cols-2 gap-2' : 'space-y-2.5'}`}>
         {rows.map(({ icon, name, value, hint }) => (
           <li key={icon} className="flex items-start gap-3">

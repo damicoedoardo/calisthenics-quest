@@ -11,6 +11,8 @@ import { stillFor } from '@/sprites/registry';
 import type { Look } from '@/sprites/engine/figure';
 
 /** The whole exercise catalog: search, filter, and open one for its demo, how-to, tips and mistakes. */
+const LEVEL_BARS: Record<string, number> = { beginner: 1, intermediate: 2, expert: 3 };
+
 export function ExerciseLibrary({ state, onClose }: { state: GameState; onClose: () => void }) {
   const [all, setAll] = useState<LibraryExercise[] | null>(null);
   const [query, setQuery] = useState('');
@@ -87,11 +89,17 @@ export function ExerciseLibrary({ state, onClose }: { state: GameState; onClose:
           <li key={x.id}>
             <button onClick={() => setOpen(x)} className="flex w-full items-center gap-3 rounded-xl bg-ink-800 p-2 text-left active:bg-ink-700">
               <Still x={x} state={state} look={mine} />
-              <span className="min-w-0">
+              <span className="min-w-0 flex-1">
                 <span className="block truncate text-sm font-semibold">{x.name}</span>
                 <span className="block truncate text-xs text-slate-400">
-                  {KIND_LABEL[x.kind]} · {cap(x.equipment)} · {x.level} · {x.primary.join(', ')}
+                  {cap(x.equipment)} · {x.primary.join(', ')}
                 </span>
+              </span>
+              {/* How hard, as one to three bars. */}
+              <span className="flex shrink-0 items-end gap-0.5 pr-1" title={`${KIND_LABEL[x.kind]}, ${x.level}`} aria-label={`${KIND_LABEL[x.kind]}, ${x.level}`}>
+                {[0, 1, 2].map((i) => (
+                  <span key={i} className={`w-1.5 ${['h-2', 'h-3', 'h-4'][i]} ${i < LEVEL_BARS[x.level] ? 'bg-gold-400' : 'bg-ink-600'}`} />
+                ))}
               </span>
             </button>
           </li>
