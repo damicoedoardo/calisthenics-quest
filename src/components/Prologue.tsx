@@ -43,9 +43,12 @@ interface Props {
   onPause?: (patch: { voice: string }) => void;
   /** On the first screen of an installed iPhone app: bring the hero over from Safari. */
   bring?: ReactNode;
-  /** A brand-new phone first asks: a new game, or sign in to the hero you already have (the cloud
-      copy then replaces this empty save, and the opening is over). */
+  /** Not signed in: the first screen asks for a new game (or to go on with this one), or to sign
+      in to the hero you already have (the cloud copy then replaces this save, and the opening is
+      over). Asked on every open until signed in, wherever the opening was left. */
   askLogin?: boolean;
+  /** Past that first screen: it isn't asked again until the app is opened again. */
+  onResume?: () => void;
 }
 
 const goldButton =
@@ -89,11 +92,10 @@ export function Prologue(props: Props) {
   );
 }
 
-function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, dev = false, onPause, bring, askLogin = false }: Props) {
+function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, dev = false, onPause, bring, askLogin = false, onResume }: Props) {
   // Opened again after the install step: on at the class pick.
-  const [step, setStep] = useState<Step>(
-    state.profile.opening === 'class' && !state.profile.onboarded ? 'class' : askLogin && !state.profile.onboarded && !state.profile.look ? 'start' : 'title',
-  );
+  const paused = state.profile.opening === 'class' && !state.profile.onboarded;
+  const [step, setStep] = useState<Step>(askLogin && !state.profile.onboarded ? 'start' : paused ? 'class' : 'title');
   const cloud = useCloudStatus();
   const look = useLook();
   const firstRun = !state.profile.onboarded;
@@ -113,6 +115,11 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, dev = false, o
   // The flame gets its name after the first workout; until then it's "A spark".
   const words = { ...storyWords(state), ...letter, voice: voice.trim() || "You're not enough.", flame: state.profile.flame ?? '' };
   const go = useCallback((s: Step) => () => setStep(s), []);
+  // On from the first screen: where the opening was left, or from the top.
+  const resume = () => {
+    onResume?.();
+    setStep(paused ? 'class' : 'title');
+  };
 
   const finish = () => onFinish({ letter, voice: voice.trim(), kit: asksKit ? kit : undefined, name: name.trim() || undefined, classId });
   const begin = () => {
@@ -139,8 +146,8 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, dev = false, o
           <p className="font-pixel text-3xl tracking-widest text-gold-400">FORMA</p>
           <p className="mt-3 font-pixel text-[10px] text-slate-400">The Road Back</p>
           <div className="mt-12 w-full max-w-xs space-y-3 [@media(orientation:landscape)_and_(max-height:600px)]:mt-8">
-            <button onClick={go('title')} className={goldButton}>
-              New game
+            <button onClick={resume} className={goldButton}>
+              {paused || state.profile.look ? 'Continue' : 'New game'}
             </button>
             <button onClick={go('login')} className="w-full rounded-2xl bg-ink-800 py-4 text-sm font-semibold text-slate-100 ring-1 ring-ink-700 active:scale-[.98]">
               I already have a hero
@@ -158,8 +165,8 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, dev = false, o
           <div className="fixed inset-0 flex flex-col items-center justify-center bg-ink-950 px-6 text-center">
             <Ember size={64} stage="spark" />
             <p className="mt-4 max-w-xs text-sm text-slate-300">There&apos;s no hero on {cloud.email ?? 'this account'} yet. Start a new game, and it&apos;s kept there.</p>
-            <button onClick={go('title')} className={`mt-6 max-w-xs ${goldButton}`}>
-              New game
+            <button onClick={resume} className={`mt-6 max-w-xs ${goldButton}`}>
+              {paused || state.profile.look ? 'Continue' : 'New game'}
             </button>
           </div>
         );

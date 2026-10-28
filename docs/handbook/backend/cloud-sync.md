@@ -23,7 +23,7 @@ OTP" and "Confirm sign up" templates are `supabase/templates/magic-link.html` (s
 code: {{ .Token }}"). It is a note from Edoardo with the code only (no link) and the game's pixel
 art, served from `public/email/` (drawn from the sprites by `node scripts/email-art.mjs`). Change
 the file and paste it into both in the dashboard once the images are live.
-Signing in on a fresh installed app takes the hero from the cloud (`plan()` → use-cloud). A brand-new phone's first screen asks **New game** or **I already have a hero** (`Prologue`'s `askLogin`, Edoardo 2026-10-28, after a friend couldn't get back in): the second signs in at once and takes the cloud hero the same way.
+Signing in on a fresh installed app takes the hero from the cloud (`plan()` → use-cloud). While not signed in, the opening's first screen asks **New game** (**Continue** when part of the opening was played) or **I already have a hero** (`Prologue`'s `askLogin`, Edoardo 2026-10-28, after a friend couldn't get back in, then again after his phone made him redo the opening he'd played on the laptop). It asks on every open until signed in, even mid-opening or after the install step. The second button signs in at once and takes the cloud hero the same way.
 
 ## Files
 

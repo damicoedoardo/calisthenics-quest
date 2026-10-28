@@ -29,7 +29,7 @@ import { PartyButton, PartyInviteCard, PartyLobby, usePartyPoll } from '@/compon
 import { others, startToJoin } from '@/lib/party';
 import { partyMe, setLobbyOpen, usePartyView } from '@/lib/party-client';
 import type { FriendCard } from '@/lib/friends';
-import { cloudConfigured, useCloudStatus } from '@/lib/cloud-client';
+import { cloudConfigured, maybeSignedIn, useCloudStatus } from '@/lib/cloud-client';
 import { BringHero, InstallGate } from '@/components/InstallGate';
 import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { sawScene, scenesToPlay, storyState, type StoryState } from '@/story/engine';
@@ -106,6 +106,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const online = onlineCount(friends);
   // After the install step, an account: a hard rule, no playing on without one (SignInGate).
   const { signedIn } = useCloudStatus();
+  const [welcomed, setWelcomed] = useState(false);
   // Parties: kept fresh while signed in; a start the leader made opens the run here too.
   usePartyPoll(signedIn, !ready || offRecord());
   const { party } = usePartyView();
@@ -268,11 +269,16 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     main.current?.scrollTo({ top: 0 });
   };
 
+  // Not signed in, a new player's opening first asks to sign in to a hero they already have, on
+  // every open and wherever it was left (Edoardo 2026-10-28: played on the laptop, the phone made
+  // him redo the opening). "Continue" or "New game" hides it until the app is opened again.
+  const welcome = !welcomed && !replaying && !signedIn && !maybeSignedIn() && cloudConfigured && !inSandbox() && !offRecord();
+
   if (!ready) return <div className="min-h-dvh bg-ink-950" />;
 
   // A new player's opening pauses after the first dungeon for the install step; the installed app
   // picks it up at the class pick.
-  if (!state.profile.onboarded && !replaying && state.profile.opening === 'class' && gated)
+  if (!state.profile.onboarded && !replaying && state.profile.opening === 'class' && gated && !welcome)
     return (
       <InstallGate
         state={state}
@@ -294,7 +300,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         onExit={replaying ? () => setReplaying(false) : undefined}
         onSkip={dev && !replaying ? () => update((s) => skipIntro(s, new Date())) : undefined}
         dev={dev}
-        askLogin={!replaying && cloudConfigured && !inSandbox() && !offRecord()}
+        askLogin={welcome}
+        onResume={() => setWelcomed(true)}
         onLook={(look) => update((s) => ({ ...s, profile: { ...s.profile, look } }))}
         onPause={({ voice }) => update((s) => ({ ...s, profile: { ...s.profile, voice, opening: 'class' } }))}
         onFinish={({ letter, voice, kit, name, classId }) => {
