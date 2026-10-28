@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Metadata, Viewport } from 'next';
 import { ServiceWorker } from '@/components/ServiceWorker';
+import { ViewportHeal } from '@/components/ViewportHeal';
 import { SPLASH } from './splash-sizes.json';
 import './globals.css';
 
@@ -47,6 +48,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       <body className="font-sans antialiased">
         {children}
         <ServiceWorker />
+        <ViewportHeal />
       </body>
     </html>
   );

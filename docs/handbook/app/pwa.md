@@ -3,7 +3,7 @@ type: reference
 title: Installable and offline
 description: How FORMA installs to the home screen and works with no signal — public/sw.js, the ServiceWorker component, the manifest, icons, and the iOS splash screens.
 tags: [app, pwa, offline, service-worker]
-timestamp: 2026-10-28
+timestamp: 2026-10-29
 ---
 
 # Installable and offline
@@ -18,6 +18,7 @@ signal.
 | Build id | `NEXT_PUBLIC_BUILD_ID` in `next.config.ts` (the Vercel commit sha). `next.config.ts` also serves `/sw.js` with no-cache |
 | Manifest | `src/app/manifest.ts`. `orientation: 'any'`: the installed app turns with the phone (the tabs have a sideways layout, see [screens.md](screens.md)) |
 | Icons | `src/app/icon.svg`, `src/app/apple-icon.png`, `public/icon-*.png`, all drawn by `scripts/icons.cjs`: the wordmark's pixel F on a small grid, scaled by whole numbers so the pixels stay sharp. The takes live in its `TAKES`, `PICK` names the one in use; `--sheet` writes a side-by-side of every take. The maskable icon keeps the art in the middle 80%. iOS keeps an old home-screen icon until the app is removed and added again |
+| Keyboard bug on iPhone | `src/components/ViewportHeal.tsx`, mounted in `src/app/layout.tsx`, installed app only. Once the keyboard has been up, iOS can keep the page at the shorter height: the fixed tab bar floats mid-screen (where the keyboard's top was) and the sticky header slides under the clock. After a text field loses focus, the keyboard goes down, or the app comes back, it hides the body for one layout and shows it again, which makes iOS measure afresh; the scroll is kept |
 | iOS splash screens | `public/splash/*.png`, one per iPhone size, drawn by `scripts/splash.cjs`; sizes in `src/app/splash-sizes.json`, wired in `src/app/layout.tsx`. Portrait only: opened sideways, no image matches and iOS shows none |
 
 ## Install before playing
