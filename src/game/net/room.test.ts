@@ -44,13 +44,13 @@ describe('a live party run', () => {
       ax = a.x,
       bx = b.x;
     const steps: Press[] = Array.from({ length: 30 }, (_, i) => ({ seq: i + 1, x: 1, y: 0, ability: false }));
-    room.take('ana', { t: 'in', steps: steps.slice(0, NET.maxQueue) });
-    for (let i = 0; i < NET.maxQueue; i++) room.tick(i / 60);
+    room.take('ana', { t: 'in', steps: steps.slice(0, NET.steady) });
+    for (let i = 0; i < NET.steady; i++) room.tick(i / 60);
     expect(a.x).toBeGreaterThan(ax);
     expect(b.x).toBe(bx);
     const phone = phoneRun(start);
     const { ack } = applySnapshot(phone, room.snapshot(), 1);
-    expect(ack).toEqual([NET.maxQueue, 0]);
+    expect(ack).toEqual([NET.steady, 0]);
   });
 
   it("gives every phone the same run, with you first and everything in its place", () => {
@@ -76,6 +76,23 @@ describe('a live party run', () => {
     for (const s of phone.shots) expect(phone.party).toContain(s.by);
     // And it can look ahead on its own until the next one comes.
     for (let i = 0; i < 6; i++) stepRun(phone, phone.party.map(() => ({ x: 0, y: 0, ability: false })));
+  });
+
+  it("counts a step played before it came, and passes it over when it comes", () => {
+    const { room } = twoRoom();
+    const a = room.run!.party[0];
+    room.take('ana', { t: 'in', steps: [{ seq: 1, x: 1, y: 0, ability: false }] });
+    room.tick(0);
+    const x1 = a.x;
+    // Step 2 is late: played with the stick as held, and counted.
+    room.tick(1 / 60);
+    expect(a.x).toBeGreaterThan(x1);
+    // It comes, with step 3 and a button: 2 is passed over, its button goes with 3.
+    room.take('ana', { t: 'in', steps: [{ seq: 2, x: 1, y: 0, ability: true }, { seq: 3, x: 1, y: 0, ability: false }] });
+    room.tick(2 / 60);
+    expect(room.run!.party[0].x).toBeGreaterThan(x1);
+    const phone = phoneRun(room.started!);
+    expect(applySnapshot(phone, room.snapshot(), 0).ack[0]).toBe(3);
   });
 
   it('plays a phone that went away with the bot, so the run goes on', () => {

@@ -29,6 +29,11 @@ attempt is **one real run** that everyone plays together. "Try again" after it i
   their id, numbers are cut to 3 decimals.
 - **Waiting.** The room starts when the whole party is in, or `NET.waitSeconds` after the first
   phone (`room.ts`). Phones see "Waiting for your party" (`PartyWait` in `FogRun.tsx`).
+- **Your steps, counted the same on both sides.** The server plays one of your steps each step.
+  When yours hasn't come yet it plays it with the stick as you last held it and counts it as
+  played (`ack`); when it comes late it's passed over (its buttons kept). So the server moves you
+  exactly as many steps as your phone did, and your phone almost never has to pull you back. A
+  phone that runs a little fast has two steps played as one once more than `NET.steady` wait.
 - **Nobody holds the run up.** A phone that drops is played by the bot until it's back
   (`botInput`); a pick waits at most `NET.pickSeconds`, then the bot picks; the stairs go deeper
   after the same wait. Any member can answer the stairs for everyone.
@@ -41,13 +46,22 @@ failure before the start (no server, no sign-in, offline) falls back to the prac
 line saying so.
 
 The scene (`src/game/dungeon/scene.ts`, `live()`) builds its own copy of the run from the start
-message (`runFromStart`: same setup, same seed, you first), then each frame:
+message (`runFromStart`: same setup, same seed, you first) and hands it to a `Follower`
+(`src/game/net/follow.ts`, pure), which each frame:
 
 1. puts in every snapshot that came (`applySnapshot`), drops your steps the server has played
-   (`ack`), and plays the rest again on top: so your hero moves the moment you press;
-2. looks ahead on its own until the next snapshot: you as pressed, the others going the way they
-   were going;
-3. sends your numbered steps every `SEND_MS`.
+   (`ack`), and plays the rest again on top: so your hero moves the moment you press. A small
+   correction glides away (`off`, drawn by `sync`) instead of a jump;
+2. plays what you press now. The engine reads each hero's input **by its id** (its place in the
+   server's run), not by its place in this phone's party, where you are first;
+3. sends your numbered steps every `FOLLOW.sendMs`;
+4. before drawing, puts everyone else (friends, monsters, shots) where they were `FOLLOW.behindMs`
+   ago on the server's clock, between two snapshots (`place`), so they glide instead of jumping
+   20 times a second.
+
+`follow.test.ts` plays two phones and the server over a slow, uneven line (70 ms each way, give or
+take 30) and checks that your hero is almost never pulled back, and that a friend moves the same
+small way every frame.
 
 Only the server's events are played (sounds, hits, new rooms, loot), so nothing happens twice.
 Picks, chests and the stairs are sent and applied at once; the server's next few snapshots may
@@ -80,9 +94,10 @@ runs going on.
 | Send snapshots more or less often | `SEND_EVERY` in `play/server.ts` |
 | Send more or less in a snapshot | `KEEP_OUT` and the replacer in `snapshot` (`wire.ts`) |
 | Add something a phone can do in a live run | a case in `Up` (`wire.ts`), `Room.take` (`room.ts`), and the scene's handler sends it (`answer` or `gear` in `scene.ts`) |
-| Change how the others are guessed between snapshots | `ahead` in `scene.ts` |
+| Draw the others further in the past (smoother on a bad line, but later) | `FOLLOW.behindMs` in `src/game/net/follow.ts` |
+| Change how a correction to your hero glides | `FOLLOW.glidePx`, `FOLLOW.glideKeep` (`follow.ts`) |
+| Change how the server waits for your steps | `NET.steady`, `NET.maxQueue` and `inputFor` in `room.ts` |
 | Change the waiting screen | `PartyWait` in `src/components/FogRun.tsx` |
 | Change how long a pass lasts | `play_pass_seconds` in `backend/app/config.py` |
 
-Not done yet: smoothing the others between snapshots (they step when a snapshot lands), your own
-hits shown before the server confirms them, and a live "Try again".
+Not done yet: your own hits shown before the server confirms them, and a live "Try again".
