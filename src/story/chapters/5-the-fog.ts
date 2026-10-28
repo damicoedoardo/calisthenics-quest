@@ -104,7 +104,7 @@ export const THE_FOG: Chapter = {
         { who: 'flame', mood: 'happy', text: "Look at my wings. Gold, all the way to the tips. They've been growing the whole time, and I didn't even notice." },
         { who: 'wanderer', text: "Neither did the Plateau. That's how it works. It hides, and hides, and then it shows all at once." },
         { who: 'flame', mood: 'soft', text: "You walked a whole flat month with no proof it was working. That's what grew these. I believe you're someone who keeps going without proof." },
-        { who: 'flame', mood: 'happy', text: "In the Fog I'll fly next to you now. And when you're hurt, I can patch you up a little. I'm a fire fairy, with a crown. Is that a real thing? It's a real thing now." },
+        { who: 'flame', mood: 'happy', text: "In the Fog I'll fly next to you now. And when you're hurt, I can patch you up a little. A fire fairy with a crown. Is that a real thing? It's a real thing now." },
       ],
     },
     {

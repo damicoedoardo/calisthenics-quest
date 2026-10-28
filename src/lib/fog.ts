@@ -158,9 +158,9 @@ export interface Power {
   fresh: boolean;
   /** Rested (a day off, or a minute by the fire): one more free skill. */
   rested: boolean;
-  /** Your flame is a bonfire: it throws fireballs. */
+  /** Your flame has reached the bonfire stage (a fairy): it throws fireballs. */
   fireballs: boolean;
-  /** Your flame is a fire fairy: it heals you a little when you're low. */
+  /** Your flame is the crowned fire fairy: it heals you a little when you're low. */
   fairy: boolean;
   /** What you named it. */
   flameName: string;

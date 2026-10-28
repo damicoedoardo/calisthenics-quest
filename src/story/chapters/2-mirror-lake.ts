@@ -64,7 +64,7 @@ export const MIRROR_LAKE: Chapter = {
       id: 'ch2-torch',
       when: { workouts: 15 },
       lines: [
-        { who: 'narrator', show: 'flame', text: '{flame} rises up, and two tiny wings pop out of its back. Then two tiny arms.', shot: { zoom: 'in', seconds: 1.4 } },
+        { who: 'narrator', show: 'flame', text: '{flame} rises up and turns into a little fairy: two tiny wings pop out of its back, then two tiny arms.', shot: { zoom: 'in', seconds: 1.4 } },
         { who: 'flame', mood: 'happy', text: 'I can light the whole path now. Look how far back it goes.' },
         { who: 'flame', text: "And I've got wings! And arms! Tiny ones. I'll hold your rest timer from now on." },
         { who: 'flame', mood: 'soft', text: "Want to know why I grew? You looked at the lake this month and didn't look away. I think you're someone who can look at themself now." },
