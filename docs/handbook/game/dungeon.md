@@ -15,7 +15,8 @@ items.ts            the things you wear, as data: slots, rarity, bonuses, class 
                     names, requirements, the pure rolls (rollRarity, rollItem), and the forge's
                     plus and reroll (boostOf, nameOf, rerollBonus; see forge.md), and what a
                     card says: foundAt (level 1-60, zone, floor) and betterBy (% against what you
-                    wear, from itemScore; an empty weapon or armor slot counts as the starter kit)
+                    wear, from itemScore; an empty weapon slot counts as the plain weapon),
+                    and who can wear what: otherClass and canWear (a weapon is its class's own)
 content.ts          what a dungeon is made of, as data: ground, rooms, chest items, monsters and how they
                     shoot, each zone's dungeon and mid-boss, the bosses, the classes' abilities
 engine.ts           plays it: a pure step function (60 a second, seeded), no Phaser
@@ -60,6 +61,7 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change how often co-op runs drop forge materials | `MAT_DROPS` in `src/balance/upgrades.ts` (`findMats` in `engine.ts`; see [forge.md](forge.md)) |
 | Add an item kind or a class's weapon | `WEAPONS`, `ARMORS`, `ItemIcon` (and `ItemArt`, `looksOf`) in `items.ts`; its art in `ITEM_ROWS` and `LEGEND_ROWS` (`src/sprites/characters/items.ts`), and how the hero wears it in `heroSpec` (`src/sprites/characters/hero.ts`), see [sprites.md](sprites.md) |
 | Change how an item looks (its kind, the seed that picks its colors) | `looksOf` and `seedOf` in `items.ts` (the seed comes from the name, so one name always looks the same) |
+| Change an SP's moves (its own move, its final, its passive) | numbers in `SP_SKILL`, `SP_FINAL`, `SURGE`, `SP_PASSIVE` (`src/balance/classes.ts`); names and words in `SP_CARDS`, `SP_MOVES`, `SP_PASSIVES` (`content.ts`); what they do in `useSkill`, `useFinal`, and the passives in `kindle`/`burnTick`, `dodge`, `attack`, `flow` (`engine.ts`); what kind of move each is (`shape` in `SP_MOVES`: ring, fan, drop, all, nova, dash, chain, guard, field, volley), played by the generic `spMove` in `engine.ts`; their icons in `SP_ICONS` (`src/sprites/characters/icons.ts`, the later SPs' from `shaped(shape, element)`), their look in `spMove` and `spShape`, and `passive` (`scene.ts`, colors from `spLook`); the bot's use at the end of `decide` (`bot.ts`) |
 | Add something each hero has (a cooldown, a count, a buff for the run) | `Hero` in `engine.ts` and its start in `newHero` (see "The hero, and the party") |
 | Change the bag panel, the pickup note or the stairs card | `BagPanel` and the `stairs` card in `src/components/FogRun.tsx` |
 
@@ -71,6 +73,25 @@ gear on (`power`; `base` is without), gear, the tapped target (`lock`), the pick
 (`offer`, `relicOffer`, `free`) and what's pushing them (`wind`, `shove`). What belongs to the room
 or the run stays on `Run`: the map, monsters, shots, loot on the floor, stairs, the boss, the clock.
 A new field about the player goes on `Hero`; one about the place goes on `Run`.
+
+With an SP on (`HeroSetup.sp`: which of the class's four, see "The SPs" in [fog.md](fog.md)) a
+hero has two more buttons (`Input.skill`, `Input.final`): the SP's own move on its own clock
+(`skillAt`, `skillReady`), and its final, which fills from hits landed and taken like the monk's
+calm (`surge`, `SURGE`, `finalReady`). Both go through `spMove(run, h, id, k, final, input)`, which
+plays the move by its kind (`shape`): a ring round you, a fan of shots, a drop on the nearest
+monster, a strike on every monster in the room, a nova that heals, a dash through them, a chain
+that jumps between them, a guard bubble, a field on the ground that keeps hitting and can slow
+(`Run.fields`, `stepFields`), or a volley all round. Each emits an `sp` event the scene draws in
+the SP's colors (`spMove`; the first SPs keep their own drawings, the rest use `spShape`). A final
+also shakes the room and bumps `finals`, which the HUD shows as a small badge with its name
+(`FinalBadge` in `FogRun.tsx`); nothing covers the fight. The SP's passive is always on
+(`SP_PASSIVE`; `has(h, id)` asks): Embers burns (`kindle`, `burnTick`), Frostbite slows
+(`Foe.slow`), Static and Sunburst hit on every few hits and Split Star on every few attacks,
+Rebound and Second Wind answer a hit (`spHurt`), Bedrock and Crystal Shell soften one (`spGuard`),
+Flow and Harvest heal, Focus and Momentum add crits and damage (`spCrit`, `spMore`), Tailwind and
+Quickstep change the dodge, Swift Sands fills the final faster; each emits a `passive` event.
+`echo` keeps a passive's own hit from setting off passives again. Without an SP none of this does
+anything and nothing is rolled, so replays stay the same.
 
 The class ability is ready on a clock (`abilityAt`), except the monk's Stillness: it fills `calm`
 from hits the monk lands and takes (`calmer`, numbers in `CALM`, `src/balance/classes.ts`), so
@@ -125,7 +146,12 @@ stand. Walking back into a room you cleared finds it as you left it (`Cell.kept`
 nothing to fight. Clearing the last room puts the stairs down in it (`run.stairs`); walking onto
 them asks (`run.stairsAsk`, the run holds still): go deeper (`downStairs`, HP full), leave with
 what you carry (`takeStairs(run, 'leave')` ends the run with `why: 'left'`), or not yet. The bot
-always goes deeper. The stairs card shows what a fall on the next floor would cost (see "Items and
+always goes deeper. When the boss falls (`bossDown`, also the Hollow's hand) the run doesn't end
+there: what's left in the room fades, the boss's own drop goes into the bag, and stairs marked
+HOME come up at the far end of the room from you (`run.home`; the scene's `won` event flashes
+and says the boss's last words). Anything still on the floor can be picked up first; walking onto
+the stairs home ends the run as a win (`why: 'boss'`). The bot (`autoPick`) wins on the spot, so
+replays and the simulators are unchanged. The stairs card shows what a fall on the next floor would cost (see "Items and
 the bag"); in developer mode the pause menu's "The stairs card" opens it anywhere (`askStairs`). Cells are `seen` once you've stood next door to them. A door
 you haven't been through says nothing about what waits behind it (`doorLook` in `scene.ts`: a
 gray "?"), and the minimap draws a seen room you haven't been in as a gray dashed "?" whatever it
@@ -143,9 +169,13 @@ draws each with its own art (`itemTexture`: the item's drawing from
 `src/sprites/characters/items.ts`, made into a texture once), its name in its rarity's color, and a
 beam over rare ones (`syncLoot`). Walking over one puts it in the bag (`run.hero.gear.bag`, `BAG` slots), unless it's full.
 
-You wear three things: a weapon and armor made for your class, and a charm. A run starts in what
-the save says you wear (`RunSetup.worn`), the starter kit (`starterKit`) filling an empty weapon or
-armor slot. An item asks for stat points (`need`, checked against `RunSetup.build` by `shortOf`):
+You wear three things: a weapon and armor made for your class, and a charm. A weapon belongs to
+its class: no other class can wear it (`otherClass`, `canWear` in `items.ts`; `wear` and `wearsIt`
+in the engine, `wornFor` and `wearFromVault` in `src/lib/fog-gear.ts`), and the cards say
+"Archer only" in red. Changing class leaves the old weapon at home, safe, until you switch back. A run
+starts in what the save says you wear (`RunSetup.worn`); with no weapon (or another class's) the
+starter kit (`starterKit`) gives a plain weapon, and nothing else: an empty armor slot stays empty
+(`STARTER` in `src/balance/items.ts`). An item asks for stat points (`need`, checked against `RunSetup.build` by `shortOf`):
 weapons the class's own stat, armor Armor, charms nothing. How many: what a player who hits the
 weekly goal and spreads points has in each stat `wearAfter(rarity, floor)` workouts after the
 zone opens (`WEAR_AFTER`, `evenPoints` in `items.ts`). `wear`, `takeOff` and `dropFromBag`

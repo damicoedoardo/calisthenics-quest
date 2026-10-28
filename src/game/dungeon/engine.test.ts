@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { powerOf, ZONES } from '@/lib/fog';
 import { initialState } from '@/lib/game';
 import { HUMAN } from '@/balance';
+import { seeded } from '@/lib/random';
 import { botInput, playRun } from './bot';
+import { rollItem } from './items';
 import { ACROSS, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, makeFloor, MIDS, mine, pickRelic, SAND, skipToBoss, skipToWarden, SPLIT, stepRun, takeEvents, wardenFloor, type Side } from './engine';
 
 describe('mid-bosses', () => {
@@ -303,12 +305,59 @@ describe('dungeon', () => {
     expect(b.phase).toBe(1);
     // Lit: walk in and stay.
     while (b.phase !== 2) stepRun(run, still);
-    for (let i = 0; i < (LIGHT.hold + 0.5) * 60 && !run.over; i++) {
+    for (let i = 0; i < (LIGHT.hold + 0.5) * 60 && !run.home; i++) {
       run.hero.x = b.x;
       run.hero.y = b.y + 20;
       stepRun(run, still);
     }
+    expect(run.home).toBe(true);
+    expect(run.over).toBeNull();
+  });
+
+  it('an SP adds its own move and its final; without one, neither works', () => {
+    for (const classId of ['warrior', 'archer', 'mage', 'monk'] as const) {
+      const run = createRun({ ...setup, classId, power: tough, seed: 5, sp: true });
+      while (!run.foes.some((f) => f.alive && f.def.xp > 0)) stepRun(run, still);
+      run.hero.surge = 1e9;
+      takeEvents(run);
+      stepRun(run, { ...still, skill: true, final: true });
+      const sp = takeEvents(run).filter((e) => e.type === 'sp');
+      expect(sp.map((e) => e.type === 'sp' && e.final)).toEqual([false, true]);
+      expect(run.hero.surge).toBe(0);
+      const plain = createRun({ ...setup, classId, power: tough, seed: 5 });
+      stepRun(plain, { ...still, skill: true, final: true });
+      expect(takeEvents(plain).some((e) => e.type === 'sp')).toBe(false);
+    }
+  });
+
+  it('after the boss falls, the drops on the floor can be picked up before the stairs home', () => {
+    const run = createRun({ ...setup, power: tough, seed: 3 });
+    skipToBoss(run);
+    while (!run.boss) stepRun(run, still);
+    const boss = run.boss;
+    boss.hp = 1;
+    run.hero.x = boss.x;
+    run.hero.y = boss.y + 40;
+    for (let i = 0; i < 600 && !run.home; i++) stepRun(run, still);
+    expect(run.home).toBe(true);
+    expect(run.over).toBeNull();
+    expect(run.foes.some((f) => f.alive)).toBe(false);
+    expect(run.bullets).toHaveLength(0);
+    // Something left on the floor: walk over it and it goes in the bag.
+    const bag = run.hero.gear.bag.length,
+      it = rollItem(seeded(1), { zone: 1, workouts: 0, floor: 9, cls: run.hero.classId }, 'magic');
+    run.loot.push({ id: ++run.ids, x: run.area.w / 2, y: run.area.h / 2, item: it });
+    run.hero.x = run.area.w / 2;
+    run.hero.y = run.area.h / 2;
+    for (let i = 0; i < 5; i++) stepRun(run, still);
+    expect(run.hero.gear.bag).toHaveLength(bag + 1);
+    expect(run.over).toBeNull();
+    // The stairs home are the win.
+    run.hero.x = run.stairs!.x;
+    run.hero.y = run.stairs!.y;
+    stepRun(run, still);
     expect(run.over).toMatchObject({ won: true, why: 'boss' });
+    expect(run.over!.gear.bag).toContain(it);
   });
 
   it('the Summit is a climb with no boss: a ledge climbed is a win, scored by height', () => {

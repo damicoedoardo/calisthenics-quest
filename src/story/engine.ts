@@ -5,6 +5,7 @@ import { CAST, type CastId } from './cast';
 import { CHAPTERS } from './chapters';
 import type { PlaceId } from './places';
 import { DEFAULT_FLAME_NAME } from './flame';
+import { spOpen } from '@/lib/sp';
 import type { AnswerId, Ask, Chapter, Line, Scene, When, WordKey, Words } from './types';
 
 /* Reads the story files: which chapter you're in, which scenes are due, and how a line reads
@@ -79,6 +80,7 @@ export function holds(w: When, state: GameState, st: StoryState, now: Date): boo
     [w.perfectWeek, () => hadPerfectWeek(state) === w.perfectWeek],
     [w.better, () => state.sessions.filter((x) => x.better).length >= w.better!],
     [w.noClass, () => !state.profile.classId === w.noClass],
+    [w.spReady, () => spOpen(state) === w.spReady],
     [w.answer, () => gave(state, w.answer!)],
     [w.needs, () => !!words[w.needs!].trim()],
     [w.roughRun, () => state.sessions.length >= w.roughRun! && state.sessions.slice(-w.roughRun!).every((x) => x.kind === 'mini')],
@@ -104,7 +106,7 @@ export function savedId(scene: Scene, state: GameState): string {
 }
 
 /** `when` fields that wait for something to happen (a rest day, a class...), not for a workout count. */
-const WAITS_FOR: (keyof When)[] = ['restDay', 'shortSession', 'roughRun', 'daysInRow', 'perfectWeek', 'better', 'noClass', 'away', 'beaten', 'finished'];
+const WAITS_FOR: (keyof When)[] = ['restDay', 'shortSession', 'roughRun', 'daysInRow', 'perfectWeek', 'better', 'noClass', 'spReady', 'away', 'beaten', 'finished'];
 
 /**
  * A story beat tied to a workout plays then, or a few workouts later while a chapter catches up.

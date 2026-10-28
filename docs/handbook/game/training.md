@@ -3,7 +3,7 @@ type: reference
 title: Training rules
 description: The real-world side of FORMA in src/lib — the built-in plan (gym or home), today's quest, logging sets, progression, "better than last time", XP and levels, stat points for the champion, classes and gear.
 tags: [game, training, rules, xp, stats]
-timestamp: 2026-10-27
+timestamp: 2026-10-28
 ---
 
 # Training rules
@@ -70,8 +70,14 @@ falloff, armor, class lean) are in `src/balance/stats.ts`.
   `MAX_ARMOR`), **Damage**, **Haste** (attack speed; its id is `speed`), **Speed** (walk speed;
   its id is `move`) and **Crit** (the chance a hit does `CRIT_HIT` times its damage). Reach is gone
   (loot comes to you): `migrate` hands its points back and turns items that asked for it into
-  items that ask for Crit (`noReach` in `game.ts`). `spendPoint`, `refundPoint`, and `resetBuild` (take all
-  back, free, any time) on the Hero tab.
+  items that ask for Crit (`noReach` in `game.ts`). On the Hero tab the plus spends a point and the
+  minus takes back one spent since your last workout, free (`putPoint`, `takeBack` in
+  `src/lib/sweat.ts`, which note your points as they stood, `buildAt`). Moving older points is a
+  start-over (`respec`) for a sweat coin.
+- **Sweat coins** (`src/lib/sweat.ts`, numbers `SWEAT` in `src/balance/economy.ts`): every workout
+  earns one (`coins` counts them from the sessions; only `sweat.spent` is saved). Starting your
+  points over costs `SWEAT.respec`, changing class `SWEAT.classChange` (`changeClass`,
+  `classCost`); the pick in the opening and the first change after it are free.
 - Each point in the same stat is worth a little less (`statValue`, `FALLOFF`), so spreading pays.
 - `BASE` is what every champion has before any point. What a point is worth is set so points are
   about 40% of a player's power growth (`POWER_SPLIT`, see [balance.md](balance.md)); check with

@@ -32,7 +32,7 @@ export function powerScore(cls: ClassId, build: Build, worn: Partial<Record<Item
 
 function raw(cls: ClassId, build: Build, worn: Partial<Record<ItemSlot, Item>>) {
   const kit = starterKit(cls),
-    t = itemTotals([worn.weapon ?? kit.weapon, worn.armor ?? kit.armor, worn.charm]),
+    t = itemTotals([worn.weapon ?? kit.weapon, worn.armor, worn.charm]),
     p = statPower(build, cls),
     kind = attackOf(cls),
     body = CLASS_BODY[kind];

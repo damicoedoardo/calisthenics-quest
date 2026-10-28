@@ -231,14 +231,24 @@ export function rollItem(rnd: () => number, at: DropAt, rarity: Rarity): Item {
   };
 }
 
-/** The free starter kit for a class: a plain weapon and armor anyone can wear. */
-export function starterKit(cls: ClassId | undefined): Record<'weapon' | 'armor', Item> {
+/** The free starter kit for a class: a plain weapon, nothing else. A run started with no weapon
+    gets it; an empty armor slot stays empty until the Fog drops one. */
+export function starterKit(cls: ClassId | undefined): { weapon: Item } {
   const c = cls ?? 'warrior';
   return {
     weapon: { id: `starter-weapon-${c}`, slot: 'weapon', cls: c, rarity: 'common', level: 0, name: `Plain ${WEAPONS[c].noun}`, base: [{ id: 'damage', v: STARTER.weaponDamage }], bonuses: [], need: null, starter: true },
-    armor: { id: `starter-armor-${c}`, slot: 'armor', cls: c, rarity: 'common', level: 0, name: `Plain ${ARMORS[c].noun}`, base: [{ id: 'health', v: STARTER.armorHealth }, { id: 'armor', v: STARTER.armorArmor }], bonuses: [], need: null, starter: true },
   };
 }
+
+/** A weapon is made for one class and only that class can wear it: the class it's for when that
+    isn't yours, or null when it fits (armor and charms fit anyone). */
+export function otherClass(item: Item, cls: ClassId | undefined): ClassId | null {
+  if (item.slot !== 'weapon' || !item.cls) return null;
+  return item.cls === (cls ?? 'warrior') ? null : item.cls;
+}
+
+/** Whether this class with these points can wear the item now. */
+export const canWear = (item: Item, build: Build, cls: ClassId | undefined) => !otherClass(item, cls) && shortOf(item, build) === 0;
 
 /** Whether a build meets an item's requirement, and if not, how many points short. */
 export function shortOf(item: Item, build: Build): number {
@@ -268,9 +278,9 @@ export function foundAt(it: Item): { level: number; zone: number; floor: number 
 }
 
 /** How much stronger an item is than the one it would replace, in percent (-12 = 12% weaker).
-    With nothing worn in a slot, it's measured against the starter kit; a charm against nothing (null). */
+    With no weapon worn, it's measured against the plain weapon; armor or a charm against nothing (null). */
 export function betterBy(it: Item, worn: Item | undefined): number | null {
-  const than = worn ?? (it.slot === 'charm' ? undefined : starterKit(it.cls ?? undefined)[it.slot]);
+  const than = worn ?? (it.slot === 'weapon' ? starterKit(it.cls ?? undefined).weapon : undefined);
   if (!than || than.id === it.id) return null;
   return Math.round((itemScore(it) / itemScore(than) - 1) * 100);
 }

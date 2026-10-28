@@ -9,14 +9,16 @@ import { useModal } from './useModal';
 import { StatPoints } from './StatPoints';
 import { FlamePowers } from './FlamePowers';
 import { FogGearCard } from './FogGearCard';
+import { SpCard } from './SpCard';
 import { useLand } from './useLand';
 import { getClass } from '@/lib/gear';
 import { gearOf, type GameState } from '@/lib/game';
 import { heroVariant } from '@/story/flame';
 import { pointsFree } from '@/lib/stats';
+import { spTrial, spWorn } from '@/lib/sp';
 
 /** The Hero tab's three parts, the same upright and sideways: what you wear with the vault and
-    Mira's forge, your champion's stats and flame, your class. */
+    Mira's forge, your champion's stats and flame, your class and its SPs. */
 export type HeroPart = 'gear' | 'stats' | 'class';
 
 interface Props {
@@ -38,7 +40,8 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
   const PARTS = [
     { id: 'gear', label: 'Gear', dot: false },
     { id: 'stats', label: 'Stats', dot: pointsFree(state) > 0 },
-    { id: 'class', label: 'Class', dot: false },
+    // Named for the SPs only once the first is given, so they stay a surprise.
+    { id: 'class', label: spTrial(state) ? 'Class & SP' : 'Class', dot: false },
   ] as const;
 
   const lookEditor = editingLook && (
@@ -103,7 +106,10 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
         <FlamePowers state={state} land={land} />
       </>
     ) : (
-      classCard
+      <div className="space-y-3">
+        {classCard}
+        <SpCard state={state} update={update} land={land} />
+      </div>
     );
 
   const changeLook = (
@@ -123,7 +129,7 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
             <section className="flex w-44 shrink-0 flex-col items-center rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 px-2.5 pb-2.5 pt-3 min-[800px]:w-52">
               <p className="font-pixel text-[9px] text-slate-400">{cls ? cls.name : 'Adventurer'}</p>
               <div className="grid min-h-0 flex-1 place-items-center">
-                <Hero gear={gear} classId={state.profile.classId} size={112} variant={heroVariant(state)} />
+                <Hero gear={gear} classId={state.profile.classId} size={112} variant={heroVariant(state)} sp={spWorn(state)} />
               </div>
               {changeLook}
             </section>
@@ -140,7 +146,7 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
     <div className="space-y-4">
       <section className="flex flex-col items-center rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 pb-4 pt-5">
         <p className="font-pixel text-[10px] text-slate-400">{cls ? cls.name : 'Adventurer'}</p>
-        <Hero gear={gear} classId={state.profile.classId} size={128} variant={heroVariant(state)} />
+        <Hero gear={gear} classId={state.profile.classId} size={128} variant={heroVariant(state)} sp={spWorn(state)} />
         <div className="mt-3">{changeLook}</div>
       </section>
 

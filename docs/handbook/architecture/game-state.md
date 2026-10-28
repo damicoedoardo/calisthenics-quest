@@ -18,6 +18,8 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 | `reps` | Current per-set target by exercise id |
 | `sessions` | Every finished workout: entries, sets with reps in reserve, XP breakdown, raises, `heavier`, `better` |
 | `build` | Stat points spent on the champion, per stat (earned points are counted from `sessions`) |
+| `buildAt`, `sweat` | Optional. Points as they stood at the last workout (what the free take-back is measured from), and sweat coins spent plus class changes made (`src/lib/sweat.ts`, see [../game/training.md](../game/training.md)) |
+| `sp` | Optional. The SPs: the workout count when the Wanderer gave the first, whether its trial's floor was reached, the later ones the story gave (`more`), the one picked to wear (`worn`), and `off` when taken off (`src/lib/sp.ts`, see [../game/fog.md](../game/fog.md)) |
 | `fogGear` | Optional. What you wear into the Fog and the vault at home (`src/lib/fog-gear.ts`, see [../game/fog.md](../game/fog.md)); embers found and spent, co-op materials for the forge (`mats`), the slot the flame holds (`guard`), `deaths`, and the starter kit's look (`kit`, set by `migrate()` from the old forge) ([../game/forge.md](../game/forge.md)) |
 | `draft` | The workout in progress, or null. A draft left from an earlier day is closed onto that day (`closeStaleDraft`). `open` marks the workout screen as open (the app reopens on it) and `restUntil` is when the running rest ends (ms), both optional |
 | `seenScenes`, `sceneMark` | Story scenes already played, and how many played at the last story moment |

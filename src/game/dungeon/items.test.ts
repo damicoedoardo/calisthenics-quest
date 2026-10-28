@@ -59,7 +59,22 @@ describe('items in a run', () => {
     const sword = many(40).find((i) => i.slot === 'weapon')!;
     const run = createRun({ zone: ZONES[2], power, classId: 'warrior', seed: 4, worn: { weapon: sword }, build: { damage: 99 } });
     expect(run.hero.gear.worn.weapon).toBe(sword);
-    expect(run.hero.gear.worn.armor?.starter).toBe(true);
+    // The starter kit is a plain weapon and nothing else.
+    expect(run.hero.gear.worn.armor).toBeUndefined();
+  });
+
+  it("a weapon is its class's: another class can't wear it, and doesn't walk in with it", () => {
+    const bow = rollItem(seeded(5), { zone: 2, workouts: 0, floor: 0, cls: 'archer' }, 'common');
+    const forced = { ...bow, slot: 'weapon' as const, need: null };
+    const run = fresh({ damage: 99, crit: 99 });
+    give(run, forced);
+    wear(run, forced.id);
+    expect(run.hero.gear.worn.weapon?.starter).toBe(true);
+    expect(run.hero.gear.bag).toEqual([forced]);
+    const walked = createRun({ zone: ZONES[2], power, classId: 'warrior', seed: 4, worn: { weapon: forced } });
+    expect(walked.hero.gear.worn.weapon?.starter).toBe(true);
+    const archer = createRun({ zone: ZONES[2], power, classId: 'archer', seed: 4, worn: { weapon: forced } });
+    expect(archer.hero.gear.worn.weapon).toBe(forced);
   });
 
   it('wears what your points allow, and it makes you stronger', () => {
@@ -153,7 +168,7 @@ describe('item cards', () => {
     expect(foundAt(starterKit('warrior').weapon)).toBeNull();
   });
   it('a found item beats the starter kit, and an item is never compared with itself', () => {
-    const deep = rollItem(seeded(3), { zone: 1, workouts: 12, floor: 9, cls: 'warrior' }, 'rare');
+    const deep = [1, 2, 3, 4, 5, 6, 7, 8].map((n) => rollItem(seeded(n), { zone: 1, workouts: 12, floor: 9, cls: 'warrior' }, 'rare')).find((i) => i.slot === 'weapon')!;
     expect(betterBy(deep, undefined)).toBeGreaterThan(0);
     expect(betterBy(deep, deep)).toBeNull();
   });

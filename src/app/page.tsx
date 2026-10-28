@@ -14,6 +14,8 @@ import { useMenuTrack } from '@/components/Sound';
 import { Workout } from '@/components/Workout';
 import { AfterSession } from '@/components/AfterSession';
 import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
+import { giveSp, spAfterRun, spWorn } from '@/lib/sp';
+import { changeClass, classCost, coins } from '@/lib/sweat';
 import { ClassPicker } from '@/components/ClassPicker';
 import { DevButton, DevPanel } from '@/components/DevPanel';
 import { Sprite } from '@/components/Sprite';
@@ -115,7 +117,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     const zone = ZONES.find((z) => String(z.id) === q.get('run'));
     if (zone) {
       const at = q.get('at');
-      setRunStart(at === 'mid' || at === 'boss' || at === 'win' ? at : undefined);
+      setRunStart(at === 'mid' || at === 'boss' || at === 'win' || at === 'sp' ? at : undefined);
       // ?party: a practice party run with two made-up friends, to see it without a backend.
       if (q.has('party')) setPartyRun({ seed: 7, friends: LAB_FRIENDS });
       setRun(zone);
@@ -213,11 +215,14 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const endScene = useCallback(
     (r: SceneResult) => {
       if (!scene) return;
-      update((s) => ({
-        ...sawScene(s, scene.id, new Date()),
-        profile: r.flame ? { ...s.profile, flame: r.flame } : s.profile,
-        answers: r.answer ? { ...s.answers, [r.answer.id]: r.answer.value } : s.answers,
-      }));
+      update((s) => {
+        const next = {
+          ...sawScene(s, scene.id, new Date()),
+          profile: r.flame ? { ...s.profile, flame: r.flame } : s.profile,
+          answers: r.answer ? { ...s.answers, [r.answer.id]: r.answer.value } : s.answers,
+        };
+        return r.sp ? giveSp(next, r.sp) : next;
+      });
       if (r.pickClass) setPicker('story');
       setScene(null);
     },
@@ -252,8 +257,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         onExit={replaying ? () => setReplaying(false) : undefined}
         onSkip={dev && !replaying ? () => update((s) => skipIntro(s, new Date())) : undefined}
         onLook={(look) => update((s) => ({ ...s, profile: { ...s.profile, look } }))}
-        onFinish={({ letter, voice, kit, name }) => {
-          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, letter, voice, kit: kit ?? s.profile.kit, name: name ?? s.profile.name } }));
+        onFinish={({ letter, voice, kit, name, classId }) => {
+          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, letter, voice, kit: kit ?? s.profile.kit, name: name ?? s.profile.name, classId: classId ?? s.profile.classId } }));
           setReplaying(false);
         }}
         // On iPhones each browser and the installed app keep their own saves: a hero copied in
@@ -296,7 +301,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         )}
         <div className="flex items-center gap-3 land:min-w-0 land:flex-1">
           <button onClick={() => setYou(true)} aria-label="You: your letter, quest log and settings" className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800 active:scale-95 land:hidden desk:hidden">
-            <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} variant={heroVariant(state)} />
+            <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
           </button>
           <div className="min-w-0 flex-1 land:flex land:items-center land:gap-4">
             <div className="flex items-baseline justify-between land:shrink-0 land:items-center land:gap-4">
@@ -347,10 +352,10 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         {/* Sideways, the hero from the header sits at the top of the rail; on a computer, bigger. */}
         <button onClick={() => setYou(true)} aria-label="You: your letter, quest log and settings" className="hidden h-11 w-11 place-items-center rounded-xl bg-ink-800 active:scale-95 land:grid desk:mx-auto desk:grid desk:h-28 desk:w-28">
           <span className="desk:hidden">
-            <Hero gear={gear} classId={state.profile.classId} size={38} bounce={false} variant={heroVariant(state)} />
+            <Hero gear={gear} classId={state.profile.classId} size={38} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
           </span>
           <span className="hidden desk:block">
-            <Hero gear={gear} classId={state.profile.classId} size={96} bounce={false} variant={heroVariant(state)} />
+            <Hero gear={gear} classId={state.profile.classId} size={96} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
           </span>
         </button>
         <div className="mx-auto grid max-w-md grid-cols-4 land:mx-0 land:w-full land:grid-cols-1 land:gap-1 desk:mx-0 desk:w-full desk:grid-cols-1 desk:gap-1">
@@ -386,7 +391,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           startAt={runStart}
           party={partyRun ?? undefined}
           // A run Together keeps its loot but never moves the story: only Story runs clear zones.
-          onEnd={(r) => update((s) => settleGear(partyRun ? s : recordRun(s, r), r).state)}
+          onEnd={(r) => update((s) => spAfterRun(settleGear(partyRun ? s : recordRun(s, r), r).state, r))}
           onLeave={() => {
             setRun(null);
             setRunStart(undefined);
@@ -408,8 +413,10 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         <ClassPicker
           workouts={state.sessions.length}
           current={state.profile.classId}
+          cost={classCost(state)}
+          coins={coins(state)}
           onPick={(id) => {
-            update((s) => ({ ...s, profile: { ...s.profile, classId: id } }));
+            update((s) => changeClass(s, id));
             setPicker(null);
           }}
           onCancel={() => setPicker(null)}

@@ -9,12 +9,16 @@ import { useMusic } from './Sound';
 import { gearOf, type GameState } from '@/lib/game';
 import { flameStage, DEFAULT_FLAME_NAME } from '@/story/flame';
 import { renderLines, scenePlace, storyWords } from '@/story/engine';
+import { spWorn } from '@/lib/sp';
 import type { AnswerId, Ask, Line, Scene, Words } from '@/story/types';
+import type { SpNo } from '@/game/dungeon/content';
 
 export interface SceneResult {
   answer?: { id: AnswerId; value: string };
   flame?: string;
   pickClass?: boolean;
+  /** The Wanderer gave an SP: which one. */
+  sp?: SpNo;
 }
 
 interface Props {
@@ -45,6 +49,7 @@ export function ScenePlayer({ scene, state, onDone }: Props) {
     const ask = scene.ask;
     if (!ask) return onDone({});
     if (ask.kind === 'class') return onDone({ pickClass: true });
+    if (ask.kind === 'sp') return onDone({ sp: ask.n ?? 1 });
     setPhase('ask');
   };
 
@@ -55,7 +60,7 @@ export function ScenePlayer({ scene, state, onDone }: Props) {
     setPhase('after');
   };
 
-  if (phase === 'ask' && scene.ask && scene.ask.kind !== 'class')
+  if (phase === 'ask' && scene.ask && scene.ask.kind !== 'class' && scene.ask.kind !== 'sp')
     return <AskCard ask={scene.ask} place={place} music={music} stage={stage} onAnswer={answered} />;
 
   return (
@@ -69,6 +74,7 @@ export function ScenePlayer({ scene, state, onDone }: Props) {
       place={place}
       words={unnamed ? { ...words, flame: '' } : words}
       flame={stage}
+      sp={spWorn(state)}
       onDone={phase === 'lines' ? endLines : () => onDone(result)}
     />
   );
@@ -84,7 +90,7 @@ function AskCard({
   stage,
   onAnswer,
 }: {
-  ask: Exclude<Ask, { kind: 'class' }>;
+  ask: Exclude<Ask, { kind: 'class' } | { kind: 'sp' }>;
   place: ReturnType<typeof scenePlace>;
   music: NonNullable<Scene['music']>;
   stage: ReturnType<typeof flameStage>['id'];

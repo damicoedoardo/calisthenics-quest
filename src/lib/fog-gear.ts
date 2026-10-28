@@ -1,7 +1,7 @@
 import { daysSinceLastSession, type GameState } from './game';
 import type { GearSlot, Tier } from './gear';
 import { buildOf } from './stats';
-import { afterFall, itemScore, shortOf, type Item, type ItemSlot } from '@/game/dungeon/items';
+import { afterFall, canWear, itemScore, type Item, type ItemSlot } from '@/game/dungeon/items';
 import { FLAME_GUARD_DAYS, MELT, VAULT, type MatId } from '@/balance';
 
 /* The things you wear into the Fog, between runs. Die in a run and the Fog takes everything you
@@ -80,11 +80,11 @@ export function atRisk(state: GameState, gear: { worn: FogGear['worn']; bag: Ite
   return { held, cold: warm ? undefined : pick, lost: risky.filter((x) => !afterFall(x)), slip: risky.filter((x) => afterFall(x)) };
 }
 
-/** What you walk into a run wearing: only what your points let you wear today (the rest waits at
-    home, safe). */
+/** What you walk into a run wearing: only what your points and your class let you wear today (the
+    rest waits at home, safe: another class's weapon until you switch back). */
 export function wornFor(state: GameState): FogGear['worn'] {
   const b = buildOf(state);
-  return Object.fromEntries(Object.entries(gearOf(state).worn).filter(([, it]) => it && shortOf(it, b) === 0));
+  return Object.fromEntries(Object.entries(gearOf(state).worn).filter(([, it]) => it && canWear(it, b, state.profile.classId)));
 }
 
 /** After a run: keep it all on a win or a walk out by the stairs, lose it all otherwise. */
@@ -125,11 +125,12 @@ export function settleGear(state: GameState, end: { won: boolean; why?: string; 
   return { state: { ...state, fogGear: { ...g, worn, vault: [...g.vault, ...stored], embers: { found: (g.embers?.found ?? 0) + embers, spent: g.embers?.spent ?? 0 } } }, out: { kept, stored, left, lost: [], embers, mats: found } };
 }
 
-/** Wear an item from the vault (what you wore goes back in its place). Nothing happens if you can't wear it yet. */
+/** Wear an item from the vault (what you wore goes back in its place). Nothing happens if you can't
+    wear it yet, or it's another class's weapon. */
 export function wearFromVault(state: GameState, id: string): GameState {
   const g = gearOf(state),
     it = g.vault.find((x) => x.id === id);
-  if (!it || shortOf(it, buildOf(state)) > 0) return state;
+  if (!it || !canWear(it, buildOf(state), state.profile.classId)) return state;
   const old = g.worn[it.slot],
     vault = g.vault.filter((x) => x !== it);
   return { ...state, fogGear: { ...g, worn: { ...g.worn, [it.slot]: it }, vault: old ? [...vault, old] : vault } };

@@ -2,7 +2,7 @@ import { EMBERS, SEASONED, STEPS } from '@/balance';
 import type { ClassId } from '@/lib/gear';
 import type { Build } from '@/lib/stats';
 import type { Zone } from '@/lib/fog';
-import { ITEM_SLOTS, itemScore, rollItem, rollRarity, shortOf, type Item, type ItemSlot } from '@/game/dungeon/items';
+import { ITEM_SLOTS, canWear, itemScore, rollItem, rollRarity, type Item, type ItemSlot } from '@/game/dungeon/items';
 
 /* The gear a real player walks in with (SEASONED in src/balance/dungeon.ts): the best they can wear
    of what earlier runs dropped, forged as far as their embers go. The Fog bot plays with it, so the
@@ -20,7 +20,7 @@ export function seasonedKit(rnd: () => number, zones: Zone[], zone: number, work
   }
   const worn: Partial<Record<ItemSlot, Item>> = {};
   for (const slot of ITEM_SLOTS) {
-    const best = finds.filter((it) => it.slot === slot && shortOf(it, build) === 0).sort((a, b) => itemScore(b) - itemScore(a))[0];
+    const best = finds.filter((it) => it.slot === slot && canWear(it, build, cls)).sort((a, b) => itemScore(b) - itemScore(a))[0];
     if (best) worn[slot] = best;
   }
   // The forge: embers from workouts and melted loot, spent a step at a time on the cheapest upgrade

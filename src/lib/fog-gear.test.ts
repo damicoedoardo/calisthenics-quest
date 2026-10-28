@@ -31,6 +31,20 @@ describe('Fog gear between runs', () => {
     }
   });
 
+  it("after a class change, the old class's weapon waits at home, safe, and can't be worn", () => {
+    const sword = item('weapon'),
+      base = strong(initialState());
+    const archer: GameState = { ...base, profile: { ...base.profile, classId: 'archer' }, fogGear: { worn: { weapon: sword }, vault: [] } };
+    expect(wornFor(archer).weapon).toBeUndefined();
+    // A fall in the run doesn't take it: it never went in.
+    const { state } = settleGear(archer, { won: false, why: 'hp', gear: { worn: {}, bag: [] } });
+    expect(state.fogGear?.worn.weapon).toBe(sword);
+    const inVault: GameState = { ...archer, fogGear: { worn: {}, vault: [sword] } };
+    expect(wearFromVault(inVault, sword.id)).toBe(inVault);
+    const warrior: GameState = { ...inVault, profile: { ...inVault.profile, classId: 'warrior' } };
+    expect(wearFromVault(warrior, sword.id).fogGear?.worn.weapon).toBe(sword);
+  });
+
   it("a full vault leaves the rest behind, keeping the best", () => {
     const bag = Array.from({ length: 6 }, () => item('charm'));
     const { state, out } = settleGear(initialState(), { won: true, why: 'boss', gear: { worn: {}, bag } });

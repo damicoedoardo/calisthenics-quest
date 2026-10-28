@@ -9,9 +9,11 @@ import { ZONES } from '@/lib/fog';
 import { SANDBOX_KEY } from '@/lib/store';
 import { withTodayPage } from '@/story/daily';
 import { midBoss } from '@/game/dungeon/engine';
+import { SP_NOS, spDef, type SpNo } from '@/game/dungeon/content';
 import { rollItem, type Item } from '@/game/dungeon/items';
 import { seeded } from '@/lib/random';
 import { spendEvenly } from '@/lib/stats';
+import type { ClassId } from '@/lib/gear';
 
 /* What's new tonight: one tap to try each change. Everything that opens the app does it on a
    sandbox save (SANDBOX_KEY, chosen by ?sandbox), so the real save on this phone is never touched.
@@ -92,6 +94,31 @@ function fused(): GameState {
   return s.seenScenes.includes('finale') ? s : { ...s, seenScenes: [...s.seenScenes, 'finale'] };
 }
 
+/** A veteran in a class, given the first SP; `awake`: its trial done (worn into the Fog). `worn`
+    above 1 gives all four SPs, wearing that one. */
+function withSp(awake: boolean, classId: ClassId = 'warrior', worn: SpNo = 1): GameState {
+  const s = spendEvenly(veteran(14, 1));
+  const more: SpNo[] = worn > 1 ? [2, 3, 4] : [];
+  // Its scenes already played, so the jump opens on the screen and not on them.
+  const seen = [...s.seenScenes, 'sp-gift', 'sp-awake', ...(worn > 1 ? ['sp-second', 'sp-third', 'sp-fourth'] : [])];
+  return { ...s, profile: { ...s.profile, classId }, sp: { givenAt: 3, ...(awake ? { floor: true } : {}), ...(worn > 1 ? { more, worn } : {}) }, seenScenes: seen };
+}
+
+/** The SP's trial just done, its waking scene not yet played: the app opens on it. */
+function spWaking(classId: ClassId): GameState {
+  const s = withSp(true, classId);
+  return { ...s, seenScenes: s.seenScenes.filter((id) => id !== 'sp-awake') };
+}
+
+/** The geared warrior with an archer's bow in the vault: it can't be worn. */
+function otherBow(): GameState {
+  const s = geared(),
+    rnd = seeded(31);
+  let bow = rollItem(rnd, { zone: 1, workouts: ZONES[1].workouts, floor: 2, cls: 'archer' }, 'magic');
+  while (bow.slot !== 'weapon') bow = rollItem(rnd, { zone: 1, workouts: ZONES[1].workouts, floor: 2, cls: 'archer' }, 'magic');
+  return { ...s, fogGear: { ...s.fogGear!, vault: [{ ...bow, need: null }, ...s.fogGear!.vault] } };
+}
+
 /** Write the sandbox save and open the app on it at `query`. */
 function open(state: GameState, query: string) {
   try {
@@ -131,6 +158,8 @@ function Panel({ title, note, children }: { title: string; note?: string; childr
 }
 
 const chip = 'whitespace-nowrap rounded-lg bg-ink-800 px-1 py-2 text-[11px] text-slate-200 active:scale-95';
+/** A chip for a two-word name: it wraps. */
+const nameChip = chip.replace('whitespace-nowrap', 'leading-tight');
 
 function Row({ icon, label, note, onClick, href }: { icon: ReactNode; label: string; note?: string; onClick?: () => void; href?: string }) {
   const body = (
@@ -170,6 +199,43 @@ export default function NightLab() {
         Everything here opens on a sandbox save. Your real progress on this phone is untouched; the app shows a blue bar while you&apos;re in the sandbox.
       </p>
 
+      <Panel title="CLASSES, SP AND SWEAT COINS" note="Your class at the start, weapons that belong to one class, the first SP with its trial, and sweat coins to change class or start your points over.">
+        <Row icon={<Swords size={16} />} label="After the boss: pick up, then go home" note="The boss's room goes quiet, HOME stairs come up; walk over what's left first" onClick={() => open(veteran(14, 1), 'run=0&at=boss')} />
+        <Row icon={<Play size={16} />} label="The opening, with the class pick" note="A new player: after the name, pick a class (you can change it later)" onClick={() => open(initialState(), '')} />
+        <Row icon={<Gem size={16} />} label="Another class's weapon" note="Hero > Gear: an archer's bow in a warrior's vault says 'Archer only' and can't be worn" onClick={() => open(otherBow(), 'tab=hero&hero=gear')} />
+        <Row icon={<Film size={16} />} label="The Wanderer gives the first SP" note="sp-gift, at 3 workouts" href="/lab/story?play=sp-gift&back" />
+        <div className="rounded-xl bg-ink-950 px-3 py-2.5">
+          <p className="text-sm text-slate-200">The SP wakes: the transformation</p>
+          <p className="text-[11px] text-slate-500">sp-awake in the app, as each class: the card cracks open, your element storms in, and you stand in its look</p>
+          <div className="mt-2 grid grid-cols-4 gap-1">
+            {(['warrior', 'archer', 'mage', 'monk'] as const).map((c) => (
+              <button key={c} className={chip} onClick={() => open(spWaking(c), '')}>
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+        <Row icon={<Sparkles size={16} />} label="The SP, sealed" note="Hero tab: the card in ash, and its trial (train twice more, reach floor 5)" onClick={() => open(withSp(false), 'tab=hero&hero=class')} />
+        <Row icon={<Sparkles size={16} />} label="The SP, awake" note="Hero tab: you in its look, the card in color, its moves and the switch to wear it" onClick={() => open(withSp(true), 'tab=hero&hero=class')} />
+        <Row icon={<Sparkles size={16} />} label="All four SPs" note="Hero tab: scroll the SPs you own with the arrows, and pick the one to wear" onClick={() => open(withSp(true, 'warrior', 2), 'tab=hero&hero=class')} />
+        <Row icon={<Film size={16} />} label="The second SP" note="sp-second, after chapter 2: the Wanderer hands it over, awake" href="/lab/story?play=sp-second&back" />
+        <Row icon={<Film size={16} />} label="The third SP" note="sp-third, after chapter 4" href="/lab/story?play=sp-third&back" />
+        <Row icon={<Film size={16} />} label="The fourth SP" note="sp-fourth, after chapter 5, before the last" href="/lab/story?play=sp-fourth&back" />
+        <div className="rounded-xl bg-ink-950 px-3 py-2.5">
+          <p className="text-sm text-slate-200">The SP in a run</p>
+          <p className="text-[11px] text-slate-500">At the mid-boss, the final already full: its own move beside your ability (R on a keyboard), its final above it (F). One row a class, SP 1 to 4.</p>
+          <div className="mt-2 grid grid-cols-4 gap-1">
+            {(['warrior', 'archer', 'mage', 'monk'] as const).flatMap((c) =>
+              SP_NOS.map((n) => (
+                <button key={c + n} className={nameChip} onClick={() => open(withSp(true, c, n), 'run=1&at=sp')}>
+                  {spDef(c, n).name}
+                </button>
+              )),
+            )}
+          </div>
+        </div>
+        <Row icon={<Swords size={16} />} label="Change class with sweat coins" note="Hero tab, Change class: the first change is free, then 3 coins" onClick={() => open({ ...withSp(true), sweat: { spent: 0, changes: 1 } }, 'tab=hero&hero=class')} />
+      </Panel>
       <Panel title="MENUS" note="Four tabs, one job each: Fog only plays (Story or Together), Hero holds your gear, vault and forge, stats and class. Tap your hero at the top for the You page.">
         <Row icon={<Swords size={16} />} label="Fog: Story" note="The worlds, then the ready strip: what you wear (tap it for Hero > Gear), warmed up, rested, the boss's hearts" onClick={() => open(geared(), 'tab=play')} />
         <Row icon={<Swords size={16} />} label="Fog: Together" note="Play with friends: the rules, the party, your friends (on a real signed-in save)" onClick={() => open(geared(), 'tab=play&fog=together')} />

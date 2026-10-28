@@ -12,7 +12,8 @@ import type { Build } from '@/lib/stats';
 import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STAIRS, type Prop } from './props';
 import { THEMES, themeFor, type Theme } from './themes';
 import { bandOf, glowOf } from './items';
-import { BANDS, MATS } from '@/balance';
+import { BANDS, MATS, SURGE } from '@/balance';
+import { spLook } from '@/sprites/characters/spLooks';
 import {
   ABILITIES,
   DODGE,
@@ -53,9 +54,15 @@ import {
   stepRun,
   takeEvents,
   abilityReady,
+  finalReady,
+  skillReady,
   wardenFloor,
   winNow,
   type AbilityId,
+  type SpMoveId,
+  type SpNo,
+  type SpPassiveId,
+  SP_MOVES,
   type CellKind,
   type Door,
   type Foe,
@@ -93,6 +100,7 @@ function recap(run: Run): RunEnd {
   const warden = wf < 0 ? null : over.won || run.floor > wf || (run.floor === wf && !!run.warden && !run.warden.alive);
   return { ...over, relics: { ...run.hero.relics }, warden };
 }
+
 
 /** Most particles and drawn effects alive at once. Measured fights peak far below this (bits 38,
     sparks 16, puffs 72, effects 3); the caps only stop a freak pile-up from stalling a slow phone. */
@@ -139,6 +147,8 @@ export interface RunSetup {
   build?: Build;
   /** The chapter's hearts are gone: a weaker boss and free skills at the start. */
   edge?: Edge;
+  /** Wearing the class's SP: its own move and its final (src/lib/sp.ts). */
+  sp?: SpNo | boolean;
   /** A party's run: the seed every phone shares. */
   seed?: number;
   /** Friends in the run (a practice run: bots play them), each with their own sheets
@@ -182,6 +192,8 @@ export interface Hud {
   floors: number;
   /** The class ability: 1 when ready. */
   ability: { id: AbilityId; ready: number };
+  /** With an SP on: its own move and its final, each 1 when ready. */
+  sp: { skill: SpMoveId; skillReady: number; final: SpMoveId; finalReady: number; finals: number } | null;
   /** The dodge: 1 when ready. */
   dodge: number;
   cleared: boolean;
@@ -211,6 +223,9 @@ export interface RunEvents {
 export interface RunHandle {
   pick: (id: UpgradeId) => void;
   ability: () => void;
+  /** The SP's own move, and its final. */
+  skill: () => void;
+  final: () => void;
   dodge: () => void;
   pause: () => void;
   resume: () => void;
@@ -219,6 +234,8 @@ export interface RunHandle {
   /** Developer mode: show the stairs card now. */
   askStairs: () => void;
   skipToWarden: () => void;
+  /** Developer mode: the SP's final ready now. */
+  fillFinal: () => void;
   /** Developer mode: show the next zone's dungeon theme; returns its name. */
   cycleTheme: () => string;
   pickRelic: (id: RelicId) => void;
@@ -387,6 +404,8 @@ class DungeonScene extends Phaser.Scene {
   private fading: { draw: (g: Phaser.GameObjects.Graphics, p: number) => void; start: number; ms: number; up: boolean }[] = [];
   private acc = 0;
   private wantAbility = false;
+  private wantSkill = false;
+  private wantFinal = false;
   private wantDodge = false;
   /** A monster tapped since the last step (null: tapped again, let go). */
   private wantLock: number | null | undefined = undefined;
@@ -394,6 +413,10 @@ class DungeonScene extends Phaser.Scene {
   private stopUntil = 0;
   /** Small hit-stops don't come back before then, so a flurry of hits doesn't stutter. */
   private stopCool = 0;
+  /** When each frequent passive last showed (they come with almost every hit). */
+  private passiveAt: Partial<Record<SpPassiveId, number>> = {};
+  /** Finals used this run: the HUD shows a small badge with the final's name when it goes up. */
+  private finals = 0;
   /** Hit-stop spent in the current second: capped at STOP_BUDGET, so a burst of hits never stacks
       into stutter. */
   private stopSpent = { from: 0, ms: 0 };
@@ -428,6 +451,7 @@ class DungeonScene extends Phaser.Scene {
       worn: setup.worn,
       build: setup.build,
       edge: setup.edge,
+      sp: setup.sp,
       // A practice run: friends come with your strength in their own class and starter kit.
       friends: setup.friends?.map((f) => ({ power: setup.power, classId: f.classId })),
     });
@@ -573,13 +597,16 @@ class DungeonScene extends Phaser.Scene {
     const kb = this.input.keyboard;
     if (kb) {
       const k = Phaser.Input.Keyboard.KeyCodes;
-      // On a computer: WASD or the arrows move, Q is the class ability, Space (or E, or Shift) dodges.
+      // On a computer: WASD or the arrows move, Q is the class ability, Space (or E, or Shift) dodges,
+      // R and F are the SP's move and final.
       this.keys = kb.addKeys({ up: k.UP, down: k.DOWN, left: k.LEFT, right: k.RIGHT, w: k.W, a: k.A, s: k.S, d: k.D }) as DungeonScene['keys'];
       // Ignored while the run holds still (a card or the bag is open), so nothing fires on the way back.
       const on = (codes: number[], act: () => void) => {
         for (const c of codes) kb.addKey(c).on('down', () => !this.paused && !this.run.hero.offer && !this.run.hero.relicOffer && !this.run.stairsAsk && act());
       };
       on([k.Q], () => (this.wantAbility = true));
+      on([k.R], () => (this.wantSkill = true));
+      on([k.F], () => (this.wantFinal = true));
       on([k.SPACE, k.E, k.SHIFT], () => (this.wantDodge = true));
     }
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
@@ -1118,6 +1145,15 @@ class DungeonScene extends Phaser.Scene {
       this.stairs = this.add.image(sx, sy, 'stairs').setDepth(-1.5).setAngle(90).setScale(1.5);
       this.roomBits.push(this.stairs);
       if (fresh) this.puffs.explode(10, sx, sy);
+      // After the boss, the stairs lead home.
+      if (r.home) {
+        const home = this.add
+          .text(sx, sy - 40, 'HOME', { fontFamily: '"Press Start 2P", monospace', fontSize: '9px', color: '#fde68a', backgroundColor: '#0b0d14cc', padding: { x: 5, y: 4 } })
+          .setOrigin(0.5, 1)
+          .setDepth(150500);
+        this.roomBits.push(home);
+        this.tweens.add({ targets: home, y: sy - 48, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      }
     }
     if (r.chest && !this.chest) {
       const [cx, cy] = this.P(r.chest.x, r.chest.y);
@@ -1153,10 +1189,12 @@ class DungeonScene extends Phaser.Scene {
     while (this.acc >= STEP * 1000 && steps < 6) {
       this.acc -= STEP * 1000;
       steps++;
-      const mine = this.bot ? botInput(run) : { ...this.stickInput(), ability: this.wantAbility, dodge: this.wantDodge, lock: this.wantLock };
+      const mine = this.bot ? botInput(run) : { ...this.stickInput(), ability: this.wantAbility, skill: this.wantSkill, final: this.wantFinal, dodge: this.wantDodge, lock: this.wantLock };
       // Friends in a practice run are played by the bot.
       const input = run.party.length > 1 ? [mine, ...run.party.slice(1).map((h) => botInput(run, h))] : mine;
       this.wantAbility = false;
+      this.wantSkill = false;
+      this.wantFinal = false;
       this.wantDodge = false;
       this.wantLock = undefined;
       stepRun(run, input);
@@ -1202,14 +1240,14 @@ class DungeonScene extends Phaser.Scene {
     if (run.over && !this.ended) {
       this.ended = true;
       // The boss's last words: beaten, at peace, or the mountain still above you.
-      if (run.over.won || run.climb !== null) {
+      if ((run.over.won && !run.home) || run.climb !== null) {
         this.speak(this.setup.lines?.end, 3000);
         this.syncSpeech();
       }
       this.bus.hud(this.hud());
-      if (run.over.won) this.cameras.main.flash(600, 255, 240, 200);
+      if (run.over.won && !run.home) this.cameras.main.flash(600, 255, 240, 200);
       else this.hero.setTint(0x6b7280);
-      this.time.delayedCall(run.over.won ? 1200 : 900, () => this.bus.end(recap(run)));
+      this.time.delayedCall(run.home ? 300 : run.over.won ? 1200 : 900, () => this.bus.end(recap(run)));
     }
   }
 
@@ -1353,7 +1391,7 @@ class DungeonScene extends Phaser.Scene {
   /** The boss's bar. The Plateau's never moves; the Hollow's fills while you stand in its light. */
   private bossBar(): Hud['boss'] {
     const b = this.run.boss;
-    if (!b) return null;
+    if (!b || this.run.home) return null;
     const which = this.setup.zone.boss;
     if (which === 'plateau') return { hp: b.hp > 0 ? b.maxHp : 0, max: b.maxHp, label: 'It looks the same' };
     if (which === 'hollow') return { hp: this.run.hold, max: LIGHT.hold, label: b.phase === 2 ? 'Stand in its light' : 'Wait for its light' };
@@ -1377,6 +1415,7 @@ class DungeonScene extends Phaser.Scene {
       floor: r.floor + 1,
       floors: r.layout.floors,
       ability: { id: r.hero.ability, ready: abilityReady(r, r.hero) },
+      sp: r.hero.sp ? { skill: r.hero.sp.skill, skillReady: skillReady(r, r.hero), final: r.hero.sp.final, finalReady: finalReady(r.hero), finals: this.finals } : null,
       dodge: Math.min(1, 1 - (r.hero.dodgeAt - r.t) / DODGE.cd),
       cleared: r.cleared,
       relics: { ...r.hero.relics },
@@ -1916,10 +1955,42 @@ class DungeonScene extends Phaser.Scene {
         this.sfx(e.id === 'volley' ? 'arrow' : e.id === 'still' || e.id === 'shock' ? 'nova' : 'dash');
         this.cameras.main.shake(100, 0.004);
         if (e.id === 'charge' || e.id === 'blink') {
-          this.fade(300, (g, p) => g.lineStyle(10 * (1 - p) + 2, 0x7dd3fc, 0.6 * (1 - p)).lineBetween(x, y, toX, toY));
+          // the charge leaves a trail of you in steel blue; the blink, a violet you and a puff of stars where you land
+          const blink = e.id === 'blink';
+          this.ghosts(x, y, toX, toY, blink ? 0xc4b5fd : 0x7dd3fc, blink ? 2 : 4);
+          this.fade(300, (g, p) => g.lineStyle(10 * (1 - p) + 2, blink ? 0xc4b5fd : 0x7dd3fc, 0.6 * (1 - p)).lineBetween(x, y, toX, toY));
           this.burst(this.puffs, 10, x, y, 10);
+          if (blink) {
+            this.burst(this.sparks, 10, toX, toY, -6);
+            this.fade(320, (g, p) => this.star(g, ...this.P(toX, toY - 0), 6 + 14 * p, 0xe9d5ff, 1 - p), true);
+          }
         }
-        if (e.id === 'still') this.fade(500, (g, p) => g.lineStyle(4, 0x86efac, 0.8 * (1 - p)).strokeCircle(x, y, 30 + 120 * p));
+        if (e.id === 'volley') {
+          // the arrows leave a fan of streaks
+          this.fade(240, (g, p) => {
+            g.lineStyle(2, 0xe0f2fe, 0.7 * (1 - p));
+            for (let i = 0; i < 12; i++) {
+              const a = (i / 12) * Math.PI * 2,
+                r0 = 18 + 60 * p;
+              g.lineBetween(x + Math.cos(a) * r0, y + Math.sin(a) * r0, x + Math.cos(a) * (r0 + 22), y + Math.sin(a) * (r0 + 22));
+            }
+          });
+        }
+        if (e.id === 'still') {
+          // a lotus of light opens under you, then the ring goes out
+          this.fade(700, (g, p) => {
+            const open = Math.min(1, p * 2.5),
+              a = 0.8 * (1 - p);
+            for (let i = 0; i < 8; i++) {
+              const t = (i / 8) * Math.PI * 2 + p * 0.6,
+                px = x + Math.cos(t) * 16 * open,
+                py = y + Math.sin(t) * 16 * open;
+              g.fillStyle(i % 2 ? 0xbbf7d0 : 0x86efac, a).fillEllipse(px, py, 22 * open + 2, 9 * open + 2);
+            }
+            g.fillStyle(0xfef9c3, a).fillCircle(x, y, 6 * open);
+          });
+          this.fade(500, (g, p) => g.lineStyle(4, 0x86efac, 0.8 * (1 - p)).strokeCircle(x, y, 30 + 120 * p));
+        }
         if (e.id === 'shock') {
           this.burst(this.puffs, 14, x, y, 10);
           this.fade(380, (g, p) => {
@@ -1929,24 +2000,32 @@ class DungeonScene extends Phaser.Scene {
         }
         break;
       }
+      case 'sp': {
+        // An SP move, each its own: fire, wind, stars or water. A final shakes the room; its name
+        // shows as a small badge in the HUD (finals), so nothing covers the fight.
+        const { x, y, r, final } = e,
+          shape = SP_MOVES[e.id].shape;
+        this.sfx(final ? 'nova' : shape === 'fan' || shape === 'volley' ? 'arrow' : shape === 'dash' ? 'dash' : shape === 'chain' ? 'spark' : 'nova', final ? 0.8 : 1.15);
+        this.shake(final ? 260 : 120, final ? 0.01 : 0.005);
+        if (final) {
+          buzz(30);
+          this.finals++;
+          this.hitStop(120);
+          this.cameras.main.flash(250, 255, 236, 200);
+        }
+        this.spMove(e, this.spAura());
+        break;
+      }
+      case 'passive':
+        this.passive(e.id, e.x, e.y);
+        break;
       case 'dodge': {
         buzz(12);
         const { x, y, toX, toY } = e;
         this.sfx('dash', 1.3);
         this.burst(this.puffs, 6, x, y, 18);
         // Afterimages along the way: you were there, and now you're not.
-        for (let i = 0; i < 3; i++) {
-          const k = i / 3,
-            [gx, gy] = this.P(x + (toX - x) * k, y + (toY - y) * k),
-            ghost = this.add
-              .image(gx, gy, this.hero.texture.key, this.hero.frame.name)
-              .setScale(this.hero.scaleX, this.hero.scaleY)
-              .setFlipX(this.hero.flipX)
-              .setTintFill(0x7dd3fc)
-              .setAlpha(0.55 - i * 0.12)
-              .setDepth(gy - 1);
-          this.tweens.add({ targets: ghost, alpha: 0, duration: 260 + i * 60, onComplete: () => ghost.destroy() });
-        }
+        this.ghosts(x, y, toX, toY, 0x7dd3fc);
         this.fade(220, (g, p) => g.lineStyle(6 * (1 - p) + 1, 0xe0f2fe, 0.5 * (1 - p)).lineBetween(x, y, toX, toY));
         break;
       }
@@ -2048,12 +2127,21 @@ class DungeonScene extends Phaser.Scene {
         this.bus.say('The shrine restores you.');
         break;
       }
+      case 'won': {
+        // The boss's last words and a flash of light; the run ends on the stairs home.
+        this.speak(this.setup.lines?.end, 3000);
+        this.syncSpeech();
+        this.cameras.main.flash(600, 255, 240, 200);
+        this.sfx('chime', 1);
+        break;
+      }
       case 'clear': {
         const r = this.run;
         this.drawRoom();
         this.sfx('nova', 0.7);
         this.cleared(true);
-        if (r.chest && isWardenRoom(r)) this.bus.say(`${midBoss(this.setup.zone).name.replace(/^the/, 'The')} left a chest. Open it, then take the stairs.`);
+        if (r.home) this.bus.say('The boss is down. Pick up what it left, then take the stairs home.');
+        else if (r.chest && isWardenRoom(r)) this.bus.say(`${midBoss(this.setup.zone).name.replace(/^the/, 'The')} left a chest. Open it, then take the stairs.`);
         else if (r.stairs) this.bus.say('Room clear. The stairs go down, or look round the floor first.');
         else this.bus.say(r.chest ? 'Room clear. Open the chest.' : 'Room clear. Pick a door: you only know what waits behind it once you go in.');
         break;
@@ -2229,7 +2317,476 @@ class DungeonScene extends Phaser.Scene {
     this.tweens.add({ targets: t, alpha: 0, delay: big ? 380 : 260, duration: 260, onComplete: () => t.setVisible(false) });
   }
 
-  /** Hold the world still for a moment. `minor` stops don't come back-to-back. */
+  /** Afterimages of you from one point to another, filled with one color. */
+  private ghosts(x: number, y: number, toX: number, toY: number, color: number, n = 3) {
+    for (let i = 0; i < n; i++) {
+      const k = i / n,
+        [gx, gy] = this.P(x + (toX - x) * k, y + (toY - y) * k),
+        ghost = this.add
+          .image(gx, gy, this.hero.texture.key, this.hero.frame.name)
+          .setScale(this.hero.scaleX, this.hero.scaleY)
+          .setFlipX(this.hero.flipX)
+          .setTintFill(color)
+          .setAlpha(0.55 - (i * 0.4) / n)
+          .setDepth(gy - 1);
+      this.tweens.add({ targets: ghost, alpha: 0, duration: 260 + i * 60, onComplete: () => ghost.destroy() });
+    }
+  }
+
+  /** A five-pointed star. */
+  private star(g: Phaser.GameObjects.Graphics, cx: number, cy: number, R: number, color: number, alpha: number) {
+    const pts: Phaser.Math.Vector2[] = [];
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5,
+        d = i % 2 ? R * 0.45 : R;
+      pts.push(new Phaser.Math.Vector2(cx + Math.cos(a) * d, cy + Math.sin(a) * d));
+    }
+    g.fillStyle(color, alpha).fillPoints(pts, true);
+  }
+
+  /** Where each final's flurry lands, round (x, y): the monsters in reach first, then spots near you. */
+  private spots(x: number, y: number, r: number, n: number): [number, number][] {
+    const out: [number, number][] = this.run.foes
+      .filter((f) => f.alive && Math.hypot(f.x - x, f.y - y) < r)
+      .slice(0, n)
+      .map((f) => [f.x, f.y]);
+    while (out.length < n) {
+      const a = Math.random() * Math.PI * 2,
+        d = 30 + Math.random() * (Math.min(r, 260) - 30);
+      out.push([x + Math.cos(a) * d, y + Math.sin(a) * d]);
+    }
+    return out;
+  }
+
+  /** How each SP move looks. Fire for the Ember Knight, wind for the Wind Ranger, stars for the
+      Star Sage, water for the River Monk; the final is the same element, bigger. */
+  private spMove(e: Extract<GameEvent, { type: 'sp' }>, aura: number[]) {
+    const { id, x, y, r } = e,
+      angle = e.angle ?? 0,
+      color = aura[1],
+      [X, Y] = this.P(x, y);
+    switch (id) {
+      case 'whirl':
+        // three blades of fire spin round you and fling embers out
+        this.fade(420, (g, p) => {
+          const R = r * (0.45 + 0.55 * p);
+          for (let i = 0; i < 3; i++) {
+            const a0 = p * Math.PI * 3 + (i * Math.PI * 2) / 3;
+            g.lineStyle(9 * (1 - p) + 2, i === 1 ? 0xfde047 : 0xf97316, 0.95 * (1 - p));
+            g.beginPath();
+            g.arc(x, y, R, a0, a0 + 1.7);
+            g.strokePath();
+          }
+          g.fillStyle(0xf97316, 0.14 * (1 - p)).fillCircle(x, y, R);
+        });
+        this.bits.particleTint = 0xf97316;
+        this.burst(this.bits, 16, x, y);
+        this.burst(this.sparks, 10, x, y, -6);
+        break;
+      case 'phoenix': {
+        // a ring of fire rolls out, and a phoenix rises from you, wings beating
+        this.fade(650, (g, p) => {
+          g.lineStyle(12 * (1 - p) + 1, 0xf97316, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.2 + 0.8 * p));
+          g.lineStyle(5 * (1 - p) + 1, 0xfde047, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.1 + 0.75 * p));
+          g.fillStyle(0xf97316, 0.2 * (1 - p)).fillCircle(x, y, r * (0.2 + 0.8 * p));
+        });
+        this.fade(1000, (g, p) => {
+          const s = 1 + 1.4 * p,
+            by = Y - 24 - 90 * p,
+            flap = Math.sin(p * Math.PI * 5) * 12 * s,
+            a = 1 - p * p;
+          // tail
+          g.fillStyle(0xdc2626, 0.8 * a).fillTriangle(X - 9 * s, by + 4 * s, X + 9 * s, by + 4 * s, X, by + 50 * s);
+          g.fillStyle(0xf97316, 0.8 * a).fillTriangle(X - 5 * s, by + 4 * s, X + 5 * s, by + 4 * s, X, by + 36 * s);
+          // wings, outer fire then inner gold
+          for (const side of [-1, 1]) {
+            g.fillStyle(0xf97316, 0.9 * a).fillTriangle(X, by, X + side * 64 * s, by - 22 * s + flap, X + side * 18 * s, by + 14 * s);
+            g.fillStyle(0xfde047, 0.9 * a).fillTriangle(X, by - 3 * s, X + side * 36 * s, by - 14 * s + flap * 0.6, X + side * 10 * s, by + 8 * s);
+          }
+          // body and head
+          g.fillStyle(0xfb923c, a).fillEllipse(X, by, 12 * s, 22 * s);
+          g.fillStyle(0xfef3c7, a).fillCircle(X, by - 13 * s, 5 * s);
+          g.fillStyle(0xfde047, a).fillTriangle(X - 2 * s, by - 13 * s, X + 2 * s, by - 13 * s, X, by - 22 * s);
+        }, true);
+        this.bits.particleTint = 0xf97316;
+        this.burst(this.bits, 40, x, y);
+        this.burst(this.sparks, 30, x, y, -6);
+        break;
+      }
+      case 'pin': {
+        // the arrows ride a gust: streaks of wind run out along the shot, and leaves with them
+        const c = Math.cos(angle),
+          sn = Math.sin(angle);
+        this.fade(360, (g, p) => {
+          for (let i = -2; i <= 2; i++) {
+            const ox = -sn * i * 9,
+              oy = c * i * 9,
+              from = 20 + 380 * Math.max(0, p - 0.15 * Math.abs(i)),
+              len = 70 - 10 * Math.abs(i);
+            g.lineStyle(i === 0 ? 4 : 2, i === 0 ? 0xffffff : 0x9fe0d0, 0.85 * (1 - p));
+            g.lineBetween(x + ox + c * from, y + oy + sn * from, x + ox + c * (from + len), y + oy + sn * (from + len));
+          }
+        });
+        this.bits.particleTint = 0x86efac;
+        this.burst(this.bits, 8, x + c * 30, y + sn * 30);
+        break;
+      }
+      case 'rain': {
+        // the sky opens: arrows fall on every monster, one after another, each with its ring of wind
+        const at = this.spots(x, y, Infinity, 10);
+        this.fade(900, (g, p) => {
+          at.forEach(([fx, fy], i) => {
+            const d = (i / at.length) * 0.45,
+              q = (p - d) / 0.25;
+            if (q < 0 || q > 2.2) return;
+            const [AX, AY] = this.P(fx, fy);
+            if (q < 1) {
+              const ty = AY - 220 * (1 - q);
+              for (const k of [-10, 0, 10]) {
+                g.lineStyle(2, 0xe0fff6, 0.95).lineBetween(AX + k + 6, ty - 26, AX + k, ty);
+                g.fillStyle(0x86efac, 1).fillTriangle(AX + k - 3, ty - 2, AX + k + 3, ty - 2, AX + k, ty + 5);
+              }
+            } else {
+              const t = q - 1;
+              g.lineStyle(3 * (1 - t / 1.2) + 1, 0x9fe0d0, Math.max(0, 0.9 - t * 0.7)).strokeEllipse(AX, AY + 6, 24 + 40 * t, 8 + 14 * t);
+            }
+          });
+          // the wind over the room
+          g.lineStyle(2, 0xe0fff6, 0.5 * (1 - p));
+          for (let i = 0; i < 6; i++) {
+            const sy = Y - 160 + i * 18,
+              sx = X - 240 + ((p * 900 + i * 130) % 480);
+            g.lineBetween(sx, sy, sx + 60, sy - 6);
+          }
+        }, true);
+        break;
+      }
+      case 'starfall': {
+        // a star drops on the monster from high up, and bursts
+        this.fade(520, (g, p) => {
+          const q = Math.min(1, p / 0.35);
+          if (q < 1) {
+            const sx = X + 120 * (1 - q),
+              sy = Y - 200 * (1 - q);
+            g.lineStyle(6, 0xc4b5fd, 0.5).lineBetween(sx + 40, sy - 66, sx, sy);
+            g.lineStyle(2, 0xffffff, 0.9).lineBetween(sx + 20, sy - 33, sx, sy);
+            this.star(g, sx, sy, 10, 0xfff3b0, 1);
+          } else {
+            const t = (p - 0.35) / 0.65;
+            this.star(g, X, Y, 12 + 26 * t, 0xfff3b0, 0.9 * (1 - t));
+            g.lineStyle(4 * (1 - t) + 1, 0xa78bfa, 0.9 * (1 - t)).strokeCircle(X, Y, (r + 10) * (0.3 + 0.9 * t));
+          }
+        }, true);
+        this.time.delayedCall(180, () => {
+          this.burst(this.sparks, 14, x, y, -6);
+          this.bits.particleTint = 0xc4b5fd;
+          this.burst(this.bits, 12, x, y);
+        });
+        break;
+      }
+      case 'sky': {
+        // a meteor shower: stars rain down all over the room and burst where they land
+        const at = this.spots(x, y, 420, 12);
+        this.fade(1100, (g, p) => {
+          at.forEach(([mx, my], i) => {
+            const d = ((i * 7) % at.length) / at.length * 0.55,
+              q = (p - d) / 0.2;
+            if (q < 0 || q > 2.5) return;
+            const [MX, MY] = this.P(mx, my);
+            if (q < 1) {
+              const sx = MX + 90 * (1 - q),
+                sy = MY - 240 * (1 - q);
+              g.lineStyle(7, 0x818cf8, 0.45).lineBetween(sx + 34, sy - 90, sx, sy);
+              g.lineStyle(2, 0xffffff, 0.9).lineBetween(sx + 14, sy - 38, sx, sy);
+              g.fillStyle(0xfff3b0, 1).fillCircle(sx, sy, 5);
+            } else {
+              const t = (q - 1) / 1.5;
+              this.star(g, MX, MY, 10 + 18 * t, 0xfff3b0, 0.9 * (1 - t));
+              g.lineStyle(3 * (1 - t) + 1, 0xa78bfa, 0.9 * (1 - t)).strokeCircle(MX, MY, 14 + 44 * t);
+            }
+          });
+        }, true);
+        this.fade(900, (g, p) => g.fillStyle(0x4338ca, 0.18 * Math.sin(p * Math.PI)).fillCircle(x, y, 520));
+        this.time.delayedCall(250, () => this.burst(this.sparks, 30, x, y, -6));
+        break;
+      }
+      case 'palm': {
+        // you push the river out: a wobbling ring of water, white foam behind it, drops flung up
+        this.fade(420, (g, p) => {
+          const R = r * (0.25 + 0.75 * p),
+            pts: Phaser.Math.Vector2[] = [];
+          for (let i = 0; i <= 32; i++) {
+            const a = (i / 32) * Math.PI * 2,
+              w = R + Math.sin(a * 6 + p * 10) * 5;
+            pts.push(new Phaser.Math.Vector2(x + Math.cos(a) * w, y + Math.sin(a) * w));
+          }
+          g.lineStyle(8 * (1 - p) + 2, 0x1f6fae, 0.85 * (1 - p)).strokePoints(pts, true);
+          g.lineStyle(3, 0xdcefff, 0.9 * (1 - p)).strokeCircle(x, y, R * 0.82);
+          g.fillStyle(color, 0.12 * (1 - p)).fillCircle(x, y, R);
+        });
+        this.bits.particleTint = 0x60b0f0;
+        this.burst(this.bits, 16, x, y);
+        this.burst(this.puffs, 6, x, y, 10);
+        break;
+      }
+      case 'palms': {
+        // a flurry of palms strikes all round you, then the river breaks over the room
+        const at = this.spots(x, y, r, 14);
+        this.fade(900, (g, p) => {
+          at.forEach(([px, py], i) => {
+            const t = (p - (i / at.length) * 0.6) / 0.22;
+            if (t < 0 || t > 1) return;
+            const [PX, PY] = this.P(px, py),
+              a = 1 - t,
+              s = 1 + 0.6 * t;
+            // an open palm of water: the heel, four fingers and a thumb
+            g.fillStyle(0xdcefff, a).fillEllipse(PX, PY, 18 * s, 16 * s);
+            for (let k = 0; k < 4; k++) g.fillStyle(0xdcefff, a).fillRoundedRect(PX - 9 * s + k * 5 * s, PY - 18 * s - (k === 1 || k === 2 ? 3 * s : 0), 4 * s, 12 * s, 2 * s);
+            g.fillStyle(0xdcefff, a).fillRoundedRect(PX + 8 * s, PY - 6 * s, 9 * s, 4 * s, 2 * s);
+            g.lineStyle(2, 0x60b0f0, a).strokeCircle(PX, PY - 4 * s, 16 * s + 8 * t);
+          });
+        }, true);
+        this.fade(700, (g, p) => {
+          const q = Math.max(0, (p - 0.4) / 0.6);
+          if (q <= 0) return;
+          g.lineStyle(12 * (1 - q) + 1, 0x1f6fae, 0.9 * (1 - q)).strokeCircle(x, y, r * (0.2 + 0.8 * q));
+          g.lineStyle(4 * (1 - q) + 1, 0xffffff, 0.9 * (1 - q)).strokeCircle(x, y, r * (0.1 + 0.75 * q));
+          g.fillStyle(0x60b0f0, 0.2 * (1 - q)).fillCircle(x, y, r * (0.2 + 0.8 * q));
+        });
+        this.bits.particleTint = 0x60b0f0;
+        this.time.delayedCall(400, () => {
+          this.burst(this.bits, 30, x, y);
+          this.burst(this.puffs, 14, x, y, 10);
+        });
+        break;
+      }
+      default:
+        this.spShape(e, aura);
+    }
+  }
+
+  /** The colors of the SP you wear (dark, middle, light), for its moves on screen. */
+  private spAura(): number[] {
+    return spLook(this.setup.classId ?? 'warrior', this.run.hero.sp?.n ?? 1).aura.map(hex);
+  }
+
+  /** The later SPs' moves, drawn by their shape in their SP's colors. */
+  private spShape(e: Extract<GameEvent, { type: 'sp' }>, aura: number[]) {
+    const { x, y, r, final } = e,
+      [c0, c1, c2] = aura,
+      [X, Y] = this.P(x, y),
+      angle = e.angle ?? 0;
+    this.bits.particleTint = c1;
+    switch (SP_MOVES[e.id].shape) {
+      case 'ring':
+        this.fade(final ? 650 : 420, (g, p) => {
+          const R = r * (0.25 + 0.75 * p);
+          g.lineStyle((final ? 12 : 8) * (1 - p) + 2, c1, 0.9 * (1 - p)).strokeCircle(x, y, R);
+          g.lineStyle(3, c2, 0.9 * (1 - p)).strokeCircle(x, y, R * 0.8);
+          g.fillStyle(c0, 0.18 * (1 - p)).fillCircle(x, y, R);
+        });
+        // the ground cracks: short lines out from you
+        this.fade(500, (g, p) => {
+          g.lineStyle(3, c0, 0.8 * (1 - p));
+          for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * Math.PI * 2 + 0.3;
+            g.lineBetween(x + Math.cos(a) * 14, y + Math.sin(a) * 14, x + Math.cos(a) * r * 0.7 * Math.min(1, p * 3), y + Math.sin(a) * r * 0.7 * Math.min(1, p * 3));
+          }
+        });
+        this.burst(this.bits, final ? 36 : 18, x, y);
+        break;
+      case 'drop':
+        // something heavy falls from high up onto the mark, then bursts
+        this.fade(final ? 700 : 520, (g, p) => {
+          const q = Math.min(1, p / 0.35);
+          if (q < 1) {
+            const sy = Y - 220 * (1 - q),
+              rr = final ? 26 : 12;
+            g.lineStyle(rr, c1, 0.35).lineBetween(X, sy - 70, X, sy);
+            g.fillStyle(c1, 1).fillCircle(X, sy, rr);
+            g.fillStyle(c2, 1).fillCircle(X - rr * 0.3, sy - rr * 0.3, rr * 0.45);
+          } else {
+            const t = (p - 0.35) / 0.65;
+            g.lineStyle(6 * (1 - t) + 1, c1, 0.9 * (1 - t)).strokeCircle(X, Y, (r + 10) * (0.3 + 0.9 * t));
+            g.fillStyle(c2, 0.5 * (1 - t)).fillCircle(X, Y, (r * 0.6) * (1 - t * 0.5));
+          }
+        }, true);
+        this.time.delayedCall(final ? 240 : 180, () => {
+          this.burst(this.bits, final ? 40 : 16, x, y);
+          this.burst(this.sparks, final ? 20 : 8, x, y, -6);
+          if (final) this.shake(200, 0.012);
+        });
+        break;
+      case 'dash': {
+        // you as a streak of the element: afterimages and a bright line
+        const toX = x + Math.cos(angle) * r,
+          toY = y + Math.sin(angle) * r;
+        this.ghosts(x, y, toX, toY, c1, 4);
+        this.fade(320, (g, p) => {
+          g.lineStyle(12 * (1 - p) + 2, c1, 0.6 * (1 - p)).lineBetween(x, y, toX, toY);
+          g.lineStyle(3, c2, 0.9 * (1 - p)).lineBetween(x, y, toX, toY);
+        });
+        this.burst(this.bits, 10, x, y);
+        break;
+      }
+      case 'chain': {
+        // a bolt from one to the next, jagged, flickering
+        const pts = (e.points ?? []).map((q, i) => (i === 0 ? q : { x: q.x + Phaser.Math.Between(-5, 5), y: q.y + Phaser.Math.Between(-5, 5) }));
+        this.fade(final ? 420 : 300, (g, p) => {
+          for (let i = 1; i < pts.length; i++) {
+            const a = pts[i - 1],
+              b = pts[i],
+              mx = (a.x + b.x) / 2 + Math.sin(i * 7 + p * 30) * 10,
+              my = (a.y + b.y) / 2 + Math.cos(i * 5 + p * 30) * 10;
+            g.lineStyle(7 * (1 - p) + 1, c1, 0.6 * (1 - p)).lineBetween(a.x, a.y, mx, my).lineBetween(mx, my, b.x, b.y);
+            g.lineStyle(2, c2, 1 - p).lineBetween(a.x, a.y, mx, my).lineBetween(mx, my, b.x, b.y);
+          }
+        });
+        pts.slice(1).forEach((q) => this.burst(this.sparks, 4, q.x, q.y, -6));
+        break;
+      }
+      case 'guard':
+        // a bubble of light round you while nothing can touch you (drawFx keeps it), and a push
+        this.fade(380, (g, p) => {
+          g.lineStyle(6 * (1 - p) + 1, c1, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.3 + 0.7 * p));
+          g.fillStyle(c2, 0.2 * (1 - p)).fillCircle(x, y, r * (0.3 + 0.7 * p));
+        });
+        this.burst(this.sparks, 10, x, y, -6);
+        break;
+      case 'nova':
+        this.fade(final ? 800 : 500, (g, p) => {
+          g.lineStyle(14 * (1 - p) + 1, c1, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.15 + 0.85 * p));
+          g.lineStyle(5 * (1 - p) + 1, c2, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.08 + 0.7 * p));
+          g.fillStyle(c2, 0.3 * (1 - p)).fillCircle(x, y, r * (0.15 + 0.85 * p));
+        });
+        // rays going out
+        this.fade(600, (g, p) => {
+          g.lineStyle(3, c2, 0.7 * (1 - p));
+          for (let i = 0; i < 12; i++) {
+            const a = (i / 12) * Math.PI * 2,
+              r0 = 20 + r * p;
+            g.lineBetween(x + Math.cos(a) * r0, y + Math.sin(a) * r0, x + Math.cos(a) * (r0 + 40), y + Math.sin(a) * (r0 + 40));
+          }
+        });
+        this.burst(this.bits, 40, x, y);
+        this.burst(this.sparks, 24, x, y, -6);
+        break;
+      case 'field':
+        // the patch opens (drawFx keeps it while it lasts)
+        this.fade(360, (g, p) => g.lineStyle(5 * (1 - p) + 1, c2, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.4 + 0.6 * p)));
+        this.burst(this.bits, final ? 30 : 12, x, y);
+        break;
+      case 'volley':
+        this.fade(320, (g, p) => {
+          g.lineStyle(3, c2, 0.8 * (1 - p));
+          for (let i = 0; i < 16; i++) {
+            const a = (i / 16) * Math.PI * 2,
+              r0 = 16 + 90 * p;
+            g.lineBetween(x + Math.cos(a) * r0, y + Math.sin(a) * r0, x + Math.cos(a) * (r0 + 26), y + Math.sin(a) * (r0 + 26));
+          }
+          g.fillStyle(c1, 0.25 * (1 - p)).fillCircle(x, y, 30 * (1 - p) + 10);
+        });
+        this.burst(this.sparks, 12, x, y, -6);
+        break;
+      case 'all': {
+        // every monster struck from above at once, and the element washes over the room
+        const at = this.spots(x, y, Infinity, 12);
+        this.fade(800, (g, p) => {
+          at.forEach(([fx, fy], i) => {
+            const q = (p - (i / at.length) * 0.3) / 0.25;
+            if (q < 0 || q > 2.4) return;
+            const [AX, AY] = this.P(fx, fy);
+            if (q < 1) {
+              const ty = AY - 200 * (1 - q);
+              g.lineStyle(5, c1, 0.6).lineBetween(AX, ty - 50, AX, ty);
+              g.fillStyle(c2, 1).fillCircle(AX, ty, 5);
+            } else {
+              const t = (q - 1) / 1.4;
+              g.lineStyle(3 * (1 - t) + 1, c1, 0.9 * (1 - t)).strokeEllipse(AX, AY + 6, 26 + 40 * t, 9 + 14 * t);
+              g.fillStyle(c2, 0.4 * (1 - t)).fillCircle(AX, AY, 12 * (1 - t));
+            }
+          });
+        }, true);
+        this.fade(700, (g, p) => g.fillStyle(c0, 0.22 * Math.sin(p * Math.PI)).fillCircle(x, y, 600));
+        break;
+      }
+    }
+  }
+
+  /** An SP's passive going off: a monster catching fire, a tailwind, a split star, the flow, and the rest. */
+  private passive(id: SpPassiveId, x: number, y: number) {
+    const [c0, c1, c2] = this.spAura(),
+      [X, Y] = this.P(x, y),
+      ring = (ms: number, color: number, from: number, to: number) => this.fade(ms, (g, p) => g.lineStyle(3 * (1 - p) + 1, color, 0.9 * (1 - p)).strokeCircle(x, y, from + (to - from) * p));
+    // Some come with almost every hit: show those at most a few times a second.
+    const often = id === 'flow' || id === 'bedrock' || id === 'static' || id === 'frostbite' || id === 'harvest';
+    if (often) {
+      if (this.time.now < (this.passiveAt[id] ?? 0)) return;
+      this.passiveAt[id] = this.time.now + (id === 'static' || id === 'frostbite' ? 150 : 450);
+    }
+    switch (id) {
+      case 'embers':
+        this.bits.particleTint = 0xf97316;
+        this.burst(this.bits, 6, x, y, -4);
+        ring(260, 0xfb923c, 10, 26);
+        break;
+      case 'tailwind':
+        ring(320, 0x9fe0d0, 14, 54);
+        break;
+      case 'splitstar':
+        this.fade(260, (g, p) => this.star(g, X, Y, 5 + 8 * p, 0xfff3b0, 1 - p), true);
+        break;
+      case 'flow':
+        this.fade(500, (g, p) => {
+          g.fillStyle(0x7dd3fc, 0.9 * (1 - p)).fillCircle(X + 8, Y - 18 - 22 * p, 3);
+          g.fillTriangle(X + 5, Y - 18 - 22 * p, X + 11, Y - 18 - 22 * p, X + 8, Y - 25 - 22 * p);
+          g.lineStyle(2, 0x60b0f0, 0.6 * (1 - p)).strokeEllipse(X, Y + 18, 26 + 16 * p, 8 + 4 * p);
+        }, true);
+        break;
+      case 'harvest':
+        // a leaf drifts up off you
+        this.fade(600, (g, p) => {
+          g.fillStyle(0x4ade80, 1 - p).fillEllipse(X - 8 + 6 * Math.sin(p * 6), Y - 20 - 26 * p, 7, 4);
+        }, true);
+        break;
+      case 'frostbite':
+        ring(300, 0xbfdbfe, 8, 24);
+        this.bits.particleTint = 0xe0f2fe;
+        this.burst(this.bits, 4, x, y, -4);
+        break;
+      case 'static':
+        this.fade(200, (g, p) => {
+          g.lineStyle(2, c2, 1 - p).lineBetween(X - 8, Y - 14, X, Y - 4).lineBetween(X, Y - 4, X - 4, Y + 2).lineBetween(X - 4, Y + 2, X + 6, Y + 12);
+        }, true);
+        break;
+      case 'sunburst':
+        ring(360, c1, 20, 90);
+        this.fade(360, (g, p) => g.fillStyle(c2, 0.2 * (1 - p)).fillCircle(x, y, 90 * p));
+        break;
+      case 'rebound':
+        ring(320, c1, 20, 120);
+        this.burst(this.sparks, 6, x, y, -6);
+        break;
+      case 'secondwind':
+        // the dawn lifts you: a column of gold light and a ring
+        this.fade(900, (g, p) => {
+          g.fillStyle(c2, 0.35 * (1 - p)).fillRect(X - 18, Y - 140, 36, 150);
+          g.lineStyle(4 * (1 - p) + 1, c1, 1 - p).strokeEllipse(X, Y + 16, 50 + 40 * p, 14 + 10 * p);
+        }, true);
+        this.burst(this.sparks, 20, x, y, -10);
+        break;
+      case 'shell':
+        ring(260, 0x67e8f9, 30, 18);
+        break;
+      case 'bedrock':
+        ring(240, c0, 18, 26);
+        break;
+      default:
+        break;
+    }
+  }
+
+  /** Hold the world still for a moment. the world still for a moment. `minor` stops don't come back-to-back. */
   private hitStop(ms: number, minor = false) {
     const now = this.time.now;
     if (reducedMotion() || (minor && now < this.stopCool)) return;
@@ -2290,6 +2847,60 @@ class DungeonScene extends Phaser.Scene {
         q = lk.def.r + 10 + 2 * Math.sin(now / 120);
       mk.lineStyle(2, 0xfde68a, 0.9).strokeEllipse(X, Y + lk.def.r + 4, lk.def.r * 3, lk.def.r);
       for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) mk.lineBetween(X + sx * q, Y + sy * q, X + sx * (q - 6), Y + sy * q).lineBetween(X + sx * q, Y + sy * q, X + sx * q, Y + sy * (q - 6));
+    }
+    // Monsters on fire from Embers: little flames dance on them till it goes out.
+    for (const f of r.foes) {
+      if (!f.alive || !f.burn || r.t >= f.burn.until) continue;
+      const [X, Y] = this.P(f.x, f.y);
+      for (let i = 0; i < 3; i++) {
+        const fx = X - 8 + i * 8,
+          h = 7 + 4 * Math.sin(now / 70 + i * 2),
+          fy = Y - f.def.r * 0.4 + (i % 2) * 4;
+        mk.fillStyle(0xf97316, 0.85).fillTriangle(fx - 4, fy, fx + 4, fy, fx, fy - h);
+        mk.fillStyle(0xfde047, 0.9).fillTriangle(fx - 2, fy, fx + 2, fy, fx, fy - h * 0.55);
+      }
+    }
+    // The Wind Ranger's Tailwind: wind streaks past you while it lasts.
+    if (r.hero.tailwind > r.t && r.hero.hp > 0) {
+      const [X, Y] = this.P(r.hero.x, r.hero.y);
+      mk.lineStyle(2, 0xe0fff6, 0.6);
+      for (let i = 0; i < 4; i++) {
+        const o = (now / 3 + i * 23) % 60;
+        mk.lineBetween(X - 26 - o, Y - 16 + i * 10, X - 12 - o, Y - 16 + i * 10);
+      }
+    }
+    // The SP's patches on the floor (Thorn Trap, Hourglass, Blizzard, Rift), while they last.
+    if (r.fields.length) {
+      const [c0, c1, c2] = this.spAura();
+      for (const fd of r.fields) {
+        const left = Math.min(1, (fd.until - r.t) / 0.4),
+          beat = (Math.sin(now / 90) + 1) / 2;
+        this.fx.fillStyle(c0, 0.18 * left).fillCircle(fd.x, fd.y, fd.r);
+        this.fx.lineStyle(2 + beat * 2, c1, 0.7 * left).strokeCircle(fd.x, fd.y, fd.r);
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 + now / 600,
+            d = fd.r * (0.3 + 0.6 * ((now / 400 + i * 0.37) % 1));
+          this.fx.fillStyle(c2, 0.8 * left).fillCircle(fd.x + Math.cos(a) * d, fd.y + Math.sin(a) * d, 3);
+        }
+      }
+    }
+    // Slowed monsters: a ring of frost at their feet.
+    for (const f of r.foes) {
+      if (!f.alive || !f.slow || r.t >= f.slow.until) continue;
+      const [X, Y] = this.P(f.x, f.y);
+      mk.lineStyle(2, 0xbfdbfe, 0.8).strokeEllipse(X, Y + f.def.r * 0.8, f.def.r * 2.4, f.def.r * 0.8);
+    }
+    // A guard of light (Sun Guard, Lotus Bloom) or a Crystal Shell round you.
+    {
+      const h = r.hero;
+      if (h.hp > 0 && (h.guardUntil > r.t || h.shellUntil > r.t)) {
+        const [X, Y] = this.P(h.x, h.y),
+          guard = h.guardUntil > r.t,
+          [, c1, c2] = this.spAura(),
+          wob = Math.sin(now / 80) * 2;
+        mk.fillStyle(guard ? c2 : 0x67e8f9, 0.15).fillCircle(X, Y - 4, 30 + wob);
+        mk.lineStyle(2, guard ? c1 : 0xa5f3fc, 0.85).strokeCircle(X, Y - 4, 30 + wob);
+      }
     }
     // Tomorrow's reach, so it's clear where waiting starts.
     if (r.boss?.alive && this.setup.zone.boss === 'tomorrow') {
@@ -2540,6 +3151,14 @@ class DungeonScene extends Phaser.Scene {
     this.wantAbility = true;
   }
 
+  skill() {
+    this.wantSkill = true;
+  }
+
+  final() {
+    this.wantFinal = true;
+  }
+
   dodge() {
     this.wantDodge = true;
   }
@@ -2599,6 +3218,10 @@ class DungeonScene extends Phaser.Scene {
     });
   }
 
+  fillFinal() {
+    this.whenBuilt(() => (this.run.hero.surge = SURGE.full));
+  }
+
   skipToWarden() {
     this.whenBuilt(() => {
       skipToWarden(this.run);
@@ -2632,6 +3255,8 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
   return {
     pick: (id) => scene.pick(id),
     ability: () => scene.ability(),
+    skill: () => scene.skill(),
+    final: () => scene.final(),
     dodge: () => scene.dodge(),
     pause: () => scene.setPaused(true),
     resume: () => scene.setPaused(false),
@@ -2639,6 +3264,7 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
     skipFloor: () => scene.skipFloor(),
     askStairs: () => scene.askStairs(),
     skipToWarden: () => scene.skipToWarden(),
+    fillFinal: () => scene.fillFinal(),
     cycleTheme: () => scene.cycleTheme(),
     pickRelic: (id) => scene.pickRelic(id),
     wear: (id) => scene.gear(() => wear(scene.run, id)),

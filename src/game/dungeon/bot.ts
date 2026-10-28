@@ -1,6 +1,6 @@
 import { HUMAN } from '@/balance';
 import { attackOf, clamp, HERO_SPEED, RANGE } from '../rules';
-import { abilityReady, BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup } from './engine';
+import { abilityReady, finalReady, skillReady, BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup } from './engine';
 
 /* The bot: a steady, careful player on a phone, not a great one (how human: HUMAN in
    src/balance/dungeon.ts). It notices a shot only after a reaction of its own, misses more of them
@@ -101,7 +101,7 @@ function idle(run: Run): number {
     HUMAN.think seconds, the stick held in between. */
 export function botInput(run: Run, h: Hero = run.hero): Input {
   const last = held.get(h);
-  if (last && run.t >= last.at && run.t - last.at < HUMAN.think) return { ...last.input, ability: false, dodge: false };
+  if (last && run.t >= last.at && run.t - last.at < HUMAN.think) return { ...last.input, ability: false, dodge: false, skill: false, final: false };
   const input = decide(run, h);
   held.set(h, { at: run.t, input });
   return input;
@@ -363,7 +363,12 @@ function decide(run: Run, h: Hero): Input {
   // The dodge: through a shot that's about to land, along the way it was already stepping.
   // Sometimes it misses the moment.
   const dodge = imminent && hash(tick, 4) >= HUMAN.dodgeMiss && now >= h.dodgeAt && !(h.charge && now < h.charge.until);
-  return { x: mx, y: my, ability, dodge };
+  // With an SP on: its own move when something is close, the final in a crowd or on a boss.
+  if (!h.sp) return { x: mx, y: my, ability, dodge };
+  const fight = !run.cleared,
+    skill = fight && skillReady(run, h) >= 1 && (nd < 150 || !!b),
+    final = fight && finalReady(h) >= 1 && (close >= 4 || !!b || h.hp < h.maxHp * 0.35);
+  return { x: mx, y: my, ability, dodge, skill, final };
 }
 
 /** Plays one whole run with the bot, as fast as the computer goes. */

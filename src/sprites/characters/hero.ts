@@ -5,6 +5,7 @@ import { NIGHT, aura, grid, mix, painter, rampOf, tint, type Grid, type Ramp } f
 import { ARM_DOWN, bone, hangs, limbs, paintArm } from '../engine/drawn';
 import { drawBow, drawStaff, drawStick, drawSword, drawWand, type WeaponLook } from '../parts/weapons';
 import { itemColors, pick, type ItemColors } from './items';
+import { spLook } from './spLooks';
 import { BANDS } from '@/balance';
 import { bandOf } from '@/game/dungeon/items';
 import { CAPE, FLAME, GOLD_GHOST, HAIR, HOLLOW_EYES, LINEN, R, SHADOW, SKIN, TROUSERS } from '../palette';
@@ -22,6 +23,9 @@ export interface HeroOpts {
   look?: Look;
   /** The hand-drawn body (engine/drawn.ts) by default; 'block' is the old body, kept for the Lab. */
   body?: 'block' | 'drawn';
+  /** Wearing one of the class's SPs (1 to 4; `true` is the first): its own clothes and light
+      (characters/spLooks.ts) over the armor. */
+  sp?: boolean | number;
 }
 
 export const DEFAULT_LOOK: Look = { sex: 'm', style: 'spiky', hair: 'brown', skin: 'light', head: 'manga' };
@@ -61,9 +65,11 @@ const WRAP: Ramp = ['#8c7a5e', '#cbbb9a', '#ece2cc'];
 const SASH: Ramp = ['#7a1f18', '#c0392b', '#e8604c'];
 const ramp3 = (r: string[]): Ramp => [r[0], r[1], r[2]];
 
-export function heroSpec({ gear, classId, variant, body }: HeroOpts): FigureSpec {
+export function heroSpec({ gear, classId, variant, body, sp: spOn }: HeroOpts): FigureSpec {
   const drawn = body !== 'block';
   const cape = variant === 'best';
+  // With the SP on, its look stands in for the armor (the weapon and charm stay yours).
+  const sp = spOn && classId ? spLook(classId, spOn === true ? 1 : spOn) : null;
   const armorTier = gear.armor.tier;
   // A Fog item worn in a slot dresses the hero in that very item (its kind, rarity and colors);
   // without one, the slot shows the forge's old tier look.
@@ -73,20 +79,21 @@ export function heroSpec({ gear, classId, variant, body }: HeroOpts): FigureSpec
     ac = ia ? itemColors(ia) : null,
     wc = iw ? itemColors(iw) : null,
     cc = ic ? itemColors(ic) : null,
-    dress = ia && (ia.art === 'heavy' || ia.art === 'light' || ia.art === 'robe') ? ia.art : null,
-    trimmed = !!ia && (ia.rarity === 'rare' || ia.rarity === 'legendary'),
-    armorLegend = ia?.rarity === 'legendary',
+    dress = sp ? sp.dress : ia && (ia.art === 'heavy' || ia.art === 'light' || ia.art === 'robe') ? ia.art : null,
+    trimmed = sp ? true : !!ia && (ia.rarity === 'rare' || ia.rarity === 'legendary'),
+    armorLegend = sp ? sp.grand : ia?.rarity === 'legendary',
+    mantle = sp ? sp.mantle : armorLegend,
     weaponLegend = iw?.rarity === 'legendary';
-  const A = ac ? ramp3(ac.body) : armorTier === 0 ? LINEN : rampOf(gear.armor.color);
+  const A = sp ? sp.a : ac ? ramp3(ac.body) : armorTier === 0 ? LINEN : rampOf(gear.armor.color);
   const W = wc ? (classId === 'archer' ? wc.handle : classId === 'monk' ? wc.trim : classId === 'mage' ? wc.gem : ramp3(wc.body)) : rampOf(gear.weapon.tier === 0 ? R.wood[1] : gear.weapon.color);
   const Sh = rampOf(gear.shield.tier === 0 ? R.leather[1] : gear.shield.color);
   const glow = wc?.glow ? wc.glow[1] : gear.weapon.glow ?? (gear.weapon.tier >= 3 ? W[2] : '#9fd3ff');
   const off = gear.shield.tier > 0 ? classId ?? 'warrior' : null;
   const attack = heroAttack(gear, classId);
   const wl = weaponLook(wc, weaponLegend);
-  const legs = dress === 'heavy' ? [mix(A[0], NIGHT, 0.4), A[0], A[1]] : dress ? TROUSERS : armorTier >= 3 ? [mix(A[0], NIGHT, 0.4), A[0], A[1]] : TROUSERS;
-  const T = ac?.trim ?? R.gold,
-    acc = ac?.accent ?? R.red;
+  const legs = sp?.legs ?? (dress === 'heavy' ? [mix(A[0], NIGHT, 0.4), A[0], A[1]] : dress ? TROUSERS : armorTier >= 3 ? [mix(A[0], NIGHT, 0.4), A[0], A[1]] : TROUSERS);
+  const T = sp?.trim ?? ac?.trim ?? R.gold,
+    acc = sp?.accent ?? ac?.accent ?? R.red;
 
   return {
     id: 'hero',
@@ -112,7 +119,7 @@ export function heroSpec({ gear, classId, variant, body }: HeroOpts): FigureSpec
           [24, 31, 38].forEach((x) => c.l.line(x, 34, x + (x - 31) * 0.4, 59, CAPE[0]));
           c.l.row(60, 13, 50, CAPE[0]);
         }
-        if (armorLegend && dress !== 'robe' && !cape) {
+        if (mantle && dress !== 'robe' && !cape) {
           // a legendary armor's mantle, in its accent, lifting a little with each frame
           const sw = c.P.f % 2;
           c.u.poly(
@@ -127,6 +134,7 @@ export function heroSpec({ gear, classId, variant, body }: HeroOpts): FigureSpec
           [24, 31, 38].forEach((x) => c.u.line(x, 33, x + (x - 31) * 0.3, 51, acc[0]));
           c.u.row(52, 17 - sw, 46 + sw, T[1]);
         }
+        sp?.back?.(c);
         if (off === 'archer') {
           // quiver over the right shoulder
           c.u.poly(
@@ -166,7 +174,7 @@ export function heroSpec({ gear, classId, variant, body }: HeroOpts): FigureSpec
         u.p(29, 30, A[0]);
         u.p(34, 30, A[0]);
         const [b0, b1] = c.torsoRange(42);
-        if (dress) itemOutfit(c, dress, A, T, acc, trimmed, armorLegend, ac, ia?.seed ?? 0);
+        if (dress) itemOutfit(c, dress, A, T, acc, trimmed, armorLegend, sp ? null : ac, sp ? 0 : (ia?.seed ?? 0));
         else if (armorTier === 0) {
           // the starter's training top: one side wrapped over the other, tied with a cloth sash
           u.line(26, 31, 33, 41, A[0]);
@@ -276,6 +284,7 @@ export function heroSpec({ gear, classId, variant, body }: HeroOpts): FigureSpec
             }
           });
         }
+        sp?.outfit?.(c);
         if (cc) {
           // the charm, worn on a cord at the chest
           u.line(28, 31, 31, 35, cc.trim[1]);
@@ -285,6 +294,7 @@ export function heroSpec({ gear, classId, variant, body }: HeroOpts): FigureSpec
           if (ic?.rarity === 'legendary' && cc.glow) c.fxu.p(P.f % 2 ? 30 : 33, 34, P.f % 4 < 2 ? '#ffffff' : cc.glow[1]);
         }
       },
+      head: sp?.head,
       off(c) {
         if (off === 'warrior') {
           const [hx, hy] = c.P.arms.L.hand,

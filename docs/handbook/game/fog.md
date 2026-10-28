@@ -54,6 +54,50 @@ level or story.
 
 Tested in `src/lib/fog.test.ts` and `src/lib/fog-gear.test.ts`.
 
+## The SPs (`src/lib/sp.ts`)
+
+Like NosTale's specialist cards: each class has four SPs (`SP_CARDS` in
+`src/game/dungeon/content.ts`), none stronger than another, each fighting its own way. At
+`SP_TRIAL.at` workouts (once you have a class) the Wanderer hands over the first in the `sp-gift`
+scene (`src/story/anytime.ts`; its ask `sp` calls `giveSp`) and says what they are: forms that
+training wakes in you, this the first. It is sealed until its trial is done (`spTrial`, `spOpen`):
+`SP_TRIAL.workouts` more workouts, and a run that reaches the mid-boss's floor (`SP_FLOOR`;
+`spAfterRun` after each run, in `page.tsx`); then `sp-awake` plays. The story gives the other three
+as surprises after chapters are beaten (`SP_GIFTS`: the scenes `sp-second`, `sp-third`,
+`sp-fourth`, each with an ask `{ kind: 'sp', n }`), awake and put on at once (`SpState.more`,
+`worn`). Nothing shows an SP before it is yours: the Hero tab lists only the ones you own
+(`spOwned`), and you scroll them there and pick the one to wear (`SpCard`, `wearSp`), or take it
+off (`setSpOff`). The one worn goes into every run (`spWorn`, a number 1 to 4 or 0;
+`HeroSetup.sp`).
+
+| Class | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|
+| Warrior | Ember Knight | Stone Warden | Storm Blade | Dawn Paladin |
+| Archer | Wind Ranger | Frost Hunter | Leaf Warden | Moon Stalker |
+| Mage | Star Sage | Crystal Mage | Sand Oracle | Void Seer |
+| Monk | River Monk | Tiger Fist | Lotus Sage | Sun Fist |
+
+Each has the class ability, its own move, a final and a passive that is always on (`SP_PASSIVES`:
+Embers burns, Bedrock hardens you standing still, Static sparks, Second Wind heals once a floor,
+Tailwind, Frostbite slows, Harvest heals on a kill, Focus crits at full health, Split Star, Crystal
+Shell blocks a hit after a dodge, Swift Sands fills the final faster, Rebound hits back, Flow heals
+on hits, Momentum builds while you move, Quickstep shortens the dodge, Sunburst bursts every few
+hits; how they play: [dungeon.md](dungeon.md)). With an SP on you look the SP's way, but your
+weapon, its tier and its forge shine stay yours (`heroSpec`). In a run the own move sits left of
+the dodge and the final over the ability (`SpButton` in `FogRun.tsx`; R and F on a keyboard); a
+final plays its sound and shows a small badge with its name under your HP (`FinalBadge`), nothing
+over the fight. Numbers: `SP_TRIAL`, `SP_GIFTS`, `SP_SKILL`, `SP_FINAL`, `SURGE`, `SP_PASSIVE` in
+`src/balance/classes.ts`.
+
+The scenes show the SP rather than explain it: the Wanderer holds up the card (a line with `art:
+'sp-sealed'` or `'sp-awake'`, `spn` naming which SP), and when one wakes a line with `art:
+'sp-transform'` plays `SpTransform` over the whole screen: the card rises and turns, the SP's
+element storms in (rising, sweeping, converging or in rings, `STYLE`), you burn white, a flash, and
+you stand in the SP's look under its name. Worn, you wear that look everywhere you are drawn: the
+Fog (`src/game/sheets.ts`), the Hero and Play tabs, the header, the story (`sp` on `<Hero>` and on
+`Dialogue`). The looks: `SP_LOOKS` in `src/sprites/characters/spLooks.ts` (see
+[sprites.md](sprites.md)).
+
 ## The run itself
 
 A run is a dungeon of ten floors per zone, each a map of rooms to explore down to the stairs (a
@@ -74,7 +118,7 @@ fills the whole screen and the camera follows you in it; the HUD is small and ke
 
 On a computer (mouse or trackpad: `useKeyboardPlay` in `src/components/useDesk.ts`) the run is
 played with keys and never asks you to turn anything. The scene's own keys: WASD or the arrows
-move, Q is the class ability, Space (or E, or Shift) dodges, a click on a monster aims at it; they
+move, Q is the class ability, R and F the SP's move and final, Space (or E, or Shift) dodges, a click on a monster aims at it; they
 do nothing while a card or the bag holds the run. `FogRun`'s keys: Esc or P pauses (and closes
 whatever is open), B or I the bag, M the map, 1 2 3 pick a skill, chest or stairs choice, Enter
 runs again at the end. Each button shows its key (`Key`), the pause menu lists them all
@@ -92,5 +136,6 @@ bot takes a minute (the run recap in `FogRun` shows a person's, to check the bot
 main knobs. The sim starts every run with the snapshot's points
 in what a player would keep by then (`seasonedKit` in `src/sim/seasoned.ts`, `SEASONED` in
 `src/balance/dungeon.ts`: the best wearable of earlier finds, forged), and the bot searches every
-room; it wears what drops. `GEAR=0` plays in the starter kit instead. Zones are tuned for that
+room; it wears what drops, and wears the SP from
+`SP_MODEL_AT` workouts on (`NOSP=1` plays without it, to see what it adds). `GEAR=0` plays in the starter kit instead. Zones are tuned for that
 player, so a player who keeps and forges their finds meets the targets, not one in the starter kit.

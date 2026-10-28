@@ -18,7 +18,7 @@ Tests are Vitest, next to the code (`*.test.ts`), with `@/` mapped to `src/` (`v
 | `src/game/dungeon/engine.test.ts` | Replays a whole seeded bot run in every zone (snapshot). A refactor keeps them identical; a balance change moves them on purpose |
 | `src/exercises/library.test.ts` | Every exercise has a real demo and coaching, every demo moves, the search filters right, and `public/data/exercises.json` is current (`pnpm exercises:db`) |
 | `src/balance/sheet.test.ts` | The balance sheet `src/balance/sheet.md` is up to date with `src/balance/` (`pnpm balance` rewrites it; see [../game/balance.md](../game/balance.md)) |
-| `src/sim/season.test.ts` | Plays every kind of player through 200 days with the real rules and fails on anything that looks wrong |
+| `src/sim/season.test.ts` | Plays every kind of player through 200 days with the real rules and fails on anything that looks wrong (every kind walks into the Fog deep enough for the SP's trial once it's given) |
 
 Accept intended snapshot changes with `pnpm test -u`, and say in the PR why they moved.
 
@@ -33,7 +33,8 @@ Accept intended snapshot changes with `pnpm test -u`, and say in the PR why they
   the S curve of win rate against the zone's scale (a straight line in logit of the rate against
   ln of the scale) and usually lands in two or three measurements per zone, with all zones
   searched at once. Every measurement plays the same seeds, so two scales compare fairly. Each run
-  starts with the snapshot's points (`build`) in what a player keeps by then (`seasonedKit`), so items the bot finds can be worn.
+  starts with the snapshot's points (`build`) in what a player keeps by then (`seasonedKit`), so items the bot finds can be worn,
+  and from `SP_MODEL_AT` workouts on with the SP (`NOSP=1` plays without it, `SP=2` to `4` wears that SP instead of the first).
 - **Keeping the sims fast**: a run is ~20 game minutes at 60 steps a second, so the engine's
   per-step loops are the cost. Distance checks go through `closer` / `farther` in `engine.ts`
   (a box test, then the exact `Math.hypot`), and lists are only rebuilt when something leaves.

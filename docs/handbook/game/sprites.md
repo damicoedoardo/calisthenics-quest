@@ -3,7 +3,7 @@ type: reference
 title: Sprites and animation
 description: All pixel art is code in src/sprites — the 64x64 figure engine, manga head, text-row art, clips, the registry, PNG sheets, fingerprint tests, and where to edit what.
 tags: [game, sprites, pixel-art]
-timestamp: 2026-10-27
+timestamp: 2026-10-28
 ---
 # Sprites
 
@@ -35,13 +35,20 @@ characters/*.ts       one file per character: hero, wanderer, mira, ember, book,
 characters/pixel.ts   text-row art: paintRows (one character per pixel) and shifted
 characters/icons.ts   app icons as text rows: the six keepsakes (end of the Today tab, sprite `keepsake`) and
                       what a day held in the Book of Days (sprite `dayIcon`), the dungeon's
-                      relics (`relicIcon`), the ability and Dodge buttons (`abilityIcon`), the run's
+                      relics (`relicIcon`), the ability and Dodge buttons (`abilityIcon`), the SP's moves and finals (`spIcon`; the later SPs' drawn from a kind of move and an element, `shaped`), the run's
                       level-up skills (`skillIcon`), and the floor track's Warden and boss (`markIcon`)
 characters/items.ts   the Fog's items (sprite `item`, opts `ItemLook` { art, rarity, seed }): one 24x24
                       text-row drawing per kind (`ITEM_ROWS`: sword, bow, staff, wand, heavy, light, robe,
                       ring, amulet, token, band) and one of its own for each kind's legendary
                       (`LEGEND_ROWS`), on a 32x32 frame; `itemColors` picks the colors from rarity
                       and seed (also drawn on the floor by the scene, and worn by the hero)
+characters/spLooks.ts  each SP's look, four per class (`SP_LOOKS`, `spLook(classId, n)`): the dress it wears (plate, jerkin or robe) in its
+                      colors, plus its own pieces (the Ember Knight's circlet and burning mantle, the Wind
+                      Ranger's feather and scarf, the Star Sage's hat and circling star, the River Monk's
+                      headband, sash and beads), and its element's colors for the transformation;
+                      the hero wears it with `sp: n` (`true` is the first)
+characters/spCard.ts  the SP card (sprite `spCard`, opts { classId, n, awake, gear, look }): a 48x64 card, you in
+                      the SP's look from the chest up in its window; sealed it is ash with a crack of light
 characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look, kit }): you
                       doing each exercise of the program (hand-posed), one rep per loop of the
                       16-frame `rep` clip, or one of the exercise library's movements from moves.ts
@@ -96,6 +103,8 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Fix a library movement's demo, or add one | its case in `frame` (`characters/moves.ts`); a new one also needs an id in `MOVES`, coaching and a classifier rule, see [exercise-library.md](exercise-library.md) |
 | Change how a zone dresses its regular monsters | `ZONE_RAMPS` (colors) and the zone's branch of `dress` in `characters/zoned.ts`; the sprites that take `{ zone }` are the `zoned(...)` entries in `registry.ts` |
 | Change a zone's dungeon colors (floor, stone, torch fire, water) | its entry in `THEMES` (`src/game/dungeon/themes.ts`); in developer mode the Fog's pause menu has a Theme button that cycles them |
+| Change how a class looks in its SP (crest, hat, scarf, colors) | its entry in `SP_LOOKS` (`characters/spLooks.ts`) |
+| Change the SP card (frame, window, the seal's crack, the sparks) | `drawSpCard` in `characters/spCard.ts` |
 | Add a character | a file in `characters/`, then an entry in `SPRITES` (`registry.ts`) |
 | Use art from Aseprite or PixelLab | see below |
 

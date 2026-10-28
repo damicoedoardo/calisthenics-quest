@@ -64,8 +64,9 @@ export const WEAR_AFTER = {
   legendary: [4, 7, 11],
 } as const;
 
-/** The free starter kit everyone has. */
-export const STARTER = { weaponDamage: 0.05, armorHealth: 6, armorArmor: 0.015 } as const;
+/** The free starter kit everyone has: a plain weapon, no armor (Edoardo 2026-10-28). Goal: a
+    run with nothing found yet still has a weapon, and the first armor you find is a real step up. */
+export const STARTER = { weaponDamage: 0.05 } as const;
 
 /** Chance a kill or a chest drops an item: an elite, a golem, any other monster, a chest. */
 export const DROPS = { elite: 0.15, golem: 0.3, plain: 0.006, chest: 0.5 } as const;
