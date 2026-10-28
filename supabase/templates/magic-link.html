@@ -1,0 +1,9 @@
+<!-- Supabase > Authentication > Emails > "Magic link or OTP". Subject: Your FORMA code: {{ .Token }} -->
+<div style="background:#0b0d12;padding:32px 16px;font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;color:#e2e8f0;text-align:center">
+  <p style="margin:0 0 8px;font-size:14px;letter-spacing:4px;color:#f5c542">FORMA</p>
+  <h1 style="margin:0 0 16px;font-size:20px;color:#f8fafc">Your fire is waiting</h1>
+  <p style="margin:0 0 8px;font-size:14px;color:#94a3b8">Type this code in the app:</p>
+  <p style="margin:0 0 24px;font-size:32px;font-weight:700;letter-spacing:8px;color:#f8fafc">{{ .Token }}</p>
+  <p style="margin:0 0 24px;font-size:14px;color:#94a3b8">Or, on this phone, <a href="{{ .ConfirmationURL }}" style="color:#f5c542">tap here to sign in</a>.</p>
+  <p style="margin:0;font-size:12px;color:#64748b">Didn't ask for this? You can ignore it.</p>
+</div>
