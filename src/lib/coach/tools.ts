@@ -3,11 +3,11 @@ import type { LibraryExercise } from '@/exercises/library';
 import type { GameState } from '../game';
 import type { SlotRole } from '../program';
 import { dosed, excluded, item, runWalk, WARMUP } from './generate';
-import { buildWeek, currentPlan, setDay, weekdayOf, weekText } from './week';
-import { dayKey } from '../days';
+import { buildWeek, currentPlan, daysLeft, moveDay, restDay, setDay, weekdayOf, weekOver, weekText } from './week';
+import { dayKey, daysApart } from '../days';
 import { REST } from '@/balance';
 import { addNote, liveNotes, removeNote } from './notes';
-import { HOLDS, isWeighted, usable } from './options';
+import { HOLDS, isWeighted, patternOf, usable } from './options';
 import { searchExercises } from './search';
 import { answersOf, profileFrom } from './setup';
 import { validate } from './validate';
@@ -142,11 +142,11 @@ function workoutFrom(input: Input, profile: CoachProfile, ctx: ToolContext): { p
 
 const NAMES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
 
-/** A day the model named ("tue", "Tuesday", "today", "2026-10-30") as a date in the next 7 days. */
+/** A day the model named ("tue", "Tuesday", "today", "2026-10-30") as a date from today to Sunday. */
 export function resolveDay(v: unknown, now: Date): string | undefined {
   const t = str(v, 20).toLowerCase();
   if (!t) return undefined;
-  for (let d = 0; d < 7; d++) {
+  for (let d = 0; d < daysLeft(now); d++) {
     const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d, 12);
     const key = dayKey(date);
     if (t === key || (d === 0 && t === 'today') || (d === 1 && t === 'tomorrow') || t.slice(0, 3) === NAMES[date.getDay()]) return key;
@@ -160,25 +160,28 @@ function setWorkout(state: GameState, input: Input, ctx: ToolContext): ToolRun {
   const profile = state.coach?.profile;
   if (!profile) return { state, result: 'No profile yet: call save_profile first.' };
   const date = resolveDay(input.day, ctx.now);
+  if (date && state.coach?.week?.days.some((d) => d.date === date && d.done)) return { state, result: `${date}'s workout is done already: nothing changed.` };
   const { plan, problems } = workoutFrom(input, profile, ctx);
   const next = setDay(state, date, plan, ctx.now);
-  return { state: next, result: `Saved on ${date ?? 'the next workout day'} and shown to the player (easier and swap added):\n${planText(plan)}${fixed(problems)}` };
+  return { state: next, result: `Saved on ${date ?? 'the next workout day'} and shown to the player (easier and swap added):\n${planText(plan)}${fixed(problems)}${headsUp(next)}` };
 }
 
-/** A whole new week from today. Days already done this week stay done. */
+/** The rest of this week, from today to Sunday. Workouts already done this week stay. */
 function setWeek(state: GameState, input: Input, ctx: ToolContext): ToolRun {
   const coach = state.coach;
   const profile = coach?.profile;
   if (!coach || !profile) return { state, result: 'No profile yet: call save_profile first.' };
   const rows = Array.isArray(input.days) ? input.days.slice(0, 7) : [];
-  const done = (coach.week?.days ?? []).filter((d) => d.done && d.date >= dayKey(ctx.now));
+  // The same calendar week: what's done stays, and so does the day it was first planned.
+  const same = coach.week && !weekOver(coach.week, ctx.now) ? coach.week : null;
+  const done = (same?.days ?? []).filter((d) => d.done);
   const days: CoachDay[] = [...done];
   const notes: string[] = [];
   for (const raw of rows) {
     if (!raw || typeof raw !== 'object') continue;
     const date = resolveDay((raw as Input).day, ctx.now);
     if (!date) {
-      notes.push(`a day "${str((raw as Input).day, 20)}" is not in the next 7 days: left out`);
+      notes.push(`a day "${str((raw as Input).day, 20)}" is not between today and Sunday: left out`);
       continue;
     }
     if (days.some((d) => d.date === date)) {
@@ -191,8 +194,53 @@ function setWeek(state: GameState, input: Input, ctx: ToolContext): ToolRun {
   }
   if (days.length === done.length) return { state, result: `No workout days in it: nothing changed.${fixed(notes)}` };
   days.sort((a, b) => a.date.localeCompare(b.date));
-  const week: CoachWeek = { start: dayKey(ctx.now), days, by: 'coach' };
-  return { state: { ...state, coach: { ...coach, week } }, result: `The week is saved and shown to the player:\n${weekText(week, ctx.now).join('\n')}${fixed(notes)}` };
+  const week: CoachWeek = { start: same?.start ?? dayKey(ctx.now), days, by: 'coach' };
+  const next = { ...state, coach: { ...coach, week } };
+  return { state: next, result: `The week is saved and shown to the player:\n${weekText(week, ctx.now).join('\n')}${fixed(notes)}${headsUp(next)}` };
+}
+
+/** What a trainer would flag in the week as it now stands: the same muscles on days in a row
+    (counting the last workout done), and three or more workout days in a row. Facts for the
+    coach to raise, never a block. */
+export function weekWarnings(state: GameState): string[] {
+  const week = state.coach?.week;
+  if (!week) return [];
+  const out: string[] = [];
+  const main = (plan: CoachPlan) => new Set(plan.items.filter((i) => i.role === 'main' && !i.skipped).map((i) => patternOf(i.family)).filter(Boolean));
+  const days = week.days;
+  for (let i = 1; i < days.length; i++) {
+    const a = days[i - 1],
+      b = days[i];
+    if (daysApart(new Date(`${a.date}T12:00:00`), new Date(`${b.date}T12:00:00`)) !== 1) continue;
+    const shared = [...main(a.plan)].filter((p) => main(b.plan).has(p));
+    if (shared.length) out.push(`${weekdayOf(a.date)} and ${weekdayOf(b.date)} are back to back and both train ${shared.join(', ')}`);
+    const c = days[i + 1];
+    if (c && daysApart(new Date(`${b.date}T12:00:00`), new Date(`${c.date}T12:00:00`)) === 1) out.push(`${weekdayOf(a.date)}, ${weekdayOf(b.date)} and ${weekdayOf(c.date)}: three workout days in a row`);
+  }
+  return out;
+}
+
+const headsUp = (state: GameState) => {
+  const w = weekWarnings(state);
+  return w.length ? `\nHeads-up (tell the player, and agree on it): ${w.join('; ')}.` : '';
+};
+
+function moveWorkout(state: GameState, input: Input, ctx: ToolContext): ToolRun {
+  const from = resolveDay(input.from, ctx.now) ?? str(input.from, 20);
+  const to = resolveDay(input.to, ctx.now);
+  if (!to) return { state, result: `"${str(input.to, 20)}" is not between today and Sunday: nothing changed.` };
+  const next = moveDay(state, from, to, ctx.now);
+  if (typeof next === 'string') return { state, result: `${next} Nothing changed.` };
+  return { state: next, result: `Moved. The week now:\n${weekText(next.coach?.week, ctx.now).join('\n')}${headsUp(next)}` };
+}
+
+function makeRestDay(state: GameState, input: Input, ctx: ToolContext): ToolRun {
+  const date = resolveDay(input.day, ctx.now) ?? str(input.day, 20);
+  const next = restDay(state, date);
+  if (typeof next === 'string') return { state, result: `${next} Nothing changed.` };
+  const left = next.coach?.week?.days.length ?? 0;
+  const want = next.coach?.profile?.days ?? 0;
+  return { state: next, result: `${date} is a rest day now. The week:\n${weekText(next.coach?.week, ctx.now).join('\n')}${left < want ? `\n${left} workouts this week, fewer than their ${want}.` : ''}` };
 }
 
 function saveProfile(state: GameState, input: Input, ctx: ToolContext): ToolRun {
@@ -256,6 +304,10 @@ export function runTool(state: GameState, name: string, args: string, ctx: ToolC
       return setWeek(state, input, ctx);
     case 'set_workout':
       return setWorkout(state, input, ctx);
+    case 'move_workout':
+      return moveWorkout(state, input, ctx);
+    case 'rest_day':
+      return makeRestDay(state, input, ctx);
     case 'save_profile':
       return saveProfile(state, input, ctx);
     case 'add_note': {

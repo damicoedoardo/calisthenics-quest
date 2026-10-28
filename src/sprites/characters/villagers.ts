@@ -4,7 +4,8 @@ import type { Grid, Ramp } from '../engine/grid';
 import { R } from '../palette';
 
 /* The people of the story who stopped, like you: Lia the dancer (Mirror Lake), Sol the runner
-   (the Village of Almosts), and the kid inside the Perfect Knight's armor. Same body and manga
+   (the Village of Almosts), the kid inside the Perfect Knight's armor, and Tamsin, who walks the
+   Ember Road. Same body and manga
    head as the hero, in their own clothes. */
 
 /** A plain top, sleeves and a hem, in one ramp. */
@@ -144,6 +145,44 @@ const KID: FigureSpec = {
   },
 };
 
+/** Tamsin walks the Ember Road ahead of you: a long rust travelling coat, a green scarf, a
+    pack strap across her chest, and a small lantern hung from her belt that flickers. */
+const TAMSIN_LOOK: Look = { sex: 'f', style: 'pony', hair: 'red', skin: 'light', head: 'manga' };
+const COAT: Ramp = ['#5a2a16', '#8e4a24', '#c27a44'];
+const SCARF: Ramp = ['#1f4a32', '#2f7a4e', '#5fb07a'];
+
+const TAMSIN: FigureSpec = {
+  id: 'tamsin',
+  attack: 'swing',
+  a: COAT,
+  legs: ['#2a2420', '#40362e', '#5a4c40'],
+  layers: {
+    outfit(c) {
+      // the coat, down past the knees, open at the front
+      top(c, COAT, 45);
+      for (let y = 46; y <= 54; y++) {
+        c.l.row(y, 21, 27, y % 4 === 0 ? COAT[0] : COAT[1]);
+        c.l.row(y, 36, 42, y % 4 === 0 ? COAT[0] : COAT[1]);
+      }
+      // the pack strap, shoulder to hip
+      c.u.line(24, 31, 39, 45, R.leather[0]);
+      c.u.line(25, 31, 40, 45, R.leather[1]);
+      // a belt, and the lantern hung from it: its glow flickers
+      c.u.row(45, 22, 41, R.leather[0]);
+      c.l.r(37, 47, 4, 5, R.iron[1]);
+      c.l.r(38, 48, 2, 3, c.P.f % 3 ? '#fbbf24' : '#fde68a');
+      c.fx.p(36 + (c.P.f % 2), 46, '#fde68a');
+    },
+    head(c) {
+      // the scarf, wrapped twice, one end hanging
+      c.u.row(28, 23, 40, SCARF[1]);
+      c.u.row(29, 23, 40, SCARF[0]);
+      c.u.row(27, 25, 38, SCARF[2]);
+      c.u.r(25, 30, 3, 6, SCARF[1]);
+    },
+  },
+};
+
 /** Villagers can be drawn as they are when you meet them, or `after` you helped them. */
 export interface VillagerOpts {
   after: boolean;
@@ -152,3 +191,4 @@ export interface VillagerOpts {
 export const drawLia = (o: Partial<VillagerOpts>, frame: ClipFrame, f: number): Grid => drawFigure(o.after ? LIA_AFTER : LIA, LIA_LOOK, frame, f);
 export const drawSol = (o: Partial<VillagerOpts>, frame: ClipFrame, f: number): Grid => drawFigure(o.after ? SOL_AFTER : SOL, SOL_LOOK, frame, f);
 export const drawKid = (_o: unknown, frame: ClipFrame, f: number): Grid => drawFigure(KID, KID_LOOK, frame, f);
+export const drawTamsin = (_o: unknown, frame: ClipFrame, f: number): Grid => drawFigure(TAMSIN, TAMSIN_LOOK, frame, f);

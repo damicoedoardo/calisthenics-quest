@@ -1,13 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ChevronRight, Swords, Users } from 'lucide-react';
+import { Check, ChevronRight, Flame, Lock, Swords, Users } from 'lucide-react';
 import { warmRunSheets } from '@/game/sheets';
 import type { GameState } from '@/lib/game';
 import { EDGE, ZONES, edgeFor, powerOf, workoutsPastHearts, zoneStatus, type Zone } from '@/lib/fog';
 import { NO_GEAR } from '@/lib/fog-gear';
 import { ITEM_SLOTS, SLOT_NAME, starterKit, type Item, type ItemSlot } from '@/game/dungeon/items';
 import { chapterStart } from '@/story/engine';
+import { ROAD_BANNER, ROAD_CHAPTERS } from '@/story/road';
+import { ROAD_LENGTH, roadAt, startRoad } from '@/lib/road';
 import { inSandbox } from '@/lib/store';
 import { setLobbyOpen, usePartyView } from '@/lib/party-client';
 import { ItemTile } from './ItemCard';
@@ -185,9 +187,71 @@ function Together({ state, update, land = false }: { state: GameState; update: (
           </button>
         )}
       </section>
+      <RoadCard state={state} update={update} />
       <FriendsCard state={state} update={update} sandbox={sandbox} />
       {sandbox && <p className="rounded-2xl bg-ink-800 p-4 text-xs text-slate-500">Friends show here on your real save, once you&apos;re signed in.</p>}
     </div>
+  );
+}
+
+/** The Ember Road, the story walked with friends: set out, then each chapter, its boss and what it
+    waits for (src/lib/road.ts). Its scenes play on their own, like the main story's. */
+function RoadCard({ state, update }: { state: GameState; update: (fn: (s: GameState) => GameState) => void }) {
+  const at = roadAt(state);
+  const plural = (n: number) => `${n} workout${n === 1 ? '' : 's'}`;
+  return (
+    <section className="self-start rounded-2xl bg-ink-800 p-4 ring-1 ring-orange-500/30">
+      <p className="flex items-center gap-2 font-pixel text-[10px] text-orange-300">
+        <Flame size={14} /> The Ember Road
+      </p>
+      {!at.started ? (
+        <>
+          <p className="mt-2 text-xs text-slate-300">
+            A story you walk with friends, apart from your own: three chapters and a finale, about two months of training. Each chapter ends in a boss your party beats together.
+          </p>
+          <button onClick={() => update(startRoad)} className="mt-3 w-full rounded-xl bg-orange-400 py-2.5 text-sm font-semibold text-ink-950">
+            Set out on the road
+          </button>
+        </>
+      ) : (
+        <ol className="mt-2 space-y-2">
+          {ROAD_CHAPTERS.map((c) => {
+            const won = at.beaten >= c.n,
+              here = !won && at.open >= c.n;
+            return (
+              <li key={c.n} className={`flex gap-2 text-xs ${won || here ? 'text-slate-200' : 'text-slate-500'}`}>
+                <span className="mt-0.5 shrink-0">{won ? <Check size={14} className="text-emerald-400" /> : here ? <Swords size={14} className="text-orange-300" /> : <Lock size={14} />}</span>
+                <span>
+                  <span className="font-semibold">
+                    {c.n}. {c.name}
+                  </span>
+                  {won ? (
+                    <> · you keep {c.fog.keepsake.name}</>
+                  ) : here ? (
+                    <> · beat {c.fog.bossName} with your party: pick {c.fog.name} in the lobby</>
+                  ) : at.open === c.n - 1 && at.beaten >= at.open && at.nextIn > 0 ? (
+                    <> · opens in {plural(at.nextIn)}</>
+                  ) : (
+                    <> · after {ROAD_CHAPTERS[c.n - 2].fog.bossName}</>
+                  )}
+                </span>
+              </li>
+            );
+          })}
+          <li className={`flex gap-2 text-xs ${at.done ? 'text-gold-300' : 'text-slate-500'}`}>
+            <span className="mt-0.5 shrink-0">{at.done ? <Check size={14} className="text-gold-300" /> : <Lock size={14} />}</span>
+            <span>
+              <span className="font-semibold">The Hearth at the Road&apos;s End</span>
+              {at.done ? (
+                <> · you keep {ROAD_BANNER.name}</>
+              ) : at.beaten >= ROAD_LENGTH ? (
+                <> · {at.nextIn > 0 ? `in ${plural(at.nextIn)}` : 'waiting for you'}</>
+              ) : null}
+            </span>
+          </li>
+        </ol>
+      )}
+    </section>
   );
 }
 

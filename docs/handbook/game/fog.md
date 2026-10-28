@@ -34,6 +34,9 @@ level or story.
   plates), and each workout since starts a run with one more free skill (`'past'` picks, up to
   `EDGE.picks`). Playing well still beats it sooner. The Fog tab's ready strip says how many hearts are left,
   or what the edge gives (`BossEdge` in `PlayTab.tsx`).
+- The Ember Road's runs (`ROAD_ZONES`, played Together) are story zones in other clothes: same
+  `id`, dungeon and boss fight, the road's own names and words, and `guide: 'Tamsin'` speaks after
+  a win. See [story.md](story.md).
 - **Run skills**: `UPGRADES` and `rollUpgrades` (three random choices per level-up), `xpToNext`.
 - **Records**: `recordRun` saves runs, clears and each zone's bests (deepest, most monsters,
   fastest win) and the last run for the flame to talk about. The mid-boss guards floor

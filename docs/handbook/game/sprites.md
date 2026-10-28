@@ -29,7 +29,7 @@ parts/spWeapons.ts    the SPs' own weapons, one entry each in `SP_WEAPON_ART` ke
                       `trail`, `burst`, `ring` draw a weapon's own attack marks from the frame's `fx`
 parts/spColors.ts     the colors the SP looks and weapons share
 characters/*.ts       one file per character: hero, wanderer, mira, ember, book, vela (old Vela),
-                      kindled (a kid made of fire, from the old finale; no scene uses it now), villagers (Lia, Sol, the kid), and the chapter
+                      kindled (a kid made of fire, from the old finale; no scene uses it now), villagers (Lia, Sol, the kid, and Tamsin of the Ember Road), and the chapter
                       enemies tomorrow, mirror, plateau, summit, and the Fog's wisp, plus the
                       dungeon's monsters: ram, smoke (the Smoker), seeker, splitter (the
                       Splitling, and splitterPop, its one-shot death), shade, and the mid-boss

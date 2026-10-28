@@ -25,15 +25,17 @@ the workout's overview and choices in `Workout.tsx`, `useCoach.ts`
 
 ## The week: the one place a workout lives (`week.ts`)
 
-`coach.week` (`CoachWeek`): a start date, `by` (built-in or coach), and its workout days
+`coach.week` (`CoachWeek`): a calendar week, Monday to Sunday. `start` is the day it was planned
+(days before it aren't part of the plan), `by` (built-in or coach), and its workout days
 (`CoachDay`: a date, a `CoachPlan`, `done` once trained). **Every reader goes through it**:
 `currentPlan(coach)` is the week's first day not done, whatever its date (a missed day moves
 along, it isn't lost). Today's quest (`todaysQuest`), the workout screen, the Train tab and the
 coach all read it; every change is written to a day (`setDay`, `setPlan` for the next one).
 
-- **Planned**: `buildWeek` spreads your days a week over seven days (`WEEK_SPREAD`), each day's
+- **Planned**: `buildWeek` spreads your days a week from today to Sunday (`WEEK_SPREAD`; late in
+  the week fewer fit, one every other day, `weekDates`), each day's
   workout built knowing the days before it (modes and A/B days take turns). `useCoachPlan` plans a
-  new one once the coach is set up and the week is over (`weekOver`: seven days past its start). The coach replaces it with `set_week` or one day with `set_workout`.
+  new one once the coach is set up and the week is over (`weekOver`: its Sunday is past, so on Monday). The coach replaces it with `set_week` or one day with `set_workout`.
 - **Done**: `finishSession` marks the next day done (`markDone`) and moves levels.
 - **Old saves** had one `coach.plan`; `migrate` turns it into a week of one day (`fromLegacy`).
 
@@ -42,7 +44,7 @@ coach all read it; every change is written to a day (`setDay`, `setPlan` for the
 Every day of the week without a workout is a rest day, and it is part of the plan: you keep it by
 sitting by the fire that day (the day's page, `restKept`; Today's rest card or the Train tab).
 A kept rest day shows ✓ in the week, the brief tells the coach which were kept, and that day's
-Fog runs start Rested (`isRested`). A week runs its seven days even when every workout is done
+Fog runs start Rested (`isRested`). A week runs to its Sunday even when every workout is done
 (`weekOver`), so its rest days still come. No XP or story heart for a rest day yet.
 
 ## Rests
@@ -62,14 +64,20 @@ screen counts that down.
 - **Tools** (the list and the rules are on the server, `backend/app/coach.py`; they run here):
   `find_exercises` (the fuzzy search below, only what your gear and sore spots allow),
   `draft_week` (the built-in coach's week, a start to change), `show_week` (the week, and the next
-  workout in full), `set_week` (every workout day: a weekday, today/tomorrow or a date in the next
-  7 days, `resolveDay`; days done stay done), `set_workout` (one day, else the next; ids, roles,
+  workout in full), `set_week` (every workout day: a weekday, today/tomorrow or a date from today to
+  Sunday, `resolveDay`; workouts done this week stay), `move_workout` (a day's workout to another
+  day; onto a workout day the two swap, `moveDay`), `rest_day` (a day's workout off the week,
+  `restDay`), `set_workout` (one day, a rest day to come gets a workout, else the next; ids, roles,
   sets, reps or seconds, rest, run minutes; the app fills names, demos, easier and swap, builds run
   steps, and runs `validate`, then says what it fixed), `save_profile` (setup, or one change with `why`,
   written to `history`), `add_note` / `remove_note`, and `suggest_replies` (the taps under its
   message; it ends the turn). Every input is checked again; bad values are dropped and said.
 - **Search** (`search.ts`): words in any order, typos and plurals forgiven ("pushups", "dumbell
   row"), everyday words mapped to the library's ("abs", "chest", "legs"); staples first.
+- **Agreed changes**: the plan changes only by talking. `set_week`, `set_workout` and
+  `move_workout` return a heads-up from `weekWarnings` (the same muscles on days in a row, three
+  days in a row); the rules on the server tell the coach to check a change against the brief, push
+  back when it isn't wise, and change the plan only once the two agree.
 - **Who it is**: the brief names the flame and the player, its form now (`flameStage`, the same
   stages the story draws) and where the story is (chapter, lesson, the enemy's hearts left,
   `storyState`), so it speaks from there. The rules (warm, short, one question at a time, no body
@@ -149,7 +157,7 @@ an LLM gets back to do better.
 - **Train tab** (`CoachScreen` in `CoachChat.tsx`): the flame with what it brings up or its last
   words, "Let's start", "Talk" or "Answer", and "What I know" (`CoachKnows`: profile, levels, notes,
   each note can be forgotten; to change the profile, tell the flame). Under it the week (`WeekBoard`):
-  a chip for each of its seven days, workouts and rest days (✓ done or kept, "next" lit) and the chosen day's workout as cards: the pixel demo, dose and rest, Easier
+  a chip for each day, Monday to Sunday: workouts, rest days, and "–" before the plan (✓ done or kept, "next" lit) and the chosen day's workout as cards: the pixel demo, dose and rest, Easier
   and Swap (days still to do), and Start on the next day; a rest day says why rest counts and, on the
   day, offers a minute by the fire. Before the first week: only a line that says to talk to the flame. Tap a card (here or on Today) for how to
   do it (`ExerciseSheet`: both demos, facts, steps, tips, mistakes). Sideways the two sit side by side.

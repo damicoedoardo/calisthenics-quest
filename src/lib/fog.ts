@@ -3,6 +3,7 @@ import { dayKey } from './days';
 import { PICKUP_REACH, RUN_LEVELS } from '@/balance';
 import { buildOf, pointsFree, statPower } from './stats';
 import { CHAPTERS } from '@/story/chapters';
+import { ROAD_CHAPTERS } from '@/story/road';
 import { chapterStart, storyState } from '@/story/engine';
 import { isRested } from '@/story/daily';
 import { flameStage, stageIndex } from '@/story/flame';
@@ -23,6 +24,10 @@ export interface Zone extends FogZone {
   /** Workouts done when that chapter starts. */
   workouts: number;
   bossName: string;
+  /** An Ember Road run (src/story/road.ts): its chapter. */
+  road?: number;
+  /** Who speaks after a win (the Wanderer when left out). */
+  guide?: string;
 }
 
 export const BOSS_NAME: Record<FogBoss, string> = {
@@ -35,6 +40,15 @@ export const BOSS_NAME: Record<FogBoss, string> = {
 };
 
 export const ZONES: Zone[] = CHAPTERS.map((c, i) => ({ ...c.fog, id: i, chapter: c.n, workouts: chapterStart(c.n), bossName: BOSS_NAME[c.fog.boss] }));
+
+/** The Ember Road's runs, one per chapter: each borrows a story zone's dungeon and boss fight (and
+    its id, which the dungeon, look, music and loot go by), with the road's own names and words. */
+export const ROAD_ZONES: Zone[] = ROAD_CHAPTERS.map((c) => ({ ...ZONES[c.base], ...c.fog, firstTry: undefined, road: c.n, guide: 'Tamsin' }));
+
+/** A party's zone as the server keeps it: a story zone's id, or ROAD_CODE plus a road chapter. */
+export const ROAD_CODE = 20;
+export const partyCode = (z: Zone) => (z.road ? ROAD_CODE + z.road : z.id);
+export const zoneByCode = (code: number): Zone | undefined => (code > ROAD_CODE ? ROAD_ZONES[code - ROAD_CODE - 1] : ZONES.find((z) => z.id === code));
 
 /** How long you survive before the boss walks out of the fog. */
 export const RUN_SECONDS = 240;

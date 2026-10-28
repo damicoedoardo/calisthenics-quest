@@ -9,6 +9,7 @@ Each goal is written next to its numbers in `src/balance/`. The sheet measures i
 | Goal | Measured |  |
 | --- | --- | --- |
 | The main story is done in 5 to 6 months at 3 workouts a week | 78 workouts, 6.0 months (the last zone opens at 64, month 4.9) | on target |
+| The Ember Road (with friends) lasts 2 to 2.5 months at 3 workouts a week | the finale 27 workouts after setting out, 2.1 months (a chapter every 9) | on target |
 | A zone's best item (a floor 10 legendary) is wearable before the next zone opens | 11 workouts after a zone opens; the next opens 1 to 3 workouts after that | on target |
 | How often a steady player levels up (6 months) | 2.9 workouts a level | no goal set yet |
 | An item's level need is met by a steady player when its points are (`LEVEL_NEED`) | 0 to 1 levels to spare | on target |

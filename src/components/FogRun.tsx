@@ -1087,7 +1087,9 @@ function Results({ state, zone, end, broken, gear, keys, onAgain, onLeave }: { s
       <p className={`mt-auto font-pixel text-sm ${end.won || left ? 'text-gold-300' : 'text-slate-300'}`}>{end.won ? `${zone.name} cleared!` : left ? 'Back in the light' : 'The Fog took you'}</p>
       {end.height != null && <p className="mt-2 font-pixel text-[10px] text-sky-300">{end.height === 0 ? 'The first ledge waits for you.' : `You climbed ${end.height} ledge${end.height === 1 ? '' : 's'} high.`}</p>}
       <p className="mt-3 text-sm text-slate-300">{end.won ? (
-          <>The Wanderer: &ldquo;{zone.after}&rdquo;</>
+          <>
+            {zone.guide ?? 'The Wanderer'}: &ldquo;{zone.after}&rdquo;
+          </>
         ) : left ? (
           'You chose to walk out with what you found. Knowing when to stop is a skill too.'
         ) : (
