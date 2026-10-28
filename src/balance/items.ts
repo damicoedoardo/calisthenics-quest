@@ -4,7 +4,7 @@
 
 /** How much the dungeon's finds give next to the starter kit. Higher = items matter more.
     Goal: gear is about 40% of a player's power growth (POWER_SPLIT in power.ts). */
-export const ITEM_POWER = 1.76;
+export const ITEM_POWER = 1.68;
 
 /** What an item gives just for wearing it, before rarity and the roll: at level 0, and more per level. */
 export const ITEM_BASE = {
@@ -34,8 +34,51 @@ export const BONUS_SIZE = {
   move: { base: 0.02, per: 0.0006 },
   heal: { base: 0.3, per: 0.02 },
   cooldown: { base: 0.03, per: 0.0012 },
-  pickup: { base: 0.06, per: 0.003 },
+  /** Crit chance (0.02 = +2 points of chance). */
+  crit: { base: 0.02, per: 0.0006 },
+  /** Crit damage: added to what a crit does (0.1 = a crit does x2.1 instead of x2). */
+  critDmg: { base: 0.08, per: 0.004 },
+  /** Slayer: more damage to elites, golems, the mid-boss and the boss. */
+  slayer: { base: 0.04, per: 0.002 },
+  /** Life steal: this share of the damage you deal comes back as HP. */
+  leech: { base: 0.004, per: 0.0002 },
+  /** Evade: the chance a hit on you misses entirely (at most MAX_EVADE). */
+  evade: { base: 0.007, per: 0.0003 },
+  /** Ability power: the class ability and the SP's moves hit harder. */
+  power: { base: 0.04, per: 0.002 },
 } as const;
+
+/** Which bonuses each slot can roll (the forge's reroll too). Goal: a weapon reads as attack, armor
+    as defence, a charm can be anything. A bonus never repeats what the item gives anyway. */
+export const BONUS_POOL = {
+  weapon: ['damage', 'speed', 'crit', 'critDmg', 'slayer', 'leech', 'power', 'cooldown'],
+  armor: ['health', 'armor', 'evade', 'move', 'heal', 'cooldown'],
+  charm: ['damage', 'speed', 'health', 'armor', 'move', 'heal', 'cooldown', 'crit', 'critDmg', 'slayer', 'leech', 'evade', 'power'],
+} as const;
+
+/** Each class's weapon carries its own crit, just for wearing it (times rarity and the roll, not
+    the item's level): chance and extra crit damage. Goal: weapons feel different; the bow is the
+    crit weapon (the archer's old Crit lean), the staff the steady one. */
+export const WEAPON_CRIT = {
+  warrior: { crit: 0.04, critDmg: 0.2 },
+  archer: { crit: 0.06, critDmg: 0.2 },
+  monk: { crit: 0.03, critDmg: 0.15 },
+  mage: { crit: 0.05, critDmg: 0.25 },
+} as const;
+
+/** Evade never goes above this, however it is stacked. Goal: you still have to dodge. */
+export const MAX_EVADE = 0.25;
+/** Life steal heals at most this share of your max HP a second. Goal: it helps, it doesn't make
+    you unkillable in a crowd. */
+export const LEECH_CAP = 0.04;
+/** Share of damage dealt to elites and bosses, for the power scale (slayer only works on them). */
+export const SLAYER_SHARE = 0.45;
+
+/** Items also ask for a hero level (the level from training XP), the one a player who hits the
+    weekly goal has when the item becomes wearable (`WEAR_AFTER`), less `slack` workouts so a short
+    week or two doesn't block it. Goal: a level need can't be met by piling points in one stat or
+    starting over; it counts every workout. */
+export const LEVEL_NEED = { slack: 2 } as const;
 
 /** Per rarity: how many bonuses (from, to) and how strong (x every number). What it asks is `WEAR_AFTER`. */
 export const RARITY_SIZE = {

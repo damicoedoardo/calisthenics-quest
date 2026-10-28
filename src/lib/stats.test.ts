@@ -26,7 +26,7 @@ describe('stat points', () => {
     s = refundPoint(s, 'damage');
     expect(pointsFree(s)).toBe(1);
     expect(pointsFree(resetBuild(s))).toBe(STARTING_POINTS);
-    expect(spendEvenly(initialState()).build).toEqual({ health: 1, armor: 1, damage: 1, speed: 1, move: 1, crit: 1 });
+    expect(spendEvenly(initialState()).build).toEqual({ health: 2, armor: 1, damage: 1, speed: 1, move: 1 });
   });
 
   it('gives a little less for each point in the same stat', () => {
@@ -41,6 +41,6 @@ describe('stat points', () => {
   it('leans each class to its stat a little', () => {
     expect(statPower({}, 'warrior').damage).toBeCloseTo(statPower({ damage: CLASS_LEAN_POINTS }).damage);
     expect(statPower({}, 'monk').health).toBeGreaterThan(0);
-    expect(statPower({}, undefined)).toEqual({ ...BASE, armor: 0 });
+    expect(statPower({}, undefined)).toEqual({ ...BASE, armor: 0, crit: 0.05 });
   });
 });

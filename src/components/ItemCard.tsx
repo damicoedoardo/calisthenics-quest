@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 import { getStat, type Build } from '@/lib/stats';
-import { bandOf, betterBy, foundAt, itemLines, looksOf, nameOf, otherClass, RARITY, SLOT_NAME, shortOf, type Item, type Rarity } from '@/game/dungeon/items';
+import { bandOf, betterBy, foundAt, itemLines, levelShort, looksOf, nameOf, otherClass, RARITY, SLOT_NAME, shortOf, type Item, type Rarity } from '@/game/dungeon/items';
 import { getClass, type ClassId } from '@/lib/gear';
 import { BANDS } from '@/balance';
 import { PlusGlow } from './PlusGlow';
@@ -71,11 +71,19 @@ export function needLine(item: Item, build: Build): { text: string; ok: boolean 
   return { text: `Needs ${getStat(item.need.stat).name} ${item.need.n}${ok ? '' : ` · you have ${have}`}`, ok };
 }
 
+/** The hero level an item asks for, and whether you have it ("Needs level 9 · you're level 7"). */
+export function levelLine(item: Item, level: number): { text: string; ok: boolean } | null {
+  if (!item.needLevel) return null;
+  const ok = levelShort(item, level) === 0;
+  return { text: `Needs level ${item.needLevel}${ok ? '' : ` · you're level ${level}`}`, ok };
+}
+
 /** An item on one card: its art on a stage lit in its rarity's color, the name in that color,
     where it was found, what it gives, how it compares with what you wear (`than`: that item, or
-    'none' when the slot is empty), what it asks. */
-export function ItemCard({ item, build, cls, than, children }: { item: Item; build: Build; cls?: ClassId; than?: Item | 'none'; children?: React.ReactNode }) {
+    'none' when the slot is empty), what it asks (a hero level, points in a stat). */
+export function ItemCard({ item, build, level, cls, than, children }: { item: Item; build: Build; level: number; cls?: ClassId; than?: Item | 'none'; children?: React.ReactNode }) {
   const need = needLine(item, build),
+    needLv = levelLine(item, level),
     other = otherClass(item, cls),
     at = foundAt(item),
     pct = than ? betterBy(item, than === 'none' ? undefined : than) : null,
@@ -105,7 +113,7 @@ export function ItemCard({ item, build, cls, than, children }: { item: Item; bui
         </p>
         <p className="text-[10px] text-slate-500">
           {RARITY[item.rarity].name} {SLOT_NAME[item.slot].toLowerCase()}
-          {at && ` · Level ${at.level} · zone ${at.zone}, floor ${at.floor}`}
+          {at && ` · item level ${at.level} · zone ${at.zone}, floor ${at.floor}`}
         </p>
         {pct !== null && (
           <p className={`mt-1 text-xs font-semibold ${pct > 0 ? 'text-emerald-300' : pct < 0 ? 'text-red-300' : 'text-slate-400'}`}>
@@ -118,6 +126,7 @@ export function ItemCard({ item, build, cls, than, children }: { item: Item; bui
           ))}
         </ul>
         {other && <p className="mt-1 text-xs font-semibold text-red-300">{getClass(other)?.name ?? other} only</p>}
+        {needLv && <p className={`mt-1 text-xs ${needLv.ok ? 'text-slate-500' : 'text-red-300'}`}>{needLv.text}</p>}
         {need && <p className={`mt-1 text-xs ${need.ok ? 'text-slate-500' : 'text-red-300'}`}>{need.text}</p>}
         {children && <div className="mt-3 flex gap-2">{children}</div>}
       </div>

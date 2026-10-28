@@ -1,12 +1,12 @@
 import type { ClassId } from '@/lib/gear';
 import type { Build, StatId } from '@/lib/stats';
-import { BANDS, BONUS_SIZE, FALL_KEEP, ITEM_BASE, ITEM_POWER, ITEM_ROLL_LOW, MAX_PLUS, POINTS, RARITY_LEAN, RARITY_SIZE, RARITY_WEIGHTS, SAFE_POINTS, SLOT_ODDS, STARTER, STARTING_POINTS, STEPS, WEAR_AFTER, WEEKLY_GOAL } from '@/balance';
+import { BANDS, BONUS_POOL, BONUS_SIZE, FALL_KEEP, ITEM_BASE, ITEM_POWER, ITEM_ROLL_LOW, LEVEL_NEED, MAX_PLUS, POINTS, RARITY_LEAN, RARITY_SIZE, RARITY_WEIGHTS, SAFE_POINTS, SLOT_ODDS, STARTER, STARTING_POINTS, STEPS, WEAPON_CRIT, WEAR_AFTER, WEEKLY_GOAL, XP } from '@/balance';
 
 /* What the dungeon drops, as data: the things you wear, how rare they come, the bonuses they can
    carry, and what each asks of your training before you can wear it. engine.ts drops and wears
    them; src/lib/fog-gear.ts keeps them in the save between runs.
-   An item you can't wear yet tells you how far away it is: its requirement is stat points spent on
-   the Hero tab, which only workouts earn. */
+   An item you can't wear yet tells you how far away it is: it asks for a hero level and for stat
+   points spent on the Hero tab, and only workouts earn either. */
 
 /** Where an item is worn. */
 export type ItemSlot = 'weapon' | 'armor' | 'charm';
@@ -26,7 +26,7 @@ export const RARITY: Record<Rarity, { name: string; color: string; bonuses: read
 export const RARITY_ODDS: [Rarity, number][] = (['common', 'magic', 'rare', 'legendary'] as const).map((r) => [r, RARITY_WEIGHTS[r]]);
 
 /** What a bonus does, and its size at item level 0 and how much it grows per level. */
-export type BonusId = 'damage' | 'speed' | 'health' | 'armor' | 'move' | 'heal' | 'cooldown' | 'pickup';
+export type BonusId = 'damage' | 'speed' | 'health' | 'armor' | 'move' | 'heal' | 'cooldown' | 'crit' | 'critDmg' | 'slayer' | 'leech' | 'evade' | 'power';
 export const BONUSES: Record<BonusId, { name: string; base: number; per: number; show: (v: number) => string; word: string }> = {
   damage: { name: 'Damage', ...BONUS_SIZE.damage, show: (v) => `+${Math.round(v * 100)}% damage`, word: 'Fury' },
   speed: { name: 'Attack speed', ...BONUS_SIZE.speed, show: (v) => `+${Math.round(v * 100)}% attack speed`, word: 'Haste' },
@@ -35,9 +35,13 @@ export const BONUSES: Record<BonusId, { name: string; base: number; per: number;
   move: { name: 'Move speed', ...BONUS_SIZE.move, show: (v) => `+${Math.round(v * 100)}% move speed`, word: 'Wind' },
   heal: { name: 'Heal on kill', ...BONUS_SIZE.heal, show: (v) => `+${v.toFixed(1)} HP a kill`, word: 'Embers' },
   cooldown: { name: 'Ability', ...BONUS_SIZE.cooldown, show: (v) => `ability ${Math.round(v * 100)}% faster`, word: 'Focus' },
-  pickup: { name: 'Pickup', ...BONUS_SIZE.pickup, show: (v) => `+${Math.round(v * 100)}% pickup range`, word: 'Pull' },
+  crit: { name: 'Crit chance', ...BONUS_SIZE.crit, show: (v) => `+${(v * 100).toFixed(1)}% crit chance`, word: 'Luck' },
+  critDmg: { name: 'Crit damage', ...BONUS_SIZE.critDmg, show: (v) => `+${Math.round(v * 100)}% crit damage`, word: 'Ruin' },
+  slayer: { name: 'Slayer', ...BONUS_SIZE.slayer, show: (v) => `+${Math.round(v * 100)}% to elites and bosses`, word: 'the Hunt' },
+  leech: { name: 'Life steal', ...BONUS_SIZE.leech, show: (v) => `${(v * 100).toFixed(1)}% of damage heals you`, word: 'Thirst' },
+  evade: { name: 'Evade', ...BONUS_SIZE.evade, show: (v) => `${(v * 100).toFixed(1)}% to evade a hit`, word: 'Mist' },
+  power: { name: 'Ability power', ...BONUS_SIZE.power, show: (v) => `ability and SP moves +${Math.round(v * 100)}%`, word: 'Will' },
 };
-const BONUS_IDS = Object.keys(BONUSES) as BonusId[];
 
 export interface Item {
   id: string;
@@ -53,6 +57,8 @@ export interface Item {
   bonuses: { id: BonusId; v: number }[];
   /** Points spent in this stat it needs, or null for none. */
   need: { stat: StatId; n: number } | null;
+  /** The hero level it needs (from training XP). Items found before levels counted have none. */
+  needLevel?: number;
   /** The free starter kit: never lost, never kept in the vault. */
   starter?: boolean;
   /** Upgrades at Mira's forge, 0 to MAX_PLUS: each makes everything on it stronger. */
@@ -91,7 +97,7 @@ export const nameOf = (it: Item) => (it.plus ? `${it.name} +${it.plus}` : it.nam
 /** Each class's weapon and the stat it asks for (the class's own stat, CLASS_LEAN). */
 export const WEAPONS: Record<ClassId, { noun: string; stat: StatId; icon: ItemIcon }> = {
   warrior: { noun: 'sword', stat: 'damage', icon: 'sword' },
-  archer: { noun: 'bow', stat: 'crit', icon: 'bow' },
+  archer: { noun: 'bow', stat: 'speed', icon: 'bow' },
   monk: { noun: 'staff', stat: 'health', icon: 'staff' },
   mage: { noun: 'wand', stat: 'speed', icon: 'wand' },
 };
@@ -155,7 +161,18 @@ const sizeOf = (id: BonusId, level: number) => (BONUSES[id].base + BONUSES[id].p
 /** Stat points a player who hits the weekly goal and spreads them over the six stats has in each
     after this many workouts (what `WEAR_AFTER` asks for). */
 export const evenPoints = (workouts: number) => (STARTING_POINTS + workouts * (POINTS.full + POINTS.week / WEEKLY_GOAL)) / STAT_COUNT;
-const STAT_COUNT = 6;
+const STAT_COUNT = 5;
+
+/** The hero level of a player who hits the weekly goal every week, after this many workouts: full
+    workouts, the streak growing a step a week, the perfect-week bonus (src/balance/training.ts). */
+export function levelAfter(workouts: number): number {
+  let xp = 0;
+  for (let i = 0; i < workouts; i++) {
+    const week = Math.floor(i / WEEKLY_GOAL);
+    xp += XP.full * (1 + Math.min(week, XP.streakMax) * XP.streakStep) + (i % WEEKLY_GOAL === WEEKLY_GOAL - 1 ? XP.perfectWeek : 0);
+  }
+  return Math.floor(xp / XP.perLevel) + 1;
+}
 /** Which depth band of `WEAR_AFTER` a floor (0-9) is in. */
 const band = (floor: number) => (floor < 3 ? 0 : floor < 7 ? 1 : 2);
 /** Workouts after its zone opens until an item from this floor and rarity can be worn. */
@@ -189,7 +206,7 @@ export function rollItem(rnd: () => number, at: DropAt, rarity: Rarity): Item {
     mat = MATERIAL[Math.min(MATERIAL.length - 1, at.zone)];
   const base: Item['base'] =
     slot === 'weapon'
-      ? [{ id: 'damage', v: (ITEM_BASE.weaponDamage + ITEM_BASE.weaponDamagePerLevel * level) * ITEM_POWER * r.power * roll() }]
+      ? [{ id: 'damage', v: (ITEM_BASE.weaponDamage + ITEM_BASE.weaponDamagePerLevel * level) * ITEM_POWER * r.power * roll() }, ...weaponCrit(cls, r.power * roll())]
       : slot === 'armor'
         ? [
             { id: 'health', v: (ITEM_BASE.armorHealth + ITEM_BASE.armorHealthPerLevel * level) * ITEM_POWER * r.power * roll() },
@@ -198,8 +215,8 @@ export function rollItem(rnd: () => number, at: DropAt, rarity: Rarity): Item {
         : [];
   const [lo, hi] = r.bonuses,
     count = (slot === 'charm' ? 1 : 0) + lo + Math.floor(rnd() * (hi - lo + 1)),
-    // A bonus never repeats what the item gives anyway (armor's HP and armor).
-    pool = BONUS_IDS.filter((id) => !base.some((b) => b.id === id)),
+    // A bonus never repeats what the item gives anyway (armor's HP and armor, a weapon's crit).
+    pool = poolOf(slot).filter((id) => !base.some((b) => b.id === id)),
     bonuses: Item['bonuses'] = [];
   for (let i = 0; i < count && pool.length; i++) {
     const id = pool.splice(Math.floor(rnd() * pool.length), 1)[0];
@@ -217,7 +234,8 @@ export function rollItem(rnd: () => number, at: DropAt, rarity: Rarity): Item {
           ? `${mat} ${noun} of ${BONUSES[bonuses[0].id].word}`
           : `${mat} ${noun}`;
   const stat: StatId | null = slot === 'weapon' ? WEAPONS[cls].stat : slot === 'armor' ? 'armor' : null,
-    n = Math.round(evenPoints(at.workouts + wearAfter(rarity, at.floor)));
+    after = at.workouts + wearAfter(rarity, at.floor),
+    n = Math.round(evenPoints(after));
   return {
     id: Math.floor(rnd() * 2 ** 32).toString(36) + Math.floor(rnd() * 2 ** 32).toString(36),
     slot,
@@ -228,15 +246,28 @@ export function rollItem(rnd: () => number, at: DropAt, rarity: Rarity): Item {
     base,
     bonuses,
     need: stat && n > 0 ? { stat, n } : null,
+    needLevel: levelAfter(Math.max(0, after - LEVEL_NEED.slack)),
   };
 }
+
+/** Which bonuses an item in this slot can roll (BONUS_POOL). */
+const poolOf = (slot: ItemSlot): BonusId[] => [...BONUS_POOL[slot]];
+
+/** A weapon's own crit (WEAPON_CRIT), sized by `k` (rarity and roll; 1 for the starter kit). */
+const weaponCrit = (cls: ClassId, k: number): Item['base'] => [
+  { id: 'crit', v: WEAPON_CRIT[cls].crit * k },
+  { id: 'critDmg', v: WEAPON_CRIT[cls].critDmg * k },
+];
+
+/** A bonus of this kind at a middle roll, for an item of this level and rarity (bringing old saves forward). */
+export const middleBonus = (id: BonusId, level: number, rarity: Rarity) => sizeOf(id, level) * RARITY[rarity].power * (1 + ITEM_ROLL_LOW) / 2;
 
 /** The free starter kit for a class: a plain weapon, nothing else. A run started with no weapon
     gets it; an empty armor slot stays empty until the Fog drops one. */
 export function starterKit(cls: ClassId | undefined): { weapon: Item } {
   const c = cls ?? 'warrior';
   return {
-    weapon: { id: `starter-weapon-${c}`, slot: 'weapon', cls: c, rarity: 'common', level: 0, name: `Plain ${WEAPONS[c].noun}`, base: [{ id: 'damage', v: STARTER.weaponDamage }], bonuses: [], need: null, starter: true },
+    weapon: { id: `starter-weapon-${c}`, slot: 'weapon', cls: c, rarity: 'common', level: 0, name: `Plain ${WEAPONS[c].noun}`, base: [{ id: 'damage', v: STARTER.weaponDamage }, ...weaponCrit(c, 1)], bonuses: [], need: null, starter: true },
   };
 }
 
@@ -247,8 +278,11 @@ export function otherClass(item: Item, cls: ClassId | undefined): ClassId | null
   return item.cls === (cls ?? 'warrior') ? null : item.cls;
 }
 
-/** Whether this class with these points can wear the item now. */
-export const canWear = (item: Item, build: Build, cls: ClassId | undefined) => !otherClass(item, cls) && shortOf(item, build) === 0;
+/** Whether this class, at this hero level and with these points, can wear the item now. */
+export const canWear = (item: Item, build: Build, cls: ClassId | undefined, level: number) => !otherClass(item, cls) && levelShort(item, level) === 0 && shortOf(item, build) === 0;
+
+/** Levels short of what an item asks (0: you're there). */
+export const levelShort = (item: Item, level: number) => Math.max(0, (item.needLevel ?? 0) - level);
 
 /** Whether a build meets an item's requirement, and if not, how many points short. */
 export function shortOf(item: Item, build: Build): number {
@@ -264,7 +298,7 @@ export function itemTotals(items: (Item | undefined)[]): Partial<Record<BonusId,
 }
 
 /** What a bonus is worth next to the others, for comparing two items (1 = a mid-dungeon bonus). */
-const WORTH: Record<BonusId, number> = { damage: 1 / 0.09, speed: 1 / 0.075, health: 1 / 28, armor: 1 / 0.03, move: 0.6 / 0.06, heal: 0.7 / 1.8, cooldown: 0.6 / 0.1, pickup: 0.3 / 0.2 };
+const WORTH: Record<BonusId, number> = { damage: 1 / 0.09, speed: 1 / 0.075, health: 1 / 28, armor: 1 / 0.03, move: 0.6 / 0.06, heal: 0.7 / 1.8, cooldown: 0.6 / 0.1, crit: 1 / 0.09, critDmg: 0.7 / 0.45, slayer: 0.6 / 0.22, leech: 0.8 / 0.022, evade: 1 / 0.033, power: 0.6 / 0.22 };
 export function itemScore(it: Item | undefined): number {
   if (!it) return 0;
   return [...it.base, ...it.bonuses].reduce((n, b) => n + b.v * WORTH[b.id], 0) * boostOf(it);
@@ -292,7 +326,7 @@ export function itemLines(it: Item): string[] {
 /** The item with bonus `i` rolled again: a different bonus, sized for the item's level and rarity. */
 export function rerollBonus(it: Item, i: number, rnd: () => number): Item {
   if (!it.bonuses[i]) return it;
-  const pool = BONUS_IDS.filter((id) => !it.base.some((b) => b.id === id) && !it.bonuses.some((b) => b.id === id)),
+  const pool = poolOf(it.slot).filter((id) => !it.base.some((b) => b.id === id) && !it.bonuses.some((b) => b.id === id)),
     id = pool[Math.floor(rnd() * pool.length)];
   if (!id) return it;
   const v = sizeOf(id, it.level) * RARITY[it.rarity].power * (ITEM_ROLL_LOW + rnd() * (1 - ITEM_ROLL_LOW));

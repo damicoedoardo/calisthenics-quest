@@ -1,4 +1,4 @@
-import { daysSinceLastSession, type GameState } from './game';
+import { daysSinceLastSession, heroLevel, type GameState } from './game';
 import type { GearSlot, Tier } from './gear';
 import { buildOf } from './stats';
 import { afterFall, canWear, itemScore, type Item, type ItemSlot } from '@/game/dungeon/items';
@@ -80,11 +80,11 @@ export function atRisk(state: GameState, gear: { worn: FogGear['worn']; bag: Ite
   return { held, cold: warm ? undefined : pick, lost: risky.filter((x) => !afterFall(x)), slip: risky.filter((x) => afterFall(x)) };
 }
 
-/** What you walk into a run wearing: only what your points and your class let you wear today (the
+/** What you walk into a run wearing: only what your level, points and class let you wear today (the
     rest waits at home, safe: another class's weapon until you switch back). */
 export function wornFor(state: GameState): FogGear['worn'] {
   const b = buildOf(state);
-  return Object.fromEntries(Object.entries(gearOf(state).worn).filter(([, it]) => it && canWear(it, b, state.profile.classId)));
+  return Object.fromEntries(Object.entries(gearOf(state).worn).filter(([, it]) => it && canWear(it, b, state.profile.classId, heroLevel(state))));
 }
 
 /** After a run: keep it all on a win or a walk out by the stairs, lose it all otherwise. */
@@ -130,7 +130,7 @@ export function settleGear(state: GameState, end: { won: boolean; why?: string; 
 export function wearFromVault(state: GameState, id: string): GameState {
   const g = gearOf(state),
     it = g.vault.find((x) => x.id === id);
-  if (!it || !canWear(it, buildOf(state), state.profile.classId)) return state;
+  if (!it || !canWear(it, buildOf(state), state.profile.classId, heroLevel(state))) return state;
   const old = g.worn[it.slot],
     vault = g.vault.filter((x) => x !== it);
   return { ...state, fogGear: { ...g, worn: { ...g.worn, [it.slot]: it }, vault: old ? [...vault, old] : vault } };

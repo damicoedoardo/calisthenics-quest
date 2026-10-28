@@ -1,6 +1,6 @@
 import { PLAN, cueOf, type DayType, type Kit, type Slot, type SlotRole } from './program';
 import { makeGear, tiersAt, type ClassId, type Gear, type GearSlot, type Tier } from './gear';
-import { looksOf, nameOf, otherClass, tierOf, type Item } from '@/game/dungeon/items';
+import { looksOf, middleBonus, nameOf, otherClass, tierOf, type BonusId, type Item } from '@/game/dungeon/items';
 import type { SpState } from './sp';
 import type { Sweat } from './sweat';
 import type { Build } from './stats';
@@ -239,6 +239,9 @@ export function totalXp(state: GameState): number {
   return state.sessions.reduce((a, s) => a + s.xp, 0);
 }
 
+/** The hero's level from training XP (items ask for it too). */
+export const heroLevel = (state: GameState) => levelInfo(totalXp(state)).level;
+
 export function levelInfo(xp: number) {
   const level = Math.floor(xp / XP_PER_LEVEL) + 1;
   const into = xp % XP_PER_LEVEL;
@@ -476,7 +479,8 @@ export function migrate(raw: unknown): GameState {
     // Mira's forge used to make new gear every few workouts. It doesn't any more: the gear it had
     // made by then stays as the hero's look (the starter kit), and finer gear comes from the Fog.
     const fogGear = s.fogGear?.kit ? s.fogGear : { worn: {}, vault: [], ...s.fogGear, kit: tiersAt((s.sessions ?? []).length) };
-    return { ...fresh, ...s, profile: profileOf(s.profile), ...noReach(s.build, fogGear) };
+    const old = noReach(s.build, fogGear);
+    return { ...fresh, ...s, profile: profileOf(s.profile), ...noCrit(old.build, old.fogGear) };
   }
   if (r.version === 2) {
     const { progress: _progress, tests: _tests, reps: _reps, ...s } = r as unknown as GameState & { progress?: unknown; tests?: unknown };
@@ -511,12 +515,36 @@ export function migrate(raw: unknown): GameState {
 }
 
 /** Reach left the stats (loot comes to you): its points go back to spend, and items that asked
-    for Reach (the archer's bows) ask for Crit, the archer's stat now. */
+    for Reach (the archer's bows) ask for Haste, the archer's stat now (it was Crit until crit left
+    the stats too, see `noCrit`). */
 function noReach(build: GameState['build'], fogGear: FogGear): { build: GameState['build']; fogGear: FogGear } {
   const old = build as Record<string, number> | undefined;
   if (!old?.reach && !JSON.stringify(fogGear).includes('"stat":"reach"')) return { build, fogGear };
   const { reach: _reach, ...rest } = old ?? {};
-  const fix = (it: Item): Item => (it.need && (it.need.stat as string) === 'reach' ? { ...it, need: { ...it.need, stat: 'crit' } } : it);
+  const fix = (it: Item): Item => (it.need && (it.need.stat as string) === 'reach' ? { ...it, need: { ...it.need, stat: 'speed' } } : it);
+  return {
+    build: old ? rest : build,
+    fogGear: { ...fogGear, vault: fogGear.vault.map(fix), worn: Object.fromEntries(Object.entries(fogGear.worn).map(([k, it]) => [k, it && fix(it)])) },
+  };
+}
+
+/** Crit left the stats for weapons and bonuses: its points go back to spend, items that asked for
+    Crit (the archer's bows) ask for Haste, the archer's stat now, and the old Pickup bonus (loot
+    comes to you anyway) becomes a crit bonus, or Evade on armor, at a middle roll. */
+function noCrit(build: GameState['build'], fogGear: FogGear): { build: GameState['build']; fogGear: FogGear } {
+  const old = build as Record<string, number> | undefined,
+    text = JSON.stringify(fogGear);
+  if (old?.crit === undefined && !text.includes('"stat":"crit"') && !text.includes('"id":"pickup"')) return { build, fogGear };
+  const { crit: _crit, ...rest } = old ?? {};
+  const fix = (it: Item): Item => ({
+    ...it,
+    need: it.need && (it.need.stat as string) === 'crit' ? { ...it.need, stat: 'speed' } : it.need,
+    bonuses: it.bonuses.map((b) => {
+      if ((b.id as string) !== 'pickup') return b;
+      const id: BonusId = it.slot === 'armor' ? 'evade' : 'crit';
+      return { id, v: middleBonus(id, it.level, it.rarity) };
+    }),
+  });
   return {
     build: old ? rest : build,
     fogGear: { ...fogGear, vault: fogGear.vault.map(fix), worn: Object.fromEntries(Object.entries(fogGear.worn).map(([k, it]) => [k, it && fix(it)])) },

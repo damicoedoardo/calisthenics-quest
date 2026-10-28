@@ -56,7 +56,7 @@ function points(): string {
     st.name,
     ...at.map((n) => {
       const v = statPower({ [st.id]: n }, undefined)[st.id];
-      return st.id === 'health' ? `+${Math.round(v)}` : st.id === 'armor' || st.id === 'crit' ? pct(v) : `+${pct(v)}`;
+      return st.id === 'health' ? `+${Math.round(v)}` : st.id === 'armor' ? pct(v) : `+${pct(v)}`;
     }),
   ]);
   return [
@@ -153,17 +153,19 @@ function items(): string {
     [0, 9].flatMap((floor) =>
       (['magic', 'rare', 'legendary'] as Rarity[]).map((r) => {
         const it = middleWeapon(z.id, floor, r);
-        const need = it.need?.n ?? 0;
-        return [`${z.id + 1} (${z.workouts} workouts in)`, floor + 1, RARITY[r].name, `+${pct(it.base[0].v)}`, it.bonuses.length, need, workoutsFor(need)];
+        const need = it.need?.n ?? 0,
+          crit = it.base.find((b) => b.id === 'crit')?.v ?? 0,
+          critDmg = it.base.find((b) => b.id === 'critDmg')?.v ?? 0;
+        return [`${z.id + 1} (${z.workouts} workouts in)`, floor + 1, RARITY[r].name, `+${pct(it.base[0].v)}`, `+${pct1(crit)} / +${pct(critDmg)}`, it.bonuses.length, it.needLevel ?? '-', need, workoutsFor(need)];
       }),
     ),
   );
   return [
     '## Weapons',
     '',
-    `The starter weapon gives +${pct(starter)} damage. A weapon with middle rolls, by zone, floor and rarity, the points in the class's stat it asks for, and the workouts until an even build has them:`,
+    `The starter weapon gives +${pct(starter)} damage. A warrior's weapon with middle rolls, by zone, floor and rarity: its own crit (chance / crit damage, \`WEAPON_CRIT\`), the hero level and the points in the class's stat it asks for, and the workouts until an even build has those points:`,
     '',
-    table(['Zone', 'Floor', 'Rarity', 'Damage', 'Bonuses', 'Needs points', 'Even build after'], rows),
+    table(['Zone', 'Floor', 'Rarity', 'Damage', 'Crit', 'Bonuses', 'Needs level', 'Needs points', 'Even build after'], rows),
   ].join('\n');
 }
 
@@ -289,7 +291,7 @@ function goals(): string {
   const toFive = Array.from({ length: 5 }, (_, i) => upgradeCost({ plus: i } as Item)).reduce((a, b) => a + b, 0),
     toTop = STEPS.reduce((n, st) => n + st.embers * triesFor(st.odds), 0);
   const weeks = weeksFor(toFive, WEEKLY_GOAL);
-  const spread = statPower({ health: 70, armor: 70, damage: 70, speed: 70, move: 70, crit: 70 }, undefined);
+  const spread = statPower({ health: 84, armor: 84, damage: 84, speed: 84, move: 84 }, undefined);
   const check = (ok: boolean) => (ok ? 'on target' : '**off target**');
   const open = 'no goal set yet';
   const story = CHAPTERS.reduce((n, c) => n + c.workouts, 0),
@@ -317,12 +319,30 @@ function goals(): string {
           ];
         })(),
         ['How often a steady player levels up (6 months)', `${perLevel.toFixed(1)} workouts a level`, open],
+        (() => {
+          // The steady player's real level after n workouts, against what each zone's items ask.
+          const levelAt = (n: number) => levelInfo(steady.sessions.slice(0, n).reduce((a, x) => a + x.xp, 0)).level;
+          const late = ZONES.flatMap((z) =>
+            [0, 9].flatMap((floor) =>
+              RARITIES.map((r) => {
+                const it = middleWeapon(z.id, floor, r),
+                  at = z.workouts + wearAfter(r, floor);
+                return levelAt(at) - (it.needLevel ?? 0);
+              }),
+            ),
+          );
+          return [
+            "An item's level need is met by a steady player when its points are (`LEVEL_NEED`)",
+            `${Math.min(...late)} to ${Math.max(...late)} levels to spare`,
+            check(Math.min(...late) >= 0 && Math.max(...late) <= 3),
+          ];
+        })(),
         ['One item +0 to +5 in about 5 weeks of training', `${weeks.toFixed(1)} weeks`, check(weeks >= 4 && weeks <= 6)],
         ['One item +0 to +15 in about a year of training (embers; materials from co-op)', `${weeksFor(toTop, WEEKLY_GOAL).toFixed(0)} weeks`, check(weeksFor(toTop, WEEKLY_GOAL) >= 40 && weeksFor(toTop, WEEKLY_GOAL) <= 70)],
         [
-          '70 points a stat gives about +80% damage, +65% attack speed, +105 HP, 20% blocked, +25% walk speed, 20% crit',
-          `+${pct(spread.damage)}, +${pct(spread.speed)}, +${Math.round(spread.health)} HP, ${pct(spread.armor)} blocked, +${pct(spread.move)} walk, ${pct(spread.crit)} crit`,
-          check(Math.abs(spread.damage - 0.8) < 0.08 && Math.abs(spread.speed - 0.65) < 0.08 && Math.abs(spread.health - 105) < 10 && Math.abs(spread.armor - 0.2) < 0.04 && Math.abs(spread.move - 0.25) < 0.05 && Math.abs(spread.crit - 0.2) < 0.04),
+          '84 points a stat (six months, spread over five) gives about +87% damage, +70% attack speed, +115 HP, 23% blocked, +28% walk speed',
+          `+${pct(spread.damage)}, +${pct(spread.speed)}, +${Math.round(spread.health)} HP, ${pct(spread.armor)} blocked, +${pct(spread.move)} walk`,
+          check(Math.abs(spread.damage - 0.87) < 0.08 && Math.abs(spread.speed - 0.7) < 0.08 && Math.abs(spread.health - 115) < 10 && Math.abs(spread.armor - 0.23) < 0.04 && Math.abs(spread.move - 0.28) < 0.05),
         ],
         [`A comeback after ${XP.comebackDays} days away earns a bonus`, `+${XP.comeback} XP`, check(XP.comeback > 0)],
         ...(['training', 'gear', 'upgrades'] as const).map((k) => {
