@@ -1,3 +1,4 @@
+import { spWorn } from '@/lib/sp';
 import { gearOf, type GameState } from '@/lib/game';
 import type { Zone } from '@/lib/fog';
 import { sheetFor, type Sheet } from '@/sprites/registry';
@@ -57,8 +58,8 @@ function jobs(state: GameState, zone: Zone): Job[] {
     classId = state.profile.classId,
     look = state.profile.look,
     hero = { gear, classId, look };
-  // Once the flame has fused with you, you burn with it down there too.
-  const you = { ...hero, variant: heroVariant(state) };
+  // Once the flame has fused with you, you burn with it down there too; with the SP on, you wear its look.
+  const you = { ...hero, variant: heroVariant(state), ...(spWorn(state) ? { sp: true } : {}) };
   const plain = ['ember', 'mirror', 'golem', 'knight', 'book', 'summit', 'splitterPop', 'warden', 'lanternMid', 'foremanMid', 'sandGolemMid', 'sandGolemMidStone', 'whisperMid', 'galeMid'] as const;
   // The regular monsters dressed for this zone (wet glass at the lake, scrap iron at the forges...).
   const dressed = ['slime', 'wisp', 'ram', 'smoke', 'seeker', 'splitter', 'splitling', 'shade'] as const;

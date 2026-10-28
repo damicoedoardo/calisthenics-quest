@@ -19,17 +19,19 @@ interface HeroProps {
   look?: Look;
   /** Change this number to play the class attack once (swing, shot or cast). */
   action?: number;
+  /** Wearing the class's SP: its own look. */
+  sp?: boolean;
 }
 
 /** Your hero. The art lives in src/sprites; this only decides when to attack. */
-export function Hero({ gear, classId, size = 160, bounce = true, variant = 'normal', look, action = 0 }: HeroProps) {
+export function Hero({ gear, classId, size = 160, bounce = true, variant = 'normal', look, action = 0, sp }: HeroProps) {
   const acting = useAction(action);
   const yours = useLook();
   return (
     <Sprite
       key={acting.key}
       id="hero"
-      opts={{ gear, classId, variant, look: look ?? yours }}
+      opts={{ gear, classId, variant, look: look ?? yours, ...(sp ? { sp } : {}) }}
       action={acting.on ? 'attack' : 'idle'}
       size={size}
       playing={acting.on || bounce}

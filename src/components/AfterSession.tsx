@@ -1,5 +1,6 @@
 'use client';
 
+import { spWorn } from '@/lib/sp';
 import { useEffect, useMemo, useState } from 'react';
 import { Hero } from './Hero';
 import { Enemy } from './Characters';
@@ -46,7 +47,7 @@ export function AfterSession({ result, before, after, onClose }: Props) {
         <p className="font-pixel text-[10px] text-slate-400">Chapter {before.chapter.n}</p>
         <p className="mt-1 font-pixel text-xs text-gold-300">vs {before.chapter.enemy}</p>
         <div className="relative mt-8 flex items-end gap-10 [@media(orientation:landscape)_and_(max-height:600px)]:mt-4">
-          <Hero gear={gearOf(result.state)} classId={result.state.profile.classId} size={110} bounce={false} variant={heroVariant(result.state)} />
+          <Hero gear={gearOf(result.state)} classId={result.state.profile.classId} size={110} bounce={false} variant={heroVariant(result.state)} sp={spWorn(result.state)} />
           <div className={`relative ${hit ? 'animate-shake' : ''} ${defeated && hit ? 'opacity-30 grayscale transition-all duration-700' : ''}`}>
             <Enemy id={before.chapter.enemySprite} size={96} />
             {hit && (
@@ -140,7 +141,7 @@ function Loot({ result, onClose }: { result: FinishResult; onClose: () => void }
 
         {newGear.length > 0 && (
           <div className="mt-4 [@media(orientation:landscape)_and_(max-height:600px)]:first:mt-0 flex flex-col items-center">
-            <Hero gear={gearOf(result.state)} classId={result.state.profile.classId} size={130} variant={heroVariant(result.state)} />
+            <Hero gear={gearOf(result.state)} classId={result.state.profile.classId} size={130} variant={heroVariant(result.state)} sp={spWorn(result.state)} />
             {newGear.map((g) => (
               <p key={g.slot} className="mt-1 text-sm">
                 Forged: <span className="font-semibold" style={{ color: tierText(g.tier) }}>{g.name}</span>

@@ -9,6 +9,7 @@ import { useMusic } from './Sound';
 import { gearOf, type GameState } from '@/lib/game';
 import { flameStage, DEFAULT_FLAME_NAME } from '@/story/flame';
 import { renderLines, scenePlace, storyWords } from '@/story/engine';
+import { spWorn } from '@/lib/sp';
 import type { AnswerId, Ask, Line, Scene, Words } from '@/story/types';
 
 export interface SceneResult {
@@ -72,6 +73,7 @@ export function ScenePlayer({ scene, state, onDone }: Props) {
       place={place}
       words={unnamed ? { ...words, flame: '' } : words}
       flame={stage}
+      sp={spWorn(state)}
       onDone={phase === 'lines' ? endLines : () => onDone(result)}
     />
   );

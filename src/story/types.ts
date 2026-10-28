@@ -61,6 +61,9 @@ export interface Line {
   film?: boolean;
   /** From this line on, play this song instead; 'none' lets the music drop out. */
   music?: TrackId | 'none';
+  /** Something shown instead of a speaker: the SP card, sealed or awake, or the SP waking (the
+      whole screen plays your class's transformation, then the scene goes on). */
+  art?: 'sp-sealed' | 'sp-awake' | 'sp-transform';
 }
 
 /**

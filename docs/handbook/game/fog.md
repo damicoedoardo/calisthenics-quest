@@ -67,6 +67,15 @@ class ability, its own move and a final (how they play: [dungeon.md](dungeon.md)
 own move sits left of the dodge and the final over the ability (`SpButton` in `FogRun.tsx`; R and F
 on a keyboard). Numbers: `SP_TRIAL`, `SP_SKILL`, `SP_FINAL`, `SURGE` in `src/balance/classes.ts`.
 
+The scenes show the SP rather than explain it: the Wanderer holds up the card (a line with `art:
+'sp-sealed'`, the `spCard` sprite in ash, you a dark shape behind a crack), and when it wakes a line
+with `art: 'sp-transform'` plays `SpTransform` over the whole screen: the card rises and turns, the
+class's element storms in (fire, wind, falling stars, rings of water), you burn white, a flash, and
+you stand in the SP's look under its name. Worn, you wear that look everywhere you are drawn: the
+Fog (`src/game/sheets.ts`), the Hero and Play tabs, the header, the story (`sp` on `<Hero>` and on
+`Dialogue`). The looks: `SP_LOOKS` in `src/sprites/characters/spLooks.ts` (see
+[sprites.md](sprites.md)).
+
 ## The run itself
 
 A run is a dungeon of ten floors per zone, each a map of rooms to explore down to the stairs (a

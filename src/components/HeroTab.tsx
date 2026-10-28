@@ -1,5 +1,6 @@
 'use client';
 
+import { spWorn } from '@/lib/sp';
 import { useState, type ReactNode } from 'react';
 import { Download, Film, Gem, Lock, Mail, Palette, Upload } from 'lucide-react';
 import { SoundToggle, useMenuMusic } from './Sound';
@@ -224,7 +225,7 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
         <section className="flex w-48 shrink-0 flex-col items-center overflow-y-auto rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 px-2.5 pb-2.5 pt-3 min-[800px]:w-56">
           <p className="font-pixel text-[9px] text-slate-400">{cls ? cls.name : 'Adventurer'}</p>
           <div className="grid min-h-0 flex-1 place-items-center">
-            <Hero gear={gear} classId={state.profile.classId} size={112} variant={heroVariant(state)} />
+            <Hero gear={gear} classId={state.profile.classId} size={112} variant={heroVariant(state)} sp={spWorn(state)} />
           </div>
           <div className="w-full">
             <WornSlots state={state} tile={36} />
@@ -283,7 +284,7 @@ export function HeroTab({ state, update, onChangeClass, onReplayOpening }: Props
     <div className="space-y-5">
       <section className="flex flex-col items-center rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 pb-4 pt-5">
         <p className="font-pixel text-[10px] text-slate-400">{cls ? cls.name : 'Adventurer'}</p>
-        <Hero gear={gear} classId={state.profile.classId} size={180} variant={heroVariant(state)} />
+        <Hero gear={gear} classId={state.profile.classId} size={180} variant={heroVariant(state)} sp={spWorn(state)} />
         <div className="mt-3 w-full px-3">
           <WornSlots state={state} tile={48} />
         </div>

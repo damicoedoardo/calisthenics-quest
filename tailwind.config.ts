@@ -50,6 +50,12 @@ export default {
         // A forged item's sparks: up from the bottom and out (src/components/PlusGlow.tsx).
         spark: { '0%': { transform: 'translateY(0) scale(1)', opacity: '0' }, '20%': { opacity: '1' }, '100%': { transform: 'translateY(-140%) scale(.3)', opacity: '0' } },
         turn: { '0%,20%': { transform: 'rotate(0)' }, '55%,85%': { transform: 'rotate(90deg)' }, '100%': { transform: 'rotate(0)' } },
+        // The SP's transformation (src/components/SpTransform.tsx): bits of the element fly in from
+        // (--dx, --dy), wind sweeps across, rings spread from your feet, the card rises and turns.
+        converge: { '0%': { transform: 'translate(var(--dx), var(--dy)) scale(1.4)', opacity: '0' }, '25%': { opacity: '1' }, '100%': { transform: 'translate(0,0) scale(.4)', opacity: '0' } },
+        sweep: { '0%': { transform: 'translateX(-70vw)', opacity: '0' }, '20%,80%': { opacity: '1' }, '100%': { transform: 'translateX(70vw)', opacity: '0' } },
+        ring: { '0%': { transform: 'scale(.2)', opacity: '1' }, '100%': { transform: 'scale(2.4)', opacity: '0' } },
+        cardrise: { '0%': { transform: 'translateY(40px) rotateY(0)', opacity: '0' }, '30%': { opacity: '1' }, '100%': { transform: 'translateY(-10px) rotateY(720deg)', opacity: '1' } },
       },
       animation: {
         pop: 'pop .45s ease-out both',
@@ -77,6 +83,10 @@ export default {
         breathe: 'breathe 10s ease-in-out infinite',
         turn: 'turn 1.8s ease-in-out infinite',
         ignite: 'ignite .9s ease-out both',
+        converge: 'converge 1.1s ease-in infinite',
+        sweep: 'sweep .9s ease-in-out infinite',
+        ring: 'ring 1.2s ease-out infinite',
+        cardrise: 'cardrise 1.4s ease-in-out both',
       },
     },
   },

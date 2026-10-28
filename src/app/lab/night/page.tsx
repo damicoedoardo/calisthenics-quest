@@ -100,6 +100,12 @@ function withSp(awake: boolean, classId: ClassId = 'warrior'): GameState {
   return { ...s, profile: { ...s.profile, classId }, sp: { givenAt: 3, ...(awake ? { floor: true } : {}) }, seenScenes: [...s.seenScenes, 'sp-gift', 'sp-awake'] };
 }
 
+/** The SP's trial just done, its waking scene not yet played: the app opens on it. */
+function spWaking(classId: ClassId): GameState {
+  const s = withSp(true, classId);
+  return { ...s, seenScenes: s.seenScenes.filter((id) => id !== 'sp-awake') };
+}
+
 /** The geared warrior with an archer's bow in the vault: it can't be worn. */
 function otherBow(): GameState {
   const s = geared(),
@@ -192,9 +198,19 @@ export default function NightLab() {
         <Row icon={<Play size={16} />} label="The opening, with the class pick" note="A new player: after the name, pick a class (you can change it later)" onClick={() => open(initialState(), '')} />
         <Row icon={<Gem size={16} />} label="Another class's weapon" note="Play tab: an archer's bow in a warrior's vault says 'Archer only' and can't be worn" onClick={() => open(otherBow(), 'tab=play')} />
         <Row icon={<Film size={16} />} label="The Wanderer gives the first SP" note="sp-gift, at 3 workouts" href="/lab/story?play=sp-gift&back" />
-        <Row icon={<Film size={16} />} label="The SP wakes" note="sp-awake, once its trial is done" href="/lab/story?play=sp-awake&back" />
-        <Row icon={<Sparkles size={16} />} label="The SP, sealed" note="Hero tab: its trial (train twice more, reach floor 5)" onClick={() => open(withSp(false), 'tab=hero')} />
-        <Row icon={<Sparkles size={16} />} label="The SP, awake" note="Hero tab: its three moves and the switch to wear it; sweat coins under your points" onClick={() => open(withSp(true), 'tab=hero')} />
+        <div className="rounded-xl bg-ink-950 px-3 py-2.5">
+          <p className="text-sm text-slate-200">The SP wakes: the transformation</p>
+          <p className="text-[11px] text-slate-500">sp-awake in the app, as each class: the card cracks open, your element storms in, and you stand in its look</p>
+          <div className="mt-2 grid grid-cols-4 gap-1">
+            {(['warrior', 'archer', 'mage', 'monk'] as const).map((c) => (
+              <button key={c} className={chip} onClick={() => open(spWaking(c), '')}>
+                {c}
+              </button>
+            ))}
+          </div>
+        </div>
+        <Row icon={<Sparkles size={16} />} label="The SP, sealed" note="Hero tab: the card in ash, and its trial (train twice more, reach floor 5)" onClick={() => open(withSp(false), 'tab=hero')} />
+        <Row icon={<Sparkles size={16} />} label="The SP, awake" note="Hero tab: you in its look, the card in color, its moves and the switch to wear it" onClick={() => open(withSp(true), 'tab=hero')} />
         <div className="rounded-xl bg-ink-950 px-3 py-2.5">
           <p className="text-sm text-slate-200">The SP in a run</p>
           <p className="text-[11px] text-slate-500">Its own move beside your ability (R on a keyboard), its final above it (F): the final fills as you fight.</p>

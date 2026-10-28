@@ -6,6 +6,7 @@ import { Ember, Hollow, Kindled } from './Characters';
 import { PlaceBackdrop } from './Place';
 import { SoundToggle, useMusic } from './Sound';
 import { Sprite } from './Sprite';
+import { SpTransform } from './SpTransform';
 import { Weather } from './Weather';
 import { PixelSnap } from './sideways';
 import { useLook } from './Look';
@@ -35,6 +36,8 @@ interface Props {
   shots?: Shot[];
   /** How grown the flame is, for its portrait. */
   flame?: FlameStage;
+  /** You wear your SP's look (once it has woken). */
+  sp?: boolean;
 }
 
 /** One step of a scene: a camera beat on its own, or a line (which can carry a beat). */
@@ -78,13 +81,25 @@ function cameraAt(beats: Beat[], index: number, place?: PlaceId): Camera {
   return cam;
 }
 
-function Portrait({ line, gear, classId, flame }: { line: Line; gear: Record<GearSlot, Gear>; classId?: ClassId; flame: FlameStage }) {
+/** The SP card held up to the camera, sealed or awake. */
+function CardArt({ awake, gear, classId }: { awake: boolean; gear: Record<GearSlot, Gear>; classId?: ClassId }) {
+  const look = useLook();
+  return (
+    <div className="animate-float" style={{ filter: 'drop-shadow(0 0 14px rgba(253,230,138,.35))' }}>
+      <Sprite id="spCard" opts={{ classId, awake, gear, look }} size={144} />
+    </div>
+  );
+}
+
+function Portrait({ line, gear, classId, flame, sp }: { line: Line; gear: Record<GearSlot, Gear>; classId?: ClassId; flame: FlameStage; sp?: boolean }) {
+  if (line.art === 'sp-sealed' || line.art === 'sp-awake') return <CardArt awake={line.art === 'sp-awake'} gear={gear} classId={classId} />;
   const p = castMember(line.show ?? line.who).portrait;
   switch (p.kind) {
     case 'sprite':
       return <Sprite id={p.sprite} size={p.size} />;
     case 'hero':
-      return <Hero gear={gear} classId={classId} size={p.size} variant={p.variant} />;
+      // Only you wear your SP: the Echo, the Hollow and the Best Self keep their own looks.
+      return <Hero gear={gear} classId={classId} size={p.size} variant={p.variant} sp={sp && (p.variant === 'normal' || p.variant === 'kindled')} />;
     case 'hollow':
       return <Hollow size={p.size} />;
     case 'flame':
@@ -121,7 +136,7 @@ const TAG = { gold: 'text-gold-300', red: 'text-red-400', sky: 'text-sky-300', a
  * A scene: portrait above, a text box below, tap to reveal and advance. With a place it plays
  * over a backdrop, and shots move the camera, cut, fade, shake or bring someone in.
  */
-export function Dialogue({ lines, gear, classId, onDone, cinematic = false, backdrop, music = 'rise', words, place, shots = [], flame = 'candle' }: Props) {
+export function Dialogue({ lines, gear, classId, onDone, cinematic = false, backdrop, music = 'rise', words, place, shots = [], flame = 'candle', sp = false }: Props) {
   const beats = useMemo<Beat[]>(() => [...shots.map((shot) => ({ shot })), ...lines.map((line) => ({ line, shot: line.shot }))], [shots, lines]);
   const [index, setIndex] = useState(0);
   const [shown, setShown] = useState(0);
@@ -210,7 +225,7 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
   const ms = secondsOf(shot) * 1000;
   const weather = cam.place ? PLACES[cam.place].weather : 'none';
   // Something to show beside the words (a speaker, someone shown, or the opening's pictures).
-  const side = !!line && !(narrator && !line.show && !backdrop);
+  const side = !!line && !(narrator && !line.show && !line.art && !backdrop);
 
   return (
     <PixelSnap.Provider value>
@@ -252,11 +267,11 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
           // Held sideways, whoever is on screen stands on the left and the words sit beside them.
           <div className={side ? 'land-safe-x contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:min-h-0 [@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:gap-6' : 'contents'}>
             <div key={`shake-p-${index}`} className={`relative flex justify-center pb-6 ${narrator ? 'flex-[0.8] items-end' : 'flex-1 items-end'} ${side ? '[@media(orientation:landscape)_and_(max-height:600px)]:flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:items-center [@media(orientation:landscape)_and_(max-height:600px)]:pb-4' : ''} ${cam.place ? '' : shake}`}>
-              {narrator && !line.show
+              {narrator && !line.show && !line.art
                 ? backdrop?.(index)
                 : (
                   <div key={`${index}-${line.show ?? line.who}`} className={enter}>
-                    <Portrait line={line} gear={gear} classId={classId} flame={flame} />
+                    <Portrait line={line} gear={gear} classId={classId} flame={flame} sp={sp} />
                   </div>
                 )}
             </div>
@@ -285,6 +300,8 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
         )}
 
         {!line && !(shot && 'title' in shot) && <div className="flex-1" />}
+
+        {line?.art === 'sp-transform' && classId && <SpTransform key={index} classId={classId} gear={gear} onDone={next} />}
 
         <div
           className={`pointer-events-none absolute inset-0 z-20 transition-opacity ${cam.fade === 'white' ? 'bg-white' : 'bg-black'}`}

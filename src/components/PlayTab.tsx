@@ -1,5 +1,6 @@
 'use client';
 
+import { spWorn } from '@/lib/sp';
 import { useEffect, useState } from 'react';
 import { Sprite } from './Sprite';
 import { Ember } from './Characters';
@@ -114,7 +115,7 @@ export function PlayTab({ state, onPlay, update }: Props) {
     return (
       <div className="flex h-full flex-col gap-3">
         <section className="flex shrink-0 items-center gap-3 rounded-2xl bg-ink-800 py-1.5 pl-2 pr-1.5">
-          <Hero gear={gearOf(state)} classId={state.profile.classId} size={40} />
+          <Hero gear={gearOf(state)} classId={state.profile.classId} size={40} sp={spWorn(state)} />
           <Ember size={stage.id === 'spark' ? 44 : 30} stage={stage.id} mood={flameMood(state, now)} />
           <div className="min-w-0 flex-1">
             <p className="font-pixel text-[10px] text-gold-300">The Fog</p>
@@ -167,7 +168,7 @@ export function PlayTab({ state, onPlay, update }: Props) {
     <div className="space-y-4">
       <section className="rounded-2xl bg-ink-800 p-4 pixel-border">
         <div className="flex items-center gap-3">
-          <Hero gear={gearOf(state)} classId={state.profile.classId} size={72} variant={heroVariant(state)} />
+          <Hero gear={gearOf(state)} classId={state.profile.classId} size={72} variant={heroVariant(state)} sp={spWorn(state)} />
           <Ember size={stage.id === 'spark' ? 64 : 44} stage={stage.id} mood={flameMood(state, now)} />
           <div className="min-w-0 flex-1">
             <p className="font-pixel text-xs text-gold-300">The Fog</p>

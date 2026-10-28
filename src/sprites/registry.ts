@@ -38,6 +38,7 @@ import { drawExercise, type ExerciseOpts } from './characters/exercise';
 import { ZONE_PLACE, dress, edged } from './characters/zoned';
 import { FOG_BANK, WORLD_LOCK } from './characters/worlds';
 import { drawItem } from './characters/items';
+import { drawSpCard, type SpCardOpts } from './characters/spCard';
 import { installStepArt, type InstallStep } from './characters/install';
 import { ABILITY_ICONS, DAY_ICONS, SP_ICONS, KEEPSAKE_ICONS, MARK_ICONS, RELIC_ICONS, SKILL_ICONS, UI_ICONS, ZONE_ICONS, type DayKind } from './characters/icons';
 
@@ -214,6 +215,13 @@ export const SPRITES = {
     defaults: { art: 'sword', rarity: 'common', seed: 0 },
     clips: (o) => ({ idle: o.rarity === 'rare' || o.rarity === 'legendary' ? 'hover' : 'still' }),
     draw: (o, _fr, f) => drawItem(o, f),
+  }),
+  // the SP card: you in its look, sealed in ash or awake in its colors
+  spCard: drawn<SpCardOpts>({
+    label: (o) => (o.awake ? 'An awake SP card' : 'A sealed SP card'),
+    defaults: { awake: false },
+    clips: () => ({ idle: 'hover' }),
+    draw: (o, _fr, f) => drawSpCard(o, f),
   }),
   relicIcon: icon<RelicIconOpts>((o) => o.name, { name: 'whetstone' }, (o) => RELIC_ICONS[o.name]),
   abilityIcon: icon<AbilityIconOpts>((o) => o.name, { name: 'charge' }, (o) => ABILITY_ICONS[o.name]),

@@ -13,7 +13,7 @@ import { useMenuTrack } from '@/components/Sound';
 import { Workout } from '@/components/Workout';
 import { AfterSession } from '@/components/AfterSession';
 import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
-import { giveSp, spAfterRun } from '@/lib/sp';
+import { giveSp, spAfterRun, spWorn } from '@/lib/sp';
 import { changeClass, classCost, coins } from '@/lib/sweat';
 import { ClassPicker } from '@/components/ClassPicker';
 import { DevButton, DevPanel } from '@/components/DevPanel';
@@ -285,7 +285,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         )}
         <div className="flex items-center gap-3 land:min-w-0 land:flex-1">
           <div className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800 land:hidden desk:hidden">
-            <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} variant={heroVariant(state)} />
+            <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
           </div>
           <div className="min-w-0 flex-1 land:flex land:items-center land:gap-4">
             <div className="flex items-baseline justify-between land:shrink-0 land:items-center land:gap-4">
@@ -330,10 +330,10 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         {/* Sideways, the hero from the header sits at the top of the rail; on a computer, bigger. */}
         <div aria-hidden className="hidden h-11 w-11 place-items-center rounded-xl bg-ink-800 land:grid desk:mx-auto desk:grid desk:h-28 desk:w-28">
           <span className="desk:hidden">
-            <Hero gear={gear} classId={state.profile.classId} size={38} bounce={false} variant={heroVariant(state)} />
+            <Hero gear={gear} classId={state.profile.classId} size={38} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
           </span>
           <span className="hidden desk:block">
-            <Hero gear={gear} classId={state.profile.classId} size={96} bounce={false} variant={heroVariant(state)} />
+            <Hero gear={gear} classId={state.profile.classId} size={96} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
           </span>
         </div>
         <div className="mx-auto grid max-w-md grid-cols-4 land:mx-0 land:w-full land:grid-cols-1 land:gap-1 desk:mx-0 desk:w-full desk:grid-cols-1 desk:gap-1">

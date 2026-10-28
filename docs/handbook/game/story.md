@@ -66,6 +66,9 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
   starts), `pace: 'slow'` (slow typing; short lines only), `film` (narration big on the picture with
   no text box) and `music` (switch songs from this line on, or `'none'` to let the music drop out).
   Use them sparingly: a scene with a hold on every line has no holds.
+- **art** on a line shows something in place of a speaker: `'sp-sealed'` or `'sp-awake'` (the SP
+  card held up), or `'sp-transform'` (the whole screen plays your class's SP waking, then the scene
+  goes on; its text is only read out by screen readers).
 - **ask**: `name` (name the flame), `choice` (saved under its id; `write` adds a free-text box),
   `class` (opens the class picker), or `sp` (the Wanderer gives the first SP, see
   [fog.md](fog.md)). `spReady: true` in a `when` waits for the SP's trial to be done.
