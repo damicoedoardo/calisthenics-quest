@@ -9,7 +9,8 @@ import { STAT_ICON } from './StatPoints';
 import { gearOf, levelInfo, totalXp, type Checkin, type GameState } from '@/lib/game';
 import { LOOT_IDS, nextLoot, purseOf, spendable, workoutsToLevel, type LootId } from '@/lib/loot';
 import { STATS } from '@/lib/stats';
-import { EMBERS, MAX_PLUS, POINTS, SWEAT } from '@/balance';
+import { EMBERS, MAT_IDS, MATS, MAX_PLUS, POINTS, SWEAT } from '@/balance';
+import { matsOf } from '@/lib/forge';
 
 /* What training gives, drawn the same everywhere: a pixel icon per kind of loot (XP, stat points,
    embers, sweat coins, co-op materials). The purse on the Hero tab shows what you have, the strip on
@@ -93,6 +94,7 @@ export function LootGuide({ state, focus, now, onGo, onClose }: { state: GameSta
   const box = useModal<HTMLDivElement>(onClose);
   const look = useLook();
   const have = purseOf(state);
+  const mats = matsOf(state);
   const lvl = levelInfo(totalXp(state));
   const toLevel = workoutsToLevel(state, now);
   const loot = nextLoot(state, 'normal', now);
@@ -197,6 +199,20 @@ export function LootGuide({ state, focus, now, onGo, onClose }: { state: GameSta
                     </button>
                   )}
                 </div>
+                {/* The four materials, each with its own color and count. */}
+                {id === 'mats' && (
+                  <div className="mt-2 grid grid-cols-4 gap-1">
+                    {MAT_IDS.map((m) => (
+                      <span key={m} className="flex flex-col items-center rounded-lg bg-ink-950 py-1.5">
+                        <span className="h-2.5 w-2.5 rotate-45 rounded-[1px]" style={{ background: MATS[m].color }} aria-hidden />
+                        <span className="mt-1 font-pixel text-[9px] text-slate-200">{mats[m] ?? 0}</span>
+                        <span className="w-full truncate px-0.5 text-center text-[8px]" style={{ color: MATS[m].color }}>
+                          {MATS[m].name}
+                        </span>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </li>
             );
           })}
