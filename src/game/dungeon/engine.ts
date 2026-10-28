@@ -289,7 +289,8 @@ export type GameEvent =
   | { type: 'attack'; kind: AttackKind; x: number; y: number; angle: number; n: number; r?: number; weapon?: SpWeapon; arc?: number }
   | { type: 'hit'; id: number; x: number; y: number; dmg: number; boss: boolean; crit?: boolean }
   | { type: 'kill'; id: number; x: number; y: number; kind: FoeKind; elite: boolean }
-  | { type: 'hurt'; x: number; y: number; dmg: number; by: 'shot' | 'touch' | 'image' | 'reflection' }
+  /** A hero took a hit; `hero` is whose (their id), so a phone shakes only for its own. */
+  | { type: 'hurt'; x: number; y: number; dmg: number; by: 'shot' | 'touch' | 'image' | 'reflection'; hero?: number }
   | { type: 'shoot'; x: number; y: number; boss: boolean }
   | { type: 'burst'; x: number; y: number; r: number; color: 'nova' | 'orb' | 'wave' | 'fire' | 'ability' }
   | { type: 'chain'; points: { x: number; y: number }[] }
@@ -2571,7 +2572,7 @@ function scripted(run: Run, b: Foe, ux: number, uy: number) {
   emit(run, { type: 'shout', x: b.x, y: b.y });
   emit(run, { type: 'say', text: 'It doesn\'t even raise its sword.' });
   for (const h of run.party) {
-    emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: Math.ceil(h.hp), by: 'shot' });
+    emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: Math.ceil(h.hp), by: 'shot', hero: h.id });
     h.hp = 0;
   }
   end(run, false, 'hp');
@@ -2868,7 +2869,7 @@ function hitYourself(run: Run, h: Hero, kind: 'image' | 'reflection') {
   h.mirrorHurtAt = run.t;
   const n = Math.max(2, Math.round(h.maxHp * SPLIT[kind]));
   h.hp -= n;
-  emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: n, by: kind });
+  emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: n, by: kind, hero: h.id });
   if (h.hp <= 0) fall(run, h);
 }
 
@@ -3438,7 +3439,7 @@ function hurt(run: Run, h: Hero, dmg: number, by: 'shot' | 'touch') {
   h.hits++;
   h.hurtUntil = now + INVULNERABLE;
   calmer(run, h, CALM.taken, true);
-  emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: Math.round(taken), by });
+  emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: Math.round(taken), by, hero: h.id });
   if (h.hp <= 0) fall(run, h);
   else spHurt(run, h);
 }
