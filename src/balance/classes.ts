@@ -98,6 +98,7 @@ export interface SpMoveNumbers {
   n?: number;
   every?: number;
   boost?: number;
+  pull?: number;
 }
 
 /** Each SP's own move (the second button). Tuned with `SP=n pnpm fog:sim`: every SP of a class
@@ -106,7 +107,7 @@ export const SP_SKILL: Record<string, SpMoveNumbers> = {
   // warrior: Leap, Shield Wall, Harpoon, Reap
   leap: { cd: 10, reach: 260, secs: 0.3, r: 100, dmg: 0.9, knock: 220 },
   shieldwall: { cd: 12, secs: 2, r: 90, dmg: 0.5, knock: 260, clear: 1 },
-  harpoon: { cd: 6, reach: 260, dmg: 2.2 },
+  harpoon: { cd: 10, reach: 260, dmg: 1.2, pull: 95 },
   reap: { cd: 6, reach: 240, width: 26, dmg: 0.7, speed: 520 },
   // archer: Piercing Shot, Bomb, Call, Vanish
   piercing: { cd: 6, reach: 420, width: 16, dmg: 2.4 },
@@ -173,18 +174,18 @@ export const SP_WEAPON: Record<string, SpWeaponNumbers> = {
   // warrior: slow wide axe, heavy hammer, long lance, wide scythe
   greataxe: { cd: 1.4, dmg: 1, arc: 2.4, reach: 95, cut: 0.7 },
   hammer: { cd: 1.2, dmg: 1.15, cut: 1.3 },
-  lance: { cd: 0.8, dmg: 1, arc: 0.45, reach: 135, cut: 0.45 },
+  lance: { cd: 1.15, dmg: 1, arc: 0.45, reach: 135, cut: 0.45 },
   scythe: { cd: 1.1, dmg: 0.64, arc: 1.6, reach: 115, cut: 0.4 },
   // archer: far piercing bow, slow cannon that bursts, boomerang that comes back, fast daggers
   longbow: { cd: 1.1, dmg: 1.1, pierce: 2 },
   cannon: { cd: 1.7, dmg: 1.5, blast: 55 },
   boomerang: { cd: 1.2, dmg: 0.7, reach: 200, back: true },
-  daggers: { cd: 0.45, dmg: 0.32, arc: 1, reach: 75, cut: 0.3 },
+  daggers: { cd: 0.45, dmg: 0.32, arc: 1, reach: 75, cut: 0.38 },
   // mage: bursting fireballs, a quick water orb, a light that heals, a shadow sword up close
   flamestaff: { cd: 1, dmg: 1, blast: 70 },
   waterorb: { cd: 0.6, dmg: 0.7 },
   bellstaff: { cd: 1, dmg: 0.7, heal: 0.0005 },
-  hexblade: { cd: 0.7, dmg: 1.9, arc: 1.2, reach: 85, cut: 1.2 },
+  hexblade: { cd: 0.7, dmg: 1.9, arc: 1.6, reach: 85, cut: 1.6 },
   // monk: fast fists, faster claws, a staff that spins all round, ki blasts from far
   gauntlets: { cd: 0.5, dmg: 0.45, arc: 0.9, reach: 70, cut: 0.45 },
   claws: { cd: 0.4, dmg: 0.26, arc: 1.3, reach: 70, cut: 0.35 },

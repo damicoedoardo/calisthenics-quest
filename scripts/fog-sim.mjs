@@ -9,10 +9,11 @@
 //
 // Options (env): CLASSES=archer,mage (default: all four), ONLY=zone1-open,zone1-later picks
 // snapshots, SCALE='{"2":1.2}' plays zone 2 with its hp and dmg 1.2x, DIALS='{"fire":1.5}' turns the
-// engine's dials, TARGET=0.33,0.67 sets what the tuner aims for (wins when a zone opens, and later
+// engine's dials, WEAPON='{"hammer":{"cut":0}}' an SP weapon's numbers, TARGET=0.33,0.67 sets what the tuner aims for (wins when a zone opens, and later
 // on), EDGE='{"bossHp":0.7,"picks":3}' plays every run as if the zone's chapter had run out of
 // hearts (a weaker boss and free skills at the start; edgeFor in src/lib/fog.ts). SP=2 wears the
-// class's second SP (3, 4 likewise) once the model player has one; NOSP=1 wears none.
+// class's second SP (3, 4 likewise) once the model player has one; NOSP=1 wears none. OUT=file.json
+// also writes every run (won, seconds, hits taken) per snapshot and class, to compare in a script.
 import { readdirSync, readFileSync } from 'node:fs';
 import { availableParallelism } from 'node:os';
 import { register } from 'node:module';
@@ -38,6 +39,9 @@ if (!isMainThread) {
   const dials = JSON.parse(process.env.DIALS || '{}');
   // HUMAN=... sets how human the bot plays (src/balance/dungeon.ts), e.g. {"notice":0.8}.
   Object.assign(HUMAN, JSON.parse(process.env.HUMAN || '{}'));
+  // WEAPON=... changes SP weapons' numbers for a try, e.g. {"hammer":{"cut":0}} (src/balance/classes.ts).
+  const { SP_WEAPON } = await import(`${root}src/balance/classes.ts`);
+  for (const [w, k] of Object.entries(JSON.parse(process.env.WEAPON || '{}'))) Object.assign(SP_WEAPON[w], k);
   Object.assign(DIALS, dials);
   const { ZONES, powerOf, edgeFor } = await import(`${root}src/lib/fog.ts`);
   const forced = process.env.EDGE ? JSON.parse(process.env.EDGE) : null;
@@ -130,10 +134,12 @@ if (!isMainThread) {
       return t.length ? `${(t[Math.floor(t.length / 2)] / 60).toFixed(1)}m` : '-';
     };
     console.log(`${'snapshot'.padEnd(12)} ${classes.map((c) => c.padStart(14)).join('')}   reached the boss, deepest floor on a loss`);
-    const table = [];
+    const table = [],
+      raw = [];
     for (const snap of snaps) {
       const per = await measure(snap, scales[snap.zone] ?? 1);
       table.push({ snap, rates: per.map((p) => rate(p.res)) });
+      for (const p of per) raw.push({ snap: snap.label, cls: p.cls, runs: p.res.map((r) => ({ won: r.won, seconds: r.seconds, hits: r.hits ?? 0 })) });
       const all = per.flatMap((p) => p.res);
       const reached = all.filter((r) => r.bossAt !== null).length / all.length;
       const lost = all.filter((r) => !r.won).map((r) => r.floor);
@@ -155,6 +161,7 @@ if (!isMainThread) {
     });
     console.log('');
     for (const f of fair) console.log(`${`${f.kind} (average)`.padEnd(16)} ${f.avg.map((a, i) => `${classes[i]} ${pct(a)}`).join('  ')}   all four ${pct(f.mean)}: ${f.ok ? 'fair' : `a class is more than ${pct(CLASS_FAIR)} off`}`);
+    if (process.env.OUT) (await import('node:fs')).writeFileSync(process.env.OUT, JSON.stringify({ sp: process.env.SP ?? '1', raw }));
     // SHEET=1 writes the result next to the balance sheet (pnpm fog:sheet).
     if (process.env.SHEET) {
       const { writeFileSync } = await import('node:fs');

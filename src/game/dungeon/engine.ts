@@ -1761,8 +1761,8 @@ function leapMove(m: MoveCtx) {
   });
 }
 
-/** hook: hit the monster in front of you (the nearest within `reach`) and drag it to you. A boss is
-    only hit. */
+/** hook: hit the monster in front of you (the nearest within `reach`) and drag it `pull` px from
+    you, dazed for `secs`. A boss is only hit. */
 function hookMove(m: MoveCtx) {
   const { run, h, k } = m,
     reach = k.reach ?? 260,
@@ -1773,13 +1773,13 @@ function hookMove(m: MoveCtx) {
   damage(run, h, f, m.dmg, 0);
   if (!f.alive || big(run, f)) return;
   const a = Math.atan2(f.y - h.y, f.x - h.x),
-    d = HERO_R + f.def.r + 4;
+    d = Math.max(HERO_R + f.def.r + 4, k.pull ?? 0);
   f.x = clamp(h.x + Math.cos(a) * d, ROOM.wall + f.def.r, run.area.w - ROOM.wall - f.def.r);
   f.y = clamp(h.y + Math.sin(a) * d, ROOM.wall + f.def.r, run.area.h - ROOM.wall - f.def.r);
   outOfPillars(run, f, f.def.r);
   f.vx = f.vy = 0;
   // A moment to find its feet before it acts again.
-  f.knockUntil = run.t + 0.25;
+  f.knockUntil = run.t + (k.secs ?? 0.25);
 }
 
 /** boomerang: a throw (`width` wide) that flies out `reach` at `speed` and comes back to your
