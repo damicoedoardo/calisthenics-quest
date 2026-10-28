@@ -18,6 +18,18 @@ body {
   min-height: 100dvh;
 }
 
+/* No scroll bar down the side: pages still scroll, like a native app. */
+html,
+body,
+main {
+  scrollbar-width: none;
+}
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+main::-webkit-scrollbar {
+  display: none;
+}
+
 /* Keyboard focus shows as a gold ring: the browser's default blue is hard to see on the ink. */
 :focus-visible {
   outline: 2px solid #fbbf24;
