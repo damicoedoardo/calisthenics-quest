@@ -70,7 +70,7 @@ function route(run: Run): Door | null {
     open = cells.filter((c) => c.seen && !c.visited && !isEnd(c.kind) && far.has(c.id)).sort((a, b) => far.get(a.id)! - rank(a.kind) - (far.get(b.id)! - rank(b.kind))),
     // Badly hurt, it looks for a shrine first, then makes for the stairs.
     next = hp < 0.4 ? (open.find((c) => c.kind === 'rest') ?? (end ? undefined : open[0])) : open[0];
-  if (end && (seen >= 0.6 || !next)) return end.id === at ? null : (first.get(end.id) ?? null);
+  if (end && (seen >= HUMAN.explore || !next)) return end.id === at ? null : (first.get(end.id) ?? null);
   return next ? first.get(next.id)! : (run.doors[0] ?? null);
 }
 

@@ -6,8 +6,10 @@
 /** What the bot should win in a zone: the day it opens, and later on (6 workouts on; 18 for the last
     two zones, laterBy in src/sim/season.ts). `pnpm fog:tune` aims at these; `pnpm fog:sheet` flags a
     zone more than `slack` off. Harder = lower. The first zone's opening day is the very first run, at 0
-    workouts: losing it is meant (the story's first lesson), so there it only must not be easier. */
-export const ZONE_WINS = { open: 0.33, later: 0.67, slack: 0.15 } as const;
+    workouts: losing it is meant (the story's first lesson): there the bot wins about `first` (at most 3
+    points over): Edoardo, 2026-10-28: "super tough, not impossible, maybe 1%". A top dodger in their
+    best finds wins about 1 in 10. */
+export const ZONE_WINS = { open: 0.33, later: 0.67, slack: 0.15, first: 0.02 } as const;
 
 export const DIALS = {
   /** Monster HP, on top of the zone's. */
@@ -62,4 +64,19 @@ export const HUMAN = {
   aim: 0.3,
   /** Chance it misses the moment to dodge a shot it saw. */
   dodgeMiss: 0.25,
+  /** Share of a floor's rooms it walks before taking the stairs: people search the whole floor for gear. */
+  explore: 1,
+};
+
+/** The gear a real player walks into a zone with, for the bot that measures it (`src/sim/seasoned.ts`):
+    the best they can wear of what earlier runs dropped (this zone's and the one before), forged with
+    the embers training and melted loot gave. Goal: the zones are tuned for people who keep their
+    best finds and forge them, not for a hero in the starter kit. */
+export const SEASONED = {
+  /** Items found so far: about what a handful of runs drops. */
+  finds: 24,
+  /** How lucky those finds were (0 a monster, 1 a chest, 2 a boss): most come from elites and chests. */
+  luck: 0.8,
+  /** Embers from melting what didn't fit, per find. */
+  meltEach: 4,
 };

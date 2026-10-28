@@ -41,11 +41,15 @@ if (!isMainThread) {
   const { ZONES, powerOf, edgeFor } = await import(`${root}src/lib/fog.ts`);
   const forced = process.env.EDGE ? JSON.parse(process.env.EDGE) : null;
   const { buildOf } = await import(`${root}src/lib/stats.ts`);
+  const { seasonedKit } = await import(`${root}src/sim/seasoned.ts`);
+  const { seeded } = await import(`${root}src/lib/random.ts`);
+  // GEAR=0 plays in the starter kit; by default the bot walks in with what a player keeps (SEASONED).
+  const geared = process.env.GEAR !== '0';
   const now = Date.now();
   parentPort.on('message', (job) => {
     const state = JSON.parse(readFileSync(job.file, 'utf8'));
     const power = powerOf(shift(state, now), new Date(now));
-    // Every run starts in the starter kit (as after a death); the bot wears what drops if its points allow.
+    // Every run starts in what a player keeps (seasonedKit; GEAR=0: the starter kit); the bot wears what drops if its points allow.
     const build = buildOf(state);
     const z = ZONES[job.zone];
     const zone = { ...z, hp: z.hp * job.scale, dmg: z.dmg * job.scale };
@@ -53,7 +57,8 @@ if (!isMainThread) {
     const out = [];
     for (let i = 0; i < job.runs; i++) {
       const seed = job.seed + i * 7919;
-      out.push({ ...playRun({ zone, power, classId: job.cls, seed, build, edge }), seed });
+      const worn = geared ? seasonedKit(seeded(seed ^ 0x5eed), ZONES, job.zone, state.sessions.length, job.cls, build) : undefined;
+      out.push({ ...playRun({ zone, power, classId: job.cls, seed, build, edge, worn }), seed });
     }
     parentPort.postMessage(out);
   });
@@ -149,7 +154,7 @@ if (!isMainThread) {
       const md = [
         '# Fog sheet',
         '',
-        `Written by \`pnpm fog:sheet\` (the Fog bot, ${runs} runs per class per point, player \`${player}\`). Do not edit by hand. The goals: \`src/balance/classes.ts\` and \`src/balance/dungeon.ts\`; the rule: \`docs/handbook/game/balance.md\`.`,
+        `Written by \`pnpm fog:sheet\` (the Fog bot, ${runs} runs per class per point, player \`${player}\`, walking in with what a player keeps (\`SEASONED\`) and searching every room). Do not edit by hand. The goals: \`src/balance/classes.ts\` and \`src/balance/dungeon.ts\`; the rule: \`docs/handbook/game/balance.md\`.`,
         '',
         '## Classes',
         '',
@@ -171,8 +176,8 @@ if (!isMainThread) {
             const opens = t.snap.label.endsWith('open'),
               all = t.rates.reduce((a, b) => a + b, 0) / t.rates.length,
               first = opens && t.snap.zone === 0,
-              ok = first ? all <= ZONE_WINS.open + ZONE_WINS.slack : Math.abs(all - (opens ? ZONE_WINS.open : ZONE_WINS.later)) <= ZONE_WINS.slack;
-            return row([String(t.snap.zone + 1), first ? 'opens (the first run, meant to be lost)' : opens ? 'opens' : `+${laterBy(t.snap.zone)} workouts`, ...t.rates.map((r) => pct(r).trim()), pct(all).trim(), ok ? 'on target' : '**off**']);
+              ok = first ? all <= ZONE_WINS.first + 0.03 : Math.abs(all - (opens ? ZONE_WINS.open : ZONE_WINS.later)) <= ZONE_WINS.slack;
+            return row([String(t.snap.zone + 1), first ? `opens (the first run, 0 workouts: at most ${pct(ZONE_WINS.first + 0.03).trim()})` : opens ? 'opens' : `+${laterBy(t.snap.zone)} workouts`, ...t.rates.map((r) => pct(r).trim()), pct(all).trim(), ok ? 'on target' : '**off**']);
           }),
         '',
       ].join('\n');
@@ -194,8 +199,11 @@ if (!isMainThread) {
     const tuneZone = async (z) => {
       const open = snaps.find((s) => s.zone === z && s.label.endsWith('open')),
         later = snaps.find((s) => s.zone === z && s.label.endsWith('later'));
-      const both = [open, later].filter(Boolean);
-      const aim = both.length === 2 ? (aimOpen + aimLater) / 2 : open ? aimOpen : aimLater;
+      // The first zone's opening day is the very first run, at 0 workouts: that zone is tuned on it
+      // alone, at ZONE_WINS.first (its later win rate follows from what six workouts give).
+      const first = z === 0 && !process.env.TARGET && open,
+        both = first ? [open] : [open, later].filter(Boolean);
+      const aim = first ? ZONE_WINS.first : both.length === 2 ? (aimOpen + aimLater) / 2 : open ? aimOpen : aimLater;
       const at = async (scale) => {
         const r = await Promise.all(both.map((s) => measure(s, scale)));
         const rates = r.map((per) => rate(per.flatMap((p) => p.res)));
