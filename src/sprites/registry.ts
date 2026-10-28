@@ -229,7 +229,7 @@ export const SPRITES = {
   }),
   relicIcon: icon<RelicIconOpts>((o) => o.name, { name: 'whetstone' }, (o) => RELIC_ICONS[o.name]),
   abilityIcon: icon<AbilityIconOpts>((o) => o.name, { name: 'charge' }, (o) => ABILITY_ICONS[o.name]),
-  spIcon: icon<SpIconOpts>((o) => o.name, { name: 'whirl' }, (o) => SP_ICONS[o.name]),
+  spIcon: icon<SpIconOpts>((o) => o.name, { name: 'leap' }, (o) => SP_ICONS[o.name]),
   elementIcon: icon<ElementIconOpts>((o) => o.name, { name: 'fire' }, (o) => ELEMENT_ICONS[o.name]),
   skillIcon: icon<SkillIconOpts>((o) => o.name, { name: 'power' }, (o) => SKILL_ICONS[o.name]),
   uiIcon: icon<UiIconOpts>((o) => o.name, { name: 'heart' }, (o) => UI_ICONS[o.name]),

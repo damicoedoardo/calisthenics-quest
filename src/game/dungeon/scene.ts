@@ -2005,7 +2005,7 @@ class DungeonScene extends Phaser.Scene {
         // shows as a small badge in the HUD (finals), so nothing covers the fight.
         const { x, y, r, final } = e,
           shape = SP_MOVES[e.id].shape;
-        this.sfx(final ? 'nova' : shape === 'fan' || shape === 'volley' ? 'arrow' : shape === 'dash' ? 'dash' : shape === 'chain' ? 'spark' : 'nova', final ? 0.8 : 1.15);
+        this.sfx(final ? 'nova' : shape === 'beam' ? 'arrow' : shape === 'dash' ? 'dash' : shape === 'chain' ? 'spark' : 'nova', final ? 0.8 : 1.15);
         this.shake(final ? 260 : 120, final ? 0.01 : 0.005);
         if (final) {
           buzz(30);
@@ -2365,204 +2365,7 @@ class DungeonScene extends Phaser.Scene {
       angle = e.angle ?? 0,
       color = aura[1],
       [X, Y] = this.P(x, y);
-    switch (id) {
-      case 'whirl':
-        // three blades of fire spin round you and fling embers out
-        this.fade(420, (g, p) => {
-          const R = r * (0.45 + 0.55 * p);
-          for (let i = 0; i < 3; i++) {
-            const a0 = p * Math.PI * 3 + (i * Math.PI * 2) / 3;
-            g.lineStyle(9 * (1 - p) + 2, i === 1 ? 0xfde047 : 0xf97316, 0.95 * (1 - p));
-            g.beginPath();
-            g.arc(x, y, R, a0, a0 + 1.7);
-            g.strokePath();
-          }
-          g.fillStyle(0xf97316, 0.14 * (1 - p)).fillCircle(x, y, R);
-        });
-        this.bits.particleTint = 0xf97316;
-        this.burst(this.bits, 16, x, y);
-        this.burst(this.sparks, 10, x, y, -6);
-        break;
-      case 'phoenix': {
-        // a ring of fire rolls out, and a phoenix rises from you, wings beating
-        this.fade(650, (g, p) => {
-          g.lineStyle(12 * (1 - p) + 1, 0xf97316, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.2 + 0.8 * p));
-          g.lineStyle(5 * (1 - p) + 1, 0xfde047, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.1 + 0.75 * p));
-          g.fillStyle(0xf97316, 0.2 * (1 - p)).fillCircle(x, y, r * (0.2 + 0.8 * p));
-        });
-        this.fade(1000, (g, p) => {
-          const s = 1 + 1.4 * p,
-            by = Y - 24 - 90 * p,
-            flap = Math.sin(p * Math.PI * 5) * 12 * s,
-            a = 1 - p * p;
-          // tail
-          g.fillStyle(0xdc2626, 0.8 * a).fillTriangle(X - 9 * s, by + 4 * s, X + 9 * s, by + 4 * s, X, by + 50 * s);
-          g.fillStyle(0xf97316, 0.8 * a).fillTriangle(X - 5 * s, by + 4 * s, X + 5 * s, by + 4 * s, X, by + 36 * s);
-          // wings, outer fire then inner gold
-          for (const side of [-1, 1]) {
-            g.fillStyle(0xf97316, 0.9 * a).fillTriangle(X, by, X + side * 64 * s, by - 22 * s + flap, X + side * 18 * s, by + 14 * s);
-            g.fillStyle(0xfde047, 0.9 * a).fillTriangle(X, by - 3 * s, X + side * 36 * s, by - 14 * s + flap * 0.6, X + side * 10 * s, by + 8 * s);
-          }
-          // body and head
-          g.fillStyle(0xfb923c, a).fillEllipse(X, by, 12 * s, 22 * s);
-          g.fillStyle(0xfef3c7, a).fillCircle(X, by - 13 * s, 5 * s);
-          g.fillStyle(0xfde047, a).fillTriangle(X - 2 * s, by - 13 * s, X + 2 * s, by - 13 * s, X, by - 22 * s);
-        }, true);
-        this.bits.particleTint = 0xf97316;
-        this.burst(this.bits, 40, x, y);
-        this.burst(this.sparks, 30, x, y, -6);
-        break;
-      }
-      case 'pin': {
-        // the arrows ride a gust: streaks of wind run out along the shot, and leaves with them
-        const c = Math.cos(angle),
-          sn = Math.sin(angle);
-        this.fade(360, (g, p) => {
-          for (let i = -2; i <= 2; i++) {
-            const ox = -sn * i * 9,
-              oy = c * i * 9,
-              from = 20 + 380 * Math.max(0, p - 0.15 * Math.abs(i)),
-              len = 70 - 10 * Math.abs(i);
-            g.lineStyle(i === 0 ? 4 : 2, i === 0 ? 0xffffff : 0x9fe0d0, 0.85 * (1 - p));
-            g.lineBetween(x + ox + c * from, y + oy + sn * from, x + ox + c * (from + len), y + oy + sn * (from + len));
-          }
-        });
-        this.bits.particleTint = 0x86efac;
-        this.burst(this.bits, 8, x + c * 30, y + sn * 30);
-        break;
-      }
-      case 'rain': {
-        // the sky opens: arrows fall on every monster, one after another, each with its ring of wind
-        const at = this.spots(x, y, Infinity, 10);
-        this.fade(900, (g, p) => {
-          at.forEach(([fx, fy], i) => {
-            const d = (i / at.length) * 0.45,
-              q = (p - d) / 0.25;
-            if (q < 0 || q > 2.2) return;
-            const [AX, AY] = this.P(fx, fy);
-            if (q < 1) {
-              const ty = AY - 220 * (1 - q);
-              for (const k of [-10, 0, 10]) {
-                g.lineStyle(2, 0xe0fff6, 0.95).lineBetween(AX + k + 6, ty - 26, AX + k, ty);
-                g.fillStyle(0x86efac, 1).fillTriangle(AX + k - 3, ty - 2, AX + k + 3, ty - 2, AX + k, ty + 5);
-              }
-            } else {
-              const t = q - 1;
-              g.lineStyle(3 * (1 - t / 1.2) + 1, 0x9fe0d0, Math.max(0, 0.9 - t * 0.7)).strokeEllipse(AX, AY + 6, 24 + 40 * t, 8 + 14 * t);
-            }
-          });
-          // the wind over the room
-          g.lineStyle(2, 0xe0fff6, 0.5 * (1 - p));
-          for (let i = 0; i < 6; i++) {
-            const sy = Y - 160 + i * 18,
-              sx = X - 240 + ((p * 900 + i * 130) % 480);
-            g.lineBetween(sx, sy, sx + 60, sy - 6);
-          }
-        }, true);
-        break;
-      }
-      case 'starfall': {
-        // a star drops on the monster from high up, and bursts
-        this.fade(520, (g, p) => {
-          const q = Math.min(1, p / 0.35);
-          if (q < 1) {
-            const sx = X + 120 * (1 - q),
-              sy = Y - 200 * (1 - q);
-            g.lineStyle(6, 0xc4b5fd, 0.5).lineBetween(sx + 40, sy - 66, sx, sy);
-            g.lineStyle(2, 0xffffff, 0.9).lineBetween(sx + 20, sy - 33, sx, sy);
-            this.star(g, sx, sy, 10, 0xfff3b0, 1);
-          } else {
-            const t = (p - 0.35) / 0.65;
-            this.star(g, X, Y, 12 + 26 * t, 0xfff3b0, 0.9 * (1 - t));
-            g.lineStyle(4 * (1 - t) + 1, 0xa78bfa, 0.9 * (1 - t)).strokeCircle(X, Y, (r + 10) * (0.3 + 0.9 * t));
-          }
-        }, true);
-        this.time.delayedCall(180, () => {
-          this.burst(this.sparks, 14, x, y, -6);
-          this.bits.particleTint = 0xc4b5fd;
-          this.burst(this.bits, 12, x, y);
-        });
-        break;
-      }
-      case 'sky': {
-        // a meteor shower: stars rain down all over the room and burst where they land
-        const at = this.spots(x, y, 420, 12);
-        this.fade(1100, (g, p) => {
-          at.forEach(([mx, my], i) => {
-            const d = ((i * 7) % at.length) / at.length * 0.55,
-              q = (p - d) / 0.2;
-            if (q < 0 || q > 2.5) return;
-            const [MX, MY] = this.P(mx, my);
-            if (q < 1) {
-              const sx = MX + 90 * (1 - q),
-                sy = MY - 240 * (1 - q);
-              g.lineStyle(7, 0x818cf8, 0.45).lineBetween(sx + 34, sy - 90, sx, sy);
-              g.lineStyle(2, 0xffffff, 0.9).lineBetween(sx + 14, sy - 38, sx, sy);
-              g.fillStyle(0xfff3b0, 1).fillCircle(sx, sy, 5);
-            } else {
-              const t = (q - 1) / 1.5;
-              this.star(g, MX, MY, 10 + 18 * t, 0xfff3b0, 0.9 * (1 - t));
-              g.lineStyle(3 * (1 - t) + 1, 0xa78bfa, 0.9 * (1 - t)).strokeCircle(MX, MY, 14 + 44 * t);
-            }
-          });
-        }, true);
-        this.fade(900, (g, p) => g.fillStyle(0x4338ca, 0.18 * Math.sin(p * Math.PI)).fillCircle(x, y, 520));
-        this.time.delayedCall(250, () => this.burst(this.sparks, 30, x, y, -6));
-        break;
-      }
-      case 'palm': {
-        // you push the river out: a wobbling ring of water, white foam behind it, drops flung up
-        this.fade(420, (g, p) => {
-          const R = r * (0.25 + 0.75 * p),
-            pts: Phaser.Math.Vector2[] = [];
-          for (let i = 0; i <= 32; i++) {
-            const a = (i / 32) * Math.PI * 2,
-              w = R + Math.sin(a * 6 + p * 10) * 5;
-            pts.push(new Phaser.Math.Vector2(x + Math.cos(a) * w, y + Math.sin(a) * w));
-          }
-          g.lineStyle(8 * (1 - p) + 2, 0x1f6fae, 0.85 * (1 - p)).strokePoints(pts, true);
-          g.lineStyle(3, 0xdcefff, 0.9 * (1 - p)).strokeCircle(x, y, R * 0.82);
-          g.fillStyle(color, 0.12 * (1 - p)).fillCircle(x, y, R);
-        });
-        this.bits.particleTint = 0x60b0f0;
-        this.burst(this.bits, 16, x, y);
-        this.burst(this.puffs, 6, x, y, 10);
-        break;
-      }
-      case 'palms': {
-        // a flurry of palms strikes all round you, then the river breaks over the room
-        const at = this.spots(x, y, r, 14);
-        this.fade(900, (g, p) => {
-          at.forEach(([px, py], i) => {
-            const t = (p - (i / at.length) * 0.6) / 0.22;
-            if (t < 0 || t > 1) return;
-            const [PX, PY] = this.P(px, py),
-              a = 1 - t,
-              s = 1 + 0.6 * t;
-            // an open palm of water: the heel, four fingers and a thumb
-            g.fillStyle(0xdcefff, a).fillEllipse(PX, PY, 18 * s, 16 * s);
-            for (let k = 0; k < 4; k++) g.fillStyle(0xdcefff, a).fillRoundedRect(PX - 9 * s + k * 5 * s, PY - 18 * s - (k === 1 || k === 2 ? 3 * s : 0), 4 * s, 12 * s, 2 * s);
-            g.fillStyle(0xdcefff, a).fillRoundedRect(PX + 8 * s, PY - 6 * s, 9 * s, 4 * s, 2 * s);
-            g.lineStyle(2, 0x60b0f0, a).strokeCircle(PX, PY - 4 * s, 16 * s + 8 * t);
-          });
-        }, true);
-        this.fade(700, (g, p) => {
-          const q = Math.max(0, (p - 0.4) / 0.6);
-          if (q <= 0) return;
-          g.lineStyle(12 * (1 - q) + 1, 0x1f6fae, 0.9 * (1 - q)).strokeCircle(x, y, r * (0.2 + 0.8 * q));
-          g.lineStyle(4 * (1 - q) + 1, 0xffffff, 0.9 * (1 - q)).strokeCircle(x, y, r * (0.1 + 0.75 * q));
-          g.fillStyle(0x60b0f0, 0.2 * (1 - q)).fillCircle(x, y, r * (0.2 + 0.8 * q));
-        });
-        this.bits.particleTint = 0x60b0f0;
-        this.time.delayedCall(400, () => {
-          this.burst(this.bits, 30, x, y);
-          this.burst(this.puffs, 14, x, y, 10);
-        });
-        break;
-      }
-      default:
-        this.spShape(e, aura);
-    }
+    this.spShape(e, aura);
   }
 
   /** The colors of the SP you wear (dark, middle, light), for its moves on screen. */
@@ -2653,40 +2456,10 @@ class DungeonScene extends Phaser.Scene {
         });
         this.burst(this.sparks, 10, x, y, -6);
         break;
-      case 'nova':
-        this.fade(final ? 800 : 500, (g, p) => {
-          g.lineStyle(14 * (1 - p) + 1, c1, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.15 + 0.85 * p));
-          g.lineStyle(5 * (1 - p) + 1, c2, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.08 + 0.7 * p));
-          g.fillStyle(c2, 0.3 * (1 - p)).fillCircle(x, y, r * (0.15 + 0.85 * p));
-        });
-        // rays going out
-        this.fade(600, (g, p) => {
-          g.lineStyle(3, c2, 0.7 * (1 - p));
-          for (let i = 0; i < 12; i++) {
-            const a = (i / 12) * Math.PI * 2,
-              r0 = 20 + r * p;
-            g.lineBetween(x + Math.cos(a) * r0, y + Math.sin(a) * r0, x + Math.cos(a) * (r0 + 40), y + Math.sin(a) * (r0 + 40));
-          }
-        });
-        this.burst(this.bits, 40, x, y);
-        this.burst(this.sparks, 24, x, y, -6);
-        break;
       case 'field':
         // the patch opens (drawFx keeps it while it lasts)
         this.fade(360, (g, p) => g.lineStyle(5 * (1 - p) + 1, c2, 0.9 * (1 - p)).strokeCircle(x, y, r * (0.4 + 0.6 * p)));
         this.burst(this.bits, final ? 30 : 12, x, y);
-        break;
-      case 'volley':
-        this.fade(320, (g, p) => {
-          g.lineStyle(3, c2, 0.8 * (1 - p));
-          for (let i = 0; i < 16; i++) {
-            const a = (i / 16) * Math.PI * 2,
-              r0 = 16 + 90 * p;
-            g.lineBetween(x + Math.cos(a) * r0, y + Math.sin(a) * r0, x + Math.cos(a) * (r0 + 26), y + Math.sin(a) * (r0 + 26));
-          }
-          g.fillStyle(c1, 0.25 * (1 - p)).fillCircle(x, y, 30 * (1 - p) + 10);
-        });
-        this.burst(this.sparks, 12, x, y, -6);
         break;
       case 'all': {
         // every monster struck from above at once, and the element washes over the room

@@ -1532,13 +1532,6 @@ function spMove(run: Run, h: Hero, id: SpMoveId, k: SpMoveNumbers, final: boolea
       heal();
       emit(run, { type: 'sp', id, x: h.x, y: h.y, r, final });
       return;
-    case 'fan': {
-      const n = k.arrows ?? 3,
-        a = aimOf(run, h, input, RANGE * 1.4);
-      for (let i = 0; i < n; i++) fire(run, h, shot, a + (i - (n - 1) / 2) * (k.spread ?? 0.15), 520, dmg, k.pierce ?? 1, null);
-      emit(run, { type: 'sp', id, x: h.x, y: h.y, r: 40, final, angle: a });
-      return;
-    }
     case 'drop': {
       const f = nearest(run, h.x, h.y, undefined, k.reach ?? 260),
         at = f ?? { x: h.x + Math.cos(h.facing) * 120, y: h.y + Math.sin(h.facing) * 120 };
@@ -1554,14 +1547,8 @@ function spMove(run: Run, h: Hero, id: SpMoveId, k: SpMoveNumbers, final: boolea
       }
       // Stop the Sands puts every shot out; Solar Flare the ones near you.
       if (k.slow) run.bullets = [];
-      else if (final && id !== 'rain') clearBullets(run, h.x, h.y, 220);
+      else if (final) clearBullets(run, h.x, h.y, 220);
       emit(run, { type: 'sp', id, x: h.x, y: h.y, r: Math.max(run.area.w, run.area.h), final, secs: k.secs });
-      return;
-    case 'nova':
-      run.bullets = [];
-      burst(run, h, h.x, h.y, r, dmg, color, undefined, k.knock ?? 260);
-      heal();
-      emit(run, { type: 'sp', id, x: h.x, y: h.y, r, final });
       return;
     case 'dash': {
       const a = aimOf(run, h, input, RANGE * 1.2),
@@ -1605,14 +1592,6 @@ function spMove(run: Run, h: Hero, id: SpMoveId, k: SpMoveNumbers, final: boolea
       if (final) clearBullets(run, h.x, h.y, r);
       run.fields.push({ id, x: at.x, y: at.y, r, until: run.t + (k.secs ?? 3), next: run.t, every, dmg, slow: k.slow ?? 0, by: h, follows: !k.reach });
       emit(run, { type: 'sp', id, x: at.x, y: at.y, r, final, secs: k.secs });
-      return;
-    }
-    case 'volley': {
-      const n = k.n ?? 12,
-        a0 = aimOf(run, h, input, RANGE);
-      for (let i = 0; i < n; i++) fire(run, h, shot, a0 + (i / n) * Math.PI * 2, 460, dmg, k.pierce ?? 1, null);
-      if (final) clearBullets(run, h.x, h.y, 160);
-      emit(run, { type: 'sp', id, x: h.x, y: h.y, r: 60, final });
       return;
     }
   }
