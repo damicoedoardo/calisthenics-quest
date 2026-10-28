@@ -42,7 +42,7 @@ no row: give a new folder its row (and a page if no page fits).
 | `src/lib/sweat*.ts`, `src/components/StatPoints.tsx`, `src/components/ClassPicker.tsx` | `game/training.md` |
 | `src/game/dungeon/**` | `game/dungeon.md` |
 | `src/lib/forge*.ts`, `src/components/FogGearCard.tsx` | `game/forge.md` |
-| `src/story/**`, `src/components/{ScenePlayer,Dialogue,Place,Weather,BookOfDays,SitByFire}.tsx` | `game/story.md` |
+| `src/story/**`, `src/lib/road*.ts`, `src/components/{ScenePlayer,Dialogue,Place,Weather,BookOfDays,SitByFire}.tsx` | `game/story.md` |
 | `src/sprites/**`, `src/components/{Sprite,Hero,Characters,Look,LookEditor}.tsx` | `game/sprites.md` |
 | `src/exercises/**`, `scripts/import-exercises.mjs`, `scripts/export-exercises.mjs`, `src/components/ExerciseLibrary.tsx` | `game/exercise-library.md` |
 | `src/lib/music*.ts`, `src/components/Sound.tsx`, `src/app/lab/music/**` | `game/sound.md` |

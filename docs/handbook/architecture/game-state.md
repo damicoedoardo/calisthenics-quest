@@ -24,7 +24,8 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 | `fogGear` | Optional. What you wear into the Fog and the vault at home (`src/lib/fog-gear.ts`, see [../game/fog.md](../game/fog.md)); embers found and spent, co-op materials for the forge (`mats`), the slot the flame holds (`guard`), `deaths`, and the starter kit's look (`kit`, set by `migrate()` from the old forge) ([../game/forge.md](../game/forge.md)) |
 | `draft` | The workout in progress, or null (`runAt`: when the run on screen started). A draft left from an earlier day is closed onto that day (`closeStaleDraft`). `open` marks the workout screen as open (the app reopens on it) and `restUntil` is when the running rest ends (ms), both optional |
 | `seenScenes`, `sceneMark` | Story scenes already played, and how many played at the last story moment |
-| `answers` | What the player chose in the story (heart moments, villager stories) |
+| `answers` | What the player chose in the story (heart moments, villager stories, the Ember Road's three questions `road1`-`road3`) |
+| `road` | Optional. The Ember Road, the story walked with friends: `from` (workouts done when you set out) and `beaten` (its bosses your party beat) (`src/lib/road.ts`, see [../game/story.md](../game/story.md)) |
 | `fog` | Zones cleared, runs, best records per zone, the last run |
 | `days` | The Book of Days: one page per day the app was opened (`dayNumber` in `src/lib/days.ts` counts them, today included) |
 | `coach` | Optional. The coach's memory: `profile` (setup answers, levels, history), `notes`, `plan` (the next workout it built), `chat` (the recent chat, as the LLM reads it) and `replies` (taps it offered) ([../game/coach.md](../game/coach.md)) |

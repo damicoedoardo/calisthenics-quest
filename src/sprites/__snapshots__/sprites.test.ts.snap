@@ -553,6 +553,8 @@ exports[`sprite registry > art fingerprints 1`] = `
   "summit idle": "3c5725a9ceb0",
   "summitBoss attack": "e02be48eb561",
   "summitBoss idle": "696bedf70767",
+  "tamsin attack": "2ebae990662f",
+  "tamsin idle": "2ebae990662f",
   "uiIcon attack": "b5f9aaacba84",
   "uiIcon idle": "b5f9aaacba84",
   "vela after": "bb2391a67bd4",

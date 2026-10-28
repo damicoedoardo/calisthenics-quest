@@ -125,10 +125,13 @@ export interface When {
   away?: number;
   /** The whole story is finished. */
   finished?: boolean;
+  /** The Ember Road, the story walked with friends (src/lib/road.ts): its chapter `open`, past the
+      middle of chapter `note`, chapter `won` (its boss fell to your party), or the finale due. */
+  road?: { open: number } | { note: number } | { won: number } | { end: true };
 }
 
 /** Saved answers: heart moments, and whether you joined a villager's story. */
-export type AnswerId = 'heart1' | 'heart2' | 'heart3' | 'heart4' | 'heart5' | 'heart6' | 'lia' | 'sol' | 'vela' | 'call';
+export type AnswerId = 'heart1' | 'heart2' | 'heart3' | 'heart4' | 'heart5' | 'heart6' | 'lia' | 'sol' | 'vela' | 'call' | 'road1' | 'road2' | 'road3';
 
 export interface Choice {
   label: string;
