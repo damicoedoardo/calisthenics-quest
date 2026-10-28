@@ -10,10 +10,20 @@ timestamp: 2026-10-28
 
 ## Developer mode
 
-`src/lib/dev.ts` (`useDevMode` and the helpers) and `src/components/DevPanel.tsx`. It is on in
-every preview and on localhost. On the live app it is also on while there are no other players
-(Edoardo's call, 2026-10-27); it can be turned off from the panel, and seven taps on the FORMA
-name turn it back on.
+`src/lib/dev.ts` (`useDevMode` and the helpers) and `src/components/DevPanel.tsx`. Only the
+developer's account has it (Edoardo's call, 2026-10-28), on the live app and on previews alike:
+signed in with an email whose SHA-256 (trimmed, lower-cased) is in `DEV_EMAILS` (`isDeveloper`;
+the repo is public, so the addresses never are in it), or on localhost. Nobody else sees the
+switch or the wrench. To add a developer, add the hash of their email to `DEV_EMAILS`.
+
+It is off until switched on in You > Settings ("Developer mode"). On, the app plays a separate
+**developer save** (`DEV_SAVE_KEY`, `forma-dev-save-v1`, `switchDevSave` in `src/lib/store.ts`
+reloads onto it): the first time it starts as a copy of the real save, then it is kept. The real
+save is never read or written while it is on, and the developer save never reaches the cloud,
+friends, parties or play stats (`offRecord()`). A blue bar in the header says so, with "Turn off",
+which reloads onto the real save as it was. The panel's Save tab can copy the real hero in again
+(`resetDevSave`). Signed out with it on, the phone goes back to the real save. The dev tools also
+show in a lab sandbox (`?sandbox`) for the developer.
 
 It adds: "Skip the intro" on the title screen; "Play here without installing" on the install screen (see [pwa.md](pwa.md#install-before-playing)); a wrench in the header that opens one panel with tabs (the open tab is remembered on the phone, `forma-dev-tab`):
 

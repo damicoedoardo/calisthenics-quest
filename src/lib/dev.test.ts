@@ -17,6 +17,7 @@ import {
   giveMaterials,
   giveSpAwake,
   giveStatPoints,
+  isDeveloper,
   jumpToChapter,
   makeItem,
   resetFog,
@@ -113,5 +114,11 @@ describe('developer mode', () => {
     expect(spOwned(all)).toEqual([1, 2, 3, 4]);
     expect(spWorn(all)).toBe(2);
     expect(takeSp(all).sp).toBeUndefined();
+  });
+
+  it('knows the developer only by an email fingerprint', async () => {
+    expect(await isDeveloper('someone@example.com')).toBe(false);
+    expect(await isDeveloper(null)).toBe(false);
+    expect(await isDeveloper('')).toBe(false);
   });
 });

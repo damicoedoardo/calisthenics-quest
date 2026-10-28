@@ -35,7 +35,7 @@ Signing in on a fresh installed app takes the hero from the cloud (`plan()` → 
 
 It shows only when all three are set at build time (Vercel env vars):
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_API_URL`. Without them
-the card is not drawn and no Supabase code is loaded. It is always off in `?sandbox`.
+the card is not drawn and no Supabase code is loaded. It is always off in `?sandbox` and on the developer save (`offRecord()`).
 
 Sign-in is by email link. The Google button shows only with `NEXT_PUBLIC_GOOGLE_SIGNIN=1`, set
 once the Google provider is turned on in the Supabase `forma` project (it isn't yet).

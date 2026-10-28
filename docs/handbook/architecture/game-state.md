@@ -52,3 +52,10 @@ load. `parseImport` (You page Restore) accepts versions 1 to 3 and runs `migrate
 `?sandbox` in the URL switches the key to `forma-sandbox-v1` (`SANDBOX_KEY`), so the real save is
 never touched. `/lab/night` writes a sandbox save for a given moment and opens the app on it. See
 [../app/dev-mode-and-labs.md](../app/dev-mode-and-labs.md).
+
+## Developer save
+
+While developer mode is on (`forma-dev-on` is `1`, set by `switchDevSave`), the key is
+`forma-dev-save-v1` (`DEV_SAVE_KEY`): a copy of the real save the first time, kept after that.
+`offRecord()` (the sandbox or the developer save) keeps the cloud, friends, parties and play stats
+off. See [../app/dev-mode-and-labs.md](../app/dev-mode-and-labs.md).

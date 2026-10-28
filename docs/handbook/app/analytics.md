@@ -31,7 +31,7 @@ minlit's PostHog: its own organization "FORMA" on PostHog's EU cloud (eu.posthog
 Set `NEXT_PUBLIC_POSTHOG_KEY` (the project's public key, `phc_...`; it is meant to be in the
 browser, so it is fine in Vercel env, never in the repo) and, for a US project,
 `NEXT_PUBLIC_POSTHOG_HOST=https://us.i.posthog.com` (EU is the default). Without the key nothing
-loads and the Settings switch is hidden. It never sends on localhost or in the sandbox. Every event
+loads and the Settings switch is hidden. It never sends on localhost, in the sandbox or on the developer save. Every event
 has `env` (`live`, `preview`) and `dev` (developer mode on), so dashboards can filter both out.
 
 No autocapture, page views, session recordings or surveys. A signed-in phone is tied to its

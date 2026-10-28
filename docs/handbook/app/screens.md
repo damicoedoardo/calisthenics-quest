@@ -39,7 +39,7 @@ The tabs work both ways up. Upright, everything is one `max-w-md` column with th
 On a phone held sideways (the `land:` variant in `tailwind.config.ts`: landscape and at most
 600px tall; tablets and desktops keep the upright layout) `page.tsx` turns the tab bar into a rail
 down the left with the hero at its top (the open tab on a lit tile), shrinks the header to one
-line (FORMA, level, XP bar; the sandbox note becomes a small tag at its end), keeps clear of the
+line (FORMA, level, XP bar; the sandbox or developer save note becomes a small tag at its end), keeps clear of the
 notch (`env(safe-area-inset-left/right)`), and makes the tab exactly fill the rest of the screen:
 `main` is the one thing that scrolls, and only if a screen can't fit.
 
