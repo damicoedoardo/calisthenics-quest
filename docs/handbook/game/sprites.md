@@ -41,7 +41,7 @@ characters/pixel.ts   text-row art: paintRows (one character per pixel) and shif
 characters/icons.ts   app icons as text rows: the six keepsakes (end of the Today tab, sprite `keepsake`) and
                       what a day held in the Book of Days (sprite `dayIcon`), the dungeon's
                       relics (`relicIcon`), the ability and Dodge buttons (`abilityIcon`), the four elements' marks (`elementIcon`, `ELEMENT_ICONS`), the SP's moves and finals (`spIcon`, `SP_ICONS`: a drawing of its own in `SP_ROWS`, else its kind of move in `SHAPED`, in the colors of its SP's element, `ELEMENT`), the run's
-                      level-up skills (`skillIcon`), and the floor track's Warden and boss (`markIcon`)
+                      level-up skills (`skillIcon`), the floor track's Warden and boss (`markIcon`), and the screens' small marks with the tab bar's five (`uiIcon`, `UI_ICONS`: Today, Train, Play, Friends, Hero)
 characters/items.ts   the Fog's items (sprite `item`, opts `ItemLook` { art, rarity, seed }): one 24x24
                       text-row drawing per kind (`ITEM_ROWS`: sword, bow, staff, wand, heavy, light, robe,
                       ring, amulet, token, band) and one of its own for each kind's legendary
