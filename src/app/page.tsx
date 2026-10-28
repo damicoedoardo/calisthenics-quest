@@ -266,15 +266,34 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
   if (!ready) return <div className="min-h-dvh bg-ink-950" />;
 
+  // A new player's opening pauses after the first dungeon for the install step; the installed app
+  // picks it up at the class pick.
+  if (!state.profile.onboarded && !replaying && state.profile.opening === 'class' && gated)
+    return (
+      <InstallGate
+        state={state}
+        platform={inst.platform}
+        canPrompt={inst.canPrompt}
+        installed={inst.installed}
+        onInstall={inst.install}
+        onSkip={dev ? inst.skip : undefined}
+        midway
+      />
+    );
+
   if (!state.profile.onboarded || replaying) {
     return (
       <Prologue
+        // Back from the install step (or a hero brought over from Safari): start again where it paused.
+        key={state.profile.opening ?? 'start'}
         state={state}
         onExit={replaying ? () => setReplaying(false) : undefined}
         onSkip={dev && !replaying ? () => update((s) => skipIntro(s, new Date())) : undefined}
+        dev={dev}
         onLook={(look) => update((s) => ({ ...s, profile: { ...s.profile, look } }))}
+        onPause={({ voice }) => update((s) => ({ ...s, profile: { ...s.profile, voice, opening: 'class' } }))}
         onFinish={({ letter, voice, kit, name, classId }) => {
-          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, letter, voice, kit: kit ?? s.profile.kit, name: name ?? s.profile.name, classId: classId ?? s.profile.classId } }));
+          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, opening: undefined, letter, voice, kit: kit ?? s.profile.kit, name: name ?? s.profile.name, classId: classId ?? s.profile.classId } }));
           setReplaying(false);
         }}
         // On iPhones each browser and the installed app keep their own saves: a hero copied in

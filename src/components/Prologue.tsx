@@ -6,7 +6,7 @@ import { Dialogue } from './Dialogue';
 import { Book, Ember, Enemy, Hollow, Wanderer } from './Characters';
 import { ClassPicker } from './ClassPicker';
 import { Hero } from './Hero';
-import { FirstFight } from './FirstFight';
+import { FogRun } from './FogRun';
 import { useLook } from './Look';
 import { LookEditor } from './LookEditor';
 import { RiseUp } from './RiseUp';
@@ -17,12 +17,13 @@ import type { GameState, Kit, Letter } from '@/lib/game';
 import { equippedGear, type ClassId, type Gear, type GearSlot } from '@/lib/gear';
 import { music } from '@/lib/music';
 import { SWEAT } from '@/balance';
-import { COLD_OPEN, FADING, FIRST_QUEST, HOLLOW_MEET, LETTER_PROMPTS, MEET, SEALED, VOICES } from '@/story/opening';
+import { COLD_OPEN, FADING, FIRST_QUEST, HELP, HOLLOW_MEET, LETTER_PROMPTS, MEET, SEALED, VOICES, WAKE } from '@/story/opening';
+import { FIRST_FOG_ZONE } from '@/lib/fog';
 import { renderLines, storyWords } from '@/story/engine';
 import { STARTER_LOOKS } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
 
-type Step = 'title' | 'cold' | 'fading' | 'voice' | 'hollow' | 'fight' | 'fallen' | 'meet' | 'letter' | 'sealed' | 'kit' | 'quest' | 'look' | 'name' | 'class';
+type Step = 'title' | 'cold' | 'fading' | 'voice' | 'wake' | 'fog' | 'hollow' | 'fallen' | 'meet' | 'class' | 'write' | 'letter' | 'sealed' | 'kit' | 'quest' | 'look' | 'name';
 
 interface Props {
   state: GameState;
@@ -33,6 +34,11 @@ interface Props {
   onExit?: () => void;
   /** Developer mode: jump past the whole opening. */
   onSkip?: () => void;
+  /** Developer mode: the dungeon's dev buttons (skip to the boss...). */
+  dev?: boolean;
+  /** After the first dungeon and the Wanderer, a new hero's opening pauses here (saved, so the
+      installed app picks it up at the class pick): the install step comes in between. */
+  onPause?: (patch: { voice: string }) => void;
   /** On the first screen of an installed iPhone app: bring the hero over from Safari. */
   bring?: ReactNode;
 }
@@ -78,8 +84,9 @@ export function Prologue(props: Props) {
   );
 }
 
-function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, bring }: Props) {
-  const [step, setStep] = useState<Step>('title');
+function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, dev = false, onPause, bring }: Props) {
+  // Opened again after the install step: on at the class pick.
+  const [step, setStep] = useState<Step>(state.profile.opening === 'class' && !state.profile.onboarded ? 'class' : 'title');
   const look = useLook();
   const firstRun = !state.profile.onboarded;
   const [letter, setLetter] = useState<Letter>(state.profile.letter);
@@ -87,8 +94,9 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, bring }: Props
   const [custom, setCustom] = useState(!!state.profile.voice && !VOICES.includes(state.profile.voice));
   const [kit, setKit] = useState<Kit>(state.profile.kit ?? 'gym');
   const [name, setName] = useState(state.profile.name ?? '');
-  // A new hero picks a class right after the name; anyone with one keeps it.
+  // A new hero gets a class from the Wanderer, after the first dungeon; anyone with one keeps it.
   const asksClass = !state.profile.classId;
+  const [classId, setClassId] = useState<ClassId>();
   const gear = equippedGear(undefined, state.sessions.length);
   // A dull, cracked blade for the first fight.
   const fightGear: Record<GearSlot, Gear> = { ...gear, weapon: { ...gear.weapon, tier: 1, color: '#6b7280', glow: undefined } };
@@ -98,7 +106,7 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, bring }: Props
   const words = { ...storyWords(state), ...letter, voice: voice.trim() || "You're not enough.", flame: state.profile.flame ?? '' };
   const go = useCallback((s: Step) => () => setStep(s), []);
 
-  const finish = (classId?: ClassId) => onFinish({ letter, voice: voice.trim(), kit: asksKit ? kit : undefined, name: name.trim() || undefined, classId });
+  const finish = () => onFinish({ letter, voice: voice.trim(), kit: asksKit ? kit : undefined, name: name.trim() || undefined, classId });
   const begin = () => {
     music.unlock();
     setStep('cold');
@@ -193,7 +201,17 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, bring }: Props
     case 'fading':
       return <Dialogue key="fading" lines={FADING} gear={gear} cinematic music="memory" backdrop={fadingBackdrop(gear)} onDone={go('voice')} />;
     case 'voice':
-      return <VoicePick voice={voice} custom={custom} setVoice={setVoice} setCustom={setCustom} onDone={go('hollow')} />;
+      return <VoicePick voice={voice} custom={custom} setVoice={setVoice} setCustom={setCustom} onDone={go('wake')} />;
+    case 'wake':
+      return (
+        <>
+          <Weather kind="ash" />
+          <Dialogue key="wake" lines={WAKE} gear={fightGear} cinematic music="memory" backdrop={() => <Hero gear={fightGear} size={150} bounce={false} />} onDone={go('fog')} />
+        </>
+      );
+    case 'fog':
+      // The first dungeon: three small floors down, and the Hollow at the bottom, who wins.
+      return <FogRun state={state} zone={FIRST_FOG_ZONE} dev={dev} onEnd={() => {}} onLeave={go('hollow')} tutorial={{ voice: words.voice, onDone: go('hollow') }} />;
     case 'hollow':
       return (
         <>
@@ -205,23 +223,52 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, bring }: Props
             music="hollow"
             backdrop={(i) =>
               i === 0 ? (
-                <Hero gear={fightGear} size={150} bounce={false} />
+                <div style={{ transform: 'rotate(-90deg)', filter: 'grayscale(1)', opacity: 0.6 }}>
+                  <Hero gear={fightGear} size={150} bounce={false} />
+                </div>
               ) : (
                 <div className="transition-all duration-1000" style={i === 1 ? { opacity: 0.4, filter: 'grayscale(1)' } : undefined}>
                   <Hollow size={160} />
                 </div>
               )
             }
-            onDone={go('fight')}
+            onDone={go('fallen')}
           />
         </>
       );
-    case 'fight':
-      return <FirstFight voice={words.voice} gear={fightGear} onDone={go('fallen')} />;
     case 'fallen':
       return <RiseUp gear={fightGear} onDone={go('meet')} />;
     case 'meet':
-      return <Dialogue key="meet" lines={MEET} gear={fightGear} backdrop={() => <Wanderer size={140} />} onDone={go('letter')} />;
+      // A new hero: "I'll help you", and the class pick before the letter.
+      return (
+        <Dialogue
+          key="meet"
+          lines={asksClass ? [...MEET.slice(0, -1), ...HELP] : MEET}
+          gear={fightGear}
+          backdrop={() => <Wanderer size={140} />}
+          onDone={
+            asksClass
+              ? () => {
+                  onPause?.({ voice: voice.trim() });
+                  setStep('class');
+                }
+              : go('letter')
+          }
+        />
+      );
+    case 'class':
+      return (
+        <ClassPicker
+          workouts={state.sessions.length}
+          onPick={(c) => {
+            setClassId(c);
+            setStep('write');
+          }}
+          note={`Don't worry, you can change it later. Your first change is free; after that it costs ${SWEAT.classChange} sweat coins, and every workout earns one.`}
+        />
+      );
+    case 'write':
+      return <Dialogue key="write" lines={MEET.slice(-1)} gear={gear} backdrop={() => <Wanderer size={140} />} onDone={go('letter')} />;
     case 'letter':
       return <LetterForm letter={letter} setLetter={setLetter} onDone={go('sealed')} />;
     case 'sealed':
@@ -244,9 +291,7 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, bring }: Props
     case 'look':
       return <MakeItYours look={look} setLook={onLook} gear={gear} onDone={go('name')} />;
     case 'name':
-      return <NameIt name={name} setName={setName} onDone={asksClass ? go('class') : () => finish()} />;
-    case 'class':
-      return <ClassPicker workouts={state.sessions.length} onPick={finish} note={`Don't worry, you can change it later. Your first change is free; after that it costs ${SWEAT.classChange} sweat coins, and every workout earns one.`} />;
+      return <NameIt name={name} setName={setName} onDone={finish} />;
   }
 }
 

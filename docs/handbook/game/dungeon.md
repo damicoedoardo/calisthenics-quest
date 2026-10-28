@@ -67,6 +67,19 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Add something each hero has (a cooldown, a count, a buff for the run) | `Hero` in `engine.ts` and its start in `newHero` (see "The hero, and the party") |
 | Change the bag panel, the pickup note or the stairs card | `BagPanel` and the `stairs` card in `src/components/FogRun.tsx` |
 
+## The first dungeon
+
+`RunSetup.tutorial` (`{ voice }`) makes a run the opening's first dungeon, numbers in `TUTORIAL`
+(`src/balance/dungeon.ts`): `TUTORIAL.layout` (3 floors of 2 rooms, no side rooms), rooms of a few
+slimes and from the second floor a wisp a wave (`tutorialWaves`, in place of `fillRoom`'s budget),
+no drops, level-up picks taken for you, the stairs always go deeper, and HP stops at 1 (`hurt`).
+In the last room the Hollow walks at you (`scripted`, in place of `steerBoss`): your hits take 1
+each and it never goes under 1 (`damage`), it says your line after `TUTORIAL.voiceAt` seconds,
+and at `TUTORIAL.lose` it strikes everyone down and the run ends (`why: 'hp'`). The scene draws
+its bar as plain HP, no light, and leaves the room-clear lines to the run's tips. Tested in
+`engine.test.ts` ("the opening's first dungeon"); runs without `tutorial` are untouched, so
+replays don't move.
+
 ## The hero, and the party
 
 Everything that belongs to a player lives on a `Hero` (`engine.ts`): where they stand, HP, level

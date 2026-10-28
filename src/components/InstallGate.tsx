@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type ReactNode } from 'react';
-import { Ember } from './Characters';
+import { Ember, Wanderer } from './Characters';
 import { Sprite } from './Sprite';
 import type { GameState } from '@/lib/game';
 import { heroCode, needsCarry, readHeroCode, type Platform } from '@/lib/install';
@@ -34,9 +34,12 @@ interface Props {
   onInstall: () => void;
   /** Developer mode: play on in the browser. */
   onSkip?: () => void;
+  /** In the middle of a new player's opening, after the Wanderer offers to help: the Wanderer
+      asks, and the installed app goes on from the class pick. */
+  midway?: boolean;
 }
 
-export function InstallGate({ state, platform, canPrompt, installed, onInstall, onSkip }: Props) {
+export function InstallGate({ state, platform, canPrompt, installed, onInstall, onSkip, midway = false }: Props) {
   const host = typeof window === 'undefined' ? '' : window.location.host;
   const copy = <CopyHero state={state} />;
   const openIt: Step = {
@@ -128,10 +131,12 @@ export function InstallGate({ state, platform, canPrompt, installed, onInstall, 
     <div className="safe-top fixed inset-0 z-40 overflow-y-auto bg-ink-950 land-safe-x">
       <div className="mx-auto flex max-w-md flex-col px-5 pb-10 pt-6 [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:max-w-4xl [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-[15rem_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:600px)]:gap-x-8 [@media(orientation:landscape)_and_(max-height:600px)]:pt-4">
         <div className="flex flex-col items-center text-center [@media(orientation:landscape)_and_(max-height:600px)]:sticky [@media(orientation:landscape)_and_(max-height:600px)]:top-4 [@media(orientation:landscape)_and_(max-height:600px)]:self-start">
-          <Ember size={64} stage="spark" />
-          <h1 className="mt-4 font-pixel text-sm leading-relaxed text-gold-400">One last step</h1>
+          {midway ? <Wanderer size={72} /> : <Ember size={64} stage="spark" />}
+          <h1 className="mt-4 font-pixel text-sm leading-relaxed text-gold-400">{midway ? 'Keep me close' : 'One last step'}</h1>
           <p className="mt-3 text-sm text-slate-300">
-            Put FORMA on your home screen. It opens full screen, works with no signal, and keeps your hero safe.
+            {midway
+              ? "Put FORMA on your home screen, and open it from there. We'll go on right where we are: your weapon, your letter, your name. It opens full screen, works with no signal, and keeps your hero safe."
+              : 'Put FORMA on your home screen. It opens full screen, works with no signal, and keeps your hero safe.'}
           </p>
           {installed && (
             <p role="status" className="mt-4 rounded-xl bg-emerald-950/60 px-3 py-2 text-sm text-emerald-200 ring-1 ring-emerald-500/40">
