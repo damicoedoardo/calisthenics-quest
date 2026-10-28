@@ -258,6 +258,8 @@ export type GameEvent =
   | { type: 'clear' }
   | { type: 'floor'; floor: number }
   | { type: 'boss' }
+  /** The boss is down: the room goes quiet and the stairs up lead home. */
+  | { type: 'won' }
   | { type: 'dash'; x: number; y: number; toX: number; toY: number }
   | { type: 'shout'; x: number; y: number }
   | { type: 'boom'; x: number; y: number; r: number }
@@ -308,7 +310,7 @@ export interface RunSetup extends HeroSetup {
   zone: Zone;
   seed: number;
   /** Skills are taken by the bot's order instead of waiting for a pick (and items the bot likes
-      are worn, and the stairs always go deeper). */
+      are worn, the stairs always go deeper, and a fallen boss ends the run on the spot). */
   autoPick?: boolean;
   layout?: Layout;
   /** More heroes in the party, after you (co-op). */
@@ -449,6 +451,8 @@ export interface Run {
   loot: { id: number; x: number; y: number; item: Item; full?: boolean; for?: number }[];
   /** Standing on the stairs: deeper, or out with what you carry? The run holds still. */
   stairsAsk: boolean;
+  /** The boss is down: what's on the floor is yours to pick up, and the stairs lead home (a win). */
+  home: boolean;
   /** Monsters already met this run (their first time gets a line). */
   met: Set<MonsterKind>;
   cleared: boolean;
@@ -513,6 +517,7 @@ export function createRun(setup: RunSetup): Run {
     stairs: null,
     loot: [],
     stairsAsk: false,
+    home: false,
     cleared: false,
     doorOpen: false,
     party,
@@ -1100,11 +1105,13 @@ export function stepRun(run: Run, input: Input | Input[]) {
       if (run.over || choosing(run) || run.stairsAsk) return;
     }
   }
-  if (run.bossAt !== null && now - run.bossAt >= (run.climb !== null ? CLIMB.limit : BOSS_LIMIT)) {
+  if (run.home) {
+    if (now >= RUN_LIMIT) return end(run, true, 'boss');
+  } else if (run.bossAt !== null && now - run.bossAt >= (run.climb !== null ? CLIMB.limit : BOSS_LIMIT)) {
     emit(run, { type: 'say', text: run.climb !== null ? 'The light fades on the mountain. You climbed, and that counts.' : 'The Fog closes in. Train, and come back.' });
     return end(run, false, 'limit');
   }
-  if (now >= RUN_LIMIT) return end(run, false, 'limit');
+  else if (now >= RUN_LIMIT) return end(run, false, 'limit');
   const inputs = Array.isArray(input) ? input : [input],
     up = standing(run);
   for (const h of up) {
@@ -1166,6 +1173,7 @@ function moveHero(run: Run, h: Hero, input: Input) {
     door = out && run.doors.find((d) => d.side === out);
   if (door) return throughDoor(run, door);
   if (run.stairs && Math.hypot(run.stairs.x - h.x, run.stairs.y - h.y) < 18 + HERO_R) {
+    if (run.home) return end(run, true, 'boss');
     if (run.setup.autoPick) return downStairs(run);
     run.stairsAsk = true;
     return;
@@ -1732,7 +1740,7 @@ function steerBoss(run: Run, b: Foe) {
       if (run.hold >= LIGHT.hold) {
         emit(run, { type: 'hand', x: b.x, y: b.y });
         emit(run, { type: 'say', text: 'You take its hand. The fog goes quiet.' });
-        end(run, true, 'boss');
+        bossDown(run);
       }
       return;
     }
@@ -1978,8 +1986,33 @@ function kill(run: Run, f: Foe, by: Hero) {
       h.gear.bag.push(it);
       if (h === run.hero) emit(run, { type: 'loot', item: it });
     }
-    end(run, true, 'boss');
+    bossDown(run);
   }
+}
+
+/** The boss is down. The bot (and the simulators) win on the spot. A player gets a quiet room:
+    what's left fades, and the stairs up lead home, so the drops on the floor can be picked up
+    first. Walking onto them is the win. */
+function bossDown(run: Run) {
+  if (run.setup.autoPick) return end(run, true, 'boss');
+  run.home = run.cleared = run.doorOpen = true;
+  cellOf(run).cleared = true;
+  if (run.boss) run.boss.alive = false;
+  for (const f of run.foes)
+    if (f.alive) {
+      f.alive = false;
+      emit(run, { type: 'kill', id: f.id, x: f.x, y: f.y, kind: f.kind, elite: f.elite });
+    }
+  run.waves = [];
+  run.bullets = [];
+  run.mines = [];
+  run.timers = [];
+  // The stairs go at the far end of the room from you, so you don't walk out by accident.
+  const { w, h: H } = run.area,
+    y = run.hero.y > H / 2 ? 110 : H - 110;
+  run.stairs = { x: w / 2, y };
+  emit(run, { type: 'won' });
+  emit(run, { type: 'clear' });
 }
 
 /** Pushes a foe away from a point without hurting it. */

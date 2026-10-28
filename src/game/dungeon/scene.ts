@@ -1118,6 +1118,15 @@ class DungeonScene extends Phaser.Scene {
       this.stairs = this.add.image(sx, sy, 'stairs').setDepth(-1.5).setAngle(90).setScale(1.5);
       this.roomBits.push(this.stairs);
       if (fresh) this.puffs.explode(10, sx, sy);
+      // After the boss, the stairs lead home.
+      if (r.home) {
+        const home = this.add
+          .text(sx, sy - 40, 'HOME', { fontFamily: '"Press Start 2P", monospace', fontSize: '9px', color: '#fde68a', backgroundColor: '#0b0d14cc', padding: { x: 5, y: 4 } })
+          .setOrigin(0.5, 1)
+          .setDepth(150500);
+        this.roomBits.push(home);
+        this.tweens.add({ targets: home, y: sy - 48, duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+      }
     }
     if (r.chest && !this.chest) {
       const [cx, cy] = this.P(r.chest.x, r.chest.y);
@@ -1202,14 +1211,14 @@ class DungeonScene extends Phaser.Scene {
     if (run.over && !this.ended) {
       this.ended = true;
       // The boss's last words: beaten, at peace, or the mountain still above you.
-      if (run.over.won || run.climb !== null) {
+      if ((run.over.won && !run.home) || run.climb !== null) {
         this.speak(this.setup.lines?.end, 3000);
         this.syncSpeech();
       }
       this.bus.hud(this.hud());
-      if (run.over.won) this.cameras.main.flash(600, 255, 240, 200);
+      if (run.over.won && !run.home) this.cameras.main.flash(600, 255, 240, 200);
       else this.hero.setTint(0x6b7280);
-      this.time.delayedCall(run.over.won ? 1200 : 900, () => this.bus.end(recap(run)));
+      this.time.delayedCall(run.home ? 300 : run.over.won ? 1200 : 900, () => this.bus.end(recap(run)));
     }
   }
 
@@ -1353,7 +1362,7 @@ class DungeonScene extends Phaser.Scene {
   /** The boss's bar. The Plateau's never moves; the Hollow's fills while you stand in its light. */
   private bossBar(): Hud['boss'] {
     const b = this.run.boss;
-    if (!b) return null;
+    if (!b || this.run.home) return null;
     const which = this.setup.zone.boss;
     if (which === 'plateau') return { hp: b.hp > 0 ? b.maxHp : 0, max: b.maxHp, label: 'It looks the same' };
     if (which === 'hollow') return { hp: this.run.hold, max: LIGHT.hold, label: b.phase === 2 ? 'Stand in its light' : 'Wait for its light' };
@@ -2048,12 +2057,21 @@ class DungeonScene extends Phaser.Scene {
         this.bus.say('The shrine restores you.');
         break;
       }
+      case 'won': {
+        // The boss's last words and a flash of light; the run ends on the stairs home.
+        this.speak(this.setup.lines?.end, 3000);
+        this.syncSpeech();
+        this.cameras.main.flash(600, 255, 240, 200);
+        this.sfx('chime', 1);
+        break;
+      }
       case 'clear': {
         const r = this.run;
         this.drawRoom();
         this.sfx('nova', 0.7);
         this.cleared(true);
-        if (r.chest && isWardenRoom(r)) this.bus.say(`${midBoss(this.setup.zone).name.replace(/^the/, 'The')} left a chest. Open it, then take the stairs.`);
+        if (r.home) this.bus.say('The boss is down. Pick up what it left, then take the stairs home.');
+        else if (r.chest && isWardenRoom(r)) this.bus.say(`${midBoss(this.setup.zone).name.replace(/^the/, 'The')} left a chest. Open it, then take the stairs.`);
         else if (r.stairs) this.bus.say('Room clear. The stairs go down, or look round the floor first.');
         else this.bus.say(r.chest ? 'Room clear. Open the chest.' : 'Room clear. Pick a door: you only know what waits behind it once you go in.');
         break;

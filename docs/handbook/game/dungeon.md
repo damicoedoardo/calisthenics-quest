@@ -124,7 +124,12 @@ stand. Walking back into a room you cleared finds it as you left it (`Cell.kept`
 nothing to fight. Clearing the last room puts the stairs down in it (`run.stairs`); walking onto
 them asks (`run.stairsAsk`, the run holds still): go deeper (`downStairs`, HP full), leave with
 what you carry (`takeStairs(run, 'leave')` ends the run with `why: 'left'`), or not yet. The bot
-always goes deeper. The stairs card shows what a fall on the next floor would cost (see "Items and
+always goes deeper. When the boss falls (`bossDown`, also the Hollow's hand) the run doesn't end
+there: what's left in the room fades, the boss's own drop goes into the bag, and stairs marked
+HOME come up at the far end of the room from you (`run.home`; the scene's `won` event flashes
+and says the boss's last words). Anything still on the floor can be picked up first; walking onto
+the stairs home ends the run as a win (`why: 'boss'`). The bot (`autoPick`) wins on the spot, so
+replays and the simulators are unchanged. The stairs card shows what a fall on the next floor would cost (see "Items and
 the bag"); in developer mode the pause menu's "The stairs card" opens it anywhere (`askStairs`). Cells are `seen` once you've stood next door to them. A door
 you haven't been through says nothing about what waits behind it (`doorLook` in `scene.ts`: a
 gray "?"), and the minimap draws a seen room you haven't been in as a gray dashed "?" whatever it
