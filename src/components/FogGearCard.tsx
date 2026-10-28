@@ -61,7 +61,7 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
           );
         })}
       </div>
-      <p className="mt-2 text-[11px] leading-snug text-slate-500">What you wear always comes home. Fall in a run and the Fog takes only what you found and carry in the bag; the stairs or a win bring that home too.</p>
+      <p className="mt-2 text-[11px] leading-snug text-slate-500">What you wear always comes home. A fall loses only the bag.</p>
       </Side>
 
       <Side on={land} className="w-[9.5rem] shrink-0 overflow-y-auto rounded-xl bg-ink-900/60 p-2.5 min-[800px]:w-[11.5rem]">

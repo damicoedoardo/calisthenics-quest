@@ -2,6 +2,7 @@
 
 import { spWorn } from '@/lib/sp';
 import { useEffect, useMemo, useState } from 'react';
+import { Sparkles } from 'lucide-react';
 import { Hero } from './Hero';
 import { Enemy } from './Characters';
 import { Sprite } from './Sprite';
@@ -133,14 +134,17 @@ function Loot({ result, onClose, onFelt }: { result: FinishResult; onClose: () =
           ))}
         </ul>
         <p className="mt-3 border-t border-ink-600 pt-3 text-4xl font-bold text-gold-400">+{session.xp} XP</p>
-        <p className="mt-1 text-sm text-slate-200">
-          +{points} stat point{points === 1 ? '' : 's'} <span className="text-slate-400">for your champion, on the Hero tab</span>
-        </p>
-        <p className="mt-1 text-sm text-slate-200">
-          +{EMBERS[session.kind]} embers <span className="text-slate-400">for Mira&apos;s forge, on the Hero tab</span>
-        </p>
+        {/* What the Hero tab gets: points for the champion, embers for Mira's forge. */}
+        <div className="mt-2 flex justify-center gap-2">
+          <span className="flex items-center gap-1.5 rounded-lg bg-ink-900 px-2.5 py-1.5 font-pixel text-[9px] text-gold-300">
+            <Sparkles size={12} aria-hidden /> +{points} point{points === 1 ? '' : 's'}
+          </span>
+          <span className="flex items-center gap-1.5 rounded-lg bg-ink-900 px-2.5 py-1.5 font-pixel text-[9px] text-orange-300">
+            <Sprite id="uiIcon" opts={{ name: 'flame' }} size={12} label="" /> +{EMBERS[session.kind]} embers
+          </span>
+        </div>
         {session.better && <p className="mt-1 text-xs text-emerald-300">Better than last time.</p>}
-        {!!session.heavier?.length && <p className="mt-1 text-xs text-sky-300">Too easy now: next time add a little weight to {session.heavier.map(nameOf).join(', ')}.</p>}
+        {!!session.heavier?.length && <p className="mt-1 text-xs text-sky-300">Next time, a little heavier: {session.heavier.map(nameOf).join(', ')}.</p>}
         </div>
         <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:block">
         {leveled && (
@@ -171,7 +175,7 @@ function Loot({ result, onClose, onFelt }: { result: FinishResult; onClose: () =
 
         {onFelt && (
           <div className="mt-4 rounded-xl bg-ink-900 p-3 text-left [@media(orientation:landscape)_and_(max-height:600px)]:first:mt-0">
-            <p className="text-xs font-semibold text-slate-300">How did it feel? <span className="font-normal text-slate-500">Your coach learns from it.</span></p>
+            <p className="text-xs font-semibold text-slate-300">How did it feel?</p>
             <div className="mt-2 grid grid-cols-3 gap-2">
               {FELT.map((f) => (
                 <button key={f.id} aria-pressed={felt === f.id} onClick={() => setFelt(f.id)} className={`rounded-lg py-2 text-xs font-semibold ${felt === f.id ? 'bg-gold-400 text-ink-950' : 'bg-ink-800 text-slate-200'}`}>

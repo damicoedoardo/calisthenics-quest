@@ -54,7 +54,7 @@ export function BookOfDays({ state, onClose }: { state: GameState; onClose: () =
           <div className="min-w-0 flex-1">
             <h1 className="font-pixel text-sm text-gold-300">Book of Days</h1>
             <p className="text-xs text-slate-500">
-              {state.days?.length ?? 0} {state.days?.length === 1 ? 'page' : 'pages'}. A page for every day you opened it.
+              {state.days?.length ?? 0} {state.days?.length === 1 ? 'page' : 'pages'}
             </p>
           </div>
           <Book size={44} />
@@ -93,12 +93,10 @@ export function BookOfDays({ state, onClose }: { state: GameState; onClose: () =
         <ol className="space-y-3 [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:600px)]:gap-3 [@media(orientation:landscape)_and_(max-height:600px)]:space-y-0">
           {pages.map((p) => (
             <li key={p.day} className="rounded-2xl bg-ink-900 p-4 ring-1 ring-ink-700">
-              <div className="flex items-baseline justify-between">
+              <div className="flex items-center justify-between">
                 <p className="font-pixel text-[10px] text-gold-300">{dateLabel(p.day)}</p>
-                <p className="flex items-center gap-1.5 text-xs text-slate-400">
-                  <Sprite id="dayIcon" opts={{ kind: whatHappened(p, state) }} size={28} label="" />
-                  {whatHappened(p, state)}
-                </p>
+                {/* What the day was, as its icon. */}
+                <Sprite id="dayIcon" opts={{ kind: whatHappened(p, state) }} size={24} label={whatHappened(p, state)} />
               </div>
               {/* A note in your own hand, like the margins the Wanderer shows you on the mountain. */}
               {marginNote(state, p) && <p className="mt-1 -rotate-1 font-mono text-xs text-amber-200/80">{marginNote(state, p)}</p>}
