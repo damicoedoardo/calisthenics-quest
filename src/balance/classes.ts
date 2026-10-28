@@ -99,24 +99,24 @@ export interface SpMoveNumbers {
 export const SP_SKILL: Record<string, SpMoveNumbers> = {
   // warrior: Whirl, Quake, Thunder Dash, Sun Guard
   whirl: { cd: 7, r: 100, dmg: 1, knock: 260, clear: 0.7 },
-  quake: { cd: 8, r: 130, dmg: 0.8, knock: 460 },
+  quake: { cd: 7, r: 130, dmg: 1.1, knock: 460 },
   thunderdash: { cd: 6, speed: 720, secs: 0.22, dmg: 1.6 },
-  sunguard: { cd: 9, secs: 1.4, r: 90, dmg: 0.5, knock: 260, clear: 1 },
+  sunguard: { cd: 14, secs: 0.7, r: 90, dmg: 0.5, knock: 260, clear: 1 },
   // archer: Pin Shot, Frost Arrow, Thorn Trap, Shadow Step
   pin: { cd: 6, arrows: 5, spread: 0.12, dmg: 2.4, pierce: 6 },
   frostarrow: { cd: 6, arrows: 3, spread: 0.18, dmg: 3.4, pierce: 2 },
-  thorntrap: { cd: 8, reach: 300, r: 80, secs: 3, every: 0.5, dmg: 0.7 },
-  shadowstep: { cd: 6, speed: 660, secs: 0.22, dmg: 1.9 },
+  thorntrap: { cd: 8, reach: 300, r: 80, secs: 3, every: 0.5, dmg: 0.55 },
+  shadowstep: { cd: 6, speed: 660, secs: 0.22, dmg: 1.5 },
   // mage: Starfall, Crystal Shards, Hourglass, Void Step
   starfall: { cd: 8, reach: 260, r: 90, dmg: 1.3 },
   shards: { cd: 7, n: 10, dmg: 1.1, pierce: 1 },
-  hourglass: { cd: 9, reach: 260, r: 100, secs: 3, every: 0.5, dmg: 0.45, slow: 0.6 },
-  voidstep: { cd: 6, speed: 760, secs: 0.2, dmg: 1.4 },
+  hourglass: { cd: 9, reach: 260, r: 100, secs: 3, every: 0.5, dmg: 0.75, slow: 0.6 },
+  voidstep: { cd: 6, speed: 760, secs: 0.2, dmg: 1.8 },
   // monk: Palm Wave, Tiger Pounce, Lotus Bloom, Rising Sun
   palm: { cd: 9, r: 120, dmg: 0.7, knock: 320, clear: 1 },
-  pounce: { cd: 6, speed: 680, secs: 0.22, dmg: 1.1 },
-  lotus: { cd: 10, secs: 1.4, r: 110, dmg: 0.4, knock: 280, heal: 0.04, clear: 1 },
-  risingsun: { cd: 8, reach: 220, r: 110, dmg: 1, knock: 320 },
+  pounce: { cd: 8, speed: 680, secs: 0.22, dmg: 0.9 },
+  lotus: { cd: 12, secs: 1.4, r: 110, dmg: 0.4, knock: 280, heal: 0.02, clear: 1 },
+  risingsun: { cd: 7, reach: 220, r: 110, dmg: 1.3, knock: 320 },
 };
 
 /** The SP's final fills by fighting, like the monk's calm: points for each hit landed and taken.
@@ -126,21 +126,21 @@ export const SURGE = { hit: 1, taken: 2, full: 300 } as const;
 /** Each SP's final; a final always wipes the shots in its reach. */
 export const SP_FINAL: Record<string, SpMoveNumbers> = {
   phoenix: { r: 220, dmg: 4, knock: 300, clear: 1 },
-  mountain: { reach: 300, r: 170, dmg: 4.2, knock: 420 },
+  mountain: { reach: 300, r: 170, dmg: 5, knock: 420 },
   thunderclap: { n: 8, reach: 340, dmg: 3.6 },
-  dawnbreak: { r: 240, dmg: 2.4, heal: 0.15 },
+  dawnbreak: { r: 240, dmg: 2, heal: 0.05 },
   rain: { dmg: 4.5 },
   blizzard: { r: 230, secs: 4, every: 0.5, dmg: 0.9, slow: 0.6 },
-  wildvolley: { n: 28, dmg: 2.4, pierce: 4 },
-  moonfall: { n: 10, reach: 380, dmg: 3.8 },
+  wildvolley: { n: 28, dmg: 1.8, pierce: 4 },
+  moonfall: { n: 10, reach: 380, dmg: 2.8 },
   sky: { r: 260, dmg: 3 },
   prism: { n: 8, reach: 340, dmg: 2.8 },
-  stopsands: { dmg: 1.8, slow: 0.8, secs: 3 },
-  rift: { r: 240, secs: 3, every: 0.4, dmg: 0.7 },
+  stopsands: { dmg: 2.4, slow: 0.8, secs: 3 },
+  rift: { r: 240, secs: 3, every: 0.4, dmg: 1.1 },
   palms: { r: 200, dmg: 2, heal: 0.1, knock: 400, clear: 1 },
   hundredclaws: { n: 10, reach: 320, dmg: 1.9 },
-  nirvana: { r: 240, dmg: 1.6, heal: 0.25 },
-  solarflare: { dmg: 2.2 },
+  nirvana: { r: 240, dmg: 1.6, heal: 0.08 },
+  solarflare: { dmg: 3.2 },
 };
 
 /** Each SP's passive, always on while it's worn, NosTale style: it changes how you play more than
@@ -156,19 +156,19 @@ export const SP_FINAL: Record<string, SpMoveNumbers> = {
     to `dmg` more damage over `secs`. Quickstep: the dodge's clock is `cd` times as long. */
 export const SP_PASSIVE = {
   embers: { chance: 0.2, secs: 2, every: 0.5, dmg: 0.1 },
-  bedrock: { after: 0.4, cut: 0.35 },
+  bedrock: { after: 0.4, cut: 0.55 },
   static: { every: 4, reach: 160, dmg: 0.8 },
-  secondwind: { below: 0.3, heal: 0.3 },
+  secondwind: { below: 0.25, heal: 0.1 },
   tailwind: { secs: 1.5, move: 0.4 },
-  frostbite: { chance: 0.3, slow: 0.4, secs: 1.5 },
-  harvest: { heal: 0.015 },
-  focus: { above: 0.8, crit: 0.15 },
+  frostbite: { chance: 0.2, slow: 0.4, secs: 1.5 },
+  harvest: { heal: 0.005 },
+  focus: { above: 0.8, crit: 0.07 },
   splitstar: { every: 4 },
   shell: { secs: 3 },
-  swiftsurge: { fill: 1.35 },
-  rebound: { r: 120, dmg: 1.2 },
+  swiftsurge: { fill: 1.6 },
+  rebound: { r: 120, dmg: 2 },
   flow: { heal: 0.004, every: 1 },
-  momentum: { secs: 1.5, dmg: 0.25 },
-  quickstep: { cd: 0.65 },
-  sunburst: { every: 5, r: 90, dmg: 0.6 },
+  momentum: { secs: 1.5, dmg: 0.1 },
+  quickstep: { cd: 0.8 },
+  sunburst: { every: 4, r: 90, dmg: 1.1 },
 } as const;
