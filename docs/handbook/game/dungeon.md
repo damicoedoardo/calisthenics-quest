@@ -61,7 +61,8 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change how often co-op runs drop forge materials | `MAT_DROPS` in `src/balance/upgrades.ts` (`findMats` in `engine.ts`; see [forge.md](forge.md)) |
 | Add an item kind or a class's weapon | `WEAPONS`, `ARMORS`, `ItemIcon` (and `ItemArt`, `looksOf`) in `items.ts`; its art in `ITEM_ROWS` and `LEGEND_ROWS` (`src/sprites/characters/items.ts`), and how the hero wears it in `heroSpec` (`src/sprites/characters/hero.ts`), see [sprites.md](sprites.md) |
 | Change how an item looks (its kind, the seed that picks its colors) | `looksOf` and `seedOf` in `items.ts` (the seed comes from the name, so one name always looks the same) |
-| Change an SP's moves (its own move, its final, its passive) | numbers in `SP_SKILL`, `SP_FINAL`, `SURGE`, `SP_PASSIVE` (`src/balance/classes.ts`); names and words in `SP_CARDS`, `SP_MOVES`, `SP_PASSIVES` (`content.ts`); what they do in `useSkill`, `useFinal`, and the passives in `kindle`/`burnTick`, `dodge`, `attack`, `flow` (`engine.ts`); what kind of move each is (`shape` in `SP_MOVES`: ring, fan, drop, all, nova, dash, chain, guard, field, volley), played by the generic `spMove` in `engine.ts`; their icons in `SP_ICONS` (`src/sprites/characters/icons.ts`, the later SPs' from `shaped(shape, element)`), their look in `spMove` and `spShape`, and `passive` (`scene.ts`, colors from `spLook`); the bot's use at the end of `decide` (`bot.ts`) |
+| Change an SP's moves (its own move, its final, its passive) | numbers in `SP_SKILL`, `SP_FINAL`, `SURGE`, `SP_PASSIVE` (`src/balance/classes.ts`; move damage is times the class's `ATTACK`); names, words, kind (`shape`) and target (`aim`) in `SP_CARDS`, `SP_MOVES`, `SP_PASSIVES` (`content.ts`); what each kind does in `SHAPES` (one function per shape, given a `MoveCtx`) and the passives in `kindle`/`burnTick`, `dodge`, `attack`, `flow` (`engine.ts`); their icons in `SP_ICONS` (`src/sprites/characters/icons.ts`); their look on screen in `spFx.ts` (`SP_FX` per move, else `SHAPE_FX` per shape; patches on the floor `FIELD_FX`, `FIELD_SHAPE_FX`; sounds `SP_SOUND`), and `passive` (`scene.ts`, colors from `spLook`); the bot's use at the end of `decide` (`bot.ts`) |
+| Change an SP weapon's basic attack | which kind it is (swing, shot, orb, wave) in `SP_WEAPONS` (`content.ts`); how fast, hard, far and wide in `SP_WEAPON` (`src/balance/classes.ts`: `cd`, `dmg`, `reach`, `arc`, `cut`, `pierce`, `blast`, `back`, `heal`); played by `attack`, `slash`, `moveShots` (`engine.ts`, `attackKind(h)`); its hit and shot on screen in `WEAPON_FX` (`spFx.ts`); the hero's animation and the weapon's art in `SP_WEAPON_ART` (see [sprites.md](sprites.md)) |
 | Add something each hero has (a cooldown, a count, a buff for the run) | `Hero` in `engine.ts` and its start in `newHero` (see "The hero, and the party") |
 | Change the bag panel, the pickup note or the stairs card | `BagPanel` and the `stairs` card in `src/components/FogRun.tsx` |
 
@@ -78,11 +79,16 @@ With an SP on (`HeroSetup.sp`: which of the class's four, see "The SPs" in [fog.
 hero has two more buttons (`Input.skill`, `Input.final`): the SP's own move on its own clock
 (`skillAt`, `skillReady`), and its final, which fills from hits landed and taken like the monk's
 calm (`surge`, `SURGE`, `finalReady`). Both go through `spMove(run, h, id, k, final, input)`, which
-plays the move by its kind (`shape`): a ring round you, a fan of shots, a drop on the nearest
-monster, a strike on every monster in the room, a nova that heals, a dash through them, a chain
-that jumps between them, a guard bubble, a field on the ground that keeps hitting and can slow
-(`Run.fields`, `stepFields`), or a volley all round. Each emits an `sp` event the scene draws in
-the SP's colors (`spMove`; the first SPs keep their own drawings, the rest use `spShape`). A final
+plays the move by its kind (`shape`, one function each in `SHAPES`): a ring round you, a drop from
+above on one monster (the nearest, or with `aim: 'strongest'` the boss or the one with the most HP,
+`n` hits in a row), a strike on every monster in the room (with a heal for each, a push, or a
+slow), a dash through them, a chain that jumps between them, a guard, a field on the ground that
+keeps hitting (round you and following you, or on a monster; `Run.fields`, `stepFields`), a wall
+of fire in a line (`SpField.to`), a leap onto a monster, a hook that drags one to you, a
+boomerang that flies out and back (`Shot.back`), a vanish (`Hero.hideUntil`: monsters lose you;
+`Hero.sneak`: your next hit lands harder), a trap that holds one still (`Foe.held`), a mark that
+makes one take more (`Foe.mark`), or a beam through a line. Each emits an `sp` event (`to` where it
+ends, `width`, `secs`, `points`) that the scene draws from `spFx.ts`, one entry per move. A final
 also shakes the room and bumps `finals`, which the HUD shows as a small badge with its name
 (`FinalBadge` in `FogRun.tsx`); nothing covers the fight. The SP's passive is always on
 (`SP_PASSIVE`; `has(h, id)` asks): Embers burns (`kindle`, `burnTick`), Frostbite slows
@@ -92,6 +98,13 @@ Flow and Harvest heal, Focus and Momentum add crits and damage (`spCrit`, `spMor
 Quickstep change the dodge, Swift Sands fills the final faster; each emits a `passive` event.
 `echo` keeps a passive's own hit from setting off passives again. Without an SP none of this does
 anything and nothing is rolled, so replays stay the same.
+
+An SP also changes the basic attack: its weapon (`SpCardDef.weapon`) sets the kind (`SP_WEAPONS`,
+read through `attackKind(h)`) and the numbers (`SP_WEAPON`, times the class's `ATTACK`): a great axe
+cuts all round, a lance reaches far, daggers and claws are quick, a cannon's shot bursts, a
+boomerang comes back, the bell staff heals a little on each hit. A swing knocks shots out of the air
+only within `cut`. Shots carry their weapon (`Shot.look`) and the attack event its `weapon` and
+`arc`, so the scene draws each its own way. The bot fights by its weapon, close or far.
 
 The class ability is ready on a clock (`abilityAt`), except the monk's Stillness: it fills `calm`
 from hits the monk lands and takes (`calmer`, numbers in `CALM`, `src/balance/classes.ts`), so
