@@ -63,6 +63,27 @@ cd /root/forma && git pull
 # db changes:       docker compose exec -T postgres psql -U forma forma < backend/db/migrate_<file>.sql
 ```
 
+## Party voice (one time)
+
+LiveKit (`livekit` in `docker-compose.yml`) needs its own address and two open ports:
+
+1. DNS: an `A voice` record pointing at the server (formaquest.app DNS on Vercel).
+2. Hetzner firewall: let in TCP 7881 and UDP 7882 from anywhere.
+3. On the server:
+
+```bash
+cd /root/forma && git pull
+cat >> .env <<EOF2
+VOICE_DOMAIN=voice.formaquest.app
+LIVEKIT_URL=wss://voice.formaquest.app
+LIVEKIT_API_KEY=forma
+LIVEKIT_API_SECRET=$(openssl rand -hex 32)
+EOF2
+docker compose up -d livekit caddy   # caddy is recreated to see VOICE_DOMAIN
+docker rollout api                    # the api picks up the LIVEKIT_ settings
+curl -s https://voice.formaquest.app  # "OK"
+```
+
 ## Looking around
 
 ```bash

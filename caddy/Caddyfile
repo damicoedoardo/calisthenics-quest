@@ -15,3 +15,8 @@
         }
     }
 }
+
+# Party voice: phones join LiveKit here (a WebSocket); the talk itself goes on UDP 7882.
+{$VOICE_DOMAIN:voice.localhost} {
+    reverse_proxy livekit:7880
+}

@@ -13,7 +13,9 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
+from app import voice
 from app.auth import AuthedUser, get_authed_user
+from app.config import settings
 from app.friends import FriendStore
 from app.party import MAX_PARTY, Party, PartyStore, PgStore
 from app.routes.friends import card_json, get_friend_store
@@ -188,3 +190,27 @@ async def start(
         raise HTTPException(status.HTTP_409_CONFLICT, "Not everyone is ready")
     await parties.start(party.id, secrets.randbelow(2**31))
     return await _view(user.user_id, parties, friends)
+
+
+@router.post("/party/voice")
+async def voice_pass(
+    user: AuthedUser = Depends(get_authed_user),
+    parties: PartyStore = Depends(get_party_store),
+    friends: FriendStore = Depends(get_friend_store),
+) -> dict[str, str]:
+    """A pass to the party's voice room, for its members only."""
+    if not (settings.livekit_url and settings.livekit_api_key and settings.livekit_api_secret):
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Voice isn't set up yet")
+    party = await parties.of(user.user_id)
+    if not party:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "You're not in a party")
+    me = await friends.many([user.user_id])
+    token = voice.voice_pass(
+        key=settings.livekit_api_key,
+        secret=settings.livekit_api_secret,
+        room=voice.room_of(party.id),
+        user_id=user.user_id,
+        name=(me[0].name if me else "") or "A hero",
+        seconds=settings.voice_pass_seconds,
+    )
+    return {"url": settings.livekit_url, "token": token, "room": voice.room_of(party.id)}

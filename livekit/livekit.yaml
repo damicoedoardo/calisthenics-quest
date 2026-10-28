@@ -1,0 +1,16 @@
+# Party voice: LiveKit's settings (docker-compose.yml, `livekit`). The api key and secret come
+# from LIVEKIT_KEYS in .env, never from this file (the repo is public).
+port: 7880
+rtc:
+  # Voice travels on one UDP port, with TCP as the fallback for networks that block UDP.
+  # Both must be open on the server's firewall.
+  udp_port: 7882
+  tcp_port: 7881
+  # Find the server's public address, so phones reach it from outside Docker.
+  use_external_ip: true
+room:
+  # A party is up to 4 heroes (backend/app/party.py, MAX_PARTY).
+  max_participants: 4
+  empty_timeout: 300
+logging:
+  level: info
