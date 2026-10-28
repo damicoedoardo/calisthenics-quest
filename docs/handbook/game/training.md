@@ -109,6 +109,14 @@ item everywhere the hero is drawn (Hero tab, the Play tab's ready strip, the hea
 one, the slot shows the tier look. Workouts now earn embers for Mira's forge on the Hero tab (Gear)
 ([forge.md](forge.md)). The art for each tier is in [sprites.md](sprites.md).
 
+## What a workout gives, in one place (`loot.ts`)
+
+`purseOf` (what you have of each: level, free points, embers, sweat coins, materials), `nextLoot`
+(what the next workout gives for a check-in, the weekly goal's points included when it would hit
+it), `workoutsToLevel` and `spendable` (points waiting, an item the forge can take up now). Only
+reads the rules above and `src/balance`; the screens draw it with `Purse.tsx`
+([../app/screens.md](../app/screens.md)).
+
 ## How to change things
 
 | I want to... | Edit |

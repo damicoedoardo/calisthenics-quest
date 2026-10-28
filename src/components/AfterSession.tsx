@@ -2,16 +2,17 @@
 
 import { spWorn } from '@/lib/sp';
 import { useEffect, useMemo, useState } from 'react';
-import { Sparkles } from 'lucide-react';
 import { Hero } from './Hero';
 import { Enemy } from './Characters';
 import { Sprite } from './Sprite';
 import { music } from '@/lib/music';
 import { EMBERS } from '@/lib/forge';
+import { SWEAT } from '@/balance';
 import { gearOf, levelInfo, totalXp, type FinishResult } from '@/lib/game';
 import { tierText } from '@/lib/gear';
 import { planExercises } from '@/lib/program';
 import { pointsEarned } from '@/lib/stats';
+import { LootIcon } from './Purse';
 import type { StoryState } from '@/story/engine';
 import { afterWorkoutLine } from '@/story/daily';
 import { heroVariant } from '@/story/flame';
@@ -134,14 +135,18 @@ function Loot({ result, onClose, onFelt }: { result: FinishResult; onClose: () =
           ))}
         </ul>
         <p className="mt-3 border-t border-ink-600 pt-3 text-4xl font-bold text-gold-400">+{session.xp} XP</p>
-        {/* What the Hero tab gets: points for the champion, embers for Mira's forge. */}
+        {/* What the Hero tab gets: points for the champion, embers for Mira's forge, a sweat coin.
+            The same icons as the Hero tab's purse, popping in one by one. */}
         <div className="mt-2 flex justify-center gap-2">
-          <span className="flex items-center gap-1.5 rounded-lg bg-ink-900 px-2.5 py-1.5 font-pixel text-[9px] text-gold-300">
-            <Sparkles size={12} aria-hidden /> +{points} point{points === 1 ? '' : 's'}
-          </span>
-          <span className="flex items-center gap-1.5 rounded-lg bg-ink-900 px-2.5 py-1.5 font-pixel text-[9px] text-orange-300">
-            <Sprite id="uiIcon" opts={{ name: 'flame' }} size={12} label="" /> +{EMBERS[session.kind]} embers
-          </span>
+          {[
+            { id: 'points' as const, n: points, color: 'text-emerald-300', label: `point${points === 1 ? '' : 's'}` },
+            { id: 'embers' as const, n: EMBERS[session.kind], color: 'text-orange-300', label: 'embers' },
+            { id: 'coins' as const, n: SWEAT.perWorkout, color: 'text-yellow-200', label: `coin${SWEAT.perWorkout === 1 ? '' : 's'}` },
+          ].map((c, i) => (
+            <span key={c.id} className={`flex items-center gap-1.5 rounded-lg bg-ink-900 px-2.5 py-1.5 font-pixel text-[9px] ${c.color} motion-safe:animate-pop`} style={{ animationDelay: `${0.4 + i * 0.2}s` }}>
+              <LootIcon id={c.id} size={14} /> +{c.n} {c.label}
+            </span>
+          ))}
         </div>
         {session.better && <p className="mt-1 text-xs text-emerald-300">Better than last time.</p>}
         {!!session.heavier?.length && <p className="mt-1 text-xs text-sky-300">Next time, a little heavier: {session.heavier.map(nameOf).join(', ')}.</p>}

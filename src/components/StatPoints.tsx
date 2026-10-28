@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Droplet, Minus, Plus, RotateCcw } from 'lucide-react';
+import { Minus, Plus, RotateCcw } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { STATS, buildOf, nextPoint, pointsEarned, pointsFree, statPower } from '@/lib/stats';
 import { SWEAT } from '@/balance';
@@ -84,7 +84,7 @@ export function StatPoints({ state, update, land = false }: { state: GameState; 
           {earned.total} points earned {why ? '' : '(how?)'}
         </button>
         <span className="flex items-center gap-1 font-mono text-slate-300" aria-label={`${purse} sweat coins`}>
-          <Droplet size={12} className="text-sky-300" aria-hidden /> {purse}
+          <Sprite id="uiIcon" opts={{ name: 'coin' }} size={12} label="" /> {purse}
         </span>
         {spent && (
           <button onClick={() => update(respec)} disabled={purse < cost} className="flex items-center gap-1 text-slate-400 disabled:opacity-40">

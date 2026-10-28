@@ -26,6 +26,8 @@ import { storyState, storyWords } from '@/story/engine';
 import { flameStage } from '@/story/flame';
 import { currentPlan, dayLabel, nextDay, nextMonday, restToday, weekdayOf } from '@/lib/coach/week';
 import { ExerciseSheet } from './ExerciseDetail';
+import { LootGuide, NextLoot, type LootGo } from './Purse';
+import type { LootId } from '@/lib/loot';
 import { fireLine, flameLine, flameMood, restTruth, todayPage, updateTodayPage } from '@/story/daily';
 
 interface Props {
@@ -37,6 +39,8 @@ interface Props {
   openBook?: boolean;
   /** No plan yet: go and plan the week with the flame. */
   onTrain: () => void;
+  /** From the loot guide: open that part of the Hero tab. */
+  onHero?: (part: LootGo) => void;
 }
 
 const CHECKINS: { id: Checkin; label: string; note: string; minutes: number }[] = [
@@ -46,11 +50,13 @@ const CHECKINS: { id: Checkin; label: string; note: string; minutes: number }[] 
 ];
 
 
-export function TodayTab({ state, update, onStart, onReplayOpening, openBook, onTrain }: Props) {
+export function TodayTab({ state, update, onStart, onReplayOpening, openBook, onTrain, onHero }: Props) {
   const now = new Date();
   const [overlay, setOverlay] = useState<'fire' | 'book' | null>(openBook ? 'book' : null);
   // An exercise tapped in the quest: how to do it.
   const [howTo, setHowTo] = useState<{ id: string; demo: ExerciseId } | null>(null);
+  // A loot chip tapped: what training gives, and where each goes.
+  const [guide, setGuide] = useState<LootId | null>(null);
   useEffect(() => {
     if (openBook) setOverlay('book');
   }, [openBook]);
@@ -90,6 +96,21 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
       )}
       {overlay === 'book' && <BookOfDays state={state} onClose={() => setOverlay(null)} />}
       {howTo && <ExerciseSheet state={state} id={howTo.id} demo={howTo.demo} onClose={() => setHowTo(null)} />}
+      {guide && (
+        <LootGuide
+          state={state}
+          focus={guide}
+          now={now}
+          onClose={() => setGuide(null)}
+          onGo={
+            onHero &&
+            ((to) => {
+              setGuide(null);
+              onHero(to);
+            })
+          }
+        />
+      )}
     </>
   );
   const items = inProgress ? todaysQuest(state) : quest;
@@ -116,6 +137,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
         aheadNote={aheadNote}
         onHowTo={(q) => setHowTo({ id: q.id, demo: q.demo })}
         reps={reps}
+        loot={<NextLoot state={state} checkin={inProgress ? state.draft!.checkin : checkin} now={now} onOpen={setGuide} land />}
         title={questTitle}
         xp={xp}
         checkin={checkin}
@@ -240,6 +262,8 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
           })}
         </ul>
       </section>
+
+      <NextLoot state={state} checkin={inProgress ? state.draft!.checkin : checkin} now={now} onOpen={setGuide} />
 
       <button
         onClick={() => onStart(inProgress ? state.draft!.checkin : checkin)}
@@ -445,6 +469,8 @@ interface LandProps {
   /** An exercise tapped: open how to do it. */
   onHowTo: (q: ReturnType<typeof todaysQuest>[number]) => void;
   title: string;
+  /** What this workout gives, as chips. */
+  loot: ReactNode;
   xp: number;
   checkin: Checkin;
   /** Left out while a quest is under way: the check-in is set then. */
@@ -575,6 +601,7 @@ function LandToday(p: LandProps) {
                 </div>
               </>
             )}
+            <div className="mb-2">{p.loot}</div>
             <button
               onClick={p.onStart}
               className="flex min-h-[2.75rem] flex-1 items-center justify-center gap-2 rounded-2xl bg-gold-400 px-3 font-pixel text-[10px] leading-relaxed text-ink-950 shadow-[0_4px_0_#b45309] transition active:translate-y-1 active:shadow-none"

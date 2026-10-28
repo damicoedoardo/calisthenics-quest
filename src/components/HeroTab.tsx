@@ -10,6 +10,8 @@ import { StatPoints } from './StatPoints';
 import { FlamePowers } from './FlamePowers';
 import { FogGearCard } from './FogGearCard';
 import { SpCard } from './SpCard';
+import { LootGuide, Purse } from './Purse';
+import type { LootId } from '@/lib/loot';
 import { useLand } from './useLand';
 import { getClass } from '@/lib/gear';
 import { gearOf, type GameState } from '@/lib/game';
@@ -35,6 +37,7 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
   const gear = gearOf(state);
   const cls = getClass(state.profile.classId);
   const [editingLook, setEditingLook] = useState(false);
+  const [guide, setGuide] = useState<LootId | null>(null);
   const land = useLand();
   const look = useLook();
   const PARTS = [
@@ -112,6 +115,21 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
       </div>
     );
 
+  // What you have to spend; tap one for where it comes from and where it goes.
+  const purse = <Purse state={state} onOpen={setGuide} land={land} />;
+  const lootGuide = guide && (
+    <LootGuide
+      state={state}
+      focus={guide}
+      now={new Date()}
+      onClose={() => setGuide(null)}
+      onGo={(to) => {
+        setGuide(null);
+        onPart(to);
+      }}
+    />
+  );
+
   const changeLook = (
     <button onClick={() => setEditingLook(true)} className="flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg bg-ink-900/70 px-4 py-2 text-xs font-semibold text-slate-300">
       <Palette size={13} className="shrink-0" /> Change look
@@ -123,7 +141,10 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
   if (land)
     return (
       <div className="flex h-full flex-col gap-2">
-        {tabs}
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="flex-1">{tabs}</div>
+          <div className="w-80">{purse}</div>
+        </div>
         <div className="flex min-h-0 flex-1 gap-3">
           {part !== 'gear' && (
             <section className="flex w-44 shrink-0 flex-col items-center rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 px-2.5 pb-2.5 pt-3 min-[800px]:w-52">
@@ -139,6 +160,7 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
           </div>
         </div>
         {lookEditor}
+        {lootGuide}
       </div>
     );
 
@@ -148,6 +170,7 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
         <p className="font-pixel text-[10px] text-slate-400">{cls ? cls.name : 'Adventurer'}</p>
         <Hero gear={gear} classId={state.profile.classId} size={128} variant={heroVariant(state)} sp={spWorn(state)} />
         <div className="mt-3">{changeLook}</div>
+        <div className="mt-3 w-full px-3">{purse}</div>
       </section>
 
       {tabs}
@@ -157,6 +180,7 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
       </div>
 
       {lookEditor}
+      {lootGuide}
     </div>
   );
 }
