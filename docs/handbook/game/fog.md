@@ -102,7 +102,9 @@ The rule for every balance number, and the changelog, are in [balance.md](balanc
 `pnpm fog:sim` plays hundreds of bot runs on them per zone and class, and prints the hits the
 bot takes a minute (the run recap in `FogRun` shows a person's, to check the bot against people;
 `HUMAN='{"notice":0.8}'` turns how human it plays). `DIALS` in `src/balance/dungeon.ts` are the
-main knobs. The sim starts every run in the starter kit with
-the snapshot's points (as after a death); the bot wears what drops, and wears the SP from
-`SP_MODEL_AT` workouts on (`NOSP=1` plays without it, to see what it adds). Zones are tuned so that run
-is about where the game was before items, so the gear you keep is strength on top.
+main knobs. The sim starts every run with the snapshot's points
+in what a player would keep by then (`seasonedKit` in `src/sim/seasoned.ts`, `SEASONED` in
+`src/balance/dungeon.ts`: the best wearable of earlier finds, forged), and the bot searches every
+room; it wears what drops, and wears the SP from
+`SP_MODEL_AT` workouts on (`NOSP=1` plays without it, to see what it adds). `GEAR=0` plays in the starter kit instead. Zones are tuned for that
+player, so a player who keeps and forges their finds meets the targets, not one in the starter kit.

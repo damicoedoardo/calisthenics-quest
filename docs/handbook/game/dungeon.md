@@ -23,7 +23,8 @@ engine.ts           plays it: a pure step function (60 a second, seeded), no Pha
 bot.ts              a player for balance tests (scripts/fog-sim.mjs) and the autopilot; it plays
                     like a person on a phone (HUMAN in src/balance/dungeon.ts: its own reaction
                     per shot, fewer shots seen when busy or fast, 10 decisions a second, a thumb
-                    a little off, a missed dodge now and then)
+                    a little off, a missed dodge now and then; it walks every room of a
+                    floor before the stairs, as people do looking for gear)
 scene.ts            draws a run with Phaser and turns events into sound and sparks; a monster
                     swells TELL (0.35 s) before a volley, so you see the shots coming
 themes.ts           each zone's colors (floor, stone, torches, water)

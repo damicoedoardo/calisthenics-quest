@@ -18,8 +18,8 @@ export const PLATEAU: Chapter = {
     hint: 'It never shows how hurt it is. Keep hitting: it is breaking, even when it looks the same.',
     after: 'It looked like nothing was happening. Everything was happening.',
     keepsake: { name: 'A Cracked Stone', text: 'It broke all at once. It had been breaking for weeks.' },
-    hp: 2.17,
-    dmg: 2.9,
+    hp: 3.13,
+    dmg: 4.18,
     ground: '#1c1712',
     fog: '#4a3a26',
     // stages: [first cracks (art stage 1), breaking (art stage 2)]
