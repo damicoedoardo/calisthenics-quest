@@ -96,20 +96,20 @@ const isRef = (v: unknown): v is Ref => !!v && typeof v === 'object' && ('$h' in
     hero (`me`, the run's order) goes first so the screen follows you, and the events it carried are
     handed back to play. Returns what the server has played of each hero's steps. */
 export function applySnapshot(run: Run, text: string, me: number): { ack: number[]; events: GameEvent[] } {
-  const { ack, run: body } = JSON.parse(text, (_k, v: unknown) => {
-    if (v && typeof v === 'object') {
-      if ('$n' in v) return (v as { $n: number }).$n === 1 ? Infinity : (v as { $n: number }).$n === -1 ? -Infinity : NaN;
-      if ('$set' in v) return new Set((v as { $set: unknown[] }).$set);
-    }
-    return v;
-  }) as { ack: number[]; run: Partial<Run> };
+  // Parsed plain (a reviver is called for every value, several times slower on a phone), then one
+  // walk puts back what JSON can't hold: other heroes and monsters, endless numbers, sets.
+  const { ack, run: body } = JSON.parse(text) as { ack: number[]; run: Partial<Run> };
   Object.assign(run, body);
   const hs = new Map(run.party.map((h) => [h.id, h])),
     fs = new Map(run.foes.map((f) => [f.id, f]));
-  const fix = (o: Record<string, unknown> | unknown[]) => {
-    for (const [k, v] of Object.entries(o)) {
-      if (isRef(v)) (o as Record<string, unknown>)[k] = '$h' in v ? hs.get(v.$h) : (fs.get(v.$f) ?? null);
-      else if (v && typeof v === 'object' && !(v instanceof Set)) fix(v as Record<string, unknown>);
+  const fix = (o: Record<string, unknown>) => {
+    for (const k in o) {
+      const v = o[k];
+      if (!v || typeof v !== 'object') continue;
+      if (isRef(v)) o[k] = '$h' in v ? hs.get(v.$h) : (fs.get(v.$f) ?? null);
+      else if ('$n' in v) o[k] = (v as { $n: number }).$n === 1 ? Infinity : (v as { $n: number }).$n === -1 ? -Infinity : NaN;
+      else if ('$set' in v) o[k] = new Set((v as { $set: unknown[] }).$set);
+      else fix(v as Record<string, unknown>);
     }
   };
   fix(run as unknown as Record<string, unknown>);

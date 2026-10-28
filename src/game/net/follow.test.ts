@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { initialState } from '@/lib/game';
 import { powerOf } from '@/lib/fog';
 import { seeded } from '@/lib/random';
-import type { HeroSetup, Input } from '../dungeon/engine';
+import { overFor, winNow, type HeroSetup, type Input } from '../dungeon/engine';
 import { Room } from './room';
 import { runFromStart } from './wire';
 import { Follower } from './follow';
@@ -30,20 +30,22 @@ class Line<T> {
   }
 }
 
-/** Two phones and the server for `seconds`, on a slow uneven line. Ana walks a square, Ben stands. */
-function play(seconds: number, ms: number, jitter: number, fast = 1.004) {
+const CLASSES: HeroSetup['classId'][] = ['warrior', 'archer', 'mage'];
+
+/** Phones (two, or `n`) and the server for `seconds`, on a slow uneven line. Each walks a square,
+    one after the other. */
+function play(seconds: number, ms: number, jitter: number, fast = 1.004, n = 2) {
   const rnd = seeded(5);
-  const room = new Room(['ana', 'ben'], 0, 3);
-  room.join('ana', hero('warrior'), 0);
-  room.join('ben', hero('archer'), 0);
+  const users = ['ana', 'ben', 'cy'].slice(0, n);
+  const room = new Room(users, 0, 3);
+  users.forEach((u, i) => room.join(u, hero(CLASSES[i]), 0));
   const start = room.begin();
-  const phones = [0, 1].map((me) => ({ f: new Follower(runFromStart(start, me), me), up: new Line<Input[] & { seq: number }[]>(ms, jitter, rnd), down: new Line<string>(ms, jitter, rnd), acc: 0 }));
-  const users = ['ana', 'ben'];
+  const phones = users.map((_, me) => ({ f: new Follower(runFromStart(start, me), me), up: new Line<Input[] & { seq: number }[]>(ms, jitter, rnd), down: new Line<string>(ms, jitter, rnd), acc: 0 }));
   const stick = (t: number): Input => {
     const leg = Math.floor(t / 900) % 5;
     return [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 0, y: -1 }, { x: 0, y: 0 }][leg] as Input;
   };
-  const out = { fix: [] as number[], glide: [] as number[], seen: [] as number[] };
+  const out = { fix: [] as number[], glide: [] as number[], seen: [] as number[], moved: [] as number[] };
   let serverAcc = 0,
     steps = 0,
     lastSeen: { x: number; y: number } | null = null;
@@ -54,7 +56,11 @@ function play(seconds: number, ms: number, jitter: number, fast = 1.004) {
     while (serverAcc >= frame * fast) {
       serverAcc -= frame * fast;
       for (const [i, p] of phones.entries()) for (const m of p.up.take(now)) room.take(users[i], { t: 'in', steps: m as never });
+      const ana = room.run!.party[0],
+        was = { x: ana.x, y: ana.y, room: room.run!.room };
       room.tick(now / 1000);
+      // How far Ana really moves in a step (a cleared room lets everyone walk faster).
+      if (room.run!.room === was.room) out.moved.push(Math.hypot(ana.x - was.x, ana.y - was.y));
       if (++steps % 3 === 0) {
         const s = room.snapshot();
         for (const p of phones) p.down.send(now, s);
@@ -69,8 +75,8 @@ function play(seconds: number, ms: number, jitter: number, fast = 1.004) {
       p.acc += frame;
       while (p.acc >= frame) {
         p.acc -= frame;
-        // Ben walks the square too, a little later.
-        p.f.press({ ...stick(i === 0 ? now : now + 450), ability: false });
+        // The others walk the square too, a little later.
+        p.f.press({ ...stick(now + 450 * i), ability: false });
       }
       const sent = p.f.outgoing(now);
       if (sent) p.up.send(now, sent as never);
@@ -131,6 +137,60 @@ describe('following a live run', () => {
     expect(later.some((e) => e.type === 'ability')).toBe(false);
     // And it timed the line: pressed at 0, played by the server by 120.
     expect(f.ping).toBe(120);
+  });
+
+  it('stays smooth with three phones', () => {
+    const { out } = play(20, 70, 30, 1.004, 3);
+    expect(pct(out.fix, 0.9)).toBeLessThan(1);
+    expect(pct(out.glide, 0.99)).toBeLessThan(10);
+    // A friend is drawn moving no faster than the rules ever move them in a step.
+    expect(pct(out.seen, 0.98)).toBeLessThan(Math.max(...out.moved) * 1.2);
+  });
+
+  it('gives each phone its own end of the run, not the leader\'s', () => {
+    const room = new Room(['ana', 'ben'], 0, 3);
+    room.join('ana', hero('warrior'), 0);
+    room.join('ben', hero('archer'), 0);
+    const f = new Follower(runFromStart(room.begin(), 1), 1),
+      server = room.run!;
+    server.party[0].kills = 7;
+    server.party[0].mats = { thread: 3 };
+    server.party[1].kills = 2;
+    server.party[1].gear.bag.push({ ...server.party[0].gear.worn.weapon!, id: 'bens', starter: false });
+    winNow(server);
+    f.take([room.snapshot()], 0);
+    const mine = overFor(f.run, f.run.hero);
+    expect(f.run.over!.kills).toBe(7);
+    expect(mine.won).toBe(true);
+    expect(mine.kills).toBe(2);
+    expect(mine.mats).toBeUndefined();
+    expect(mine.gear.bag.map((it) => it.id)).toEqual(['bens']);
+  });
+
+  it('asks you to pick only what the server asks, and keeps a friend\'s chest theirs', () => {
+    const room = new Room(['ana', 'ben'], 0, 3);
+    room.join('ana', hero('warrior'), 0);
+    room.join('ben', hero('archer'), 0);
+    const start = room.begin(),
+      ana = new Follower(runFromStart(start, 0), 0),
+      ben = new Follower(runFromStart(start, 1), 1),
+      server = room.run!;
+    // Ana's phone walks onto a chest the server doesn't have yet: no card of its own making.
+    ana.run.chest = { x: ana.run.hero.x, y: ana.run.hero.y, opened: false };
+    ana.press({ x: 0, y: 0, ability: false });
+    expect(ana.run.hero.relicOffer).toBeNull();
+    // The server opens it for Ana: her phone gets the server's card, Ben's hears nothing of it.
+    server.party[1].x += 200;
+    server.chest = { x: server.party[0].x, y: server.party[0].y, opened: false };
+    room.tick(0);
+    const s = room.snapshot(),
+      forAna = ana.take([s], 50),
+      forBen = ben.take([s], 50);
+    expect(ana.run.hero.relicOffer).toEqual(server.party[0].relicOffer);
+    expect(ana.run.hero.relicOffer).not.toBeNull();
+    expect(forAna.some((e) => e.type === 'chest')).toBe(true);
+    expect(forBen.some((e) => e.type === 'chest')).toBe(false);
+    expect(ben.run.hero.relicOffer).toBeNull();
   });
 
   it('ends up where the server has you', () => {

@@ -59,6 +59,7 @@ import {
   finalReady,
   skillReady,
   wardenFloor,
+  overFor,
   winNow,
   type AbilityId,
   type SpMoveId,
@@ -100,7 +101,8 @@ export interface RunEnd extends EngineEnd {
 }
 
 function recap(run: Run): RunEnd {
-  const over = run.over!,
+  // Your own end (in a live run the run's own is the leader's).
+  const over = overFor(run, run.hero),
     wf = wardenFloor(run.layout);
   const warden = wf < 0 ? null : over.won || run.floor > wf || (run.floor === wf && !!run.warden && !run.warden.alive);
   return { ...over, relics: { ...run.hero.relics }, warden };
@@ -271,9 +273,11 @@ export interface RunHandle {
   destroy: () => void;
 }
 
-/** A live run: after you pick or answer the stairs, the server's next few runs may still ask (they
-    left before your answer got there). They're not asked again for this long (ms). */
+/** A live run: after you pick or answer the stairs, the server's next few runs may still ask the
+    same (they left before your answer got there). That same card isn't shown again for this long
+    (ms); a new one is. */
 const ANSWER_MS = 800;
+const askKey = (kind: string, choices: readonly string[] | null | undefined) => `${kind}:${choices?.join() ?? ''}`;
 
 const SFX: Record<'slash' | 'arrow' | 'orb' | 'wave', SfxId> = { slash: 'slash', arrow: 'arrow', orb: 'orb', wave: 'wave' };
 const HEAL = '#86efac';
@@ -504,6 +508,8 @@ class DungeonScene extends Phaser.Scene {
   private net: PlayLink | null = null;
   private follow: Follower | null = null;
   private answeredAt = -1e9;
+  /** The card you last answered in a live run (`askKey`). */
+  private answered = '';
 
   constructor(
     private setup: RunSetup,
@@ -1361,9 +1367,10 @@ class DungeonScene extends Phaser.Scene {
     const events = f.take(net.take(), now);
     if (events.length || now - this.answeredAt < ANSWER_MS) {
       if (now - this.answeredAt < ANSWER_MS) {
-        run.hero.offer = null;
-        run.hero.relicOffer = null;
-        run.stairsAsk = false;
+        const h = run.hero;
+        if (h.offer && askKey('pick', h.offer.choices) === this.answered) h.offer = null;
+        if (h.relicOffer && askKey('relic', h.relicOffer) === this.answered) h.relicOffer = null;
+        if (this.answered === 'stairs') run.stairsAsk = false;
       }
       for (const e of events) this.react(e);
     }
@@ -1378,10 +1385,11 @@ class DungeonScene extends Phaser.Scene {
     f.place(now);
   }
 
-  /** A live run: tell the server, and hold off its next few asks. */
-  private answer(m: Up) {
+  /** A live run: tell the server, and hold off its next few asks of the same card. */
+  private answer(m: Up, asked: string) {
     this.net!.send(m);
     this.answeredAt = this.time.now;
+    this.answered = asked;
   }
 
   private botPick(choices: UpgradeId[]): UpgradeId {
@@ -2992,9 +3000,11 @@ class DungeonScene extends Phaser.Scene {
 
   pick(id: UpgradeId) {
     this.offered = false;
-    if (this.net) this.answer({ t: 'pick', id });
+    if (this.net) this.answer({ t: 'pick', id }, askKey('pick', this.run.hero.offer?.choices));
     if (!this.run.hero.offer?.choices.includes(id)) return;
     pick(this.run, id);
+    // A live run: the next card (another level) comes from the server, not rolled here.
+    if (this.net) this.run.hero.offer = null;
     const h = this.hero;
     this.fade(450, (g, p) => g.lineStyle(4 * (1 - p) + 1, 0xfbbf24, 0.9 * (1 - p)).strokeCircle(h.x, h.y, 24 + 80 * p));
   }
@@ -3035,9 +3045,11 @@ class DungeonScene extends Phaser.Scene {
 
   pickRelic(id: RelicId) {
     this.offered = false;
-    if (this.net) this.answer({ t: 'relic', id });
+    if (this.net) this.answer({ t: 'relic', id }, askKey('relic', this.run.hero.relicOffer));
     if (!this.run.hero.relicOffer?.includes(id)) return;
     pickRelic(this.run, id);
+    // A live run: the server's own word of it is the one played, so it shows once.
+    if (this.net) this.run.events.length = 0;
     for (const e of takeEvents(this.run)) this.react(e);
     const h = this.hero;
     this.fade(450, (g, p) => g.lineStyle(4 * (1 - p) + 1, 0xfbbf24, 0.9 * (1 - p)).strokeCircle(h.x, h.y, 24 + 80 * p));
@@ -3061,7 +3073,7 @@ class DungeonScene extends Phaser.Scene {
     this.asked = false;
     // A live run: the server takes everyone down (or not); its next run shows the new floor.
     if (this.net) {
-      this.answer({ t: 'stairs', choice });
+      this.answer({ t: 'stairs', choice }, 'stairs');
       this.run.stairsAsk = false;
       return;
     }

@@ -59,17 +59,23 @@ message (`runFromStart`: same setup, same seed, you first) and hands it to a `Fo
    ago on the server's clock, between two snapshots (`place`), so they glide instead of jumping
    20 times a second.
 
-`follow.test.ts` plays two phones and the server over a slow, uneven line (70 ms each way, give or
-take 30) and checks that your hero is almost never pulled back, and that a friend moves the same
-small way every frame.
+`follow.test.ts` plays two phones, then three, and the server over a slow, uneven line (70 ms
+each way, give or take 30) and checks that your hero is almost never pulled back, and that a
+friend moves the same small way every frame. A snapshot is parsed plain and one walk puts back
+the heroes, monsters, sets and endless numbers (`applySnapshot`): a reviver on every value cost
+six times as much.
 
 Only the server's events are played (sounds, hits, new rooms, loot), so nothing happens twice,
 except your own moves: a swing, an ability, an SP move or a dodge shows the moment you press
 (`press` returns it), and the server's copy is skipped. The engine tags those events with the hero
 whose turn made them (`byOf` in `engine.ts`). In developer mode the run shows `ping`: from pressing
 a step to the server playing it.
-Picks, chests and the stairs are sent and applied at once; the server's next few snapshots may
-still ask, so they're ignored for `ANSWER_MS`. A card the server no longer asks (someone else took
+A friend's own news (their item, their chest, their pick) isn't played on your phone (`heard`).
+Cards (a level's skills, a chest's items, the stairs) come only from the server: the `Follower`
+drops any its own steps ask, since it would roll other choices than the server's. Your answer is
+sent and applied at once; the server's next few snapshots may still ask the same card, so that
+one card is ignored for `ANSWER_MS` (a new one shows). Each phone's recap is its own hero's end
+(`overFor`), not the run's, which is the leader's. A card the server no longer asks (someone else took
 the stairs, the bot picked for you) closes (`dismiss`). Pausing or opening the bag doesn't stop a
 live run: your hero just stands still. There is no hit-stop in a live run.
 

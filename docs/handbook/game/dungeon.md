@@ -144,7 +144,8 @@ party order. The rules treat every hero the same:
   `Hero.mats` (a `mat` event for you) and handed home in `RunEnd.mats`. A solo run never calls
   the rng for them, so solo replays are unchanged ([forge.md](forge.md)).
 - A hero at 0 HP is down (`fall`) and stops acting; the run ends when the whole party is down.
-  `RunEnd` is still yours. A friend standing within `PARTY.revive.r` of one who is down for
+  `RunEnd` is still yours: `run.over` is the first hero's, and `overFor(run, h)` gives any
+  hero's own (their kills, items, materials), which the scene's recap uses for you. A friend standing within `PARTY.revive.r` of one who is down for
   `PARTY.revive.secs` brings them back up (`revive`, a filling ring in the scene); anyone still
   down gets up on the way down the stairs (`PARTY.stairsUp`). A hero who is down is carried
   through doors with the party.
@@ -165,7 +166,9 @@ party order. The rules treat every hero the same:
 
 **A live party run**: the game server plays the run and the scene follows it (`RunSetup.net`,
 `live()` in `scene.ts`, which hands the following to `Follower` in `src/game/net/follow.ts`; your own moves' events carry
-the hero who made them, `byOf(e)`, so a live run shows them at once); see [../backend/live-runs.md](../backend/live-runs.md).
+the hero who made them, `byOf(e)`, so a live run shows them at once; news for one hero only (an
+item into their bag, their drop, chest, chest item or material) is sent with `emitTo` and heard
+only by that hero, `heard(e, id)`, which `takeEvents` and the `Follower` apply); see [../backend/live-runs.md](../backend/live-runs.md).
 
 **A practice party run** (no game server, or "Try again"): the scene takes `RunSetup.friends`
 (name, class and their own hero sheets from `friendSheets` in `src/game/sheets.ts`) and `seed`,

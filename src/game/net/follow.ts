@@ -1,4 +1,4 @@
-import { byOf, stepRun, type GameEvent, type Input, type Run } from '../dungeon/engine';
+import { byOf, heard, stepRun, type GameEvent, type Input, type Run } from '../dungeon/engine';
 import { applySnapshot, type Press } from './wire';
 
 /* A phone's side of a live run, without the drawing (the scene in src/game/dungeon/scene.ts draws
@@ -64,8 +64,9 @@ export class Follower {
     let ack = 0;
     for (const t of texts) {
       const got = applySnapshot(run, t, this.me);
-      // Your own moves were played when you pressed them (`press`): not again.
-      events.push(...got.events.filter((e) => byOf(e) !== this.me));
+      // Your own moves were played when you pressed them (`press`): not again. A friend's own
+      // news (their item, their chest) is theirs.
+      events.push(...got.events.filter((e) => byOf(e) !== this.me && heard(e, this.me)));
       ack = got.ack[this.me] ?? 0;
     }
     const at = this.pressedAt.get(ack);
@@ -143,7 +144,13 @@ export class Follower {
       // where it stands in this phone's party (you're first here).
       inputs = run.party.map(() => still);
     inputs[this.me] = p;
+    // Cards come only from the server: a level, a chest or the stairs guessed here would roll
+    // other choices than the server's, and a pick from them would be turned down and asked again.
+    const asks = run.party.map((h) => [h.offer, h.relicOffer] as const),
+      stairs = run.stairsAsk;
     stepRun(run, inputs);
+    run.party.forEach((h, i) => ([h.offer, h.relicOffer] = asks[i]));
+    run.stairsAsk = stairs;
     return run.events.splice(0);
   }
 
