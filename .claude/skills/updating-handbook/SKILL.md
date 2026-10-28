@@ -58,6 +58,7 @@ no row: give a new folder its row (and a page if no page fits).
 | `backend/**`, `.github/workflows/backend.yml` | `backend/api.md` |
 | `src/lib/cloud*.ts`, `src/components/Cloud.tsx` | `backend/cloud-sync.md` |
 | `src/lib/friends*.ts`, `src/lib/party*.ts`, `src/lib/voice-client.ts`, `src/components/{Friends,Party}.tsx`, `backend/app/{friends,party,gifts,voice}.py`, `backend/app/routes/{friends,party,gifts}.py` | `backend/friends.md` |
+| `src/game/net/**`, `play/**`, `src/lib/play-client.ts`, `backend/app/play.py` | `backend/live-runs.md` |
 | `docker-compose*.yml`, `caddy/**`, `livekit/**`, `litellm-config.yaml`, `.env.example`, `scripts/deploy/**`, `.github/workflows/deploy-backend.yml` | `backend/server.md` |
 
 Also update `product/overview.md` for any change a player would notice (a new tab, a new feature,

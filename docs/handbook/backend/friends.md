@@ -55,8 +55,10 @@ Party button on a friend's row, or Invite in the lobby), picks the zone among th
 them, and starts once everyone else taps ready. A **start** is a seed and a time on the party:
 every phone sees it on its next look and walks in (`startToJoin` in `src/lib/party.ts`, run from
 `page.tsx`, played once per phone, `forma-party-played-v1`); then the party is back in its lobby
-with the ready flags cleared. Until the game server exists each phone plays a **practice run**:
-you, with bots playing your friends' heroes (see [../game/dungeon.md](../game/dungeon.md)). A
+with the ready flags cleared. The first attempt is a **live run** on the game server, everyone in
+one run ([live-runs.md](live-runs.md)); when that isn't there (not set up, offline) each phone
+plays a **practice run**: you, with bots playing your friends' heroes (see
+[../game/dungeon.md](../game/dungeon.md)). A
 party run (the Play tab's **Together**) keeps its loot and co-op materials but never moves the story:
 only Story runs clear a zone (`page.tsx`, `onEnd`). The lobby also lists the **Ember Road**'s chapters up to the one the leader is on (sent to the server as zone `20 + chapter`, `partyCode`/`zoneByCode` in `src/lib/fog.ts`); beating a road boss there moves the road on for each hero on that chapter (`wonRoad`, see [../game/story.md](../game/story.md)). Friends, invites and the lobby button live
 under Together.
@@ -66,7 +68,7 @@ under Together.
 | `backend/app/party.py` | Tables `parties`, `party_members`, `party_invites` (made on start), `PgStore`, `MemoryStore` |
 | `backend/app/routes/party.py` | `GET /party`, `POST /party/invite`, `/join`, `/decline`, `/leave`, `/start`, `PUT /party/ready`, `/zone` |
 | `backend/tests/test_party.py` | Invite, join, ready, start; only friends; only the leader; leaving |
-| `src/lib/party.ts`, `party-client.ts` | Types, `startToJoin`, `canStart`; the calls and the shared party view (`usePartyView`), the lobby's open flag |
+| `src/lib/party.ts`, `party-client.ts` | Types, `startToJoin`, `canStart`; the calls and the shared party view (`usePartyView`; an answer that comes back after a newer one is dropped, so a poll sent just before Join can't bring the invite back), the lobby's open flag |
 | `src/components/Party.tsx` | `usePartyPoll` (every 4 s in a party, 30 s otherwise), `PartyInviteCard`, `PartyButton`, `PartyLobby`, `VoiceBar` |
 
 ### Party voice

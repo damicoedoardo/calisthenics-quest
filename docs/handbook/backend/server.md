@@ -27,6 +27,7 @@ backend, as the Docker Compose stack in `docker-compose.yml`:
 | `caddy` | host `:80`, `:443` | The only public door. Gets the TLS certificate for `DOMAIN` itself (`caddy/Caddyfile`) |
 | `livekit` | `livekit:7880` through Caddy at `VOICE_DOMAIN`; host TCP `7881`, UDP `7882` | Party voice ([friends.md](friends.md#party-voice)). Settings in `livekit/livekit.yaml`; the key pair (`LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`) in `.env`, shared with the api |
 | `api` | `api:8000`, compose network only | The FastAPI app ([api.md](api.md)); image from GHCR |
+| `play` | `play:8090` through Caddy at `DOMAIN/play` | The game server for live party runs ([live-runs.md](live-runs.md)). Built on the server from the repo (`play/Dockerfile`), not GHCR; `PLAY_SECRET` in `.env`, shared with the api (with `PLAY_URL`) |
 | `litellm` | `litellm:4000`; host `127.0.0.1:4000` only (an SSH port-forward reaches its `/ui`) | The coach's LLM proxy, as on minlit: the api asks for `forma-coach`, `litellm-config.yaml` maps it to DeepSeek V4.1 Flash 1017 on OpenRouter. Keys in `.env`: `OPENROUTER_API_KEY` and `LITELLM_MASTER_KEY` (shared with the api). To change model: edit `litellm-config.yaml`, `git pull`, `docker compose up -d litellm`, no deploy |
 | `postgres` | host `127.0.0.1:5432` only | Runs `backend/db/init.sql` on first boot; data in the `postgres_data` volume |
 
@@ -42,7 +43,11 @@ image it swaps it in with a zero-downtime `docker rollout api` and checks `/heal
 Caddy. Why the api has no host port and Caddy re-resolves `api` every 2s: two api containers run
 side by side for a moment during a rollout.
 
-Everything outside the image (compose file, Caddyfile, deploy scripts, database changes) is
+The game server is built on the server instead: once `PLAY_SECRET` is set, the same poller
+fast-forwards the repo when `play/`, `src/` or `scripts/ts-hooks.mjs` change on `main` and runs
+`docker compose up -d --build play`.
+
+Everything else outside the image (compose file, Caddyfile, deploy scripts, database changes) is
 applied by hand after a `git pull` on the server. The one-time setup and those steps are in
 `scripts/deploy/README.md`.
 

@@ -45,6 +45,10 @@ services:
       # The coach: the LiteLLM proxy below, under its master key. Empty: the coach is off.
       - FORMA_LITELLM_URL=http://litellm:4000
       - FORMA_LITELLM_KEY=${LITELLM_MASTER_KEY:-}
+      # Live party runs: where phones find the game server, and the secret its passes are signed
+      # with. Empty: no live runs, a party plays with bots as before.
+      - FORMA_PLAY_URL=${PLAY_URL:-}
+      - FORMA_PLAY_SECRET=${PLAY_SECRET:-}
     depends_on:
       postgres:
         condition: service_healthy
@@ -85,6 +89,20 @@ services:
     volumes:
       - ./litellm-config.yaml:/app/config.yaml:ro
     command: ["--config", "/app/config.yaml", "--port", "4000"]
+    restart: unless-stopped
+
+  play:
+    # The game server for live party runs: one real run per party, played by the app's own engine.
+    # Built here from the repo (no image registry): `docker compose up -d --build play`. Caddy brings
+    # wss://<DOMAIN>/play to it as play:8090. A restart ends the runs going on (phones fall back).
+    build:
+      context: .
+      dockerfile: play/Dockerfile
+    expose:
+      - "8090"
+    environment:
+      # Shared with the api, which signs the passes (FORMA_PLAY_SECRET below).
+      - PLAY_SECRET=${PLAY_SECRET:-}
     restart: unless-stopped
 
   caddy:

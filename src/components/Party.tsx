@@ -73,9 +73,10 @@ export function usePartyPoll(signedIn: boolean, off: boolean) {
 
 /** "Ana invites you to the Fog": join or not now. */
 export function PartyInviteCard() {
-  const { invites } = usePartyView();
+  const { party, invites } = usePartyView();
   const [busy, setBusy] = useState(false);
-  const inv = invites[0];
+  // Never an invite to the party you're already in.
+  const inv = invites.find((i) => i.party_id !== party?.id);
   if (!inv) return null;
   const name = inv.from.name || 'A friend';
   return (
@@ -261,7 +262,7 @@ function Lobby({ state }: { state: GameState }) {
                 </p>
               )}
               <p className="mt-3 text-xs text-slate-400">
-                A practice run for now: you play your hero, and your friends&apos; heroes fight beside you, played by the game. Playing live together comes next.
+                <b className="text-slate-200">Not live yet:</b> each of you plays on your own phone, and your friends&apos; heroes fight beside you played by the game. Loot, XP and the Ember Road count for each of you. Playing live in one run comes with the game server.
               </p>
               {zone.road && <p className="mt-2 text-xs text-orange-200">Beat {zone.bossName} together and the Ember Road goes on for everyone on this chapter.</p>}
             </section>

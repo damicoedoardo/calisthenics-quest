@@ -1,0 +1,6 @@
+# The build sees only what the game server runs.
+*
+!play/
+!src/
+!scripts/ts-hooks.mjs
+play/node_modules

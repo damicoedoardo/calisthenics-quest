@@ -13,7 +13,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel, Field
 
-from app import voice
+from app import play, voice
 from app.auth import AuthedUser, get_authed_user
 from app.config import settings
 from app.friends import FriendStore
@@ -214,3 +214,28 @@ async def voice_pass(
         seconds=settings.voice_pass_seconds,
     )
     return {"url": settings.livekit_url, "token": token, "room": voice.room_of(party.id)}
+
+
+@router.post("/party/play")
+async def play_pass(
+    user: AuthedUser = Depends(get_authed_user),
+    parties: PartyStore = Depends(get_party_store),
+) -> dict[str, str]:
+    """A pass to the party's live run, once the leader has started one; for its members only."""
+    if not (settings.play_url and settings.play_secret):
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Live runs aren't set up yet")
+    party = await parties.of(user.user_id)
+    if not party:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "You're not in a party")
+    if party.seed is None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Your party hasn't started a run")
+    token = play.play_pass(
+        secret=settings.play_secret,
+        user_id=user.user_id,
+        party_id=party.id,
+        seed=party.seed,
+        zone=party.zone,
+        users=[m.user_id for m in party.members],
+        seconds=settings.play_pass_seconds,
+    )
+    return {"url": settings.play_url, "token": token}

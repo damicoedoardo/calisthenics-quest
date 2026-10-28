@@ -26,6 +26,11 @@ class Settings(BaseSettings):
     livekit_api_secret: str = ""
     # How long a voice pass lasts; the app asks for a new one each time it joins.
     voice_pass_seconds: int = 6 * 3600
+    # Live party runs: the game server's address (wss://.../play) and the secret it shares with us
+    # (PLAY_SECRET there). Empty: runs together stay practice runs on each phone.
+    play_url: str = ""
+    play_secret: str = ""
+    play_pass_seconds: int = 15 * 60
 
     # The coach (an LLM) through the LiteLLM proxy on this server, which sends it to OpenRouter
     # (litellm-config.yaml). Empty key: the coach is off and /coach says so. Keys live only in
