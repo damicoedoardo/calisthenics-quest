@@ -207,4 +207,24 @@ describe('sprite registry', () => {
     prints['kindled long hair'] = hash(framesFor('kindled', 'idle', { hair: 'long' }));
     expect(prints).toMatchSnapshot();
   });
+
+  it('SP look fingerprints', () => {
+    // every SP, boy and girl, at rest and walking, bare-handed and with the class's weapon;
+    // its attack and its card kept apart, so a new attack clip moves only those
+    const prints: Record<string, string> = {};
+    for (const cls of ['warrior', 'archer', 'mage', 'monk'] as ClassId[])
+      for (const n of [1, 2, 3, 4])
+        for (const sex of ['m', 'f'] as const) {
+          const look = STARTER_LOOKS[sex],
+            armed = { ...uniformGear(cls, 0), weapon: uniformGear(cls, 1).weapon },
+            k = `sp ${cls} ${n} ${sex}`;
+          for (const [g, gear] of [['bare', uniformGear(cls, 0)], ['armed', armed]] as const) {
+            const o = { gear, classId: cls, look, sp: n };
+            prints[`${k} ${g} rest`] = hash([...framesFor('hero', 'idle', o), ...framesFor('hero', 'walk', o)]);
+            prints[`${k} ${g} attack`] = hash(framesFor('hero', 'attack', o));
+          }
+          prints[`${k} card`] = hash(framesFor('spCard', 'idle', { classId: cls, n, awake: true, gear: armed, look }));
+        }
+    expect(prints).toMatchSnapshot();
+  });
 });
