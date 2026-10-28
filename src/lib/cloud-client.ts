@@ -46,11 +46,9 @@ export interface CloudStatus {
   /** Signed in as (null: signed out). */
   email: string | null;
   signedIn: boolean;
-  phase: 'idle' | 'saving' | 'saved' | 'offline' | 'error' | 'ask';
+  phase: 'idle' | 'saving' | 'saved' | 'offline' | 'error';
   savedAt?: string;
   workouts?: number;
-  /** When phase is 'ask': the cloud copy to choose against. */
-  cloud?: CloudCopy;
 }
 
 let status: CloudStatus = { email: null, signedIn: false, phase: 'idle' };
