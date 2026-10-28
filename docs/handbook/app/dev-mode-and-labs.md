@@ -14,7 +14,9 @@ timestamp: 2026-10-28
 developer's account has it (Edoardo's call, 2026-10-28), on the live app and on previews alike:
 signed in with an email whose SHA-256 (trimmed, lower-cased) is in `DEV_EMAILS` (`isDeveloper`;
 the repo is public, so the addresses never are in it), or on localhost. Nobody else sees the
-switch or the wrench. To add a developer, add the hash of their email to `DEV_EMAILS`.
+switch or the wrench. To add a developer, add the hash of their email to `DEV_EMAILS`. Besides
+Edoardo's own there are two test accounts of his (Gmail "+" addresses that land in his inbox), for
+trying friends and parties in two windows.
 
 It is off until switched on in You > Settings ("Developer mode"). On, the app plays a separate
 **developer save** (`DEV_SAVE_KEY`, `forma-dev-save-v1`, `switchDevSave` in `src/lib/store.ts`
