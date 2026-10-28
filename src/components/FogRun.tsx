@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
+import { Fragment, memo, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Backpack, Pause, Smartphone } from 'lucide-react';
 import { heroLevel, type GameState } from '@/lib/game';
 import { fill, storyWords } from '@/story/engine';
@@ -350,7 +350,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party, tutor
 
   const left = hud ? Math.max(0, RUN_SECONDS - hud.seconds) : RUN_SECONDS;
   // What a fall would cost right now: what you found and still carry in the bag.
-  const risk = hud ? atRisk(state, hud.gear.bag) : null;
+  const carried = hud?.gear.bag,
+    risk = useMemo(() => (carried ? atRisk(state, carried) : null), [state, carried]);
 
   return (
     <div className="fixed inset-0 z-50 touch-none select-none bg-ink-950" data-run-end={end ? JSON.stringify(end) : undefined}>
@@ -724,7 +725,18 @@ function FinalBadge({ id }: { id: SpMoveId }) {
 
 /** HP, level and XP, top left: a short pixel bar each, the numbers on the HP bar, and the chest
     items you hold under them. */
-function Vitals({ hud }: { hud: Hud }) {
+/** The HUD comes ten times a second; these keep a part from redrawing when what it shows hasn't
+    changed (the run keeps unchanged parts of the HUD the same objects). Callbacks are left out:
+    the HUD's reach the run through a ref, so an older one does the same. */
+function sameButCallbacks<P extends object>(a: P, b: P): boolean {
+  const keys = Object.keys(b) as (keyof P)[];
+  return keys.length === Object.keys(a).length && keys.every((k) => typeof b[k] === 'function' || Object.is(a[k], b[k]));
+}
+function sameVitals({ hud: a }: { hud: Hud }, { hud: b }: { hud: Hud }): boolean {
+  return a.hp === b.hp && a.maxHp === b.maxHp && a.xp === b.xp && a.xpNext === b.xpNext && a.level === b.level && a.relics === b.relics && a.sp?.final === b.sp?.final && a.sp?.finals === b.sp?.finals;
+}
+
+const Vitals = memo(function Vitals({ hud }: { hud: Hud }) {
   const share = hud.hp / hud.maxHp,
     relics = Object.entries(hud.relics ?? {}) as [RelicId, number][];
   return (
@@ -762,10 +774,10 @@ function Vitals({ hud }: { hud: Hud }) {
       )}
     </div>
   );
-}
+}, sameVitals);
 
 /** The bag, top right: how full it is, and in red how many things a fall would cost right now. */
-function BagButton({ bag, risk, keys, onOpen }: { bag: number; risk: Item[] | null; keys: boolean; onOpen: () => void }) {
+const BagButton = memo(function BagButton({ bag, risk, keys, onOpen }: { bag: number; risk: Item[] | null; keys: boolean; onOpen: () => void }) {
   const lost = risk?.length ?? 0,
     full = bag >= BAG;
   return (
@@ -783,7 +795,7 @@ function BagButton({ bag, risk, keys, onOpen }: { bag: number; risk: Item[] | nu
       {lost > 0 && <span className="absolute -right-1.5 -top-1.5 min-w-[16px] rounded-sm bg-red-500 px-1 py-[3px] text-center font-pixel text-[7px] leading-none text-white ring-1 ring-ink-950">{lost}</span>}
     </button>
   );
-}
+}, sameButCallbacks);
 
 /** A key on the keyboard that does what this button does, shown on a computer. `corner` pins it
     to the bottom right of the button it sits in. */
@@ -842,7 +854,7 @@ function RiskLine({ risk, size = 26 }: { risk: Item[]; size?: number }) {
 
 /** How deep you are: a row of floors, filling as you go, the boss at the end; an ember marks the
     Warden's floor. */
-function DepthMap({ floor, floors, boss, midName, mid }: { floor: number; floors: number; boss: string; midName: string; mid: number | null }) {
+const DepthMap = memo(function DepthMap({ floor, floors, boss, midName, mid }: { floor: number; floors: number; boss: string; midName: string; mid: number | null }) {
   return (
     <div className="flex items-center gap-[3px]" role="img" aria-label={`Floor ${floor} of ${floors}, ${mid ? `${midName.replace(/^The/, 'the')} on floor ${mid}, ` : ''}${boss} at the bottom.`}>
       {Array.from({ length: floors }, (_, i) => {
@@ -856,7 +868,7 @@ function DepthMap({ floor, floors, boss, midName, mid }: { floor: number; floors
       <Sprite id="markIcon" opts={{ name: 'boss' }} size={11} label="The boss" className={floor === floors ? 'motion-safe:animate-pulse' : 'opacity-70'} />
     </div>
   );
-}
+}, sameButCallbacks);
 
 /** Each kind of room's color on the map, and its name there (the mid-boss's is its own). */
 const MAP_LOOK: Record<CellKind, { color: string; name: string }> = {
@@ -876,7 +888,7 @@ const UNKNOWN_ROOM = { color: '#64748b', name: '?' };
     the ones behind a door you haven't opened, as gray dashed outlines that don't say what waits
     there (the stairs too); you, the gold one. Tap for it big, with
     names; the run holds still while it's open. */
-function FloorMap({ map, floor, midName, keys, hold }: { map: MiniMap; floor: number; midName: string; keys: boolean; hold: (on: boolean) => void }) {
+const FloorMap = memo(function FloorMap({ map, floor, midName, keys, hold }: { map: MiniMap; floor: number; midName: string; keys: boolean; hold: (on: boolean) => void }) {
   const [open, setOpen] = useState(false);
   const toggle = (on: boolean) => {
     setOpen(on);
@@ -960,11 +972,11 @@ function FloorMap({ map, floor, midName, keys, hold }: { map: MiniMap; floor: nu
       )}
     </>
   );
-}
+}, sameButCallbacks);
 
 /** A big foe's health along the top: the zone's boss, or the Warden halfway down (in ember colors,
     red once it's past half). */
-function BossBar({ name, hp, max, ember }: { name: string; hp: number; max: number; ember?: 'warm' | 'hot' }) {
+const BossBar = memo(function BossBar({ name, hp, max, ember }: { name: string; hp: number; max: number; ember?: 'warm' | 'hot' }) {
   return (
     <div className="mx-auto mt-1.5 w-full max-w-xs">
       <p className={`text-center font-pixel text-[9px] ${ember ? 'text-orange-300' : 'text-violet-300'}`}>{name}</p>
@@ -973,12 +985,12 @@ function BossBar({ name, hp, max, ember }: { name: string; hp: number; max: numb
       </div>
     </div>
   );
-}
+}, sameButCallbacks);
 
 /** The class ability: a big round button under your right thumb, filling up while it recharges.
     The dodge sits to its left, smaller, on its own short clock. With an SP on, its own move sits
     between them and its final over the ability, glowing once it's full. */
-function AbilityButton({ bare, id, ready, dodge, sp, keys, onUse, onDodge, onSkill, onFinal }: { bare?: boolean; id: AbilityId; ready: number; dodge: number; sp: Hud['sp']; keys: boolean; onUse: () => void; onDodge: () => void; onSkill: () => void; onFinal: () => void }) {
+const AbilityButton = memo(function AbilityButton({ bare, id, ready, dodge, sp, keys, onUse, onDodge, onSkill, onFinal }: { bare?: boolean; id: AbilityId; ready: number; dodge: number; sp: Hud['sp']; keys: boolean; onUse: () => void; onDodge: () => void; onSkill: () => void; onFinal: () => void }) {
   const up = ready >= 1,
     dodgeUp = dodge >= 1;
   return (
@@ -1028,7 +1040,7 @@ function AbilityButton({ bare, id, ready, dodge, sp, keys, onUse, onDodge, onSki
       )}
     </div>
   );
-}
+}, sameButCallbacks);
 
 /** The first dungeon's tip for where you are: move, the door, the stairs, the dodge, the bottom. */
 function TutorialTip({ hud, keys }: { hud: Hud; keys: boolean }) {

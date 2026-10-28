@@ -116,14 +116,20 @@ const FX_CAP = { bits: 300, sparks: 200, puffs: 160, fading: 80 };
     of the room's height on screen, so a shot from the far wall is seen coming. */
 const FIT = { edge: 12, hud: 30, see: 300 };
 
-/** The system asks for less motion: no hit-stop and no buzz. */
+/** The system asks for less motion: no hit-stop and no buzz. Asked once and then kept up to date,
+    since it's asked on every hit. */
+let lessMotion: MediaQueryList | null | undefined;
 function reducedMotion(): boolean {
   try {
-    return !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    if (lessMotion === undefined) lessMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)') ?? null;
+    return !!lessMotion?.matches;
   } catch {
     return false;
   }
 }
+
+/** A share (0 to 1) cut down to whole hundredths: finer than any ring shows, and 1 only when full. */
+const hundredths = (x: number) => Math.floor(x * 100) / 100;
 
 /** A light buzz on phones, for the moments you should feel: never with reduced motion or the sound off. */
 function buzz(pattern: number | number[]) {
@@ -374,7 +380,10 @@ class DungeonScene extends Phaser.Scene {
   private shots = new Map<number, Phaser.GameObjects.Image>();
   private gems = new Map<number, Phaser.GameObjects.Image>();
   private flames: Phaser.GameObjects.Sprite[] = [];
+  /** The walls and doors, drawn off screen as some 17,000 small rects; `walls` holds them as one
+      picture, made again only when the room changes, so a frame never redraws them. */
   private room!: Phaser.GameObjects.Graphics;
+  private walls!: Phaser.GameObjects.RenderTexture | Phaser.GameObjects.Graphics;
   private floorTiles!: Phaser.GameObjects.TileSprite;
   /** Water and spikes, redrawn each frame (they ripple and rise). */
   private ground!: Phaser.GameObjects.Graphics;
@@ -406,7 +415,7 @@ class DungeonScene extends Phaser.Scene {
   private bits!: Phaser.GameObjects.Particles.ParticleEmitter;
   private sparks!: Phaser.GameObjects.Particles.ParticleEmitter;
   private puffs!: Phaser.GameObjects.Particles.ParticleEmitter;
-  private numbers: Phaser.GameObjects.Text[] = [];
+  private numbers: Phaser.GameObjects.BitmapText[] = [];
   private bossLabel: Phaser.GameObjects.Text | null = null;
   /** The boss's speech bubble, until `speechUntil`; the next taunt comes at `tauntAt`. */
   private speech!: Phaser.GameObjects.Text;
@@ -482,7 +491,7 @@ class DungeonScene extends Phaser.Scene {
   /** The mid-boss's state last frame, to hear it change: the Lantern's light, the Sand Golem as stone. */
   private midWas: { dim: number | null; stone: boolean } = { dim: null, stone: false };
   /** Damage numbers by the monster they belong to, so quick hits add up in one number. */
-  private numberOf = new Map<Phaser.GameObjects.Text, { key: number; n: number; at: number; y: number }>();
+  private numberOf = new Map<Phaser.GameObjects.BitmapText, { key: number; n: number; at: number; y: number }>();
   private offered = false;
   private ended = false;
   private hudAt = 0;
@@ -533,7 +542,7 @@ class DungeonScene extends Phaser.Scene {
   /** The layers drawn in engine points, turned a quarter so they lie like the room on screen. */
   private turn() {
     const h = this.run.area.h;
-    for (const o of [this.floorTiles, this.ground, this.room, this.fx]) o.setRotation(Math.PI / 2).setPosition(h, 0);
+    for (const o of [this.floorTiles, this.ground, this.walls, this.fx]) o.setRotation(Math.PI / 2).setPosition(h, 0);
   }
 
   /** Particles from an engine point, `dy` screen pixels below it (up when negative). */
@@ -577,7 +586,7 @@ class DungeonScene extends Phaser.Scene {
         this.run.events.length = 0;
       }
       this.ended = true;
-      this.bus.hud(this.hud());
+      this.sendHud();
       this.bus.end(recap(this.run));
       return;
     }
@@ -588,7 +597,11 @@ class DungeonScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#07080d').setRoundPixels(true);
     this.floorTiles = this.add.tileSprite(0, 0, ROOM.w, ROOM.h, 'ground').setOrigin(0).setDepth(-3);
     this.ground = this.add.graphics().setDepth(-1.5);
-    this.room = this.add.graphics().setDepth(-1);
+    // Without a renderer (a fast bot run) there's nothing to draw into: the walls stay a Graphics.
+    if (this.game.renderer) {
+      this.room = this.make.graphics(undefined, false);
+      this.walls = this.add.renderTexture(0, 0, ROOM.w, ROOM.h).setOrigin(0).setDepth(-1);
+    } else this.walls = this.room = this.add.graphics().setDepth(-1);
     this.torchFire = this.add.graphics().setDepth(-0.5);
     this.shadows = this.add.graphics().setDepth(0.5);
     this.tips = this.add.graphics().setDepth(-1.4);
@@ -641,15 +654,8 @@ class DungeonScene extends Phaser.Scene {
     this.bits.setDepth(90001);
     this.sparks = this.add.particles(0, 0, 'dot', { emitting: false, speed: { min: 60, max: 200 }, lifespan: 300, alpha: { start: 1, end: 0 }, tint: [0xfde68a, 0xfbbf24, 0xffffff], maxAliveParticles: FX_CAP.sparks });
     this.sparks.setDepth(90002);
-    for (let i = 0; i < 40; i++) {
-      this.numbers.push(
-        this.add
-          .text(0, 0, '', { fontFamily: '"Press Start 2P", monospace', fontSize: '8px', color: '#ffffff', stroke: '#0b0d14', strokeThickness: 3 })
-          .setOrigin(0.5)
-          .setDepth(95000)
-          .setVisible(false),
-      );
-    }
+    this.numberFonts();
+    for (let i = 0; i < 40; i++) this.numbers.push(this.add.bitmapText(0, 0, 'num9', '', this.numberCell[9]).setLetterSpacing(this.numberGap[9]).setOrigin(0.5).setDepth(95000).setVisible(false));
     this.speech = this.add
       .text(0, 0, '', { fontFamily: '"Press Start 2P", monospace', fontSize: '8px', color: '#fef2f2', backgroundColor: '#0b0d14d9', padding: { x: 6, y: 5 }, align: 'center', wordWrap: { width: 190 }, lineSpacing: 4 })
       .setOrigin(0.5, 1)
@@ -827,6 +833,7 @@ class DungeonScene extends Phaser.Scene {
       g.generateTexture(key, w, h);
     };
     tex('dot', 3, 3, () => g.fillStyle(0xffffff).fillRect(0, 0, 3, 3));
+    tex('shadow', 64, 20, () => g.fillStyle(0x000000).fillEllipse(32, 10, 64, 20));
     if (this.textures.exists('mist')) this.textures.remove('mist');
     const mist = this.textures.createCanvas('mist', 64, 64);
     if (mist) {
@@ -1125,6 +1132,11 @@ class DungeonScene extends Phaser.Scene {
       for (let y = 5; y < w; y += 6) g.fillStyle(S[2]).fillRect(l - 6, y, 6, 1).fillRect(l + door, y, 6, 1);
       g.restore();
     }
+    const rt = this.walls;
+    if (rt instanceof Phaser.GameObjects.RenderTexture) {
+      if (rt.width !== W || rt.height !== H) rt.resize(W, H, false);
+      rt.clear().draw(g, 0, 0);
+    }
   }
 
   /** What a door says, and its color: a door you haven't been through doesn't say what waits
@@ -1309,7 +1321,7 @@ class DungeonScene extends Phaser.Scene {
     this.drawVignette();
     if (this.time.now >= this.hudAt) {
       this.hudAt = this.time.now + 100;
-      this.bus.hud(this.hud());
+      this.sendHud();
     }
     if (run.over && !this.ended) {
       this.ended = true;
@@ -1319,7 +1331,7 @@ class DungeonScene extends Phaser.Scene {
         this.speak(this.setup.lines?.end, 3000);
         this.syncSpeech();
       }
-      this.bus.hud(this.hud());
+      this.sendHud();
       if (run.over.won && !run.home) this.cameras.main.flash(600, 255, 240, 200);
       else this.hero.setTint(0x6b7280);
       this.time.delayedCall(run.home ? 300 : run.over.won ? 1200 : 900, () => this.bus.end(recap(run)));
@@ -1520,6 +1532,27 @@ class DungeonScene extends Phaser.Scene {
     return { hp: Math.max(0, b.hp), max: b.maxHp };
   }
 
+  /** Hands the page the HUD only when something on it changed, and keeps the parts that didn't
+      the same objects, so the page redraws only what moved. */
+  private sendHud() {
+    const next = this.hud(),
+      last = this.lastHud;
+    if (last) {
+      let same = true;
+      for (const k of Object.keys(next) as (keyof Hud)[]) {
+        const a = last[k],
+          b = next[k];
+        if (a === b) continue;
+        if (a && b && typeof a === 'object' && JSON.stringify(a) === JSON.stringify(b)) (next as unknown as Record<string, unknown>)[k] = a;
+        else same = false;
+      }
+      if (same) return;
+    }
+    this.lastHud = next;
+    this.bus.hud(next);
+  }
+  private lastHud: Hud | null = null;
+
   private hud(): Hud {
     const r = this.run;
     return {
@@ -1537,9 +1570,9 @@ class DungeonScene extends Phaser.Scene {
       wardenFloor: wardenFloor(r.layout) >= 0 ? wardenFloor(r.layout) + 1 : null,
       floor: r.floor + 1,
       floors: r.layout.floors,
-      ability: { id: r.hero.ability, ready: abilityReady(r, r.hero) },
-      sp: r.hero.sp ? { skill: r.hero.sp.skill, skillReady: skillReady(r, r.hero), final: r.hero.sp.final, finalReady: finalReady(r.hero), finals: this.finals } : null,
-      dodge: Math.min(1, 1 - (r.hero.dodgeAt - r.t) / DODGE.cd),
+      ability: { id: r.hero.ability, ready: hundredths(abilityReady(r, r.hero)) },
+      sp: r.hero.sp ? { skill: r.hero.sp.skill, skillReady: hundredths(skillReady(r, r.hero)), final: r.hero.sp.final, finalReady: hundredths(finalReady(r.hero)), finals: this.finals } : null,
+      dodge: hundredths(Math.min(1, 1 - (r.hero.dodgeAt - r.t) / DODGE.cd)),
       cleared: r.cleared,
       relics: { ...r.hero.relics },
       map: this.miniMap(),
@@ -1772,21 +1805,30 @@ class DungeonScene extends Phaser.Scene {
       fl.setDepth(fl.y + 1);
     });
 
-    const g = this.shadows.clear().fillStyle(0x000000, 0.3);
-    g.fillEllipse(hx, hy + 22, 30, 9);
+    // Shadows are pictures from a pool, not shapes: a Graphics ellipse is cut into triangles anew
+    // each frame, for every monster.
+    let n = 0;
+    const shadow = (x: number, y: number, w: number, h: number) => {
+      const im = (this.shadowPool[n++] ??= this.add.image(0, 0, 'shadow').setAlpha(0.3).setDepth(0.5));
+      im.setPosition(x, y).setDisplaySize(w, h).setVisible(true);
+    };
+    shadow(hx, hy + 22, 30, 9);
     for (const f of r.foes)
       if (f.alive) {
         const [X, Y] = this.P(f.x, f.y);
-        g.fillEllipse(X, Y + f.def.r + 6, f.def.r * 2.6, f.def.r * 0.8);
+        shadow(X, Y + f.def.r + 6, f.def.r * 2.6, f.def.r * 0.8);
       }
+    for (let i = n; i < this.shadowPool.length && this.shadowPool[i].visible; i++) this.shadowPool[i].setVisible(false);
     // Elites stand on a gold ring.
-    g.lineStyle(2, 0xfbbf24, 0.8);
+    const g = this.shadows.clear().lineStyle(2, 0xfbbf24, 0.8);
     for (const f of r.foes)
       if (f.alive && f.elite) {
         const [X, Y] = this.P(f.x, f.y);
         g.strokeEllipse(X, Y + f.def.r + 4, f.def.r * 3, f.def.r);
       }
   }
+
+  private shadowPool: Phaser.GameObjects.Image[] = [];
 
   private syncMap<T extends { id: number; x: number; y: number }>(
     map: Map<number, Phaser.GameObjects.Image>,
@@ -2397,6 +2439,57 @@ class DungeonScene extends Phaser.Scene {
     }
   }
 
+  /** The damage numbers' digits, white on a dark edge, drawn once in the pixel font at both sizes
+      (9 and 11 px) and tinted per number: a text object would paint and upload a new picture on
+      every hit. If the font isn't in yet, they're drawn again once it is. */
+  private numberGap: Record<number, number> = { 9: 0, 11: 0 };
+  /** Each size's cell width: the font's own size, so its digits are drawn one to one. */
+  private numberCell: Record<number, number> = { 9: 9, 11: 11 };
+  private numberFonts() {
+    const chars = '0123456789+',
+      font = (size: number) => `${size}px "Press Start 2P", monospace`,
+      bake = () => {
+        for (const size of [9, 11]) {
+          const key = `num${size}`,
+            probe = document.createElement('canvas').getContext('2d');
+          if (!probe) return;
+          probe.font = font(size);
+          const step = Math.ceil(probe.measureText('0').width),
+            cw = step + 4,
+            ch = size + 6;
+          if (this.textures.exists(key)) this.textures.remove(key);
+          const tex = this.textures.createCanvas(key, cw * chars.length, ch);
+          if (!tex) return;
+          const ctx = tex.getContext();
+          ctx.font = font(size);
+          ctx.textBaseline = 'alphabetic';
+          ctx.lineWidth = 3;
+          ctx.lineJoin = 'round';
+          ctx.strokeStyle = '#0b0d14';
+          ctx.fillStyle = '#ffffff';
+          [...chars].forEach((c, i) => {
+            ctx.strokeText(c, i * cw + 2, size + 2);
+            ctx.fillText(c, i * cw + 2, size + 2);
+          });
+          tex.refresh();
+          this.cache.bitmapFont.remove(key);
+          this.cache.bitmapFont.add(key, Phaser.GameObjects.RetroFont.Parse(this, { image: key, width: cw, height: ch, chars, charsPerRow: chars.length, 'spacing.x': 0, 'spacing.y': 0, 'offset.x': 0, 'offset.y': 0, lineSpacing: 0 }));
+          this.numberGap[size] = step - cw;
+          this.numberCell[size] = cw;
+        }
+        for (const t of this.numbers) {
+          const size = t.font === 'num11' ? 11 : 9;
+          t.setFont(t.font, this.numberCell[size]).setLetterSpacing(this.numberGap[size]);
+        }
+      };
+    bake();
+    try {
+      if (!document.fonts.check(font(9))) void document.fonts.load(font(9)).then(() => this.sys.isActive() && bake());
+    } catch {
+      // No font loading API: the numbers stay as drawn.
+    }
+  }
+
   /** A number floating `lift` pixels above an engine point. */
   private number(ex: number, ey: number, lift: number, n: number, color?: string, key?: number) {
     const now = this.time.now,
@@ -2420,12 +2513,13 @@ class DungeonScene extends Phaser.Scene {
     this.showNumber(t, px, at, n, color, false);
   }
 
-  private showNumber(t: Phaser.GameObjects.Text, x: number, y: number, n: number, color: string | undefined, again: boolean) {
-    const big = n >= 30;
+  private showNumber(t: Phaser.GameObjects.BitmapText, x: number, y: number, n: number, color: string | undefined, again: boolean) {
+    const big = n >= 30,
+      size = big ? 11 : 9;
     this.tweens.killTweensOf(t);
+    if (t.font !== `num${size}`) t.setFont(`num${size}`, this.numberCell[size]).setLetterSpacing(this.numberGap[size]);
     t.setText(color === HEAL ? `+${n}` : String(n))
-      .setColor(color ?? (big ? '#fbbf24' : '#ffffff'))
-      .setFontSize(big ? 11 : 9)
+      .setTint(hex(color ?? (big ? '#fbbf24' : '#ffffff')))
       .setPosition(x, y)
       .setVisible(true)
       .setAlpha(1)
@@ -2960,7 +3054,7 @@ class DungeonScene extends Phaser.Scene {
     }
     for (const e of takeEvents(this.run)) this.react(e);
     this.syncLoot();
-    this.bus.hud(this.hud());
+    this.sendHud();
   }
 
   stairsChoice(choice: 'deeper' | 'leave' | 'stay') {

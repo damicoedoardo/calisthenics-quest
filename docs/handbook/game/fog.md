@@ -139,6 +139,9 @@ phone" card (`usePortrait`), and where the browser allows it (Android, installed
 screen itself for the run (`useSideways`). The rest of the app stays upright. Sideways, the room
 fills the whole screen and the camera follows you in it; the HUD is small and kept to the corners
 (see "Sideways on screen" in [dungeon.md](dungeon.md)).
+The HUD's parts (`Vitals`, `DepthMap`, `BagButton`, `FloorMap`, `BossBar`, `AbilityButton`) are
+memoized: the scene sends the HUD up to ten times a second, and only a part whose data changed
+redraws (see "What a frame costs" in [dungeon.md](dungeon.md)).
 
 **The first dungeon.** A new player's opening plays one run before anything else: `FogRun` with
 `tutorial` (`{ voice, onDone }`) in `FIRST_FOG_ZONE` (`src/lib/fog.ts`: zone 1's look, monsters and
