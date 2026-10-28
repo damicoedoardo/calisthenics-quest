@@ -27,6 +27,7 @@ import {
   spDef,
   type AbilityId,
   type SpMoveId,
+  type SpWeapon,
   type SpNo,
   type SpPassiveId,
   type Ally,
@@ -243,6 +244,8 @@ export interface Shot {
   /** Whose it is: they get the kill. */
   by: Hero;
   kind: 'arrow' | 'orb';
+  /** The SP weapon that threw it (a cannonball, a boomerang, a ki blast), for its look on screen. */
+  look?: SpWeapon;
   x: number;
   y: number;
   vx: number;
@@ -264,7 +267,8 @@ export interface Gem {
 
 /** What happened this step, for the screen and the speakers. */
 export type GameEvent =
-  | { type: 'attack'; kind: AttackKind; x: number; y: number; angle: number; n: number; r?: number }
+  /** A basic attack; `weapon` is the worn SP's weapon (its own hit on screen), `arc` how wide a swing cuts. */
+  | { type: 'attack'; kind: AttackKind; x: number; y: number; angle: number; n: number; r?: number; weapon?: SpWeapon; arc?: number }
   | { type: 'hit'; id: number; x: number; y: number; dmg: number; boss: boolean; crit?: boolean }
   | { type: 'kill'; id: number; x: number; y: number; kind: FoeKind; elite: boolean }
   | { type: 'hurt'; x: number; y: number; dmg: number; by: 'shot' | 'touch' | 'image' | 'reflection' }
@@ -272,8 +276,10 @@ export type GameEvent =
   | { type: 'burst'; x: number; y: number; r: number; color: 'nova' | 'orb' | 'wave' | 'fire' | 'ability' }
   | { type: 'chain'; points: { x: number; y: number }[] }
   | { type: 'ability'; id: AbilityId; x: number; y: number; toX: number; toY: number }
-  /** An SP move: its own move or its final, a ring of size `r` at x, y. */
-  | { type: 'sp'; id: SpMoveId; x: number; y: number; r: number; final: boolean; angle?: number; points?: { x: number; y: number }[]; secs?: number }
+  /** An SP move: its own move or its final, of size `r` at x, y. `to` is where it ends (a leap's
+      landing, a beam's or wall's far end, the monster a hook drags), `angle` the way it goes,
+      `points` a chain's path, `width` a beam's or wall's width, `secs` how long it lasts. */
+  | { type: 'sp'; id: SpMoveId; x: number; y: number; r: number; final: boolean; angle?: number; points?: { x: number; y: number }[]; secs?: number; to?: { x: number; y: number }; width?: number }
   /** An SP's passive went off: a monster caught fire, a tailwind, a split star, the flow's heal. */
   | { type: 'passive'; id: SpPassiveId; x: number; y: number }
   | { type: 'dodge'; x: number; y: number; toX: number; toY: number }
@@ -439,7 +445,7 @@ export interface Hero {
   /** The monk's calm: Stillness is ready when it reaches CALM.full (it fills by fighting). */
   calm: number;
   /** The SP worn into the run (which one, its moves and passive, from SP_CARDS), or null. */
-  sp: { n: SpNo; skill: SpMoveId; final: SpMoveId; passive: SpPassiveId } | null;
+  sp: { n: SpNo; skill: SpMoveId; final: SpMoveId; passive: SpPassiveId; weapon: SpWeapon } | null;
   skillAt: number;
   /** The SP's final is ready when this reaches SURGE.full (it fills by fighting). */
   surge: number;
@@ -607,7 +613,7 @@ function spOn(hs: HeroSetup): Hero['sp'] {
   if (!hs.sp) return null;
   const n: SpNo = hs.sp === true ? 1 : hs.sp,
     d = spDef(hs.classId, n);
-  return { n, skill: d.skill, final: d.final, passive: d.passive };
+  return { n, skill: d.skill, final: d.final, passive: d.passive, weapon: d.weapon };
 }
 
 /** The passive of the SP a hero wears, if it is this one. */
