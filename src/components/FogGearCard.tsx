@@ -37,7 +37,8 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
     setPick(id === pick ? null : id);
     setSure(false);
   };
-  const hint = <p className={`text-[11px] text-slate-500 ${land ? 'text-center' : 'mt-3'}`}>Tap an item to wear it, give it to {flame === 'Your flame' ? 'your flame' : flame}, or take it to Mira&apos;s forge.</p>;
+  const hintText = `Tap an item to wear it, give it to ${flame === 'Your flame' ? 'your flame' : flame}, or take it to Mira's forge.`;
+  const hint = <p className="text-center text-[11px] text-slate-500">{hintText}</p>;
   return (
     <section className={`rounded-2xl bg-ink-800 ${land ? 'flex h-full flex-col p-3' : 'p-4'}`}>
       <div className="flex items-baseline justify-between">
@@ -132,7 +133,14 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
           {all.length > 0 && hint}
         </>
       ) : (
-        all.length > 0 && hint
+        // Upright, the same: Mira waits under the vault.
+        <div className="mt-3 flex items-center gap-3 rounded-xl bg-ink-900/60 p-3">
+          <Sprite id="mira" size={48} label="Mira" />
+          <div className="min-w-0">
+            <p className="font-pixel text-[9px] text-gold-300">Mira&apos;s forge</p>
+            {all.length > 0 && <p className="mt-1 text-[11px] text-slate-500">{hintText}</p>}
+          </div>
+        </div>
       )}
       </Side>
       </Side>
