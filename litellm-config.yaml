@@ -1,0 +1,34 @@
+# FORMA's LiteLLM proxy (the coach's LLM), the same shape as minlit's.
+#
+# The api asks for `forma-coach` (FORMA_COACH_MODEL, backend/app/config.py). To switch model or
+# provider, change only this entry, then `docker compose up -d litellm` on the server: no deploy.
+# Mounted read-only at /app/config.yaml in the container; a change needs a container restart.
+
+model_list:
+  # DeepSeek V4.1 Flash 1017 via OpenRouter, as minlit uses. `provider` picks the fastest host
+  # among those charging at most $0.15 / $0.60 per 1M input/output tokens.
+  - model_name: forma-coach
+    litellm_params:
+      model: openrouter/deepseek/deepseek-v4.1-flash-1017
+      api_key: os.environ/OPENROUTER_API_KEY
+      extra_body:
+        provider:
+          sort: throughput
+          max_price:
+            prompt: 0.15
+            completion: 0.6
+      # USD per token, approximate; only for LiteLLM's own spend log.
+      input_cost_per_token: 0.0000001
+      output_cost_per_token: 0.0000004
+
+general_settings:
+  # Gates every call. From the container env; never commit a real value.
+  master_key: os.environ/LITELLM_MASTER_KEY
+
+litellm_settings:
+  # A chat reply should never take this long; don't leave a stalled call open.
+  request_timeout: 90
+  # Drop params a provider doesn't take instead of failing.
+  drop_params: true
+  # Retry a provider's passing 5xx before giving up.
+  num_retries: 2
