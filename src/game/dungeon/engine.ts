@@ -1814,7 +1814,7 @@ function trapMove(m: MoveCtx) {
     return spEvent(m, at.x, at.y, { r: 20 });
   }
   const hold = !big(run, f);
-  spEvent(m, f.x, f.y, { r: f.def.r + 10, ...(hold ? { secs } : {}) });
+  spEvent(m, f.x, f.y, { r: f.def.r + 10, secs });
   if (hold) f.held = { until: run.t + secs, dmg: m.dmg, by: h };
   else damage(run, h, f, m.dmg, 0);
 }
@@ -2761,13 +2761,14 @@ function attack(run: Run, h: Hero) {
   } else if (kind === 'wave') {
     for (let i = 0; i < n; i++) later(run, i * 0.18, () => burst(run, h, h.x, h.y, WAVE_R + i * 20, dmg, 'wave'));
   } else {
-    for (let i = 0; i < n; i++) slash(run, h, angle + (i * Math.PI * 2) / n, dmg, swing, arc, w?.heal ?? 0);
+    for (let i = 0; i < n; i++) slash(run, h, angle + (i * Math.PI * 2) / n, dmg, swing, arc, w?.heal ?? 0, w ? (w.cut ?? 0) : arc);
   }
 }
 
 /** A swing: everything within `R` and `arc` radians either side of `angle` is hit, and the shots
-    there are cut out of the air. `heal`: a share of your HP back for each monster hit. */
-function slash(run: Run, h: Hero, angle: number, dmg: number, R: number, arc: number, heal: number) {
+    within `cut` radians either side are knocked out of the air. `heal`: a share of your HP back
+    for each monster hit. */
+function slash(run: Run, h: Hero, angle: number, dmg: number, R: number, arc: number, heal: number, cut: number) {
   for (const f of run.foes) {
     if (!f.alive) continue;
     const d = dist(f, h);
@@ -2790,12 +2791,13 @@ function slash(run: Run, h: Hero, angle: number, dmg: number, R: number, arc: nu
     const diff = Math.atan2(br.y - h.y, br.x - h.x) - angle;
     if (Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff))) < arc) blowUp(run, br, h);
   }
-  // A sword swing also knocks shots out of the air.
+  // A swing also knocks shots out of the air.
+  if (cut <= 0) return;
   run.bullets = run.bullets.filter((b) => {
     const d = Math.hypot(b.x - h.x, b.y - h.y);
     if (d > R + 10) return true;
     const diff = Math.atan2(b.y - h.y, b.x - h.x) - angle;
-    return Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff))) >= arc;
+    return Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff))) >= cut;
   });
 }
 
