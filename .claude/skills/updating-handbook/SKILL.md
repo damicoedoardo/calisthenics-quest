@@ -40,6 +40,7 @@ no row: give a new folder its row (and a page if no page fits).
 | `src/lib/fog*.ts`, `src/game/*.ts`, `src/components/FogRun.tsx`, `src/components/PlayTab.tsx` | `game/fog.md` |
 | `src/lib/sp*.ts`, `src/components/SpCard.tsx`, `src/components/SpTransform.tsx` | `game/fog.md` |
 | `src/lib/sweat*.ts`, `src/components/StatPoints.tsx`, `src/components/ClassPicker.tsx` | `game/training.md` |
+| `src/lib/loot*.ts` | `game/training.md` |
 | `src/game/dungeon/**` | `game/dungeon.md` |
 | `src/lib/forge*.ts`, `src/components/FogGearCard.tsx` | `game/forge.md` |
 | `src/story/**`, `src/lib/road*.ts`, `src/components/{ScenePlayer,Dialogue,Place,Weather,BookOfDays,SitByFire}.tsx` | `game/story.md` |
