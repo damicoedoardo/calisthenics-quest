@@ -140,6 +140,14 @@ screen itself for the run (`useSideways`). The rest of the app stays upright. Si
 fills the whole screen and the camera follows you in it; the HUD is small and kept to the corners
 (see "Sideways on screen" in [dungeon.md](dungeon.md)).
 
+**The first dungeon.** A new player's opening plays one run before anything else: `FogRun` with
+`tutorial` (`{ voice, onDone }`) in `FIRST_FOG_ZONE` (`src/lib/fog.ts`: zone 1's look, monsters and
+music, gentler, with the Hollow at the bottom). It shows a tip for where you are (`TutorialTip`:
+move, the door, the stairs, the dodge, the bottom; words in `FIRST_FOG_TIPS`,
+`src/story/opening.ts`), only the Dodge button (no class yet), no bag, no records, no play stats,
+and no recap: the fall goes straight back to the opening. "Skip the dungeon" in the pause menu and
+on the "turn your phone" card. The engine side is in [dungeon.md](dungeon.md#the-first-dungeon).
+
 On a computer (mouse or trackpad: `useKeyboardPlay` in `src/components/useDesk.ts`) the run is
 played with keys and never asks you to turn anything. The scene's own keys: WASD or the arrows
 move, Q is the class ability, R and F the SP's move and final, Space (or E, or Shift) dodges, a click on a monster aims at it; they

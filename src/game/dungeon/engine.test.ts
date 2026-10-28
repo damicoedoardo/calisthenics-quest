@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { powerOf, ZONES } from '@/lib/fog';
+import { FIRST_FOG_ZONE, powerOf, ZONES } from '@/lib/fog';
 import { initialState } from '@/lib/game';
-import { CALM, HUMAN, PARTY, SP_SKILL, SP_WEAPON } from '@/balance';
+import { CALM, HUMAN, PARTY, SP_SKILL, SP_WEAPON, TUTORIAL } from '@/balance';
 import { seeded } from '@/lib/random';
 import { botInput, playRun } from './bot';
 import { rollItem } from './items';
@@ -748,5 +748,43 @@ describe('a party (co-op)', () => {
     me.calm = CALM.full;
     stepRun(run, [{ x: 0, y: 0, ability: true }, idle[1]]);
     expect(friend.hp).toBeGreaterThan(10);
+  });
+});
+
+describe("the opening's first dungeon", () => {
+  const power = powerOf(initialState(), new Date());
+  const play = (input: (run: Run) => { x: number; y: number; ability: boolean }) => {
+    const run = createRun({ zone: FIRST_FOG_ZONE, power, classId: undefined, seed: 3, tutorial: { voice: 'You always quit.' } });
+    let lowest = Infinity,
+      said = false;
+    for (let i = 0; i < 60 * 600 && !run.over; i++) {
+      stepRun(run, input(run));
+      if (!run.over) lowest = Math.min(lowest, run.hero.hp);
+      said ||= takeEvents(run).some((e) => e.type === 'say' && e.text.includes('You always quit.'));
+    }
+    return { run, lowest, said };
+  };
+
+  it('the bot walks all three floors, never falls on the way, and loses to the Hollow at the bottom', () => {
+    const { run, lowest, said } = play((r) => botInput(r));
+    expect(run.layout).toEqual(TUTORIAL.layout);
+    expect(run.over?.why).toBe('hp');
+    expect(run.over?.won).toBe(false);
+    expect(run.over?.floor).toBe(TUTORIAL.layout.floors);
+    expect(isBossRoom(run)).toBe(true);
+    expect(lowest).toBeGreaterThanOrEqual(1);
+    expect(said).toBe(true);
+    expect(run.over!.seconds).toBeLessThan(240);
+    // Nothing to carry out of it.
+    expect(run.hero.gear.bag).toEqual([]);
+  });
+
+  it('standing still in the Hollow\'s room still ends in the loss, on time', () => {
+    const run = createRun({ zone: FIRST_FOG_ZONE, power, classId: undefined, seed: 3, tutorial: { voice: 'x' } });
+    skipToBoss(run);
+    const still = { x: 0, y: 0, ability: false };
+    for (let i = 0; i < 60 * (TUTORIAL.lose + 3) && !run.over; i++) stepRun(run, still);
+    expect(run.over?.why).toBe('hp');
+    expect(run.boss?.hp).toBeGreaterThanOrEqual(1);
   });
 });

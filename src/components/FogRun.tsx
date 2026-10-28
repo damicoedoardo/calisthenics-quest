@@ -5,6 +5,7 @@ import { Backpack, Pause, Smartphone } from 'lucide-react';
 import { heroLevel, type GameState } from '@/lib/game';
 import { fill, storyWords } from '@/story/engine';
 import type { FogLines } from '@/story/types';
+import { FIRST_FOG_TIPS } from '@/story/opening';
 import { edgeFor, getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
 import { zoneMusic } from '@/lib/music-zones';
@@ -39,6 +40,9 @@ interface Props {
   /** A party's run: the shared seed, and the friends who come along. The first attempt is live on
       the game server when it's there; otherwise (and on "Try again") bots play the friends. */
   party?: { seed: number; friends: FriendCard[] };
+  /** The opening's first dungeon (FIRST_FOG_ZONE): the Hollow says `voice` at the bottom and strikes
+      you down. No bag, no recap, no records: `onDone` follows the fall. */
+  tutorial?: { voice: string; onDone: () => void };
 }
 
 export type RunStart = 'mid' | 'boss' | 'win' | 'sp';
@@ -92,7 +96,7 @@ export function useSideways() {
 }
 
 /** A run in the Fog: the Phaser canvas, with the HUD, skill picks and results drawn over it. */
-export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Props) {
+export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party, tutorial }: Props) {
   const host = useRef<HTMLDivElement>(null);
   const run = useRef<RunHandle | null>(null);
   const [hud, setHud] = useState<Hud | null>(null);
@@ -137,7 +141,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
 
   // Each zone has its own run and boss themes; the Warden halfway down has his own.
   const tunes = zoneMusic(zone.id);
-  useMusic(end ? null : hud?.boss ? tunes.boss : hud?.warden ? 'warden' : tunes.run);
+  useMusic(end ? null : hud?.boss ? (tutorial ? 'hollow' : tunes.boss) : hud?.warden ? 'warden' : tunes.run);
 
   useEffect(() => {
     const el = host.current;
@@ -166,7 +170,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
     el.addEventListener('pointerdown', moved, { once: true });
     let jump = 0;
     const how = { party: !!party, bot: !!auto, start_at: startAt && attempt === 0 ? startAt : null };
-    const hero = { power: powerOf(state, new Date()), classId, worn: wornFor(state), build: buildOf(state), heroLevel: heroLevel(state), edge: edgeFor(state, zone), sp: spWorn(state) || undefined };
+    const hero = { power: powerOf(state, new Date()), classId, worn: wornFor(state), build: buildOf(state), heroLevel: heroLevel(state), edge: tutorial ? undefined : edgeFor(state, zone), sp: tutorial ? undefined : spWorn(state) || undefined };
     // A party's first attempt: the live run on the game server, once everyone walks in. When it
     // isn't there (not set up, no signal), the run is a practice one with bots, as before.
     const leaving = new AbortController();
@@ -177,9 +181,10 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
     Promise.all([game, calm, live]).then(([{ startRun }, , net]) => {
       setWaiting(null);
       if (cancelled) return net?.close();
-      track(runStartEvent(state, zone.id, how));
+      if (!tutorial) track(runStartEvent(state, zone.id, how));
       const look = (f: FriendCard | undefined, classId: ClassId | undefined) => ({ name: f?.name ?? 'Friend', classId, ...friendSheets({ classId, look: f?.look ?? null, tiers: f?.look?.gear }) });
       run.current = startRun(el, { zone, lines: bossLines(zone, state), ...hero, sheets, autopilot: auto, fast: bot === 'fast',
+        tutorial: tutorial && { voice: tutorial.voice },
         // Only the first attempt shares the party's seed; "Try again" is a run of your own.
         seed: party && attempt === 0 ? party.seed : undefined,
         // Live: the others in the run's order (the server's), each as their friend card shows them.
@@ -208,6 +213,12 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
           setChest(null);
         },
         end: (r) => {
+          if (tutorial) {
+            // The fall is the story's: no recap, the opening goes on.
+            music.sting('defeat');
+            jump = window.setTimeout(() => tutorial.onDone(), 2400);
+            return;
+          }
           music.sting(r.won ? (zoneMusic(zone.id).win ?? 'victory') : r.why === 'left' ? 'levelup' : 'defeat');
           const result: RunResult = { ...r, zone: zone.id };
           track(runEndEvent(state, result, how));
@@ -374,7 +385,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
           </div>
           <div className="flex w-[11.5rem] shrink-0 flex-col items-end gap-1.5">
             <div className="flex items-center gap-1.5">
-              <BagButton bag={hud.gear.bag.length} risk={risk} keys={keys} onOpen={() => openBag(true)} />
+              {!tutorial && <BagButton bag={hud.gear.bag.length} risk={risk} keys={keys} onOpen={() => openBag(true)} />}
               <button
                 aria-label="Pause"
                 onPointerDown={(e) => e.stopPropagation()}
@@ -398,13 +409,15 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
       {failed && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
           <p className="text-sm text-slate-300">The Fog has to download once, with a signal. After that it works offline too.</p>
-          <button onClick={onLeave} className="w-full max-w-xs rounded-xl bg-ink-800 py-3 text-sm text-slate-300">
-            Back
+          <button onClick={tutorial?.onDone ?? onLeave} className="w-full max-w-xs rounded-xl bg-ink-800 py-3 text-sm text-slate-300">
+            {tutorial ? 'Skip the dungeon' : 'Back'}
           </button>
         </div>
       )}
 
-      {tip && hud && !end && hud.seconds < 6 && (
+      {tutorial && hud && !end && !boss && <TutorialTip hud={hud} keys={keys} />}
+
+      {!tutorial && tip && hud && !end && hud.seconds < 6 && (
         <p className="pointer-events-none absolute inset-x-6 bottom-28 mx-auto max-w-md animate-pulse text-center text-sm text-slate-300">
           {keys
             ? `WASD or the arrows to move; you attack on your own. Click a monster to aim at it. Space dodges shots, Q is ${ABILITIES[hud.ability?.id ?? 'charge'].name}. ${zone.bossName} waits ${hud.floors} floors down.`
@@ -413,7 +426,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
       )}
 
       {hud?.ability && !end && (
-        <AbilityButton id={hud.ability.id} ready={hud.ability.ready} dodge={hud.dodge ?? 1} sp={hud.sp} keys={keys} onUse={() => run.current?.ability?.()} onDodge={() => run.current?.dodge?.()} onSkill={() => run.current?.skill?.()} onFinal={() => run.current?.final?.()} />
+        <AbilityButton bare={!!tutorial} id={hud.ability.id} ready={hud.ability.ready} dodge={hud.dodge ?? 1} sp={hud.sp} keys={keys} onUse={() => run.current?.ability?.()} onDodge={() => run.current?.dodge?.()} onSkill={() => run.current?.skill?.()} onFinal={() => run.current?.final?.()} />
       )}
 
       {floorShown && !end && (
@@ -434,7 +447,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
       {boss && !offer && (
         <div className="pointer-events-none absolute inset-x-6 top-24 mx-auto max-w-md rounded-2xl bg-ink-950/85 p-4 text-center ring-1 ring-violet-500/50">
           <p className="font-pixel text-xs leading-relaxed text-violet-300">{zone.boss === 'summit' ? 'The climb begins' : `${zone.bossName} walks out of the Fog`}</p>
-          {zone.boss === 'hollow' && state.profile.voice && <p className="mt-2 text-sm italic text-slate-200">&ldquo;{state.profile.voice}&rdquo;</p>}
+          {zone.boss === 'hollow' && (tutorial?.voice || state.profile.voice) && <p className="mt-2 text-sm italic text-slate-200">&ldquo;{tutorial?.voice || state.profile.voice}&rdquo;</p>}
           <p className="mt-2 text-sm text-slate-200">{zone.hint}</p>
         </div>
       )}
@@ -596,8 +609,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
           <button onClick={resume} className="w-full max-w-xs rounded-xl bg-gold-400 py-3 font-pixel text-[10px] text-ink-950">
             Keep going
           </button>
-          <button onClick={onLeave} className="w-full max-w-xs rounded-xl bg-ink-800 py-3 text-sm text-slate-300">
-            Leave the run
+          <button onClick={tutorial?.onDone ?? onLeave} className="w-full max-w-xs rounded-xl bg-ink-800 py-3 text-sm text-slate-300">
+            {tutorial ? 'Skip the dungeon' : 'Leave the run'}
           </button>
           {keys && <KeyList />}
           {dev && (
@@ -643,8 +656,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party }: Pro
           <Smartphone size={44} className="text-gold-300 motion-safe:animate-turn" aria-hidden />
           <p className="font-pixel text-xs leading-relaxed text-gold-300">Turn your phone sideways</p>
           <p className="max-w-xs text-sm text-slate-400">The Fog is played with the phone held across: move with your left thumb, fight with your right.</p>
-          <button onClick={onLeave} className="w-full max-w-xs rounded-xl bg-ink-800 py-3 text-sm text-slate-300">
-            Back
+          <button onClick={tutorial?.onDone ?? onLeave} className="w-full max-w-xs rounded-xl bg-ink-800 py-3 text-sm text-slate-300">
+            {tutorial ? 'Skip the dungeon' : 'Back'}
           </button>
         </div>
       )}
@@ -962,7 +975,7 @@ function BossBar({ name, hp, max, ember }: { name: string; hp: number; max: numb
 /** The class ability: a big round button under your right thumb, filling up while it recharges.
     The dodge sits to its left, smaller, on its own short clock. With an SP on, its own move sits
     between them and its final over the ability, glowing once it's full. */
-function AbilityButton({ id, ready, dodge, sp, keys, onUse, onDodge, onSkill, onFinal }: { id: AbilityId; ready: number; dodge: number; sp: Hud['sp']; keys: boolean; onUse: () => void; onDodge: () => void; onSkill: () => void; onFinal: () => void }) {
+function AbilityButton({ bare, id, ready, dodge, sp, keys, onUse, onDodge, onSkill, onFinal }: { bare?: boolean; id: AbilityId; ready: number; dodge: number; sp: Hud['sp']; keys: boolean; onUse: () => void; onDodge: () => void; onSkill: () => void; onFinal: () => void }) {
   const up = ready >= 1,
     dodgeUp = dodge >= 1;
   return (
@@ -985,6 +998,8 @@ function AbilityButton({ id, ready, dodge, sp, keys, onUse, onDodge, onSkill, on
           Dodge
         </span>
       </div>
+      {/* The opening's first dungeon comes before the class: only the dodge. */}
+      {!bare && (
       <div className="relative flex flex-col items-center">
         <button
           aria-label={ABILITIES[id].name}
@@ -1007,7 +1022,35 @@ function AbilityButton({ id, ready, dodge, sp, keys, onUse, onDodge, onSkill, on
           {ABILITIES[id].name}
         </span>
       </div>
+      )}
     </div>
+  );
+}
+
+/** The first dungeon's tip for where you are: move, the door, the stairs, the dodge, the bottom. */
+function TutorialTip({ hud, keys }: { hud: Hud; keys: boolean }) {
+  const kind = hud.map.cells.find((c) => c.id === hud.map.at)?.kind,
+    first = hud.map.at === 0;
+  const tip = hud.boss
+    ? null
+    : hud.cleared
+      ? kind === 'stairs'
+        ? FIRST_FOG_TIPS.stairs
+        : FIRST_FOG_TIPS.door
+      : !first
+        ? null
+        : hud.floor === 1
+          ? hud.kills === 0 && (keys ? FIRST_FOG_TIPS.moveKeys : FIRST_FOG_TIPS.move)
+          : hud.floor === hud.floors
+            ? FIRST_FOG_TIPS.bottom
+            : keys
+              ? FIRST_FOG_TIPS.dodgeKeys
+              : FIRST_FOG_TIPS.dodge;
+  if (!tip) return null;
+  return (
+    <p key={tip} className="pointer-events-none absolute inset-x-6 bottom-28 mx-auto max-w-md animate-fadein text-center text-sm text-slate-200 drop-shadow-[0_2px_0_#0b0d14]">
+      {tip}
+    </p>
   );
 }
 
