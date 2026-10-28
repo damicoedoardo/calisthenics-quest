@@ -126,7 +126,7 @@ const TAKES = {
   },
 };
 
-const PICK = 'title';
+const PICK = 'badge';
 
 /** SVG of a grid, one unit per cell. */
 function svg(grid) {
