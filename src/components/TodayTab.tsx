@@ -24,6 +24,8 @@ import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
 import { daysSinceTraining, isRestDay, trainedToday } from '@/lib/days';
 import { storyState, storyWords } from '@/story/engine';
 import { flameStage } from '@/story/flame';
+import { currentPlan } from '@/lib/coach/week';
+import { ExerciseSheet } from './ExerciseDetail';
 import { fireLine, flameLine, flameMood, restTruth, todayPage, updateTodayPage } from '@/story/daily';
 
 interface Props {
@@ -45,6 +47,8 @@ const CHECKINS: { id: Checkin; label: string; note: string }[] = [
 export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: Props) {
   const now = new Date();
   const [overlay, setOverlay] = useState<'fire' | 'book' | null>(openBook ? 'book' : null);
+  // An exercise tapped in the quest: how to do it.
+  const [howTo, setHowTo] = useState<{ id: string; demo: ExerciseId } | null>(null);
   useEffect(() => {
     if (openBook) setOverlay('book');
   }, [openBook]);
@@ -76,11 +80,12 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
         />
       )}
       {overlay === 'book' && <BookOfDays state={state} onClose={() => setOverlay(null)} />}
+      {howTo && <ExerciseSheet state={state} id={howTo.id} demo={howTo.demo} onClose={() => setHowTo(null)} />}
     </>
   );
   const items = inProgress ? todaysQuest(state) : quest;
   const startLabel = inProgress ? 'Continue quest' : doneToday ? 'Start the next quest' : 'Start quest';
-  const questTitle = checkin === 'rough' && !inProgress ? 'Minimum quest' : state.coach?.plan ? state.coach.plan.title : `Day ${day} quest`;
+  const questTitle = checkin === 'rough' && !inProgress ? 'Minimum quest' : (currentPlan(state.coach)?.title ?? `Day ${day} quest`);
   const xp = previewXp(state, inProgress ? state.draft!.checkin : checkin, now);
   const reps = (q: (typeof items)[number]) => {
     const done = state.draft?.sets[q.id]?.length ?? 0;
@@ -97,6 +102,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
         hero={hero}
         story={story}
         items={items}
+        onHowTo={(q) => setHowTo({ id: q.id, demo: q.demo })}
         reps={reps}
         title={questTitle}
         xp={xp}
@@ -192,9 +198,10 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
         <ul className="mt-3 space-y-2">
           {items.map((q) => {
             return (
-              <li key={q.id} className="flex items-center gap-3 rounded-xl bg-ink-900 py-1.5 pl-1.5 pr-3">
+              <li key={q.id}>
+                <button onClick={() => setHowTo({ id: q.id, demo: q.demo })} aria-label={`How to do ${q.name}`} className="flex w-full items-center gap-3 rounded-xl bg-ink-900 py-1.5 pl-1.5 pr-3 text-left active:scale-[.98]">
                 {/* A still of you doing it: the demo's first frame, at 1:1 so it stays crisp. */}
-                {(EXERCISES as string[]).includes(q.id) ? (
+                {(EXERCISES as string[]).includes(q.demo) ? (
                   <Sprite id="exercise" opts={{ exercise: q.demo, ...hero }} size={64} playing={false} label={`${q.name}, demo`} className="shrink-0 rounded-lg bg-ink-950" />
                 ) : (
                   <span className="h-16 w-16 shrink-0" />
@@ -206,6 +213,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook }: 
                   <span className="mt-0.5 block text-sm leading-snug text-slate-100">{q.name}</span>
                 </span>
                 <span className="shrink-0 font-mono text-sm text-slate-300">{reps(q)}</span>
+                </button>
               </li>
             );
           })}
@@ -386,6 +394,8 @@ interface LandProps {
   story: ReturnType<typeof storyState>;
   items: ReturnType<typeof todaysQuest>;
   reps: (q: ReturnType<typeof todaysQuest>[number]) => string;
+  /** An exercise tapped: open how to do it. */
+  onHowTo: (q: ReturnType<typeof todaysQuest>[number]) => void;
   title: string;
   xp: number;
   checkin: Checkin;
@@ -480,9 +490,10 @@ function LandToday(p: LandProps) {
           {/* The exercises side by side; the dark box takes what height there is, the figure stands on its floor. */}
           <ul className="grid min-w-0 flex-1 auto-cols-[minmax(4rem,1fr)] grid-flow-col gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {p.items.map((q) => (
-              <li key={q.id} className="flex min-h-0 flex-col rounded-xl bg-ink-900 p-1.5 text-center">
+              <li key={q.id} className="flex min-h-0">
+                <button onClick={() => p.onHowTo(q)} aria-label={`How to do ${q.name}`} className="flex min-h-0 w-full flex-col rounded-xl bg-ink-900 p-1.5 text-center active:scale-[.98]">
                 <span className="relative flex min-h-0 flex-1 items-end justify-center overflow-hidden rounded-lg bg-ink-950">
-                  {(EXERCISES as string[]).includes(q.id) && (
+                  {(EXERCISES as string[]).includes(q.demo) && (
                     <Sprite id="exercise" opts={{ exercise: q.demo, ...p.hero }} size={64} playing={false} label={`${q.name}, demo`} className="shrink-0" />
                   )}
                   <span className="absolute left-1 top-1 rounded bg-ink-950/85 px-0.5 text-[9px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[q.role] }}>
@@ -491,6 +502,7 @@ function LandToday(p: LandProps) {
                 </span>
                 <span className="mt-1 line-clamp-2 shrink-0 text-xs leading-tight text-slate-100">{q.name}</span>
                 <span className="shrink-0 font-mono text-xs text-slate-300">{p.reps(q)}</span>
+                </button>
               </li>
             ))}
           </ul>

@@ -1,7 +1,7 @@
 ---
 type: reference
 title: The coach (workout planner)
-description: The coach in src/lib/coach — your flame as an LLM coach you chat with (the chat loop, its tools run on the phone, the fuzzy exercise search, the server relay), the three-layer memory (profile, training log, notes), the built-in coach that builds workouts for gym, calisthenics, running or a mix, easier and swap choices, the guardrails every workout passes, and the screens that play it.
+description: The coach in src/lib/coach — your flame as an LLM coach you chat with (the week it plans, the one place every workout lives; the chat loop, its tools run on the phone, the fuzzy exercise search, the server relay), the three-layer memory (profile, training log, notes), the flame speaking first (nudges), the built-in coach that builds workouts for gym, calisthenics, running or a mix, easier and swap choices, the guardrails every workout passes, and the screens that play it.
 tags: [game, training, coach, planner, memory, llm]
 timestamp: 2026-10-28
 ---
@@ -9,17 +9,40 @@ timestamp: 2026-10-28
 # The coach
 
 The coach is your flame (Ember, or the name you gave it). You chat with it: it asks where you
-start and what you want, builds your workouts, and changes them when you say so. It is an LLM (on
+start and what you want, plans your **week** of workouts, and changes it when you say so. It
+pushes back, kindly, when what you say doesn't add up, and it speaks first when there is
+something to say. It is an LLM (on
 the server, [../backend/api.md](../backend/api.md)) that works through tools here on the phone:
 it may only pick exercises from the library, and every workout it makes passes the same checks as
 the **built-in coach**, the plain-rules builder that runs offline, before setup and as its
 starting draft. The rule for both: **the coach chooses, the code keeps the facts and the
 numbers.** XP, stat points and story never depend on what the coach planned.
 
-Code: `src/lib/coach/` (pure, tested in `coach.test.ts` and `chat.test.ts`). Numbers:
+Code: `src/lib/coach/` (pure, tested in `coach.test.ts`, `chat.test.ts` and `week.test.ts`). Numbers:
 `src/balance/coach.ts`. Screens: `CoachChat.tsx` (the Train tab's coach and the chat),
 `CoachSetup` (the quick taps), the workout's overview and choices in `Workout.tsx`, `useCoach.ts`
-(keeps a workout ready, runs the chat).
+(keeps a week ready, runs the chat). How to do each exercise: `ExerciseDetail.tsx`.
+
+## The week: the one place a workout lives (`week.ts`)
+
+`coach.week` (`CoachWeek`): a start date, `by` (built-in or coach), and its workout days
+(`CoachDay`: a date, a `CoachPlan`, `done` once trained). **Every reader goes through it**:
+`currentPlan(coach)` is the week's first day not done, whatever its date (a missed day moves
+along, it isn't lost). Today's quest (`todaysQuest`), the workout screen, the Train tab and the
+coach all read it; every change is written to a day (`setDay`, `setPlan` for the next one).
+
+- **Planned**: `buildWeek` spreads your days a week over seven days (`WEEK_SPREAD`), each day's
+  workout built knowing the days before it (modes and A/B days take turns). `useCoachPlan` plans a
+  new one once the coach is set up and the week is over (`weekOver`: every day done, or seven days
+  past its start). The coach replaces it with `set_week` or one day with `set_workout`.
+- **Done**: `finishSession` marks the next day done (`markDone`) and moves levels.
+- **Old saves** had one `coach.plan`; `migrate` turns it into a week of one day (`fromLegacy`).
+
+## Rests
+
+Each item may carry `rest` (seconds after a set), set by the coach in the chat (clamped to
+`REST.min`-`REST.max`); without one, core rests `REST.core`, the rest `REST_SECONDS`. The rest
+screen counts that down.
 
 ## The chat (`chat.ts`, `tools.ts`)
 
@@ -31,15 +54,24 @@ Code: `src/lib/coach/` (pure, tested in `coach.test.ts` and `chat.test.ts`). Num
   something you said). Older talk lives on as notes and the log.
 - **Tools** (the list and the rules are on the server, `backend/app/coach.py`; they run here):
   `find_exercises` (the fuzzy search below, only what your gear and sore spots allow),
-  `draft_workout` (the built-in coach's plan, a start to change), `set_workout` (ids, roles, sets,
-  reps or seconds, run minutes; the app fills names, demos, easier and swap, builds run steps, and
-  runs `validate`, then says what it fixed), `save_profile` (setup, or one change with `why`,
+  `draft_week` (the built-in coach's week, a start to change), `show_week` (the week, and the next
+  workout in full), `set_week` (every workout day: a weekday, today/tomorrow or a date in the next
+  7 days, `resolveDay`; days done stay done), `set_workout` (one day, else the next; ids, roles,
+  sets, reps or seconds, rest, run minutes; the app fills names, demos, easier and swap, builds run
+  steps, and runs `validate`, then says what it fixed), `save_profile` (setup, or one change with `why`,
   written to `history`), `add_note` / `remove_note`, and `suggest_replies` (the taps under its
   message; it ends the turn). Every input is checked again; bad values are dropped and said.
 - **Search** (`search.ts`): words in any order, typos and plurals forgiven ("pushups", "dumbell
   row"), everyday words mapped to the library's ("abs", "chest", "legs"); staples first.
-- **Who it is**: the brief's first line names the flame and the player; the rules (warm, short,
-  one question at a time, no body talk, not a doctor) are fixed on the server.
+- **Who it is**: the brief names the flame and the player, its form now (`flameStage`, the same
+  stages the story draws) and where the story is (chapter, lesson, the enemy's hearts left,
+  `storyState`), so it speaks from there. The rules (warm, short, one question at a time, no body
+  talk, not a doctor, honest: push back on what isn't wise or doesn't match the log, and suggest
+  better) are fixed on the server.
+- **It speaks first** (`nudge.ts`): `coachNudge` picks one thing worth saying from the save (a
+  missed day, a new week, the chapter's enemy one workout from beaten, a workout done, today's
+  workout). Until heard it shows on the flame's card with a dot on the Train tab; opening the chat
+  says it there (`hearNudge`, kept in `coach.heard`), or an empty chat opens on it from the coach.
 - **Sign-in**: talking needs the cloud sign-in (Hero > Settings); signed out, the chat offers the
   quick taps (`CoachSetup`) instead.
 
@@ -53,16 +85,16 @@ All of it lives in the save (`state.coach`, optional: saves without it play the 
 | **Training log**: sessions with sets (reps or seconds, reps in the tank, optional kg and km), each entry's name and family, the mode, who planned it, what you skipped or changed, how it felt | `state.sessions` | only the app |
 | **Notes**: short typed sentences (`like`, `dislike`, `pain`, `life`, `goal`, `other`), dated, optionally until a date, at most `MAX_NOTES` (a pain note is never dropped for room) | `coach.notes` (`notes.ts`) | you at setup; the coach in the chat |
 
-Plus `coach.plan`: the next workout (`CoachPlan`). Today's quest (`todaysQuest` in `game.ts`)
-plays it when there is one, else the built-in plan. `finishSession` writes the plan's mode, changes
-and skips on the session, clears the plan, and moves levels (`shiftLevels`).
+Plus `coach.week`: the planned week (above). Today's quest (`todaysQuest` in `game.ts`) plays its
+next day when there is one, else the built-in plan. `finishSession` writes the plan's mode, changes
+and skips on the session, marks the day done, and moves levels (`shiftLevels`).
 
 **Levels**: setup sets them from tap answers ("I don't know" starts low, `setup.ts`); after
 `LEVEL_SHIFT.window` workouts of a pattern since it last moved, most sets easy (4+ left) moves it
 up one, most very hard (0-1) down one. A level from your workouts shows a ✓ on the Train tab.
 
 **The coach brief** (`brief.ts`): one plain-text page built from the save on every call — profile,
-notes with ids, the last 10 workouts in a line each, days since each pattern, this week's count.
+the flame's form and the story, notes with ids, the week day by day, the last 10 workouts in a line each, days since each pattern, this week's count.
 This is what the LLM reads; it never reads or writes the save itself, only through the tools.
 
 ## Building a workout (`generate.ts`)
@@ -93,7 +125,7 @@ Every main and core item carries up to `CHOICES.easier` easier moves (the hand-m
 demo first, e.g. pull-up → negatives → band pull-up → table row, then the same family a level
 down) and `CHOICES.swaps` swaps (same family and region, no harder, one per demo). Found by code,
 so each is a real exercise with a demo and with your gear. `plan.ts` applies a change
-(`changeItem`, `moveItem`, `skipItem`): logged sets move with a swapped exercise, the item keeps
+(`changeItem` on the next day or a later one, `moveItem`, `skipItem`): logged sets move with a swapped exercise, the item keeps
 `changed` (what it was), a swap keeps the old one as a choice. The built-in plan becomes a plan
 too when a workout opens (`planFromQuest`), so it can be changed the same way.
 
@@ -107,16 +139,19 @@ an LLM gets back to do better.
 
 ## Screens
 
-- **Train tab** (`CoachScreen` in `CoachChat.tsx`): the flame with its last words, "Let's start"
-  or "Talk", and "What I know" (`CoachKnows`: profile, levels, notes, each note can be forgotten,
-  "Redo setup"). Under it today's workout as cards: the exercise's pixel demo, its dose, Easier and
-  Swap (the choices sheet), and Start. Sideways the two sit side by side.
+- **Train tab** (`CoachScreen` in `CoachChat.tsx`): the flame with what it brings up or its last
+  words, "Let's start", "Talk" or "Answer", and "What I know" (`CoachKnows`: profile, levels, notes,
+  each note can be forgotten, "Redo setup"). Under it the week (`WeekBoard`): a chip per workout day
+  (✓ done, "next" lit) and the chosen day's workout as cards: the pixel demo, dose and rest, Easier
+  and Swap (days still to do), and Start on the next day. Tap a card (here or on Today) for how to
+  do it (`ExerciseSheet`: both demos, facts, steps, tips, mistakes). Sideways the two sit side by side.
 - **The chat** (`CoachChat`): the camp fire at the top with the flame, the talk below in the
-  story's dialogue boxes, the taps it offers, and a box to type. A workout it just built shows in
-  the chat as a strip of demos.
+  story's dialogue boxes, the taps it offers, and a box to type. A week or day it just set shows in
+  the chat as the week, a strip of demos per day.
 - **Quick taps** (`CoachSetup.tsx`): eight tap screens (modes, goal, days and minutes, gear,
   experience, where you start, what to spare, anything else), for setup without the chat.
-- **Workout** (`Workout.tsx`): an overview before the first set (move up and down, Easier, Swap,
+- **Workout** (`Workout.tsx`): no pausing. Closing it after a set asks first ("Leave, don't
+  count it"): leaving throws the sets away and the workout starts over next time. An overview before the first set (move up and down, Easier, Swap,
   Skip; the list button brings it back), "Too hard? Easier" and "Swap" under the demo, and a run
   view: a bar of the steps, a big clock for the step you're on, a buzz at each change, distance at
   the end. The run's start is saved (`draft.runAt`), so the clock keeps going through a phone lock.
@@ -127,7 +162,8 @@ an LLM gets back to do better.
 
 | I want to... | Edit |
 |---|---|
-| Change sets, reps, run minutes, caps | `src/balance/coach.ts` |
+| Change sets, reps, run minutes, caps, which days of the week train, rests | `src/balance/coach.ts` |
+| Add something the flame brings up | `coachNudge` in `src/lib/coach/nudge.ts`, with a test |
 | Change which families a day trains | `DAYS` in `src/lib/coach/generate.ts` |
 | Prefer other exercises | `STAPLES` in `src/lib/coach/staples.ts` |
 | Change an easier ladder | `LADDER` in `src/lib/coach/options.ts` |

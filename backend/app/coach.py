@@ -47,6 +47,14 @@ the player can answer with (they can also type).
 doctor or physio, and plan around it.
 - Never shame. Missing a week is normal; coming back is the win.
 
+Who you are in the story:
+- You are the player's flame. The brief says your form now (you grow with their workouts) and \
+where the story is: the chapter, its lesson, and the enemy each workout hurts. Speak from there, \
+lightly: a line now and then that ties a workout to the story ("one more and Tomorrow falls"), \
+never a lecture. Don't make up story events the brief doesn't name.
+- Sometimes you speak first: the brief may say what to bring up (a missed day, a workout done, \
+a week done). Open with it, warmly, then help.
+
 Getting to know a new player (the brief says "No setup yet"):
 - Find out, in a friendly chat of about 5 to 8 questions: what they want to do (gym, \
 calisthenics, running, or a mix), why (feel good, get stronger, build muscle, go longer, learn a \
@@ -54,19 +62,36 @@ skill), how many days a week and how long, what gear they have, how they trained
 they start (for example push-ups in a row, pull-ups, a lift they know, how long they can run), \
 and anything that hurts.
 - Guess sensible answers from what they say; don't ask what you already know.
-- Then call save_profile with everything, and build their first workout.
+- Then call save_profile with everything, and plan their first week.
 
-Building and changing workouts:
-- Use only exercise ids from the library: find them with find_exercises, or start from \
-draft_workout (the app's own plan for today) and change it.
-- Then call set_workout with the whole workout. The app checks it (gear, sore spots, a warm-up \
-first and a stretch last, not too many sets, about the minutes they have) and tells you what it \
-fixed. If it lists problems, fix them and call set_workout again.
+Planning the week:
+- You plan a whole week at a time: the player sees every day of it, and today's workout is its \
+first day not done. The brief shows the week. show_week gives the next workout in full.
+- To plan or rethink the week, start from draft_week (the app's own week from their profile and \
+log) or build your own, then call set_week with every workout day (weekday names like "mon" or \
+dates, within the next 7 days; as many days as they train a week, with rest days between where \
+it fits). To change one day only, call set_workout with that day.
+- Use only exercise ids from the library: find them with find_exercises.
+- Each item: id, role (warmup, main, core, stretch), sets, low and high (reps, or seconds for a \
+hold), and rest (seconds after each set: about 120-180 for heavy lifts, 60-90 for most moves, \
+45-60 for core). Runs take minutes instead.
+- The app checks every workout (gear, sore spots, a warm-up first and a stretch last, not too \
+many sets, about the minutes they have) and tells you what it fixed. If it lists problems, fix \
+them and call the tool again.
 - Easier versions and swaps for every exercise are added by the app: don't list them yourself.
-- Fit the workout to the levels in the brief (1 is new, 5 is very strong), to what they did \
-lately (rest what was just trained), and to their notes. Start easy with a new player.
-- After set_workout, tell them about the workout in one or two lines: what today is about and \
-one tip. The app shows the workout itself as cards.
+- Fit the week to the levels in the brief (1 is new, 5 is very strong), to what they did lately, \
+and to their notes: hard days apart, the same muscles not two days running. Start easy with a \
+new player.
+- After saving, tell them about the week (or the day) in one or two lines and one tip. The app \
+shows the workouts themselves as cards.
+
+Be honest, like a good coach:
+- If what the player says doesn't add up or isn't wise (training every day after a long break, \
+a jump far past their level, "I did 50 pull-ups" against a log of 3, skipping all rest, training \
+through sharp pain), say so kindly and plainly, explain why in a line, and suggest something \
+better. Don't just do it.
+- If they insist and it isn't unsafe, you can do it, and say what to watch for.
+- Never pretend: the log in the brief is the truth about what they did.
 
 Remembering:
 - When you learn something worth keeping (likes, dislikes, pain, life, goals), call add_note \
@@ -74,7 +99,6 @@ with one short sentence. Use days for things that pass, like a sore knee or a bu
 - When a note is no longer true, call remove_note with its id from the brief.
 - When the player tells you something that changes their profile (more days, new gear, a new \
 goal, a level that is clearly wrong), call save_profile with only that change and why.
-- Never invent workouts the player did; the log in the brief is the truth.
 
 Keep to training, the app, and how the player feels about it. If asked about something else, \
 answer in a line and bring it back to training."""
@@ -127,6 +151,28 @@ def _tool(name: str, description: str, parameters: dict[str, Any]) -> dict[str, 
 
 _level = {"type": "integer", "enum": [1, 2, 3, 4, 5]}
 
+# One workout, as set_week and set_workout take it. For a run: the run's id (forma:easy-run,
+# forma:run-walk, forma:interval-run, forma:long-run) and its minutes.
+_WORKOUT: dict[str, Any] = {
+    "mode": {"type": "string", "enum": MODES},
+    "title": {"type": "string", "description": "One short line on what the day is."},
+    "items": {
+        "type": "array",
+        "items": _obj(
+            {
+                "id": {"type": "string", "description": "A library exercise id."},
+                "role": {"type": "string", "enum": ROLES},
+                "sets": {"type": "integer"},
+                "low": {"type": "integer", "description": "Fewest reps (or seconds for a hold)."},
+                "high": {"type": "integer", "description": "Most reps or seconds."},
+                "rest": {"type": "integer", "description": "Seconds of rest after each set."},
+                "minutes": {"type": "integer", "description": "Runs only."},
+            },
+            ["id", "role"],
+        ),
+    },
+}
+
 # The tools, OpenAI style, in a fixed order (a provider's prompt cache needs the same bytes every
 # call). All run on the phone, which checks every input again before using it.
 TOOLS: list[dict[str, Any]] = [
@@ -145,38 +191,44 @@ TOOLS: list[dict[str, Any]] = [
         ),
     ),
     _tool(
-        "draft_workout",
-        "The app's own plan for the player's next workout, built from their profile and log. "
-        "A good start to change with set_workout.",
-        _obj({"mode": {"type": "string", "enum": MODES}}, []),
+        "draft_week",
+        "The app's own plan for the player's coming week, built from their profile and log. A "
+        "good start to change and save with set_week.",
+        _obj({}),
     ),
     _tool(
-        "set_workout",
-        "Make this the player's next workout. The app checks it and returns what it fixed. "
-        "For a run, give the run's id (forma:easy-run, forma:run-walk, forma:interval-run, "
-        "forma:long-run) and its minutes; sets, low and high are then not needed.",
+        "show_week",
+        "The week as it is now, and the next workout in full (ids and doses).",
+        _obj({}),
+    ),
+    _tool(
+        "set_week",
+        "Plan the whole week from today: every workout day with its workout. Days already done "
+        "this week stay. The app checks each workout and returns the week.",
         _obj(
             {
-                "mode": {"type": "string", "enum": MODES},
-                "title": {"type": "string", "description": "One short line on what today is."},
-                "items": {
+                "days": {
                     "type": "array",
                     "items": _obj(
                         {
-                            "id": {"type": "string", "description": "A library exercise id."},
-                            "role": {"type": "string", "enum": ROLES},
-                            "sets": {"type": "integer"},
-                            "low": {
-                                "type": "integer",
-                                "description": "Fewest reps (or seconds for a hold).",
-                            },
-                            "high": {"type": "integer", "description": "Most reps or seconds."},
-                            "minutes": {"type": "integer", "description": "Runs only."},
-                        },
-                        ["id", "role"],
+                            "day": {"type": "string", "description": "'mon'..'sun' or a date."},
+                            **_WORKOUT,
+                        }
                     ),
-                },
+                }
             }
+        ),
+    ),
+    _tool(
+        "set_workout",
+        "Change one day's workout (default: the next workout). The app checks it and returns "
+        "what it fixed.",
+        _obj(
+            {
+                "day": {"type": "string", "description": "'mon'..'sun', 'today' or a date."},
+                **_WORKOUT,
+            },
+            ["mode", "title", "items"],
         ),
     ),
     _tool(

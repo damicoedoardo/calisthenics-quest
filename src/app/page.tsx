@@ -41,6 +41,7 @@ import { settleGear } from '@/lib/fog-gear';
 import { skipIntro, useDevMode } from '@/lib/dev';
 import { mustInstall, needsCarry } from '@/lib/install';
 import { useInstall } from '@/lib/install-client';
+import { freshNudge } from '@/lib/coach/nudge';
 
 type Tab = 'today' | 'train' | 'play' | 'hero';
 
@@ -374,8 +375,10 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
               className={`flex flex-col items-center gap-1 py-2.5 text-[11px] font-medium land:mx-2 land:rounded-xl land:py-2 desk:flex-row desk:gap-3 desk:rounded-xl desk:px-4 desk:py-3 desk:text-sm desk:hover:bg-ink-800/60 ${tab === id ? 'text-gold-400 land:bg-ink-800 land:ring-1 land:ring-gold-400/30 desk:bg-ink-800 desk:ring-1 desk:ring-gold-400/30' : 'text-slate-500 desk:hover:text-slate-300'}`}
             >
               {/* Full color on the open tab; faded and grey on the others. */}
-              <span className="grid h-[22px] place-items-center">
+              <span className="relative grid h-[22px] place-items-center">
                 <Sprite id="uiIcon" opts={{ name: icon }} size={22} label="" className={tab === id ? '' : 'opacity-70 grayscale'} />
+                {/* The flame has something to say. */}
+                {id === 'train' && tab !== 'train' && state && freshNudge(state, new Date()) && <span aria-label="New from your flame" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-gold-300 ring-2 ring-ink-900" />}
               </span>
               {label}
             </button>

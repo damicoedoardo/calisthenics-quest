@@ -2,14 +2,16 @@ import type { Family } from '@/exercises/coaching';
 import type { LibraryExercise } from '@/exercises/library';
 import type { GameState } from '../game';
 import type { SlotRole } from '../program';
-import { buildWorkout, dosed, excluded, item, runWalk, WARMUP } from './generate';
+import { dosed, excluded, item, runWalk, WARMUP } from './generate';
+import { buildWeek, currentPlan, setDay, weekdayOf, weekText } from './week';
+import { dayKey } from '../days';
+import { REST } from '@/balance';
 import { addNote, liveNotes, removeNote } from './notes';
 import { HOLDS, isWeighted, usable } from './options';
 import { searchExercises } from './search';
 import { answersOf, profileFrom } from './setup';
-import { setPlan } from './plan';
 import { validate } from './validate';
-import { PATTERNS, type Area, type CoachPlan, type CoachProfile, type CoachState, type Experience, type Gear, type Goal, type Level, type Minutes, type Mode, type PlanItem, type RunStep } from './types';
+import { PATTERNS, type Area, type CoachDay, type CoachPlan, type CoachProfile, type CoachState, type CoachWeek, type Experience, type Gear, type Goal, type Level, type Minutes, type Mode, type PlanItem, type RunStep } from './types';
 
 /* The coach's tools, run here on the phone: the model asks, the app does it and says what happened
    in a line or two of text the model reads. The model's input is never trusted: every field is
@@ -93,11 +95,10 @@ function runSteps(id: string, min: number, level: Level): RunStep[] {
   return [{ effort: 'easy', sec: min * 60 }];
 }
 
-function setWorkout(state: GameState, input: Input, ctx: ToolContext): ToolRun {
-  const profile = state.coach?.profile;
-  if (!profile) return { state, result: 'No profile yet: call save_profile first.' };
+/** A workout from the model's items: real library exercises only, dosed and checked. */
+function workoutFrom(input: Input, profile: CoachProfile, ctx: ToolContext): { plan: CoachPlan; problems: string[] } {
   const byId = new Map(ctx.all.map((x) => [x.id, x]));
-  const mode = one(input.mode, MODES) ?? 'gym';
+  const mode = one(input.mode, MODES) ?? profile.modes[0] ?? 'gym';
   const skipped: string[] = [];
   const rows = Array.isArray(input.items) ? input.items.slice(0, 14) : [];
   const items: PlanItem[] = [];
@@ -106,6 +107,7 @@ function setWorkout(state: GameState, input: Input, ctx: ToolContext): ToolRun {
     const r = raw as Input;
     const id = str(r.id, 120);
     const role = one(r.role, ROLES) ?? 'main';
+    const rest = int(r.rest, REST.min, REST.max);
     if (id === 'circles') {
       items.push(WARMUP);
       continue;
@@ -131,16 +133,66 @@ function setWorkout(state: GameState, input: Input, ctx: ToolContext): ToolRun {
     const base = dosed(x, role, profile, ctx.all, profile.gear);
     const hold = base.unit === 'sec' || HOLDS.includes(x.demo);
     const low = int(r.low, 1, hold ? 300 : 50) ?? base.low;
-    items.push({ ...base, sets: int(r.sets, 1, 8) ?? base.sets, low, high: Math.max(low, int(r.high, 1, hold ? 300 : 50) ?? base.high), ...(isWeighted(x) ? { weighted: true } : {}) });
+    items.push({ ...base, sets: int(r.sets, 1, 8) ?? base.sets, low, high: Math.max(low, int(r.high, 1, hold ? 300 : 50) ?? base.high), ...(isWeighted(x) ? { weighted: true } : {}), ...(rest ? { rest } : {}) });
   }
-  const title = str(input.title, 80) || 'Today, from your coach';
+  const title = str(input.title, 80) || 'From your coach';
   const checked = validate({ mode, items, by: 'coach', at: ctx.now.toISOString(), title }, { all: ctx.all, profile });
-  const problems = [...skipped, ...checked.problems];
-  const next = setPlan(state, checked.plan);
-  return {
-    state: next,
-    result: `Saved and shown to the player as cards (easier and swap added to each):\n${planText(checked.plan)}${problems.length ? `\nFixed: ${problems.join('; ')}.` : ''}`,
-  };
+  return { plan: checked.plan, problems: [...skipped, ...checked.problems] };
+}
+
+const NAMES = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+
+/** A day the model named ("tue", "Tuesday", "today", "2026-10-30") as a date in the next 7 days. */
+export function resolveDay(v: unknown, now: Date): string | undefined {
+  const t = str(v, 20).toLowerCase();
+  if (!t) return undefined;
+  for (let d = 0; d < 7; d++) {
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() + d, 12);
+    const key = dayKey(date);
+    if (t === key || (d === 0 && t === 'today') || (d === 1 && t === 'tomorrow') || t.slice(0, 3) === NAMES[date.getDay()]) return key;
+  }
+  return undefined;
+}
+
+const fixed = (problems: string[]) => (problems.length ? `\nFixed: ${problems.join('; ')}.` : '');
+
+function setWorkout(state: GameState, input: Input, ctx: ToolContext): ToolRun {
+  const profile = state.coach?.profile;
+  if (!profile) return { state, result: 'No profile yet: call save_profile first.' };
+  const date = resolveDay(input.day, ctx.now);
+  const { plan, problems } = workoutFrom(input, profile, ctx);
+  const next = setDay(state, date, plan, ctx.now);
+  return { state: next, result: `Saved on ${date ?? 'the next workout day'} and shown to the player (easier and swap added):\n${planText(plan)}${fixed(problems)}` };
+}
+
+/** A whole new week from today. Days already done this week stay done. */
+function setWeek(state: GameState, input: Input, ctx: ToolContext): ToolRun {
+  const coach = state.coach;
+  const profile = coach?.profile;
+  if (!coach || !profile) return { state, result: 'No profile yet: call save_profile first.' };
+  const rows = Array.isArray(input.days) ? input.days.slice(0, 7) : [];
+  const done = (coach.week?.days ?? []).filter((d) => d.done && d.date >= dayKey(ctx.now));
+  const days: CoachDay[] = [...done];
+  const notes: string[] = [];
+  for (const raw of rows) {
+    if (!raw || typeof raw !== 'object') continue;
+    const date = resolveDay((raw as Input).day, ctx.now);
+    if (!date) {
+      notes.push(`a day "${str((raw as Input).day, 20)}" is not in the next 7 days: left out`);
+      continue;
+    }
+    if (days.some((d) => d.date === date)) {
+      notes.push(`${date} twice or already done: left out`);
+      continue;
+    }
+    const { plan, problems } = workoutFrom(raw as Input, profile, ctx);
+    days.push({ date, plan });
+    notes.push(...problems.map((p) => `${date}: ${p}`));
+  }
+  if (days.length === done.length) return { state, result: `No workout days in it: nothing changed.${fixed(notes)}` };
+  days.sort((a, b) => a.date.localeCompare(b.date));
+  const week: CoachWeek = { start: dayKey(ctx.now), days, by: 'coach' };
+  return { state: { ...state, coach: { ...coach, week } }, result: `The week is saved and shown to the player:\n${weekText(week, ctx.now).join('\n')}${fixed(notes)}` };
 }
 
 function saveProfile(state: GameState, input: Input, ctx: ToolContext): ToolRun {
@@ -180,7 +232,7 @@ function saveProfile(state: GameState, input: Input, ctx: ToolContext): ToolRun 
   if (!old) p.setupAt = at;
   if (!said.length && old) return { state, result: 'Nothing to change.' };
   // A new profile: the workout comes from the coach next (set_workout), so none is built yet.
-  return { state: withCoach(state, { ...coach, profile: p, ...(old ? {} : { plan: null }) }), result: `Saved: ${said.join(', ') || 'a new profile with defaults'}.` };
+  return { state: withCoach(state, { ...coach, profile: p, ...(old ? {} : { week: null }) }), result: `Saved: ${said.join(', ') || 'a new profile with defaults'}.` };
 }
 
 /** Run one tool call. Unknown tools and bad input come back as a line the model can act on. */
@@ -192,12 +244,16 @@ export function runTool(state: GameState, name: string, args: string, ctx: ToolC
       const found = searchExercises(pool(state, ctx.all, ctx.now), str(input.query, 80), { family: input.family as Family | undefined, limit: 10 });
       return { state, result: found.length ? found.map(line).join('\n') : 'Nothing found. Try other words, or no family.' };
     }
-    case 'draft_workout': {
+    case 'draft_week': {
       const coach = state.coach;
       if (!coach?.profile) return { state, result: 'No profile yet: call save_profile first.' };
-      const plan = buildWorkout({ all: ctx.all, coach, sessions: state.sessions, now: ctx.now, rng: ctx.rng, mode: one(input.mode, MODES) });
-      return { state, result: plan ? `${planText(plan)}\n(Not saved: call set_workout to make it the workout, as is or changed.)` : 'Could not build one.' };
+      const week = buildWeek({ all: ctx.all, coach, sessions: state.sessions, now: ctx.now, rng: ctx.rng });
+      return { state, result: week ? `${week.days.map((d) => `${weekdayOf(d.date)} ${d.date}\n${planText(d.plan)}`).join('\n')}\n(Not saved: call set_week to make it the week, as is or changed.)` : 'Could not build one.' };
     }
+    case 'show_week':
+      return { state, result: weekText(state.coach?.week, ctx.now).join('\n') + (currentPlan(state.coach) ? `\nNext workout in full:\n${planText(currentPlan(state.coach)!)}` : '') };
+    case 'set_week':
+      return setWeek(state, input, ctx);
     case 'set_workout':
       return setWorkout(state, input, ctx);
     case 'save_profile':

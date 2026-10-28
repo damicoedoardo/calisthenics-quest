@@ -7,6 +7,7 @@ import { searchExercises } from './search';
 import { runTool, type ToolContext } from './tools';
 import { CHAT_KEEP, coachTurn, MAX_ROUNDS, OPENER, shownChat, trimChat, type Answer, type Ask } from './chat';
 import type { ChatMessage, ToolCall } from './types';
+import { currentPlan } from './week';
 
 let all: LibraryExercise[];
 beforeAll(async () => {
@@ -99,7 +100,7 @@ describe('runTool', () => {
     expect(p.gear).toEqual(['dumbbells']);
     expect(p.history).toEqual([]);
     expect(p.setupAt).toBe(NOW.toISOString());
-    expect(r.state.coach!.plan).toBeNull();
+    expect(currentPlan(r.state.coach)).toBeUndefined();
     expect(rest(r.state)).toEqual(rest(s));
   });
 
@@ -131,7 +132,7 @@ describe('runTool', () => {
         { id: '90_90_Hamstring', role: 'stretch', low: 45 },
       ],
     });
-    const plan = r.state.coach!.plan!;
+    const plan = currentPlan(r.state.coach)!;
     expect(plan.by).toBe('coach');
     expect(plan.title).toBe('Legs and push');
     expect(plan.items[0].role).toBe('warmup');
@@ -156,7 +157,7 @@ describe('runTool', () => {
   it('a run gets steps that add up to its minutes', () => {
     const s = withSetup(answers({ modes: ['running'], run: 0 }));
     const r = run(s, 'set_workout', { mode: 'running', items: [{ id: 'forma:run-walk', minutes: 20 }] });
-    const item = r.state.coach!.plan!.items.find((i) => i.id === 'forma:run-walk')!;
+    const item = currentPlan(r.state.coach)!.items.find((i) => i.id === 'forma:run-walk')!;
     expect(item.run).toBeDefined();
     const total = item.run!.reduce((a, x) => a + x.sec, 0);
     expect(total).toBe(20 * 60);

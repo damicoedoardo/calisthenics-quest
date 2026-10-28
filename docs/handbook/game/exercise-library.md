@@ -13,6 +13,8 @@ Code: `src/exercises/`. Shown in the app from the Train tab ("Exercise library",
 and movement, and per exercise the boy and girl demo, how-to steps, "Do it well" tips and common
 mistakes. Held sideways, the search and filters share one line, the list has two columns, and an
 exercise shows its demos and facts beside the how-to.
+The exercise page is `ExerciseDetail.tsx`; tapping any workout card on Today or the Train tab
+opens it too (`ExerciseSheet`: the card's exercise by id, else the plainest one with its demo).
 
 891 exercises: the open catalog [free-exercise-db](https://github.com/yuhonas/free-exercise-db)
 (public domain) plus the FORMA program's own moves and four runs for the coach (`RUNS` in `library.ts`). Every one has a pixel demo (boy and girl) and
