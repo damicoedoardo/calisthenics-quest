@@ -55,10 +55,13 @@ export default {
         converge: { '0%': { transform: 'translate(var(--dx), var(--dy)) scale(1.4)', opacity: '0' }, '25%': { opacity: '1' }, '100%': { transform: 'translate(0,0) scale(.4)', opacity: '0' } },
         sweep: { '0%': { transform: 'translateX(-70vw)', opacity: '0' }, '20%,80%': { opacity: '1' }, '100%': { transform: 'translateX(70vw)', opacity: '0' } },
         ring: { '0%': { transform: 'scale(.2)', opacity: '1' }, '100%': { transform: 'scale(2.4)', opacity: '0' } },
+        // Loot thrown up by a workout, out of the hero and into its place (src/components/Purse.tsx).
+        loot: { '0%': { transform: 'translateY(90px) scale(.3)', opacity: '0' }, '15%': { opacity: '1' }, '45%,100%': { transform: 'translateY(0) scale(1)', opacity: '1' } },
         cardrise: { '0%': { transform: 'translateY(40px) rotateY(0)', opacity: '0' }, '30%': { opacity: '1' }, '100%': { transform: 'translateY(-10px) rotateY(720deg)', opacity: '1' } },
       },
       animation: {
         pop: 'pop .45s ease-out both',
+        loot: 'loot 1.4s cubic-bezier(.2,.8,.3,1.2) both',
         spark: 'spark 1.6s ease-out infinite',
         float: 'float 2.4s ease-in-out infinite',
         fall: 'fall linear forwards',

@@ -1003,9 +1003,10 @@ export const ZONE_ICONS: PixelArt[] = [
 
 /** Small marks for the screens around the game: a heart (full or spent), a check, a padlock, a
     bookmark (kept or not), the Book of Days, an arrow on, a little flame (no face: that's Ember's),
-    play, and close; the tab bar's five (crossed swords, a skill tree, a game pad, two friends, a shield) and the
-    developer's wrench. */
-export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookmark' | 'bookmarkKept' | 'book' | 'chevron' | 'flame' | 'play' | 'close' | 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabHero' | 'tabFriends' | 'wrench', PixelArt> = {
+    play, and close; the tab bar's five (crossed swords, a skill tree, a game pad, two friends, a shield), the
+    developer's wrench, and what a workout gives (an arrow up for XP, a green star for a stat point, a sweat coin,
+    a co-op material). */
+export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookmark' | 'bookmarkKept' | 'book' | 'chevron' | 'flame' | 'play' | 'close' | 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabHero' | 'tabFriends' | 'wrench' | 'xp' | 'point' | 'coin' | 'mat', PixelArt> = {
   heart: {
     rows: [
       '.rr.rr.',
@@ -1113,5 +1114,25 @@ export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookm
   wrench: {
     rows: ['.....xx..', '....x..x.', '....x...x', '.....x.x.', '....xxx..', '...xxx...', '..xxx....', '.xxx.....', '.xx......'],
     palette: { x: '#7dd3fc' },
+  },
+  // XP: an arrow up, the hero's level.
+  xp: {
+    rows: ['....k....', '...kYk...', '..kYWYk..', '.kYWYYYk.', 'kkkYYYkkk', '..kYYyk..', '..kYyyk..', '..kyyyk..', '..kkkkk..'],
+    palette: { k: K, Y: '#fbbf24', y: '#d4a017', W: '#fff3b0' },
+  },
+  // A stat point: a green star.
+  point: {
+    rows: ['....k....', '...kGk...', 'kkkkWkkkk', 'kGGWGGGgk', '.kGGGGgk.', '..kGGgk..', '.kGgkgGk.', 'kGgk.kggk', 'kkk...kkk'],
+    palette: { k: K, G: '#34d399', g: '#047857', W: '#d1fae5' },
+  },
+  // A sweat coin: gold, with a drop of sweat on it.
+  coin: {
+    rows: ['..kkkkk..', '.kYYYYyk.', 'kYYYsYYyk', 'kYYsSsYyk', 'kYsSssyyk', 'kYsssssyk', 'kYYsssyyk', '.kyyyyyk.', '..kkkkk..'],
+    palette: { k: K, Y: '#fde047', y: '#ca8a04', s: '#38bdf8', S: '#e0f2fe' },
+  },
+  // A co-op material: a cut stone.
+  mat: {
+    rows: ['....k....', '...kVk...', '..kVWvk..', '.kVWvvvk.', 'kVvvvvvdk', '.kvvvvdk.', '..kvvdk..', '...kdk...', '....k....'],
+    palette: { k: K, V: '#e9d5ff', W: '#ffffff', v: '#c084fc', d: '#7e22ce' },
   },
 };

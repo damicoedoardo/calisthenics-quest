@@ -384,7 +384,15 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
       <main ref={main} className="flex-1 px-4 pb-28 pt-2 land:min-h-0 land:overflow-y-auto land:pb-3 desk:mx-auto desk:w-full desk:max-w-2xl desk:px-6 desk:pb-12">
         {tab === 'today' ? (
-          <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook} onTrain={() => setTab('train')} />
+          <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook}
+            onTrain={() => setTab('train')}
+            onHero={(part) => {
+              setHeroPart(part);
+              setTab('hero');
+              window.scrollTo({ top: 0 });
+              main.current?.scrollTo({ top: 0 });
+            }}
+          />
         ) : tab === 'train' ? (
           <TrainTab state={state} update={update} onStart={start} />
         ) : tab === 'play' ? (
