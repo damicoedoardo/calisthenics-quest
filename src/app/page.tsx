@@ -118,7 +118,13 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   }, [ready, update]);
   // Before the first paint, so the tabs never flash ahead of it.
   useLayoutEffect(() => {
-    if (ready && state.profile.onboarded && !inSandbox() && openingDue()) setOpening(true);
+    if (!ready || !state.profile.onboarded) return;
+    // The phone closed the app mid-workout: open straight back on it, still today's.
+    if (closeStaleDraft(state, new Date()).draft?.open) {
+      setTraining(true);
+      return;
+    }
+    if (!inSandbox() && openingDue()) setOpening(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
   // Anything that takes the screen (a scene, a run, a workout) closes the panel for good.
