@@ -1,12 +1,12 @@
 import { HUMAN } from '@/balance';
-import { attackOf, clamp, HERO_SPEED, RANGE } from '../rules';
-import { abilityReady, finalReady, skillReady, BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup } from './engine';
+import { clamp, HERO_SPEED, RANGE } from '../rules';
+import { abilityReady, attackKind, finalReady, skillReady, BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup } from './engine';
 
 /* The bot: a steady, careful player on a phone, not a great one (how human: HUMAN in
    src/balance/dungeon.ts). It notices a shot only after a reaction of its own, misses more of them
    when the room is busy or they fly fast, decides about ten times a second, and its thumb is a
    little off. It sidesteps shots on course to hit it,
-   keeps its class's distance from monsters (a sword goes close, the rest stay back), plays each
+   keeps its weapon's distance from monsters (a blade or fists go close, the rest stay back), plays each
    boss by its rule, explores the floor's map room by room once a room is clear (then takes the
    stairs), and uses the ability when it
    helps. It reads the ground too: around pillars, out of water and rising spikes, away from
@@ -108,7 +108,9 @@ export function botInput(run: Run, h: Hero = run.hero): Input {
 }
 
 function decide(run: Run, h: Hero): Input {
-  const melee = attackOf(h.classId) === 'slash',
+  // How it fights: by its SP weapon when it wears one, else by its class.
+  const kind = attackKind(h),
+    melee = kind === 'slash',
     still = idle(run) > STALL,
     stuck = still && !run.cleared,
     // Lingering in a cleared room: stop waiting for spikes to drop and just walk through, as a
@@ -285,7 +287,7 @@ function decide(run: Run, h: Hero): Input {
             lit
             ? LIGHT.r * 0.45
             : 160
-          : melee || attackOf(h.classId) === 'wave'
+          : melee || kind === 'wave'
           ? 60
           : rule === 'tomorrow'
             ? TOMORROW_REACH - 60
@@ -299,7 +301,7 @@ function decide(run: Run, h: Hero): Input {
           ? 40
           : foreman
             ? 80
-          : attackOf(h.classId) === 'wave'
+          : kind === 'wave'
             ? 80
             : RANGE * 0.7,
       dx = goal.x - h.x,
