@@ -289,7 +289,8 @@ export type GameEvent =
   | { type: 'attack'; kind: AttackKind; x: number; y: number; angle: number; n: number; r?: number; weapon?: SpWeapon; arc?: number }
   | { type: 'hit'; id: number; x: number; y: number; dmg: number; boss: boolean; crit?: boolean }
   | { type: 'kill'; id: number; x: number; y: number; kind: FoeKind; elite: boolean }
-  | { type: 'hurt'; x: number; y: number; dmg: number; by: 'shot' | 'touch' | 'image' | 'reflection' }
+  /** A hero took a hit; `hero` is whose (their id), so a phone shakes only for its own. */
+  | { type: 'hurt'; x: number; y: number; dmg: number; by: 'shot' | 'touch' | 'image' | 'reflection'; hero?: number }
   | { type: 'shoot'; x: number; y: number; boss: boolean }
   | { type: 'burst'; x: number; y: number; r: number; color: 'nova' | 'orb' | 'wave' | 'fire' | 'ability' }
   | { type: 'chain'; points: { x: number; y: number }[] }
@@ -777,6 +778,17 @@ const emit = (run: Run, e: GameEvent) => {
 };
 /** Whose own move an event shows (an attack, an ability, an SP move, a dodge), if it is one. */
 export const byOf = (e: GameEvent): number | undefined => (e as GameEvent & { by?: number }).by;
+/** News for one hero only (an item into their bag, their chest, their relic, their material):
+    in a party the others don't hear it. */
+const emitTo = (run: Run, h: Hero, e: GameEvent) => {
+  (e as GameEvent & { only?: number }).only = h.id;
+  emit(run, e);
+};
+/** Whether the hero `id` hears an event: everyone does, unless it's another hero's own news. */
+export const heard = (e: GameEvent, id: number) => {
+  const only = (e as GameEvent & { only?: number }).only;
+  return only === undefined || only === id;
+};
 const dist = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y);
 // The same as Math.hypot(dx, dy) < r and > r, but most pairs are far apart, and a box test says so
 // without the square root. Same answers to the last bit, so replays don't move.
@@ -1417,7 +1429,7 @@ function moveHero(run: Run, h: Hero, input: Input) {
     }
     run.loot = run.loot.filter((o) => o !== l);
     h.gear.bag.push(l.item);
-    emit(run, { type: 'loot', item: l.item });
+    emitTo(run, h, { type: 'loot', item: l.item });
     if (run.setup.autoPick) botWear(run, h, l.item);
     break;
   }
@@ -2571,7 +2583,7 @@ function scripted(run: Run, b: Foe, ux: number, uy: number) {
   emit(run, { type: 'shout', x: b.x, y: b.y });
   emit(run, { type: 'say', text: 'It doesn\'t even raise its sword.' });
   for (const h of run.party) {
-    emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: Math.ceil(h.hp), by: 'shot' });
+    emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: Math.ceil(h.hp), by: 'shot', hero: h.id });
     h.hp = 0;
   }
   end(run, false, 'hp');
@@ -2823,7 +2835,7 @@ function kill(run: Run, f: Foe, by: Hero) {
       if (h.gear.bag.length >= BAG) return dropItem(run, f.x + i * 26, f.y + 30, DROP_LUCK.boss, h);
       const it = newItem(run, DROP_LUCK.boss, h.classId);
       h.gear.bag.push(it);
-      if (h === run.hero) emit(run, { type: 'loot', item: it });
+      emitTo(run, h, { type: 'loot', item: it });
     });
     bossDown(run);
   }
@@ -2870,7 +2882,7 @@ function hitYourself(run: Run, h: Hero, kind: 'image' | 'reflection') {
   h.mirrorHurtAt = run.t;
   const n = Math.max(2, Math.round(h.maxHp * SPLIT[kind]));
   h.hp -= n;
-  emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: n, by: kind });
+  emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: n, by: kind, hero: h.id });
   if (h.hp <= 0) fall(run, h);
 }
 
@@ -3244,7 +3256,7 @@ function openChest(run: Run, h: Hero) {
     const id = ids[Math.floor(run.rnd() * ids.length)];
     if (!choices.includes(id)) choices.push(id);
   }
-  if (h === run.hero) emit(run, { type: 'chest', x: c.x, y: c.y });
+  emitTo(run, h, { type: 'chest', x: c.x, y: c.y });
   if (run.rnd() < DROPS.chest) {
     if (solo) dropEach(run, c.x, c.y + 34, DROP_LUCK.chest);
     else dropItem(run, c.x, c.y + 34, DROP_LUCK.chest, h);
@@ -3263,7 +3275,7 @@ export function pickRelic(run: Run, id: RelicId, h: Hero = run.hero) {
     h.hp = Math.min(h.maxHp, h.hp + 20);
   }
   if (id === 'coal') h.flames++;
-  emit(run, { type: 'relic', id });
+  emitTo(run, h, { type: 'relic', id });
 }
 
 function gain(run: Run, h: Hero, n: number) {
@@ -3317,7 +3329,7 @@ function dropItem(run: Run, x: number, y: number, luck: number, to: Hero) {
   const l: Run['loot'][number] = { id: ++run.ids, x: clamp(x, m, w - m), y: clamp(y, m, h - m), item };
   if (run.party.length > 1) l.for = to.id;
   run.loot.push(l);
-  if (to === run.hero) emit(run, { type: 'drop', x: l.x, y: l.y, item });
+  emitTo(run, to, { type: 'drop', x: l.x, y: l.y, item });
 }
 
 /** A drop is personal: each standing hero gets their own item, for their class, a little apart. */
@@ -3335,7 +3347,7 @@ function findMats(run: Run, from: keyof typeof MAT_DROPS, x: number, y: number, 
       const p = odds[mat];
       if (!p || run.rnd() >= p) continue;
       h.mats[mat] = (h.mats[mat] ?? 0) + 1;
-      if (h === run.hero) emit(run, { type: 'mat', mat, n: 1, x, y });
+      emitTo(run, h, { type: 'mat', mat, n: 1, x, y });
     }
 }
 
@@ -3390,7 +3402,7 @@ export function dropFromBag(run: Run, id: string, h: Hero = run.hero) {
   const l: Run['loot'][number] = { id: ++run.ids, x: h.x, y: h.y + 36, item: it, full: true };
   if (run.party.length > 1) l.for = h.id;
   run.loot.push(l);
-  emit(run, { type: 'drop', x: l.x, y: l.y, item: it });
+  emitTo(run, h, { type: 'drop', x: l.x, y: l.y, item: it });
 }
 
 /** The bot wears what it picks up when it can and it's better than what it has. */
@@ -3440,7 +3452,7 @@ function hurt(run: Run, h: Hero, dmg: number, by: 'shot' | 'touch') {
   h.hits++;
   h.hurtUntil = now + INVULNERABLE;
   calmer(run, h, CALM.taken, true);
-  emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: Math.round(taken), by });
+  emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: Math.round(taken), by, hero: h.id });
   if (h.hp <= 0) fall(run, h);
   else spHurt(run, h);
 }
@@ -3451,28 +3463,35 @@ function fall(run: Run, h: Hero) {
   if (standing(run).length === 0) end(run, false, 'hp');
 }
 
+/** How the run ended for one hero: their kills, level, items and materials. The run keeps the
+    first hero's (`run.over`); in a live party each phone builds its own from it (`overFor(run, run.hero)`
+    there is you), so nobody takes home a friend's items. */
+export function overFor(run: Run, h: Hero, won = run.over?.won ?? false, why: RunEnd['why'] = run.over?.why ?? 'hp'): RunEnd {
+  return {
+    won,
+    seconds: Math.floor(run.t),
+    kills: h.kills,
+    hits: h.hits,
+    level: h.level,
+    hp: won ? Math.max(0, Math.ceil(h.hp)) : 0,
+    maxHp: h.maxHp,
+    floor: run.floor + 1,
+    room: run.room + 1,
+    bossAt: run.bossAt === null ? null : Math.floor(run.bossAt),
+    why,
+    height: run.climb,
+    gear: { worn: Object.fromEntries(Object.entries(h.gear.worn).filter(([, it]) => it && !it.starter)) as Partial<Record<ItemSlot, Item>>, bag: [...h.gear.bag] },
+    ...(Object.keys(h.mats).length ? { mats: { ...h.mats } } : {}),
+  };
+}
+
 function end(run: Run, won: boolean, why: RunEnd['why']) {
   if (run.over) return;
   // On the Summit there's no top: however the climb ends, a ledge climbed is a win.
   if (run.climb !== null) won = run.climb >= 1;
   // A co-op win with nobody down: a chance of the rarest material.
   if (won && run.party.length > 1 && standing(run).length === run.party.length) findMats(run, 'clear', run.hero.x, run.hero.y);
-  run.over = {
-    won,
-    seconds: Math.floor(run.t),
-    kills: run.hero.kills,
-    hits: run.hero.hits,
-    level: run.hero.level,
-    hp: won ? Math.max(0, Math.ceil(run.hero.hp)) : 0,
-    maxHp: run.hero.maxHp,
-    floor: run.floor + 1,
-    room: run.room + 1,
-    bossAt: run.bossAt === null ? null : Math.floor(run.bossAt),
-    why,
-    height: run.climb,
-    gear: { worn: Object.fromEntries(Object.entries(run.hero.gear.worn).filter(([, it]) => it && !it.starter)) as Partial<Record<ItemSlot, Item>>, bag: [...run.hero.gear.bag] },
-    ...(Object.keys(run.hero.mats).length ? { mats: { ...run.hero.mats } } : {}),
-  };
+  run.over = overFor(run, run.hero, won, why);
   if (!won) run.hero.hp = 0;
 }
 
@@ -3508,5 +3527,5 @@ export function skipToBoss(run: Run) {
 export function takeEvents(run: Run): GameEvent[] {
   const e = run.events;
   run.events = [];
-  return e;
+  return e.filter((x) => heard(x, run.hero.id));
 }

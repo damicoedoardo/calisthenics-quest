@@ -144,7 +144,8 @@ party order. The rules treat every hero the same:
   `Hero.mats` (a `mat` event for you) and handed home in `RunEnd.mats`. A solo run never calls
   the rng for them, so solo replays are unchanged ([forge.md](forge.md)).
 - A hero at 0 HP is down (`fall`) and stops acting; the run ends when the whole party is down.
-  `RunEnd` is still yours. A friend standing within `PARTY.revive.r` of one who is down for
+  `RunEnd` is still yours: `run.over` is the first hero's, and `overFor(run, h)` gives any
+  hero's own (their kills, items, materials), which the scene's recap uses for you. A friend standing within `PARTY.revive.r` of one who is down for
   `PARTY.revive.secs` brings them back up (`revive`, a filling ring in the scene); anyone still
   down gets up on the way down the stairs (`PARTY.stairsUp`). A hero who is down is carried
   through doors with the party.
@@ -165,7 +166,9 @@ party order. The rules treat every hero the same:
 
 **A live party run**: the game server plays the run and the scene follows it (`RunSetup.net`,
 `live()` in `scene.ts`, which hands the following to `Follower` in `src/game/net/follow.ts`; your own moves' events carry
-the hero who made them, `byOf(e)`, so a live run shows them at once); see [../backend/live-runs.md](../backend/live-runs.md).
+the hero who made them, `byOf(e)`, so a live run shows them at once; news for one hero only (an
+item into their bag, their drop, chest, chest item or material) is sent with `emitTo` and heard
+only by that hero, `heard(e, id)`, which `takeEvents` and the `Follower` apply); see [../backend/live-runs.md](../backend/live-runs.md).
 
 **A practice party run** (no game server, or "Try again"): the scene takes `RunSetup.friends`
 (name, class and their own hero sheets from `friendSheets` in `src/game/sheets.ts`) and `seed`,
@@ -297,8 +300,19 @@ What a frame costs, kept small for phones (measured with a phone-speed CPU in Ch
   `num9`, `num11`, tinted per number); a Text would paint and upload a new picture on every hit.
 - The HUD goes to the page only when something on it changed (`sendHud`), and parts that didn't
   change stay the same objects, so `FogRun`'s memoized parts skip redrawing.
+- The words over the doors (`?`, `UP`) come from the same sheet; an item on the floor is painted
+  in one ImageData (`paintFrames`, `src/sprites/engine/grid.ts`).
+- At most `SFX_PER_FRAME` of the sounds that come in crowds (`CROWD`: blows, hits, kills, light)
+  start in one frame (`sfx`): each is a few new audio nodes, and a party's blows land together.
+- Phaser measures the page for a new size only every 5 s (`resizeInterval`); the ResizeObserver in
+  `startRun` catches real changes.
 - Prefer images, pools and drawn-once textures over a Graphics redrawn each frame; keep per-frame
   Graphics to what moves (water, spike tips, effects).
+
+In a party, only your own events move your screen: `mine(id)` and `spriteOf(id)` in `react` read who
+an event belongs to (`byOf(e)` for attacks, abilities, SP moves and dodges; `hero` on `hurt`). A
+friend's blow turns their hero, their dodge leaves their own afterimages, and the stop, the shake,
+the buzz, the red edge and the final's badge are only for yours.
 
 `pnpm test` replays a whole bot run in every zone (`engine.test.ts`): a refactor keeps those
 replays exactly as they were, and a balance change moves them on purpose (`pnpm test -u`).

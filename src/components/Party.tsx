@@ -262,8 +262,13 @@ function Lobby({ state }: { state: GameState }) {
                 </p>
               )}
               <p className="mt-3 text-xs text-slate-400">
-                <b className="text-slate-200">Not live yet:</b> each of you plays on your own phone, and your friends&apos; heroes fight beside you played by the game. Loot, XP and the Ember Road count for each of you. Playing live in one run comes with the game server.
+                You all play one run, live. Each of you gets your own loot and XP, and the Ember Road counts for each of you.
               </p>
+              {!road.started && (
+                <p className="mt-2 text-xs text-orange-200">
+                  For a story together, set out on the Ember Road on the Friends tab. Its chapters then show up here.
+                </p>
+              )}
               {zone.road && <p className="mt-2 text-xs text-orange-200">Beat {zone.bossName} together and the Ember Road goes on for everyone on this chapter.</p>}
             </section>
 
@@ -292,7 +297,7 @@ function Lobby({ state }: { state: GameState }) {
           <section className="rounded-2xl bg-ink-800 p-4">
             <p className="text-[10px] uppercase tracking-wider text-slate-500">Invite</p>
             {friends.filter((f) => !inParty.has(f.id)).length === 0 ? (
-              <p className="mt-2 text-xs text-slate-500">Add friends in the Fog, under Together, to invite them here.</p>
+              <p className="mt-2 text-xs text-slate-500">Add friends on the Friends tab to invite them here.</p>
             ) : (
               <ul className="mt-1 divide-y divide-ink-700">
                 {friends

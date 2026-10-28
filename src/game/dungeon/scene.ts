@@ -3,6 +3,7 @@ import type { ClassId } from '@/lib/gear';
 import type { Sheet } from '@/sprites/registry';
 import { xpToNext, type Edge, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import { music, type SfxId } from '@/lib/music';
+import { paintFrames } from '@/sprites/engine/grid';
 import { BOT_PICKS, type BossSheetKey, type SheetKey, type Sheets } from '../rules';
 import type { FogBoss, FogLines } from '@/story/types';
 import { R } from '@/sprites/palette';
@@ -59,6 +60,7 @@ import {
   finalReady,
   skillReady,
   wardenFloor,
+  overFor,
   winNow,
   type AbilityId,
   type SpMoveId,
@@ -76,6 +78,7 @@ import {
   type Side,
   type RunEnd as EngineEnd,
   type ShotStyle,
+  byOf,
 } from './engine';
 import { runFromStart, type Up } from '../net/wire';
 import { Follower } from '../net/follow';
@@ -100,7 +103,8 @@ export interface RunEnd extends EngineEnd {
 }
 
 function recap(run: Run): RunEnd {
-  const over = run.over!,
+  // Your own end (in a live run the run's own is the leader's).
+  const over = overFor(run, run.hero),
     wf = wardenFloor(run.layout);
   const warden = wf < 0 ? null : over.won || run.floor > wf || (run.floor === wf && !!run.warden && !run.warden.alive);
   return { ...over, relics: { ...run.hero.relics }, warden };
@@ -271,13 +275,18 @@ export interface RunHandle {
   destroy: () => void;
 }
 
-/** A live run: after you pick or answer the stairs, the server's next few runs may still ask (they
-    left before your answer got there). They're not asked again for this long (ms). */
+/** A live run: after you pick or answer the stairs, the server's next few runs may still ask the
+    same (they left before your answer got there). That same card isn't shown again for this long
+    (ms); a new one is. */
 const ANSWER_MS = 800;
+const askKey = (kind: string, choices: readonly string[] | null | undefined) => `${kind}:${choices?.join() ?? ''}`;
 
 const SFX: Record<'slash' | 'arrow' | 'orb' | 'wave', SfxId> = { slash: 'slash', arrow: 'arrow', orb: 'orb', wave: 'wave' };
 const HEAL = '#86efac';
 const RISE_MS = 280;
+/** The sounds that come in crowds (blows, hits, kills, light); others always play. */
+const CROWD: ReadonlySet<SfxId> = new Set(['slash', 'arrow', 'orb', 'wave', 'hit', 'bossHit', 'kill', 'gem', 'dash']);
+const SFX_PER_FRAME = 2;
 /** At most this much hit-stop (ms) in any one second. */
 const STOP_BUDGET = 140;
 
@@ -353,7 +362,13 @@ const BEEN = 0x94a3b8;
 const INWARD: Record<Side, [number, number]> = { e: [0, 1], w: [0, -1], n: [1, 0], s: [-1, 0] };
 /** Each kind of monster shot has its own color, so you learn what it will do. */
 const SHOT_TEX: Record<ShotStyle, string> = { plain: 'bullet', homing: 'bullet-homing', bounce: 'bullet-bounce', ramp: 'bullet-ramp', wiggle: 'bullet-page' };
-const hex = (c: string) => Phaser.Display.Color.HexStringToColor(c).color;
+/** A color as a number. Remembered, since the ground asks for the theme's colors every frame. */
+const hexes = new Map<string, number>();
+const hex = (c: string) => {
+  let n = hexes.get(c);
+  if (n === undefined) hexes.set(c, (n = Phaser.Display.Color.HexStringToColor(c).color));
+  return n;
+};
 /** A bubble's middle, kept far enough in from the walls that it fits. */
 const clampX = (x: number, w: number) => Math.min(w - 105, Math.max(105, x));
 
@@ -462,7 +477,7 @@ class DungeonScene extends Phaser.Scene {
     later: (ms, f) => void this.time.delayedCall(ms, f),
     shake: (ms, k) => this.shake(ms, k),
     sfx: (id, pitch) => this.sfx(id, pitch),
-    ghosts: (x, y, toX, toY, color, n) => this.ghosts(x, y, toX, toY, color, n),
+    ghosts: (x, y, toX, toY, color, n) => this.ghosts(x, y, toX, toY, color, n, this.actor),
     spots: (x, y, r, n) => this.spots(x, y, r, n),
     hero: () => this.run.hero,
     follow: (x, y) => {
@@ -504,6 +519,8 @@ class DungeonScene extends Phaser.Scene {
   private net: PlayLink | null = null;
   private follow: Follower | null = null;
   private answeredAt = -1e9;
+  /** The card you last answered in a live run (`askKey`). */
+  private answered = '';
 
   constructor(
     private setup: RunSetup,
@@ -1160,13 +1177,7 @@ class DungeonScene extends Phaser.Scene {
       cv = this.textures.createCanvas(key, g[0].length, g.length);
     const ctx = cv?.getContext();
     if (!cv || !ctx) return key;
-    g.forEach((row, y) =>
-      row.forEach((c, x) => {
-        if (!c) return;
-        ctx.fillStyle = c;
-        ctx.fillRect(x, y, 1, 1);
-      }),
-    );
+    paintFrames(ctx, [g]);
     cv.refresh();
     return key;
   }
@@ -1216,8 +1227,12 @@ class DungeonScene extends Phaser.Scene {
       if (!look.label) continue;
       const [x, y, ox, oy] = at[d.side];
       this.roomBits.push(
+        // From the damage numbers' sheet (its 9 px size has '?' and 'UP'): a new Text here was
+        // painted and uploaded right as the room cleared.
         this.add
-          .text(...this.P(x, y), look.label, { fontFamily: '"Press Start 2P", monospace', fontSize: '9px', color: `#${look.color.toString(16).padStart(6, '0')}`, stroke: '#0b0d14', strokeThickness: 3 })
+          .bitmapText(...this.P(x, y), 'num9', look.label, this.numberCell[9])
+          .setLetterSpacing(this.numberGap[9])
+          .setTint(look.color)
           .setOrigin(ox, oy)
           .setDepth(96000),
       );
@@ -1361,9 +1376,10 @@ class DungeonScene extends Phaser.Scene {
     const events = f.take(net.take(), now);
     if (events.length || now - this.answeredAt < ANSWER_MS) {
       if (now - this.answeredAt < ANSWER_MS) {
-        run.hero.offer = null;
-        run.hero.relicOffer = null;
-        run.stairsAsk = false;
+        const h = run.hero;
+        if (h.offer && askKey('pick', h.offer.choices) === this.answered) h.offer = null;
+        if (h.relicOffer && askKey('relic', h.relicOffer) === this.answered) h.relicOffer = null;
+        if (this.answered === 'stairs') run.stairsAsk = false;
       }
       for (const e of events) this.react(e);
     }
@@ -1378,10 +1394,11 @@ class DungeonScene extends Phaser.Scene {
     f.place(now);
   }
 
-  /** A live run: tell the server, and hold off its next few asks. */
-  private answer(m: Up) {
+  /** A live run: tell the server, and hold off its next few asks of the same card. */
+  private answer(m: Up, asked: string) {
     this.net!.send(m);
     this.answeredAt = this.time.now;
+    this.answered = asked;
   }
 
   private botPick(choices: UpgradeId[]): UpgradeId {
@@ -1856,13 +1873,18 @@ class DungeonScene extends Phaser.Scene {
 
   // ---------- what happened: light, sparks, sound ----------
 
+  /** The hero whose move is being drawn (the SP looks' afterimages are theirs). */
+  private actor!: Phaser.GameObjects.Sprite;
+
   private react(e: GameEvent) {
     const now = this.time.now;
+    this.actor = this.spriteOf(byOf(e));
     switch (e.type) {
       case 'attack': {
-        this.hero.play('heroAttack');
-        // Facing the blow across the screen (the engine's up is the screen's right).
-        this.hero.setFlipX(Math.sin(e.angle) > 0);
+        // Facing the blow across the screen (the engine's up is the screen's right). A friend's
+        // blow turns their hero, never yours.
+        if (this.mine(byOf(e))) this.hero.play('heroAttack');
+        this.spriteOf(byOf(e)).setFlipX(Math.sin(e.angle) > 0);
         this.sfx(SFX[e.kind]);
         // the swing or shot of the weapon in hand (spFx.ts)
         attackFx(this.kit, e, this.spAura());
@@ -1966,19 +1988,25 @@ class DungeonScene extends Phaser.Scene {
         if (MID_KINDS.has(e.kind)) this.cameras.main.flash(300, 255, 180, 90);
         break;
       }
-      case 'hurt':
-        buzz(40);
-        this.hitStop(70);
-        this.hero.setTintFill(0xff6b6b);
-        this.time.delayedCall(90, () => !this.run.over && this.hero.clearTint());
-        this.cameras.main.shake(120, 0.006);
-        // A red pulse at the screen's edge, not a full-screen flash: easy on small screens.
-        this.hurtAt = this.time.now;
-        this.sfx('hurt');
+      case 'hurt': {
+        // A friend hit: their hero flashes and their number shows; the stop, the shake, the buzz
+        // and the red edge are only for you.
+        const who = this.spriteOf(e.hero);
+        who.setTintFill(0xff6b6b);
+        this.time.delayedCall(90, () => !this.run.over && who.clearTint());
+        if (this.mine(e.hero)) {
+          buzz(40);
+          this.hitStop(70);
+          this.cameras.main.shake(120, 0.006);
+          // A red pulse at the screen's edge, not a full-screen flash: easy on small screens.
+          this.hurtAt = this.time.now;
+          this.sfx('hurt');
+        }
         this.bits.particleTint = 0xef4444;
         this.burst(this.bits, 6, e.x, e.y);
         this.number(e.x, e.y, 26, e.dmg, '#fca5a5');
         break;
+      }
       case 'shoot':
         this.burst(this.sparks, e.boss ? 3 : 1, e.x, e.y);
         if (e.boss && this.run.boss && e.x === this.run.boss.x && e.y === this.run.boss.y) {
@@ -2110,11 +2138,11 @@ class DungeonScene extends Phaser.Scene {
       case 'ability': {
         const { x, y, toX, toY } = e;
         this.sfx(e.id === 'volley' ? 'arrow' : e.id === 'still' || e.id === 'shock' ? 'nova' : 'dash');
-        this.cameras.main.shake(100, 0.004);
+        if (this.mine(byOf(e))) this.cameras.main.shake(100, 0.004);
         if (e.id === 'charge' || e.id === 'blink') {
           // the charge leaves a trail of you in steel blue; the blink, a violet you and a puff of stars where you land
           const blink = e.id === 'blink';
-          this.ghosts(x, y, toX, toY, blink ? 0xc4b5fd : 0x7dd3fc, blink ? 2 : 4);
+          this.ghosts(x, y, toX, toY, blink ? 0xc4b5fd : 0x7dd3fc, blink ? 2 : 4, this.spriteOf(byOf(e)));
           this.fade(300, (g, p) => g.lineStyle(10 * (1 - p) + 2, blink ? 0xc4b5fd : 0x7dd3fc, 0.6 * (1 - p)).lineBetween(x, y, toX, toY));
           this.burst(this.puffs, 10, x, y, 10);
           if (blink) {
@@ -2161,8 +2189,10 @@ class DungeonScene extends Phaser.Scene {
         // An SP move: its sound and look are in spFx.ts. A final shakes the room; its name shows
         // as a small badge in the HUD (finals), so nothing covers the fight.
         const { final } = e;
-        this.shake(final ? 260 : 120, final ? 0.01 : 0.005);
-        if (final) {
+        // A friend's move shows, but only your own shakes the screen and fills your badge.
+        const own = this.mine(byOf(e));
+        if (own) this.shake(final ? 260 : 120, final ? 0.01 : 0.005);
+        if (final && own) {
           buzz(30);
           this.finals++;
           this.hitStop(120);
@@ -2176,12 +2206,12 @@ class DungeonScene extends Phaser.Scene {
         this.passive(e.id, e.x, e.y);
         break;
       case 'dodge': {
-        buzz(12);
+        if (this.mine(byOf(e))) buzz(12);
         const { x, y, toX, toY } = e;
         this.sfx('dash', 1.3);
         this.burst(this.puffs, 6, x, y, 18);
         // Afterimages along the way: you were there, and now you're not.
-        this.ghosts(x, y, toX, toY, 0x7dd3fc);
+        this.ghosts(x, y, toX, toY, 0x7dd3fc, 3, this.spriteOf(byOf(e)));
         this.fade(220, (g, p) => g.lineStyle(6 * (1 - p) + 1, 0xe0f2fe, 0.5 * (1 - p)).lineBetween(x, y, toX, toY));
         break;
       }
@@ -2451,7 +2481,7 @@ class DungeonScene extends Phaser.Scene {
   /** Each size's cell width: the font's own size, so its digits are drawn one to one. */
   private numberCell: Record<number, number> = { 9: 9, 11: 11 };
   private numberFonts() {
-    const chars = '0123456789+',
+    const chars = '0123456789+?UP',
       font = (size: number) => `${size}px "Press Start 2P", monospace`,
       bake = () => {
         for (const size of [9, 11]) {
@@ -2534,14 +2564,26 @@ class DungeonScene extends Phaser.Scene {
   }
 
   /** Afterimages of you from one point to another, filled with one color. */
-  private ghosts(x: number, y: number, toX: number, toY: number, color: number, n = 3) {
+  /** An event is about your own hero (or no hero in particular). */
+  private mine(id: number | undefined): boolean {
+    return id === undefined || id === this.run.hero.id;
+  }
+
+  /** The sprite of the hero with this id on this screen: yours, or a friend's. */
+  private spriteOf(id: number | undefined): Phaser.GameObjects.Sprite {
+    if (this.mine(id)) return this.hero;
+    const i = this.run.party.findIndex((h) => h.id === id);
+    return this.friends[i - 1]?.sprite ?? this.hero;
+  }
+
+  private ghosts(x: number, y: number, toX: number, toY: number, color: number, n = 3, who = this.hero) {
     for (let i = 0; i < n; i++) {
       const k = i / n,
         [gx, gy] = this.P(x + (toX - x) * k, y + (toY - y) * k),
         ghost = this.add
-          .image(gx, gy, this.hero.texture.key, this.hero.frame.name)
-          .setScale(this.hero.scaleX, this.hero.scaleY)
-          .setFlipX(this.hero.flipX)
+          .image(gx, gy, who.texture.key, who.frame.name)
+          .setScale(who.scaleX, who.scaleY)
+          .setFlipX(who.flipX)
           .setTintFill(color)
           .setAlpha(0.55 - (i * 0.4) / n)
           .setDepth(gy - 1);
@@ -2989,7 +3031,16 @@ class DungeonScene extends Phaser.Scene {
     this.pad.fillStyle(0xfbbf24, 0.6).fillCircle(sx + this.stick.dx * k, sy + this.stick.dy * k, 18 * k);
   }
 
+  /** At most `SFX_PER_FRAME` of the crowd's sounds start in one frame: each is a few new audio nodes, and a
+      party's blows landing together made a burst of them. More at once can't be told apart. */
+  private sfxFrame = { at: -1, n: 0 };
   private sfx(id: SfxId, pitch?: number) {
+    if (CROWD.has(id)) {
+      const f = this.game.getFrame();
+      if (f !== this.sfxFrame.at) this.sfxFrame = { at: f, n: 0 };
+      if (this.sfxFrame.n >= SFX_PER_FRAME) return;
+      this.sfxFrame.n++;
+    }
     music.sfx(id, pitch);
   }
 
@@ -2997,9 +3048,11 @@ class DungeonScene extends Phaser.Scene {
 
   pick(id: UpgradeId) {
     this.offered = false;
-    if (this.net) this.answer({ t: 'pick', id });
+    if (this.net) this.answer({ t: 'pick', id }, askKey('pick', this.run.hero.offer?.choices));
     if (!this.run.hero.offer?.choices.includes(id)) return;
     pick(this.run, id);
+    // A live run: the next card (another level) comes from the server, not rolled here.
+    if (this.net) this.run.hero.offer = null;
     const h = this.hero;
     this.fade(450, (g, p) => g.lineStyle(4 * (1 - p) + 1, 0xfbbf24, 0.9 * (1 - p)).strokeCircle(h.x, h.y, 24 + 80 * p));
   }
@@ -3040,9 +3093,11 @@ class DungeonScene extends Phaser.Scene {
 
   pickRelic(id: RelicId) {
     this.offered = false;
-    if (this.net) this.answer({ t: 'relic', id });
+    if (this.net) this.answer({ t: 'relic', id }, askKey('relic', this.run.hero.relicOffer));
     if (!this.run.hero.relicOffer?.includes(id)) return;
     pickRelic(this.run, id);
+    // A live run: the server's own word of it is the one played, so it shows once.
+    if (this.net) this.run.events.length = 0;
     for (const e of takeEvents(this.run)) this.react(e);
     const h = this.hero;
     this.fade(450, (g, p) => g.lineStyle(4 * (1 - p) + 1, 0xfbbf24, 0.9 * (1 - p)).strokeCircle(h.x, h.y, 24 + 80 * p));
@@ -3066,7 +3121,7 @@ class DungeonScene extends Phaser.Scene {
     this.asked = false;
     // A live run: the server takes everyone down (or not); its next run shows the new floor.
     if (this.net) {
-      this.answer({ t: 'stairs', choice });
+      this.answer({ t: 'stairs', choice }, 'stairs');
       this.run.stairsAsk = false;
       return;
     }
@@ -3109,7 +3164,9 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
     pixelArt: true,
     banner: false,
     audio: { noAudio: true },
-    scale: { mode: Phaser.Scale.RESIZE, width: parent.clientWidth, height: parent.clientHeight },
+    // The ResizeObserver below catches every change of size, so Phaser's own check (which measures
+    // the page, and makes the browser lay it out, every half second) can wait much longer.
+    scale: { mode: Phaser.Scale.RESIZE, width: parent.clientWidth, height: parent.clientHeight, resizeInterval: 5000 },
     input: { activePointers: 2 },
     scene: [scene],
   });

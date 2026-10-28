@@ -60,7 +60,8 @@ one run ([live-runs.md](live-runs.md)); when that isn't there (not set up, offli
 plays a **practice run**: you, with bots playing your friends' heroes (see
 [../game/dungeon.md](../game/dungeon.md)). A
 party run (from the **Friends** tab) keeps its loot and co-op materials but never moves the story:
-only Story runs clear a zone (`page.tsx`, `onEnd`). The lobby also lists the **Ember Road**'s chapters up to the one the leader is on (sent to the server as zone `20 + chapter`, `partyCode`/`zoneByCode` in `src/lib/fog.ts`); beating a road boss there moves the road on for each hero on that chapter (`wonRoad`, see [../game/story.md](../game/story.md)). Friends, invites and the lobby button live
+only Story runs clear a zone (`page.tsx`, `onEnd`). The lobby also lists the **Ember Road**'s chapters up to the one the leader is on (before you set out, a line points to the
+Friends tab's "Set out on the road") (sent to the server as zone `20 + chapter`, `partyCode`/`zoneByCode` in `src/lib/fog.ts`); beating a road boss there moves the road on for each hero on that chapter (`wonRoad`, see [../game/story.md](../game/story.md)). Friends, invites and the lobby button live
 on the Friends tab.
 
 | File | What |

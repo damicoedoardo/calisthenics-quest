@@ -198,7 +198,8 @@ single frame once and caches it (the exercise library's rows draw one as each ro
 
 `toSheet` (`engine/grid.ts`) turns frames into a PNG data URL on a canvas kept in memory
 (`willReadFrequently`): reading back a canvas on the graphics chip waits for the chip, and during a
-Fog run that froze the game for a moment each time a new icon first showed.
+Fog run that froze the game for a moment each time a new icon first showed. `paintFrames` is its painting step,
+for a canvas you already have (the Fog's items on the floor).
 
 ## Using a PNG sprite sheet
 
