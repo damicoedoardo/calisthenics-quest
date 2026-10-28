@@ -1,4 +1,5 @@
 import type { AbilityId, RelicId, SpMoveId } from '@/game/dungeon/engine';
+import type { SpElement } from '@/game/dungeon/content';
 import type { UpgradeId } from '@/lib/fog';
 import type { PixelArt } from './pixel';
 
@@ -544,17 +545,17 @@ export const ABILITY_ICONS: Record<AbilityId | 'dodge', PixelArt> = {
 
 /** The colors of each later SP's light, dark to light (as in characters/spLooks.ts). */
 const ELEMENT: Record<string, [string, string, string]> = {
-  stone: ['#6b4f2a', '#c49a5a', '#f0dcb0'],
+  stone: ['#3b0764', '#8b5cf6', '#ede9fe'],
   storm: ['#3b4fb8', '#facc15', '#fef08a'],
   dawn: ['#b45309', '#fbbf24', '#fff7d6'],
   frost: ['#1e40af', '#93c5fd', '#f0f9ff'],
-  leaf: ['#166534', '#4ade80', '#d9f99d'],
+  leaf: ['#9a3412', '#f97316', '#fde047'],
   moon: ['#312e81', '#a5b4fc', '#eef2ff'],
-  crystal: ['#0e7490', '#67e8f9', '#f0abfc'],
-  sand: ['#92400e', '#f59e0b', '#fef3c7'],
+  crystal: ['#0e7490', '#67e8f9', '#ffffff'],
+  sand: ['#9a3412', '#f97316', '#fed7aa'],
   void: ['#3b0764', '#a855f7', '#f3e8ff'],
-  tiger: ['#9a3412', '#fb923c', '#ffedd5'],
-  lotus: ['#065f46', '#34d399', '#fde68a'],
+  tiger: ['#b45309', '#fcd34d', '#ffffff'],
+  lotus: ['#3b0764', '#a855f7', '#f3e8ff'],
   sun: ['#b45309', '#fbbf24', '#fffbeb'],
 };
 
@@ -760,6 +761,30 @@ export const SP_ICONS: Record<SpMoveId, PixelArt> = {
   nirvana: shaped('nova', 'lotus'),
   risingsun: shaped('drop', 'sun'),
   solarflare: shaped('all', 'sun'),
+};
+
+/** The four elements' marks, 10x10 (the SP card and the gallery in /lab/sp). */
+export const ELEMENT_ICONS: Record<SpElement, PixelArt> = {
+  // a flame
+  fire: {
+    rows: ['....k.....', '...k1k....', '...k21k.k.', '..k221kk1k', '.k22321k1k', '.k23332k1k', 'k2333W32k.', 'k233WW32k.', '.k23332k..', '..kkkkk...'],
+    palette: { k: K, W: '#ffffff', '1': '#b91c1c', '2': '#f97316', '3': '#fde047' },
+  },
+  // a drop of water
+  water: {
+    rows: ['....kk....', '...k22k...', '...k22k...', '..k2332k..', '.k223332k.', '.k2W3332k.', 'k22W33322k', 'k2223322k.', '.k122221k.', '..kkkkkk..'],
+    palette: { k: K, W: '#ffffff', '1': '#1e3a8a', '2': '#3b82f6', '3': '#93c5fd' },
+  },
+  // a sun of light
+  light: {
+    rows: ['....22....', '.2..33..2.', '..2kkkk2..', '..k3WW3k..', '23k3WW33k2', '23k33333k2', '..k3333k..', '..2kkkk2..', '.2..33..2.', '....22....'],
+    palette: { k: K, W: '#ffffff', '2': '#f59e0b', '3': '#fde68a' },
+  },
+  // a crescent in the dark
+  shadow: {
+    rows: ['...kkkk...', '..k221k...', '.k2331k...', 'k2331k....', 'k231k.....', 'k231k.....', 'k2331k....', '.k2331kkk.', '..k223321k', '...kkkkkk.'],
+    palette: { k: K, '1': '#2e1065', '2': '#7c3aed', '3': '#d8b4fe' },
+  },
 };
 
 /** The run's level-up skills, 12x12; a few share a relic's drawing because they do the same thing. */

@@ -32,7 +32,7 @@ export interface SpLook {
 const EMBER_GOLD: Ramp = ["#8a4b0c", "#e0a526", "#ffe08a"];
 const FIRE: Ramp = ["#7a1a0c", "#d4410c", "#fb923c"];
 
-/** Ember Knight: crimson plate, a flame cape, a gold circlet with flame crests. */
+/** Ember Knight (fire): crimson plate, a flame cape, a gold circlet with flame crests. */
 const EMBER_KNIGHT: SpLook = {
   dress: "heavy",
   a: ["#5c1a14", "#a3301f", "#d9583a"],
@@ -82,20 +82,20 @@ const EMBER_KNIGHT: SpLook = {
   },
 };
 
-const WIND: Ramp = ["#3f8f80", "#9fe0d0", "#effffa"];
+const WIND: Ramp = ["#b08a2a", "#f2d27a", "#fffbe6"];
 
-/** Wind Ranger: a sage jerkin, a light cloak, a long scarf the wind keeps lifting, a feather. */
+/** Wind Ranger (light): a white jerkin, a gold scarf the wind keeps lifting, a white feather. */
 const WIND_RANGER: SpLook = {
   dress: "light",
-  a: ["#1d4a3a", "#2f7a5c", "#5fb38a"],
-  trim: ["#7a8a94", "#c8d4da", "#ffffff"],
+  a: ["#8a8272", "#d8d0be", "#f6f2e6"],
+  trim: ["#8a6a1a", "#d9b24a", "#fff3b0"],
   accent: WIND,
   grand: true,
   mantle: true,
-  legs: ["#1a2a26", "#2a403a", "#3e5a52"],
-  aura: ["#2f8f7a", "#7fe0c8", "#e0fff6"],
-  glow: "#e0fff6",
-  spark: "#86efac",
+  legs: ["#3a3428", "#5a5240", "#7a705a"],
+  aura: ["#b45309", "#fcd34d", "#fffbeb"],
+  glow: "#fffbeb",
+  spark: "#ffffff",
   back(c) {
     // the scarf's two tails stream out over the shoulder, rising and falling with the wind
     const { u, P } = c,
@@ -116,32 +116,32 @@ const WIND_RANGER: SpLook = {
         py = y;
       }
     });
-    // a few leaves ride the wind past you
-    c.fx.p(8 + ((P.f * 5) % 12), 20 + ((P.f * 3) % 6), "#86efac");
+    // a few motes of light ride the wind past you
+    c.fx.p(8 + ((P.f * 5) % 12), 20 + ((P.f * 3) % 6), "#fde68a");
     c.fx.p(4 + ((P.f * 7) % 10), 40 - ((P.f * 2) % 5), WIND[2]);
   },
   head(c) {
     const { u } = c;
-    // a long feather tucked in over one ear, white with a green vane
-    u.thick(44, 15, 50, 2, 2, WIND[2]);
-    u.line(45, 14, 51, 2, WIND[0]);
-    u.line(46, 9, 49, 4, "#4ade80");
-    u.p(51, 1, "#4ade80");
+    // a long feather tucked in over one ear, white with a gold vane
+    u.thick(44, 15, 50, 2, 2, "#ffffff");
+    u.line(45, 14, 51, 2, "#9a9a9a");
+    u.line(46, 9, 49, 4, WIND[1]);
+    u.p(51, 1, WIND[1]);
     u.r(43, 14, 3, 3, "#7a4a24");
   },
 };
 
 const STAR_GOLD: Ramp = ["#8a6a1a", "#e8c45a", "#fff3b0"];
 
-/** Star Sage: a night-blue robe with stars in it, a tall pointed hat, a star that circles you. */
+/** Star Sage (light): a white robe with gold stars, a tall white hat, a star that circles you. */
 const STAR_SAGE: SpLook = {
   dress: "robe",
-  a: ["#1a1446", "#2e2a7a", "#4b46b8"],
+  a: ["#8a8a9a", "#dcdce8", "#ffffff"],
   trim: STAR_GOLD,
-  accent: ["#3a1f6e", "#6b3fc0", "#a67cff"],
+  accent: ["#1e3a8a", "#3b5bdb", "#93c5fd"],
   grand: true,
   mantle: false,
-  aura: ["#4338ca", "#818cf8", "#e0e7ff"],
+  aura: ["#b45309", "#fcd34d", "#fffbeb"],
   glow: "#fff3b0",
   spark: "#fff3b0",
   back(c) {
@@ -162,7 +162,7 @@ const STAR_SAGE: SpLook = {
   },
   head(c) {
     const { u } = c,
-      H: Ramp = ["#14103a", "#2e2a7a", "#4b46b8"];
+      H: Ramp = ["#9a9aae", "#e4e4f0", "#ffffff"];
     // the brim, wide over the hair
     u.ellipse(32, 10, 18, 3, H[0]);
     u.ellipse(32, 9, 17, 2, H[1]);
@@ -213,7 +213,7 @@ const STAR_SAGE: SpLook = {
 const RIVER: Ramp = ["#0f3a63", "#1f6fae", "#5aaee6"];
 const FOAM: Ramp = ["#8fb6d0", "#dcefff", "#ffffff"];
 
-/** River Monk: a blue gi with a foam sash, a headband whose tails ripple, beads, drops of water. */
+/** River Monk (water): a blue gi with a foam sash, a headband whose tails ripple, beads, drops of water. */
 const RIVER_MONK: SpLook = {
   dress: "light",
   a: RIVER,
@@ -279,23 +279,23 @@ const RIVER_MONK: SpLook = {
 
 // ---------- the warrior's other three ----------
 
-const STONE: Ramp = ['#3f3a36', '#6b625a', '#9a8f84'];
-const MOSS: Ramp = ['#2f4a22', '#4f7a34', '#86b45a'];
+const STONE: Ramp = ['#1c1826', '#3a3348', '#5c5470'];
+const VEIN: Ramp = ['#4c1d95', '#8b5cf6', '#ddd6fe'];
 
-/** Stone Warden: plate like old rock, moss in its seams, a crown of stone; pebbles hang round you. */
+/** Stone Warden (shadow): plate of black stone, violet light in its seams, a crown of stone; shards hang round you. */
 const STONE_WARDEN: SpLook = {
   dress: 'heavy',
   a: STONE,
-  trim: ['#5a4a1e', '#a08a3a', '#d8c070'],
-  accent: MOSS,
+  trim: ['#4a4458', '#8a84a0', '#c8c2dc'],
+  accent: VEIN,
   grand: true,
   mantle: false,
-  legs: ['#24211e', '#3a3530', '#544c44'],
-  aura: ['#6b4f2a', '#c49a5a', '#f0dcb0'],
-  glow: '#f0dcb0',
-  spark: '#a3e635',
+  legs: ['#121018', '#221e2c', '#36304a'],
+  aura: ['#3b0764', '#8b5cf6', '#ede9fe'],
+  glow: '#ede9fe',
+  spark: '#c4b5fd',
   back(c) {
-    // pebbles float round you, rising and settling
+    // black shards float round you, rising and settling
     const f = c.P.f;
     [
       [9, 40],
@@ -305,12 +305,12 @@ const STONE_WARDEN: SpLook = {
     ].forEach(([x, y], i) => {
       const k = [0, 1, 2, 1][(f + i) % 4];
       c.fx.r(x, y - k, 2, 2, i % 2 ? STONE[2] : STONE[1]);
-      c.fx.p(x, y - k, '#d6cfc6');
+      c.fx.p(x, y - k, VEIN[2]);
     });
   },
   head(c) {
     const { u } = c;
-    // a crown of stone over the brow, moss on it, a green stone in the middle
+    // a crown of black stone over the brow, a violet stone in the middle
     u.row(10, 19, 44, STONE[1]);
     u.row(11, 19, 44, STONE[0]);
     u.row(10, 21, 30, STONE[2]);
@@ -319,16 +319,16 @@ const STONE_WARDEN: SpLook = {
       u.p(x - 1, 6 + (i % 2), STONE[2]);
     });
     u.r(30, 6, 4, 5, STONE[1]);
-    u.r(31, 7, 2, 2, MOSS[2]);
+    u.r(31, 7, 2, 2, VEIN[2]);
     u.p(31, 7, '#ecfccb');
-    u.p(23, 11, MOSS[1]);
-    u.p(40, 11, MOSS[1]);
+    u.p(23, 11, VEIN[1]);
+    u.p(40, 11, VEIN[1]);
   },
 };
 
 const VOLT: Ramp = ['#8a6a0a', '#facc15', '#fef08a'];
 
-/** Storm Blade: dark blue steel, a winged helm, a cape, and lightning crackling round you. */
+/** Storm Blade (water): dark blue steel, a winged helm, a cape, and lightning crackling round you. */
 const STORM_BLADE: SpLook = {
   dress: 'heavy',
   a: ['#1e2a4a', '#34508a', '#5f86c8'],
@@ -367,12 +367,12 @@ const STORM_BLADE: SpLook = {
 
 const DAWN_GOLD: Ramp = ['#9a6a12', '#f2c04a', '#fff1b8'];
 
-/** Dawn Paladin: white and gold plate, a rose tabard and cape, a sun crest; morning light behind you. */
+/** Dawn Paladin (light): white and gold plate, a deep gold tabard and cape, a sun crest; morning light behind you. */
 const DAWN_PALADIN: SpLook = {
   dress: 'heavy',
   a: ['#8a8070', '#e4dccb', '#ffffff'],
   trim: DAWN_GOLD,
-  accent: ['#9a3a5a', '#f07aa8', '#fbd0e2'],
+  accent: ['#92400e', '#d97706', '#fcd34d'],
   grand: true,
   mantle: true,
   legs: ['#4a4438', '#7a7262', '#a89e8a'],
@@ -413,7 +413,7 @@ const DAWN_PALADIN: SpLook = {
 const ICE: Ramp = ['#1e3a5f', '#3b82f6', '#bfdbfe'];
 const FUR: Ramp = ['#9aa8b4', '#e2ecf4', '#ffffff'];
 
-/** Frost Hunter: an icy jerkin, a fur-lined hood and cloak, snow drifting round you. */
+/** Frost Hunter (water): an icy jerkin, a fur-lined hood and cloak, snow drifting round you. */
 const FROST_HUNTER: SpLook = {
   dress: 'light',
   a: ['#2a4a6a', '#5b8fbf', '#a8d4f0'],
@@ -454,23 +454,23 @@ const FROST_HUNTER: SpLook = {
   },
 };
 
-const LEAF: Ramp = ['#2f5a1a', '#4f8a2a', '#8ac04a'];
+const LEAF: Ramp = ['#7a1a0c', '#d4410c', '#fbbf24'];
 const BARK: Ramp = ['#3a2410', '#6a4420', '#a0703a'];
 
-/** Leaf Warden: a moss and bark jerkin, a crown of thorns and leaves, leaves riding past. */
+/** Leaf Warden (fire): a rust and bark jerkin, a crown of thorns and autumn leaves, burning leaves riding past. */
 const LEAF_WARDEN: SpLook = {
   dress: 'light',
-  a: ['#2a3a14', '#46622a', '#6e8e3e'],
+  a: ['#4a1a0c', '#7a2e14', '#a8481e'],
   trim: BARK,
   accent: ['#5a3a10', '#b07a2a', '#e0b060'],
   grand: false,
   mantle: true,
   legs: ['#2a2014', '#3e3020', '#56442e'],
-  aura: ['#166534', '#4ade80', '#dcfce7'],
-  glow: '#dcfce7',
-  spark: '#86efac',
+  aura: ['#9a3412', '#f97316', '#fed7aa'],
+  glow: '#fed7aa',
+  spark: '#fde047',
   back(c) {
-    // leaves fall past you, turning
+    // autumn leaves fall past you, glowing like embers
     const f = c.P.f;
     [
       [8, 6],
@@ -502,7 +502,7 @@ const LEAF_WARDEN: SpLook = {
 
 const MOON: Ramp = ['#5a5a8a', '#c7d2fe', '#f5f5ff'];
 
-/** Moon Stalker: a night-violet jerkin and hood, a crescent moon pinned at the brow, stars round you. */
+/** Moon Stalker (shadow): a night-violet jerkin and hood, a crescent moon pinned at the brow, stars round you. */
 const MOON_STALKER: SpLook = {
   dress: 'light',
   a: ['#1a1630', '#2e2850', '#4a4278'],
@@ -546,9 +546,9 @@ const MOON_STALKER: SpLook = {
 
 // ---------- the mage's other three ----------
 
-const CRYSTAL: Ramp = ['#8a2a6a', '#e879f9', '#fae8ff'];
+const CRYSTAL: Ramp = ['#2a5a8a', '#a5d8ff', '#ffffff'];
 
-/** Crystal Mage: a teal robe with pink crystal trim, a tiara of crystals, shards floating round you. */
+/** Crystal Mage (water): a teal robe with ice-clear crystal trim, a tiara of crystals, shards floating round you. */
 const CRYSTAL_MAGE: SpLook = {
   dress: 'robe',
   a: ['#0f4a4a', '#1a8a8a', '#5ad0c8'],
@@ -557,7 +557,7 @@ const CRYSTAL_MAGE: SpLook = {
   grand: true,
   mantle: false,
   aura: ['#0e7490', '#67e8f9', '#ecfeff'],
-  glow: '#fae8ff',
+  glow: '#ecfeff',
   spark: '#f0abfc',
   back(c) {
     // three shards circle you
@@ -595,10 +595,10 @@ const CRYSTAL_MAGE: SpLook = {
   },
 };
 
-const SAND: Ramp = ['#7a5a2a', '#c0944a', '#e8c88a'];
+const SAND: Ramp = ['#7a2a10', '#b8501e', '#e8a060'];
 const TURQ: Ramp = ['#0f5a5a', '#14b8a6', '#99f6e4'];
 
-/** Sand Oracle: a sand-colored robe, a veil held by a gold band with a turquoise eye, sand falling round you. */
+/** Sand Oracle (fire): a robe of red desert sand, a veil held by a gold band with a turquoise eye, hot sand falling round you. */
 const SAND_ORACLE: SpLook = {
   dress: 'robe',
   a: SAND,
@@ -606,8 +606,8 @@ const SAND_ORACLE: SpLook = {
   accent: TURQ,
   grand: true,
   mantle: true,
-  aura: ['#92400e', '#f59e0b', '#fef3c7'],
-  glow: '#fef3c7',
+  aura: ['#9a3412', '#f97316', '#fed7aa'],
+  glow: '#fed7aa',
   spark: '#fde68a',
   back(c) {
     // sand runs down beside you, like an hourglass
@@ -634,7 +634,7 @@ const SAND_ORACLE: SpLook = {
 
 const VOID: Ramp = ['#5b21b6', '#a855f7', '#e9d5ff'];
 
-/** Void Seer: a robe dark as a night with no stars, a deep hood with a violet gem, little dark suns round you. */
+/** Void Seer (shadow): a robe dark as a night with no stars, a deep hood with a violet gem, little dark suns round you. */
 const VOID_SEER: SpLook = {
   dress: 'robe',
   a: ['#140a1e', '#2a1440', '#4a2470'],
@@ -677,20 +677,20 @@ const VOID_SEER: SpLook = {
 
 // ---------- the monk's other three ----------
 
-const TIGER: Ramp = ['#7a3a0a', '#d9771a', '#f5a54a'];
+const TIGER: Ramp = ['#8a8a96', '#dcdce4', '#ffffff'];
 
-/** Tiger Fist: an orange gi striped black, a headband with tiger ears, a tail of cloth. */
+/** Tiger Fist (light): a white gi striped black like a white tiger, a headband with tiger ears, a tail of cloth. */
 const TIGER_FIST: SpLook = {
   dress: 'light',
   a: TIGER,
   trim: ['#1a1410', '#3a2a20', '#5a4a3a'],
-  accent: ['#9a9a9a', '#e5e5e5', '#ffffff'],
+  accent: ['#8a6a1a', '#e8c45a', '#fff3b0'],
   grand: false,
   mantle: false,
   legs: ['#1a1410', '#2e241c', '#463a2e'],
-  aura: ['#9a3412', '#fb923c', '#ffedd5'],
-  glow: '#ffedd5',
-  spark: '#fdba74',
+  aura: ['#b45309', '#fcd34d', '#fffbeb'],
+  glow: '#fffbeb',
+  spark: '#ffffff',
   back(c) {
     // a striped tail of cloth behind you, swishing
     const { u, P } = c;
@@ -724,31 +724,32 @@ const TIGER_FIST: SpLook = {
         ],
         TIGER[1],
       );
-      u.p(x, 3, '#ffffff');
-      u.p(x, 4, '#ffffff');
+      u.p(x, 3, '#f9a8d4');
+      u.p(x, 4, '#f9a8d4');
       u.line(x - 3, 6, x, 1, '#1a1410');
     });
   },
 };
 
-const JADE: Ramp = ['#0f3a32', '#1f6a5a', '#3a9a82'];
+const NIGHT_GI: Ramp = ['#14101c', '#2a2236', '#433856'];
+const LOTUS: Ramp = ['#581c87', '#a855f7', '#e9d5ff'];
 const GOLD: Ramp = ['#8a5a10', '#d4a017', '#fde68a'];
 
-/** Lotus Sage: a deep jade gi with gold trim, a dark headband with a gold lotus sigil, gold motes
-    rising round you. */
+/** Lotus Sage (shadow): a black gi with gold trim, a dark headband with a violet lotus sigil, violet
+    petals rising round you. */
 const LOTUS_SAGE: SpLook = {
   dress: 'light',
-  a: JADE,
+  a: NIGHT_GI,
   trim: GOLD,
   accent: GOLD,
   grand: false,
   mantle: false,
-  legs: ['#14201c', '#22302a', '#34463e'],
-  aura: ['#065f46', '#34d399', '#ecfdf5'],
-  glow: '#ecfdf5',
-  spark: '#fde68a',
+  legs: ['#0e0c14', '#1a1622', '#2a2436'],
+  aura: ['#3b0764', '#a855f7', '#f3e8ff'],
+  glow: '#f3e8ff',
+  spark: '#e9d5ff',
   back(c) {
-    // gold motes rise round you
+    // violet petals rise round you
     const f = c.P.f;
     [
       [9, 44],
@@ -757,8 +758,8 @@ const LOTUS_SAGE: SpLook = {
       [57, 24],
     ].forEach(([x, y], i) => {
       const yy = y - ((f * 2 + i * 4) % 14);
-      c.fx.p(x, yy, GOLD[2]);
-      c.fx.p(x, yy + 1, GOLD[1]);
+      c.fx.p(x, yy, LOTUS[2]);
+      c.fx.p(x, yy + 1, LOTUS[1]);
     });
   },
   outfit(c) {
@@ -771,14 +772,14 @@ const LOTUS_SAGE: SpLook = {
   },
   head(c) {
     const { u } = c;
-    // a dark headband with a small gold lotus sigil at the brow, its tails out behind
+    // a dark headband with a small violet lotus sigil at the brow, its tails out behind
     u.row(12, 19, 45, '#1c1c22');
     u.row(13, 19, 45, '#0b0d14');
     const x = 32;
-    u.p(x, 10, GOLD[2]);
-    u.row(11, x - 1, x + 1, GOLD[1]);
-    u.row(12, x - 2, x + 2, GOLD[1]);
-    u.p(x, 12, GOLD[2]);
+    u.p(x, 10, LOTUS[2]);
+    u.row(11, x - 1, x + 1, LOTUS[1]);
+    u.row(12, x - 2, x + 2, LOTUS[1]);
+    u.p(x, 12, LOTUS[2]);
     u.p(46, 13, '#1c1c22');
     u.p(47, 14, '#1c1c22');
     u.p(47, 15, '#0b0d14');
@@ -787,7 +788,7 @@ const LOTUS_SAGE: SpLook = {
 
 const SUN: Ramp = ['#a16207', '#facc15', '#fef9c3'];
 
-/** Sun Fist: a red and gold gi, a headband with a sun disk, a sun burning behind your head. */
+/** Sun Fist (fire): a red and gold gi, a headband with a sun disk, a sun burning behind your head. */
 const SUN_FIST: SpLook = {
   dress: 'light',
   a: ['#7a1a0a', '#c2410c', '#f97316'],
@@ -820,6 +821,30 @@ const SUN_FIST: SpLook = {
     u.r(31, 8, 2, 2, SUN[2]);
   },
 };
+
+/** The girl's cut of an SP's plate or jerkin: a short flared skirt over the legs, its hem in the
+    trim (plate keeps its tabard showing; a robe already reaches the knees, so it keeps its own). */
+export function spGirlCut(c: Ctx, sp: SpLook) {
+  if (!c.P.fem || sp.dress === "robe") return;
+  const { u } = c,
+    A = sp.a;
+  for (let y = 44; y <= 49; y++) {
+    const flare = (y - 44) >> 1,
+      x0 = 22 - flare,
+      x1 = 41 + flare;
+    const col = y === 49 ? sp.trim[1] : (y + 1) % 3 ? A[1] : A[0];
+    // plate keeps its tabard down the middle
+    if (sp.dress === "heavy") {
+      u.row(y, x0, 28, col);
+      u.row(y, 35, x1, col);
+    } else u.row(y, x0, x1, col);
+    u.p(x0, y, A[0]);
+    u.p(x1, y, A[0]);
+    if (y < 49) u.p(x0 + 1, y, A[2]);
+  }
+  // the folds
+  (sp.dress === "heavy" ? [25, 38] : [27, 32, 37]).forEach((x) => u.col(x, 46, 48, A[0]));
+}
 
 /** Each class's four SPs' looks, in the order of SP_CARDS (src/game/dungeon/content.ts). */
 export const SP_LOOKS: Record<ClassId, readonly [SpLook, SpLook, SpLook, SpLook]> = {

@@ -1,5 +1,6 @@
 import { uniformGear } from '@/lib/gear';
 import type { AbilityId, RelicId, SpMoveId } from '@/game/dungeon/engine';
+import type { SpElement } from '@/game/dungeon/content';
 import type { UpgradeId } from '@/lib/fog';
 import { RARITY, type ItemLook } from '@/game/dungeon/items';
 import { CLIPS, type ClipFrame, type ClipId, type SpriteAction } from './clips';
@@ -40,7 +41,7 @@ import { FOG_BANK, WORLD_LOCK } from './characters/worlds';
 import { drawItem } from './characters/items';
 import { drawSpCard, type SpCardOpts } from './characters/spCard';
 import { installStepArt, type InstallStep } from './characters/install';
-import { ABILITY_ICONS, DAY_ICONS, SP_ICONS, KEEPSAKE_ICONS, MARK_ICONS, RELIC_ICONS, SKILL_ICONS, UI_ICONS, ZONE_ICONS, type DayKind } from './characters/icons';
+import { ABILITY_ICONS, DAY_ICONS, ELEMENT_ICONS, SP_ICONS, KEEPSAKE_ICONS, MARK_ICONS, RELIC_ICONS, SKILL_ICONS, UI_ICONS, ZONE_ICONS, type DayKind } from './characters/icons';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
    art for a character is a change here, never in a component. Two kinds:
@@ -126,6 +127,9 @@ export interface AbilityIconOpts {
 }
 export interface SpIconOpts {
   name: SpMoveId;
+}
+export interface ElementIconOpts {
+  name: SpElement;
 }
 export interface SkillIconOpts {
   name: UpgradeId;
@@ -226,6 +230,7 @@ export const SPRITES = {
   relicIcon: icon<RelicIconOpts>((o) => o.name, { name: 'whetstone' }, (o) => RELIC_ICONS[o.name]),
   abilityIcon: icon<AbilityIconOpts>((o) => o.name, { name: 'charge' }, (o) => ABILITY_ICONS[o.name]),
   spIcon: icon<SpIconOpts>((o) => o.name, { name: 'whirl' }, (o) => SP_ICONS[o.name]),
+  elementIcon: icon<ElementIconOpts>((o) => o.name, { name: 'fire' }, (o) => ELEMENT_ICONS[o.name]),
   skillIcon: icon<SkillIconOpts>((o) => o.name, { name: 'power' }, (o) => SKILL_ICONS[o.name]),
   uiIcon: icon<UiIconOpts>((o) => o.name, { name: 'heart' }, (o) => UI_ICONS[o.name]),
   zoneIcon: icon<ZoneIconOpts>((o) => `zone ${o.zone}`, { zone: 0 }, (o) => ZONE_ICONS[Math.max(0, Math.min(ZONE_ICONS.length - 1, o.zone))]),

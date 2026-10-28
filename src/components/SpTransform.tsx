@@ -10,7 +10,7 @@ import {
 import { Hero } from "./Hero";
 import { Sprite } from "./Sprite";
 import { useLook } from "./Look";
-import { spDef, type SpElement, type SpNo } from "@/game/dungeon/content";
+import { spDef, type SpTheme, type SpNo } from "@/game/dungeon/content";
 import { spLook } from "@/sprites/characters/spLooks";
 import type { ClassId, Gear, GearSlot } from "@/lib/gear";
 import { fastStory } from "@/lib/dev";
@@ -95,7 +95,7 @@ export function SpTransform({
       />
 
       {phase === "storm" && (
-        <Storm style={STYLE[def.element]} colors={sp.aura} spark={sp.spark} />
+        <Storm style={STYLE[def.theme]} colors={sp.aura} spark={sp.spark} />
       )}
 
       <div
@@ -167,7 +167,7 @@ const bit = (style: CSSProperties, color: string, size = 8): CSSProperties => ({
 /** How each element storms in: rising like fire, sweeping like wind, gathering like stars, or
     spreading in rings like water. */
 type StormStyle = "rise" | "sweep" | "converge" | "rings";
-const STYLE: Record<SpElement, StormStyle> = {
+const STYLE: Record<SpTheme, StormStyle> = {
   fire: "rise",
   dawn: "rise",
   sun: "rise",

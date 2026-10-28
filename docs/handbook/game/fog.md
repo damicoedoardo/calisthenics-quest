@@ -72,10 +72,16 @@ off (`setSpOff`). The one worn goes into every run (`spWorn`, a number 1 to 4 or
 
 | Class | 1 | 2 | 3 | 4 |
 |---|---|---|---|---|
-| Warrior | Ember Knight | Stone Warden | Storm Blade | Dawn Paladin |
-| Archer | Wind Ranger | Frost Hunter | Leaf Warden | Moon Stalker |
-| Mage | Star Sage | Crystal Mage | Sand Oracle | Void Seer |
-| Monk | River Monk | Tiger Fist | Lotus Sage | Sun Fist |
+| Warrior | Ember Knight (fire) | Stone Warden (shadow) | Storm Blade (water) | Dawn Paladin (light) |
+| Archer | Wind Ranger (light) | Frost Hunter (water) | Leaf Warden (fire) | Moon Stalker (shadow) |
+| Mage | Star Sage (light) | Crystal Mage (water) | Sand Oracle (fire) | Void Seer (shadow) |
+| Monk | River Monk (water) | Tiger Fist (light) | Lotus Sage (shadow) | Sun Fist (fire) |
+
+Each class has one SP of each of the four elements (`SpElement`: fire, water, light, shadow;
+`SP_ELEMENTS`, `ELEMENT_NAMES`), and each card has a one-line idea of who it is (`about`). The
+element only sets colors and the mark on the card for now; how elements beat each other, and
+monsters with elements, come later. `theme` (`SpTheme`) is the SP's own light (ember, frost,
+lotus...), which picks how it storms in when it wakes. See all sixteen, boy and girl, at `/lab/sp`.
 
 Each has the class ability, its own move, a final and a passive that is always on (`SP_PASSIVES`:
 Embers burns, Bedrock hardens you standing still, Static sparks, Second Wind heals once a floor,

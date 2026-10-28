@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { initialState, type GameState, type Session } from './game';
 import { giveSp, setSpOff, SP_FLOOR, spAfterRun, spOpen, spOwned, spTrial, spWorn, wearSp } from './sp';
 import { SP_TRIAL } from '@/balance';
+import { SP_CARDS, SP_ELEMENTS } from '@/game/dungeon/content';
 
 const workouts = (n: number): Session[] =>
   Array.from({ length: n }, (_, i) => ({ id: String(i), date: new Date(2026, 9, 1 + i).toISOString(), kind: 'full', day: 'A', xp: 100, breakdown: [], entries: [] }));
@@ -44,5 +45,11 @@ describe('the later SPs', () => {
     const s = giveSp(woken(), 3);
     expect(spWorn(wearSp(s, 1))).toBe(1);
     expect(wearSp(s, 4)).toBe(s);
+  });
+});
+
+describe('the elements', () => {
+  it('gives each class one SP of each element', () => {
+    for (const cards of Object.values(SP_CARDS)) expect(cards.map((c) => c.element).sort()).toEqual([...SP_ELEMENTS].sort());
   });
 });

@@ -8,6 +8,8 @@ exports[`sprite registry > art fingerprints 1`] = `
   "book idle": "a9f159d5eab8",
   "dayIcon attack": "6e22c11eb5d4",
   "dayIcon idle": "6e22c11eb5d4",
+  "elementIcon attack": "fafae7ea9cd9",
+  "elementIcon idle": "fafae7ea9cd9",
   "ember attack": "d4540b77ed81",
   "ember idle": "d4540b77ed81",
   "exercise ab-rollout": "e8b38158c402",

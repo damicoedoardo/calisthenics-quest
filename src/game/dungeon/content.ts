@@ -582,12 +582,20 @@ export type SpPassiveId =
   | 'splitstar' | 'shell' | 'swiftsurge' | 'rebound'
   | 'flow' | 'momentum' | 'quickstep' | 'sunburst';
 
-/** What an SP's light is made of: its colors on screen, its card and its waking (src/sprites/characters/spLooks.ts). */
-export type SpElement = 'fire' | 'stone' | 'storm' | 'dawn' | 'wind' | 'frost' | 'leaf' | 'moon' | 'star' | 'crystal' | 'sand' | 'void' | 'water' | 'tiger' | 'lotus' | 'sun';
+/** What an SP's light looks like: its colors on screen, its card and its waking (src/sprites/characters/spLooks.ts). */
+export type SpTheme = 'fire' | 'stone' | 'storm' | 'dawn' | 'wind' | 'frost' | 'leaf' | 'moon' | 'star' | 'crystal' | 'sand' | 'void' | 'water' | 'tiger' | 'lotus' | 'sun';
+
+/** The four elements. Each class has one SP of each; monsters get them later. */
+export type SpElement = 'fire' | 'water' | 'light' | 'shadow';
+export const SP_ELEMENTS: readonly SpElement[] = ['fire', 'water', 'light', 'shadow'];
+export const ELEMENT_NAMES: Record<SpElement, string> = { fire: 'Fire', water: 'Water', light: 'Light', shadow: 'Shadow' };
 
 export interface SpCardDef {
   name: string;
+  /** Who this SP is, in one line (the SP card and the gallery in /lab/sp). */
+  about: string;
   element: SpElement;
+  theme: SpTheme;
   skill: SpMoveId;
   final: SpMoveId;
   passive: SpPassiveId;
@@ -597,28 +605,28 @@ export interface SpCardDef {
     others as the story goes on. None is stronger than the others; each fights its own way. */
 export const SP_CARDS: Record<ClassId, readonly [SpCardDef, SpCardDef, SpCardDef, SpCardDef]> = {
   warrior: [
-    { name: 'Ember Knight', element: 'fire', skill: 'whirl', final: 'phoenix', passive: 'embers' },
-    { name: 'Stone Warden', element: 'stone', skill: 'quake', final: 'mountain', passive: 'bedrock' },
-    { name: 'Storm Blade', element: 'storm', skill: 'thunderdash', final: 'thunderclap', passive: 'static' },
-    { name: 'Dawn Paladin', element: 'dawn', skill: 'sunguard', final: 'dawnbreak', passive: 'secondwind' },
+    { name: 'Ember Knight', about: "A knight in burning red plate who charges in first and never backs down.", element: 'fire', theme: 'fire', skill: 'whirl', final: 'phoenix', passive: 'embers' },
+    { name: 'Stone Warden', about: "A wall of black stone: slow, patient, and nothing gets past.", element: 'shadow', theme: 'stone', skill: 'quake', final: 'mountain', passive: 'bedrock' },
+    { name: 'Storm Blade', about: "A swordsman of rain and thunder, there and gone like lightning.", element: 'water', theme: 'storm', skill: 'thunderdash', final: 'thunderclap', passive: 'static' },
+    { name: 'Dawn Paladin', about: "A knight in white and gold who stands between friends and the dark.", element: 'light', theme: 'dawn', skill: 'sunguard', final: 'dawnbreak', passive: 'secondwind' },
   ],
   archer: [
-    { name: 'Wind Ranger', element: 'wind', skill: 'pin', final: 'rain', passive: 'tailwind' },
-    { name: 'Frost Hunter', element: 'frost', skill: 'frostarrow', final: 'blizzard', passive: 'frostbite' },
-    { name: 'Leaf Warden', element: 'leaf', skill: 'thorntrap', final: 'wildvolley', passive: 'harvest' },
-    { name: 'Moon Stalker', element: 'moon', skill: 'shadowstep', final: 'moonfall', passive: 'focus' },
+    { name: 'Wind Ranger', about: "A sky hunter in white and gold, quick as the morning wind.", element: 'light', theme: 'wind', skill: 'pin', final: 'rain', passive: 'tailwind' },
+    { name: 'Frost Hunter', about: "A hunter from the snow who slows the world down, then takes the shot.", element: 'water', theme: 'frost', skill: 'frostarrow', final: 'blizzard', passive: 'frostbite' },
+    { name: 'Leaf Warden', about: "A keeper of the autumn wood; the leaves round you burn like embers.", element: 'fire', theme: 'leaf', skill: 'thorntrap', final: 'wildvolley', passive: 'harvest' },
+    { name: 'Moon Stalker', about: "A hunter of the night who strikes from the dark and is gone.", element: 'shadow', theme: 'moon', skill: 'shadowstep', final: 'moonfall', passive: 'focus' },
   ],
   mage: [
-    { name: 'Star Sage', element: 'star', skill: 'starfall', final: 'sky', passive: 'splitstar' },
-    { name: 'Crystal Mage', element: 'crystal', skill: 'shards', final: 'prism', passive: 'shell' },
-    { name: 'Sand Oracle', element: 'sand', skill: 'hourglass', final: 'stopsands', passive: 'swiftsurge' },
-    { name: 'Void Seer', element: 'void', skill: 'voidstep', final: 'rift', passive: 'rebound' },
+    { name: 'Star Sage', about: "A sage in white who calls stars down from the sky.", element: 'light', theme: 'star', skill: 'starfall', final: 'sky', passive: 'splitstar' },
+    { name: 'Crystal Mage', about: "A mage of clear crystal and deep water, cool and sharp.", element: 'water', theme: 'crystal', skill: 'shards', final: 'prism', passive: 'shell' },
+    { name: 'Sand Oracle', about: "An oracle of the burning desert who bends time like falling sand.", element: 'fire', theme: 'sand', skill: 'hourglass', final: 'stopsands', passive: 'swiftsurge' },
+    { name: 'Void Seer', about: "A seer who looks into the dark between stars and walks through it.", element: 'shadow', theme: 'void', skill: 'voidstep', final: 'rift', passive: 'rebound' },
   ],
   monk: [
-    { name: 'River Monk', element: 'water', skill: 'palm', final: 'palms', passive: 'flow' },
-    { name: 'Tiger Fist', element: 'tiger', skill: 'pounce', final: 'hundredclaws', passive: 'momentum' },
-    { name: 'Lotus Sage', element: 'lotus', skill: 'lotus', final: 'nirvana', passive: 'quickstep' },
-    { name: 'Sun Fist', element: 'sun', skill: 'risingsun', final: 'solarflare', passive: 'sunburst' },
+    { name: 'River Monk', about: "A monk who moves like a river: soft, steady, and never stopped.", element: 'water', theme: 'water', skill: 'palm', final: 'palms', passive: 'flow' },
+    { name: 'Tiger Fist', about: "A white tiger of a fighter, all pounce and claws.", element: 'light', theme: 'tiger', skill: 'pounce', final: 'hundredclaws', passive: 'momentum' },
+    { name: 'Lotus Sage', about: "A calm fighter of the black lotus, quiet in the middle of the storm.", element: 'shadow', theme: 'lotus', skill: 'lotus', final: 'nirvana', passive: 'quickstep' },
+    { name: 'Sun Fist', about: "A brawler with the sun behind, who hits like a sunrise.", element: 'fire', theme: 'sun', skill: 'risingsun', final: 'solarflare', passive: 'sunburst' },
   ],
 };
 

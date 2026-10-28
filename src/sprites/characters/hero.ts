@@ -5,7 +5,7 @@ import { NIGHT, aura, grid, mix, painter, rampOf, tint, type Grid, type Ramp } f
 import { ARM_DOWN, bone, hangs, limbs, paintArm } from '../engine/drawn';
 import { drawBow, drawStaff, drawStick, drawSword, drawWand, type WeaponLook } from '../parts/weapons';
 import { itemColors, pick, type ItemColors } from './items';
-import { spLook } from './spLooks';
+import { spGirlCut, spLook } from './spLooks';
 import { BANDS } from '@/balance';
 import { bandOf } from '@/game/dungeon/items';
 import { CAPE, FLAME, GOLD_GHOST, HAIR, HOLLOW_EYES, LINEN, R, SHADOW, SKIN, TROUSERS } from '../palette';
@@ -284,6 +284,7 @@ export function heroSpec({ gear, classId, variant, body, sp: spOn }: HeroOpts): 
             }
           });
         }
+        if (sp) spGirlCut(c, sp);
         sp?.outfit?.(c);
         if (cc) {
           // the charm, worn on a cord at the chest

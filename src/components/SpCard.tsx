@@ -36,6 +36,7 @@ import {
   type SpPassiveId,
 } from "@/game/dungeon/engine";
 import type { GameState } from "@/lib/game";
+import { ELEMENT_NAMES } from "@/game/dungeon/content";
 import {
   setSpOff,
   SP_FLOOR,
@@ -114,9 +115,17 @@ export function SpCard({
       }
     >
       <div className="flex items-center justify-between gap-2">
-        <p className="font-pixel text-[10px] text-violet-300">
+        <div className="flex items-center gap-1.5 font-pixel text-[10px] text-violet-300">
+          {open && (
+            <Sprite
+              id="elementIcon"
+              opts={{ name: card.element }}
+              size={14}
+              label={ELEMENT_NAMES[card.element]}
+            />
+          )}
           SP · {card.name}
-        </p>
+        </div>
         {!open ? (
           <p className="flex items-center gap-1 text-[11px] text-slate-500">
             <Lock size={11} aria-hidden /> Sealed
@@ -162,6 +171,9 @@ export function SpCard({
         <div className="min-w-0 flex-1">
           {open ? (
             <>
+              <p className="mb-2 text-xs italic text-slate-400">
+                {card.about}
+              </p>
               <ul className="space-y-2">
                 {moves.map((m) => (
                   <li key={m.name} className="flex items-start gap-2">
