@@ -481,7 +481,8 @@ export function migrate(raw: unknown): GameState {
     // made by then stays as the hero's look (the starter kit), and finer gear comes from the Fog.
     const fogGear = s.fogGear?.kit ? s.fogGear : { worn: {}, vault: [], ...s.fogGear, kit: tiersAt((s.sessions ?? []).length) };
     const old = noReach(s.build, fogGear);
-    return { ...fresh, ...s, profile: profileOf(s.profile), ...noCrit(old.build, old.fogGear), ...(s.coach ? { coach: fromLegacy(s.coach) } : {}) };
+    const kept = noCrit(old.build, old.fogGear);
+    return { ...fresh, ...s, profile: profileOf(s.profile), build: kept.build, fogGear: armorAsksNoPoints(kept.fogGear), ...(s.coach ? { coach: fromLegacy(s.coach) } : {}) };
   }
   if (r.version === 2) {
     const { progress: _progress, tests: _tests, reps: _reps, ...s } = r as unknown as GameState & { progress?: unknown; tests?: unknown };
@@ -550,6 +551,14 @@ function noCrit(build: GameState['build'], fogGear: FogGear): { build: GameState
     build: old ? rest : build,
     fogGear: { ...fogGear, vault: fogGear.vault.map(fix), worn: Object.fromEntries(Object.entries(fogGear.worn).map(([k, it]) => [k, it && fix(it)])) },
   };
+}
+
+/** Armor stopped asking for Armor points (it asks only for a level, so any build can wear it):
+    armor found before keeps no points need either. */
+function armorAsksNoPoints(fogGear: FogGear): FogGear {
+  const fix = (it: Item): Item => (it.slot === 'armor' && it.need ? { ...it, need: null } : it);
+  if (![...fogGear.vault, ...Object.values(fogGear.worn)].some((it) => it && it.slot === 'armor' && it.need)) return fogGear;
+  return { ...fogGear, vault: fogGear.vault.map(fix), worn: Object.fromEntries(Object.entries(fogGear.worn).map(([k, it]) => [k, it && fix(it)])) };
 }
 
 function defaultId(): string {

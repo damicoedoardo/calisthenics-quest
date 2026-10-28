@@ -13,25 +13,24 @@ const many = (n: number, rarity: Item['rarity'] = 'magic') => {
 };
 
 describe('items', () => {
-  it('weapons and armor are made for your class; weapons ask for its stat, armor for Armor, charms for nothing', () => {
+  it('weapons and armor are made for your class; weapons ask for its stat, armor and charms only for a level', () => {
     for (const it of many(60)) {
-      if (it.slot === 'charm') {
-        expect(it.cls).toBeNull();
-        expect(it.need).toBeNull();
-      } else {
-        expect(it.cls).toBe('warrior');
-        expect(it.need?.stat).toBe(it.slot === 'weapon' ? 'damage' : 'armor');
-      }
+      expect(it.needLevel).toBeGreaterThanOrEqual(1);
+      if (it.slot === 'charm') expect(it.cls).toBeNull();
+      else expect(it.cls).toBe('warrior');
+      if (it.slot === 'weapon') expect(it.need?.stat).toBe('damage');
+      else expect(it.need).toBeNull();
     }
   });
 
   it('rarer items carry more bonuses and ask for more', () => {
     const avg = (xs: Item[], f: (i: Item) => number) => xs.reduce((n, i) => n + f(i), 0) / xs.length;
-    const common = many(80, 'common').filter((i) => i.slot !== 'charm'),
-      legend = many(80, 'legendary').filter((i) => i.slot !== 'charm');
+    const common = many(80, 'common').filter((i) => i.slot === 'weapon'),
+      legend = many(80, 'legendary').filter((i) => i.slot === 'weapon');
     expect(avg(common, (i) => i.bonuses.length)).toBe(0);
     expect(avg(legend, (i) => i.bonuses.length)).toBe(4);
     expect(avg(legend, (i) => i.need!.n)).toBeGreaterThan(avg(common, (i) => i.need!.n));
+    expect(avg(legend, (i) => i.needLevel ?? 0)).toBeGreaterThan(avg(common, (i) => i.needLevel ?? 0));
     expect(avg(legend, itemScore)).toBeGreaterThan(avg(common, itemScore));
   });
 

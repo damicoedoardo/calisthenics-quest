@@ -233,7 +233,9 @@ export function rollItem(rnd: () => number, at: DropAt, rarity: Rarity): Item {
         : rarity === 'magic' && bonuses.length
           ? `${mat} ${noun} of ${BONUSES[bonuses[0].id].word}`
           : `${mat} ${noun}`;
-  const stat: StatId | null = slot === 'weapon' ? WEAPONS[cls].stat : slot === 'armor' ? 'armor' : null,
+  // Only weapons ask for points (the class's stat); armor and charms ask only for a level, so any
+  // build can wear them (Edoardo 2026-10-28).
+  const stat: StatId | null = slot === 'weapon' ? WEAPONS[cls].stat : null,
     after = at.workouts + wearAfter(rarity, at.floor),
     n = Math.round(evenPoints(after));
   return {

@@ -205,8 +205,10 @@ starts in what the save says you wear (`RunSetup.worn`); with no weapon (or anot
 starter kit (`starterKit`) gives a plain weapon, and nothing else: an empty armor slot stays empty
 (`STARTER` in `src/balance/items.ts`). An item asks for a hero level (`needLevel`, the level from
 training XP, checked against `RunSetup.heroLevel` by `levelShort`; items found before 2026-10-28
-have none) and for stat points (`need`, checked against `RunSetup.build` by `shortOf`): weapons
-the class's own stat, armor Armor, charms nothing. Both come from one clock: what a player who
+have none) and, for weapons only, stat points in the class's own stat (`need`, checked against
+`RunSetup.build` by `shortOf`). Armor and charms ask only for the level, so any way of spending
+points can wear them (Edoardo 2026-10-28; `armorAsksNoPoints` in `game.ts` clears older armor's
+need). Both come from one clock: what a player who
 hits the weekly goal has `wearAfter(rarity, floor)` workouts after the zone opens (`WEAR_AFTER`;
 points spread over the five stats, `evenPoints`; the level, `levelAfter`, from `LEVEL_NEED.slack`
 workouts earlier so a short week doesn't block it). The level can't be met by piling points in

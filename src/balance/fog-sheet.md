@@ -17,7 +17,7 @@ Win rate by zone and class, against `ZONE_WINS`: 33% the day a zone opens, 67% l
 
 | Zone | When | archer | mage | warrior | monk | All four |  |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | opens (the first run, 0 workouts: at most 5%) | 4% | 0% | 2% | 0% | 2% | on target |
+| 1 | opens (the first run, 0 workouts: at most 5%) | 2% | 4% | 2% | 0% | 2% | on target |
 | 1 | +6 workouts | 71% | 73% | 83% | 58% | 71% | on target |
 | 2 | opens | 35% | 33% | 19% | 15% | 26% | on target |
 | 2 | +6 workouts | 75% | 69% | 73% | 60% | 69% | on target |

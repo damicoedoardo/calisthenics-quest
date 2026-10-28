@@ -310,17 +310,19 @@ describe('levels, migration', () => {
     expect(s.fogGear?.vault[0].need).toEqual({ stat: 'speed', n: 9 });
   });
 
-  it('hands back the points in Crit, bows ask for Haste, and Pickup bonuses become crit or Evade', () => {
+  it('hands back the points in Crit, bows ask for Haste, Pickup bonuses become crit or Evade, armor asks no points', () => {
     const bow = { ...rollItem(seeded(5), { zone: 1, workouts: 10, floor: 3, cls: 'archer' }, 'magic'), slot: 'weapon' as const },
       oldBow = { ...bow, need: { stat: 'crit', n: 9 }, bonuses: [{ id: 'pickup', v: 0.1 }] } as unknown as typeof bow,
       plate = { ...rollItem(seeded(6), { zone: 1, workouts: 10, floor: 3, cls: 'archer' }, 'magic'), slot: 'armor' as const },
-      oldPlate = { ...plate, bonuses: [{ id: 'pickup', v: 0.1 }] } as unknown as typeof plate;
+      oldPlate = { ...plate, need: { stat: 'armor', n: 5 }, bonuses: [{ id: 'pickup', v: 0.1 }] } as unknown as typeof plate;
     const s = migrate({ ...initialState(), build: { damage: 4, crit: 6 }, fogGear: { worn: { weapon: oldBow }, vault: [oldPlate], kit: { weapon: 1, armor: 1, shield: 0 } } });
     expect(s.build).toEqual({ damage: 4 });
     expect(s.fogGear?.worn.weapon?.need).toEqual({ stat: 'speed', n: 9 });
     expect(s.fogGear?.worn.weapon?.bonuses.map((b) => b.id)).toEqual(['crit']);
     expect(s.fogGear?.vault[0].bonuses.map((b) => b.id)).toEqual(['evade']);
     expect(s.fogGear?.vault[0].bonuses[0].v).toBeGreaterThan(0);
+    // Armor asks only for a level now, old armor too.
+    expect(s.fogGear?.vault[0].need).toBeNull();
   });
 
   it('the look follows a finer item you wear into the Fog', () => {
