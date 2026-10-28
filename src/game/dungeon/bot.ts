@@ -1,6 +1,6 @@
 import { HUMAN } from '@/balance';
 import { clamp, HERO_SPEED, RANGE } from '../rules';
-import { abilityReady, attackKind, finalReady, skillReady, BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup, type SpMoveId } from './engine';
+import { abilityReady, attackKind, canOpen, onStairs, outSide, finalReady, skillReady, BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup, type SpMoveId } from './engine';
 
 /* The bot: a steady, careful player on a phone, not a great one (how human: HUMAN in
    src/balance/dungeon.ts). It notices a shot only after a reaction of its own, misses more of them
@@ -314,8 +314,13 @@ function decide(run: Run, h: Hero): Input {
     y += (dy / d) * pull + (dx / d) * 0.35;
   } else if (run.cleared) {
     // Gems come on their own: pick up what dropped, open the chest, then on to where the map says.
-    const c = run.loot.find((l) => !l.full && mine(l, h)) ?? (run.chest && !run.chest.opened ? run.chest : null),
-      door = c ? null : run.climb !== null ? (run.doors[0] ?? null) : route(run),
+    // In a party: a friend down comes first (stand by them to get them up), then the door or
+    // stairs where you (the first hero) wait, so the party goes on together.
+    const down = run.party.length > 1 ? run.party.find((o) => o.hp <= 0) : undefined,
+      lead = h !== run.hero && run.hero.hp > 0 ? run.hero : null,
+      leadOut = lead && outSide(run, lead),
+      c = down ?? run.loot.find((l) => !l.full && mine(l, h)) ?? (canOpen(run, h) ? run.chest : null),
+      door = c ? null : leadOut ? (run.doors.find((d) => d.side === leadOut) ?? null) : lead && onStairs(run, lead) ? null : run.climb !== null ? (run.doors[0] ?? null) : route(run),
       [gx, gy] = c ? [c.x, c.y] : door ? beyond(run, door) : run.stairs ? [run.stairs.x, run.stairs.y] : [h.x, h.y],
       dx = gx - h.x,
       dy = gy - h.y,
