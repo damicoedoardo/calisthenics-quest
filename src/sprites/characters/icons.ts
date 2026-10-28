@@ -1,4 +1,5 @@
 import type { AbilityId, RelicId, SpMoveId } from '@/game/dungeon/engine';
+import { SP_CARDS, SP_MOVES, type SpElement, type SpShape } from '@/game/dungeon/content';
 import type { UpgradeId } from '@/lib/fog';
 import type { PixelArt } from './pixel';
 
@@ -542,25 +543,25 @@ export const ABILITY_ICONS: Record<AbilityId | 'dodge', PixelArt> = {
   },
 };
 
-/** The colors of each later SP's light, dark to light (as in characters/spLooks.ts). */
-const ELEMENT: Record<string, [string, string, string]> = {
-  stone: ['#6b4f2a', '#c49a5a', '#f0dcb0'],
-  storm: ['#3b4fb8', '#facc15', '#fef08a'],
-  dawn: ['#b45309', '#fbbf24', '#fff7d6'],
-  frost: ['#1e40af', '#93c5fd', '#f0f9ff'],
-  leaf: ['#166534', '#4ade80', '#fbb0c8'],
-  moon: ['#312e81', '#a5b4fc', '#eef2ff'],
-  crystal: ['#0e7490', '#67e8f9', '#f0abfc'],
-  sand: ['#92400e', '#f59e0b', '#fef3c7'],
-  void: ['#3b0764', '#a855f7', '#f3e8ff'],
-  tiger: ['#9a3412', '#fb923c', '#ffedd5'],
-  lotus: ['#9d174d', '#f472b6', '#fdf2f8'],
-  sun: ['#b45309', '#fbbf24', '#fffbeb'],
+/** The colors of an SP's moves, dark to light, by the SP's element (as its look in characters/spLooks.ts). */
+const ELEMENT: Record<SpElement, [string, string, string]> = {
+  fire: ['#9a3412', '#f97316', '#fde047'],
+  water: ['#1e40af', '#60a5fa', '#e0f2fe'],
+  light: ['#b45309', '#fcd34d', '#fffbeb'],
+  shadow: ['#3b0764', '#a855f7', '#f3e8ff'],
 };
 
-/** One drawing for each kind of SP move (SpShape in src/game/dungeon/content.ts): 1, 2, 3 are the
-    element's dark, middle and light. */
-const SHAPED: Record<string, string[]> = {
+/** The element of the SP that has each move. */
+const MOVE_ELEMENT = Object.fromEntries(
+  Object.values(SP_CARDS).flatMap((cards) => cards.flatMap((c) => [[c.skill, c.element], [c.final, c.element]])),
+) as Record<SpMoveId, SpElement>;
+
+/* The SP move icons, 12x12. 1, 2, 3 are the element's dark, middle and light; W white, k the
+   outline; m steel, d iron, b wood. */
+
+/** One drawing for each kind of SP move (SpShape in src/game/dungeon/content.ts), for a move
+    that has no drawing of its own in SP_ROWS. */
+const SHAPED: Record<SpShape, string[]> = {
   // a ring breaking out all round
   ring: ['....1111....', '..11222211..', '.12......21.', '.2..3..3..2.', '12...33...21', '12..3WW3..21', '12..3WW3..21', '12...33...21', '.2..3..3..2.', '.12......21.', '..11222211..', '....1111....'],
   // something heavy falling on a mark
@@ -571,195 +572,124 @@ const SHAPED: Record<string, string[]> = {
   chain: ['k..........k', '3k........k3', '.3k......k3.', '..2W....W2..', '..k2k..k2k..', '.....2W.....', '....k2Wk....', '.....W2.....', '..k2k..k2k..', '.32......23.', '3k........k3', 'k..........k'],
   // a shield of light round you
   guard: ['....2222....', '..22333322..', '.23......32.', '.3...kk...3.', '23..kWWk..32', '3..kWWWWk..3', '3..kWWWWk..3', '23..kWWk..32', '.3...kk...3.', '.23......32.', '..22333322..', '....2222....'],
-  // a great flash
-  nova: ['3....33....3', '.3...22...3.', '..3..11..3..', '...3kWWk3...', '33.kWWWWk.33', '221WWWWWW122', '221WWWWWW122', '33.kWWWWk.33', '...3kWWk3...', '..3..11..3..', '.3...22...3.', '3....33....3'],
   // a patch on the ground that keeps hitting
-  field: ['..3.....3...', '.3W3...3W3..', '..3..3..3...', '.....W3.....', '..3..3...3..', '.3W3....3W3.', '..3.......3.', '............', '..11111111..', '.1222222221.', '1223333332 1', '.1111111111.'],
-  // a few shots spread ahead
-  fan: ['..........3.', '.........32.', '......3.2...', '.....32.....', '..........3.', 'kk...3222W2.', 'kWk.........', 'kk...3222W2.', '..........3.', '.....32.....', '......3.2...', '.........32.'],
-  // shots flying out every way
-  volley: ['.....3......', '..3..2..3...', '...2.2.2....', '....222.....', '3221kWk1223.', '....222.....', '...2.2.2....', '..3..2..3...', '.....3......', '............', '............', '............'],
+  field: ['..3.....3...', '.3W3...3W3..', '..3..3..3...', '.....W3.....', '..3..3...3..', '.3W3....3W3.', '..3.......3.', '............', '..11111111..', '.1222222221.', '122333333221', '.1111111111.'],
   // the whole room struck at once
   all: ['3.3.3.3.3.3.', '2.2.2.2.2.2.', '.2.2.2.2.2.2', 'k.k.k.k.k.k.', '............', '..3......3..', '.3W3....3W3.', '..3..3...3..', '....3W3.....', '.....3......', '1.1.1.1.1.1.', '111111111111'],
+  // a line on the floor that burns
+  wall: ['............', '............', '............', '............', '.3..3..3..3.', '323323323323', '3W33W33W33W3', '222222222222', '111111111111', 'kkkkkkkkkkkk', '............', '............'],
+  // a jump and a crash
+  leap: ['..kkkk......', '.k2222k.....', 'k2k..k2k....', 'kk....k2k...', '.......k2k..', '........k2k.', '.........kk.', '............', '..3..3..3...', '.3W3.33.3W3.', '123321123321', '111111111111'],
+  // a throw on a line that drags back
+  hook: ['.....kk.....', '....k22k....', '....k2k.....', '....k2k.....', '....k2k.....', '....k2k.....', '.k..k2k.....', 'k3k.k2k.....', 'k3k.k2k.....', '.k3kk2k.....', '..k333k.....', '...kkk......'],
+  // a throw that comes back
+  boomerang: ['.kk.........', 'k33k........', 'k3W3k.......', '.k333k......', '..k333k.....', '...k333kkkk.', '...k3333333k', '....kkkkkkk.', '.........2..', '.......2....', '....22......', '............'],
+  // gone in a puff
+  vanish: ['...2..2.....', '..2.22.2.2..', '.2.kkkk.2...', '..k1111k..2.', '.k111111k...', 'k11W11W11k.2', 'k11111111k..', '.k111111k.2.', '..k1111k....', '.2.kkkk.2...', '...2.2..2...', '..2...2.....'],
+  // one held in a bubble
+  trap: ['....kkkk....', '..kk3333kk..', '.k3WW....3k.', '.k3W.....3k.', 'k3...11...3k', 'k3..1221..3k', 'k3..1221..3k', 'k3...11...3k', '.k3......3k.', '.k3......3k.', '..kk3333kk..', '....kkkk....'],
+  // a mark on one
+  mark: ['....kkkk....', '..kk2222kk..', '.k2..33..2k.', '.k2.3..3.2k.', 'k2.3.WW.3.2k', 'k23.W11W.32k', 'k23.W11W.32k', 'k2.3.WW.3.2k', '.k2.3..3.2k.', '.k2..33..2k.', '..kk2222kk..', '....kkkk....'],
+  // a beam straight ahead
+  beam: ['............', '............', '............', '..kkk.......', '.k222k3333..', 'k23W32WWWW33', 'k2WWW2WWWWW3', 'k23W32WWWW33', '.k222k3333..', '..kkk.......', '............', '............'],
 };
 
-/** An SP move's icon from its kind and its element. */
-function shaped(shape: string, element: string): PixelArt {
-  const [a, b, c] = ELEMENT[element];
-  return { rows: SHAPED[shape].map((r) => r.replace(/ /g, '.')), palette: { k: K, W: '#ffffff', '1': a, '2': b, '3': c } };
+/** Each SP move's own drawing. Leap, Vanish, Bubble, Curse and Ki Wave use their shape's. */
+const SP_ROWS: Partial<Record<SpMoveId, string[]>> = {
+  // warrior
+  // a ring of flames round you
+  inferno: ['....3..3....', '..3.2..2.3..', '.32.1kk1.23.', '..1k....k1..', '3.k......k.3', '21k......k12', '21k......k12', '3.k......k.3', '..1k....k1..', '.32.1kk1.23.', '..3.2..2.3..', '....3..3....'],
+  // a tower shield of gold
+  shieldwall: ['.kkkkkkkkkk.', 'k2222222222k', 'k2333WW3332k', 'k23333W3332k', 'k2WWWWWWWW2k', 'k23333W3332k', 'k23333W3332k', '.k2333W332k.', '.k2333W332k.', '..k23W332k..', '...k2W22k...', '....kkkk....'],
+  // a hammer of light coming down
+  judgment: ['.....kk.....', '....k33k....', '....kbbk....', '....kbbk....', '....kbbk....', '.kkkkkkkkkk.', 'k3333WW3333k', 'k2222222222k', 'k1111111111k', '.kkkkkkkkkk.', '3..3.33.3..3', '.3.3.33.3.3.'],
+  // the lance thrown, its rope behind
+  harpoon: ['.........kkk', '........k3Wk', '.......k33k.', '......kmkk..', '.....kmk....', '....kmk.....', '...kmk......', '..kbk.......', '.k2.........', '.2..22......', '2..2..2..2..', '...2...22...'],
+  // a wave curling over
+  tidalcharge: ['....kkkk....', '..kk3333k...', '.k33WWW33k..', 'k32kkkk3W3k.', 'k2k....k33k.', 'k2k.....k3k.', 'k22k...k32k.', '.k222kk322k.', '..k2222222k3', '.k122222221W', 'k1111111111k', '.kkkkkkkkkk.'],
+  // a scythe spinning
+  reap: ['....kkkkkk..', '..kk3333Wbk.', '.k33kkkkbk..', 'k3k....kbk..', 'kk....kbk...', '.....kbk....', '....kbk.....', '...kbk...2..', '..kbk...2...', '.kbk...2....', '.kk..22.....', '....2.......'],
+  // wisps flying in to you
+  soulharvest: ['.3........3.', '3W2......2W3', '.32......23.', '...2....2...', '....kkkk....', '...k3WW3k...', '...k3333k...', '....kkkk....', '...2....2...', '.32......23.', '3W2......2W3', '.3........3.'],
+  // archer
+  // one long arrow
+  piercing: ['.........kkk', '........kWWk', '.......k3Wk.', '......k33k..', '.....kmk....', '....kmk.....', '...kmk......', '..kmk.......', '.k2k........', 'k22k........', 'k2k.........', 'kk..........'],
+  // arrows falling in a circle
+  arrowrain: ['.k...k...k..', '.3...3...3..', '.3...3...3..', 'k2k.k2k.k2k.', '.k...k...k..', '...k...k....', '...3...3....', '..k2k.k2k...', '...k...k....', '.1111111111.', '1..........1', '.1111111111.'],
+  // a lit bomb
+  bomb: ['........3.3.', '.........W3.', '........k...', '.......k....', '...kkkk.....', '..kddddk....', '.kdmmdddk...', '.kdmddddk...', '.kddddddk...', '.kddddddk...', '..kddddk....', '...kkkk.....'],
+  // shells falling, a blast below
+  barrage: ['..2....2....', '...2....2...', '....kk...kk.', '...kddk.kddk', '...kddk.kddk', '....kk...kk.', '.2..........', '..2.........', '...kk..3.3..', '..kddk.323..', '..kddk3W2W3.', '...kk1222221'],
+  // a wolf of light, howling
+  call: ['.k........k.', 'k3k......k3k', 'k33k....k33k', 'k333kkkk333k', 'k3333333333k', 'k3kk3333kk3k', 'k3Wk3333kW3k', '.k33333333k.', '..k33kk33k..', '...k3kk3k...', '....k22k....', '.....kk.....'],
+  // the pack's tracks, one after another
+  pack: ['.........3.3', '........3.3.', '.........33.', '.....3.3.33.', '....3.3.....', '.....33.....', '.3.3.33.....', '3.3.........', '.33.........', '.33.........', '............', '............'],
+  // two daggers crossed
+  thousandcuts: ['kk........kk', 'kWk......kWk', '.k3k....k3k.', '..k3k..k3k..', '...k3kk3k...', '....k33k....', '....k33k....', '...kbkkbk...', '..kbk..kbk..', '.k2k....k2k.', 'k2k......k2k', 'kk........kk'],
+  // mage
+  // a line of flames
+  firewall: ['............', '............', '..3...3...3.', '..3...3...3.', '.323.323.323', '.3W3.3W3.3W3', '23W3223W3223', '2WW322WW322W', '2WW322WW3223', '122211222112', '111111111111', 'kkkkkkkkkkkk'],
+  // a rock of fire falling
+  meteor: ['3...........', '.3..........', '..2.3.......', '...22.......', '..3.22......', '....222kkk..', '.....2kdd1k.', '.....kd3d11k', '.....kdd111k', '.....k1111k.', '......kkkk..', '............'],
+  // a wave over the room
+  tsunami: ['.....kkk....', '...kk333kk..', '..k3WWW3k3k.', '.k3k...k.k3k', '.k3k......k.', 'k33k...kkk..', 'k332kkk333k.', 'k3222223W33k', 'k2222222kk3k', 'k1222222k.k.', 'k1111111111k', '.kkkkkkkkkk.'],
+  // a halo over a light
+  blessing: ['..kkkkkkkk..', '.k33333333k.', '..kkkkkkkk..', '.....kk.....', '....k33k....', '..kk3WW3kk..', '.k33WWWW33k.', '..kk3WW3kk..', '....k33k....', '....k33k....', '....k33k....', '.....kk.....'],
+  // a white flash
+  radiance: ['3....33....3', '.3...22...3.', '..3..33..3..', '...3kWWk3...', '33.kWWWWk.33', '23WWWWWWWW32', '23WWWWWWWW32', '33.kWWWWk.33', '...3kWWk3...', '..3..33..3..', '.3...22...3.', '3....33....3'],
+  // a giant blade of shadow
+  voidedge: ['..........kk', '.........k3k', '........k3Wk', '.......k32k.', '......k32k..', '.....k32k...', '....k32k....', '.k.k32k.....', '.kk22k......', '..kkk.......', '.kd.kk......', 'kd...k......'],
+  // monk
+  // a fist rising in fire
+  risingdragon: ['.....33.....', '....3WW3....', '...32WW23...', '..3.kkkk.3..', '...k2222k...', '..k222222k..', '..k2kk2k2k..', '..k222222k..', '...k2222k...', '..3.k22k.3..', '.32.k22k.23.', '1221k11k1221'],
+  // a dragon breathing fire
+  dragonroar: ['..kk........', '.k22k.......', 'k2W22k......', 'k22222kk.33.', '.k22222k3W3.', '..k2kkk22333', '..k2k.k2333W', '.k22kkk2333.', 'k2222222k.3.', '.kk22222k...', '...kkkkk....', '............'],
+  // a leap, and claws where it lands
+  pounce: ['..kkk.......', '.k222k......', 'k2...k2.....', 'k.....k2....', '.......k2...', '........k...', '...W..W..W..', '..W3.W3.W3..', '.W3.W3.W3...', 'W3.W3.W3....', '3..3..3.....', '............'],
+  // claws everywhere
+  hundredclaws: ['W...W...W..W', '3W..3W..3W3.', '.3W..3W.W3..', '..3W.W3W3...', 'W..3W3W3..W.', '3W.W3W3W.W3.', '.3W3W3W3W3..', '..3W3..3W...', '.W3.3W..3W..', 'W3...3W..3W.', '3.....3...3W', '...........3'],
+  // a staff spinning in a ring of water
+  tidespin: ['....2222....', '..22....22..', '.2.......kk.', '.2......kbk.', '2......kbk.2', '2.....kbk..2', '2....kbk...2', '2...kbk....2', '.2.kbk....2.', '.2kbk.....2.', '..kk....22..', '....2222....'],
+  // water flowing on
+  riverdance: ['............', '.33.....33..', '3WW3...3WW3.', '2..23.32..23', '....222.....', '............', '.22.....22..', '2112...2112.', '1..12.21..12', '....111.....', '............', '............'],
+  // a huge ball of ki
+  spiritbomb: ['...kkkkkk...', '..k333222k..', '.k3WW33222k.', '.k3W333222k.', '.k33332222k.', '.k33222221k.', '..k322211k..', '...kkkkkk...', '.3...kk...3.', '..3.k22k.3..', '...k2222k...', '..kkkkkkkk..'],
+};
+
+/** An SP move's icon: its own drawing (or its shape's) in its SP's element. */
+function spIconOf(id: SpMoveId): PixelArt {
+  const [a, b, c] = ELEMENT[MOVE_ELEMENT[id] ?? 'light'];
+  return {
+    rows: SP_ROWS[id] ?? SHAPED[SP_MOVES[id].shape],
+    palette: { k: K, W: '#ffffff', '1': a, '2': b, '3': c, m: '#9ca3af', d: '#374151', b: '#92400e' },
+  };
 }
 
 /** Each SP's own move and final, 12x12 (the run's SP buttons and the Hero tab's SP card). */
-export const SP_ICONS: Record<SpMoveId, PixelArt> = {
-  // a blade spun in a ring
-  whirl: {
-    rows: [
-      '....kkkk....',
-      '..kkGGGGkk..',
-      '.kGg....gGk.',
-      '.kg..kk..gk.',
-      'kG..kWlk..Gk',
-      'kg.kWlk...gk',
-      'kg.klk....gk',
-      'kG.kk.....Gk',
-      '.kg......gk.',
-      '.kGg....gGk.',
-      '..kkGGGGkk..',
-      '....kkkk....',
-    ],
-    palette: KIT,
+export const SP_ICONS = Object.fromEntries((Object.keys(SP_MOVES) as SpMoveId[]).map((id) => [id, spIconOf(id)])) as Record<SpMoveId, PixelArt>;
+
+/** The four elements' marks, 10x10 (the SP card and the gallery in /lab/sp). */
+export const ELEMENT_ICONS: Record<SpElement, PixelArt> = {
+  // a flame
+  fire: {
+    rows: ['....k.....', '...k1k....', '...k21k.k.', '..k221kk1k', '.k22321k1k', '.k23332k1k', 'k2333W32k.', 'k233WW32k.', '.k23332k..', '..kkkkk...'],
+    palette: { k: K, W: '#ffffff', '1': '#b91c1c', '2': '#f97316', '3': '#fde047' },
   },
-  // arrows in a tight line
-  pin: {
-    rows: [
-      '..........k.',
-      '.........kWk',
-      '........kWk.',
-      '...k...klk..',
-      '..kWk.kbk...',
-      '.kWk.kbk....',
-      '..klkbk.....',
-      '...kbk......',
-      '..kbk.......',
-      '.kSk........',
-      'kSSk........',
-      '.kk.........',
-    ],
-    palette: KIT,
+  // a drop of water
+  water: {
+    rows: ['....kk....', '...k22k...', '...k22k...', '..k2332k..', '.k223332k.', '.k2W3332k.', 'k22W33322k', 'k2223322k.', '.k122221k.', '..kkkkkk..'],
+    palette: { k: K, W: '#ffffff', '1': '#1e3a8a', '2': '#3b82f6', '3': '#93c5fd' },
   },
-  // a star falling
-  starfall: {
-    rows: [
-      'k...........',
-      '.kv.........',
-      '..kv........',
-      '...kv..k....',
-      '....kvkVk...',
-      '...kkVWVkk..',
-      '..kVWWWWWVk.',
-      '...kkVWVkk..',
-      '....kVkVk...',
-      '....kk.kk...',
-      '............',
-      '............',
-    ],
-    palette: KIT,
+  // a sun of light
+  light: {
+    rows: ['....22....', '.2..33..2.', '..2kkkk2..', '..k3WW3k..', '23k3WW33k2', '23k33333k2', '..k3333k..', '..2kkkk2..', '.2..33..2.', '....22....'],
+    palette: { k: K, W: '#ffffff', '2': '#f59e0b', '3': '#fde68a' },
   },
-  // an open hand pushing air
-  palm: {
-    rows: [
-      '...k.k.k....',
-      '..kSkSkSk...',
-      '..kSkSkSk.k.',
-      '..kSkSkSkkSk',
-      '..kSSSSSkSk.',
-      '..kSSSSSSSk.',
-      '..kSSSSSSk..',
-      '...kSSSSk...',
-      '...kSSSSk...',
-      's..kkkkkk..s',
-      '.s.......s..',
-      '..ssssssss..',
-    ],
-    palette: KIT,
+  // a crescent in the dark
+  shadow: {
+    rows: ['...kkkk...', '..k221k...', '.k2331k...', 'k2331k....', 'k231k.....', 'k231k.....', 'k2331k....', '.k2331kkk.', '..k223321k', '...kkkkkk.'],
+    palette: { k: K, '1': '#2e1065', '2': '#7c3aed', '3': '#d8b4fe' },
   },
-  // a blade in a ring of fire
-  phoenix: {
-    rows: [
-      '..k..kk..k..',
-      '.kok.kok.kok',
-      '.kook..kook.',
-      'koyok.kWkyok',
-      'kok..kWlk.ok',
-      'ko..kWlk..ok',
-      'ko.kWlk...ok',
-      'kokbkk...yok',
-      '.kBk.....ok.',
-      'kBk.ookooko.',
-      'kk..kkoyok..',
-      '.....kkkk...',
-    ],
-    palette: KIT,
-  },
-  // arrows falling from the sky
-  rain: {
-    rows: [
-      '.k...k...k..',
-      '.b...b...b..',
-      '.b...b...b..',
-      'kWk.kWk.kWk.',
-      '.k...k...k..',
-      '...k...k...k',
-      '...b...b...b',
-      '...b...b...b',
-      '..kWk.kWk.kW',
-      '...k...k...k',
-      'e.e.e.e.e.e.',
-      'eeeeeeeeeeee',
-    ],
-    palette: KIT,
-  },
-  // the sky cracking open
-  sky: {
-    rows: [
-      'vvvvvvvvvvvv',
-      'VVkVVVVVkVVV',
-      '..kv....kv..',
-      '...kv..kv...',
-      '....kWWk....',
-      '...kWWWWk...',
-      '..kWWWWWWk..',
-      '...kWWWWk...',
-      '....kWWk....',
-      '..kv....vk..',
-      '.kv......vk.',
-      'kv........vk',
-    ],
-    palette: KIT,
-  },
-  // many hands at once
-  palms: {
-    rows: [
-      '.k.k...k.k..',
-      'kSkSk.kSkSk.',
-      'kSSSk.kSSSk.',
-      '.kSk...kSk..',
-      '.....k.k....',
-      '....kSkSk...',
-      '....kSSSk...',
-      '.k.k.kSk.k.k',
-      'kSkSk...kSkS',
-      'kSSSk...kSSS',
-      '.kSk.....kSk',
-      'sssssssssss.',
-    ],
-    palette: KIT,
-  },
-  // The later SPs' moves: one drawing for each kind of move, in the SP's own colors (ELEMENT).
-  quake: shaped('ring', 'stone'),
-  mountain: shaped('drop', 'stone'),
-  thunderdash: shaped('dash', 'storm'),
-  thunderclap: shaped('chain', 'storm'),
-  sunguard: shaped('guard', 'dawn'),
-  dawnbreak: shaped('nova', 'dawn'),
-  frostarrow: shaped('fan', 'frost'),
-  blizzard: shaped('field', 'frost'),
-  thorntrap: shaped('field', 'leaf'),
-  wildvolley: shaped('volley', 'leaf'),
-  shadowstep: shaped('dash', 'moon'),
-  moonfall: shaped('chain', 'moon'),
-  shards: shaped('volley', 'crystal'),
-  prism: shaped('chain', 'crystal'),
-  hourglass: shaped('field', 'sand'),
-  stopsands: shaped('all', 'sand'),
-  voidstep: shaped('dash', 'void'),
-  rift: shaped('field', 'void'),
-  pounce: shaped('dash', 'tiger'),
-  hundredclaws: shaped('chain', 'tiger'),
-  lotus: shaped('guard', 'lotus'),
-  nirvana: shaped('nova', 'lotus'),
-  risingsun: shaped('drop', 'sun'),
-  solarflare: shaped('all', 'sun'),
 };
 
 /** The run's level-up skills, 12x12; a few share a relic's drawing because they do the same thing. */

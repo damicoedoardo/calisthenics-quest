@@ -5,7 +5,8 @@ import { NIGHT, aura, grid, mix, painter, rampOf, tint, type Grid, type Ramp } f
 import { ARM_DOWN, bone, hangs, limbs, paintArm } from '../engine/drawn';
 import { drawBow, drawStaff, drawStick, drawSword, drawWand, type WeaponLook } from '../parts/weapons';
 import { itemColors, pick, type ItemColors } from './items';
-import { spLook } from './spLooks';
+import { spGirlCut, spLook, spWeapon } from './spLooks';
+import { SP_WEAPON_ART } from '../parts/spWeapons';
 import { BANDS } from '@/balance';
 import { bandOf } from '@/game/dungeon/items';
 import { CAPE, FLAME, GOLD_GHOST, HAIR, HOLLOW_EYES, LINEN, R, SHADOW, SKIN, TROUSERS } from '../palette';
@@ -49,8 +50,13 @@ export function normalizeLook(look?: Partial<Look> | null): Look {
   };
 }
 
-/** The clip each class attacks with. Until you hold a real weapon, everyone swings a stick. */
-export function heroAttack(gear: Record<GearSlot, Gear>, classId?: ClassId): ClipId {
+/** Which SP is worn (1 to 4), from HeroOpts.sp, or 0 for none. */
+const spNo = (sp: HeroOpts['sp']) => (sp === true ? 1 : sp || 0);
+
+/** The clip each class attacks with. Until you hold a real weapon, everyone swings a stick. With an
+    SP on, its own weapon's attack (SP_WEAPON_ART in parts/spWeapons.ts). */
+export function heroAttack(gear: Record<GearSlot, Gear>, classId?: ClassId, sp?: HeroOpts['sp']): ClipId {
+  if (classId && spNo(sp)) return SP_WEAPON_ART[spWeapon(classId, spNo(sp))].clip;
   if (gear.weapon.tier === 0) return 'swing';
   if (classId === 'archer') return 'shoot';
   if (classId === 'mage') return 'cast';
@@ -69,7 +75,9 @@ export function heroSpec({ gear, classId, variant, body, sp: spOn }: HeroOpts): 
   const drawn = body !== 'block';
   const cape = variant === 'best';
   // With the SP on, its look stands in for the armor (the weapon and charm stay yours).
-  const sp = spOn && classId ? spLook(classId, spOn === true ? 1 : spOn) : null;
+  const spN = spNo(spOn),
+    sp = spN && classId ? spLook(classId, spN) : null,
+    spw = spN && classId ? SP_WEAPON_ART[spWeapon(classId, spN)] : null;
   const armorTier = gear.armor.tier;
   // A Fog item worn in a slot dresses the hero in that very item (its kind, rarity and colors);
   // without one, the slot shows the forge's old tier look.
@@ -88,8 +96,9 @@ export function heroSpec({ gear, classId, variant, body, sp: spOn }: HeroOpts): 
   const W = wc ? (classId === 'archer' ? wc.handle : classId === 'monk' ? wc.trim : classId === 'mage' ? wc.gem : ramp3(wc.body)) : rampOf(gear.weapon.tier === 0 ? R.wood[1] : gear.weapon.color);
   const Sh = rampOf(gear.shield.tier === 0 ? R.leather[1] : gear.shield.color);
   const glow = wc?.glow ? wc.glow[1] : gear.weapon.glow ?? (gear.weapon.tier >= 3 ? W[2] : '#9fd3ff');
-  const off = gear.shield.tier > 0 ? classId ?? 'warrior' : null;
-  const attack = heroAttack(gear, classId);
+  // an SP with its own weapon carries nothing else: no shield, quiver, orb or gloves
+  const off = gear.shield.tier > 0 && !sp ? classId ?? 'warrior' : null;
+  const attack = heroAttack(gear, classId, spOn);
   const wl = weaponLook(wc, weaponLegend);
   const legs = sp?.legs ?? (dress === 'heavy' ? [mix(A[0], NIGHT, 0.4), A[0], A[1]] : dress ? TROUSERS : armorTier >= 3 ? [mix(A[0], NIGHT, 0.4), A[0], A[1]] : TROUSERS);
   const T = sp?.trim ?? ac?.trim ?? R.gold,
@@ -98,7 +107,8 @@ export function heroSpec({ gear, classId, variant, body, sp: spOn }: HeroOpts): 
   return {
     id: 'hero',
     attack,
-    stance: attack === 'shoot' ? { left: 'out' } : undefined,
+    // an SP's weapon holds its own stance; a class bow is held out
+    stance: spw ? spw.stance : attack === 'shoot' ? { left: 'out' } : undefined,
     a: A,
     legs,
     glove: off === 'monk' ? Sh : undefined,
@@ -284,6 +294,7 @@ export function heroSpec({ gear, classId, variant, body, sp: spOn }: HeroOpts): 
             }
           });
         }
+        if (sp) spGirlCut(c, sp);
         sp?.outfit?.(c);
         if (cc) {
           // the charm, worn on a cord at the chest
@@ -318,13 +329,17 @@ export function heroSpec({ gear, classId, variant, body, sp: spOn }: HeroOpts): 
         }
       },
       weapon(c) {
-        if (gear.weapon.tier === 0) drawStick(c, glow);
+        if (spw) {
+          spw.draw?.(c);
+          sp?.pet?.(c);
+        } else if (gear.weapon.tier === 0) drawStick(c, glow);
         else if (classId === 'archer') drawBow(c, W, glow, wl);
         else if (classId === 'monk') drawStaff(c, W, glow, wl);
         else if (classId === 'mage') drawWand(c, W, glow, wl);
         else drawSword(c, W, glow, wl);
       },
       hands(c) {
+        spw?.hands?.(c);
         if (off !== 'monk') return;
         (['L', 'R'] as const).forEach((s) => {
           const [x, y] = c.P.arms[s].hand;

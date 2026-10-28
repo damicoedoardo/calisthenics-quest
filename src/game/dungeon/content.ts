@@ -1,7 +1,7 @@
 import type { ClassId } from '@/lib/gear';
 import type { Zone } from '@/lib/fog';
 import type { FogBoss } from '@/story/types';
-import { clamp } from '../rules';
+import { clamp, type AttackKind } from '../rules';
 import { ABILITY, DIALS, ELITE } from '@/balance';
 
 /* What the dungeon is made of, as plain data: the ground, the doors and chest items, every monster
@@ -570,10 +570,10 @@ export const SP_NOS: SpNo[] = [1, 2, 3, 4];
 
 /** The SP's two moves past the class ability: its own move (a second button) and its final. */
 export type SpMoveId =
-  | 'whirl' | 'phoenix' | 'quake' | 'mountain' | 'thunderdash' | 'thunderclap' | 'sunguard' | 'dawnbreak'
-  | 'pin' | 'rain' | 'frostarrow' | 'blizzard' | 'thorntrap' | 'wildvolley' | 'shadowstep' | 'moonfall'
-  | 'starfall' | 'sky' | 'shards' | 'prism' | 'hourglass' | 'stopsands' | 'voidstep' | 'rift'
-  | 'palm' | 'palms' | 'pounce' | 'hundredclaws' | 'lotus' | 'nirvana' | 'risingsun' | 'solarflare';
+  | 'leap' | 'inferno' | 'shieldwall' | 'judgment' | 'harpoon' | 'tidalcharge' | 'reap' | 'soulharvest'
+  | 'piercing' | 'arrowrain' | 'bomb' | 'barrage' | 'call' | 'pack' | 'vanish' | 'thousandcuts'
+  | 'firewall' | 'meteor' | 'bubble' | 'tsunami' | 'blessing' | 'radiance' | 'curse' | 'voidedge'
+  | 'risingdragon' | 'dragonroar' | 'pounce' | 'hundredclaws' | 'tidespin' | 'riverdance' | 'kiwave' | 'spiritbomb';
 
 /** Each SP's passive, always on while it's worn (numbers: SP_PASSIVE in src/balance/classes.ts). */
 export type SpPassiveId =
@@ -582,12 +582,30 @@ export type SpPassiveId =
   | 'splitstar' | 'shell' | 'swiftsurge' | 'rebound'
   | 'flow' | 'momentum' | 'quickstep' | 'sunburst';
 
-/** What an SP's light is made of: its colors on screen, its card and its waking (src/sprites/characters/spLooks.ts). */
-export type SpElement = 'fire' | 'stone' | 'storm' | 'dawn' | 'wind' | 'frost' | 'leaf' | 'moon' | 'star' | 'crystal' | 'sand' | 'void' | 'water' | 'tiger' | 'lotus' | 'sun';
+/** What an SP's light looks like: its colors on screen, its card and its waking (src/sprites/characters/spLooks.ts). */
+export type SpTheme = 'fire' | 'stone' | 'storm' | 'dawn' | 'wind' | 'frost' | 'leaf' | 'moon' | 'star' | 'crystal' | 'sand' | 'void' | 'water' | 'tiger' | 'lotus' | 'sun';
+
+/** The four elements. Each class has one SP of each; monsters get them later. */
+export type SpElement = 'fire' | 'water' | 'light' | 'shadow';
+export const SP_ELEMENTS: readonly SpElement[] = ['fire', 'water', 'light', 'shadow'];
+export const ELEMENT_NAMES: Record<SpElement, string> = { fire: 'Fire', water: 'Water', light: 'Light', shadow: 'Shadow' };
+
+/** The SP's own weapon. It sets the basic attack (SP_WEAPONS below, numbers: SP_WEAPON in
+    src/balance/classes.ts), the hero's attack animation and the weapon's art
+    (src/sprites/parts/spWeapons.ts), and the hit on screen (src/game/dungeon/spFx.ts). */
+export type SpWeapon =
+  | 'greataxe' | 'hammer' | 'lance' | 'scythe'
+  | 'longbow' | 'cannon' | 'boomerang' | 'daggers'
+  | 'flamestaff' | 'waterorb' | 'bellstaff' | 'hexblade'
+  | 'gauntlets' | 'claws' | 'bo' | 'kipalms';
 
 export interface SpCardDef {
   name: string;
+  /** Who this SP is, in one line (the SP card and the gallery in /lab/sp). */
+  about: string;
   element: SpElement;
+  theme: SpTheme;
+  weapon: SpWeapon;
   skill: SpMoveId;
   final: SpMoveId;
   passive: SpPassiveId;
@@ -597,28 +615,28 @@ export interface SpCardDef {
     others as the story goes on. None is stronger than the others; each fights its own way. */
 export const SP_CARDS: Record<ClassId, readonly [SpCardDef, SpCardDef, SpCardDef, SpCardDef]> = {
   warrior: [
-    { name: 'Ember Knight', element: 'fire', skill: 'whirl', final: 'phoenix', passive: 'embers' },
-    { name: 'Stone Warden', element: 'stone', skill: 'quake', final: 'mountain', passive: 'bedrock' },
-    { name: 'Storm Blade', element: 'storm', skill: 'thunderdash', final: 'thunderclap', passive: 'static' },
-    { name: 'Dawn Paladin', element: 'dawn', skill: 'sunguard', final: 'dawnbreak', passive: 'secondwind' },
+    { name: 'Blaze Reaver', about: 'A berserker with a burning axe bigger than you, who never backs down.', element: 'fire', theme: 'fire', weapon: 'greataxe', skill: 'leap', final: 'inferno', passive: 'embers' },
+    { name: 'Sun Bastion', about: 'A wall of white and gold: a war hammer, a tower shield, nothing gets past.', element: 'light', theme: 'dawn', weapon: 'hammer', skill: 'shieldwall', final: 'judgment', passive: 'bedrock' },
+    { name: 'Riptide Lancer', about: 'A knight of the sea with a long lance, there and gone like a wave.', element: 'water', theme: 'storm', weapon: 'lance', skill: 'harpoon', final: 'tidalcharge', passive: 'static' },
+    { name: 'Nightscythe', about: 'A reaper in a torn black cloak whose scythe cuts the dark.', element: 'shadow', theme: 'void', weapon: 'scythe', skill: 'reap', final: 'soulharvest', passive: 'secondwind' },
   ],
   archer: [
-    { name: 'Wind Ranger', element: 'wind', skill: 'pin', final: 'rain', passive: 'tailwind' },
-    { name: 'Frost Hunter', element: 'frost', skill: 'frostarrow', final: 'blizzard', passive: 'frostbite' },
-    { name: 'Leaf Warden', element: 'leaf', skill: 'thorntrap', final: 'wildvolley', passive: 'harvest' },
-    { name: 'Moon Stalker', element: 'moon', skill: 'shadowstep', final: 'moonfall', passive: 'focus' },
+    { name: 'Rainstalker', about: 'A silent hunter in a rain hood whose arrows go through everything.', element: 'water', theme: 'frost', weapon: 'longbow', skill: 'piercing', final: 'arrowrain', passive: 'tailwind' },
+    { name: 'Flintfire', about: 'An explosives expert with a hand cannon and a bomb always lit.', element: 'fire', theme: 'fire', weapon: 'cannon', skill: 'bomb', final: 'barrage', passive: 'frostbite' },
+    { name: 'Wolfcaller', about: 'A keeper of the wild with a boomerang and a wolf of light at your side.', element: 'light', theme: 'dawn', weapon: 'boomerang', skill: 'call', final: 'pack', passive: 'harvest' },
+    { name: 'Silent Fang', about: 'An assassin with two daggers who strikes from the dark and is gone.', element: 'shadow', theme: 'moon', weapon: 'daggers', skill: 'vanish', final: 'thousandcuts', passive: 'focus' },
   ],
   mage: [
-    { name: 'Star Sage', element: 'star', skill: 'starfall', final: 'sky', passive: 'splitstar' },
-    { name: 'Crystal Mage', element: 'crystal', skill: 'shards', final: 'prism', passive: 'shell' },
-    { name: 'Sand Oracle', element: 'sand', skill: 'hourglass', final: 'stopsands', passive: 'swiftsurge' },
-    { name: 'Void Seer', element: 'void', skill: 'voidstep', final: 'rift', passive: 'rebound' },
+    { name: 'Ashcaller', about: 'A fire caster in a horned hood whose staff holds a ball of flame.', element: 'fire', theme: 'fire', weapon: 'flamestaff', skill: 'firewall', final: 'meteor', passive: 'splitstar' },
+    { name: 'Tidesinger', about: 'A caster of the deep sea with an orb of water over the hand.', element: 'water', theme: 'water', weapon: 'waterorb', skill: 'bubble', final: 'tsunami', passive: 'shell' },
+    { name: 'Dawnbell', about: 'A healer in white with a halo and a bell that rings the dark away.', element: 'light', theme: 'star', weapon: 'bellstaff', skill: 'blessing', final: 'radiance', passive: 'swiftsurge' },
+    { name: 'Hexedge', about: 'A mage who fights up close with a sword made of shadow.', element: 'shadow', theme: 'void', weapon: 'hexblade', skill: 'curse', final: 'voidedge', passive: 'rebound' },
   ],
   monk: [
-    { name: 'River Monk', element: 'water', skill: 'palm', final: 'palms', passive: 'flow' },
-    { name: 'Tiger Fist', element: 'tiger', skill: 'pounce', final: 'hundredclaws', passive: 'momentum' },
-    { name: 'Lotus Sage', element: 'lotus', skill: 'lotus', final: 'nirvana', passive: 'quickstep' },
-    { name: 'Sun Fist', element: 'sun', skill: 'risingsun', final: 'solarflare', passive: 'sunburst' },
+    { name: 'Dragonheart', about: 'A brawler in red gauntlets whose fists burn like a dragon.', element: 'fire', theme: 'sun', weapon: 'gauntlets', skill: 'risingdragon', final: 'dragonroar', passive: 'flow' },
+    { name: 'White Claw', about: 'A fighter like a white tiger, all leaps and claws.', element: 'light', theme: 'tiger', weapon: 'claws', skill: 'pounce', final: 'hundredclaws', passive: 'momentum' },
+    { name: 'Stillwater', about: 'A calm fighter with a long staff who flows like a river.', element: 'water', theme: 'water', weapon: 'bo', skill: 'tidespin', final: 'riverdance', passive: 'quickstep' },
+    { name: 'Voidpalm', about: 'A fighter who throws their own energy from the palms, from far away.', element: 'shadow', theme: 'void', weapon: 'kipalms', skill: 'kiwave', final: 'spiritbomb', passive: 'sunburst' },
   ],
 };
 
@@ -645,45 +663,79 @@ export const SP_PASSIVES: Record<SpPassiveId, { name: string; text: string }> = 
 };
 
 /** How each move plays: the engine picks what to do from its `shape` (numbers: SP_SKILL and
-    SP_FINAL in src/balance/classes.ts). ring: all around you. fan: shots at your target. drop: on
-    the monster nearest you. all: every monster in the room. nova: a great blast that puts out every
-    shot. dash: you rush through them. chain: a bolt jumping between monsters. guard: nothing
-    touches you for a moment. field: a patch that keeps hitting. volley: shots all around you. */
-export type SpShape = 'ring' | 'fan' | 'drop' | 'all' | 'nova' | 'dash' | 'chain' | 'guard' | 'field' | 'volley';
+    SP_FINAL in src/balance/classes.ts; the look on screen: src/game/dungeon/spFx.ts).
+    ring: all around you. drop: a blow from above on one monster (`aim`). all: every monster in the
+    room. dash: you rush through them. chain: you or your light jump from monster to monster. guard:
+    nothing touches you for a moment. field: a patch on the floor that keeps hitting (round you, or
+    on a monster). wall: a line of fire on the floor in front of you. leap: you jump onto a monster
+    and crash down. hook: a throw that drags a monster to you. boomerang: a throw that flies out and
+    comes back, hitting both ways. vanish: unseen for a moment, and your next hit lands harder.
+    trap: one monster held still, then hit. mark: one monster takes more from every hit for a
+    while. beam: everything in a line in front of you is hit. */
+export type SpShape = 'ring' | 'drop' | 'all' | 'dash' | 'chain' | 'guard' | 'field' | 'wall' | 'leap' | 'hook' | 'boomerang' | 'vanish' | 'trap' | 'mark' | 'beam';
 
-export const SP_MOVES: Record<SpMoveId, { name: string; text: string; shape: SpShape }> = {
-  whirl: { name: 'Whirl', shape: 'ring', text: 'Spin with your blade out: everything close is hit and thrown back, and the shots by you are cut.' },
-  phoenix: { name: 'Phoenix Blade', shape: 'ring', text: 'Your final. Fire all around you hits everything in a wide ring and wipes the shots in it.' },
-  quake: { name: 'Quake', shape: 'ring', text: 'Stamp the ground: everything near is hit and thrown far back.' },
-  mountain: { name: 'Mountain Fall', shape: 'drop', text: 'Your final. A mountain of stone drops on the monster nearest you and everything round it.' },
-  thunderdash: { name: 'Thunder Dash', shape: 'dash', text: 'Rush ahead as lightning: untouchable, hitting everything you pass.' },
-  thunderclap: { name: 'Thunderclap', shape: 'chain', text: 'Your final. A bolt jumps from monster to monster across the room.' },
-  sunguard: { name: 'Sun Guard', shape: 'guard', text: 'Raise the light: for a moment nothing can touch you, and it pushes away what is close.' },
-  dawnbreak: { name: 'Dawnbreak', shape: 'nova', text: 'Your final. The dawn breaks around you: it hits everything near, heals you, and puts out every shot.' },
-  pin: { name: 'Pin Shot', shape: 'fan', text: 'A tight fan of arrows at your target that go through a whole line of monsters.' },
-  rain: { name: 'Arrow Rain', shape: 'all', text: 'Your final. Arrows fall on every monster in the room.' },
-  frostarrow: { name: 'Frost Arrow', shape: 'fan', text: 'Three heavy arrows of ice at your target.' },
-  blizzard: { name: 'Blizzard', shape: 'field', text: 'Your final. A storm of snow around you hits again and again and slows everything in it.' },
-  thorntrap: { name: 'Thorn Trap', shape: 'field', text: 'Thorns burst up under the monster nearest you and keep biting.' },
-  wildvolley: { name: 'Wild Volley', shape: 'volley', text: 'Your final. Arrows fly out from you in every direction, through everything.' },
-  shadowstep: { name: 'Shadow Step', shape: 'dash', text: 'Slip through them like a shadow, cutting everything you pass.' },
-  moonfall: { name: 'Moonfall', shape: 'chain', text: 'Your final. Moonlight leaps from monster to monster, all over the room.' },
-  starfall: { name: 'Starfall', shape: 'drop', text: 'A star drops on the monster nearest you and bursts.' },
-  sky: { name: 'Falling Sky', shape: 'nova', text: 'Your final. A great blast around you, and every shot in the room goes out.' },
-  shards: { name: 'Crystal Shards', shape: 'volley', text: 'Crystals burst out from you in every direction.' },
-  prism: { name: 'Prism', shape: 'chain', text: 'Your final. A beam of light splits from monster to monster.' },
-  hourglass: { name: 'Hourglass', shape: 'field', text: 'Sand pours down on the monster nearest you: it slows everything there and keeps hitting.' },
-  stopsands: { name: 'Stop the Sands', shape: 'all', text: 'Your final. Time all but stops: every monster in the room is hit and slowed, and the shots go out.' },
-  voidstep: { name: 'Void Step', shape: 'dash', text: 'Step through the dark: untouchable, hitting everything on the way.' },
-  rift: { name: 'Rift', shape: 'field', text: 'Your final. The ground opens around you and keeps hitting all that stands in it.' },
-  palm: { name: 'Palm Wave', shape: 'ring', text: 'Push the air: everything near is hit and shoved away, and the shots near you go.' },
-  palms: { name: 'Thousand Palms', shape: 'ring', text: 'Your final. Heal, wipe the shots near you, and hit and shove everything around you.' },
-  pounce: { name: 'Tiger Pounce', shape: 'dash', text: 'Leap at them like a tiger, hitting everything you pass.' },
-  hundredclaws: { name: 'Hundred Claws', shape: 'chain', text: 'Your final. You strike from monster to monster faster than the eye.' },
-  lotus: { name: 'Lotus Bloom', shape: 'guard', text: 'A lotus opens round you: for a moment nothing touches you, it heals you a little and pushes them back.' },
-  nirvana: { name: 'Stillwater', shape: 'nova', text: 'Your final. Peace spreads out from you: it heals you a lot, hits everything near and puts out every shot.' },
-  risingsun: { name: 'Rising Sun', shape: 'drop', text: 'A sun bursts on the monster nearest you and throws them back.' },
-  solarflare: { name: 'Solar Flare', shape: 'all', text: 'Your final. The sun flares: every monster in the room is hit, and the shots near you go.' },
+/** Which monster a move picks: the nearest (the default) or the one with the most HP left. */
+export type SpAim = 'nearest' | 'strongest';
+
+export const SP_MOVES: Record<SpMoveId, { name: string; text: string; shape: SpShape; aim?: SpAim }> = {
+  // warrior
+  leap: { name: 'Leap', shape: 'leap', text: 'Jump onto the monster nearest you and crash down in fire, hitting all around where you land.' },
+  inferno: { name: 'Inferno', shape: 'field', text: 'Your final. Spin with the axe in a ring of fire that goes with you and keeps burning all it touches.' },
+  shieldwall: { name: 'Shield Wall', shape: 'guard', text: 'Raise the shield: for a moment nothing gets through, and what is close is pushed back.' },
+  judgment: { name: 'Judgment', shape: 'drop', aim: 'strongest', text: 'Your final. A hammer of light falls from the sky on the strongest monster in the room.' },
+  harpoon: { name: 'Harpoon', shape: 'hook', text: 'Throw the lance: it hits the monster in front of you and drags it to you.' },
+  tidalcharge: { name: 'Tidal Charge', shape: 'dash', text: 'Your final. Ride a wave right across the room, untouchable, hitting all you pass.' },
+  reap: { name: 'Reap', shape: 'boomerang', text: 'Throw the scythe: it spins out, cutting all it passes, and comes back to your hand.' },
+  soulharvest: { name: 'Soul Harvest', shape: 'all', text: 'Your final. Every monster in the room takes a cut, and you heal a little for each.' },
+  // archer
+  piercing: { name: 'Piercing Shot', shape: 'beam', text: 'One heavy arrow that goes through a whole line of monsters.' },
+  arrowrain: { name: 'Rain of Arrows', shape: 'field', text: 'Your final. Arrows keep falling on a wide circle round the monster nearest you.' },
+  bomb: { name: 'Bomb', shape: 'field', text: 'Throw a bomb at the monster nearest you: it bursts and leaves the floor burning.' },
+  barrage: { name: 'Barrage', shape: 'all', text: 'Your final. Cannon fire rains on every monster in the room.' },
+  call: { name: 'Call', shape: 'drop', aim: 'strongest', text: 'Your wolf of light leaps on the strongest monster in the room.' },
+  pack: { name: 'Pack', shape: 'chain', text: 'Your final. Spirit wolves run through the room, biting monster after monster.' },
+  vanish: { name: 'Vanish', shape: 'vanish', text: 'Melt into the dark: for a moment nothing sees you, and your next hit lands far harder.' },
+  thousandcuts: { name: 'Thousand Cuts', shape: 'chain', text: 'Your final. Flash from monster to monster, cutting each one.' },
+  // mage
+  firewall: { name: 'Fire Wall', shape: 'wall', text: 'A line of fire on the floor in front of you that burns all who cross it.' },
+  meteor: { name: 'Meteor', shape: 'drop', text: 'Your final. A huge rock of fire falls on the monster nearest you and everything round it.' },
+  bubble: { name: 'Bubble', shape: 'trap', text: 'Trap the monster nearest you in a bubble: it can\'t move or shoot until it pops.' },
+  tsunami: { name: 'Tsunami', shape: 'all', text: 'Your final. A wave crosses the room, hits every monster and pushes them all back.' },
+  blessing: { name: 'Blessing', shape: 'guard', text: 'Light wraps round you: you heal, and for a moment nothing can touch you.' },
+  radiance: { name: 'Radiance', shape: 'all', text: 'Your final. A blinding light: every monster in the room is hit and all but stops.' },
+  curse: { name: 'Curse', shape: 'mark', text: 'Curse the monster nearest you: for a while it takes more from every hit.' },
+  voidedge: { name: 'Void Edge', shape: 'beam', text: 'Your final. A giant blade of shadow cuts through the room in front of you.' },
+  // monk
+  risingdragon: { name: 'Rising Dragon', shape: 'ring', text: 'An uppercut that lifts you in a column of fire, burning all around you.' },
+  dragonroar: { name: 'Dragon Roar', shape: 'beam', text: 'Your final. A dragon of fire flies out from you through everything in its way.' },
+  pounce: { name: 'Pounce', shape: 'leap', text: 'Leap on a monster far away and rake it as you land.' },
+  hundredclaws: { name: 'Hundred Claws', shape: 'drop', aim: 'strongest', text: 'Your final. A storm of claws on the strongest monster in the room.' },
+  tidespin: { name: 'Tide Spin', shape: 'guard', text: 'Spin the staff like a wheel: it stops every shot for a moment and pushes back what is close.' },
+  riverdance: { name: 'River Dance', shape: 'chain', text: 'Your final. Flow from monster to monster like water, striking each.' },
+  kiwave: { name: 'Ki Wave', shape: 'beam', text: 'Push your ki out of both palms in a beam that goes through a whole line.' },
+  spiritbomb: { name: 'Spirit Bomb', shape: 'drop', text: 'Your final. Lift a huge ball of ki and throw it on the monster nearest you.' },
+};
+
+/** What each SP weapon's basic attack is: a swing (slash: a cut in front of you), a shot (arrow:
+    flies straight), an orb (flies after a monster) or a wave (bursts all around you). How hard,
+    fast, far and wide it hits is SP_WEAPON in src/balance/classes.ts. */
+export const SP_WEAPONS: Record<SpWeapon, { name: string; attack: AttackKind }> = {
+  greataxe: { name: 'Great axe', attack: 'slash' },
+  hammer: { name: 'Hammer and shield', attack: 'slash' },
+  lance: { name: 'Lance', attack: 'slash' },
+  scythe: { name: 'Scythe', attack: 'slash' },
+  longbow: { name: 'Long bow', attack: 'arrow' },
+  cannon: { name: 'Hand cannon', attack: 'arrow' },
+  boomerang: { name: 'Boomerang', attack: 'arrow' },
+  daggers: { name: 'Twin daggers', attack: 'slash' },
+  flamestaff: { name: 'Flame staff', attack: 'orb' },
+  waterorb: { name: 'Water orb', attack: 'orb' },
+  bellstaff: { name: 'Bell staff', attack: 'orb' },
+  hexblade: { name: 'Shadow sword', attack: 'slash' },
+  gauntlets: { name: 'Gauntlets', attack: 'slash' },
+  claws: { name: 'Claws', attack: 'slash' },
+  bo: { name: 'Bo staff', attack: 'wave' },
+  kipalms: { name: 'Ki palms', attack: 'orb' },
 };
 
 /** Every class can dodge: a short dash, untouchable for a moment, on its own short clock. */

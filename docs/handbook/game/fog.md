@@ -72,10 +72,28 @@ off (`setSpOff`). The one worn goes into every run (`spWorn`, a number 1 to 4 or
 
 | Class | 1 | 2 | 3 | 4 |
 |---|---|---|---|---|
-| Warrior | Ember Knight | Stone Warden | Storm Blade | Dawn Paladin |
-| Archer | Wind Ranger | Frost Hunter | Leaf Warden | Moon Stalker |
-| Mage | Star Sage | Crystal Mage | Sand Oracle | Void Seer |
-| Monk | River Monk | Tiger Fist | Lotus Sage | Sun Fist |
+| Warrior | Blaze Reaver (fire, great axe) | Sun Bastion (light, hammer and tower shield) | Riptide Lancer (water, lance) | Nightscythe (shadow, scythe) |
+| Archer | Rainstalker (water, long bow) | Flintfire (fire, hand cannon and bomb) | Wolfcaller (light, boomerang and a wolf of light) | Silent Fang (shadow, twin daggers) |
+| Mage | Ashcaller (fire, flame staff) | Tidesinger (water, water orb) | Dawnbell (light, bell staff, halo) | Hexedge (shadow, shadow sword) |
+| Monk | Dragonheart (fire, gauntlets) | White Claw (light, claws) | Stillwater (water, bo staff) | Voidpalm (shadow, ki in the palms) |
+
+An SP turns you into a different job: its own clothes, headgear and weapon, the boy and the girl
+each with their own cut. Each class has one SP of each of the four elements (`SpElement`: fire,
+water, light, shadow; `SP_ELEMENTS`, `ELEMENT_NAMES`), and each card has a one-line idea of who
+it is (`about`). The element only sets colors and the mark on the card for now; how elements beat
+each other and monsters with elements come later. Each SP's weapon changes the basic attack (the
+axe cuts all round, the lance reaches far, daggers are quick, the cannon's shot bursts, the
+boomerang comes back) and its own attack animation, and its own move and final fit the job:
+
+| Class | 1 | 2 | 3 | 4 |
+|---|---|---|---|---|
+| Warrior | Leap / Inferno | Shield Wall / Judgment | Harpoon / Tidal Charge | Reap / Soul Harvest |
+| Archer | Piercing Shot / Rain of Arrows | Bomb / Barrage | Call / Pack | Vanish / Thousand Cuts |
+| Mage | Fire Wall / Meteor | Bubble / Tsunami | Blessing / Radiance | Curse / Void Edge |
+| Monk | Rising Dragon / Dragon Roar | Pounce / Hundred Claws | Tide Spin / River Dance | Ki Wave / Spirit Bomb |
+
+The passives still come from the first design and get redone later. `theme` (`SpTheme`) picks how the SP
+storms in when it wakes. See all sixteen, boy and girl, at `/lab/sp`.
 
 Each has the class ability, its own move, a final and a passive that is always on (`SP_PASSIVES`:
 Embers burns, Bedrock hardens you standing still, Static sparks, Second Wind heals once a floor,
@@ -86,7 +104,7 @@ hits; how they play: [dungeon.md](dungeon.md)). With an SP on you look the SP's 
 weapon, its tier and its forge shine stay yours (`heroSpec`). In a run the own move sits left of
 the dodge and the final over the ability (`SpButton` in `FogRun.tsx`; R and F on a keyboard); a
 final plays its sound and shows a small badge with its name under your HP (`FinalBadge`), nothing
-over the fight. Numbers: `SP_TRIAL`, `SP_GIFTS`, `SP_SKILL`, `SP_FINAL`, `SURGE`, `SP_PASSIVE` in
+over the fight (its camera flash skips under reduced motion). Numbers: `SP_TRIAL`, `SP_GIFTS`, `SP_SKILL`, `SP_FINAL`, `SURGE`, `SP_PASSIVE`, `SP_WEAPON` in
 `src/balance/classes.ts`.
 
 The scenes show the SP rather than explain it: the Wanderer holds up the card (a line with `art:

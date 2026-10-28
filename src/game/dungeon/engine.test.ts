@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { powerOf, ZONES } from '@/lib/fog';
 import { initialState } from '@/lib/game';
-import { HUMAN } from '@/balance';
+import { HUMAN, SP_SKILL } from '@/balance';
 import { seeded } from '@/lib/random';
 import { botInput, playRun } from './bot';
 import { rollItem } from './items';
-import { ACROSS, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, makeFloor, MIDS, mine, pickRelic, SAND, skipToBoss, skipToWarden, SPLIT, stepRun, takeEvents, wardenFloor, type Side } from './engine';
+import { ACROSS, attackKind, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, makeFloor, MIDS, mine, pickRelic, SAND, skipToBoss, skipToWarden, SP_NOS, SPLIT, stepRun, takeEvents, wardenFloor, type GameEvent, type Run, type Side, type SpNo } from './engine';
+import type { ClassId } from '@/lib/gear';
 
 describe('mid-bosses', () => {
   const power = powerOf(initialState(), new Date());
@@ -316,14 +317,17 @@ describe('dungeon', () => {
 
   it('an SP adds its own move and its final; without one, neither works', () => {
     for (const classId of ['warrior', 'archer', 'mage', 'monk'] as const) {
-      const run = createRun({ ...setup, classId, power: tough, seed: 5, sp: true });
-      while (!run.foes.some((f) => f.alive && f.def.xp > 0)) stepRun(run, still);
-      run.hero.surge = 1e9;
-      takeEvents(run);
-      stepRun(run, { ...still, skill: true, final: true });
-      const sp = takeEvents(run).filter((e) => e.type === 'sp');
-      expect(sp.map((e) => e.type === 'sp' && e.final)).toEqual([false, true]);
-      expect(run.hero.surge).toBe(0);
+      for (const n of SP_NOS) {
+        const run = createRun({ ...setup, classId, power: tough, seed: 5, sp: n });
+        while (!run.foes.some((f) => f.alive && f.def.xp > 0 && run.t >= f.bornUntil)) stepRun(run, still);
+        run.hero.surge = 1e9;
+        takeEvents(run);
+        stepRun(run, { ...still, skill: true, final: true });
+        const sp = takeEvents(run).filter((e) => e.type === 'sp');
+        expect(sp.map((e) => e.type === 'sp' && e.final), `${classId} SP ${n}`).toEqual([false, true]);
+        // Spent (the final's own hits start the next one).
+        expect(run.hero.surge).toBeLessThan(20);
+      }
       const plain = createRun({ ...setup, classId, power: tough, seed: 5 });
       stepRun(plain, { ...still, skill: true, final: true });
       expect(takeEvents(plain).some((e) => e.type === 'sp')).toBe(false);
@@ -395,6 +399,169 @@ describe('dungeon', () => {
       }
       expect(run.over, ZONES[z].boss).toMatchObject({ won: true, why: 'boss' });
     }
+  });
+});
+
+describe('SP moves and weapons', () => {
+  const power = powerOf(initialState(), new Date());
+  const still = { x: 0, y: 0, ability: false };
+  /** The first room with SP `sp` worn, and monsters (copies of the first one) where `at` puts them,
+      from the hero: they don't walk or shoot and have HP to spare, the room is bare, and the hero's
+      own attack waits. */
+  const spRoom = (classId: ClassId, sp: SpNo, at: [number, number][]) => {
+    const run = createRun({ zone: ZONES[0], power, classId, seed: 5, sp });
+    while (!run.foes.some((f) => f.alive && run.t >= f.bornUntil)) stepRun(run, still);
+    const base = run.foes.find((f) => f.alive && run.t >= f.bornUntil)!,
+      h = run.hero;
+    run.foes = at.map(([dx, dy], i) => ({ ...base, id: 9000 + i, x: h.x + dx, y: h.y + dy, vx: 0, vy: 0, speed: 0, hp: 1e6, maxHp: 1e6, next: base.next.map(() => 1e9), knockUntil: 0, burn: undefined, slow: undefined }));
+    run.waves = [];
+    run.bullets = [];
+    run.terrain = { water: [], pillars: [], spikes: [], barrels: [], shrine: null };
+    h.cd.attack = 1e9;
+    takeEvents(run);
+    return run;
+  };
+  const hitsOn = (events: GameEvent[], id: number) => events.filter((e) => e.type === 'hit' && e.id === id && e.dmg > 0).length;
+  /** Steps until `done`, or `secs` have gone by. */
+  const until = (run: Run, done: () => boolean, secs = 3) => {
+    for (let i = 0; i < secs * 60 && !done(); i++) stepRun(run, still);
+  };
+
+  it("an SP's basic attack is its weapon's: an archer in Silent Fang cuts with daggers", () => {
+    const run = spRoom('archer', 4, [[0, -40]]);
+    expect(attackKind(run.hero)).toBe('slash');
+    run.hero.cd.attack = 0;
+    stepRun(run, still);
+    const at = takeEvents(run).find((e) => e.type === 'attack');
+    expect(at).toMatchObject({ kind: 'slash', weapon: 'daggers' });
+    expect(attackKind({ classId: 'archer', sp: null })).toBe('arrow');
+  });
+
+  it('Leap jumps onto the monster, untouchable in the air, and crashes down on it', () => {
+    const run = spRoom('warrior', 1, [[0, -200]]),
+      f = run.foes[0],
+      h = run.hero;
+    stepRun(run, { ...still, skill: true });
+    expect(h.ghostUntil).toBeGreaterThan(run.t + 0.2);
+    until(run, () => f.hp < f.maxHp);
+    expect(f.hp).toBeLessThan(f.maxHp);
+    expect(Math.hypot(f.x - h.x, f.y - h.y)).toBeLessThan(60);
+  });
+
+  it('Harpoon hits the monster in front of you and drags it to you', () => {
+    const run = spRoom('warrior', 3, [[0, -200]]),
+      f = run.foes[0],
+      h = run.hero;
+    stepRun(run, { ...still, skill: true });
+    expect(f.hp).toBeLessThan(f.maxHp);
+    expect(Math.hypot(f.x - h.x, f.y - h.y)).toBeLessThan(45);
+    expect(takeEvents(run).find((e) => e.type === 'sp')).toMatchObject({ id: 'harpoon', to: { y: h.y - 200 } });
+  });
+
+  it('Reap flies out and comes back to your hand, hitting the monster both ways', () => {
+    const run = spRoom('warrior', 4, [[0, -120]]),
+      f = run.foes[0];
+    stepRun(run, { ...still, skill: true });
+    const events: GameEvent[] = [];
+    const dies = run.shots[0].dies;
+    until(run, () => {
+      events.push(...takeEvents(run));
+      return run.shots.length === 0;
+    });
+    expect(hitsOn(events, f.id)).toBe(2);
+    expect(run.t).toBeLessThan(dies);
+  });
+
+  it('Piercing Shot hits everything in a line, and nothing beside it', () => {
+    const run = spRoom('archer', 1, [[0, -80], [0, -160], [0, -240], [120, -160]]);
+    stepRun(run, { ...still, skill: true });
+    const [a, b, c, off] = run.foes;
+    for (const f of [a, b, c]) expect(f.hp).toBeLessThan(f.maxHp);
+    expect(off.hp).toBe(off.maxHp);
+  });
+
+  it('Vanish: monsters lose you and hold their fire, and your next hit lands harder', () => {
+    const run = spRoom('archer', 4, [[0, -40]]),
+      f = run.foes[0],
+      h = run.hero;
+    // Below Focus's line, so no crits.
+    h.hp = Math.round(h.maxHp * 0.5);
+    h.cd.attack = 0;
+    until(run, () => f.hp < f.maxHp);
+    const plain = f.maxHp - f.hp;
+    h.cd.attack = 1e9;
+    stepRun(run, { ...still, skill: true });
+    expect(h.hideUntil).toBeGreaterThan(run.t);
+    f.next = f.next.map(() => 0);
+    for (let i = 0; i < 30; i++) stepRun(run, still);
+    expect(run.bullets).toHaveLength(0);
+    Object.assign(f, { x: h.x, y: h.y - 40 });
+    const hp = f.hp;
+    h.cd.attack = 0;
+    until(run, () => f.hp < hp);
+    expect(hp - f.hp).toBeGreaterThan(plain * (1 + (SP_SKILL.vanish.boost ?? 1)) * 0.8);
+  });
+
+  it('Fire Wall keeps burning what stands in it', () => {
+    const run = spRoom('mage', 1, [[0, -90]]),
+      f = run.foes[0];
+    stepRun(run, { ...still, skill: true });
+    const events: GameEvent[] = [];
+    for (let i = 0; i < 120; i++) {
+      stepRun(run, still);
+      events.push(...takeEvents(run));
+    }
+    expect(hitsOn(events, f.id)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('Bubble holds a monster still, then it pops and hurts', () => {
+    const run = spRoom('mage', 2, [[0, -120]]),
+      f = run.foes[0];
+    f.speed = 80;
+    stepRun(run, { ...still, skill: true });
+    const y = f.y;
+    expect(f.held).toBeDefined();
+    f.next = f.next.map(() => 0);
+    for (let i = 0; i < 60; i++) stepRun(run, still);
+    expect(f.y).toBeCloseTo(y);
+    expect(f.hp).toBe(f.maxHp);
+    expect(run.bullets).toHaveLength(0);
+    until(run, () => !f.held);
+    stepRun(run, still);
+    expect(f.hp).toBeLessThan(f.maxHp);
+  });
+
+  it('Curse makes a monster take more from every hit', () => {
+    const run = spRoom('mage', 4, [[-15, -40], [15, -40]]),
+      [marked, plain] = run.foes;
+    stepRun(run, { ...still, skill: true });
+    expect(marked.mark).toBeDefined();
+    const a = marked.hp,
+      b = plain.hp;
+    run.hero.cd.attack = 0;
+    until(run, () => marked.hp < a && plain.hp < b);
+    expect(a - marked.hp).toBeGreaterThan((b - plain.hp) * 1.3);
+  });
+
+  it('Judgment falls on the strongest monster in the room, not the nearest', () => {
+    const run = spRoom('warrior', 2, [[0, -60], [0, -400]]),
+      [near, strong] = run.foes;
+    near.hp = 1e5;
+    run.hero.surge = 1e9;
+    stepRun(run, { ...still, final: true });
+    expect(strong.hp).toBeLessThan(strong.maxHp);
+    expect(near.hp).toBe(1e5);
+  });
+
+  it('Soul Harvest hits every monster in the room and heals you for each', () => {
+    const run = spRoom('warrior', 4, [[0, -60], [80, -300], [-80, -500]]),
+      h = run.hero;
+    h.hp = Math.round(h.maxHp / 2);
+    const hp = h.hp;
+    h.surge = 1e9;
+    stepRun(run, { ...still, final: true });
+    for (const f of run.foes) expect(f.hp).toBeLessThan(f.maxHp);
+    expect(h.hp).toBeGreaterThan(hp);
   });
 });
 

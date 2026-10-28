@@ -600,99 +600,19 @@ exports[`replays > every zone plays the same run as before 1`] = `
   },
   {
     "bossAt": null,
-    "floor": 3,
+    "floor": 1,
     "gear": {
-      "bag": [
-        {
-          "base": [
-            {
-              "id": "damage",
-              "v": 0.1271076279259622,
-            },
-          ],
-          "bonuses": [],
-          "cls": "monk",
-          "id": "1g1ja8m1sousnx",
-          "level": 31,
-          "name": "Sunworn staff",
-          "need": {
-            "n": 24,
-            "stat": "health",
-          },
-          "rarity": "common",
-          "slot": "weapon",
-        },
-        {
-          "base": [
-            {
-              "id": "damage",
-              "v": 0.1392620426293708,
-            },
-          ],
-          "bonuses": [
-            {
-              "id": "cooldown",
-              "v": 0.12539039897758664,
-            },
-          ],
-          "cls": "monk",
-          "id": "yx4k70vwz7lb",
-          "level": 31,
-          "name": "Sunworn staff of Focus",
-          "need": {
-            "n": 24,
-            "stat": "health",
-          },
-          "rarity": "magic",
-          "slot": "weapon",
-        },
-        {
-          "base": [
-            {
-              "id": "damage",
-              "v": 0.23341877617734078,
-            },
-          ],
-          "bonuses": [
-            {
-              "id": "speed",
-              "v": 0.12017094126796724,
-            },
-            {
-              "id": "cooldown",
-              "v": 0.14924286353781221,
-            },
-            {
-              "id": "armor",
-              "v": 0.039680467187029125,
-            },
-            {
-              "id": "move",
-              "v": 0.09253900321558714,
-            },
-          ],
-          "cls": "monk",
-          "id": "k39v2t8diu9y",
-          "level": 32,
-          "name": "Slow Fire",
-          "need": {
-            "n": 26,
-            "stat": "health",
-          },
-          "rarity": "legendary",
-          "slot": "weapon",
-        },
-      ],
+      "bag": [],
       "worn": {},
     },
     "height": null,
-    "hits": 43,
+    "hits": 23,
     "hp": 0,
-    "kills": 112,
-    "level": 7,
-    "maxHp": 370,
-    "room": 4,
-    "seconds": 323,
+    "kills": 23,
+    "level": 3,
+    "maxHp": 400,
+    "room": 5,
+    "seconds": 147,
     "why": "hp",
     "won": false,
   },

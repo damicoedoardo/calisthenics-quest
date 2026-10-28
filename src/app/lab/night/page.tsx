@@ -218,6 +218,7 @@ export default function NightLab() {
         <Row icon={<Sparkles size={16} />} label="The SP, sealed" note="Hero tab: the card in ash, and its trial (train twice more, reach floor 5)" onClick={() => open(withSp(false), 'tab=hero&hero=class')} />
         <Row icon={<Sparkles size={16} />} label="The SP, awake" note="Hero tab: you in its look, the card in color, its moves and the switch to wear it" onClick={() => open(withSp(true), 'tab=hero&hero=class')} />
         <Row icon={<Sparkles size={16} />} label="All four SPs" note="Hero tab: scroll the SPs you own with the arrows, and pick the one to wear" onClick={() => open(withSp(true, 'warrior', 2), 'tab=hero&hero=class')} />
+        <Row icon={<Sparkles size={16} />} label="SP gallery" note="All sixteen SPs, boy and girl, with their element and who each one is" href="/lab/sp" />
         <Row icon={<Film size={16} />} label="The second SP" note="sp-second, after chapter 2: the Wanderer hands it over, awake" href="/lab/story?play=sp-second&back" />
         <Row icon={<Film size={16} />} label="The third SP" note="sp-third, after chapter 4" href="/lab/story?play=sp-third&back" />
         <Row icon={<Film size={16} />} label="The fourth SP" note="sp-fourth, after chapter 5, before the last" href="/lab/story?play=sp-fourth&back" />

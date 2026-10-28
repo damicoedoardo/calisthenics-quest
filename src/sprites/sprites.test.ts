@@ -10,6 +10,8 @@ import { tint, type Grid } from './engine/grid';
 import { planExercises } from '@/lib/program';
 import { EXERCISES, type ExerciseId } from './characters/exercise';
 import { SPRITES, clipFor, framesFor, imageSheet, type SpriteId } from './registry';
+import { SP_WEAPON_ART } from './parts/spWeapons';
+import { spWeapon } from './characters/spLooks';
 
 const painted = (g: Grid) => g.flat().filter(Boolean).length;
 const hash = (frames: Grid[]) => createHash('sha1').update(JSON.stringify(frames)).digest('hex').slice(0, 12);
@@ -83,6 +85,21 @@ describe('sprite registry', () => {
     expect(clipFor('vela', 'attack')).toBe('raise');
     // The true form waves (the finale's last line).
     expect(clipFor('kindled', 'attack')).toBe('wave');
+  });
+
+  it('an SP attacks with its own weapon, and each weapon has its own clip', () => {
+    const seen = new Set<string>();
+    for (const cls of ['warrior', 'archer', 'mage', 'monk'] as ClassId[])
+      for (const n of [1, 2, 3, 4]) {
+        const clip = SP_WEAPON_ART[spWeapon(cls, n)].clip;
+        // even before a real weapon: the SP brings its own
+        expect(clipFor('hero', 'attack', { gear: uniformGear(cls, 0), classId: cls, sp: n })).toBe(clip);
+        expect(CLIPS[clip].loop).toBe(false);
+        seen.add(clip);
+      }
+    expect(seen.size).toBe(16);
+    // without an SP nothing changes
+    expect(clipFor('hero', 'attack', { gear: uniformGear('archer', 2), classId: 'archer' })).toBe('shoot');
   });
 
   it('the idle loop bobs and the attack moves', () => {
@@ -205,6 +222,26 @@ describe('sprite registry', () => {
     for (const step of ['iosShare', 'iosAdd', 'iosChromeShare', 'androidMenu', 'androidAdd', 'home', 'safari'] as const)
       prints[`install ${step}`] = hash(framesFor('installStep', 'idle', { step }));
     prints['kindled long hair'] = hash(framesFor('kindled', 'idle', { hair: 'long' }));
+    expect(prints).toMatchSnapshot();
+  });
+
+  it('SP look fingerprints', () => {
+    // every SP, boy and girl, at rest and walking, bare-handed and with the class's weapon;
+    // its attack and its card kept apart, so a new attack clip moves only those
+    const prints: Record<string, string> = {};
+    for (const cls of ['warrior', 'archer', 'mage', 'monk'] as ClassId[])
+      for (const n of [1, 2, 3, 4])
+        for (const sex of ['m', 'f'] as const) {
+          const look = STARTER_LOOKS[sex],
+            armed = { ...uniformGear(cls, 0), weapon: uniformGear(cls, 1).weapon },
+            k = `sp ${cls} ${n} ${sex}`;
+          for (const [g, gear] of [['bare', uniformGear(cls, 0)], ['armed', armed]] as const) {
+            const o = { gear, classId: cls, look, sp: n };
+            prints[`${k} ${g} rest`] = hash([...framesFor('hero', 'idle', o), ...framesFor('hero', 'walk', o)]);
+            prints[`${k} ${g} attack`] = hash(framesFor('hero', 'attack', o));
+          }
+          prints[`${k} card`] = hash(framesFor('spCard', 'idle', { classId: cls, n, awake: true, gear: armed, look }));
+        }
     expect(prints).toMatchSnapshot();
   });
 });

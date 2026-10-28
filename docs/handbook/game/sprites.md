@@ -23,6 +23,11 @@ engine/figure.ts      the base 64x64 humanoid: body, face, hair, arms, layer ord
 engine/manga.ts       the manga head (the hero's default): face as text art, hair as shapes
 engine/drawn.ts       the hero's hand-drawn body (`body: 'block'` gives the old block body)
 parts/weapons.ts      sword, stick, staff, wand, bow
+parts/spWeapons.ts    the SPs' own weapons, one entry each in `SP_WEAPON_ART` keyed by the SP card's `weapon`
+                      (`{ draw, hands, clip, stance }`: its drawing, what it puts on the hands, its attack
+                      clip, its stance); `held` paints one along the hand's aim, `along` finds a point on it,
+                      `trail`, `burst`, `ring` draw a weapon's own attack marks from the frame's `fx`
+parts/spColors.ts     the colors the SP looks and weapons share
 characters/*.ts       one file per character: hero, wanderer, mira, ember, book, vela (old Vela),
                       kindled (a kid made of fire, from the old finale; no scene uses it now), villagers (Lia, Sol, the kid), and the chapter
                       enemies tomorrow, mirror, plateau, summit, and the Fog's wisp, plus the
@@ -35,7 +40,7 @@ characters/*.ts       one file per character: hero, wanderer, mira, ember, book,
 characters/pixel.ts   text-row art: paintRows (one character per pixel) and shifted
 characters/icons.ts   app icons as text rows: the six keepsakes (end of the Today tab, sprite `keepsake`) and
                       what a day held in the Book of Days (sprite `dayIcon`), the dungeon's
-                      relics (`relicIcon`), the ability and Dodge buttons (`abilityIcon`), the SP's moves and finals (`spIcon`; the later SPs' drawn from a kind of move and an element, `shaped`), the run's
+                      relics (`relicIcon`), the ability and Dodge buttons (`abilityIcon`), the four elements' marks (`elementIcon`, `ELEMENT_ICONS`), the SP's moves and finals (`spIcon`, `SP_ICONS`: a drawing of its own in `SP_ROWS`, else its kind of move in `SHAPED`, in the colors of its SP's element, `ELEMENT`), the run's
                       level-up skills (`skillIcon`), and the floor track's Warden and boss (`markIcon`)
 characters/items.ts   the Fog's items (sprite `item`, opts `ItemLook` { art, rarity, seed }): one 24x24
                       text-row drawing per kind (`ITEM_ROWS`: sword, bow, staff, wand, heavy, light, robe,
@@ -43,10 +48,14 @@ characters/items.ts   the Fog's items (sprite `item`, opts `ItemLook` { art, rar
                       (`LEGEND_ROWS`), on a 32x32 frame; `itemColors` picks the colors from rarity
                       and seed (also drawn on the floor by the scene, and worn by the hero)
 characters/spLooks.ts  each SP's look, four per class (`SP_LOOKS`, `spLook(classId, n)`): the dress it wears (plate, jerkin or robe) in its
-                      colors, plus its own pieces (the Ember Knight's circlet and burning mantle, the Wind
-                      Ranger's feather and scarf, the Star Sage's hat and circling star, the River Monk's
-                      headband, sash and beads), and its element's colors for the transformation;
-                      the hero wears it with `sp: n` (`true` is the first)
+                      colors, its own headgear (a horned helm, a fin crest, hoods, goggles, a straw
+                      hat, a halo) and a `pet` (the Wolfcaller's wolf). Its weapon is not part of the
+                      look: `spWeapon(classId, n)` finds it in `SP_WEAPON_ART` (parts/spWeapons.ts)
+                      through the card's `weapon`; with it, no shield, quiver or orb. A girl gets her own cut where it matters (braids, a ponytail, a circlet
+                      instead of a helm; a short skirt where the look sets `skirt`, `spGirlCut`).
+                      Colors follow the element: fire red and orange, water blue, light white and
+                      gold, shadow black and violet. The hero wears it with `sp: n` (`true` is the
+                      first); all sixteen, boy and girl: `/lab/sp`
 characters/spCard.ts  the SP card (sprite `spCard`, opts { classId, n, awake, gear, look }): a 48x64 card, you in
                       the SP's look from the chest up in its window; sealed it is ash with a crack of light
 characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look, kit }): you
@@ -72,7 +81,8 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Change a color everywhere | `palette.ts` |
 | Make an animation faster, slower, longer, or move an arm in it | that clip in `clips.ts` (`ms`, `frames`) |
 | Add a new animation | add a clip in `clips.ts`, then point a sprite's `clips` at it in `registry.ts` |
-| Change which animation a class attacks with | `heroAttack` in `characters/hero.ts` |
+| Change which animation a class attacks with | `heroAttack` in `characters/hero.ts` (with an SP on, its weapon's `clip` wins) |
+| Change an SP weapon's attack animation | its clip in `clips.ts` ("the SP weapons' attacks"), or point `clip` in its `SP_WEAPON_ART` entry at another; check `/lab/sp` on Attack |
 | Reshape the body (legs, torso, head, shoulders) | `BODY` in `engine/figure.ts` |
 | Change the hero's face (eyes, chin, mouth) | the `MANGA_FACE.art` text rows in `engine/manga.ts` |
 | Change the hero's hair (spikes, bangs, headband) | its entry in `MANGA_HAIR` (`engine/manga.ts`): each lock is a list of points |
@@ -80,6 +90,8 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Add a hairstyle | a new entry in `HAIRSTYLES` (`engine/figure.ts`), plus one in `MANGA_HAIR` for the manga head (without it, that style falls back to the classic head) |
 | Change the classic face | `EYE_PATTERN` and `FACE` in `engine/figure.ts` |
 | Redraw a weapon | `parts/weapons.ts` |
+| Redraw an SP's look | its entry in `characters/spLooks.ts`; check `/lab/sp` |
+| Redraw an SP's weapon, or what it does on the hands | its entry in `SP_WEAPON_ART` (`parts/spWeapons.ts`); check `/lab/sp` |
 | Change armor tiers, capes, shields | `heroSpec` layers in `characters/hero.ts` |
 | Redraw a Fog item, or a legendary | its rows in `ITEM_ROWS` or `LEGEND_ROWS` (`characters/items.ts`); the letters are listed at the top of the file |
 | Change an item rarity's colors, the dyes and gems a seed picks, or the legendaries' looks | `METAL`, `LEATHER`, `CLOTH`, `GEMS`, `TRIM`, `ACCENTS`, `THEMES` and `itemColors` in `characters/items.ts` |
@@ -140,6 +152,14 @@ and duration come from the clip. Looping clips (idle) repeat; the others play on
 The hero's `walk` clip (played in a run while you move, sheet `heroWalk`) lifts one foot, then the
 other (`step`: the lifted leg is drawn shorter, its boot higher), with a one-pixel dip between
 steps, so the hero walks on the ground instead of floating.
+
+The SP weapons each attack with their own clip (`chop` the great axe, `smash` the hammer, `thrust`
+the lance, `reap` the scythe, `longdraw` the long bow, `blast` the cannon, `throw` the boomerang,
+`stab` the daggers, `flare` the flame staff, `pulse` the water orb, `ring` the bell staff,
+`hexslash` the shadow sword, `combo` the gauntlets, `swipe` the claws, `spin` the bo, `palms` the
+ki). For them a frame can also set `aim` / `aimL` (where a held weapon points), `grip` (how far
+the hand slides up it) and `fly` (how far a thrown one has flown), and the arms have two more
+poses: right `tuck` (hand at the ribs) and left `fwd` (reaching across the chest).
 
 Creatures (Ember, the Book, the enemies) read the same frames their own way: `hover` is an
 eight-frame float where `bob` is the breath, and `lunge` is their attack, a wind-up
@@ -202,4 +222,5 @@ if gear needs to recolor it, because a PNG can't follow gear tiers on its own.
 
 `sprites.test.ts` draws every sprite and action and keeps a fingerprint of the pixels. After an art
 change you meant to make, run `pnpm test -- -u` to accept the new fingerprints. If you didn't mean to
-change any art, a failing fingerprint means something broke.
+change any art, a failing fingerprint means something broke. A second snapshot, "SP look fingerprints", keeps every SP, boy and girl, at rest, walking and
+attacking, with and without a class weapon, so a weapon or look refactor can prove it moved no pixel.
