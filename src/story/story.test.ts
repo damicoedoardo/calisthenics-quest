@@ -6,7 +6,7 @@ import { CAST } from './cast';
 import { recordRun } from '@/lib/fog';
 import { FIRST_CLEAR, RUN_LINES } from './daily/fog-lines';
 import { CHAPTERS } from './chapters';
-import { ALL_SCENES, MAX_SCENES_AT_ONCE, VILLAGERS, chapterStart, fill, pendingScenes, renderLines, sawScene, scenesToPlay, storyWords } from './engine';
+import { ALL_SCENES, MAX_SCENES_AT_ONCE, VILLAGERS, answeredLines, asksAgain, chapterStart, endedScene, fill, pendingScenes, putOff, renderLines, sawScene, scenesToPlay, storySoFar, storyWords, waitingCount } from './engine';
 import { FLAME_STAGES } from './flame';
 import { PLACES } from './places';
 import { CALLBACKS, FLAME_LINES } from './daily/flame-lines';
@@ -307,6 +307,62 @@ describe('scenes at one moment', () => {
     expect(scenesToPlay(state, now)).toEqual([]);
     const later = { ...state, sessions: [...state.sessions, workout(day(10))] };
     expect(scenesToPlay(later, day(10)).length).toBeGreaterThan(0);
+  });
+});
+
+describe('Story so far', () => {
+  const day = (i: number) => new Date(2026, 0, 1 + i, 18);
+  const after = (n: number): GameState => ({ ...initialState(), sessions: Array.from({ length: n }, (_, i) => workout(day(i))) });
+  const ids = (s: GameState) => storySoFar(s).flatMap((g) => g.entries.map((e) => e.id));
+
+  it('lists only scenes already reached, so nothing is spoiled', () => {
+    const state = after(10);
+    expect(ids(state)).toEqual([]);
+    const first = scenesToPlay(state, day(9))[0];
+    const seen = endedScene(state, first.id, 'due', {}, day(9));
+    expect(ids(seen)).toEqual([first.id]);
+    expect(waitingCount(seen)).toBe(0);
+  });
+
+  it('keeps a scene put off with Later out of the way until it is played from the list', () => {
+    const state = after(10);
+    const now = day(9);
+    const due = scenesToPlay(state, now).map((s) => s.id);
+    const off = putOff(state, due, now);
+    // Nothing else plays at this moment, and the put-off scenes never come back on their own.
+    expect(scenesToPlay(off, now)).toEqual([]);
+    expect(pendingScenes(off, now).map((s) => s.id)).not.toContain(due[0]);
+    expect(storySoFar(off).flatMap((g) => g.entries).find((e) => e.id === due[0])?.waits).toBe('later');
+    expect(waitingCount(off)).toBe(due.length);
+    const played = endedScene(off, due[0], 'later', {}, now);
+    expect(played.seenScenes).toContain(due[0]);
+    expect(played.laterScenes).not.toContain(due[0]);
+  });
+
+  it('marks a skipped scene until it is watched to the end', () => {
+    const state = after(10);
+    const now = day(9);
+    const id = scenesToPlay(state, now)[0].id;
+    const skipped = endedScene(state, id, 'due', { skipped: true }, now);
+    expect(waitingCount(skipped)).toBe(1);
+    expect(endedScene(skipped, id, 'again', { skipped: true }, now).skippedScenes).toEqual([id]);
+    const watched = endedScene(skipped, id, 'again', {}, now);
+    expect(watched.skippedScenes).toEqual([]);
+    expect(watched.seenScenes.filter((x) => x === id)).toHaveLength(1);
+  });
+
+  it('asks a question again only when it was never answered, and never gives a gift twice', () => {
+    const naming = ALL_SCENES.find((p) => p.scene.ask?.kind === 'name')!.scene;
+    const state = after(1);
+    expect(asksAgain(naming, { ...state, seenScenes: [naming.id] })).toBe(false);
+    expect(asksAgain(naming, { ...state, seenScenes: [naming.id], skippedScenes: [naming.id] })).toBe(true);
+    const choice = ALL_SCENES.find((p) => p.scene.ask?.kind === 'choice')!.scene;
+    const ask = choice.ask as Extract<typeof choice.ask, { kind: 'choice' }>;
+    expect(asksAgain(choice, state)).toBe(true);
+    const answered = { ...state, answers: { [ask.id]: ask.choices[0].value } };
+    expect(asksAgain(choice, answered)).toBe(false);
+    expect(answeredLines(choice, answered)).toEqual(ask.choices[0].after ?? ask.after ?? []);
+    for (const { scene } of ALL_SCENES.filter((p) => p.scene.ask?.kind === 'sp' || p.scene.ask?.kind === 'class')) expect(asksAgain(scene, state)).toBe(false);
   });
 });
 

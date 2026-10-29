@@ -90,6 +90,25 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
 - Play a whole season in a second with `SIM_OUT=sim-out npx vitest run src/sim`: seven kinds of
   player, a timeline each in sim-out/, and a list of anything that looks wrong.
 
+## Story so far (watching again)
+
+The Play tab's Story so far (`src/components/StorySoFar.tsx`) lists every scene the player has
+reached (`storySoFar` in `engine.ts`): the opening, each chapter, the scenes that come any time,
+the Ember Road. Only seen or put-off scenes are listed, so nothing is spoiled. A scene's name there
+is its `title`, or its first line as the player reads it.
+
+- **Later**, beside Skip in a scene that came due (`onLater` on `Dialogue`): that scene and any
+  other due at this moment go to `laterScenes` (`putOff`) and nothing else plays at this moment.
+  They never play on their own again; from the list they play in full, questions and gifts included
+  (mode `'later'`). A class pick has no Later.
+- **Skip** (the words, or the question) still ends the scene as before, and also marks it in
+  `skippedScenes`; watching it to the end from the list clears the mark (`endedScene`).
+- **Watched again** (mode `'again'` on `ScenePlayer`): the lines, then what followed the answer the
+  player gave (`answeredLines`), with no gifts. A question never answered asks for real
+  (`asksAgain`): a choice with no saved answer, or the flame's name skipped (still the default).
+- The Play tab's button gets a gold dot while anything waits (`waitingCount`); after Later, and the
+  first skip (`skipNoteSeen`), a note says where the scene waits.
+
 ## The Ember Road (walked with friends)
 
 A second, shorter story apart from the six months: three chapters and a finale about friendship
@@ -130,6 +149,7 @@ leaves fires and notes. The data is `road.ts`; the rules are `src/lib/road.ts`.
 | Change what someone says | the line in its chapter file |
 | Move a scene to another workout | its `when` |
 | Add a scene | a new entry in the chapter's `scenes` (a new, unique `id`) |
+| Name a scene in Story so far | its `title` (left out, its first line stands in) |
 | Change the Ember Road (words, bosses' names, which zone a chapter borrows) | `road.ts`; how long it takes: `ROAD` in `src/balance/training.ts` |
 | Add a character | an entry in `cast.ts` (and a sprite in `src/sprites/registry.ts` if it's new art) |
 | Change a portrait's size or name color | its entry in `cast.ts` |

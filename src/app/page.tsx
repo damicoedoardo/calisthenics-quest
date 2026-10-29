@@ -7,6 +7,7 @@ import { HeroTab, type HeroPart } from '@/components/HeroTab';
 import { PlayTab } from '@/components/PlayTab';
 import { FriendsTab } from '@/components/FriendsTab';
 import { YouPage } from '@/components/YouPage';
+import { StorySoFar } from '@/components/StorySoFar';
 import { FogRun, type RunStart } from '@/components/FogRun';
 import { Hero } from '@/components/Hero';
 import { Prologue } from '@/components/Prologue';
@@ -32,7 +33,7 @@ import type { FriendCard } from '@/lib/friends';
 import { cloudConfigured, maybeSignedIn, useCloudStatus } from '@/lib/cloud-client';
 import { BringHero, InstallGate } from '@/components/InstallGate';
 import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
-import { sawScene, scenesToPlay, storyState, type StoryState } from '@/story/engine';
+import { endedScene, putOff, scenesToPlay, storyState, waitingCount, type SceneMode, type StoryState } from '@/story/engine';
 import { withTodayPage } from '@/story/daily';
 import { heroVariant } from '@/story/flame';
 import type { Scene } from '@/story/types';
@@ -85,6 +86,12 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const [training, setTraining] = useState(false);
   const [after, setAfter] = useState<{ result: FinishResult; before: StoryState; after: StoryState } | null>(null);
   const [scene, setScene] = useState<Scene | null>(null);
+  // How the scene was opened: its moment came, or from Story so far (put off, or watched again).
+  const [sceneMode, setSceneMode] = useState<SceneMode>('due');
+  // Story so far (the Play tab): every scene reached, to watch again.
+  const [storyOpen, setStoryOpen] = useState(false);
+  // A short note after Later (and the first skip): where the scene waits.
+  const [storyNote, setStoryNote] = useState<string | null>(null);
   const [picker, setPicker] = useState<'story' | 'manual' | null>(null);
   const [replaying, setReplaying] = useState(false);
   const [run, setRun] = useState<Zone | null>(null);
@@ -207,7 +214,10 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   useEffect(() => {
     if (!ready || !state.profile.onboarded || opening || replaying || training || after || scene || picker || run) return;
     const next = scenesToPlay(state, new Date())[0];
-    if (next) setScene(next);
+    if (next) {
+      setSceneMode('due');
+      setScene(next);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, state.profile.onboarded, state.sessions.length, state.road, opening, replaying, training, after, scene, picker, run]);
 
@@ -223,18 +233,30 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const endScene = useCallback(
     (r: SceneResult) => {
       if (!scene) return;
-      update((s) => {
-        const next = {
-          ...sawScene(s, scene.id, new Date()),
-          profile: r.flame ? { ...s.profile, flame: r.flame } : s.profile,
-          answers: r.answer ? { ...s.answers, [r.answer.id]: r.answer.value } : s.answers,
-        };
-        return r.sp ? giveSp(next, r.sp) : next;
-      });
-      if (r.pickClass) setPicker('story');
+      const now = new Date();
+      if (r.later) {
+        // Not now: this scene and any other due at this moment wait in Story so far.
+        const ids = sceneMode === 'due' ? [scene.id, ...scenesToPlay(state, now).map((x) => x.id)] : [scene.id];
+        update((s) => putOff(s, ids, now));
+        setStoryNote(ids.length > 1 ? 'These scenes wait for you in Play › Story so far.' : 'It waits for you in Play › Story so far.');
+      } else {
+        update((s) => {
+          const next = {
+            ...endedScene(s, scene.id, sceneMode, r, now),
+            profile: r.flame ? { ...s.profile, flame: r.flame } : s.profile,
+            answers: r.answer ? { ...s.answers, [r.answer.id]: r.answer.value } : s.answers,
+            // The first skip says where skipped scenes go.
+            skipNoteSeen: s.skipNoteSeen || !!r.skipped,
+          };
+          return r.sp ? giveSp(next, r.sp) : next;
+        });
+        if (r.skipped && !state.skipNoteSeen) setStoryNote('Skipped. Watch it any time in Play › Story so far.');
+        if (r.pickClass) setPicker('story');
+      }
       setScene(null);
+      setSceneMode('due');
     },
-    [scene, update],
+    [scene, sceneMode, state, update],
   );
 
   useCoachPlan(state, update);
@@ -399,6 +421,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           <PlayTab
             state={state}
             onPlay={setRun}
+            onStory={() => setStoryOpen(true)}
             onGear={() => {
               setHeroPart('gear');
               setTab('hero');
@@ -440,6 +463,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
                 <Sprite id="uiIcon" opts={{ name: icon }} size={22} label="" className={tab === id ? '' : 'opacity-70 grayscale'} />
                 {/* The flame has something to say. */}
                 {id === 'train' && tab !== 'train' && state && freshNudge(state, new Date()) && <span aria-label="New from your flame" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-gold-300 ring-2 ring-ink-900" />}
+                {/* Story scenes put off or skipped wait in Story so far. */}
+                {id === 'play' && waitingCount(state) > 0 && <span aria-label="Story scenes waiting" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-gold-300 ring-2 ring-ink-900" />}
                 {/* How many friends are online. */}
                 {id === 'friends' && online > 0 && <span aria-label={`${online} online`} className="absolute -right-2.5 -top-1 min-w-[1rem] rounded-full bg-emerald-500 px-1 text-center font-mono text-[9px] font-bold leading-4 text-ink-950 ring-2 ring-ink-900">{online}</span>}
               </span>
@@ -504,7 +529,19 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           onFelt={(felt, comment) => update((s) => ({ ...s, sessions: s.sessions.map((x) => (x.id === after.result.session.id ? { ...x, felt, ...(comment ? { comment } : {}) } : x)) }))}
         />
       )}
-      {scene && <ScenePlayer key={scene.id} scene={scene} state={state} onDone={endScene} />}
+      {scene && <ScenePlayer key={scene.id} scene={scene} state={state} mode={sceneMode} onDone={endScene} />}
+      {storyOpen && !busy && (
+        <StorySoFar
+          state={state}
+          onPlay={(s, mode) => {
+            setSceneMode(mode);
+            setScene(s);
+          }}
+          onOpening={() => setReplaying(true)}
+          onClose={() => setStoryOpen(false)}
+        />
+      )}
+      {storyNote && !busy && <StoryNote text={storyNote} onClose={() => setStoryNote(null)} />}
       {picker && (
         <ClassPicker
           workouts={state.sessions.length}
@@ -521,5 +558,24 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       {you && !busy && <YouPage state={state} update={update} onReplayOpening={() => setReplaying(true)} onClose={() => setYou(false)} devSwitch={devAllowed ? { on: devOn, set: setDevOn } : undefined} />}
       {opening && <Opening state={state} onDone={() => setOpening(false)} />}
     </div>
+  );
+}
+
+/** Says where a scene put off or skipped waits; goes by itself after a few seconds, or on a tap. */
+function StoryNote({ text, onClose }: { text: string; onClose: () => void }) {
+  useEffect(() => {
+    const t = window.setTimeout(onClose, 4500);
+    return () => window.clearTimeout(t);
+    // A new note starts its own few seconds.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [text]);
+  return (
+    <button
+      onClick={onClose}
+      role="status"
+      className="fixed inset-x-4 bottom-24 z-40 mx-auto max-w-sm animate-fadein rounded-xl bg-ink-800 px-4 py-3 text-left text-sm text-slate-200 shadow-lg ring-1 ring-gold-400/50 land:bottom-4"
+    >
+      {text}
+    </button>
   );
 }

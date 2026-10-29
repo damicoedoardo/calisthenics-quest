@@ -8,6 +8,7 @@ import { initialState, type GameState } from '@/lib/game';
 import { ZONES } from '@/lib/fog';
 import { SANDBOX_KEY } from '@/lib/store';
 import { withTodayPage } from '@/story/daily';
+import { DEFAULT_FLAME_NAME } from '@/story/flame';
 import { midBoss } from '@/game/dungeon/engine';
 import { SP_NOS, spDef, type SpNo } from '@/game/dungeon/content';
 import { rollItem, type Item } from '@/game/dungeon/items';
@@ -47,6 +48,28 @@ function veteran(workouts: number, cleared: number): GameState {
   // Nothing waiting to play over the screen being opened (a rest-day scene, say).
   for (let i = 0; i < 5; i++) s = skipDueScenes(s, new Date());
   return s;
+}
+
+/** A player `n` workouts in, one every other day, who watched every scene as it came. */
+function storyWalk(n: number): GameState {
+  const now = Date.now();
+  let s = skipIntro(initialState(), new Date(now - (n * 2 + 2) * DAY));
+  s = { ...s, profile: { ...s.profile, classId: 'warrior', flame: 'Pip' } };
+  for (let i = 0; i < n; i++) {
+    const day = new Date(now - (n - i) * 2 * DAY);
+    s = addFakeWorkouts(s, 1, day, true);
+    for (let k = 0; k < 4; k++) s = skipDueScenes(s, day);
+  }
+  return s;
+}
+
+/** Story so far with two scenes waiting: the flame's name skipped, and the last scene put off with Later. */
+function storyWaiting(): GameState {
+  let s = storyWalk(20);
+  // Nothing due today (a rest-day scene) plays over the list.
+  for (let k = 0; k < 4; k++) s = skipDueScenes(s, new Date());
+  const last = s.seenScenes.at(-1)!;
+  return { ...s, profile: { ...s.profile, flame: DEFAULT_FLAME_NAME }, seenScenes: s.seenScenes.filter((x) => x !== last), laterScenes: [last], skippedScenes: ['flame-name'] };
 }
 
 /** A geared hero on the Ember Road: `beaten` of its bosses down, `walked` workouts since setting out,
@@ -220,6 +243,11 @@ export default function NightLab() {
 
       <Panel title="DEVELOPER MODE, IN TABS" note="The wrench next to FORMA opens one menu with tabs: Go (any screen, every Lab), Wallet (embers, sweat coins, co-op materials), Gear (any item, any rarity, +0 to +15), Hero (class, SPs, stat points), Story (chapter jump, scenes, days), Fog (bosses beaten, a run in any zone at any spot), Save (copy, load, wipe).">
         <Row icon={<Sparkles size={16} />} label="Open the developer menu" note="A hero 30 workouts in, the menu open on top" onClick={() => open(veteran(30, 2), 'tab=today&dev')} />
+      </Panel>
+
+      <Panel title="STORY SO FAR" note="Play tab, at the top: every scene you reached, to watch again. Later (beside Skip) puts a scene off; skipped and put-off scenes wait there with a gold mark, and a question you skipped (like the flame's name) can be answered there.">
+        <Row icon={<Film size={16} />} label="A scene after a workout: try Later or Skip" note="Opens on Today with chapter 2's first scene due" onClick={() => open(addFakeWorkouts(storyWalk(11), 1, new Date(), false), 'tab=today')} />
+        <Row icon={<BookOpen size={16} />} label="Story so far, two scenes waiting" note="The flame's name skipped and the last scene put off" onClick={() => open(storyWaiting(), 'tab=play')} />
       </Panel>
 
       <Panel title="DESIGN PASS" note="Pixel, minimal, fewer words: one screen at a time.">

@@ -3,7 +3,7 @@ type: conceptual
 title: Product overview
 description: FORMA is a training app played like a pixel RPG — training earns, the Fog game spends — installable, offline, one save per phone.
 tags: [product, overview]
-timestamp: 2026-10-28
+timestamp: 2026-10-29
 ---
 
 # Product overview
@@ -27,7 +27,7 @@ training gave you. Gear comes from the dungeon, each item with its own art (lege
 |---|---|---|
 | Today | The flame and its line for the day, today's quest (the plan's Day A or B: warm-up, main lifts, core, stretch), the rest card on rest days, the Book of Days | `src/components/TodayTab.tsx` |
 | Train | The coach: your flame, which you chat with (it asks where you start, plans your week and changes it when you say, pushes back when something isn't wise, and speaks first when there's something to say), the week as day chips and each day's workout as cards with demos, easier and swap (tap a card for how to do it); the exercise library (891 exercises, pixel demos, tips and mistakes); before setup, gym or home and the built-in plan | `src/components/TrainTab.tsx`, `CoachChat.tsx` |
-| Play | The Fog: your power from training, the zones, a run | `src/components/PlayTab.tsx`, `FogRun.tsx` |
+| Play | The Fog: your power from training, the zones, a run; Story so far, to watch any scene reached again (scenes put off with Later or skipped wait there) | `src/components/PlayTab.tsx`, `FogRun.tsx`, `StorySoFar.tsx` |
 | Friends | Who is online (tap to invite), your party, the Ember Road, every friend with your code | `src/components/FriendsTab.tsx`, `Friends.tsx` |
 | Hero | Gear, class, look, the champion's stat points, keepsakes, friends (who is online, in the Fog, trained today), settings (sound, music in the menus), backup | `src/components/HeroTab.tsx` |
 

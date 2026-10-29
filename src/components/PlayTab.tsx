@@ -1,13 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Film } from 'lucide-react';
 import { warmRunSheets } from '@/game/sheets';
 import type { GameState } from '@/lib/game';
 import { EDGE, ZONES, edgeFor, powerOf, workoutsPastHearts, zoneStatus, type Zone } from '@/lib/fog';
 import { NO_GEAR } from '@/lib/fog-gear';
 import { ITEM_SLOTS, SLOT_NAME, starterKit, type Item, type ItemSlot } from '@/game/dungeon/items';
-import { chapterStart } from '@/story/engine';
+import { chapterStart, waitingCount } from '@/story/engine';
 import { ItemTile } from './ItemCard';
 import { Sprite } from './Sprite';
 import { WorldPicker } from './WorldPicker';
@@ -18,6 +18,8 @@ interface Props {
   onPlay: (zone: Zone) => void;
   /** Open Hero > Gear (the ready strip's worn items). */
   onGear: () => void;
+  /** Open Story so far: every scene reached, to watch again. */
+  onStory: () => void;
 }
 
 /**
@@ -49,7 +51,7 @@ function useWarmRun(state: GameState) {
 
 /** The game between workouts: the worlds of the Fog, the story you play alone. Friends, the party and
     the Ember Road are on the Friends tab; your gear, vault and forge on the Hero tab. */
-export function PlayTab({ state, onPlay, onGear }: Props) {
+export function PlayTab({ state, onPlay, onGear, onStory }: Props) {
   useWarmRun(state);
   const land = useLand();
 
@@ -58,6 +60,7 @@ export function PlayTab({ state, onPlay, onGear }: Props) {
       <div className="flex h-full flex-col gap-3">
         <div className="flex shrink-0 items-center gap-3">
           <Ready state={state} onGear={onGear} land />
+          <StoryRow state={state} onStory={onStory} land />
         </div>
         <div className="min-h-0 flex-1">
           <WorldPicker state={state} onPlay={onPlay} land />
@@ -67,9 +70,36 @@ export function PlayTab({ state, onPlay, onGear }: Props) {
 
   return (
     <div className="space-y-4">
+      <StoryRow state={state} onStory={onStory} />
       <WorldPicker state={state} onPlay={onPlay} />
       <Ready state={state} onGear={onGear} />
     </div>
+  );
+}
+
+/** Story so far, and how many scenes wait there (put off with Later, or skipped). */
+function StoryRow({ state, onStory, land = false }: { state: GameState; onStory: () => void; land?: boolean }) {
+  const waiting = waitingCount(state);
+  const label = waiting > 0 ? `Story so far: ${waiting} ${waiting === 1 ? 'scene waits' : 'scenes wait'} for you` : 'Story so far: watch any scene again';
+  if (land)
+    return (
+      <button onClick={onStory} aria-label={label} className={`relative flex h-full shrink-0 items-center gap-2 rounded-2xl px-3 py-2 ${waiting ? 'bg-ink-800 ring-1 ring-gold-400/50' : 'bg-ink-800'}`}>
+        <Film size={16} className="text-gold-300" />
+        <span className="font-pixel text-[8px] text-slate-200">STORY</span>
+        {waiting > 0 && <span className="rounded-full bg-gold-300 px-1.5 font-mono text-[10px] font-bold leading-4 text-ink-950">{waiting}</span>}
+      </button>
+    );
+  return (
+    <button onClick={onStory} aria-label={label} className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left active:scale-[.98] ${waiting ? 'bg-ink-800 ring-1 ring-gold-400/50' : 'bg-ink-800'}`}>
+      <Film size={18} className="shrink-0 text-gold-300" />
+      <span className="min-w-0 flex-1">
+        <span className="block font-pixel text-[9px] text-slate-200">STORY SO FAR</span>
+        <span className={`mt-0.5 block text-xs ${waiting ? 'text-gold-300' : 'text-slate-500'}`}>
+          {waiting > 0 ? `${waiting} ${waiting === 1 ? 'scene waits' : 'scenes wait'} for you` : 'Watch any scene again'}
+        </span>
+      </span>
+      <ChevronRight size={16} className="shrink-0 text-slate-500" />
+    </button>
   );
 }
 
