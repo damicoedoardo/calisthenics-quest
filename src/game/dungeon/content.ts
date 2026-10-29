@@ -147,6 +147,8 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
   slime: { hp: 16, speed: 46, dmg: 8, r: 14, xp: 1, move: 'chase', shoots: [{ every: 2.6, kind: 'aimed', n: 1, speed: 120, dmg: 7, first: 1.2 }], cost: 1 },
   wisp: { hp: 10, speed: 80, dmg: 5, r: 12, xp: 1, move: 'orbit', range: 150, shoots: [{ every: 2.3, kind: 'spread', n: 3, arc: 0.5, speed: 140, dmg: 6, first: 1.5 }], cost: 1.5 },
   mirror: { hp: 36, speed: 50, dmg: 10, r: 15, xp: 3, move: 'keep', range: 210, shoots: [{ every: 3.2, kind: 'ring', n: 10, speed: 105, dmg: 8, first: 1.8 }], cost: 2.5 },
+  // The Ash Golem, at the end of each floor: throws a boulder where you stand (step out before it
+  // lands and bursts), and stomps a ring of cinders that starts slow and speeds up.
   golem: {
     hp: 220,
     speed: 36,
@@ -155,22 +157,23 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
     xp: 12,
     move: 'chase',
     shoots: [
-      { every: 3.4, kind: 'spread', n: 5, arc: 0.7, speed: 135, dmg: 10, first: 1.5 },
-      { every: 5, kind: 'ring', n: 14, speed: 95, dmg: 9, first: 3 },
+      { every: 3.4, kind: 'mine', n: 6, speed: 100, dmg: 12, r: 50, first: 1.5 },
+      { every: 5, kind: 'ring', n: 14, speed: 100, dmg: 9, style: 'ramp', first: 3 },
     ],
     cost: 6,
   },
   // A golden copy of you, sent by the Mirror. Hitting it hurts you.
   reflection: { hp: 30, speed: 72, dmg: 8, r: 12, xp: 0, move: 'chase', shoots: [], cost: 0 },
-  // Winds up (it glows red), then charges in a straight line and throws a ring where it stops.
+  // The Lancer Husk, an empty suit of armor: winds up (it glows red), then charges in a straight
+  // line and throws a ring where it stops.
   ram: { hp: 30, speed: 34, dmg: 13, r: 15, xp: 2, move: 'charge', shoots: [{ every: 0, on: 'move', kind: 'ring', n: 6, speed: 95, dmg: 7 }], cost: 2 },
-  // A floating book that never moves and turns a slow spiral of pages.
+  // The Snooze Clock, one of Tomorrow's: never moves and ticks out a slow spiral of clock hands.
   book: { hp: 34, speed: 0, dmg: 8, r: 14, xp: 2, move: 'still', shoots: [{ every: 0.55, kind: 'spiral', n: 3, speed: 80, dmg: 7, style: 'wiggle', first: 1.4 }], cost: 2.5 },
   // Lobs smoke bombs where you stand: step off the circle before it bursts.
   smoke: { hp: 18, speed: 70, dmg: 6, r: 12, xp: 2, move: 'orbit', range: 200, shoots: [{ every: 2.8, kind: 'mine', n: 6, speed: 90, dmg: 11, r: 46, first: 1.5 }], cost: 2 },
   // Keeps away and sends shots that curve after you for a moment.
   seeker: { hp: 26, speed: 46, dmg: 8, r: 14, xp: 2, move: 'keep', range: 230, shoots: [{ every: 3, kind: 'aimed', n: 2, speed: 115, dmg: 8, style: 'homing', first: 1.6 }], cost: 2.5 },
-  // A big slime that bounces shots off the walls and falls apart into three small ones.
+  // The Excuse Jar: bounces shards off the walls and breaks into three Jar Imps (splitlings).
   splitter: { hp: 48, speed: 36, dmg: 11, r: 18, xp: 3, move: 'chase', shoots: [{ every: 3.2, kind: 'ring', n: 8, speed: 90, dmg: 7, style: 'bounce', first: 1.6 }], cost: 3 },
   splitling: { hp: 9, speed: 74, dmg: 5, r: 10, xp: 0, move: 'chase', shoots: [], cost: 0 },
   // A shade of you: vanishes, lands near you (watch for the mark) and fires a ring that starts slow.
@@ -425,12 +428,12 @@ export const zoneDungeon = (zone: Pick<Zone, 'id'>) => ZONE_DUNGEONS[clamp(zone.
 
 /** A line about each monster the first time it shows up in a run. */
 export const MEET: Partial<Record<MonsterKind, string>> = {
-  ram: 'Rams glow red, then charge in a line: step aside.',
+  ram: 'Lancer Husks glow red, then charge in a line: step aside.',
   mirror: 'Mirrors keep their distance and fire rings.',
-  book: 'The Book of Days never moves. It turns a spiral of pages.',
+  book: 'Snooze Clocks never move. They tick out a spiral of clock hands.',
   smoke: 'Smoke wisps lob bombs where you stand. Leave the circle.',
   seeker: 'Seekers fire shots that curve after you.',
-  splitter: 'Splitters bounce shots off the walls, and fall apart when hit hard enough.',
+  splitter: 'Excuse Jars bounce shards off the walls, and break into imps when hit hard enough.',
   shade: 'Shades vanish and land next to you. Watch for the mark.',
 };
 
@@ -453,7 +456,8 @@ export const BOSSES: Record<FogBoss, MonsterDef & { plates?: number }> = {
     xp: 0,
     move: 'chase',
     shoots: [
-      { every: 3, kind: 'ring', n: 12, speed: 90, dmg: 10, first: 2 },
+      // a ring of Zs that drift as they go, and an alarm clock thrown at you
+      { every: 3, kind: 'ring', n: 12, speed: 90, dmg: 10, style: 'wiggle', first: 2 },
       { every: 2.2, kind: 'aimed', n: 1, speed: 150, dmg: 9, r: 8, first: 1 },
     ],
     cost: 0,

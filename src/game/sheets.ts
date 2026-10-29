@@ -6,7 +6,7 @@ import { normalizeLook, type HeroOpts } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
 import { makeGear, type ClassId, type Gear, type GearSlot, type Tier } from '@/lib/gear';
 import { heroVariant } from '@/story/flame';
-import type { BossSheetKey, Sheets } from './rules';
+import type { BossSheetKey, DressedKey, Sheets } from './rules';
 
 /* Every sprite sheet a Fog run draws with. sheetFor caches what it builds, so drawing them while
    the Play tab sits idle (one at a time, so the page never stalls) makes the tap on Play start the
@@ -14,7 +14,7 @@ import type { BossSheetKey, Sheets } from './rules';
 
 type Job = [string, () => Sheet];
 
-/** The dungeon boss sheets for a zone (by id: 1 the Mirror, 2 the Knight, 3 the Plateau, 4 the
+/** The dungeon boss sheets for a zone (by id: 0 Tomorrow, 1 the Mirror, 2 the Knight, 3 the Plateau, 4 the
     Hollow, 5 the Summit). Only the run's own boss is drawn: they're big and there are many. */
 function bossJobs(zoneId: number, hero: Pick<HeroOpts, 'gear' | 'classId' | 'look'>): [BossSheetKey, () => Sheet][] {
   const staged = (id: 'knightBoss' | 'plateauBoss'): [BossSheetKey, () => Sheet][] =>
@@ -22,6 +22,11 @@ function bossJobs(zoneId: number, hero: Pick<HeroOpts, 'gear' | 'classId' | 'loo
       [`${id}${stage || ''}` as BossSheetKey, () => sheetFor(id, 'idle', { stage })],
       [`${id}${stage || ''}Attack` as BossSheetKey, () => sheetFor(id, 'attack', { stage })],
     ]);
+  if (zoneId === 0)
+    return [
+      ['tomorrowBoss', () => sheetFor('tomorrowBoss', 'idle')],
+      ['tomorrowBossAttack', () => sheetFor('tomorrowBoss', 'attack')],
+    ];
   if (zoneId === 1)
     return [
       ['mirrorBoss', () => sheetFor('mirrorBoss', 'idle', hero)],
@@ -60,9 +65,10 @@ function jobs(state: GameState, zone: Zone): Job[] {
     hero = { gear, classId, look };
   // Once the flame has fused with you, you burn with it down there too; with the SP on, you wear its look.
   const you = { ...hero, variant: heroVariant(state), ...(spWorn(state) ? { sp: spWorn(state) } : {}) };
-  const plain = ['ember', 'mirror', 'golem', 'knight', 'book', 'summit', 'splitterPop', 'warden', 'lanternMid', 'foremanMid', 'sandGolemMid', 'sandGolemMidStone', 'whisperMid', 'galeMid'] as const;
-  // The regular monsters dressed for this zone (wet glass at the lake, scrap iron at the forges...).
-  const dressed = ['slime', 'wisp', 'ram', 'smoke', 'seeker', 'splitter', 'splitling', 'shade'] as const;
+  const plain = ['ember', 'mirror', 'knight', 'summit', 'jarPop', 'warden', 'lanternMid', 'foremanMid', 'sandGolemMid', 'sandGolemMidStone', 'whisperMid', 'galeMid'] as const;
+  // The regular monsters dressed for this zone (wet glass at the lake, scrap iron at the forges...),
+  // standing and firing.
+  const dressed: DressedKey[] = ['slime', 'wisp', 'lancer', 'clock', 'smoke', 'seeker', 'jar', 'imp', 'shade', 'ashGolem'];
   return [
     ['hero', () => sheetFor('hero', 'idle', you)],
     ['heroAttack', () => sheetFor('hero', 'attack', you)],
@@ -71,6 +77,7 @@ function jobs(state: GameState, zone: Zone): Job[] {
     ['echo', () => sheetFor('hero', 'idle', { ...hero, variant: 'echo' })],
     ...plain.map((id): Job => [id, () => sheetFor(id, 'idle')]),
     ...dressed.map((id): Job => [id, () => sheetFor(id, 'idle', { zone: zone.id })]),
+    ...dressed.map((id): Job => [`${id}Attack`, () => sheetFor(id, 'attack', { zone: zone.id })]),
     ...bossJobs(zone.id, hero),
     ...midJobs(zone.id),
   ];

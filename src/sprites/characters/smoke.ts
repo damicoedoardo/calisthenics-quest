@@ -2,7 +2,8 @@ import type { ClipFrame } from '../clips';
 import { autoshade, grid, outline, painter, scale2x, type Grid } from '../engine/grid';
 import { paintRows, shifted } from './pixel';
 
-/* The Smoker, a dungeon monster: a lavender puff of smoke with a cheeky grin, holding a bomb over
+/* The Smoker, a dungeon monster: a puff of soot from the Ashlands' chimneys, embers for eyes and a
+   sharp-toothed grin, holding a bomb over
    its head with the fuse already lit. Its tail curls away like a trail of smoke. Its attack: it
    cocks the bomb back, then throws it (and it's gone from its hand). 32x32 rows, doubled. */
 
@@ -40,9 +41,11 @@ const ROWS = [
   '.....................aa.........',
   '................................',
 ];
-const SMOKE = { a: '#5b3f8c', b: '#9d84d6', c: '#cdbdf2' };
-const BOMB = { k: '#1c1a2b', K: '#3a3656', w: '#8f8ab0', u: '#a16207' };
-const FACE = '#24163f';
+const SMOKE = { a: '#3b3350', b: '#6a5d86', c: '#a597c4' };
+const BOMB = { k: '#15131f', K: '#33304a', w: '#c7c2e0', u: '#a16207' };
+const FACE = '#120e1a';
+const EYE = ['#f59e0b', '#fde68a'];
+const GLOW = '#a78bfa';
 const SPARK = ['#f97316', '#fde047', '#ffffff'];
 
 export function drawSmoke(_o: unknown, frame: ClipFrame, f: number): Grid {
@@ -73,10 +76,13 @@ export function drawSmoke(_o: unknown, frame: ClipFrame, f: number): Grid {
       u.line(x, ey + (i ? 0 : 3), x + 3, ey + 1.5, FACE);
     });
   else
-    [ex, ex + 12].forEach((x) => {
-      u.r(x, ey, 4, 4, '#ffffff');
-      u.r(x + (hit ? 0 : 1), ey + 1, 2, 3, FACE);
-      u.row(ey - 2, x - 1, x + 3, FACE);
+    // ember eyes, slanted, with a thin dark slit
+    [ex, ex + 12].forEach((x, i) => {
+      u.r(x, ey, 5, 4, EYE[0]);
+      u.r(x + (i ? 0 : 3), ey, 2, 1, EYE[1]);
+      u.col(x + (hit ? 1 : 2), ey + 1, ey + 3, FACE);
+      // a cross brow, slanting down to the middle
+      u.line(x - 1, ey - (i ? 1 : 3), x + 5, ey - (i ? 3 : 1), FACE);
     });
   if (wind) {
     u.r(ex + 5, ey + 7, 6, 2, FACE);
@@ -85,11 +91,20 @@ export function drawSmoke(_o: unknown, frame: ClipFrame, f: number): Grid {
     u.line(42 + dx, 7, 47 + dx, 5, SMOKE.c);
   } else if (hit) u.r(ex + 6, ey + 7, 4, 4, FACE);
   else {
-    u.row(ey + 8, ex + 3, ex + 11, FACE);
-    u.p(ex + 2, ey + 7, FACE);
-    u.p(ex + 12, ey + 7, FACE);
-    u.r(ex + 6, ey + 9, 3, 1, '#f0abfc');
+    // a wide grin full of little teeth
+    u.row(ey + 7, ex + 1, ex + 15, FACE);
+    u.r(ex + 3, ey + 8, 11, 2, FACE);
+    for (let x = ex + 3; x <= ex + 13; x += 2) u.p(x, ey + 8, '#e7e5e4');
+    u.p(ex, ey + 6, FACE);
+    u.p(ex + 16, ey + 6, FACE);
   }
+  // violet light glowing through the soot, and wisps curling up off its head
+  u.p(16 + dx, 46, GLOW);
+  u.p(44 + dx, 48, GLOW);
+  [[26, 18, 0], [36, 16, 4]].forEach(([x, y, ph]) => {
+    const k = (f + ph) % 8;
+    if (k < 6) u.p(x + dx + (k % 3) - 1, y - k * 2, k < 3 ? SMOKE.c : SMOKE.b);
+  });
   // the fuse spark sputters
   if (!hit) {
     const sx = 54 - dx + (wind ? 6 : 0),
