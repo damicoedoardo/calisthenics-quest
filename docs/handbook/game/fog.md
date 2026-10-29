@@ -37,8 +37,8 @@ level or story.
 - The Ember Road's runs (`ROAD_ZONES`, played Together) keep a story zone's `id` (loot, records,
   toughness) with the road's own names and words, and `guide: 'Tamsin'` speaks after a win. A
   chapter with its own `world` (`Zone.world`, read through `worldOf`) fights in a dungeon of its
-  own, with its own boss (`fog.boss`, e.g. `lull`); one without borrows the story zone's dungeon
-  and boss as they are. See [story.md](story.md) and "Worlds" in [dungeon.md](dungeon.md).
+  own, with its own boss (`fog.boss`: `lull`, `distance`, `alone`); one without borrows the story
+  zone's dungeon and boss as they are. Its hp and dmg are the story zone's times `ROAD_TOUGH`. See [story.md](story.md) and "Worlds" in [dungeon.md](dungeon.md).
 - **Run skills**: `UPGRADES` and `rollUpgrades` (three random choices per level-up), `xpToNext`.
   Seventeen skills; Wider choice adds a fourth card. Each has a `kind` (attack, magic, guard, craft) that colors its card; their numbers are
   `RUN_SKILL` in `src/balance/skills.ts`. The level-up pick is `SkillPick`

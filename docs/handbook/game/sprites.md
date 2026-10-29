@@ -76,10 +76,16 @@ characters/install.ts the install guide's pictures (`installStep`, opts { step }
 characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-6, a world }): recolored onto the
                       zone's ramp and dressed (lake glass and drips, forge scrap and glowing cracks,
                       plateau sandstone, fog mist, summit ice, the Whetstone Pass's slate with a
-                      honed steel edge and sparks)
+                      honed steel edge and sparks, the Quiet Miles' night mist with a lantern glint,
+                      the Long Bridge's plank wood with a rope lashing)
 characters/whetstone.ts  the Ember Road's first world: the Grinder (`grinder`, a runaway whetstone),
                       the Bellows mid-boss (`bellowsMid`) and the Lull (`lullBoss`), a mossy giant
                       who sings
+characters/quietmiles.ts  the second: the Unsent (`unsent`, a letter never sent), the Silent Bell
+                      (`bellMid`) and the Distance (`distanceBoss`, fog with a lantern-glass face)
+characters/longbridge.ts  the third: the Loner (`loner`, behind a round shield), the Tollkeeper
+                      (`tollMid`), the One Who Walks Alone (`aloneBoss`, opts { stage: 0-2 }, plates
+                      falling, then the helm off) and the Road Banner (`roadBanner`)
 ```
 
 ## How to change things

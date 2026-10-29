@@ -37,6 +37,16 @@ describe('the Ember Road', () => {
     expect(at(s).finale).toBe(true);
   });
 
+  it('stitches every friend who beat a road boss with you on the banner, once each', () => {
+    let s = startRoad(train(initialState(), 3));
+    s = wonRoad(s, 1, ['Ana', 'Ben']);
+    expect(s.road?.walked).toEqual(['Ana', 'Ben']);
+    // a win that doesn't move the road still counts who was there
+    s = wonRoad(s, 3, ['Ben', 'Cleo', 'Cleo']);
+    expect(s.road?.walked).toEqual(['Ana', 'Ben', 'Cleo']);
+    expect(at(s).beaten).toBe(1);
+  });
+
   it('a win out of order changes nothing, and a friend brought along sets out', () => {
     const s = train(initialState(), 4);
     expect(wonRoad(s, 2).road).toEqual({ from: 4, beaten: 0 });

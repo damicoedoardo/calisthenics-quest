@@ -109,6 +109,32 @@ export const THEMES: Theme[] = [
     water: ['#06090f', '#121a26', '#27364a', '#8fa3bf'],
     litter: ['#2a3142', '#4a556e', '#2f3a2a', '#56653f', '#9c8f7a'],
   },
+  {
+    // The Quiet Miles (the Ember Road): a valley at night, blue-violet stone wet with mist,
+    // lanterns burning a warm gold, still pools that hold the sky.
+    name: 'Quiet Miles',
+    ground: '#151a2e',
+    fog: '#4a5488',
+    stone: ['#0a0c18', '#171c33', '#232a48', '#30395e', '#414b78', '#5a6596', '#97a0cc'],
+    moss: '#4f6b7a',
+    fire: ['#92400e', '#f59e0b', '#fde68a', '#fffbeb'],
+    glow: '#fbbf24',
+    water: ['#05070f', '#0e1430', '#253064', '#a5b4fc'],
+    litter: ['#232a48', '#414b78', '#2b3a44', '#4f6b7a', '#c8ceea'],
+  },
+  {
+    // The Long Bridge (the Ember Road): weathered planks and posts over a gorge, rope lashings,
+    // torches in iron cages, the dark river far below in the gaps.
+    name: 'Long Bridge',
+    ground: '#2a1d14',
+    fog: '#6b7a8f',
+    stone: ['#140d08', '#2a1a10', '#3d2a1c', '#5a3a22', '#7a5434', '#9a7048', '#d6b47a'],
+    moss: '#6b7a3a',
+    fire: ['#9a3412', '#fb923c', '#fed7aa', '#fff7ed'],
+    glow: '#fb923c',
+    water: ['#03060a', '#0a1622', '#1c3448', '#7fa3bf'],
+    litter: ['#3d2a1c', '#7a5434', '#4a4a2a', '#6b7a3a', '#d6b47a'],
+  },
 ];
 
 /** The theme for a world (a zone's id, or an Ember Road chapter's own world, from 0); worlds past

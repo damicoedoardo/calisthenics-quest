@@ -58,6 +58,12 @@ import {
   wardenFloor,
   LIGHT,
   LULL,
+  ALONE,
+  BELL,
+  DISTANCE,
+  LANTERN,
+  LONER,
+  TOLL,
   type Layout,
   MEET,
   MINE,
@@ -196,6 +202,10 @@ export interface Foe {
   held?: { until: number; dmg: number; by: Hero };
   /** Marked (Curse): takes `k` more from every hit until then. */
   mark?: { until: number; k: number };
+  /** The Loner: where its shield faces (radians). */
+  face?: number;
+  /** The Tollkeeper: when each hero (by id) last hit it. */
+  hitters?: Record<number, number>;
   alive: boolean;
 }
 
@@ -356,6 +366,12 @@ export type GameEvent =
   | { type: 'wake'; hero: number; x: number; y: number; by: 'friend' | 'hit' | 'self' }
   /** The Lull sings louder (under half his HP). */
   | { type: 'louder'; x: number; y: number }
+  /** A false shape of the Distance shown up by a lantern. */
+  | { type: 'shown'; id: number; x: number; y: number }
+  /** The Silent Bell tolls, and the toll will come back from toX, toY. */
+  | { type: 'toll'; x: number; y: number; toX: number; toY: number }
+  /** A hit glanced off a Loner's shield. */
+  | { type: 'block'; id: number; x: number; y: number }
   /** The mid-boss speaks (in the speech bubble, over it). */
   | { type: 'midSay'; text: string }
   | { type: 'say'; text: string }
@@ -541,6 +557,8 @@ export interface Hero {
   orbit: number;
   fairyAt: number;
   mirrorHurtAt: number;
+  /** The One Who Walks Alone: when this hero can break its next plate (ALONE). */
+  plateAt: number;
   free: FreePick[];
   pendingLevels: number;
   /** A pick waiting for the player: the run holds still until it's made. */
@@ -753,6 +771,7 @@ function newHero(hs: HeroSetup, id: number): Hero {
     orbit: 0,
     fairyAt: 0,
     mirrorHurtAt: 0,
+    plateAt: 0,
     free: [...(power.fresh ? (['fresh'] as const) : []), ...(power.rested ? (['rested'] as const) : []), ...Array<FreePick>(hs.edge?.picks ?? 0).fill('past')],
     pendingLevels: 0,
     offer: null,
@@ -1216,9 +1235,12 @@ function summonBoss(run: Run) {
     { zone } = run.setup;
   const weak = run.setup.edge?.bossHp ?? 1;
   // A party makes the boss tougher, but not the Knight: his plates fall one at a time however
-  // many hit him (PLATE_EVERY), so more plates would only make the fight longer.
+  // many hit him (PLATE_EVERY), so more plates would only make the fight longer. The One Who Walks
+  // Alone loses one a hero at a time, so each friend brings it more (ALONE.more).
   const more = partyMore(run, 'boss'),
-    hp = run.setup.tutorial ? TUTORIAL.bossHp : def.plates ? Math.round(def.plates * weak) : Math.round(def.hp * zone.hp * BOSS_HP * weak * more);
+    friends = run.setup.friends?.length ?? 0,
+    plates = def.plates ? def.plates * (which === 'alone' ? 1 + ALONE.more * friends : 1) : 0,
+    hp = run.setup.tutorial ? TUTORIAL.bossHp : plates ? Math.round(plates * weak) : Math.round(def.hp * zone.hp * BOSS_HP * weak * more);
   const b: Foe = {
     id: ++run.ids,
     kind: 'boss',
@@ -1248,8 +1270,8 @@ function summonBoss(run: Run) {
   run.foes.push(b);
   run.boss = b;
   run.bossAt = run.t;
-  run.bossSummon = which === 'mirror' ? 2 : 6;
-  run.bossClock = which === 'knight' ? 6 : which === 'mirror' ? SPLIT.first : 0;
+  run.bossSummon = which === 'mirror' ? 2 : which === 'distance' ? DISTANCE.call : 6;
+  run.bossClock = which === 'knight' ? 6 : which === 'mirror' ? SPLIT.first : which === 'distance' ? DISTANCE.first : which === 'alone' ? ALONE.apart : 0;
   // The Hollow's light first opens a few seconds in.
   if (which === 'hollow' && !run.setup.tutorial) b.act = run.t + LIGHT.first;
   emit(run, { type: 'boss' });
@@ -2166,6 +2188,8 @@ function moveFoes(run: Run) {
       if (p.above && f.hp <= f.maxHp * p.above) return;
       // The Hollow's light open: it turns its spiral instead (steerBoss).
       if (f === run.boss && run.setup.zone.boss === 'hollow' && f.phase === 2) return;
+      // An Unsent out of every lantern's light is only a shape.
+      if (f.kind === 'unsent' && !lit(run, f)) return;
       shoot(run, f, p);
     });
     // A mid-boss's second phase: a roar, and new volleys (the Warden's cross stops turning).
@@ -2175,7 +2199,7 @@ function moveFoes(run: Run) {
       emit(run, { type: 'midSay', text: midBoss(run.setup.zone).hot });
     }
     // Touch (a charging ram hits harder).
-    if (f.def.dmg > 0 && !held) for (const h of up) if (dist(f, h) < f.def.r + HERO_R) hurt(run, h, f.def.dmg * (f !== run.warden && now < f.dashUntil ? 1.5 : 1), 'touch');
+    if (f.def.dmg > 0 && !held && !(f.kind === 'unsent' && !lit(run, f))) for (const h of up) if (dist(f, h) < f.def.r + HERO_R) hurt(run, h, f.def.dmg * (f !== run.warden && now < f.dashUntil ? 1.5 : 1), 'touch');
     if (run.over) return;
   }
   // Monsters push each other apart.
@@ -2224,6 +2248,13 @@ function steer(run: Run, f: Foe) {
   }
   // An image of the Mirror fades back into the lake.
   if (f.kind === 'image' && now >= f.act) return fade(run, f);
+  // The Loner turns its shield toward you, slowly.
+  if (f.kind === 'loner') {
+    const want = Math.atan2(dy, dx),
+      cur = f.face ?? want,
+      turn = Math.atan2(Math.sin(want - cur), Math.cos(want - cur));
+    f.face = cur + clamp(turn, -LONER.turn * STEP, LONER.turn * STEP);
+  }
   switch (f.def.move) {
     case 'still':
       f.vx = f.vy = 0;
@@ -2522,7 +2553,7 @@ function splitMirror(run: Run, b: Foe, n: number) {
   emit(run, { type: 'split' });
   if (!run.met.has('image')) {
     run.met.add('image');
-    emit(run, { type: 'say', text: 'The lake shows many Mirrors. Only the real one shoots: go to it.' });
+    emit(run, { type: 'say', text: run.setup.zone.boss === 'distance' ? 'Shapes in the fog, all alike. Only the real one shoots. A lantern close to a false one shows it.' : 'The lake shows many Mirrors. Only the real one shoots: go to it.' });
   }
 }
 
@@ -2584,6 +2615,61 @@ function steerBoss(run: Run, b: Foe) {
     for (let i = 0; i < Math.min(2, 3 - alive); i++) {
       const side = (i === 0 ? 1 : -1) * 40;
       addFoe(run, 'reflection', b.x + dx * 0.45 - (dy / d) * side, b.y + dy * 0.45 + (dx / d) * side);
+    }
+    return;
+  }
+  if (which === 'distance') {
+    // It keeps at arm's length and splits among false shapes of itself; a lantern near a false
+    // one shows it up for everyone. Now and then it sends Unsent letters out of the fog.
+    const v = d > 230 ? b.speed : d < 150 ? -b.speed : 0;
+    b.vx = (dx / d) * v;
+    b.vy = (dy / d) * v;
+    for (const f of run.foes)
+      if (f.alive && f.kind === 'image' && f.phase === 1 && run.t >= f.bornUntil && lit(run, f)) {
+        f.phase = 2;
+        emit(run, { type: 'shown', id: f.id, x: f.x, y: f.y });
+      }
+    run.bossClock -= STEP;
+    if (run.bossClock <= 0) {
+      const hurt = b.hp < b.maxHp * 0.5;
+      run.bossClock = DISTANCE.every * (hurt ? 0.8 : 1);
+      // More lanterns, more shapes to show up: one more for each friend.
+      splitMirror(run, b, (hurt ? DISTANCE.more : DISTANCE.shapes) + (run.setup.friends?.length ?? 0));
+    }
+    run.bossSummon -= STEP;
+    if (run.bossSummon > 0) return;
+    run.bossSummon = DISTANCE.call;
+    if (run.foes.filter((f) => f.alive && f.kind === 'unsent').length < 3)
+      for (const side of [-1, 1]) addFoe(run, 'unsent', clamp(b.x + side * 90, ROOM.wall + 20, run.area.w - ROOM.wall - 20), b.y + 30);
+    return;
+  }
+  if (which === 'alone') {
+    // It walks at you. Past a third of its plates it pushes you all apart now and then ("Help is
+    // weakness"); past two thirds it is too tired to, and only fights.
+    b.vx = (dx / d) * b.speed;
+    b.vy = (dy / d) * b.speed;
+    const left = b.hp / b.maxHp;
+    if (b.phase === 1 && left <= 2 / 3) b.phase = 2;
+    if (b.phase === 2 && left <= 1 / 3) {
+      b.phase = 3;
+      b.speed = b.def.speed * 0.75;
+    }
+    if (b.phase !== 2) return;
+    run.bossClock -= STEP;
+    if (run.bossClock > 0) return;
+    run.bossClock = ALONE.apart;
+    const up = standing(run);
+    if (up.length < 2) return;
+    // Each hero is thrown away from the middle of the party.
+    const mx = up.reduce((a, p) => a + p.x, 0) / up.length,
+      my = up.reduce((a, p) => a + p.y, 0) / up.length;
+    emit(run, { type: 'shout', x: b.x, y: b.y });
+    emit(run, { type: 'say', text: 'It pushes you apart. Come back together.' });
+    for (const p of up) {
+      const px = p.x - mx,
+        py = p.y - my,
+        pd = Math.hypot(px, py) || 1;
+      p.shove = { until: now + 0.45, x: (px / pd) * ALONE.push, y: (py / pd) * ALONE.push };
     }
     return;
   }
@@ -2718,7 +2804,19 @@ function scripted(run: Run, b: Foe, ux: number, uy: number) {
 const pow = (h: Hero, base: number) => heroDamage(base, h.power, h.ups) * (1 + DIALS.relic * 0.12 * relic(h, 'whetstone'));
 
 /** The Hollow: nothing you throw at it lands. */
-const untouchable = (run: Run, f: Foe) => f === run.boss && run.setup.zone.boss === 'hollow' && !run.setup.tutorial;
+const untouchable = (run: Run, f: Foe) => (f === run.boss && run.setup.zone.boss === 'hollow' && !run.setup.tutorial) || (f.kind === 'unsent' && !lit(run, f));
+
+/** In a lantern's light (the Quiet Miles): some hero who is up stands within LANTERN.r of it. */
+export function lit(run: Pick<Run, 'party'>, f: Pick<Foe, 'x' | 'y' | 'def'>) {
+  for (const h of run.party) if (h.hp > 0 && Math.hypot(h.x - f.x, h.y - f.y) <= LANTERN.r + f.def.r) return true;
+  return false;
+}
+
+/** A false shape of the Distance a lantern has shown up: it stays see-through, and nothing aims at it. */
+export const shownFalse = (f: Pick<Foe, 'kind' | 'phase'>) => f.kind === 'image' && f.phase === 2;
+
+/** The boss splits into shapes of itself, and only the real one shoots: the Mirror, the Distance. */
+const splits = (run: Run) => run.setup.zone.boss === 'mirror' || run.setup.zone.boss === 'distance';
 
 // ---------- the mid-bosses ----------
 
@@ -2738,7 +2836,7 @@ function startMid(run: Run, f: Foe) {
     for (let i = 0; i < SWAP.crowd; i++) addFoe(run, 'wisp', run.area.w * (0.15 + 0.175 * i), 230 + (i % 2) * 70).bornUntil = t0;
     f.act = t0 + SWAP.every;
   }
-  if (f.kind === 'gale' || f.kind === 'bellows') f.act = t0 + 2;
+  if (f.kind === 'gale' || f.kind === 'bellows' || f.kind === 'bell') f.act = t0 + 2;
 }
 
 /** A mid-boss's own rule, every step (after it has chosen where to walk). */
@@ -2831,6 +2929,26 @@ function stepMid(run: Run, f: Foe) {
       }
       return;
     }
+    case 'bell': {
+      // It tolls a ring, and the toll comes back a moment later from across the middle of the room.
+      if (now < f.act) return;
+      f.act = now + BELL.every * (hot ? 0.8 : 1);
+      shoot(run, f, BELL.toll);
+      const { w, h: H } = run.area,
+        ex = w - f.x,
+        ey = H - f.y;
+      emit(run, { type: 'toll', x: f.x, y: f.y, toX: ex, toY: ey });
+      later(run, BELL.echo, () => {
+        if (!f.alive) return;
+        const [x, y] = [f.x, f.y];
+        f.x = ex;
+        f.y = ey;
+        shoot(run, f, BELL.toll);
+        f.x = x;
+        f.y = y;
+      });
+      return;
+    }
     case 'gale': {
       for (const h of run.party) h.wind = { x: 0, y: 0 };
       if (now >= f.act && !f.windUntil) {
@@ -2880,11 +2998,14 @@ function locked(run: Run, h: Hero, reach: number): Foe | null {
 
 function nearest(run: Run, x: number, y: number, skip?: Set<Foe>, within = Infinity): Foe | null {
   let best: Foe | null = null,
-    bd = within * within;
+    bd = Infinity;
   for (const f of run.foes) {
     // Nothing aims at a reflection of you on purpose (a blast or a piercing arrow still finds it).
-    if (!f.alive || skip?.has(f) || run.t < f.bornUntil || untouchable(run, f) || f.kind === 'reflection') continue;
-    const d = (f.x - x) ** 2 + (f.y - y) ** 2;
+    if (!f.alive || skip?.has(f) || run.t < f.bornUntil || untouchable(run, f) || f.kind === 'reflection' || shownFalse(f)) continue;
+    const r = (f.x - x) ** 2 + (f.y - y) ** 2;
+    if (r >= within * within) continue;
+    // A Loner showing you its shield is a poor mark: another as close, or a little further, first.
+    const d = r * (shielded(f, x, y) ? 4 : 1);
     if (d < bd) {
       bd = d;
       best = f;
@@ -2897,12 +3018,23 @@ function nearest(run: Run, x: number, y: number, skip?: Set<Foe>, within = Infin
 function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = by.x, fromY = by.y) {
   if (!f.alive || run.t < f.bornUntil || untouchable(run, f)) return;
   const boss = f === run.boss;
-  const knight = boss && run.setup.zone.boss === 'knight';
+  const knight = boss && (run.setup.zone.boss === 'knight' || run.setup.zone.boss === 'alone');
   // The first dungeon's Hollow: every hit takes 1, and it never falls.
   const scriptedBoss = boss && !!run.setup.tutorial;
-  // A plate falls to any hit, however small, but only one at a time.
-  if (knight && run.t < f.act) return;
-  if (knight) f.act = run.t + PLATE_EVERY;
+  // A plate falls to any hit, however small, but only one at a time: the Knight's one at a time
+  // whoever hits, the One Who Walks Alone's one at a time for each of you.
+  if (knight && run.setup.zone.boss === 'alone') {
+    if (run.t < by.plateAt) return;
+    by.plateAt = run.t + PLATE_EVERY;
+  } else if (knight) {
+    if (run.t < f.act) return;
+    f.act = run.t + PLATE_EVERY;
+  }
+  // The Loner's shield: a hit from in front glances off.
+  if (shielded(f, fromX, fromY)) {
+    emit(run, { type: 'block', id: f.id, x: f.x, y: f.y });
+    return;
+  }
   // The Sand Golem, standing still, is stone: the hit glances off.
   if (f === run.warden && f.kind === 'sandGolem' && hardened(run, f)) {
     emit(run, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg: 0, boss: false });
@@ -2917,7 +3049,9 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
     slay = f.elite || f.kind === 'golem' || boss || f === run.warden ? 1 + by.gearFx.slayer + RUN_SKILL.giant.dmg * (by.ups.giant ?? 0) : 1,
     // The Bellows breathing in is open: hits land harder.
     open = f === run.warden && f.kind === 'bellows' && run.t < f.windUntil ? BELLOWS.open : 1,
-    dmg = knight || scriptedBoss ? 1 : Math.max(1, Math.round(amount * slay * open * spMore(by) * spMark(run, by, f) * (crit ? CRIT_HIT + by.gearFx.critDmg : 1)));
+    // The Tollkeeper, braced against one at a time.
+    braced = f.kind === 'toll' ? tollBrace(run, by, f) : 1,
+    dmg = knight || scriptedBoss ? 1 : Math.max(1, Math.round(amount * slay * open * braced * spMore(by) * spMark(run, by, f) * (crit ? CRIT_HIT + by.gearFx.critDmg : 1)));
   if (f.kind === 'reflection' || f.kind === 'image') {
     // A copy of you, or of the Mirror: it shatters, and you feel it.
     hitYourself(run, by, f.kind);
@@ -2947,6 +3081,21 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
     f.knockUntil = run.t + 0.14;
   }
   if (f.hp <= 0) kill(run, f, by);
+}
+
+/** A Loner's shield faces x, y: a hit from there glances off. */
+function shielded(f: Foe, x: number, y: number) {
+  if (f.kind !== 'loner' || f.face === undefined) return false;
+  const a = Math.atan2(y - f.y, x - f.x) - f.face;
+  return Math.abs(Math.atan2(Math.sin(a), Math.cos(a))) < LONER.arc;
+}
+
+/** The Tollkeeper takes a hit in full only if another hero hit it a moment ago (TOLL). */
+function tollBrace(run: Run, by: Hero, f: Foe) {
+  const hits = (f.hitters ??= {}),
+    pair = Object.entries(hits).some(([id, at]) => Number(id) !== by.id && run.t - at <= TOLL.pair);
+  hits[by.id] = run.t;
+  return pair ? 1 : TOLL.alone;
 }
 
 /** Life steal: a share of the damage dealt comes back, at most LEECH_CAP of max HP a second. */
@@ -3054,7 +3203,7 @@ function nudge(run: Run, f: Foe, knock: number, fromX: number, fromY: number) {
 
 function hitYourself(run: Run, h: Hero, kind: 'image' | 'reflection') {
   if (run.over) return;
-  if (!h.mirrorHurtAt) emit(run, { type: 'say', text: kind === 'image' ? 'Only an image, and it cut you. The real Mirror is the one that shoots.' : 'That was you. Walk past your reflections.' });
+  if (!h.mirrorHurtAt) emit(run, { type: 'say', text: kind === 'image' ? (run.setup.zone.boss === 'distance' ? 'A false shape, and it cut you. Only the real one shoots: bring a lantern close.' : 'Only an image, and it cut you. The real Mirror is the one that shoots.') : 'That was you. Walk past your reflections.' });
   h.mirrorHurtAt = run.t;
   const n = Math.max(2, Math.round(h.maxHp * SPLIT[kind]));
   h.hp -= n;
@@ -3104,7 +3253,7 @@ function attack(run: Run, h: Hero) {
     kind = attackKind(h),
     w = h.sp ? SP_WEAPON[h.sp.weapon] : null,
     reach = w?.reach ?? (kind === 'slash' ? SLASH_REACH : RANGE),
-    b = run.boss?.alive && run.setup.zone.boss !== 'mirror' && !untouchable(run, run.boss) && run.t >= run.boss.bornUntil && dist(run.boss, h) <= reach ? run.boss : null,
+    b = run.boss?.alive && !splits(run) && !untouchable(run, run.boss) && run.t >= run.boss.bornUntil && dist(run.boss, h) <= reach ? run.boss : null,
     target = locked(run, h, reach) ?? b ?? nearest(run, h.x, h.y, undefined, reach);
   if (!target && kind !== 'wave') return;
   if (kind === 'wave' && !nearest(run, h.x, h.y, undefined, 150)) return;

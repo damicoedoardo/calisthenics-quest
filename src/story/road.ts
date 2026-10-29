@@ -48,10 +48,12 @@ export const ROAD_CHAPTERS: RoadChapter[] = [
     name: 'The Quiet Miles',
     place: 'quiet-miles',
     base: 1,
+    world: 7,
     fog: {
       name: 'The Quiet Miles',
+      boss: 'distance',
       bossName: 'The Distance',
-      hint: 'The Distance hides among shapes in the fog. Hitting a false one hurts you. Only the real one shoots: find it together.',
+      hint: 'The Distance hides among shapes in the fog. Hitting a false one hurts you. Only the real one shoots, and a lantern near a false one shows it up: spread out and find it together.',
       after: 'Time doesn’t wear out a real friend. You called, they came. That’s all it ever takes.',
       keepsake: { name: 'A Lantern Glass', text: "It held a friend's light through the fog." },
       lines: {
@@ -67,10 +69,12 @@ export const ROAD_CHAPTERS: RoadChapter[] = [
     name: 'The Long Bridge',
     place: 'long-bridge',
     base: 2,
+    world: 8,
     fog: {
       name: 'The Long Bridge',
+      boss: 'alone',
       bossName: 'The One Who Walks Alone',
-      hint: 'Every hit breaks one plate, whoever lands it. Alone it takes forever. Together it falls.',
+      hint: 'Each of you breaks one plate at a time, whoever lands it. Alone it takes forever. Together it falls. When it pushes you apart, come back together.',
       after: "Asking for help isn't weakness. It's how anyone gets across.",
       keepsake: { name: 'A Knot of Bridge Rope', text: 'Tied by more than one pair of hands. It held.' },
       lines: {

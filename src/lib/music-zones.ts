@@ -19,9 +19,14 @@ import type { Track } from './music';
  *   the Whetstone Pass     pass / passBoss: a walking tune up a mountain road, two voices that
  *                          answer each other; the Lull's boss theme is a lullaby that tries to rock
  *                          you to sleep while the drums keep you awake
+ *   the Quiet Miles        miles / milesBoss: a lonely call into the dark, and after a long
+ *                          quiet, an answer from far off; the Distance's theme is two voices
+ *                          drifting apart that keep finding each other again
+ *   the Long Bridge        bridge / bridgeBoss: a rope-hauling song, everyone pulling on the beat;
+ *                          the boss's march starts alone and gains a voice every few bars
  */
 
-export type ZoneTrackId = 'lake' | 'lakeBoss' | 'forge' | 'forgeBoss' | 'plateau' | 'plateauBoss' | 'woods' | 'woodsBoss' | 'summit' | 'summitBoss' | 'warden' | 'pass' | 'passBoss';
+export type ZoneTrackId = 'lake' | 'lakeBoss' | 'forge' | 'forgeBoss' | 'plateau' | 'plateauBoss' | 'woods' | 'woodsBoss' | 'summit' | 'summitBoss' | 'warden' | 'pass' | 'passBoss' | 'miles' | 'milesBoss' | 'bridge' | 'bridgeBoss';
 export type ZoneStingId = 'shatter' | 'warmth';
 
 // ---------- helpers ----------
@@ -162,6 +167,60 @@ const LULL_TUNE = bars(
   'E5 - - - A4 - - -',
 );
 
+// ---------- the Ember Road: the Quiet Miles ----------
+
+// E minor, slow, a lot of quiet. One voice calls into the valley; two bars of nothing; then the
+// answer, softer, from far away. It always comes.
+const MILES_DRONE = bars('E2 - - - - - - -', 'E2 - - - - - - -', 'C2 - - - - - - -', 'C2 - - - - - - -', 'A1 - - - - - - -', 'A1 - - - - - - -', 'B1 - - - - - - -', 'B1 - - - D#2 - - -');
+const MILES_CALL = bars('B4 - - E5 - - G5 -', 'F#5 - - - - - - -', '. . . . . . . .', '. . . . . . . .', 'A4 - - C5 - - E5 -', 'D#5 - - - B4 - - -', '. . . . . . . .', '. . . . . . . .');
+const MILES_ANSWER = bars('. . . . . . . .', '. . . . . . . .', 'G5 - - E5 - - B4 -', 'C5 - - - - - - -', '. . . . . . . .', '. . . . . . . .', 'F#5 - - D#5 - - B4 -', 'E5 - - - - - - -');
+const MILES_LAMP = loop(8, 'E6 . . . . . . .');
+
+// The Distance: two voices playing the same tune, one a little behind the other; they drift apart
+// by a step every few bars, then fall back together. Under them, a quick glassy tick.
+const DIST_BASS = bars('E2 . E3 . E2 . E3 .', 'C2 . C3 . C2 . C3 .', 'A1 . A2 . A1 . A2 .', 'B1 . B2 . B1 . D#3 .', 'E2 . E3 . E2 . E3 .', 'G2 . G3 . G2 . G3 .', 'A1 . A2 . C2 . C3 .', 'B1 . B2 . D#2 . F#2 .');
+const DIST_TUNE = bars(
+  'E5 - G5 - B5 - A5 -',
+  'G5 - - - E5 - - -',
+  'C5 - E5 - A5 - G5 -',
+  'F#5 - - - D#5 - - -',
+  'E5 - G5 - B5 - E6 -',
+  'D6 - - - B5 - - -',
+  'C6 - B5 - A5 - G5 -',
+  'F#5 - - - - - - -',
+);
+const DIST_TICK = loop(8, 'B5 . E6 . B5 . G5 .');
+
+// ---------- the Ember Road: the Long Bridge ----------
+
+// D major, a rope-hauling song: everyone pulls on the one (the thump and the low "heave").
+const BRIDGE_BASS = bars('D2 . . A2 D2 . . A2', 'G2 . . D3 G2 . . D3', 'D2 . . A2 D2 . . A2', 'A2 . . E3 A2 . C#3 .', 'D2 . . A2 D2 . . A2', 'G2 . . D3 B2 . . G2', 'A2 . . E3 A2 . . E3', 'D2 . A2 . D2 . . .');
+const BRIDGE_TUNE = bars(
+  'A4 - D5 - F#5 - E5 D5',
+  'B4 - D5 - G5 - - -',
+  'A4 - D5 - F#5 - A5 -',
+  'G5 - F#5 - E5 - - -',
+  'A4 - D5 - F#5 - E5 D5',
+  'B4 - D5 - G5 - B5 -',
+  'A5 - G5 - F#5 - E5 -',
+  'D5 - - - . . . .',
+);
+const BRIDGE_HEAVE = loop(8, 'D3 - - - . . . .');
+
+// The One Who Walks Alone: an A minor march, one voice at first. Every four bars another joins it,
+// until the whole party is marching.
+const ALONE_MARCH = bars('A2 . A2 . E2 . A2 .', 'F2 . F2 . C2 . F2 .', 'G2 . G2 . D2 . G2 .', 'E2 . E2 . B1 . E2 .', 'A2 . A2 . E2 . A2 .', 'F2 . F2 . C2 . F2 .', 'D2 . D2 . A1 . D2 .', 'E2 . E2 . G#2 . B2 .');
+const ALONE_TUNE = bars(
+  'A4 - - B4 C5 - E5 -',
+  'F5 - E5 - C5 - - -',
+  'D5 - - E5 F5 - G5 -',
+  'E5 - - - B4 - - -',
+  'A4 - - B4 C5 - E5 -',
+  'F5 - A5 - G5 - F5 -',
+  'E5 - D5 - C5 - B4 -',
+  'A4 - - - G#4 - - -',
+);
+
 // ---------- zone 4: the Plateau ----------
 
 // D dorian. One figure, over and over, like a flat road. Something joins every four bars, so you
@@ -265,6 +324,64 @@ export const ZONE_TRACKS: Record<ZoneTrackId | ZoneStingId, Track> = {
       { wave: 'thump', gain: 0.4, pattern: bars(loop(8, 'x . . . . . x .'), loop(8, 'x . . x . . x .')) },
       { wave: 'snare', gain: 0.08, pattern: bars(rest(4), loop(3, '. . . . x . . .'), '. . x . x x x x', loop(7, '. . x . . . x .'), 'x x x x x x x x') },
       { wave: 'hat', gain: 0.018, pattern: bars(rest(8), loop(8, 'x x x x x x x x')) },
+    ],
+  },
+  miles: {
+    level: 1.5,
+    bpm: 84,
+    stepsPerBeat: 2,
+    dry: true,
+    voices: [
+      { wave: 'sine', gain: 0.12, pattern: twice(MILES_DRONE) },
+      { wave: 'triangle', gain: 0.1, pattern: twice(MILES_CALL) },
+      // the answer, from far away: softer, an octave down
+      { wave: 'glass', gain: 0.045, pattern: bars(rest(8), transpose(MILES_ANSWER, -12)) },
+      { wave: 'glass', gain: 0.03, pattern: twice(MILES_LAMP) },
+      { wave: 'thump', gain: 0.2, pattern: loop(16, 'x . . . . . . .') },
+    ],
+  },
+  milesBoss: {
+    level: 1.5,
+    bpm: 112,
+    stepsPerBeat: 2,
+    dry: true,
+    voices: [
+      { wave: 'triangle', gain: 0.14, pattern: twice(DIST_BASS) },
+      { wave: 'square', gain: 0.03, cutoff: 2200, pattern: twice(DIST_TUNE) },
+      // the second voice: a step behind, then two, then back with the first
+      { wave: 'triangle', gain: 0.08, pattern: bars(later(DIST_TUNE, 1), later(DIST_TUNE, 2)) },
+      { wave: 'glass', gain: 0.035, pattern: twice(DIST_TICK) },
+      { wave: 'thump', gain: 0.36, pattern: loop(16, 'x . . . x . . .') },
+      { wave: 'hat', gain: 0.016, pattern: loop(16, '. x . x . x . x') },
+    ],
+  },
+  bridge: {
+    level: 1.45,
+    bpm: 100,
+    stepsPerBeat: 2,
+    dry: true,
+    voices: [
+      { wave: 'triangle', gain: 0.13, pattern: twice(BRIDGE_BASS) },
+      { wave: 'square', gain: 0.03, cutoff: 2400, pattern: bars(rest(8), BRIDGE_TUNE) },
+      { wave: 'triangle', gain: 0.08, pattern: bars(BRIDGE_TUNE, transpose(BRIDGE_TUNE, -12)) },
+      { wave: 'sine', gain: 0.08, pattern: twice(BRIDGE_HEAVE) },
+      { wave: 'thump', gain: 0.34, pattern: loop(16, 'x . . . . . x .') },
+      { wave: 'hat', gain: 0.014, pattern: loop(16, '. . x . . . x .') },
+    ],
+  },
+  bridgeBoss: {
+    level: 1.5,
+    bpm: 116,
+    stepsPerBeat: 2,
+    dry: true,
+    voices: [
+      { wave: 'triangle', gain: 0.14, pattern: twice(ALONE_MARCH) },
+      // alone at first; a voice joins every four bars
+      { wave: 'square', gain: 0.03, cutoff: 2200, pattern: twice(ALONE_TUNE) },
+      { wave: 'triangle', gain: 0.07, pattern: bars(rest(4), ALONE_TUNE.split(' ').slice(32).join(' '), transpose(ALONE_TUNE, -12)) },
+      { wave: 'glass', gain: 0.04, pattern: bars(rest(8), transpose(ALONE_TUNE, 12)) },
+      { wave: 'thump', gain: 0.38, pattern: bars(loop(8, 'x . . . x . . .'), loop(8, 'x . x . x . x .')) },
+      { wave: 'snare', gain: 0.08, pattern: bars(rest(12), loop(4, '. . x . . . x .')) },
     ],
   },
   lake: {
@@ -461,6 +578,8 @@ export const ZONE_MUSIC: { run: ZoneTrackId | 'fog'; boss: ZoneTrackId | 'fogBos
   { run: 'summit', boss: 'summitBoss' },
   // the Ember Road's worlds
   { run: 'pass', boss: 'passBoss' },
+  { run: 'miles', boss: 'milesBoss' },
+  { run: 'bridge', boss: 'bridgeBoss' },
 ];
 
 export const zoneMusic = (zone: number) => ZONE_MUSIC[Math.max(0, Math.min(ZONE_MUSIC.length - 1, zone))];

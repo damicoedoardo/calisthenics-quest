@@ -5,7 +5,7 @@ import { CALM, HUMAN, PARTY, SP_SKILL, SP_WEAPON, TUTORIAL } from '@/balance';
 import { seeded } from '@/lib/random';
 import { botInput, playRun } from './bot';
 import { rollItem } from './items';
-import { ACROSS, addFoe, asleep, BAG, attackKind, BELLOWS, canOpen, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, LULL, makeFloor, MIDS, ROLL, mine, pickRelic, SAND, skipToBoss, skipToWarden, SP_NOS, SPLIT, stepRun, takeEvents, wardenFloor, worldOf, type GameEvent, type Run, type Side, type SpNo } from './engine';
+import { ACROSS, addFoe, asleep, BAG, attackKind, BELLOWS, canOpen, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LANTERN, LIGHT, lit, LULL, makeFloor, MIDS, ROLL, mine, pickRelic, SAND, skipToBoss, skipToWarden, SP_NOS, SPLIT, stepRun, takeEvents, wardenFloor, worldOf, type GameEvent, type Run, type Side, type SpNo } from './engine';
 import type { ClassId } from '@/lib/gear';
 
 describe('mid-bosses', () => {
@@ -82,7 +82,93 @@ describe("the Ember Road's own worlds", () => {
   it('the Whetstone Pass is its own world, with the Lull at the bottom', () => {
     expect(worldOf(pass)).toBe(6);
     expect(pass.boss).toBe('lull');
-    expect(worldOf(ROAD_ZONES[1])).toBe(ROAD_ZONES[1].id);
+    // and so are the Quiet Miles (the Distance) and the Long Bridge (the One Who Walks Alone)
+    expect(ROAD_ZONES.map((z) => [worldOf(z), z.boss])).toEqual([
+      [6, 'lull'],
+      [7, 'distance'],
+      [8, 'alone'],
+    ]);
+  });
+
+  it('in the Quiet Miles an Unsent is only a shape until a lantern comes close', () => {
+    const run = createRun({ zone: ROAD_ZONES[1], power: { ...power, health: 5000 }, classId: 'archer', seed: 3 });
+    run.foes = [];
+    run.waves = [];
+    const h = run.hero;
+    const u = addFoe(run, 'unsent', h.x, h.y - LANTERN.r - 80);
+    u.bornUntil = 0;
+    u.speed = 0;
+    expect(lit(run, u)).toBe(false);
+    takeEvents(run);
+    for (let i = 0; i < 60 * 2; i++) stepRun(run, still);
+    expect(u.hp).toBe(u.maxHp);
+    // your lantern comes close: it is real, and your arrows find it
+    u.y = h.y - LANTERN.r / 2;
+    expect(lit(run, u)).toBe(true);
+    for (let i = 0; i < 60 * 2 && u.alive; i++) stepRun(run, still);
+    expect(u.hp).toBeLessThan(u.maxHp);
+  });
+
+  it("a lantern shows up the Distance's false shapes", () => {
+    const run = createRun({ zone: ROAD_ZONES[1], power: { ...power, health: 5000 }, classId: undefined, seed: 4 });
+    skipToBoss(run);
+    while (!run.foes.some((f) => f.alive && f.kind === 'image' && run.t >= f.bornUntil)) stepRun(run, still);
+    const shape = run.foes.find((f) => f.alive && f.kind === 'image')!;
+    expect(shape.phase).toBe(1);
+    takeEvents(run);
+    run.hero.x = shape.x;
+    run.hero.y = shape.y + 40;
+    stepRun(run, still);
+    expect(shape.phase).toBe(2);
+    expect(takeEvents(run).some((e) => e.type === 'shown' && e.id === shape.id)).toBe(true);
+  });
+
+  it("a Loner's shield takes the hits from in front", () => {
+    const run = createRun({ zone: ROAD_ZONES[2], power: { ...power, health: 5000 }, classId: 'archer', seed: 2 });
+    run.foes = [];
+    run.waves = [];
+    const h = run.hero;
+    const l = addFoe(run, 'loner', h.x, h.y - 120);
+    l.bornUntil = 0;
+    l.speed = 0;
+    takeEvents(run);
+    let blocked = 0;
+    for (let i = 0; i < 60 * 2; i++) {
+      stepRun(run, still);
+      blocked += takeEvents(run).filter((e) => e.type === 'block').length;
+    }
+    expect(blocked).toBeGreaterThan(0);
+    expect(l.hp).toBe(l.maxHp);
+    // from behind, they land
+    l.face = Math.atan2(l.y - h.y, l.x - h.x);
+    for (let i = 0; i < 30; i++) stepRun(run, still);
+    expect(l.hp).toBeLessThan(l.maxHp);
+  });
+
+  it('the One Who Walks Alone loses its plates faster the more of you hit it', () => {
+    const broken = (friends: number) => {
+      const strong = { ...power, health: 50000 };
+      const run = createRun({ zone: ROAD_ZONES[2], power: strong, classId: 'archer', seed: 6, friends: Array.from({ length: friends }, () => ({ power: strong, classId: 'archer' as ClassId })) });
+      skipToBoss(run);
+      const inputs = run.party.map(() => still);
+      while (!run.boss || run.t < run.boss.bornUntil) stepRun(run, inputs);
+      const b = run.boss!,
+        start = b.hp;
+      for (let i = 0; i < 60 * 3; i++) {
+        b.x = run.area.w / 2;
+        b.y = 140;
+        run.party.forEach((o, k) => {
+          o.x = run.area.w / 2 + (k - 0.5) * 60;
+          o.y = 260;
+        });
+        stepRun(run, inputs);
+      }
+      return { gone: start - b.hp, plates: b.maxHp };
+    };
+    const one = broken(0),
+      two = broken(1);
+    expect(two.gone).toBeGreaterThan(one.gone * 1.6);
+    expect(two.plates).toBeGreaterThan(one.plates);
   });
 
   it("the Lull's song puts a lone hero to sleep, and a friend close by wakes them", () => {

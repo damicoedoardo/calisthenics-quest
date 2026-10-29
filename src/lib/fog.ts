@@ -1,6 +1,6 @@
 import { daysSinceLastSession, type GameState } from './game';
 import { dayKey } from './days';
-import { PICKUP_REACH, RUN_LEVELS, RUN_SKILL, TUTORIAL } from '@/balance';
+import { PICKUP_REACH, ROAD_TOUGH, RUN_LEVELS, RUN_SKILL, TUTORIAL } from '@/balance';
 import { buildOf, pointsFree, statPower } from './stats';
 import { CHAPTERS } from '@/story/chapters';
 import { FIRST_FOG } from '@/story/opening';
@@ -43,6 +43,8 @@ export const BOSS_NAME: Record<FogBoss, string> = {
   hollow: 'The Hollow',
   summit: 'The Summit',
   lull: 'The Lull',
+  distance: 'The Distance',
+  alone: 'The One Who Walks Alone',
 };
 
 export const ZONES: Zone[] = CHAPTERS.map((c, i) => ({ ...c.fog, id: i, chapter: c.n, workouts: chapterStart(c.n), bossName: BOSS_NAME[c.fog.boss] }));
@@ -52,10 +54,14 @@ export const ZONES: Zone[] = CHAPTERS.map((c, i) => ({ ...c.fog, id: i, chapter:
 export const FIRST_FOG_ZONE: Zone = { ...ZONES[0], ...FIRST_FOG, firstTry: undefined, boss: 'hollow', bossName: BOSS_NAME.hollow, hp: TUTORIAL.hp, dmg: TUTORIAL.dmg };
 
 /** The Ember Road's runs, one per chapter. Each takes a story zone's id (which its loot and records
-    go by) and toughness, with the road's own names and words. A chapter with a world of its own
+    go by) and toughness (times ROAD_TOUGH), with the road's own names and words. A chapter with a world of its own
     (`world`) fights its own monsters, mid-boss and boss there; one without borrows the story zone's
     dungeon and boss fight as they are. */
-export const ROAD_ZONES: Zone[] = ROAD_CHAPTERS.map((c) => ({ ...ZONES[c.base], ...c.fog, firstTry: undefined, road: c.n, guide: 'Tamsin', ...(c.world === undefined ? {} : { world: c.world }) }));
+export const ROAD_ZONES: Zone[] = ROAD_CHAPTERS.map((c) => {
+  const base = ZONES[c.base],
+    k = ROAD_TOUGH[c.n] ?? 1;
+  return { ...base, ...c.fog, hp: base.hp * k, dmg: base.dmg * k, firstTry: undefined, road: c.n, guide: 'Tamsin', ...(c.world === undefined ? {} : { world: c.world }) };
+});
 
 /** A party's zone as the server keeps it: a story zone's id, or ROAD_CODE plus a road chapter. */
 export const ROAD_CODE = 20;

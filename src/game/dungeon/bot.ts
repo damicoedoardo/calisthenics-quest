@@ -1,6 +1,6 @@
 import { HUMAN } from '@/balance';
 import { clamp, HERO_SPEED, RANGE } from '../rules';
-import { abilityReady, attackKind, canOpen, onStairs, outSide, finalReady, skillReady, BARREL, CHARGE, createRun, GALE, LIGHT, LULL, ROOM, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup, type SpMoveId } from './engine';
+import { abilityReady, attackKind, canOpen, onStairs, outSide, finalReady, skillReady, BARREL, CHARGE, createRun, GALE, LANTERN, LIGHT, LONER, LULL, ROOM, lit as inLantern, type Foe, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup, type SpMoveId } from './engine';
 
 /* The bot: a steady, careful player on a phone, not a great one (how human: HUMAN in
    src/balance/dungeon.ts). It notices a shot only after a reaction of its own, misses more of them
@@ -210,7 +210,7 @@ function decide(run: Run, h: Hero): Input {
   }
 
   // Monsters: keep the class's distance from the nearest, and don't touch any.
-  let near: { x: number; y: number } | null = null,
+  let near: { x: number; y: number; kind?: string } | null = null,
     nd = Infinity,
     close = 0;
   for (const f of run.foes) {
@@ -233,6 +233,16 @@ function decide(run: Run, h: Hero): Input {
         x += -f.dashY * s * 3;
         y += f.dashX * s * 3;
         danger += 2;
+      }
+    }
+    // A Loner's shield: walk round to its side, where hits land.
+    if (f.kind === 'loner' && f.face !== undefined && d < 240) {
+      let a = Math.atan2(h.y - f.y, h.x - f.x) - f.face;
+      a = Math.atan2(Math.sin(a), Math.cos(a));
+      if (Math.abs(a) < LONER.arc + 0.2) {
+        const s = a >= 0 ? 1 : -1;
+        x += (-dy / d) * s * 1.4;
+        y += (dx / d) * s * 1.4;
       }
     }
     // A shade's mark: where it lands and fires.
@@ -294,9 +304,9 @@ function decide(run: Run, h: Hero): Input {
             : rule === 'lull'
               ? // Inside his reach, so his song never puts it to sleep.
                 LULL.reach - 60
-            : rule === 'knight'
+            : rule === 'knight' || rule === 'alone'
               ? 110
-              : rule === 'mirror'
+              : rule === 'mirror' || rule === 'distance'
                 ? // Close enough that the real one, not an image, is the nearest to aim at.
                   90
                 : 170
@@ -306,7 +316,10 @@ function decide(run: Run, h: Hero): Input {
             ? 80
           : kind === 'wave'
             ? 80
-            : RANGE * 0.7,
+            : // An Unsent out of the light: bring your lantern to it.
+              near?.kind === 'unsent' && goal === near && !inLantern(run, near as Foe)
+              ? LANTERN.r - 40
+              : RANGE * 0.7,
       dx = goal.x - h.x,
       dy = goal.y - h.y,
       d = Math.hypot(dx, dy) || 1,

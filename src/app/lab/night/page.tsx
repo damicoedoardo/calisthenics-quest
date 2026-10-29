@@ -53,7 +53,7 @@ function veteran(workouts: number, cleared: number): GameState {
     and its scenes so far already seen. */
 function onRoad(beaten: number, walked: number): GameState {
   let s = geared();
-  s = { ...s, road: { from: s.sessions.length - walked, beaten } };
+  s = { ...s, road: { from: s.sessions.length - walked, beaten, ...(beaten ? { walked: ['Ana', 'Ben'] } : {}) } };
   for (let i = 0; i < 8; i++) s = skipDueScenes(s, new Date());
   return s;
 }
@@ -323,6 +323,9 @@ export default function NightLab() {
         <Row icon={<Swords size={16} />} label="The Ember Road, before setting out" note="Friends tab: the road card; tap Set out and its first scene plays" onClick={() => open(geared(), 'tab=friends')} />
         <Row icon={<Swords size={16} />} label="The Ember Road, chapter 2" note="The Lull beaten, 10 workouts in: The Quiet Miles open, the road card shows what's next" onClick={() => open(onRoad(1, 10), 'tab=friends')} />
         <Row icon={<Swords size={16} />} label="An Ember Road run: The Lull" note="Chapter 1's party run (practice), with Ana and Ben; win it and Tamsin speaks" onClick={() => open(onRoad(0, 2), 'run=road1&party')} />
+        <Row icon={<Swords size={16} />} label="An Ember Road run: The Distance" note="Chapter 2, the Quiet Miles (practice party): lanterns, Unsent letters, the Silent Bell; jump to the boss with the dev menu" onClick={() => open(onRoad(1, 10), 'run=road2&party')} />
+        <Row icon={<Swords size={16} />} label="An Ember Road run: The One Who Walks Alone" note="Chapter 3, the Long Bridge (practice party): Loners with shields, the Tollkeeper, plates that each of you breaks" onClick={() => open(onRoad(2, 19), 'run=road3&party')} />
+        <Row icon={<Swords size={16} />} label="The Road Banner" note="The road walked to its end: the banner on the road card, your name and your friends' stitched on it" onClick={() => open(onRoad(3, 28), 'tab=friends')} />
         <Row icon={<Swords size={16} />} label="A party run (practice)" note="You with two friends, Ana the archer and Ben the mage, played by the bot: names over their heads, XP for all, drops each their own" onClick={() => open(veteran(14, 1), 'run=0&party')} />
         <Row icon={<Gem size={16} />} label="Loot: your gear and the vault" note="Hero > Gear: what you wear into the Fog, the vault, an item you can't wear yet" onClick={() => open(geared(), 'tab=hero&hero=gear')} />
         <div className="rounded-xl bg-ink-950 px-3 py-2.5">

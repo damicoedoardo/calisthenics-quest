@@ -95,9 +95,9 @@ export { DIALS };
 
 // ---------- monsters ----------
 
-export type MonsterKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'ram' | 'book' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade' | 'grinder' | 'warden' | 'image' | MidKind;
+export type MonsterKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'ram' | 'book' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade' | 'grinder' | 'unsent' | 'loner' | 'warden' | 'image' | MidKind;
 /** The floor-5 mid-bosses, one per world (MIDS). */
-export type MidKind = 'warden' | 'lantern' | 'foreman' | 'sandGolem' | 'whisper' | 'gale' | 'bellows';
+export type MidKind = 'warden' | 'lantern' | 'foreman' | 'sandGolem' | 'whisper' | 'gale' | 'bellows' | 'bell' | 'toll';
 export type FoeKind = MonsterKind | 'boss';
 
 /** How a monster moves: walks at you, keeps its distance, circles you at its range, stands still,
@@ -186,6 +186,12 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
   // The Grinder (the Whetstone Pass): a runaway whetstone. It turns to face you, rolls at you until
   // it hits a wall, and throws a fan of sparks at you off the stone.
   grinder: { hp: 32, speed: 0, dmg: 12, r: 14, xp: 2, move: 'roll', shoots: [{ every: 0, on: 'move', kind: 'spread', n: 5, arc: 1.1, speed: 105, dmg: 7 }], cost: 2.5 },
+  // The Unsent (the Quiet Miles): a letter never sent, drifting after you. Out of every lantern's
+  // light it is only a shape in the fog: it can't be hit, and it neither hurts nor shoots (LANTERN).
+  unsent: { hp: 26, speed: 58, dmg: 12, r: 12, xp: 2, move: 'chase', shoots: [{ every: 2.4, kind: 'spread', n: 3, arc: 0.5, speed: 125, dmg: 7, first: 0.8 }], cost: 2 },
+  // The Loner (the Long Bridge): a traveller behind a great shield it turns toward you. A hit on the
+  // shield does nothing; from the side or behind it lands (LONER).
+  loner: { hp: 30, speed: 40, dmg: 12, r: 15, xp: 3, move: 'chase', shoots: [{ every: 2.6, kind: 'spread', n: 3, arc: 0.4, speed: 130, dmg: 8, first: 1.6 }], cost: 2.5 },
   // The Warden of the Ashes, halfway down: a great golem that guards the stairs. First it turns a
   // slow cross of shots (walk around it with the arms); hurt past half, it stops turning and fires
   // aimed bursts at you, with a ring now and then. It never joins an ordinary room.
@@ -286,6 +292,38 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
     ],
     cost: 0,
   },
+  // The Silent Bell (the Quiet Miles): it tolls a ring, and the toll comes back across the room a
+  // moment later, from the far side (BELL).
+  bell: {
+    hp: 1000,
+    speed: 26,
+    dmg: 10,
+    r: 22,
+    xp: 30,
+    move: 'keep',
+    range: 180,
+    shoots: [
+      { every: 2, kind: 'aimed', n: 3, speed: 125, dmg: 9, first: 1.6 },
+      { every: 0.25, kind: 'spiral', n: 2, speed: 85, dmg: 7, turn: 0.28, below: 0.5 },
+    ],
+    cost: 0,
+  },
+  // The Tollkeeper (the Long Bridge): braced against anyone who comes at it alone (TOLL). It stamps
+  // a ring and throws stones where you stand.
+  toll: {
+    hp: 760,
+    speed: 34,
+    dmg: 14,
+    r: 22,
+    xp: 30,
+    move: 'chase',
+    shoots: [
+      { every: 3, kind: 'ring', n: 16, speed: 95, dmg: 9, first: 2 },
+      { every: 3.6, kind: 'mine', n: 6, speed: 100, dmg: 11, r: 46, first: 3 },
+      { every: 1.6, kind: 'aimed', n: 2, speed: 135, dmg: 9, below: 0.5 },
+    ],
+    cost: 0,
+  },
   // The Gale (the Summit): gusts that blow you toward the edge of the room, where the drop bites.
   gale: {
     hp: 640,
@@ -325,8 +363,10 @@ export const MIDS: MidBoss[] = [
   { kind: 'sandGolem', name: 'the Sand Golem', tip: 'It only takes hits while it walks', enter: "Stand still. Nothing's moving anyway.", hot: 'Cracks? Probably nothing.', fall: 'Sand, all along. It was moving.' },
   { kind: 'whisper', name: 'the Whisper', tip: 'Find the one that glows, and stay on it', enter: 'Shh. Nobody will notice if you stop.', hot: 'Louder now. Still only a whisper.', fall: 'Quiet. You kept walking anyway.' },
   { kind: 'gale', name: 'the Gale', tip: 'Lean into a gust, and stay off the edges', enter: 'Turn back. The top is too far.', hot: 'Harder. Everyone else turns back here.', fall: 'Just a breeze now. Keep climbing.' },
-  // The Ember Road's worlds (6 on: the Whetstone Pass)
+  // The Ember Road's worlds (6 the Whetstone Pass, 7 the Quiet Miles, 8 the Long Bridge)
   { kind: 'bellows', name: 'the Bellows', tip: 'Walk away as it breathes in, and hit it then: it is open', enter: "Let the fire go out. It's warm enough.", hot: 'Why keep stoking it? Sit down.', fall: 'Hear that? The forge is roaring again.' },
+  { kind: 'bell', name: 'the Silent Bell', tip: 'Every toll comes back from across the room: watch both sides', enter: "Nobody's rung in years. Nobody will.", hot: 'Hear that? Nothing. Nobody answers.', fall: 'It rang. Somebody heard.' },
+  { kind: 'toll', name: 'the Tollkeeper', tip: 'It braces against one at a time: hit it together', enter: 'One at a time. Pay your own way.', hot: "Two of you? That's not allowed.", fall: 'Fine. Cross together, then.' },
 ];
 export const midBoss = (zone: Pick<Zone, 'id' | 'world'>) => MIDS[clamp(worldOf(zone), 0, MIDS.length - 1)];
 /** The Warden of the Ashes, the first zone's mid-boss. */
@@ -349,6 +389,18 @@ export const GALE = { every: 5.5, wind: 1, blow: 2, push: 105, edge: 60, bite: 1
     hit lands while it breathes in (it is open); the embers come `after` s, once you're thrown clear.
     The pull fades out from 150 px further than `close` down to nothing at `close` (a fighter up
     close isn't dragged onto it). */
+/** The Silent Bell: how often it tolls (s), the ring it tolls, and how long until the toll comes
+    back from the point across the middle of the room. */
+export const BELL = { every: 3, toll: { every: 0, kind: 'ring', n: 16, speed: 95, dmg: 8 } as Pattern, echo: 1.1 };
+/** The Tollkeeper: a hit lands `alone` as hard unless another hero hit it in the last `pair` s.
+    Goal: a party that hits it together beats it as fast as any mid-boss; one at a time, it lasts. */
+export const TOLL = { pair: 1.5, alone: 0.5 };
+/** The Quiet Miles' lanterns: each hero's light (px). Inside it an Unsent is real (it can be hit,
+    it hurts, it shoots), and a false shape of the Distance shows that it is false. */
+export const LANTERN = { r: 110 };
+/** The Loner's shield: hits from within `arc` radians either side of where it faces glance off, and
+    it turns toward you at `turn` rad/s, so you can walk around it, or a friend comes from behind. */
+export const LONER = { arc: 0.9, turn: 0.9 };
 export const BELLOWS = { every: 5, draw: 2, pull: 85, close: 90, push: 300, shove: 0.4, after: 0.3, embers: { every: 0, kind: 'ring', n: 14, speed: 120, dmg: 8 } as Pattern, open: 1.5 };
 
 /** Monsters that join deeper down, by the floor (of 10) they first show on and how common they are. */
@@ -375,6 +427,9 @@ export interface ZoneDungeon {
   ground: { water: number; spikes: number; barrels: number; pillars: number };
   /** How far you see, in world pixels (the fog); the bot doesn't see shots past it either. */
   sight?: number;
+  /** Each hero carries a lantern (LANTERN): drawn round them, it is what makes the world's Unsent
+      real and shows the Distance's false shapes up. The rule itself holds anywhere. */
+  lanterns?: boolean;
 }
 export const ZONE_DUNGEONS: ZoneDungeon[] = [
   // The Ashlands: the first dungeon, everything met one floor at a time.
@@ -475,12 +530,50 @@ export const ZONE_DUNGEONS: ZoneDungeon[] = [
     ],
     ground: { water: 0.4, spikes: 1.2, barrels: 1.6, pillars: 1.3 },
   },
+  // The Quiet Miles (the Ember Road, chapter 2): a long valley at night, walls of fog standing
+  // across it, so you see only a little way. Unsent letters drift in it from the first floor,
+  // wisps and shades live in it, seekers further on; standing stones, still pools.
+  {
+    unlock: [
+      ['wisp', 0, 2.2],
+      ['unsent', 0, 2.4],
+      ['slime', 0, 1.5],
+      ['seeker', 1, 1.6],
+      ['shade', 1, 1.5],
+      ['mirror', 2, 1.4],
+      ['smoke', 4, 1.6],
+      ['splitter', 5, 1.5],
+      ['ram', 6, 1.5],
+    ],
+    ground: { water: 1.3, spikes: 0.6, barrels: 0.5, pillars: 1.5 },
+    sight: 230,
+    lanterns: true,
+  },
+  // The Long Bridge (the Ember Road, chapter 3): rope bridges and ledges over a gorge. Loners hold
+  // the planks from the start, lancer husks charge down them, the wind brings smoke; few posts to
+  // hide behind, gaps of dark water.
+  {
+    unlock: [
+      ['slime', 0, 2],
+      ['loner', 0, 1.2],
+      ['ram', 0, 1.6],
+      ['wisp', 1, 1.6],
+      ['smoke', 2, 1.6],
+      ['book', 3, 1.4],
+      ['seeker', 4, 1.5],
+      ['splitter', 5, 1.5],
+      ['shade', 6, 1.6],
+    ],
+    ground: { water: 1.4, spikes: 1, barrels: 1, pillars: 0.5 },
+  },
 ];
 /** The dungeon of a run's zone (by its world). */
 export const zoneDungeon = (zone: Pick<Zone, 'id' | 'world'>) => ZONE_DUNGEONS[clamp(worldOf(zone), 0, ZONE_DUNGEONS.length - 1)];
 
 /** A line about each monster the first time it shows up in a run. */
 export const MEET: Partial<Record<MonsterKind, string>> = {
+  unsent: 'Unsent letters drift in the fog. Only a lantern makes them real: bring yours close.',
+  loner: 'Loners hide behind their shields. Hit them from the side or from behind.',
   ram: 'Lancer Husks glow red, then charge in a line: step aside.',
   mirror: 'Mirrors keep their distance and fire rings.',
   book: 'Snooze Clocks never move. They tick out a spiral of clock hands.',
@@ -502,6 +595,10 @@ export const MEET: Partial<Record<MonsterKind, string>> = {
  * The Ember Road's, each about a friendship:
  * - The Lull sings to sleep whoever is left on their own, and heals while you all hang back: stay
  *   together and push in.
+ * - The Distance hides among false shapes of itself; only the real one shoots, and a lantern held
+ *   near a false one shows it up: spread out and find it together.
+ * - The One Who Walks Alone wears plates like the Knight, but each of you breaks one at a time:
+ *   the more of you hit it, the faster it falls. It pushes you apart: come back together.
  */
 export const BOSSES: Record<FogBoss, MonsterDef & { plates?: number }> = {
   tomorrow: {
@@ -593,6 +690,38 @@ export const BOSSES: Record<FogBoss, MonsterDef & { plates?: number }> = {
     ],
     cost: 0,
   },
+  // The Distance (the Quiet Miles): a tall shape of fog with a lantern-glass face, at arm's length.
+  distance: {
+    hp: 850,
+    speed: 38,
+    dmg: 16,
+    r: 18,
+    xp: 0,
+    move: 'keep',
+    range: 190,
+    shoots: [
+      // only the real one: a turning spiral of fog, and a slow pair aimed at you
+      { every: 0.22, kind: 'spiral', n: 2, speed: 110, dmg: 9, first: 2 },
+      { every: 2, kind: 'aimed', n: 3, speed: 125, dmg: 10, first: 1.4 },
+    ],
+    cost: 0,
+  },
+  // The One Who Walks Alone (the Long Bridge): a traveller grown into its armor, arms folded.
+  alone: {
+    hp: 40,
+    plates: 40,
+    speed: 56,
+    dmg: 18,
+    r: 16,
+    xp: 0,
+    move: 'chase',
+    shoots: [
+      { every: 2.6, kind: 'spread', n: 5, arc: 0.6, speed: 160, dmg: 11, first: 1.5 },
+      { every: 1.4, kind: 'aimed', n: 2, speed: 145, dmg: 9, below: 2 / 3 },
+      { every: 3.2, kind: 'ring', n: 16, speed: 95, dmg: 9, below: 1 / 3 },
+    ],
+    cost: 0,
+  },
 } as Record<FogBoss, MonsterDef & { plates?: number }>;
 
 /** Bosses are as tough as the floor they guard (like its monsters), so the fight lasts long
@@ -628,6 +757,14 @@ export const TOMORROW_REACH = 200;
 export const LULL = { reach: 200, near: 160, fill: 0.24, clear: 0.6, sleep: 2.2, wake: 46, louder: 1.6, heal: 0.03 };
 /** A Grinder's roll: how long it turns to face you first (it glows), how fast it rolls, the longest
     roll (s), and the pause after it hits a wall. */
+/** The Distance: how often it splits among false shapes (s; faster under half), how many (and
+    under half; one more for each friend, as each brings a lantern), and how often it sends Unsent
+    letters (s). */
+export const DISTANCE = { every: 9, first: 4, shapes: 3, more: 4, call: 7 };
+/** The One Who Walks Alone: a hero breaks one plate each PLATE_EVERY however many hit, so a party
+    breaks them faster; each friend adds `more` of its plates. Past a third of its plates it pushes
+    you apart (`push`, px/s, every `apart` s). Goal: the fight lasts about as long for 2 as for 4. */
+export const ALONE = { more: 0.6, push: 300, apart: 6.5 };
 export const ROLL = { wind: 0.6, speed: 200, most: 2.6, rest: 0.5 };
 /** A ram's charge: how often, how long it glows first, how long and fast it rushes. */
 export const CHARGE = { every: 3.6, wind: 0.75, dash: 0.6, speed: 330 };

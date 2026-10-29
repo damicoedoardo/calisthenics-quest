@@ -16,7 +16,7 @@ describe('music tracks', () => {
 
   it('every Fog world has a run and a boss theme, and its win sting exists', () => {
     // the six story zones, then the Ember Road's own worlds
-    expect(ZONE_MUSIC).toHaveLength(7);
+    expect(ZONE_MUSIC).toHaveLength(9);
     for (const z of ZONE_MUSIC) {
       expect(TRACKS[z.run]).toBeDefined();
       expect(TRACKS[z.boss]).toBeDefined();

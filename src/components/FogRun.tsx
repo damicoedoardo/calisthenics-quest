@@ -379,7 +379,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party, tutor
             </div>
             {hud.boss && (
               <BossBar
-                name={`${zone.bossName}${zone.boss === 'knight' ? ` · ${Math.ceil(hud.boss.hp)} plates` : hud.boss.label ? ` · ${hud.boss.label}` : ''}`}
+                name={`${zone.bossName}${zone.boss === 'knight' || zone.boss === 'alone' ? ` · ${Math.ceil(hud.boss.hp)} plates` : hud.boss.label ? ` · ${hud.boss.label}` : ''}`}
                 hp={hud.boss.hp}
                 max={hud.boss.max}
               />
