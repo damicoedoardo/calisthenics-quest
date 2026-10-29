@@ -148,7 +148,7 @@ export function drawAloneBoss(o: AloneOpts, frame: ClipFrame, f: number): Grid {
   const out = outline(autoshade(g)),
     u = painter(out);
   // straps and bundles of the pack
-  u.line(cx - 8, top + 22, cx + 6, top + 6 + slip, PACK[0]);
+  u.line(cx + 9, top + 22, cx - 9, top + 42, PACK[0]);
   u.row(top + 12 + slip, cx, cx + 18, PACK[0]);
   u.row(top + 22 + slip, cx + 2, cx + 18, PACK[0]);
   u.r(cx + 12, top + 14 + slip, 4, 4, '#a8854e');

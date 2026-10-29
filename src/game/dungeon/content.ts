@@ -546,7 +546,7 @@ export const ZONE_DUNGEONS: ZoneDungeon[] = [
       ['ram', 6, 1.5],
     ],
     ground: { water: 1.3, spikes: 0.6, barrels: 0.5, pillars: 1.5 },
-    sight: 230,
+    sight: 290,
     lanterns: true,
   },
   // The Long Bridge (the Ember Road, chapter 3): rope bridges and ledges over a gorge. Loners hold

@@ -35,7 +35,7 @@ export function drawUnsent(_o: unknown, frame: ClipFrame, f: number): Grid {
   u.line(cx - 15, cy + 11 - flap, cx - 4, cy + 3, PAPER[1]);
   u.line(cx + 17, cy + 10, cx + 4, cy + 3, PAPER[1]);
   // the wax seal, never broken
-  u.ellipse(cx, cy + 2, 4, 3.5, WAX[1]);
+  u.ellipse(cx, cy + 2, 3, 2.5, WAX[1]);
   u.p(cx - 1, cy + 1, WAX[2]);
   u.p(cx + 1, cy + 3, WAX[0]);
   // two sad eyes, looking up, and a small mouth
@@ -135,8 +135,8 @@ export function drawDistanceBoss(_o: unknown, frame: ClipFrame, f: number): Grid
     p.thick(cx - 8, top + 18, cx - 28, top + 24, 3, MIST[2]);
     p.thick(cx + 8, top + 18, cx + 28, top + 24, 3, MIST[2]);
   } else {
-    p.thick(cx - 9, top + 18, cx - 16, top + 46, 3, MIST[2]);
-    p.thick(cx + 9, top + 18, cx + 16, top + 46, 3, MIST[2]);
+    p.thick(cx - 9, top + 18, cx - 22, top + 46, 3, MIST[3]);
+    p.thick(cx + 9, top + 18, cx + 22, top + 46, 3, MIST[3]);
   }
   // its head: a lantern's glass, an iron cap and ring on top
   p.r(cx - 6, top + 2, 12, 12, GLASS[1]);
@@ -159,7 +159,7 @@ export function drawDistanceBoss(_o: unknown, frame: ClipFrame, f: number): Grid
     u.p(cx + 2, top + 5, GLASS[2]);
   }
   // fingers, long and thin, at the ends of the arms
-  const hands: [number, number][] = hit || wind ? [[cx - 29, top + 24], [cx + 28, top + 24]] : [[cx - 16, top + 47], [cx + 15, top + 47]];
+  const hands: [number, number][] = hit || wind ? [[cx - 29, top + 24], [cx + 28, top + 24]] : [[cx - 22, top + 47], [cx + 21, top + 47]];
   for (const [hx, hy] of hands) for (let i = -1; i <= 1; i++) u.line(hx + i, hy, hx + i * 2, hy + 3, MIST[3]);
   // the fog it is made of, curling off its edges and its hem
   for (let i = 0; i < 6; i++) {
