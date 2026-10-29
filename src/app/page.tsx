@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { TodayTab } from '@/components/TodayTab';
+import { startsToday } from '@/lib/coach/week';
 import { TrainTab } from '@/components/TrainTab';
 import { HeroTab, type HeroPart } from '@/components/HeroTab';
 import { PlayTab } from '@/components/PlayTab';
@@ -261,7 +262,11 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
   useCoachPlan(state, update);
 
-  const start = (checkin: Checkin) => {
+  // A workout starts on its own day, never ahead of it (one under way always carries on). `force`:
+  // the developer menu's jump straight into a workout.
+  const start = (checkin: Checkin, force = false) => {
+    const going = !!state.draft && Object.values(state.draft.sets).some((l) => l.length > 0);
+    if (!going && !force && !startsToday(state.coach, new Date())) return;
     update((s) => {
       const hasSets = !!s.draft && Object.values(s.draft.sets).some((l) => l.length > 0);
       if (hasSets) return s;
@@ -283,7 +288,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   // The dev panel's Go tab: a tab, a part of one, or a screen.
   const devGo = (to: DevGo) => {
     if (to === 'you') return setYou(true);
-    if (to === 'workout') return start('normal');
+    if (to === 'workout') return start('normal', true);
     const hero = to === 'gear' || to === 'stats' || to === 'class';
     if (hero) setHeroPart(to);
     setTab(hero ? 'hero' : to === 'fog' ? 'play' : to === 'together' ? 'friends' : to);

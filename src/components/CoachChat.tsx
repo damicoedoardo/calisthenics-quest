@@ -144,7 +144,11 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
             <span className="shrink-0 text-xs text-slate-400">{day.done ? 'done' : `about ${minutesOf(day.plan.items)} min`}</span>
           </div>
           <WorkoutCards state={state} update={update} items={day.plan.items} date={day.done ? undefined : day.date} />
-          {day === next ? (
+          {day === next && !inProgress && day.date > today ? (
+            <p className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-ink-900 py-3 text-xs text-slate-400">
+              <Sprite id="uiIcon" opts={{ name: 'lock' }} size={12} label="" /> Opens {dayLabel(day.date, now) === 'Tomorrow' ? 'tomorrow' : `on ${weekdayOf(day.date)}`}. Today, rest.
+            </p>
+          ) : day === next ? (
             <button
               onClick={() => onStart(inProgress ? state.draft!.checkin : 'normal')}
               className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-400 py-3 font-pixel text-[10px] text-ink-950 shadow-[0_3px_0_#047857] active:translate-y-0.5 active:shadow-none"

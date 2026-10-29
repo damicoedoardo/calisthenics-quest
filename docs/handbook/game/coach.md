@@ -182,7 +182,7 @@ an LLM gets back to do better.
   words, "Let's start", "Talk" or "Answer", and "What I know" (`CoachKnows`: profile, levels, notes,
   each note can be forgotten; to change the profile, tell the flame). Under it the week (`WeekBoard`):
   a chip for each day, Monday to Sunday: workouts, rest days, and "–" before the plan (✓ done or kept, "next" lit) and the chosen day's workout as cards (it opens on today, or on the next workout once today's is done): the pixel demo, dose and rest, Easier
-  and Swap (days still to do), and Start on the next day; a rest day says why rest counts and, on the
+  and Swap (days still to do), and Start on the next day once its day has come (`startsToday`: on its date or after it, to catch up a missed one, never ahead; `start` in `page.tsx` checks it too, the developer menu's Workout jump skips it); a rest day says why rest counts and, on the
   day, offers a minute by the fire. Before the first week: only a line that says to talk to the flame. Tap a card (here or on Today) for how to
   do it (`ExerciseSheet`: both demos, facts, steps, tips, mistakes). Sideways the two sit side by side.
 - **The chat** (`CoachChat`): the camp fire at the top with the flame, the talk below in the

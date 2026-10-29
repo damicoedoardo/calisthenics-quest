@@ -69,6 +69,14 @@ export function weekSlots(week: CoachWeek): { date: string; day?: CoachDay; befo
 /** A rest day kept: you sat by the fire that day. */
 export const restKept = (state: Pick<GameState, 'days'>, date: string) => !!state.days?.find((d) => d.day === date)?.fire;
 
+/** The next workout can start today: its day has come (a missed day can still be caught up),
+    never ahead of it. With no week yet the built-in plan starts any day. */
+export function startsToday(coach: CoachState | undefined, now: Date): boolean {
+  if (!coach?.week) return true;
+  const next = nextDay(coach.week);
+  return !!next && next.date <= dayKey(now);
+}
+
 /** Today is one of the week's rest days. */
 export function restToday(coach: CoachState | undefined, now: Date): boolean {
   const week = coach?.week;
