@@ -50,9 +50,7 @@ if (!isMainThread) {
   for (const [w, k] of Object.entries(JSON.parse(process.env.WEAPON || '{}'))) Object.assign(SP_WEAPON[w], k);
   Object.assign(DIALS, dials);
   const { ZONES, ROAD_ZONES, powerOf, edgeFor } = await import(`${root}src/lib/fog.ts`);
-  // PARTY=2 (to 4) plays each run as a party of bots (the class named, then the next ones along),
-// as the Ember Road and party runs are played; the win counts for the party.
-// ROAD=1 plays the Ember Road's chapter 1 in place of the story zone it stands in for (its base).
+  // ROAD=1 plays the Ember Road's chapter 1 in place of the story zone it stands in for (its base).
   const road = process.env.ROAD ? ROAD_ZONES[Number(process.env.ROAD) - 1] : null;
   const forced = process.env.EDGE ? JSON.parse(process.env.EDGE) : null;
   const { buildOf } = await import(`${root}src/lib/stats.ts`);
