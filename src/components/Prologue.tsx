@@ -387,9 +387,12 @@ function MakeItYours({ look, setLook, gear, onDone }: { look: Look; setLook: (l:
       <div className="mt-5 flex-1 [@media(orientation:landscape)_and_(max-height:600px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:600px)]:row-span-2 [@media(orientation:landscape)_and_(max-height:600px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:600px)]:mt-4">
         <LookEditor look={look} onChange={setLook} gear={gear} />
       </div>
-      <button onClick={onDone} className={`mt-5 ${goldButton} ${SIDE_BUTTON}`}>
-        This is me
-      </button>
+      {/* Upright, pinned to the bottom so it is in reach without scrolling past every choice. */}
+      <div className={`safe-bottom sticky bottom-0 z-10 -mx-4 mt-3 bg-ink-950 px-4 pb-2 pt-3 [@media(orientation:landscape)_and_(max-height:600px)]:mx-0 [@media(orientation:landscape)_and_(max-height:600px)]:bg-transparent [@media(orientation:landscape)_and_(max-height:600px)]:p-0 ${SIDE_BUTTON}`}>
+        <button onClick={onDone} className={goldButton}>
+          This is me
+        </button>
+      </div>
     </div>
   );
 }
