@@ -29,6 +29,7 @@ opening.ts            the opening, before the first workout: the first dungeon's
 daily/flame-lines.ts  what the flame says on Today, by kind of day, and its face
 daily/quotes.ts       words for the road, by chapter
 daily/rest.ts         rest-day truths, and what the flame says after a minute by the fire
+daily/after.ts        the flame's line after a workout, the Book of Days margin notes
 daily/index.ts        picks the day's line and quote, and keeps the Book of Days
 engine.ts             reads all of it: which chapter you're in, which scenes are due
 story.test.ts         checks every reference (speakers, places, songs, {words})

@@ -17,7 +17,8 @@ import { spendEvenly } from '@/lib/stats';
 import type { ClassId } from '@/lib/gear';
 import { loadLibrary } from '@/exercises/library';
 import { applySetup } from '@/lib/coach/setup';
-import { buildWeek } from '@/lib/coach/week';
+import { buildWeek, markDone } from '@/lib/coach/week';
+import { dayKey } from '@/lib/days';
 
 /* What's new tonight: one tap to try each change. Everything that opens the app does it on a
    sandbox save (SANDBOX_KEY, chosen by ?sandbox), so the real save on this phone is never touched.
@@ -161,6 +162,19 @@ async function withWeek(s: GameState): Promise<GameState> {
   return { ...s, coach: { ...coach, week } };
 }
 
+/** `s` without today's workout, so Today still has a quest to start. */
+function notYetToday(s: GameState): GameState {
+  const today = dayKey(new Date());
+  return { ...s, sessions: s.sessions.filter((w) => dayKey(new Date(w.date)) !== today) };
+}
+
+/** `s` with this week planned and its first workout done today: Today says you did it. */
+async function doneToday(s: GameState): Promise<GameState> {
+  const w = await withWeek(notYetToday(s));
+  const done = addFakeWorkouts(w, 1, new Date(), true);
+  return { ...done, coach: markDone(done.coach!, new Date().toISOString()) };
+}
+
 /** Write the sandbox save and open the app on it at `query`. */
 function open(state: GameState, query: string) {
   try {
@@ -252,7 +266,8 @@ export default function NightLab() {
 
       <Panel title="DESIGN PASS" note="Pixel, minimal, fewer words: one screen at a time.">
         <Row icon={<Swords size={16} />} label="The Friends tab" note="Its own tab: who is online now (tap to invite), your party, the Ember Road, every friend. Sample friends in the sandbox" onClick={() => open(geared(), 'tab=friends')} />
-        <Row icon={<Dumbbell size={16} />} label="Today, with a week planned" note="The chapter's boss, your flame, today's quest and Start" onClick={async () => open(await withWeek(veteran(30, 3)), 'tab=today')} />
+        <Row icon={<Dumbbell size={16} />} label="Today, with a week planned" note="The chapter's boss, your flame, today's quest and Start" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=today')} />
+        <Row icon={<Dumbbell size={16} />} label="Today, after the workout" note="Today's workout done: you did it, your counts, and what's next (Train shows it)" onClick={async () => open(await doneToday(veteran(30, 3)), 'tab=today')} />
       </Panel>
 
       <Panel title="YOUR COACH: THE FLAME" note="Your flame plans your training now. Train tab: its last words and today's workout as cards with demos, easier and swap on each. Tap Let's start and it chats with you at the camp fire. Talking needs a sign-in (Hero > Settings) on the real save.">

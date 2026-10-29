@@ -67,7 +67,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
   const streak = weekStreak(state, now);
   const day = dayType(state);
   const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
-  // After today's workout the quest below is the next one, not one still owed today.
+  // After today's workout Today says so and stops there: the next one is on the Train tab.
   const doneToday = !inProgress && trainedToday(state, now);
   // The week is the one place a workout comes from: none planned (or all done), no quest.
   const plan = currentPlan(state.coach);
@@ -114,7 +114,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
     </>
   );
   const items = inProgress ? todaysQuest(state) : quest;
-  const startLabel = inProgress ? 'Continue quest' : doneToday ? 'Start the next quest' : 'Start quest';
+  const startLabel = inProgress ? 'Continue quest' : 'Start quest';
   const questTitle = checkin === 'rough' && !inProgress ? 'Minimum quest' : (plan?.title ?? `Day ${day} quest`);
   const xp = previewXp(state, inProgress ? state.draft!.checkin : checkin, now);
   const reps = (q: (typeof items)[number]) => {
@@ -132,7 +132,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
         hero={hero}
         story={story}
         items={items}
-        noPlan={noPlan ? <NoPlan state={state} now={now} onTrain={onTrain} land /> : null}
+        instead={doneToday ? <DoneToday state={state} now={now} onTrain={onTrain} land /> : noPlan ? <NoPlan state={state} now={now} onTrain={onTrain} land /> : null}
         restDay={restDay}
         aheadNote={aheadNote}
         onHowTo={(q) => setHowTo({ id: q.id, demo: q.demo })}
@@ -142,7 +142,6 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
         xp={xp}
         checkin={checkin}
         onCheckin={inProgress ? undefined : setCheckin}
-        doneToday={doneToday}
         startLabel={startLabel}
         onStart={() => onStart(inProgress ? state.draft!.checkin : checkin)}
         onReplayOpening={onReplayOpening}
@@ -198,17 +197,14 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
 
       <QuoteCard state={state} now={now} update={update} onOpenBook={() => setOverlay('book')} />
 
-      {noPlan ? (
+      {doneToday ? (
+        <DoneToday state={state} now={now} onTrain={onTrain} />
+      ) : noPlan ? (
         <NoPlan state={state} now={now} onTrain={onTrain} />
       ) : (
         <>
       {!inProgress && (
         <section>
-          {doneToday && (
-            <div className="mb-3 flex items-center gap-2 text-xs text-emerald-300">
-              <Sprite id="uiIcon" opts={{ name: 'check' }} size={14} label="" /> Done for today. The next one is ready.
-            </div>
-          )}
           {aheadNote && <p className="mb-3 text-xs text-orange-200">{aheadNote}</p>}
           <div className="flex items-center gap-3">
             <p className="shrink-0 font-pixel text-[8px] leading-relaxed text-slate-500">
@@ -462,8 +458,8 @@ interface LandProps {
   story: ReturnType<typeof storyState>;
   items: ReturnType<typeof todaysQuest>;
   reps: (q: ReturnType<typeof todaysQuest>[number]) => string;
-  /** Shown in place of the quest board when no workout is planned. */
-  noPlan: ReactNode;
+  /** Shown in place of the quest board: today's workout done, or none planned. */
+  instead: ReactNode;
   restDay: boolean;
   aheadNote: string | null;
   /** An exercise tapped: open how to do it. */
@@ -475,7 +471,6 @@ interface LandProps {
   checkin: Checkin;
   /** Left out while a quest is under way: the check-in is set then. */
   onCheckin?: (c: Checkin) => void;
-  doneToday: boolean;
   startLabel: string;
   onStart: () => void;
   onReplayOpening: () => void;
@@ -551,14 +546,13 @@ function LandToday(p: LandProps) {
         </div>
       </div>
 
-      {p.noPlan ?? (
+      {p.instead ?? (
       <section className="flex min-h-0 flex-1 flex-col rounded-2xl bg-ink-800 p-3">
         <div className="flex items-baseline gap-3">
           <h3 className="shrink-0 font-pixel text-[10px] text-gold-300">{p.title}</h3>
           <p className="shrink-0 font-mono text-[11px] text-slate-400">
             {p.onCheckin && `${CHECKINS.find((c) => c.id === p.checkin)!.minutes} min · `}+{p.xp} XP
           </p>
-          {p.doneToday && <p className="min-w-0 flex-1 truncate text-xs text-emerald-300">Done for today. The next one is ready.</p>}
           {p.aheadNote && <p className="min-w-0 flex-1 truncate text-xs text-orange-200">{p.aheadNote}</p>}
         </div>
 
@@ -641,6 +635,45 @@ function NoPlan({ state, now, onTrain, land }: { state: GameState; now: Date; on
           </button>
         </>
       )}
+    </section>
+  );
+}
+
+/**
+ * Today's workout is done, so Today says so and stops there: done for the day, two counts (workouts
+ * in all, this week), and a quiet line on what's next, which the Train tab shows in full.
+ */
+function DoneToday({ state, now, onTrain, land }: { state: GameState; now: Date; onTrain: () => void; land?: boolean }) {
+  const total = state.sessions.length;
+  const week = sessionsThisWeek(state, now);
+  const coachWeek = state.coach?.week;
+  const next = nextDay(coachWeek);
+  const ends = coachWeek ? nextMonday(coachWeek) : null;
+  const cells = [
+    { n: String(total), label: total === 1 ? 'workout' : 'workouts' },
+    { n: `${Math.min(week, WEEKLY_GOAL)}/${WEEKLY_GOAL}`, label: 'this week' },
+  ];
+  const nextWords = next
+    ? `Next: ${dayLabel(next.date, now)} · ${next.plan.title}`
+    : coachWeek && ends
+      ? `Next week starts ${daysApart(now, ends) <= 1 ? 'tomorrow' : weekdayOf(dayKey(ends))}`
+      : `Plan your next week with ${storyWords(state).flame}`;
+  return (
+    <section className={`rounded-2xl bg-ink-800 text-center ${land ? 'flex min-h-0 flex-1 flex-col items-center justify-center p-3' : 'px-5 py-6'}`}>
+      <p className={`font-pixel text-emerald-300 ${land ? 'text-[11px]' : 'text-sm'}`}>Done for today</p>
+      <p className={`text-slate-300 ${land ? 'mt-1.5 text-xs' : 'mt-2 text-sm'}`}>You earned it. Enjoy the rest of your day.</p>
+      <div className={`mx-auto grid w-full max-w-[16rem] grid-cols-2 gap-2 ${land ? 'mt-3' : 'mt-5'}`}>
+        {cells.map((c) => (
+          <div key={c.label} className="rounded-xl bg-ink-900 py-2.5">
+            <p className={`font-pixel text-gold-300 ${land ? 'text-xs' : 'text-sm'}`}>{c.n}</p>
+            <p className="mt-1 text-[10px] text-slate-400">{c.label}</p>
+          </div>
+        ))}
+      </div>
+      <button onClick={onTrain} className={`mx-auto flex max-w-full items-center justify-center gap-1 text-xs text-slate-400 active:text-slate-200 ${land ? 'mt-3' : 'mt-5'}`}>
+        <span className="min-w-0 truncate">{nextWords}</span>
+        <Sprite id="uiIcon" opts={{ name: 'chevron' }} size={10} label="" className="shrink-0" />
+      </button>
     </section>
   );
 }
