@@ -2,6 +2,7 @@
 
 import { spWorn } from '@/lib/sp';
 import { useEffect, useMemo, useState } from 'react';
+import { Share2 } from 'lucide-react';
 import { Hero } from './Hero';
 import { Enemy } from './Characters';
 import { Sprite } from './Sprite';
@@ -26,6 +27,8 @@ interface Props {
   onClose: () => void;
   /** How the workout felt, for the coach. */
   onFelt?: (felt: Felt, comment: string) => void;
+  /** Share it with friends (signed in only): opens the share page. */
+  onShare?: () => void;
 }
 
 type Felt = NonNullable<FinishResult['session']['felt']>;
@@ -36,7 +39,7 @@ const FELT: { id: Felt; label: string }[] = [
 ];
 
 /** After a session: a short battle against the chapter enemy, then the loot. */
-export function AfterSession({ result, before, after, onClose, onFelt }: Props) {
+export function AfterSession({ result, before, after, onClose, onFelt, onShare }: Props) {
   const [stage, setStage] = useState<'battle' | 'loot'>(before.chapter ? 'battle' : 'loot');
   const [hit, setHit] = useState(false);
   const reps = result.session.entries.reduce((a, e) => a + e.sets.reduce((b, s) => b + s.reps, 0), 0);
@@ -84,10 +87,10 @@ export function AfterSession({ result, before, after, onClose, onFelt }: Props) 
     );
   }
 
-  return <Loot result={result} onClose={onClose} onFelt={onFelt} />;
+  return <Loot result={result} onClose={onClose} onFelt={onFelt} onShare={onShare} />;
 }
 
-function Loot({ result, onClose, onFelt }: { result: FinishResult; onClose: () => void; onFelt?: Props['onFelt'] }) {
+function Loot({ result, onClose, onFelt, onShare }: { result: FinishResult; onClose: () => void; onFelt?: Props['onFelt']; onShare?: Props['onShare'] }) {
   const { session, newGear, levelBefore, levelAfter } = result;
   const [felt, setFelt] = useState<Felt | null>(null);
   const [comment, setComment] = useState('');
@@ -207,6 +210,17 @@ function Loot({ result, onClose, onFelt }: { result: FinishResult; onClose: () =
           className="mt-6 w-full rounded-2xl bg-gold-400 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
           Continue
         </button>
+        {onShare && (
+          <button
+            onClick={() => {
+              if (felt && onFelt) onFelt(felt, comment.trim().slice(0, 200));
+              onShare();
+            }}
+            className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-ink-700 py-3 text-sm font-semibold text-slate-100"
+          >
+            <Share2 size={16} /> Share with friends
+          </button>
+        )}
         </div>
       </div>
     </div>

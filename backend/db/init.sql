@@ -86,6 +86,36 @@ CREATE TABLE IF NOT EXISTS cheers (
 );
 CREATE INDEX IF NOT EXISTS cheers_receiver ON cheers (receiver) WHERE seen_at IS NULL;
 
+-- The feed (app/feed.py): shared workouts, their photos, flames and comments. Also created by
+-- the api on start.
+CREATE TABLE IF NOT EXISTS posts (
+    id          uuid PRIMARY KEY,
+    author      uuid NOT NULL,
+    workout     jsonb NOT NULL,
+    text        text NOT NULL DEFAULT '',
+    has_photo   boolean NOT NULL DEFAULT false,
+    cheered_by  jsonb NOT NULL DEFAULT '[]',
+    created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS posts_author ON posts (author, created_at DESC);
+CREATE TABLE IF NOT EXISTS post_photos (
+    post_id     uuid PRIMARY KEY REFERENCES posts (id) ON DELETE CASCADE,
+    data        bytea NOT NULL
+);
+CREATE TABLE IF NOT EXISTS post_flames (
+    post_id     uuid NOT NULL REFERENCES posts (id) ON DELETE CASCADE,
+    user_id     uuid NOT NULL,
+    PRIMARY KEY (post_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS post_comments (
+    id          uuid PRIMARY KEY,
+    post_id     uuid NOT NULL REFERENCES posts (id) ON DELETE CASCADE,
+    author      uuid NOT NULL,
+    text        text NOT NULL,
+    created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS post_comments_post ON post_comments (post_id, created_at);
+
 -- How many messages each player sent the coach today, to cap the bill (app/coach.py).
 CREATE TABLE IF NOT EXISTS coach_usage (
     user_id  uuid NOT NULL,

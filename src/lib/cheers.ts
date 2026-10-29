@@ -27,5 +27,9 @@ export interface Cheer {
 /** What a friend typed, as sent: one line, spaces tidied, cut to the limit. Empty means nothing to send. */
 export const cleanCheer = (text: string) => text.split(/\s+/).filter(Boolean).join(' ').slice(0, CHEER_LIMIT.length);
 
-/** What your friends see while you work out: the plan's name, or "A workout". */
-export const trainingLabel = (state: GameState) => (currentPlan(state.coach)?.title ?? 'A workout').slice(0, 40);
+/** What your friends see while you work out: the coach's name for today, or "A workout" (the
+    built-in plan's own title is about the plan, not the day). */
+export function trainingLabel(state: GameState): string {
+  const plan = currentPlan(state.coach);
+  return (plan && plan.by !== 'built-in' ? plan.title : 'A workout').slice(0, 40);
+}

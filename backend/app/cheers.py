@@ -48,6 +48,10 @@ class CheerStore(Protocol):
         """Every cheer waiting for `receiver`, oldest first, marked seen so it shows only once."""
         ...
 
+    async def senders_since(self, receiver: str, since: datetime) -> list[str]:
+        """Who cheered `receiver` since then, each once, first cheer first (for a feed post)."""
+        ...
+
 
 def _midnight() -> datetime:
     return datetime.now(UTC).replace(hour=0, minute=0, second=0, microsecond=0)
@@ -92,6 +96,15 @@ class PgStore:
         )
         return sorted((_cheer(r) for r in rows), key=lambda c: c.created_at)
 
+    async def senders_since(self, receiver: str, since: datetime) -> list[str]:
+        rows = await get_pool().fetch(
+            "SELECT sender, min(created_at) AS first FROM cheers"
+            " WHERE receiver = $1 AND created_at >= $2 GROUP BY sender ORDER BY first",
+            receiver,
+            since,
+        )
+        return [str(r["sender"]) for r in rows]
+
 
 class MemoryStore:
     """The same rules as PgStore, in a list: for tests."""
@@ -118,4 +131,11 @@ class MemoryStore:
     async def take(self, receiver: str) -> list[Cheer]:
         out = [c for c, seen in self.rows if c.receiver == receiver and not seen]
         self.rows = [(c, seen or c.receiver == receiver) for c, seen in self.rows]
+        return out
+
+    async def senders_since(self, receiver: str, since: datetime) -> list[str]:
+        out: list[str] = []
+        for c, _ in self.rows:
+            if c.receiver == receiver and c.created_at >= since and c.sender not in out:
+                out.append(c.sender)
         return out

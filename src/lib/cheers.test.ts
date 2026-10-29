@@ -16,7 +16,7 @@ describe('cheers', () => {
   });
 
   it('names the workout for friends', () => {
-    expect(trainingLabel(initialState())).toBeTruthy();
+    expect(trainingLabel(initialState())).toBe('A workout');
     expect(trainingLabel(initialState()).length).toBeLessThanOrEqual(40);
   });
 });
