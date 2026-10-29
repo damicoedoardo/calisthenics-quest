@@ -8,15 +8,20 @@ import { ATTACK } from '@/balance';
 
 export type SheetKey = 'hero' | 'heroAttack' | 'heroWalk' | 'ember' | 'hollow' | 'slime' | 'wisp' | 'mirror' | 'golem' | 'knight' | 'echo' | 'book' | 'summit'
   // the dungeon's own monsters
-  | 'ram' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade'
+  | 'ram' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade' | 'ashGolem'
+  // the regular monsters firing (played once as they shoot)
+  | `${DressedKey}Attack`
   // the Splitter splitting (played once), and the mid-boss
   | 'splitterPop' | 'warden'
   // the other zones' mid-bosses (the Sand Golem also set to stone)
   | 'lanternMid' | 'foremanMid' | 'sandGolemMid' | 'sandGolemMidStone' | 'whisperMid' | 'galeMid'
   | BossSheetKey;
+/** The regular monsters, drawn in each zone's dress (zoned.ts). */
+export type DressedKey = 'slime' | 'wisp' | 'ram' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade' | 'ashGolem';
 /** The dungeon bosses: idle, attack (played once), stages for the Knight and the Plateau, and the
     Mirror's and the Hollow's ends (played once). A run only builds its own zone's (FogRun.tsx). */
 export type BossSheetKey =
+  | 'tomorrowBoss' | 'tomorrowBossAttack'
   | 'mirrorBoss' | 'mirrorBossAttack' | 'mirrorBossShatter'
   | 'knightBoss' | 'knightBossAttack' | 'knightBoss1' | 'knightBoss1Attack' | 'knightBoss2' | 'knightBoss2Attack'
   | 'plateauBoss' | 'plateauBossAttack' | 'plateauBoss1' | 'plateauBoss1Attack' | 'plateauBoss2' | 'plateauBoss2Attack'

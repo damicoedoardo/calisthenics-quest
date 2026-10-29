@@ -229,8 +229,9 @@ export interface Bullet {
   ang: number;
   spd: number;
   /** Bounces off walls left. */
-  bounce: number;  /** Who fired it, for its look (FOE_FX in foeFx.ts). */
+  bounce: number;  /** Who fired it, and with which of its patterns, for its look (foeFx.ts). */
   from?: FoeKind;
+  pat?: number;
 }
 
 /** A lobbed bomb: lands, then bursts at `at`. */
@@ -2313,6 +2314,7 @@ function shoot(run: Run, f: Foe, p: Pattern) {
       spd: speed,
       bounce: style === 'bounce' ? 1 : 0,
       from: f.kind,
+      pat: f.def.shoots.indexOf(p),
     });
   if (p.kind === 'aimed') for (let i = 0; i < p.n; i++) add(at + (i - (p.n - 1) / 2) * 0.12);
   else if (p.kind === 'spread') for (let i = 0; i < p.n; i++) add(at + (p.n === 1 ? 0 : (i / (p.n - 1) - 0.5) * (p.arc ?? 0.5)));

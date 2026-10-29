@@ -88,6 +88,13 @@ const round =
     g.fillStyle(core).fillCircle(6, 6, rim ? 3 : 2);
   };
 
+/** A lumpy stone with a hot core. */
+function rock(g: G, glow: number, body: number, core: number) {
+  g.fillStyle(glow, 0.4).fillCircle(7, 7, 7);
+  g.fillStyle(body).fillPoints([{ x: 3, y: 4 }, { x: 8, y: 2 }, { x: 12, y: 5 }, { x: 11, y: 11 }, { x: 6, y: 12 }, { x: 2, y: 9 }], true);
+  g.fillStyle(core).fillCircle(7, 7, 2.5);
+}
+
 /** Every monster shot's picture, by key. Monster shots are hot, round and easy to read against
     any ground; a monster's own shot keeps that: a glow round it and a light core. */
 export const SHOT_ART: Record<string, ShotArt> = {
@@ -113,6 +120,119 @@ export const SHOT_ART: Record<string, ShotArt> = {
   'bullet-homing': { w: 14, h: 14, paint: round(0x22d3ee, 0x67e8f9, 0xecfeff) },
   'bullet-bounce': { w: 14, h: 14, paint: round(0x84cc16, 0xbef264, 0xf7fee7) },
   'bullet-ramp': { w: 14, h: 14, paint: round(0xf97316, 0xfdba74, 0xfff7ed) },
+  // Tomorrow's yawns: a sleepy bubble, and the Z it lets out (its boss shots).
+  'shot-yawn': {
+    w: 14,
+    h: 14,
+    paint: (g) => {
+      g.fillStyle(0x818cf8, 0.4).fillCircle(7, 7, 7);
+      g.fillStyle(0xc7d2fe).fillCircle(7, 7, 5);
+      g.fillStyle(0x6366f1).fillCircle(8, 8, 3);
+      g.fillStyle(0xffffff).fillRect(4, 4, 2, 2);
+    },
+  },
+  'shot-z': {
+    w: 16,
+    h: 16,
+    paint: (g) => {
+      g.fillStyle(0x818cf8, 0.4).fillCircle(8, 8, 8);
+      g.fillStyle(0xe0e7ff).fillRect(3, 3, 10, 3).fillRect(3, 10, 10, 3);
+      g.fillTriangle(10, 6, 13, 6, 6, 10).fillTriangle(10, 6, 6, 10, 3, 10);
+    },
+  },
+  // Tomorrow's alarm clock, thrown at you.
+  'shot-alarm': {
+    w: 18,
+    h: 18,
+    spin: 5,
+    paint: (g) => {
+      g.fillStyle(0xfbbf24, 0.35).fillCircle(9, 9, 9);
+      g.fillStyle(0xfde68a).fillCircle(5, 4, 3).fillCircle(13, 4, 3);
+      g.fillStyle(0xd4a017).fillCircle(9, 10, 6);
+      g.fillStyle(0xfffbeb).fillCircle(9, 10, 4);
+      g.fillStyle(0x1e1b2e).fillRect(9, 7, 1, 4).fillRect(9, 10, 3, 1);
+    },
+  },
+  // A wisp's ember: a little flame, pointing the way it flies.
+  'shot-ember': {
+    w: 12,
+    h: 16,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0xf97316, 0.35).fillEllipse(6, 9, 12, 14);
+      g.fillStyle(0xf97316).fillTriangle(6, 0, 1, 10, 11, 10).fillCircle(6, 10, 5);
+      g.fillStyle(0xfde047).fillTriangle(6, 4, 3, 11, 9, 11).fillCircle(6, 11, 3);
+      g.fillStyle(0xffffff).fillCircle(6, 12, 1.5);
+    },
+  },
+  // A glass shard off a Mirror.
+  'shot-shard': {
+    w: 12,
+    h: 16,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0x7dd3fc, 0.35).fillEllipse(6, 8, 12, 16);
+      g.fillStyle(0xbae6fd).fillPoints([{ x: 6, y: 0 }, { x: 11, y: 8 }, { x: 6, y: 16 }, { x: 1, y: 8 }], true);
+      g.fillStyle(0xffffff).fillPoints([{ x: 6, y: 2 }, { x: 8, y: 8 }, { x: 6, y: 12 }, { x: 4, y: 8 }], true);
+    },
+  },
+  // Stones a ram kicks up, and the Ash Golem's cinders: rock with a hot core.
+  'shot-rock': { w: 14, h: 14, spin: 4, paint: (g) => rock(g, 0xe89a48, 0x8a5a2b, 0xfde68a) },
+  'shot-cinder': { w: 14, h: 14, spin: 3, paint: (g) => rock(g, 0xf97316, 0x44403c, 0xfdba74) },
+  // A Seeker's tear: it curves after you.
+  'shot-tear': {
+    w: 12,
+    h: 16,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0x22d3ee, 0.35).fillEllipse(6, 9, 12, 14);
+      g.fillStyle(0x67e8f9).fillTriangle(6, 0, 1, 10, 11, 10).fillCircle(6, 10, 5);
+      g.fillStyle(0xecfeff).fillCircle(5, 10, 2);
+    },
+  },
+  // A Splitter's goo, which bounces off the walls.
+  'shot-goo': {
+    w: 14,
+    h: 14,
+    paint: (g) => {
+      g.fillStyle(0x84cc16, 0.35).fillCircle(7, 7, 7);
+      g.fillStyle(0x4ade80).fillEllipse(7, 8, 11, 9);
+      g.fillStyle(0xbbf7d0).fillCircle(5, 6, 2);
+    },
+  },
+  // A Shade's ring: dark at first, its rim lighting up as it speeds.
+  'shot-void': {
+    w: 14,
+    h: 14,
+    paint: (g) => {
+      g.fillStyle(0xc084fc, 0.4).fillCircle(7, 7, 7);
+      g.fillStyle(0xe9d5ff).fillCircle(7, 7, 5);
+      g.fillStyle(0x3b0764).fillCircle(7, 7, 3);
+    },
+  },
+  // What a Smoker's bomb throws when it bursts: violet sparks.
+  'shot-spark': {
+    w: 12,
+    h: 12,
+    spin: 8,
+    paint: (g) => {
+      g.fillStyle(0xc084fc, 0.4).fillCircle(6, 6, 6);
+      g.fillStyle(0xf0abfc).fillRect(5, 0, 2, 12).fillRect(0, 5, 12, 2);
+      g.fillStyle(0xffffff).fillRect(4, 4, 4, 4);
+    },
+  },
+  // The Warden's embers: bigger and hotter.
+  'shot-ember-big': {
+    w: 14,
+    h: 18,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0xef4444, 0.35).fillEllipse(7, 10, 14, 16);
+      g.fillStyle(0xef4444).fillTriangle(7, 0, 1, 12, 13, 12).fillCircle(7, 12, 6);
+      g.fillStyle(0xfbbf24).fillTriangle(7, 4, 3, 13, 11, 13).fillCircle(7, 13, 4);
+      g.fillStyle(0xffffff).fillCircle(7, 14, 2);
+    },
+  },
   // The Book's pages.
   'bullet-page': {
     w: 12,
@@ -130,9 +250,16 @@ export const SHOT_ART: Record<string, ShotArt> = {
     (FoeFx.shot) wins over this; a boss's plain shot is `bullet-boss`. */
 export const STYLE_SHOT = { plain: 'bullet', homing: 'bullet-homing', bounce: 'bullet-bounce', ramp: 'bullet-ramp', wiggle: 'bullet-page' } as const;
 
-/** The picture for a shot fired by `from` (a boss's when `boss`), in `style`. */
-export function shotOf(from: Foe['kind'] | undefined, boss: boolean, style: keyof typeof STYLE_SHOT): string {
-  const own = from && from !== 'boss' ? FOE_FX[from].shot : undefined;
+/** A zone boss's own shots, by its patterns' order in BOSSES (content.ts); a pattern without one
+    looks like its style. */
+export const BOSS_SHOTS: Partial<Record<FogBoss, string[]>> = {
+  tomorrow: ['shot-z', 'shot-alarm'],
+};
+
+/** The picture for a shot fired by `from` (a boss's when `boss`), in `style`. A boss's shot
+    (`from` 'boss') is its BOSS_SHOTS entry for pattern `n`. */
+export function shotOf(from: Foe['kind'] | undefined, boss: boolean, style: keyof typeof STYLE_SHOT, which?: FogBoss, n?: number): string {
+  const own = from === 'boss' ? (which && n !== undefined ? BOSS_SHOTS[which]?.[n] : undefined) : from ? FOE_FX[from].shot : undefined;
   return own ?? (boss && style === 'plain' ? 'bullet-boss' : STYLE_SHOT[style]);
 }
 
@@ -140,19 +267,58 @@ export function shotOf(from: Foe['kind'] | undefined, boss: boolean, style: keyo
 
 /** A lobbed bomb on its way (p 0 to 1 of the flight), then on the ground filling up until it
     bursts (p 0 to 1 of the fuse). */
-export function drawMine(fx: G, mk: G, P: FoeCtx['P'], m: Mine, flying: boolean, p: number) {
+export function drawMine(fx: G, mk: G, P: FoeCtx['P'], m: Mine, flying: boolean, p: number, now: number) {
+  const golem = m.from === 'golem';
   if (flying) {
+    // its shadow grows as it falls; the bomb (a Smoker's, fuse lit) or a boulder arcs over
     fx.fillStyle(0x000000, 0.25).fillCircle(m.x, m.y, 4 + 6 * p);
-    const [X, Y] = P(m.x, m.y);
-    mk.fillStyle(0xc4b5fd).fillCircle(X, Y - 40 * Math.sin(Math.PI * p), 5);
+    const [X, Y] = P(m.x, m.y),
+      y = Y - 40 * Math.sin(Math.PI * p);
+    if (golem) {
+      mk.fillStyle(0x57534e).fillCircle(X, y, 7);
+      mk.fillStyle(0xf97316).fillCircle(X + 1, y + 1, 2.5);
+    } else {
+      mk.fillStyle(0x15131f).fillCircle(X, y, 5);
+      mk.fillStyle(0xc7c2e0).fillRect(X - 2, y - 3, 2, 2);
+      mk.fillStyle(now % 120 < 60 ? 0xfde047 : 0xf97316).fillRect(X + 2, y - 7, 2, 2);
+    }
   } else {
-    fx.lineStyle(2, 0xc084fc, 0.9).strokeCircle(m.x, m.y, m.r);
-    fx.fillStyle(0xa855f7, 0.1 + 0.3 * p).fillCircle(m.x, m.y, m.r * p);
-    fx.fillStyle(0xe9d5ff).fillCircle(m.x, m.y, 4);
+    // where it will burst: the edge, and a ring closing in on the bomb as the fuse burns down
+    const c = golem ? 0xf97316 : 0xc084fc;
+    fx.lineStyle(2, c, 0.9).strokeCircle(m.x, m.y, m.r);
+    fx.fillStyle(golem ? 0xea580c : 0xa855f7, 0.08 + 0.22 * p).fillCircle(m.x, m.y, m.r);
+    fx.lineStyle(2, golem ? 0xfdba74 : 0xf0abfc, 0.5 + 0.5 * p).strokeCircle(m.x, m.y, m.r * (1 - p) + 4);
+    if (golem) {
+      fx.fillStyle(0x57534e).fillCircle(m.x, m.y, 7);
+      fx.fillStyle(p > 0.7 && now % 140 < 70 ? 0xffffff : 0xf97316).fillCircle(m.x, m.y, 3);
+    } else {
+      fx.fillStyle(0x15131f).fillCircle(m.x, m.y, 5);
+      fx.fillStyle(now % (p > 0.7 ? 80 : 160) < 40 ? 0xffffff : 0xfde047).fillCircle(m.x + 3, m.y - 3, 2);
+    }
   }
 }
 
 // ---------- the monsters ----------
+
+/** How long before a volley a monster gives its warning: it swells, and its own tell plays (s). */
+export const TELL = 0.35;
+/** How far into its warning a monster is (0 to 1), or -1 when no volley is coming. Only volleys
+    on a clock count, not a stream of quick shots (which would just throb). */
+export function soon(f: Foe, t: number): number {
+  let best = -1;
+  f.def.shoots.forEach((p, i) => {
+    const left = f.next[i] - t;
+    if (!p.on && p.every >= 1 && left > 0 && left < TELL) best = Math.max(best, 1 - left / TELL);
+  });
+  return best;
+}
+
+/** A puff of bits and a soft ring where something ended. */
+function puff(k: FoeKit, e: KillEvent, R: number, color: number, n = 8) {
+  const { x, y } = e;
+  k.burst('bits', n, x, y, -8, color);
+  k.fade(320, (g, p) => g.lineStyle(2, color, 0.7 * (1 - p)).strokeCircle(x, y, R * (0.5 + p)));
+}
 
 /** A copy breaking like glass (the Mirror's images, your reflections). */
 function glass(k: FoeKit, e: KillEvent, R: number, n: number, ms: number, pitch: number) {
@@ -182,6 +348,7 @@ export const BOSS_LOOKS: Record<FogBoss, Look> = {
     Plateau's cracks), and its height on screen (1 = the hero's). Until a zone's sheets are loaded
     the boss wears its stand-in from BOSS_LOOKS. Swapping a boss's art is a change here. */
 export const BOSS_ART: Partial<Record<FogBoss, { stages: BossSheetKey[]; size: number; bits: number[] }>> = {
+  tomorrow: { stages: ['tomorrowBoss'], size: 1.7, bits: [0x94a3b8, 0x8a3f55, 0xc9a23a] },
   mirror: { stages: ['mirrorBoss'], size: 1.05, bits: [0xe0f2fe, 0x7dd3fc, 0xffffff] },
   knight: { stages: ['knightBoss', 'knightBoss1', 'knightBoss2'], size: 1.15, bits: [0xe2e8f0, 0x94a3b8, 0xdc2626] },
   plateau: { stages: ['plateauBoss', 'plateauBoss1', 'plateauBoss2'], size: 1.7, bits: [0xd9b47a, 0x8f6b3d, 0x5a4124] },
@@ -198,10 +365,67 @@ export function bossStage(which: FogBoss, f: Foe): number {
 
 /** Every monster, each with its own sprite (src/sprites/characters) and effects. */
 export const FOE_FX: Record<MonsterKind, FoeFx> = {
-  slime: { look: { tex: 'slime', scale: 0.55, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0] } },
-  wisp: { look: { tex: 'wisp', scale: 0.5, bits: [0xf97316, 0xfde68a, 0x6b7280] }, killPitch: 1.3 },
-  mirror: { look: { tex: 'mirror', scale: 0.65, bits: [0xe2e8f0, 0xcbd5e1, 0xffffff] } },
-  golem: { look: { tex: 'golem', scale: 0.95, bits: [0xa8a29e, 0x78716c, 0x84cc16] }, heavy: true },
+  // A bit of Tomorrow: yawns sleepy bubbles, squashes before it does, and splats when it's gone.
+  slime: {
+    look: { tex: 'slime', scale: 0.55, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0] },
+    shot: 'shot-yawn',
+    death: (k, e, R) => {
+      const { x, y } = e;
+      k.fade(900, (g, p) => g.fillStyle(0x64748b, 0.45 * (1 - p)).fillEllipse(x, y, R * 1.6, R * 1.1));
+    },
+  },
+  // An ash wisp: its flame flares before it spits embers, and it gutters out into ash.
+  wisp: {
+    look: { tex: 'wisp', scale: 0.5, bits: [0xf97316, 0xfde68a, 0x6b7280] },
+    shot: 'shot-ember',
+    killPitch: 1.3,
+    tell: ({ f, fx, t }) => {
+      const p = soon(f, t);
+      if (p >= 0) fx.fillStyle(0xf97316, 0.15 + 0.25 * p).fillCircle(f.x, f.y, f.def.r * (0.8 + 0.6 * p));
+    },
+    death: (k, e, R) => {
+      k.burst('puffs', 4, e.x, e.y, -10);
+      puff(k, e, R, 0x9ca3af, 6);
+    },
+  },
+  // A Mirror glints before its ring of glass, and breaks like glass.
+  mirror: {
+    look: { tex: 'mirror', scale: 0.65, bits: [0xe2e8f0, 0xcbd5e1, 0xffffff] },
+    shot: 'shot-shard',
+    tell: ({ f, mk, P, t }) => {
+      const p = soon(f, t);
+      if (p < 0) return;
+      const [X, Y] = P(f.x, f.y),
+        s = 4 + 6 * p;
+      mk.fillStyle(0xffffff, 0.5 + 0.5 * p).fillPoints([{ x: X + 6, y: Y - 14 - s }, { x: X + 7.5, y: Y - 14 }, { x: X + 6, y: Y - 14 + s }, { x: X + 4.5, y: Y - 14 }], true);
+      mk.fillRect(X + 6 - s, Y - 14.5, s * 2, 1);
+    },
+    death: (k, e, R) => glass(k, e, R, 10, 240, 1.1),
+  },
+  // The Ash Golem, at the end of each floor: the floor glows under it before it stomps, it throws
+  // boulders where you stand, and it falls apart into rock and embers.
+  golem: {
+    look: { tex: 'ashGolem', scale: 0.95, bits: [0x78716c, 0x44403c, 0xf97316] },
+    shot: 'shot-cinder',
+    heavy: true,
+    tell: ({ f, fx, t }) => {
+      const p = soon(f, t);
+      if (p < 0) return;
+      fx.fillStyle(0xea580c, 0.12 + 0.25 * p).fillCircle(f.x, f.y, f.def.r * (1.2 + 0.8 * p));
+      fx.lineStyle(2, 0xfdba74, 0.3 + 0.5 * p).strokeCircle(f.x, f.y, f.def.r * (2 - 0.6 * p));
+    },
+    death: (k, e, R) => {
+      k.burst('bits', 14, e.x, e.y, 0, 0xf97316);
+      k.burst('puffs', 6, e.x, e.y, 6);
+      const { x, y } = e;
+      k.fade(600, (g, p) => {
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2 + 0.3;
+          g.lineStyle(2, 0xf97316, 0.8 * (1 - p)).lineBetween(x, y, x + Math.cos(a) * R * (0.6 + 0.6 * p), y + Math.sin(a) * R * (0.6 + 0.6 * p));
+        }
+      });
+    },
+  },
   // A golden copy of you, sent by the Mirror. Hitting it hurts you.
   reflection: {
     look: { tex: 'echo', scale: 0.75, bits: [0xfde68a, 0xfbbf24, 0xffffff], tint: 0xfde68a },
@@ -210,6 +434,8 @@ export const FOE_FX: Record<MonsterKind, FoeFx> = {
   // Glows red before it charges, along the line it will take.
   ram: {
     look: { tex: 'ram', scale: 0.62, bits: [0xe89a48, 0xb8651e, 0xe8dcc0] },
+    shot: 'shot-rock',
+    death: (k, e, R) => puff(k, e, R, 0xe8dcc0),
     tell: ({ f, fx, t }) => {
       if (t >= f.windUntil) return;
       const p = 1 - (f.windUntil - t) / 0.75,
@@ -218,18 +444,56 @@ export const FOE_FX: Record<MonsterKind, FoeFx> = {
     },
     body: (s, { f, t, now, look }) => void s.setTint(t < f.windUntil && Math.floor(now / 90) % 2 ? 0xff4d4d : (look.tint ?? 0xffffff)),
   },
-  book: { look: { tex: 'book', scale: 0.62, bits: [0xfef3c7, 0xd6d3d1, 0x92400e] } },
-  smoke: { look: { tex: 'smoke', scale: 0.55, bits: [0xa78bfa, 0x6b21a8, 0xe9d5ff] } },
-  seeker: { look: { tex: 'seeker', scale: 0.55, bits: [0x67e8f9, 0x0e7490, 0xffffff] } },
+  // The Book of Days: its pages flutter loose when it's gone.
+  book: {
+    look: { tex: 'book', scale: 0.62, bits: [0xfef3c7, 0xd6d3d1, 0x92400e] },
+    death: (k, e) => {
+      const [X, Y] = k.P(e.x, e.y);
+      k.fade(
+        700,
+        (g, p) => {
+          for (let i = 0; i < 5; i++) {
+            const x = X + (i - 2) * 9 + Math.sin(p * 9 + i) * 6,
+              y = Y - 10 + p * 30 + (i % 2) * 6;
+            g.fillStyle(0xfef3c7, 1 - p).fillRect(x, y, 6, 7);
+          }
+        },
+        true,
+      );
+    },
+  },
+  // A Smoker: lobs a bomb (drawMine), throws violet sparks when it bursts, and goes up in soot.
+  smoke: {
+    look: { tex: 'smoke', scale: 0.55, bits: [0x6a5d86, 0x3b3350, 0xa78bfa] },
+    shot: 'shot-spark',
+    death: (k, e, R) => {
+      k.burst('puffs', 8, e.x, e.y, -6);
+      puff(k, e, R, 0xa78bfa, 4);
+    },
+  },
+  // A Seeker: its eye lights up before it cries tears that curve after you.
+  seeker: {
+    look: { tex: 'seeker', scale: 0.55, bits: [0x67e8f9, 0x0e7490, 0xffffff] },
+    shot: 'shot-tear',
+    tell: ({ f, mk, P, t }) => {
+      const p = soon(f, t);
+      if (p < 0) return;
+      const [X, Y] = P(f.x, f.y);
+      mk.lineStyle(2, 0x67e8f9, 0.4 + 0.5 * p).strokeCircle(X, Y - 4, 6 + 10 * (1 - p));
+    },
+    death: (k, e, R) => puff(k, e, R, 0x67e8f9),
+  },
   // Falls apart into its three Splitlings.
   splitter: {
     look: { tex: 'splitter', scale: 0.78, bits: [0x86efac, 0x15803d, 0xdcfce7] },
+    shot: 'shot-goo',
     death: (k, e, _R, look) => k.once('splitterPop', e.x, e.y, look.scale),
   },
   splitling: { look: { tex: 'splitling', scale: 0.5, bits: [0x86efac, 0x15803d] } },
   // Fades out, and marks where it will land.
   shade: {
     look: { tex: 'shade', scale: 0.65, bits: [0xa78bfa, 0x6b21a8, 0x1e1b4b] },
+    shot: 'shot-void',
     tell: ({ f, fx, t }) => {
       if (t >= f.windUntil) return;
       const p = 1 - (f.windUntil - t) / 0.8;
@@ -237,9 +501,13 @@ export const FOE_FX: Record<MonsterKind, FoeFx> = {
       fx.fillStyle(0x6b21a8, 0.2 + 0.3 * p).fillCircle(f.dashX, f.dashY, 16);
     },
     body: (s, { f, t }) => void s.setAlpha(t < f.windUntil ? 0.25 : 1),
+    death: (k, e) => {
+      const [X, Y] = k.P(e.x, e.y);
+      k.fade(500, (g, p) => g.fillStyle(0x6b21a8, 0.5 * (1 - p)).fillEllipse(X, Y - 20 * p, 20 * (1 - p) + 4, 30 * (1 - p) + 4), true);
+    },
   },
   // The Warden of the Ashes: the golem, much bigger, the grey of cold ash, embers glowing under it.
-  warden: { look: { tex: 'warden', scale: 1.3, bits: [0x78716c, 0xf97316, 0xfde68a] }, heavy: true },
+  warden: { look: { tex: 'warden', scale: 1.3, bits: [0x78716c, 0xf97316, 0xfde68a] }, shot: 'shot-ember-big', heavy: true },
   // The Mirror's images look exactly like it (the scene swaps in the Mirror's own art, BOSS_ART).
   image: { look: BOSS_LOOKS.mirror, death: (k, e, R) => glass(k, e, R, 12, 240, 1) },
   // The other zones' mid-bosses: the Drowned Lantern, the Foreman, the Sand Golem (which swaps to

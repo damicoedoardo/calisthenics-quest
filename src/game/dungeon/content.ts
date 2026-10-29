@@ -147,6 +147,8 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
   slime: { hp: 16, speed: 46, dmg: 8, r: 14, xp: 1, move: 'chase', shoots: [{ every: 2.6, kind: 'aimed', n: 1, speed: 120, dmg: 7, first: 1.2 }], cost: 1 },
   wisp: { hp: 10, speed: 80, dmg: 5, r: 12, xp: 1, move: 'orbit', range: 150, shoots: [{ every: 2.3, kind: 'spread', n: 3, arc: 0.5, speed: 140, dmg: 6, first: 1.5 }], cost: 1.5 },
   mirror: { hp: 36, speed: 50, dmg: 10, r: 15, xp: 3, move: 'keep', range: 210, shoots: [{ every: 3.2, kind: 'ring', n: 10, speed: 105, dmg: 8, first: 1.8 }], cost: 2.5 },
+  // The Ash Golem, at the end of each floor: throws a boulder where you stand (step out before it
+  // lands and bursts), and stomps a ring of cinders that starts slow and speeds up.
   golem: {
     hp: 220,
     speed: 36,
@@ -155,8 +157,8 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
     xp: 12,
     move: 'chase',
     shoots: [
-      { every: 3.4, kind: 'spread', n: 5, arc: 0.7, speed: 135, dmg: 10, first: 1.5 },
-      { every: 5, kind: 'ring', n: 14, speed: 95, dmg: 9, first: 3 },
+      { every: 3.4, kind: 'mine', n: 6, speed: 100, dmg: 12, r: 50, first: 1.5 },
+      { every: 5, kind: 'ring', n: 14, speed: 100, dmg: 9, style: 'ramp', first: 3 },
     ],
     cost: 6,
   },
@@ -453,7 +455,8 @@ export const BOSSES: Record<FogBoss, MonsterDef & { plates?: number }> = {
     xp: 0,
     move: 'chase',
     shoots: [
-      { every: 3, kind: 'ring', n: 12, speed: 90, dmg: 10, first: 2 },
+      // a ring of Zs that drift as they go, and an alarm clock thrown at you
+      { every: 3, kind: 'ring', n: 12, speed: 90, dmg: 10, style: 'wiggle', first: 2 },
       { every: 2.2, kind: 'aimed', n: 1, speed: 150, dmg: 9, r: 8, first: 1 },
     ],
     cost: 0,

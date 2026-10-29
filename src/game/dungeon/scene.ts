@@ -16,7 +16,7 @@ import { bandOf, glowOf } from './items';
 import { BANDS, MATS, PARTY, SURGE } from '@/balance';
 import { spLook } from '@/sprites/characters/spLooks';
 import { WEAPON_FX, attackFx, drawFields, shotTexture, spFx, star, type Aura, type SpEvent } from './spFx';
-import { BOSS_ART, BOSS_LOOKS, FOE_FX, SHOT_ART, bossStage, drawMine, mirrorBreaks, shotOf, type FoeCtx, type FoeKit, type Look } from './foeFx';
+import { BOSS_ART, BOSS_LOOKS, FOE_FX, SHOT_ART, bossStage, drawMine, mirrorBreaks, shotOf, soon, type FoeCtx, type FoeKit, type Look } from './foeFx';
 import {
   ABILITIES,
   DODGE,
@@ -316,10 +316,8 @@ const hex = (c: string) => {
 const clampX = (x: number, w: number) => Math.min(w - 105, Math.max(105, x));
 
 
-/** How long before a monster's volley it swells, so you see the shots coming (s). */
-const TELL = 0.35;
-/** Whether a monster is about to fire a volley (not a stream of quick shots, which would just throb). */
-const aboutToFire = (f: Run['foes'][number], t: number) => f.def.shoots.some((p, i) => !p.on && p.every >= 1 && f.next[i] > t && f.next[i] - t < TELL);
+/** Whether a monster is about to fire a volley: it swells TELL (foeFx.ts) before, so you see the shots coming. */
+const aboutToFire = (f: Run['foes'][number], t: number) => soon(f, t) >= 0;
 
 class DungeonScene extends Phaser.Scene {
   run: Run;
@@ -1706,7 +1704,7 @@ class DungeonScene extends Phaser.Scene {
       }
     }
 
-    this.syncMap(this.bullets, r.bullets, (b) => this.add.image(...this.P(b.x, b.y), shotOf(b.from, b.boss, b.style)).setDepth(this.dark ? 145000 : 80000), (img, b) => {
+    this.syncMap(this.bullets, r.bullets, (b) => this.add.image(...this.P(b.x, b.y), shotOf(b.from, b.boss, b.style, this.setup.zone.boss, b.pat)).setDepth(this.dark ? 145000 : 80000), (img, b) => {
       const art = SHOT_ART[img.texture.key];
       if (art?.spin) img.setRotation(r.t * art.spin + b.id);
       else if (art?.point) img.setRotation(Math.atan2(b.vy, b.vx) + Math.PI / 2);
@@ -1931,6 +1929,14 @@ class DungeonScene extends Phaser.Scene {
         // The mid-boss winds up its own attack as it fires.
         const mid = this.run.warden;
         if (mid?.alive && e.x === mid.x && e.y === mid.y) this.bossAttack(mid);
+        // A regular monster plays its attack as it fires, and its own flourish (foeFx.ts).
+        else if (e.kind && e.kind !== 'boss' && e.id !== undefined) {
+          const f = this.run.foes.find((o) => o.id === e.id);
+          if (f?.alive) {
+            this.bossAttack(f);
+            FOE_FX[e.kind].fire?.(this.kit, f, looks(e.kind, this.setup.zone));
+          }
+        }
         break;
       case 'split':
         this.speak(this.setup.lines?.stages[0]);
@@ -2795,7 +2801,7 @@ class DungeonScene extends Phaser.Scene {
     // Smoke bombs: in the air, then a circle filling up until it bursts.
     for (const m of r.mines) {
       const flying = r.t < m.lands;
-      drawMine(this.fx, mk, this.kit.P, m, flying, flying ? 1 - (m.lands - r.t) / 0.55 : 1 - (m.at - r.t) / 1.1);
+      drawMine(this.fx, mk, this.kit.P, m, flying, flying ? 1 - (m.lands - r.t) / 0.55 : 1 - (m.at - r.t) / 1.1, now);
     }
     this.drawGround();
   }
