@@ -15,7 +15,8 @@ import { THEMES, themeFor, type Theme } from './themes';
 import { bandOf, glowOf } from './items';
 import { BANDS, MATS, PARTY, SURGE } from '@/balance';
 import { spLook } from '@/sprites/characters/spLooks';
-import { WEAPON_FX, attackFx, drawFields, shotTexture, spFx, star, type Aura, type FxKit, type SpEvent } from './spFx';
+import { WEAPON_FX, attackFx, drawFields, shotTexture, spFx, star, type Aura, type SpEvent } from './spFx';
+import { BOSS_ART, BOSS_LOOKS, FOE_FX, SHOT_ART, bossStage, drawMine, mirrorBreaks, shotOf, type FoeCtx, type FoeKit, type Look } from './foeFx';
 import {
   ABILITIES,
   DODGE,
@@ -77,7 +78,6 @@ import {
   type Run,
   type Side,
   type RunEnd as EngineEnd,
-  type ShotStyle,
   byOf,
 } from './engine';
 import { runFromStart, type Up } from '../net/wire';
@@ -290,68 +290,13 @@ const SFX_PER_FRAME = 2;
 /** At most this much hit-stop (ms) in any one second. */
 const STOP_BUDGET = 140;
 
-/** How a monster is drawn: its sprite sheet, its size (1 = a 64px sheet at full size), and the
-    colors of the bits it bursts into. */
-type Look = { tex: SheetKey; scale: number; bits: number[]; tint?: number };
-/** Each boss's stand-in until its zone's own art (BOSS_ART) is loaded, and its size for the label. */
-const BOSS_LOOKS: Record<FogBoss, Look> = {
-  tomorrow: { tex: 'slime', scale: 1.5, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0] },
-  mirror: { tex: 'mirror', scale: 1.35, bits: [0xe2e8f0, 0xcbd5e1, 0xffffff] },
-  knight: { tex: 'knight', scale: 1.15, bits: [0xe2e8f0, 0x94a3b8, 0xdc2626] },
-  plateau: { tex: 'hollow', scale: 1.5, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
-  hollow: { tex: 'hollow', scale: 1.5, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
-  summit: { tex: 'hollow', scale: 1.5, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
-};
-/** Every monster's look, each with its own sprite (src/sprites/characters). */
-const DUNGEON_LOOKS: Record<MonsterKind, Look> = {
-  slime: { tex: 'slime', scale: 0.55, bits: [0x94a3b8, 0x5b74c4, 0xe2e8f0] },
-  wisp: { tex: 'wisp', scale: 0.5, bits: [0xf97316, 0xfde68a, 0x6b7280] },
-  mirror: { tex: 'mirror', scale: 0.65, bits: [0xe2e8f0, 0xcbd5e1, 0xffffff] },
-  golem: { tex: 'golem', scale: 0.95, bits: [0xa8a29e, 0x78716c, 0x84cc16] },
-  // A golden copy of you, sent by the Mirror. Hitting it hurts you.
-  reflection: { tex: 'echo', scale: 0.75, bits: [0xfde68a, 0xfbbf24, 0xffffff] },
-  ram: { tex: 'ram', scale: 0.62, bits: [0xe89a48, 0xb8651e, 0xe8dcc0] },
-  book: { tex: 'book', scale: 0.62, bits: [0xfef3c7, 0xd6d3d1, 0x92400e] },
-  smoke: { tex: 'smoke', scale: 0.55, bits: [0xa78bfa, 0x6b21a8, 0xe9d5ff] },
-  seeker: { tex: 'seeker', scale: 0.55, bits: [0x67e8f9, 0x0e7490, 0xffffff] },
-  splitter: { tex: 'splitter', scale: 0.78, bits: [0x86efac, 0x15803d, 0xdcfce7] },
-  splitling: { tex: 'splitling', scale: 0.5, bits: [0x86efac, 0x15803d] },
-  shade: { tex: 'shade', scale: 0.65, bits: [0xa78bfa, 0x6b21a8, 0x1e1b4b] },
-  // The Warden of the Ashes: the golem, much bigger, the grey of cold ash, embers glowing under it.
-  warden: { tex: 'warden', scale: 1.3, bits: [0x78716c, 0xf97316, 0xfde68a] },
-  // The Mirror's images look exactly like it (the scene swaps in the Mirror's own art, BOSS_ART).
-  image: { tex: BOSS_LOOKS.mirror.tex, scale: BOSS_LOOKS.mirror.scale, bits: BOSS_LOOKS.mirror.bits },
-  // The other zones' mid-bosses: the Drowned Lantern, the Foreman, the Sand Golem (which swaps to
-  // its stone sheet while it stands), the Whisper and the Gale.
-  lantern: { tex: 'lanternMid', scale: 1.15, bits: [0x7dd3fc, 0x0e7490, 0xe0f2fe] },
-  foreman: { tex: 'foremanMid', scale: 1.2, bits: [0xd6a36b, 0x92400e, 0x86efac] },
-  sandGolem: { tex: 'sandGolemMid', scale: 1.25, bits: [0xe8c48a, 0xb08850, 0x8f6b3d] },
-  whisper: { tex: 'whisperMid', scale: 0.85, bits: [0xc4b5fd, 0x7c3aed, 0xffffff] },
-  gale: { tex: 'galeMid', scale: 1.15, bits: [0xe2e8f0, 0x94a3b8, 0xffffff] },
-};
 /** The mid-bosses' kinds, for the big pops and stomps. */
 const MID_KINDS = new Set<Foe['kind']>(MIDS.map((m) => m.kind));
 /** How far you see right now: the Fog's sight, or the Drowned Lantern's dark (null: all of it). */
 const sightNow = (r: Run) => zoneDungeon(r.setup.zone).sight ?? r.dim;
 /** The dark's texture is drawn for this sight, and stretched for any other. */
 const DARK_REF = 190;
-const looks = (kind: Foe['kind'], zone: Zone): Look => (kind === 'boss' ? BOSS_LOOKS[zone.boss] : DUNGEON_LOOKS[kind]);
-/** Each zone boss's own art, in the stages of its fight (the Knight's plates falling, the
-    Plateau's cracks), and its height on screen (1 = the hero's). Until a zone's sheets are loaded
-    the boss wears its stand-in from BOSS_LOOKS. Swapping a boss's art is a change here. */
-const BOSS_ART: Partial<Record<FogBoss, { stages: BossSheetKey[]; size: number; bits: number[] }>> = {
-  mirror: { stages: ['mirrorBoss'], size: 1.05, bits: [0xe0f2fe, 0x7dd3fc, 0xffffff] },
-  knight: { stages: ['knightBoss', 'knightBoss1', 'knightBoss2'], size: 1.15, bits: [0xe2e8f0, 0x94a3b8, 0xdc2626] },
-  plateau: { stages: ['plateauBoss', 'plateauBoss1', 'plateauBoss2'], size: 1.7, bits: [0xd9b47a, 0x8f6b3d, 0x5a4124] },
-  hollow: { stages: ['hollowBoss'], size: 1.3, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
-  summit: { stages: ['summitBoss'], size: 1.9, bits: [0xe2e8f0, 0xfde68a, 0xffffff] },
-};
-/** Which stage of its art a boss is in: the Knight by plates left, the Plateau by its cracks. */
-function bossStage(which: FogBoss, f: Foe): number {
-  if (which === 'knight') return f.hp > f.maxHp * (2 / 3) ? 0 : f.hp > f.maxHp / 3 ? 1 : 2;
-  if (which === 'plateau') return f.phase <= 3 ? 0 : f.phase <= 6 ? 1 : 2;
-  return 0;
-}
+const looks = (kind: Foe['kind'], zone: Zone): Look => (kind === 'boss' ? BOSS_LOOKS[zone.boss] : FOE_FX[kind].look);
 /** A crit's number: gold, and on its own, not added to the hits around it. */
 const CRIT_COLOR = '#fde047';
 /** A door to a room you haven't been in: it doesn't say what waits there. */
@@ -360,8 +305,6 @@ const UNKNOWN = { label: '?', color: 0xcbd5e1 };
 const BEEN = 0x94a3b8;
 /** Into the room from each wall (engine space). */
 const INWARD: Record<Side, [number, number]> = { e: [0, 1], w: [0, -1], n: [1, 0], s: [-1, 0] };
-/** Each kind of monster shot has its own color, so you learn what it will do. */
-const SHOT_TEX: Record<ShotStyle, string> = { plain: 'bullet', homing: 'bullet-homing', bounce: 'bullet-bounce', ramp: 'bullet-ramp', wiggle: 'bullet-page' };
 /** A color as a number. Remembered, since the ground asks for the theme's colors every frame. */
 const hexes = new Map<string, number>();
 const hex = (c: string) => {
@@ -466,7 +409,7 @@ class DungeonScene extends Phaser.Scene {
   /** You were down (a party run) last frame. */
   private heroDown = false;
   /** What the SP effects (spFx.ts) draw with. */
-  private readonly kit: FxKit = {
+  private readonly kit: FoeKit = {
     fade: (ms, draw, up) => this.fade(ms, draw, up),
     P: (x, y) => this.P(x, y),
     burst: (kind, n, x, y, dy, tint) => {
@@ -493,6 +436,11 @@ class DungeonScene extends Phaser.Scene {
       this.hiddenUntil = Math.max(this.hiddenUntil, this.time.now + ms);
     },
     room: () => this.run.area,
+    once: (tex, x, y, scale) => {
+      const [X, Y] = this.P(x, y),
+        s = this.add.sprite(X, Y, tex).setScale(scale).setDepth(Y).play(tex);
+      s.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => s.destroy());
+    },
   };
   /** Finals used this run: the HUD shows a small badge with the final's name when it goes up. */
   private finals = 0;
@@ -914,36 +862,8 @@ class DungeonScene extends Phaser.Scene {
       g.fillStyle(0xc4b5fd).fillCircle(7, 7, 4);
       g.fillStyle(0xffffff).fillCircle(6, 6, 2);
     });
-    // Monster shots: hot, round and easy to read against any ground.
-    tex('bullet', 14, 14, () => {
-      g.fillStyle(0xf43f5e, 0.35).fillCircle(7, 7, 7);
-      if (zone.boss === 'plateau') g.fillStyle(0x1c1712).fillCircle(7, 7, 6);
-      g.fillStyle(0xfb7185).fillCircle(7, 7, 5);
-      g.fillStyle(0xffe4e6).fillCircle(6, 6, 2);
-    });
-    tex('bullet-boss', 18, 18, () => {
-      g.fillStyle(0xa855f7, 0.35).fillCircle(9, 9, 9);
-      g.fillStyle(0xc084fc).fillCircle(9, 9, 6);
-      g.fillStyle(0xf5d0fe).fillCircle(8, 8, 3);
-    });
-    // On the Plateau's sandstone, warm shots get a dark rim and a bigger light core so they read.
-    const rim = zone.boss === 'plateau';
-    const shot = (key: string, glow: number, body: number, core: number) =>
-      tex(key, 14, 14, () => {
-        g.fillStyle(glow, 0.35).fillCircle(7, 7, 7);
-        if (rim) g.fillStyle(0x1c1712).fillCircle(7, 7, 6);
-        g.fillStyle(body).fillCircle(7, 7, 5);
-        g.fillStyle(core).fillCircle(6, 6, rim ? 3 : 2);
-      });
-    shot('bullet-homing', 0x22d3ee, 0x67e8f9, 0xecfeff);
-    shot('bullet-bounce', 0x84cc16, 0xbef264, 0xf7fee7);
-    shot('bullet-ramp', 0xf97316, 0xfdba74, 0xfff7ed);
-    // The Book's pages.
-    tex('bullet-page', 12, 12, () => {
-      g.fillStyle(0xfbbf24, 0.35).fillRect(0, 0, 12, 12);
-      g.fillStyle(0xfef3c7).fillRect(2, 1, 8, 10);
-      g.fillStyle(0xa16207).fillRect(3, 3, 6, 1).fillRect(3, 5, 6, 1).fillRect(3, 7, 4, 1);
-    });
+    // Monster shots (foeFx.ts): on the Plateau's sandstone, warm shots get a dark rim so they read.
+    for (const [key, art] of Object.entries(SHOT_ART)) tex(key, art.w, art.h, () => art.paint(g, zone.boss === 'plateau'));
     // The furniture, drawn as text rows (props.ts), two texture pixels per character.
     const prop = (key: string, { rows, palette }: Prop, under?: () => void) =>
       tex(key, rows[0].length * 2, rows.length * 2, () => {
@@ -1485,6 +1405,11 @@ class DungeonScene extends Phaser.Scene {
     return { tex: key, scale: (art.size * 64 * 0.8) / sheet.h, bits: art.bits };
   }
 
+  /** One monster on this frame, for its warnings and body language (foeFx.ts). */
+  private foeCtx(f: Foe, mk: Phaser.GameObjects.Graphics, now: number): FoeCtx {
+    return { f, fx: this.fx, mk, P: this.kit.P, t: this.run.t, now, look: looks(f.kind, this.setup.zone) };
+  }
+
   /** The boss (or the mid-boss) plays its attack once, when it has one. */
   private bossAttack(b: Foe | null = this.run.boss) {
     const e = b && this.foes.get(b.id),
@@ -1703,8 +1628,7 @@ class DungeonScene extends Phaser.Scene {
       if (!e) {
         const look = f.kind === 'boss' || f.kind === 'image' ? this.bossLook(f) : looks(f.kind, this.setup.zone);
         const s = this.add.sprite(...this.P(f.x, f.y), look.tex).play(look.tex).setScale(look.scale);
-        if (f.kind === 'reflection') s.setTint(0xfde68a);
-        else if (look.tint) s.setTint(look.tint);
+        if (look.tint) s.setTint(look.tint);
         e = { s, base: look.scale * (f.elite ? ELITE.r : 1), born: now, squash: 0, flash: 0, tex: look.tex, attackAt: 0 };
         this.foes.set(f.id, e);
       }
@@ -1747,14 +1671,14 @@ class DungeonScene extends Phaser.Scene {
       else s.setAlpha(1).setScale(base * (aboutToFire(f, r.t) ? 1.14 : 1));
       if (e.flash && now >= e.flash) {
         e.flash = 0;
-        const tint = f.kind === 'reflection' ? 0xfde68a : f.kind === 'boss' || f.kind === 'image' ? undefined : looks(f.kind, this.setup.zone).tint;
+        const tint = f.kind === 'boss' || f.kind === 'image' ? undefined : looks(f.kind, this.setup.zone).tint;
         if (tint) s.setTint(tint);
         else if (f === r.boss && r.t < f.windUntil) s.setTint(0xff6b6b);
         else s.clearTint();
       }
-      // A ram glowing before its charge; a shade fading out before it lands.
-      if (f.kind === 'ram' && !e.flash) s.setTint(r.t < f.windUntil && Math.floor(now / 90) % 2 ? 0xff4d4d : (looks('ram', this.setup.zone).tint ?? 0xffffff));
-      if (f.kind === 'shade') s.setAlpha(r.t < f.windUntil ? 0.25 : 1);
+      // Its own body language (foeFx.ts): a ram glowing before its charge, a shade fading out.
+      const own = f.kind === 'boss' ? undefined : FOE_FX[f.kind];
+      if (own?.body && !e.flash) own.body(s, this.foeCtx(f, this.marks, now));
       // The Sand Golem set to stone while it stands; the Whisper flickering white before it trades places.
       if (f === r.warden && f.kind === 'sandGolem') {
         const tex = hardened(r, f) ? 'sandGolemMidStone' : 'sandGolemMid';
@@ -1782,8 +1706,10 @@ class DungeonScene extends Phaser.Scene {
       }
     }
 
-    this.syncMap(this.bullets, r.bullets, (b) => this.add.image(...this.P(b.x, b.y), b.boss && b.style === 'plain' ? 'bullet-boss' : SHOT_TEX[b.style]).setDepth(this.dark ? 145000 : 80000), (img, b) => {
-      if (b.style === 'wiggle') img.setRotation(r.t * 6 + b.id);
+    this.syncMap(this.bullets, r.bullets, (b) => this.add.image(...this.P(b.x, b.y), shotOf(b.from, b.boss, b.style)).setDepth(this.dark ? 145000 : 80000), (img, b) => {
+      const art = SHOT_ART[img.texture.key];
+      if (art?.spin) img.setRotation(r.t * art.spin + b.id);
+      else if (art?.point) img.setRotation(Math.atan2(b.vy, b.vx) + Math.PI / 2);
     });
     for (const b of r.terrain.barrels)
       if (!b.alive && this.barrels.has(b.id)) {
@@ -1953,31 +1879,16 @@ class DungeonScene extends Phaser.Scene {
           g.lineStyle(4 * (1 - p) + 1, 0xffffff, 0.9 * (1 - p)).strokeCircle(x, y, R * (0.6 + 1.4 * p));
           if (big) g.lineStyle(2, look.bits[0], 0.7 * (1 - p)).strokeCircle(x, y, R * (0.8 + 2.4 * p));
         });
-        // the Splitter bursts into its three Splitlings
-        if (e.kind === 'splitter') {
-          const [X, Y] = this.P(x, y),
-            pop = this.add.sprite(X, Y, 'splitterPop').setScale(look.scale).setDepth(Y).play('splitterPop');
-          pop.once(Phaser.Animations.Events.ANIMATION_COMPLETE, () => pop.destroy());
-        }
+        // Its own end (foeFx.ts): the Splitter bursts into its Splitlings, a copy breaks like glass.
+        const own = boss ? undefined : FOE_FX[e.kind as MonsterKind];
+        own?.death?.(this.kit, e, R, look);
         if (big) {
           buzz(huge ? [30, 40, 50] : 25);
           this.cameras.main.shake(huge ? 320 : 160, huge ? 0.01 : 0.006);
           this.hitStop(huge ? 70 : 60);
         }
-        if (e.kind === 'image' || e.kind === 'reflection' || (boss && this.setup.zone.boss === 'mirror')) {
-          // A copy (or the Mirror itself) breaks like glass.
-          this.sfx('glass', boss ? 0.7 : e.kind === 'image' ? 1 : 1.2);
-          this.bits.particleTint = 0xe0f2fe;
-          this.burst(this.bits, boss ? 30 : 12, x, y);
-          this.fade(boss ? 500 : 240, (g, p) => {
-            for (let i = 0; i < 6; i++) {
-              const a = (i / 6) * Math.PI * 2 + 0.4,
-                r0 = R * (0.3 + 1.2 * p);
-              g.lineStyle(2, 0xffffff, 0.9 * (1 - p)).lineBetween(x + Math.cos(a) * r0 * 0.5, y + Math.sin(a) * r0 * 0.5, x + Math.cos(a) * r0, y + Math.sin(a) * r0);
-            }
-          });
-        }
-        this.sfx('kill', big ? 0.6 : e.kind === 'wisp' ? 1.3 : 1);
+        if (boss && this.setup.zone.boss === 'mirror') mirrorBreaks(this.kit, e, R);
+        this.sfx('kill', big ? 0.6 : (own?.killPitch ?? 1));
         if (boss) {
           // Gone for good: the room stays up after the boss (the stairs home), and sync must not
           // write to a destroyed label (that froze the game after Tomorrow fell).
@@ -2242,7 +2153,7 @@ class DungeonScene extends Phaser.Scene {
         break;
       case 'spawn':
         this.burst(this.puffs, 5, e.x, e.y, 20);
-        if (e.kind === 'golem' || MID_KINDS.has(e.kind)) {
+        if (e.kind !== 'boss' && FOE_FX[e.kind].heavy) {
           this.sfx('stomp');
           this.cameras.main.shake(180, 0.004);
         }
@@ -2849,20 +2760,10 @@ class DungeonScene extends Phaser.Scene {
     if (r.stairs) this.fx.lineStyle(2, 0xfbbf24, 0.25 + 0.3 * ((Math.sin(now / 220) + 1) / 2)).strokeCircle(r.stairs.x, r.stairs.y, 32);
     // The ward, while it's up.
     if (relic(r.hero, 'charm') && r.t >= r.hero.wardAt) this.fx.lineStyle(2, 0x7dd3fc, 0.35 + 0.15 * Math.sin(now / 180)).strokeCircle(r.hero.x, r.hero.y, 24);
-    // A ram's line before it charges.
+    // Each monster's warnings (foeFx.ts): a ram's line before it charges, where a shade will land.
     for (const f of r.foes) {
-      if (!f.alive) continue;
-      if (f.kind === 'ram' && r.t < f.windUntil) {
-        const p = 1 - (f.windUntil - r.t) / 0.75,
-          len = 330 * 0.6;
-        this.fx.lineStyle(f.def.r * 2, 0xef4444, 0.1 + 0.25 * p).lineBetween(f.x, f.y, f.x + f.dashX * len, f.y + f.dashY * len);
-      }
-      // Where a shade will land.
-      if (f.kind === 'shade' && r.t < f.windUntil) {
-        const p = 1 - (f.windUntil - r.t) / 0.8;
-        this.fx.lineStyle(2, 0xa78bfa, 0.9).strokeCircle(f.dashX, f.dashY, 26 - 10 * p);
-        this.fx.fillStyle(0x6b21a8, 0.2 + 0.3 * p).fillCircle(f.dashX, f.dashY, 16);
-      }
+      const tell = f.alive && f.kind !== 'boss' ? FOE_FX[f.kind].tell : undefined;
+      if (tell) tell(this.foeCtx(f, mk, now));
     }
     // In the fog: the eyes of what waits just past what you can see.
     const sight = sightNow(r);
@@ -2893,17 +2794,8 @@ class DungeonScene extends Phaser.Scene {
     }
     // Smoke bombs: in the air, then a circle filling up until it bursts.
     for (const m of r.mines) {
-      if (r.t < m.lands) {
-        const p = 1 - (m.lands - r.t) / 0.55;
-        this.fx.fillStyle(0x000000, 0.25).fillCircle(m.x, m.y, 4 + 6 * p);
-        const [X, Y] = this.P(m.x, m.y);
-        mk.fillStyle(0xc4b5fd).fillCircle(X, Y - 40 * Math.sin(Math.PI * p), 5);
-      } else {
-        const p = 1 - (m.at - r.t) / 1.1;
-        this.fx.lineStyle(2, 0xc084fc, 0.9).strokeCircle(m.x, m.y, m.r);
-        this.fx.fillStyle(0xa855f7, 0.1 + 0.3 * p).fillCircle(m.x, m.y, m.r * p);
-        this.fx.fillStyle(0xe9d5ff).fillCircle(m.x, m.y, 4);
-      }
+      const flying = r.t < m.lands;
+      drawMine(this.fx, mk, this.kit.P, m, flying, flying ? 1 - (m.lands - r.t) / 0.55 : 1 - (m.at - r.t) / 1.1);
     }
     this.drawGround();
   }

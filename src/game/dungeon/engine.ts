@@ -229,7 +229,8 @@ export interface Bullet {
   ang: number;
   spd: number;
   /** Bounces off walls left. */
-  bounce: number;
+  bounce: number;  /** Who fired it, for its look (FOE_FX in foeFx.ts). */
+  from?: FoeKind;
 }
 
 /** A lobbed bomb: lands, then bursts at `at`. */
@@ -245,6 +246,8 @@ export interface Mine {
   /** Shots it throws when it bursts. */
   n: number;
   speed: number;
+  /** Who threw it, for its look (FOE_FX in foeFx.ts). */
+  from?: FoeKind;
 }
 
 export interface Shot {
@@ -291,7 +294,8 @@ export type GameEvent =
   | { type: 'kill'; id: number; x: number; y: number; kind: FoeKind; elite: boolean }
   /** A hero took a hit; `hero` is whose (their id), so a phone shakes only for its own. */
   | { type: 'hurt'; x: number; y: number; dmg: number; by: 'shot' | 'touch' | 'image' | 'reflection'; hero?: number }
-  | { type: 'shoot'; x: number; y: number; boss: boolean }
+  /** A monster fired a volley (`id` and `kind`: which, for its look). */
+  | { type: 'shoot'; x: number; y: number; boss: boolean; id?: number; kind?: FoeKind }
   | { type: 'burst'; x: number; y: number; r: number; color: 'nova' | 'orb' | 'wave' | 'fire' | 'ability' }
   | { type: 'chain'; points: { x: number; y: number }[] }
   | { type: 'ability'; id: AbilityId; x: number; y: number; toX: number; toY: number }
@@ -2289,8 +2293,8 @@ function shoot(run: Run, f: Foe, p: Pattern) {
     // Lobbed at where you stand, a little off; it lands, then bursts.
     const x = clamp(h.x + (run.rnd() - 0.5) * 40, ROOM.wall + 10, run.area.w - ROOM.wall - 10),
       y = clamp(h.y + (run.rnd() - 0.5) * 40, ROOM.wall + 10, run.area.h - ROOM.wall - 10);
-    run.mines.push({ id: ++run.ids, x, y, r: p.r ?? 46, dmg, lands: run.t + MINE.flight, at: run.t + MINE.flight + MINE.fuse, n: p.n, speed });
-    emit(run, { type: 'shoot', x: f.x, y: f.y, boss });
+    run.mines.push({ id: ++run.ids, x, y, r: p.r ?? 46, dmg, lands: run.t + MINE.flight, at: run.t + MINE.flight + MINE.fuse, n: p.n, speed, from: f.kind });
+    emit(run, { type: 'shoot', x: f.x, y: f.y, boss, id: f.id, kind: f.kind });
     return;
   }
   const add = (a: number) =>
@@ -2308,6 +2312,7 @@ function shoot(run: Run, f: Foe, p: Pattern) {
       ang: a,
       spd: speed,
       bounce: style === 'bounce' ? 1 : 0,
+      from: f.kind,
     });
   if (p.kind === 'aimed') for (let i = 0; i < p.n; i++) add(at + (i - (p.n - 1) / 2) * 0.12);
   else if (p.kind === 'spread') for (let i = 0; i < p.n; i++) add(at + (p.n === 1 ? 0 : (i / (p.n - 1) - 0.5) * (p.arc ?? 0.5)));
@@ -2318,7 +2323,7 @@ function shoot(run: Run, f: Foe, p: Pattern) {
     f.spin += p.turn ?? 0.32;
     for (let i = 0; i < p.n; i++) add(f.spin + (i / p.n) * Math.PI * 2);
   }
-  emit(run, { type: 'shoot', x: f.x, y: f.y, boss });
+  emit(run, { type: 'shoot', x: f.x, y: f.y, boss, id: f.id, kind: f.kind });
 }
 
 function moveBullets(run: Run) {
@@ -2395,7 +2400,7 @@ function moveMines(run: Run, now: number, up: Hero[]) {
     emit(run, { type: 'boom', x: mn.x, y: mn.y, r: mn.r });
     for (let i = 0; i < mn.n; i++) {
       const a = (i / mn.n) * Math.PI * 2 + 0.3;
-      run.bullets.push({ id: ++run.ids, x: mn.x, y: mn.y, vx: Math.cos(a) * mn.speed, vy: Math.sin(a) * mn.speed, r: 5, dmg: mn.dmg * 0.6, born: now, boss: false, style: 'plain', ang: a, spd: mn.speed, bounce: 0 });
+      run.bullets.push({ id: ++run.ids, x: mn.x, y: mn.y, vx: Math.cos(a) * mn.speed, vy: Math.sin(a) * mn.speed, r: 5, dmg: mn.dmg * 0.6, born: now, boss: false, style: 'plain', ang: a, spd: mn.speed, bounce: 0, from: mn.from });
     }
     return false;
   });
