@@ -167,7 +167,7 @@ describe('following a live run', () => {
     expect(mine.gear.bag.map((it) => it.id)).toEqual(['bens']);
   });
 
-  it('asks you to pick only what the server asks, and keeps a friend\'s chest theirs', () => {
+  it('asks you to pick only what the server asks, and opens a chest for the whole party at once', () => {
     const room = new Room(['ana', 'ben'], 0, 3);
     room.join('ana', hero('warrior'), 0);
     room.join('ben', hero('archer'), 0);
@@ -179,18 +179,23 @@ describe('following a live run', () => {
     ana.run.chest = { x: ana.run.hero.x, y: ana.run.hero.y, opened: false };
     ana.press({ x: 0, y: 0, ability: false });
     expect(ana.run.hero.relicOffer).toBeNull();
-    // The server opens it for Ana: her phone gets the server's card, Ben's hears nothing of it.
+    // The server opens it as Ana walks onto it, for Ben too, far off: each phone gets its own card.
     server.party[1].x += 200;
     server.chest = { x: server.party[0].x, y: server.party[0].y, opened: false };
     room.tick(0);
     const s = room.snapshot(),
       forAna = ana.take([s], 50),
       forBen = ben.take([s], 50);
-    expect(ana.run.hero.relicOffer).toEqual(server.party[0].relicOffer);
     expect(ana.run.hero.relicOffer).not.toBeNull();
-    expect(forAna.some((e) => e.type === 'chest')).toBe(true);
-    expect(forBen.some((e) => e.type === 'chest')).toBe(false);
-    expect(ben.run.hero.relicOffer).toBeNull();
+    expect(ana.run.hero.relicOffer).toEqual(server.party[0].relicOffer);
+    expect(ben.run.hero.relicOffer).not.toBeNull();
+    expect(ben.run.hero.relicOffer).toEqual(server.party[1].relicOffer);
+    expect(forAna.filter((e) => e.type === 'chest')).toHaveLength(1);
+    expect(forBen.filter((e) => e.type === 'chest')).toHaveLength(1);
+    // What Ana picks is her news, not Ben's.
+    room.take('ana', { t: 'relic', id: server.party[0].relicOffer![0] });
+    room.tick(0.1);
+    expect(ben.take([room.snapshot()], 100).some((e) => e.type === 'relic')).toBe(false);
   });
 
   it('draws a friend walking, not floating', () => {
