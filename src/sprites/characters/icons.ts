@@ -804,24 +804,26 @@ export const SKILL_ICONS: Record<UpgradeId, PixelArt> = {
     ],
     palette: KIT,
   },
-  // a horseshoe magnet
-  magnet: {
+  // a star falling
+  star: {
     rows: [
-      '...kkkkkk...',
-      '..kRRRRRRk..',
-      '.kRpRRRRRrk.',
-      'kRpRkkkkRRrk',
-      'kRRk....kRrk',
-      'kRRk....kRrk',
-      'kRRk....kRrk',
-      'kkkk....kkkk',
-      'kWlk....kWlk',
-      'klmk....klmk',
-      'kkkk....kkkk',
-      '............',
+      '..........k.',
+      '.k...k...kGk',
+      '..k.....kGk.',
+      '....k..kGk..',
+      '......kGk...',
+      '..k.kkkk....',
+      '....kyGk....',
+      '..kkyWWykk..',
+      '.kyyWWWWyyk.',
+      '..kkyWWykk..',
+      '...kyykyyk..',
+      '...kk..kk...',
     ],
     palette: KIT,
   },
+
+
   guard: RELIC_ICONS.iron,
 };
 

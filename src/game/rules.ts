@@ -30,7 +30,7 @@ export type BossSheetKey =
 export type Sheets = Record<Exclude<SheetKey, BossSheetKey>, Sheet> & Partial<Record<BossSheetKey, Sheet>>;
 
 /** Skills the bot takes first. */
-export const BOT_PICKS: UpgradeId[] = ['multi', 'power', 'haste', 'vital', 'spark', 'flame', 'nova', 'guard', 'swift', 'magnet'];
+export const BOT_PICKS: UpgradeId[] = ['multi', 'power', 'haste', 'vital', 'spark', 'flame', 'nova', 'guard', 'swift', 'star'];
 
 export const HERO_SPEED = 150;
 export const HERO_HP = 100;
@@ -60,11 +60,12 @@ export const heroSpeed = (ups: Ups) => HERO_SPEED * (1 + K.swift.move * (ups.swi
 export const heroDamage = (base: number, power: Power, ups: Ups) => base * (1 + power.damage) * (1 + K.power.dmg * (ups.power ?? 0));
 export const attackCooldown = (kind: AttackKind, power: Power, ups: Ups) => ATTACK[kind].cd / ((1 + power.speed) * (1 + K.haste.rate * (ups.haste ?? 0)));
 export const armorOf = (power: Power, ups: Ups) => Math.min(0.6, power.armor + K.guard.armor * (ups.guard ?? 0));
-export const gemReach = (power: Power, ups: Ups) => 60 * (1 + power.reach + K.magnet.reach * (ups.magnet ?? 0));
+export const gemReach = (power: Power) => 60 * (1 + power.reach);
 
 /** Skills on a timer, per level. */
 export const sparkHit = (lv: number) => ({ jumps: K.spark.jumps + lv, dmg: K.spark.dmg + K.spark.dmgPer * (lv - 1) });
 export const novaHit = (lv: number) => ({ r: K.nova.r + K.nova.rPer * (lv - 1), dmg: K.nova.dmg + K.nova.dmgPer * (lv - 1) });
+export const starHit = (lv: number) => ({ r: K.star.r, dmg: K.star.dmg + K.star.dmgPer * (lv - 1) });
 
 export const FLAME = { orbit: 68, spin: 2.6, touch: 22, every: 500, dmg: 7 };
 export const FIREBALL = { every: 2.5, r: 52, dmg: 16, flightMs: 320 };

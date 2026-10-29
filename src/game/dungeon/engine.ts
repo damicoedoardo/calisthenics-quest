@@ -19,6 +19,7 @@ import {
   heroSpeed,
   novaHit,
   sparkHit,
+  starHit,
   type AttackKind,
 } from '../rules';
 import {
@@ -292,7 +293,9 @@ export type GameEvent =
   /** A hero took a hit; `hero` is whose (their id), so a phone shakes only for its own. */
   | { type: 'hurt'; x: number; y: number; dmg: number; by: 'shot' | 'touch' | 'image' | 'reflection'; hero?: number }
   | { type: 'shoot'; x: number; y: number; boss: boolean }
-  | { type: 'burst'; x: number; y: number; r: number; color: 'nova' | 'orb' | 'wave' | 'fire' | 'ability' }
+  | { type: 'burst'; x: number; y: number; r: number; color: 'nova' | 'orb' | 'wave' | 'fire' | 'ability' | 'star' }
+  /** Falling star (a run skill): a star on its way down to (x, y); its burst follows. */
+  | { type: 'star'; x: number; y: number }
   | { type: 'chain'; points: { x: number; y: number }[] }
   | { type: 'ability'; id: AbilityId; x: number; y: number; toX: number; toY: number }
   /** An SP move: its own move or its final, of size `r` at x, y. `to` is where it ends (a leap's
@@ -506,7 +509,7 @@ export interface Hero {
   waiting: boolean;
   /** Hits taken this run (what the run's recap shows, to set the bot against people). */
   hits: number;
-  cd: { attack: number; spark: number; nova: number; fireball: number };
+  cd: { attack: number; spark: number; nova: number; fireball: number; star: number };
   ups: Partial<Record<UpgradeId, number>>;
   flames: number;
   orbit: number;
@@ -714,7 +717,7 @@ function newHero(hs: HeroSetup, id: number): Hero {
     waiting: false,
     shots: 0,
     hits: 0,
-    cd: { attack: 0.5, spark: RUN_SKILL.spark.every, nova: RUN_SKILL.nova.every, fireball: 2.5 },
+    cd: { attack: 0.5, spark: RUN_SKILL.spark.every, nova: RUN_SKILL.nova.every, fireball: 2.5, star: RUN_SKILL.star.every },
     ups: {},
     flames: power.flames,
     orbit: 0,
@@ -3145,6 +3148,22 @@ function skills(run: Run, h: Hero) {
       burst(run, h, h.x, h.y, hit.r, pow(h, hit.dmg), 'nova');
     }
   }
+  const star = h.ups.star ?? 0;
+  if (star > 0) {
+    h.cd.star -= STEP;
+    if (h.cd.star <= 0) {
+      // Falling star: on the foe nearest you; with none in range it tries again soon.
+      const target = nearest(run, h.x, h.y, undefined, RANGE);
+      h.cd.star = target ? RUN_SKILL.star.every : 0.3;
+      if (target) {
+        const hit = starHit(star),
+          tx = target.x,
+          ty = target.y;
+        emit(run, { type: 'star', x: tx, y: ty });
+        later(run, 0.35, () => burst(run, h, tx, ty, hit.r, pow(h, hit.dmg), 'star'));
+      }
+    }
+  }
 }
 
 /** Your friends on the Summit: they keep beside you and help. The Wanderer shoots, Mira swings
@@ -3185,7 +3204,7 @@ function pullGems(run: Run) {
   // Each bit of light flies to the hero nearest it, and every standing hero gets its XP.
   run.gems = run.gems.filter((g) => {
     const h = prey(run, g.x, g.y),
-      reach = gemReach(h.power, h.ups),
+      reach = gemReach(h.power),
       dx = h.x - g.x,
       dy = h.y - g.y,
       d = Math.hypot(dx, dy);

@@ -21,9 +21,11 @@ export const RUN_SKILL = {
   swift: { move: 0.12, max: 3 },
   /** Second breath: max HP per level, and a full heal. */
   vital: { hp: 25, max: 4 },
-  /** Pull: how much further light comes to you, per level. */
-  magnet: { reach: 0.5, max: 3 },
+  /** Falling star: every `every` s a star falls on the foe nearest you (in range), hitting all
+      within `r` for `dmg` (`dmgPer` more a level), as hard as your damage. Goal: a slow, heavy
+      hit you see coming, a third timer next to Spark and Ash nova. Took Pull's place (Edoardo,
+      2026-10-29): Pull did little, since a cleared room's light comes to you anyway. */
+  star: { every: 4, r: 58, dmg: 34, dmgPer: 16, max: 3 },
   /** Stand firm: less damage taken per level (armor; all armor stops at 60%). */
   guard: { armor: 0.1, max: 3 },
-
 } as const;

@@ -212,7 +212,7 @@ export function nextGrowth(state: GameState): string {
 
 // ---------- skills you pick during a run ----------
 
-export type UpgradeId = 'power' | 'haste' | 'multi' | 'flame' | 'spark' | 'nova' | 'swift' | 'vital' | 'magnet' | 'guard';
+export type UpgradeId = 'power' | 'haste' | 'multi' | 'flame' | 'spark' | 'nova' | 'swift' | 'vital' | 'star' | 'guard';
 
 /** What a skill is about, for its card's color: hitting, magic on a timer, staying alive, or the rest. */
 export type SkillKind = 'attack' | 'magic' | 'guard' | 'craft';
@@ -240,7 +240,7 @@ export const UPGRADES: Upgrade[] = [
   { id: 'nova', name: 'Ash nova', kind: 'magic', text: (n) => (n === 1 ? `Every ${K.nova.every} s, a burst of light pushes foes back.` : 'The burst grows wider and hits harder.'), max: K.nova.max },
   { id: 'swift', name: 'Swift feet', kind: 'craft', text: () => `You move ${pc(K.swift.move)} faster.`, max: K.swift.max },
   { id: 'vital', name: 'Second breath', kind: 'guard', text: () => `+${K.vital.hp} max HP, and you heal fully.`, max: K.vital.max },
-  { id: 'magnet', name: 'Pull', kind: 'craft', text: () => `You pick up light from ${pc(K.magnet.reach)} further away.`, max: K.magnet.max },
+  { id: 'star', name: 'Falling star', kind: 'magic', text: (n) => (n === 1 ? `Every ${K.star.every} s, a star falls on a foe near you.` : 'The star hits harder.'), max: K.star.max },
   { id: 'guard', name: 'Stand firm', kind: 'guard', text: () => `You take ${pc(K.guard.armor)} less damage.`, max: K.guard.max },
 ];
 

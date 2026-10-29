@@ -2110,10 +2110,23 @@ class DungeonScene extends Phaser.Scene {
         if (a) this.tweens.add({ targets: a, y: a.y - 6, duration: 90, yoyo: true });
         break;
       }
+      case 'star': {
+        // Falling star (a run skill): a streak of light coming down on the spot, and a mark on the floor.
+        const { x, y } = e;
+        this.fade(350, (g, p) => {
+          const sx = x + 40 * (1 - p),
+            sy = y - 260 * (1 - p);
+          g.lineStyle(3, 0xfde68a, 0.9).lineBetween(sx + 6, sy - 34, sx, sy);
+          g.fillStyle(0xfffbeb, 1).fillCircle(sx, sy, 4);
+          g.lineStyle(1, 0xfde68a, 0.5 * p).strokeCircle(x, y, 18 + 10 * p);
+        });
+        break;
+      }
       case 'burst': {
-        const color = { nova: 0xf8fafc, orb: 0xa78bfa, wave: 0xfbbf24, fire: 0xf97316, ability: 0x7dd3fc }[e.color],
+        const color = { nova: 0xf8fafc, orb: 0xa78bfa, wave: 0xfbbf24, fire: 0xf97316, ability: 0x7dd3fc, star: 0xfde68a }[e.color],
           { x, y, r: R } = e;
         if (e.color === 'nova') this.sfx('nova');
+        if (e.color === 'star') this.sfx('stomp', 1.3);
         if (e.color === 'wave') this.sfx('wave');
         this.fade(260, (g, p) => {
           g.lineStyle(5 * (1 - p) + 1, color, 0.8 * (1 - p)).strokeCircle(x, y, R * (0.3 + 0.7 * p));
