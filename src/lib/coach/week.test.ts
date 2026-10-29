@@ -4,7 +4,7 @@ import { seeded } from '@/lib/random';
 import { finishSession, initialState, migrate, todaysQuest, type GameState } from '@/lib/game';
 import { applySetup, type SetupAnswers } from './setup';
 import { runTool, resolveDay, type ToolContext } from './tools';
-import { buildWeek, currentPlan, dayLabel, fromLegacy, markDone, nextDay, restKept, restToday, setDay, weekDates, weekOver, weekSlots, weekText } from './week';
+import { buildWeek, currentPlan, dayLabel, fromLegacy, markDone, nextDay, restKept, restToday, setDay, startsToday, weekDates, weekOver, weekSlots, weekText } from './week';
 import { coachNudge, freshNudge, hearNudge } from './nudge';
 import { coachBrief } from './brief';
 import { changeItem } from './plan';
@@ -82,6 +82,18 @@ describe('the week', () => {
     expect(currentPlan(c)).toBeUndefined();
     expect(weekOver(c.week, NOW)).toBe(false);
     expect(markDone(c, NOW.toISOString())).toBe(c);
+  });
+
+  it('a workout starts on its day or after it (catching up), never ahead of it', () => {
+    const s = withWeek();
+    // Planned Wed, Fri, Sun; Wednesday done, so Friday is next.
+    const c = markDone(s.coach!, NOW.toISOString());
+    expect(startsToday(s.coach, NOW)).toBe(true);
+    expect(startsToday(c, NOW)).toBe(false);
+    expect(startsToday(c, new Date(2026, 9, 29, 12))).toBe(false);
+    expect(startsToday(c, new Date(2026, 9, 30, 12))).toBe(true);
+    expect(startsToday(c, new Date(2026, 9, 31, 12))).toBe(true);
+    expect(startsToday(undefined, NOW)).toBe(true);
   });
 
   it('every other day of the week is a rest day, kept by sitting by the fire', () => {

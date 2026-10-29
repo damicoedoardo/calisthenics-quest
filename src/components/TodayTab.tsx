@@ -24,7 +24,7 @@ import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
 import { dayKey, daysApart, daysSinceTraining, isRestDay, trainedToday } from '@/lib/days';
 import { storyState, storyWords } from '@/story/engine';
 import { flameStage } from '@/story/flame';
-import { currentPlan, dayLabel, nextDay, nextMonday, restToday, weekdayOf } from '@/lib/coach/week';
+import { currentPlan, dayLabel, nextDay, nextMonday, restToday, startsToday, weekdayOf } from '@/lib/coach/week';
 import { ExerciseSheet } from './ExerciseDetail';
 import { LootGuide, NextLoot, type LootGo } from './Purse';
 import type { LootId } from '@/lib/loot';
@@ -73,9 +73,10 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
   const plan = currentPlan(state.coach);
   const noPlan = !plan && !inProgress;
   const restDay = isRestDay(state, now) || restToday(state.coach, now);
-  // A planned rest day: the quest below is the next workout, for its own day.
-  const ahead = !inProgress && !doneToday && restToday(state.coach, now) && plan ? nextDay(state.coach?.week) : undefined;
-  const aheadNote = ahead ? `Today is a rest day. This is your next workout, for ${dayLabel(ahead.date, now).toLowerCase() === 'tomorrow' ? 'tomorrow' : weekdayOf(ahead.date)}.` : null;
+  // Not its day yet (a rest day, say): the quest below is the next workout, to see, not to start.
+  const ahead = !inProgress && !doneToday && plan && !startsToday(state.coach, now) ? nextDay(state.coach?.week) : undefined;
+  const aheadDay = ahead ? (dayLabel(ahead.date, now) === 'Tomorrow' ? 'tomorrow' : weekdayOf(ahead.date)) : '';
+  const aheadNote = ahead ? `${restToday(state.coach, now) ? 'Today is a rest day. ' : ''}This is your next workout, for ${aheadDay}.` : null;
   // You, in your gear and look, for the exercise stills in the quest list.
   const look = useLook();
   const hero = { gear: gearOf(state), classId: state.profile.classId, look };
@@ -114,7 +115,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
     </>
   );
   const items = inProgress ? todaysQuest(state) : quest;
-  const startLabel = inProgress ? 'Continue quest' : 'Start quest';
+  const startLabel = inProgress ? 'Continue quest' : ahead ? `Opens ${aheadDay === 'tomorrow' ? 'tomorrow' : `on ${aheadDay}`}` : 'Start quest';
   const questTitle = checkin === 'rough' && !inProgress ? 'Minimum quest' : (plan?.title ?? `Day ${day} quest`);
   const xp = previewXp(state, inProgress ? state.draft!.checkin : checkin, now);
   const reps = (q: (typeof items)[number]) => {
@@ -143,6 +144,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
         checkin={checkin}
         onCheckin={inProgress ? undefined : setCheckin}
         startLabel={startLabel}
+        locked={!!ahead}
         onStart={() => onStart(inProgress ? state.draft!.checkin : checkin)}
         onReplayOpening={onReplayOpening}
         onSit={() => setOverlay('fire')}
@@ -263,9 +265,10 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
 
       <button
         onClick={() => onStart(inProgress ? state.draft!.checkin : checkin)}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] transition active:translate-y-1 active:shadow-none"
+        disabled={!!ahead}
+        className={`flex w-full items-center justify-center gap-2 rounded-2xl py-4 font-pixel text-xs transition ${ahead ? 'bg-ink-700 text-slate-400' : 'bg-gold-400 text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none'}`}
       >
-        <Sprite id="uiIcon" opts={{ name: 'play' }} size={14} label="" />
+        <Sprite id="uiIcon" opts={{ name: ahead ? 'lock' : 'play' }} size={14} label="" />
         {startLabel}
       </button>
 
@@ -472,6 +475,8 @@ interface LandProps {
   /** Left out while a quest is under way: the check-in is set then. */
   onCheckin?: (c: Checkin) => void;
   startLabel: string;
+  /** Not the workout's day yet: Start shows when it opens, and can't be pressed. */
+  locked: boolean;
   onStart: () => void;
   onReplayOpening: () => void;
   onSit: () => void;
@@ -598,9 +603,10 @@ function LandToday(p: LandProps) {
             <div className="mb-2">{p.loot}</div>
             <button
               onClick={p.onStart}
-              className="flex min-h-[2.75rem] flex-1 items-center justify-center gap-2 rounded-2xl bg-gold-400 px-3 font-pixel text-[10px] leading-relaxed text-ink-950 shadow-[0_4px_0_#b45309] transition active:translate-y-1 active:shadow-none"
+              disabled={p.locked}
+              className={`flex min-h-[2.75rem] flex-1 items-center justify-center gap-2 rounded-2xl px-3 font-pixel text-[10px] leading-relaxed transition ${p.locked ? 'bg-ink-700 text-slate-400' : 'bg-gold-400 text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none'}`}
             >
-              <Sprite id="uiIcon" opts={{ name: 'play' }} size={14} label="" className="shrink-0" />
+              <Sprite id="uiIcon" opts={{ name: p.locked ? 'lock' : 'play' }} size={14} label="" className="shrink-0" />
               {p.startLabel}
             </button>
           </div>
