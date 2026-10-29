@@ -3197,7 +3197,7 @@ function skills(run: Run, h: Hero) {
       h.cd.frost = 0.25;
       const k = RUN_SKILL.frost.slow * frost;
       for (const f of run.foes) {
-        if (!f.alive || f === run.boss || !closer(f.x - h.x, f.y - h.y, RUN_SKILL.frost.r + f.def.r)) continue;
+        if (!f.alive || f === run.boss || f === run.warden || !closer(f.x - h.x, f.y - h.y, RUN_SKILL.frost.r + f.def.r)) continue;
         if (f.slow && run.t < f.slow.until && f.slow.k > k) continue;
         f.slow = { until: run.t + 0.35, k };
       }
@@ -3499,9 +3499,10 @@ function hurt(run: Run, h: Hero, dmg: number, by: 'shot' | 'touch') {
     emit(run, { type: 'evade', x: h.x, y: h.y });
     return;
   }
-  // Stand your ground (a run skill): standing still a moment, you take less.
-  const planted = h.ups.stand && h.stillFor >= RUN_SKILL.stand.after ? 1 - RUN_SKILL.stand.less * h.ups.stand : 1;
-  const hit = spGuard(run, h, (dmg * planted * (1 - armorOf(h.power, h.ups))) / (1 + DIALS.relic * 0.14 * relic(h, 'iron')));
+  // Stand your ground (a run skill): standing still a moment, you take less. It counts as armor, so
+  // it stops at the same cap: standing still with full armor is never a way to take almost nothing.
+  const planted = h.ups.stand && h.stillFor >= RUN_SKILL.stand.after ? RUN_SKILL.stand.less * h.ups.stand : 0;
+  const hit = spGuard(run, h, (dmg * (1 - armorOf(h.power, h.ups, planted))) / (1 + DIALS.relic * 0.14 * relic(h, 'iron')));
   // In the first dungeon you can't fall: HP stops at 1.
   const taken = run.setup.tutorial ? Math.min(hit, h.hp - 1) : hit;
   if (taken <= 0) {

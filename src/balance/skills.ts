@@ -30,7 +30,7 @@ export const RUN_SKILL = {
   guard: { armor: 0.1, max: 3 },
 
   /* Added 2026-10-29 (Edoardo's picks). Each one pushes a different way to play. */
-  /** Cold air: monsters within `r` of you walk `slow` slower per level (not the boss). Goal: more
+  /** Cold air: monsters within `r` of you walk `slow` slower per level (not the boss or the mid-boss). Goal: more
       time to step out of the way, as useful to the melee classes as to the ranged. */
   frost: { r: 120, slow: 0.15, max: 3 },
   /** Keen eye: crit chance per level, on top of what you wear. Goal: makes crit gear a choice in a run. */
@@ -43,8 +43,9 @@ export const RUN_SKILL = {
   /** Momentum: each kill adds a stack for `secs` s (a new kill renews them all), up to `stacks`;
       each stack makes you attack `rate` faster per level. Goal: rewards rushing a room. */
   rush: { rate: 0.06, stacks: 5, secs: 4, max: 3 },
-  /** Stand your ground: after `after` s standing still you take `less` less damage per level, until
-      you move. Goal: rewards planting your feet; the opposite of Momentum. */
+  /** Stand your ground: after `after` s standing still, `less` more armor per level until you move,
+      inside the same 60% armor cap (so it can't stack into near-immunity). Goal: rewards planting
+      your feet; the opposite of Momentum. */
   stand: { after: 1, less: 0.15, max: 3 },
   /** Wider choice: one more card at every level-up after this one. One level. */
   wide: { cards: 1, max: 1 },
