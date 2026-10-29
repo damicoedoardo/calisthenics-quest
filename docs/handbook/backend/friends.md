@@ -1,9 +1,9 @@
 ---
 type: conceptual
 title: Friends
-description: Friend codes, asks and accepts, who is online, in the Fog or trained today, and parties (invite, lobby, ready, start, practice run) — the tables, the /me, /friends and /party routes, and the screens.
-tags: [backend, friends, social, co-op, voice, livekit]
-timestamp: 2026-10-28
+description: Friend codes, asks and accepts, who is online, training, in the Fog or trained today, cheers mid-workout, and parties (invite, lobby, ready, start, practice run) — the tables, the /me, /friends and /party routes, and the screens.
+tags: [backend, friends, social, co-op, voice, livekit, cheers]
+timestamp: 2026-10-29
 ---
 
 # Friends
@@ -15,11 +15,14 @@ itself never does.
 ## What a friend sees
 
 Each player has a public **card** on the server: the hero's name (from the save, asked after the look in the opening; older saves are asked on the Friends card), class, level,
-look and worn gear tiers, when they last trained, and whether the app is open (`online`) or in a
-run (`playing`, the zone's name). Nothing else of the save is shared. A friend shows as:
+look and worn gear tiers, when they last trained, and whether the app is open (`online`), in a
+run (`playing`, the zone's name) or in a workout (`training`, the plan's name, `trainingLabel` in
+`src/lib/cheers.ts`). Nothing else of the save is shared. A friend shows as:
 
-- **In the Fog: <world>** while their run is going, **Online** while the app is open, else
-  **Seen 2 h ago**.
+- **Training now: <workout>** while they work out, **In the Fog: <world>** while their run is
+  going, **Online** while the app is open, else **Seen 2 h ago**. Over the hero a small bubble
+  says it at a glance: a dumbbell while training, swords in the Fog, nothing otherwise (`Doing`
+  in `Friends.tsx`).
 - A flame and **trained today** when their last workout was on this phone's today. This is the
   part that nudges friends to train.
 
@@ -97,6 +100,32 @@ With the mic on, the iPhone may play the game's sound lower.
 | `backend/tests/test_voice.py` | Members get a pass to their room; no party, no pass; off until set up |
 | `src/lib/voice-client.ts` | `joinVoice`, `leaveVoice`, `setMic`, `silence`, `useVoice` (who's here, talking, quiet) |
 
+## Cheers
+
+A friend who is working out can be cheered on. Their hero shows **Cheer** (in **Online** on the
+Friends tab, and instead of Party on their row in the Friends card); it opens a page (`CheerPage`
+in `Friends.tsx`) with a box for your own words and quick lines with their name in ("Push, Ben!")
+that only fill the box. **Send** stores it on the server; their phone looks for cheers every 8 s
+during a workout and every minute otherwise (`useCheers` in `Cheers.tsx`, in `page.tsx`) and
+shows each one at the top, over the workout too: your hero, "<name> cheers you on" and your line
+(`CheerToast`, 6 s, a tap closes it). Each cheer shows once.
+
+- Only to an accepted friend, at most 80 letters, at most 20 a day from one friend to another
+  (`CHEER_LIMIT` in `src/lib/cheers.ts`; the server's copies are `PER_DAY` and `LENGTH` in
+  `routes/cheers.py`, keep them the same). Over it, 429.
+- A friend sees a cheer only while the app is open (it is, during a workout); there are no phone
+  notifications yet.
+- In the sandbox Ben is training (tap Cheer to see the page) and a workout gets a sample cheer from
+  Ana after 4 s.
+
+| File | What |
+|---|---|
+| `backend/app/cheers.py` | Table `cheers` (made on start), `PgStore`, `MemoryStore` |
+| `backend/app/routes/cheers.py` | `POST /cheers` (send), `POST /cheers/take` (what waits, each once) |
+| `backend/tests/test_cheers.py` | Send and see once, only friends, not empty, so many a day, `training` on the card |
+| `src/lib/cheers.ts` | Pure: the limits, `quickCheers`, `cleanCheer`, `trainingLabel` |
+| `src/components/Cheers.tsx` | `useCheers` and `CheerToast` |
+
 ## Gifts of forge materials
 
 Friends can give each other co-op materials for Mira's forge ([../game/forge.md](../game/forge.md)).
@@ -125,3 +154,7 @@ what waits on each refresh (`POST /gifts/claim`, each gift handed out once) into
 | Change what a voice pass allows | `voice_pass` in `backend/app/voice.py` |
 | Change how much can be given a day | `GIFTS.perDay` in `src/balance/upgrades.ts` and `PER_DAY` in `backend/app/routes/gifts.py` |
 | Change the gift picker | `GiveMats` in `Friends.tsx` |
+| Change the cheer page or the quick lines | `CheerPage` in `Friends.tsx`, `quickCheers` in `src/lib/cheers.ts` |
+| Change how a cheer pops up, or how often the app looks | `CheerToast`, `FAST_MS`/`SLOW_MS`/`SHOW_MS` in `Cheers.tsx` |
+| Change how many cheers a day, or how long | `CHEER_LIMIT` in `src/lib/cheers.ts` and `PER_DAY`/`LENGTH` in `backend/app/routes/cheers.py` |
+| Change the bubble over a friend's hero | `Doing` in `Friends.tsx` |

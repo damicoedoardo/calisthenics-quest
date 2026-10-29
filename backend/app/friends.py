@@ -1,8 +1,9 @@
 """Friends: each player's public card (`profiles`) and who is friends with whom (`friends`).
 
 A card holds only what friends see: a name, the hero's class, level and look, when they last
-trained, and whether the app is open right now (`seen_at`, refreshed every 30 s while it is) or
-in a run (`playing`). A friendship starts as an ask from `a` to `b` and holds once `b` accepts.
+trained, and whether the app is open right now (`seen_at`, refreshed every 30 s while it is), in
+a run (`playing`) or in a workout (`training`). A friendship starts as an ask from `a` to `b`
+and holds once `b` accepts.
 Behind a small store, like saves.py, so the routes are tested without a database.
 """
 
@@ -25,8 +26,10 @@ CREATE TABLE IF NOT EXISTS profiles (
     look        jsonb,
     trained_at  timestamptz,
     playing     text,
+    training    text,
     seen_at     timestamptz NOT NULL DEFAULT now()
 );
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS training text;
 CREATE TABLE IF NOT EXISTS friends (
     a           uuid NOT NULL,
     b           uuid NOT NULL,
@@ -61,6 +64,7 @@ class Profile:
     trained_at: datetime | None
     playing: str | None
     seen_at: datetime
+    training: str | None = None
 
 
 @dataclass(frozen=True)
@@ -73,7 +77,7 @@ class Link:
 
 
 # The fields a phone may set on its own card.
-CARD_FIELDS = ("name", "class_id", "level", "look", "trained_at", "playing")
+CARD_FIELDS = ("name", "class_id", "level", "look", "trained_at", "playing", "training")
 
 
 class FriendStore(Protocol):
@@ -114,10 +118,11 @@ def _profile(r: Any) -> Profile:
         trained_at=r["trained_at"],
         playing=r["playing"],
         seen_at=r["seen_at"],
+        training=r["training"],
     )
 
 
-_COLS = "user_id, code, name, class_id, level, look, trained_at, playing, seen_at"
+_COLS = "user_id, code, name, class_id, level, look, trained_at, playing, seen_at, training"
 
 
 class PgStore:

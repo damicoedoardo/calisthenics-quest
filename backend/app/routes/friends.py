@@ -35,6 +35,7 @@ class Card(BaseModel):
     look: dict[str, Any] | None = None
     trained_at: datetime | None = None
     playing: str | None = Field(default=None, max_length=40)
+    training: str | None = Field(default=None, max_length=40)
 
 
 class AddFriend(BaseModel):
@@ -51,6 +52,7 @@ def card_json(p: Profile, now: datetime) -> dict[str, Any]:
         "trained_at": p.trained_at.isoformat() if p.trained_at else None,
         "online": now - p.seen_at < ONLINE_FOR,
         "playing": p.playing if now - p.seen_at < ONLINE_FOR else None,
+        "training": p.training if now - p.seen_at < ONLINE_FOR else None,
         "seen_at": p.seen_at.isoformat(),
     }
 
@@ -92,8 +94,10 @@ async def get_friends(
             continue
         key = "friends" if link.accepted else "asks_out" if link.mine else "asks_in"
         out[key].append(card_json(p, now))
-    # Who is playing first, then who is online, then by name.
-    out["friends"].sort(key=lambda c: (not c["playing"], not c["online"], c["name"].lower()))
+    # Who is training or playing first, then who is online, then by name.
+    out["friends"].sort(
+        key=lambda c: (not (c["training"] or c["playing"]), not c["online"], c["name"].lower())
+    )
     return out
 
 

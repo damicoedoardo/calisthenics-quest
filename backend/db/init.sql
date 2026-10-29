@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS profiles (
     look        jsonb,
     trained_at  timestamptz,
     playing     text,
-    seen_at     timestamptz NOT NULL DEFAULT now()
+    seen_at     timestamptz NOT NULL DEFAULT now(),
+    training    text
 );
 CREATE TABLE IF NOT EXISTS friends (
     a           uuid NOT NULL,
@@ -72,6 +73,18 @@ CREATE TABLE IF NOT EXISTS gifts (
     claimed_at  timestamptz
 );
 CREATE INDEX IF NOT EXISTS gifts_receiver ON gifts (receiver) WHERE claimed_at IS NULL;
+
+-- Cheers: a short line one friend sends another, mostly mid-workout, waiting until seen
+-- (app/cheers.py).
+CREATE TABLE IF NOT EXISTS cheers (
+    id          uuid PRIMARY KEY,
+    sender      uuid NOT NULL,
+    receiver    uuid NOT NULL,
+    text        text NOT NULL,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    seen_at     timestamptz
+);
+CREATE INDEX IF NOT EXISTS cheers_receiver ON cheers (receiver) WHERE seen_at IS NULL;
 
 -- How many messages each player sent the coach today, to cap the bill (app/coach.py).
 CREATE TABLE IF NOT EXISTS coach_usage (

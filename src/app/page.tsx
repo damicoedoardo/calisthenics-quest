@@ -26,6 +26,8 @@ import { Sprite } from '@/components/Sprite';
 import { LookProvider } from '@/components/Look';
 import { useCloudSync } from '@/components/Cloud';
 import { onlineCount, useFriends, useFriendsBeat } from '@/components/Friends';
+import { CheerToast, useCheers } from '@/components/Cheers';
+import { trainingLabel } from '@/lib/cheers';
 import { SignInGate, signInDue } from '@/components/SignInGate';
 import { PartyButton, PartyInviteCard, PartyLobby, usePartyPoll } from '@/components/Party';
 import { others, startToJoin } from '@/lib/party';
@@ -107,11 +109,14 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   // The cloud backup, when signed in. Never before the save has loaded, never in the sandbox or
   // on the developer save.
   useCloudSync(state, update, !ready || offRecord());
-  // Shows you online to your friends while the app is open, and in the Fog during a run.
-  useFriendsBeat(state, run?.name ?? null, !ready || offRecord());
+  // Shows you online to your friends while the app is open, in the Fog during a run, and
+  // training during a workout (so they can cheer you on).
+  useFriendsBeat(state, run?.name ?? null, training ? trainingLabel(state) : null, !ready || offRecord());
   // Your friends: the Friends tab, and how many are online on its tab button.
   const friends = useFriends(update, !ready || offRecord(), sandbox, tab === 'friends');
   const online = onlineCount(friends);
+  // Cheers from friends: looked for every few seconds during a workout.
+  const cheers = useCheers(!ready || offRecord(), training, sandbox);
   // After the install step, an account: a hard rule, no playing on without one (SignInGate).
   const { signedIn } = useCloudStatus();
   const [welcomed, setWelcomed] = useState(false);
@@ -525,6 +530,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         </>
       )}
       {training && <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />}
+      <CheerToast cheer={cheers.cheer} friends={friends.list?.friends ?? []} onDone={cheers.next} />
       {after && (
         <AfterSession
           result={after.result}
