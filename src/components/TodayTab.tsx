@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { BookOfDays } from './BookOfDays';
 import { Keepsakes } from './Keepsakes';
 import { Ember, Enemy, Hollow } from './Characters';
+import { Hero } from './Hero';
 import { SitByFire } from './SitByFire';
 import { Sprite } from './Sprite';
 import { useLook } from './Look';
@@ -654,10 +655,10 @@ function DoneToday({ state, now, onTrain, land }: { state: GameState; now: Date;
   const next = nextDay(coachWeek);
   const ends = coachWeek ? nextMonday(coachWeek) : null;
   const name = storyWords(state).flame;
-  const cells: { n: string; label: string }[] = [
-    { n: String(total), label: total === 1 ? 'workout' : 'workouts' },
-    inRow >= 2 ? { n: String(inRow), label: 'days in a row' } : { n: `${Math.min(week, WEEKLY_GOAL)}/${WEEKLY_GOAL}`, label: 'this week' },
-    { n: `+${xp}`, label: 'XP today' },
+  const cells: { n: string; label: string; icon: 'tabTrain' | 'flame' | 'xp' }[] = [
+    { n: String(total), label: total === 1 ? 'workout' : 'workouts', icon: 'tabTrain' },
+    inRow >= 2 ? { n: String(inRow), label: 'days in a row', icon: 'flame' } : { n: `${Math.min(week, WEEKLY_GOAL)}/${WEEKLY_GOAL}`, label: 'this week', icon: 'flame' },
+    { n: `+${xp}`, label: 'XP today', icon: 'xp' },
   ];
   const nextWords = next
     ? `Next: ${dayLabel(next.date, now)} · ${next.plan.title}`
@@ -665,14 +666,30 @@ function DoneToday({ state, now, onTrain, land }: { state: GameState; now: Date;
       ? `Every workout this week is done. Your next week starts ${daysApart(now, ends) <= 1 ? 'tomorrow' : weekdayOf(dayKey(ends))}.`
       : `Plan your next week with ${name}.`;
   return (
-    <section className={`rounded-2xl bg-gradient-to-b from-[#132a22] to-ink-900 text-center ring-1 ring-emerald-400/25 ${land ? 'flex min-h-0 flex-1 flex-col items-center justify-center p-3' : 'p-5'}`}>
-      <Sprite id="uiIcon" opts={{ name: 'check' }} size={land ? 20 : 28} label="" className="mx-auto" />
-      <p className={`mt-2 font-pixel leading-relaxed text-emerald-200 ${land ? 'text-[11px]' : 'text-sm'}`}>{doneTitle(now)}</p>
+    <section className={`rounded-2xl bg-gradient-to-b from-[#132a22] to-ink-900 text-center ring-1 ring-emerald-400/25 ${land ? 'flex min-h-0 flex-1 items-center justify-center gap-6 p-3' : 'p-5'}`}>
+      {/* You and your flame, side by side and glowing about it, with little hearts over you. */}
+      <div className={`relative flex shrink-0 items-end justify-center gap-1 ${land ? '' : 'mx-auto'}`} aria-hidden>
+        {[0, 1, 2].map((i) => (
+          <span key={i} className="absolute motion-safe:animate-float" style={{ left: `${30 + i * 20}%`, top: i === 1 ? -6 : 2, animationDelay: `${i * 0.4}s` }}>
+            <Sprite id="uiIcon" opts={{ name: 'heart' }} size={land ? 10 : 12} label="" />
+          </span>
+        ))}
+        <Hero gear={gearOf(state)} classId={state.profile.classId} size={96} />
+        <div className="mb-1">
+          <Ember size={56} stage={flameStage(total).id} mood="bright" />
+        </div>
+      </div>
+      {/* Sideways the words sit beside the two of you; upright, under. */}
+      <div className={land ? 'flex w-full max-w-sm min-w-0 flex-col items-center' : 'flex flex-col items-center'}>
+      <p className={`font-pixel leading-relaxed ${land ? '' : 'mt-2'} text-emerald-200 ${land ? 'text-[11px]' : 'text-sm'}`}>{doneTitle(now)}</p>
       <p className={`text-slate-300 ${land ? 'mt-1 text-xs' : 'mt-2 text-sm'}`}>Today&apos;s workout is done. Rest well, the next one can wait.</p>
       <div className={`grid w-full max-w-sm grid-cols-3 gap-2 ${land ? 'mt-2' : 'mt-4'}`}>
         {cells.map((c) => (
           <div key={c.label} className={`rounded-xl bg-ink-950/60 ${land ? 'py-1.5' : 'py-2.5'}`}>
-            <p className={`font-pixel text-gold-300 ${land ? 'text-[11px]' : 'text-sm'}`}>{c.n}</p>
+            <div className={`flex items-center justify-center gap-1.5 font-pixel text-gold-300 ${land ? 'text-[11px]' : 'text-sm'}`}>
+              <Sprite id="uiIcon" opts={{ name: c.icon }} size={land ? 12 : 14} label="" />
+              {c.n}
+            </div>
             <p className="mt-1 text-[10px] text-slate-400">{c.label}</p>
           </div>
         ))}
@@ -681,6 +698,7 @@ function DoneToday({ state, now, onTrain, land }: { state: GameState; now: Date;
         <span className="min-w-0 truncate">{nextWords}</span>
         <Sprite id="uiIcon" opts={{ name: 'chevron' }} size={12} label="" className="shrink-0" />
       </button>
+      </div>
     </section>
   );
 }
