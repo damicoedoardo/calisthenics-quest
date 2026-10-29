@@ -908,20 +908,31 @@ describe('a party (co-op)', () => {
     expect(friend.hp).toBe(Math.round(friend.maxHp * PARTY.revive.hp));
   });
 
-  it('each hero opens the chest once, for their own pick', () => {
+  it('the first hero at the chest opens it for the whole party, each with their own pick', () => {
     const run = cleared(),
       [me, friend] = run.party;
     run.chest = { x: run.area.w / 2, y: run.area.h / 2, opened: false };
     [me.x, me.y] = [run.chest.x, run.chest.y];
+    [friend.x, friend.y] = [40, 40];
     stepRun(run, idle);
     expect(me.relicOffer).not.toBeNull();
-    expect(canOpen(run, me)).toBe(false);
-    expect(canOpen(run, friend)).toBe(true);
-    pickRelic(run, me.relicOffer![0], me);
-    [me.x, me.y] = [40, 40];
-    [friend.x, friend.y] = [run.chest.x, run.chest.y];
-    stepRun(run, idle);
     expect(friend.relicOffer).not.toBeNull();
+    expect(canOpen(run, me)).toBe(false);
+    expect(canOpen(run, friend)).toBe(false);
+    // Each pick is their own.
+    pickRelic(run, me.relicOffer![0], me);
+    expect(friend.relicOffer).not.toBeNull();
+  });
+
+  it('levels the party as one, down or not', () => {
+    const run = cleared(),
+      [me, friend] = run.party;
+    friend.hp = 0;
+    run.gems.push({ id: ++run.ids, x: me.x, y: me.y, value: 1000, pulled: false });
+    stepRun(run, idle);
+    expect(friend.level).toBe(me.level);
+    expect(me.offer).not.toBeNull();
+    expect(friend.offer).not.toBeNull();
   });
 
   it('the shrine heals the whole party, and Stillness heals friends close by', () => {

@@ -3547,7 +3547,8 @@ function pullGems(run: Run) {
       d = Math.hypot(dx, dy);
     if (d < 16) {
       emit(run, { type: 'gem' });
-      for (const o of standing(run)) gain(run, o, g.value);
+      // A party levels as one: everyone gets it, down or not, so the level-up cards come to all at once.
+      for (const o of run.party) gain(run, o, g.value);
       return false;
     }
     // Once a room is clear, all its light comes to you.
@@ -3598,12 +3599,16 @@ function openDoors(run: Run) {
   if (c.kind === 'stairs' || c.kind === 'warden') run.stairs = { x: w / 2, y: 110 };
 }
 
-/** Open the chest: three chest items to pick from, maybe an item. In a party each hero opens it
-    once, for their own pick and their own item. */
+/** Open the chest: three chest items to pick from, maybe an item. In a party, the first hero to
+    open it opens it for everyone at once: each gets their own pick and their own item. */
 function openChest(run: Run, h: Hero) {
   const c = run.chest;
   if (!c || !canOpen(run, h)) return;
-  const solo = run.party.length < 2;
+  if (run.party.length < 2) return openFor(run, h, c, true);
+  for (const o of run.party) if (canOpen(run, o)) openFor(run, o, c, false);
+}
+
+function openFor(run: Run, h: Hero, c: NonNullable<Run['chest']>, solo: boolean) {
   c.opened = true;
   if (!solo) (c.took ??= []).push(h.id);
   const ids = Object.keys(RELICS) as RelicId[];

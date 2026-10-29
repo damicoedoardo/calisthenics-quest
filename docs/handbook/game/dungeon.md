@@ -197,7 +197,8 @@ party order. The rules treat every hero the same:
   `burst(run, by, ...)`), and that hero gets the kill and the fang heal.
 - Monsters, their shots and homing bullets go for the nearest hero still standing (`prey`); shots,
   touch, bombs, barrels, spikes and the Gale hit whoever they reach (`standing`).
-- Light (gems) flies to the hero nearest it, and its XP goes to every hero still standing.
+- Light (gems) flies to the hero nearest it, and its XP goes to every hero in the party, down or
+  not: a party levels as one, so the level-up cards come to everyone at once (`pullGems`).
 - Drops are personal (`dropEach`): each standing hero gets their own item, rolled for their class
   and tagged with their id (`loot[].for`, set only in a party). Only that hero sees and takes it
   (`mine`, used by the pick-up, the bot and the scene). The boss's drop goes into every bag.
@@ -218,8 +219,8 @@ party order. The rules treat every hero the same:
 - The party moves as one: a door (`outSide`) or the stairs (`onStairs`) take you on only when
   every hero standing is in that doorway or on the stairs. Until then you wait there (`Hero.waiting`;
   a line for that hero only, once a run, `Hero.toldWait`). The stairs then ask once for everyone.
-- The chest opens once per hero in a party (`canOpen`, `chest.took`): each gets their own pick of
-  chest items, their own item roll and materials. The shrine heals the whole party.
+- In a party the first hero at the chest opens it for everyone at once (`openChest`, `openFor`,
+  `chest.took`): each gets their own pick of chest items, their own item roll and materials. The shrine heals the whole party.
 - Moves that heal or guard help friends within `PARTY.near` (`friendsNear`): Blessing, Soul
   Harvest and Stillness heal them the same share of their own HP (`healFriends`); Shield Wall,
   Blessing and Tide Spin make them untouchable and clear the shots round them too. Curse, Bubble

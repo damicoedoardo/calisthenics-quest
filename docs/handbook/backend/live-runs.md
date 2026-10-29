@@ -3,7 +3,7 @@ type: conceptual
 title: Live party runs
 description: The game server that plays one real Fog run for a party — the pass, the wire format, the room, how a phone predicts and corrects, the fall back to bots, and how it is deployed.
 tags: [backend, co-op, multiplayer, game-server, websocket]
-timestamp: 2026-10-28
+timestamp: 2026-10-29
 ---
 
 # Live party runs
@@ -73,7 +73,8 @@ except your own moves: a swing, an ability, an SP move or a dodge shows the mome
 (`press` returns it), and the server's copy is skipped. The engine tags those events with the hero
 whose turn made them (`byOf` in `engine.ts`). In developer mode the run shows `ping`: from pressing
 a step to the server playing it.
-A friend's own news (their item, their chest, their pick) isn't played on your phone (`heard`).
+A friend's own news (their item, their pick) isn't played on your phone (`heard`). A level-up or
+a chest comes to everyone at once, each with their own card ([../game/dungeon.md](../game/dungeon.md)).
 Cards (a level's skills, a chest's items, the stairs) come only from the server: the `Follower`
 drops any its own steps ask, since it would roll other choices than the server's. Your answer is
 sent and applied at once; the server's next few snapshots may still ask the same card, so that
