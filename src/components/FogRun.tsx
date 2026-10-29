@@ -6,7 +6,7 @@ import { heroLevel, type GameState } from '@/lib/game';
 import { fill, storyWords } from '@/story/engine';
 import type { FogLines } from '@/story/types';
 import { FIRST_FOG_TIPS } from '@/story/opening';
-import { edgeFor, getUpgrade, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
+import { edgeFor, nextGrowth, powerOf, recordsBroken, RUN_SECONDS, type RunResult, type UpgradeId, type Zone } from '@/lib/fog';
 import { music } from '@/lib/music';
 import { zoneMusic } from '@/lib/music-zones';
 import { friendSheets, runSheets } from '@/game/sheets';
@@ -19,6 +19,7 @@ import { atRisk, settleGear, vaultSize, wornFor, type GearOutcome } from '@/lib/
 import { canWear, ITEM_SLOTS, nameOf, otherClass, RARITY, SLOT_NAME, type Item, type ItemSlot } from '@/game/dungeon/items';
 import { ItemCard, ItemTile } from './ItemCard';
 import { Sprite } from './Sprite';
+import { SkillPick } from './SkillPick';
 import { SoundToggle, useMusic } from './Sound';
 import { useKeyboardPlay } from './useDesk';
 import { track } from '@/lib/analytics-client';
@@ -45,7 +46,7 @@ interface Props {
   tutorial?: { voice: string; onDone: () => void };
 }
 
-export type RunStart = 'mid' | 'boss' | 'win' | 'sp';
+export type RunStart = 'mid' | 'boss' | 'win' | 'sp' | 'skills';
 
 
 /* Every zone is a dungeon (src/game/dungeon), each with its own boss and ground. */
@@ -243,6 +244,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party, tutor
             h?.fillFinal();
           }
           else if (startAt === 'boss') h?.skipToBoss();
+          else if (startAt === 'skills') h?.levelNow(5);
           else {
             // The recap: let the bot play a little first, so it has something to show.
             h?.autopilot(true);
@@ -534,41 +536,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party, tutor
         </p>
       )}
 
-      {offer && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/80 px-4">
-          <p className="font-pixel text-sm text-gold-300">{offer.free === 'fresh' ? 'Warmed up!' : offer.free === 'rested' ? 'Rested!' : offer.free === 'past' ? 'Kept at it!' : 'Level up!'}</p>
-          <p className="mt-2 text-center text-xs text-slate-400">
-            {offer.free === 'fresh'
-              ? 'You trained in the last two days: take a free skill.'
-              : offer.free === 'rested'
-                ? `You rested, and ${flameName ?? 'your flame'} burns brighter for it: take a free skill.`
-                : offer.free === 'past'
-                  ? `You kept training after ${zone.bossName} ran out of hearts: take a free skill.`
-                  : 'Pick a skill.'}
-          </p>
-          <div className="mt-4 flex w-full max-w-3xl items-stretch justify-center gap-2">
-            {offer.choices.map((id, i) => {
-              const u = getUpgrade(id),
-                next = (offer.levels[id] ?? 0) + 1;
-              return (
-                <button key={id} onClick={() => pick(id)} className="relative flex max-w-[15rem] flex-1 flex-col items-center gap-2 rounded-xl bg-ink-800 p-3 text-center ring-1 ring-gold-400/30 shadow-[0_3px_0_#0b0d14] active:scale-[.98]">
-                  {keys && <Key k={String(i + 1)} corner />}
-                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-ink-900 text-gold-300">
-                    <Sprite id="skillIcon" opts={{ name: id }} size={28} label="" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="flex flex-col items-center gap-1">
-                      <span className="text-sm font-semibold text-slate-100">{u.name.replace('{flame}', flameName ?? 'Your flame')}</span>
-                      <span className="font-pixel text-[8px] text-slate-400">{next === 1 ? 'NEW' : `Lv${next}`}</span>
-                    </span>
-                    <span className="mt-0.5 block text-xs text-slate-400">{u.text(next)}</span>
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      {offer && <SkillPick choices={offer.choices} levels={offer.levels} free={offer.free} flameName={flameName} bossName={zone.bossName} keys={keys} onPick={pick} />}
 
       {chest && (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink-950/80 px-4">
@@ -627,6 +595,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party, tutor
                   ['To the mid-boss', () => run.current?.skipToWarden()],
                   [`Theme${theme ? `: ${theme}` : ''}`, () => setTheme(run.current?.cycleTheme() ?? null)],
                   ['Win this run', () => run.current?.winNow()],
+                  ['Level up now', () => run.current?.levelNow()],
                   [
                     auto ? 'Take the controls' : 'Let the bot play',
                     () => {

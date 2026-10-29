@@ -3,7 +3,7 @@ type: reference
 title: Developer mode and the labs
 description: Developer mode (src/lib/dev.ts, DevPanel) and the lab pages — /lab sprites, /lab/story scenes, /lab/sp the sixteen SPs, /lab/music tracks, /lab/night sandbox jumps — for trying changes without training for real.
 tags: [app, dev-mode, lab, testing]
-timestamp: 2026-10-28
+timestamp: 2026-10-29
 ---
 
 # Developer mode and the labs
@@ -39,7 +39,7 @@ It adds: "Skip the intro" on the title screen; "Play here without installing" on
 | Fog | How many bosses are beaten (`setBossesBeaten`), reset the Fog, and a run in any zone on this save at the start, the mid-boss, the boss, the recap, or with the SP's final full (`onRun`, the same spots as `?run=&at=`) |
 | Save | Copy or download the save, paste one to load (tap twice), start over as a new player, turn developer mode off (live app only) |
 
-In a Fog run's pause menu: "Skip to the boss", "Next floor", "To the mid-boss", "The stairs card" (the stairs choice, here and now), "Win this run", the bot, and a Theme button that cycles zone colors.
+In a Fog run's pause menu: "Skip to the boss", "Next floor", "To the mid-boss", "The stairs card" (the stairs choice, here and now), "Win this run", "Level up now" (the skill cards; `?run=0&at=skills` opens them with five skills already taken, as the `/lab/night` row does), the bot, and a Theme button that cycles zone colors.
 Held sideways the panel is a wider sheet with the open tab's sections in two columns. `?dev` on a sandbox jump opens it on top.
 Helpers are pure functions on `GameState` and tested in `src/lib/dev.test.ts`.
 

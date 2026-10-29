@@ -1,5 +1,5 @@
 import type { ClassId } from '@/lib/gear';
-import { MAT_DROPS, MAT_IDS, PARTY, TUTORIAL, type MatId } from '@/balance';
+import { MAT_DROPS, MAT_IDS, PARTY, RUN_SKILL, TUTORIAL, type MatId } from '@/balance';
 import { rollUpgrades, xpToNext, type Edge, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import {
   ATTACK,
@@ -19,6 +19,8 @@ import {
   heroSpeed,
   novaHit,
   sparkHit,
+  starHit,
+  blastHit,
   type AttackKind,
 } from '../rules';
 import {
@@ -297,7 +299,9 @@ export type GameEvent =
   | { type: 'hurt'; x: number; y: number; dmg: number; by: 'shot' | 'touch' | 'image' | 'reflection'; hero?: number }
   /** A monster fired a volley (`id` and `kind`: which, for its look). */
   | { type: 'shoot'; x: number; y: number; boss: boolean; id?: number; kind?: FoeKind }
-  | { type: 'burst'; x: number; y: number; r: number; color: 'nova' | 'orb' | 'wave' | 'fire' | 'ability' }
+  | { type: 'burst'; x: number; y: number; r: number; color: 'nova' | 'orb' | 'wave' | 'fire' | 'ability' | 'star' | 'blast' }
+  /** Falling star (a run skill): a star on its way down to (x, y); its burst follows. */
+  | { type: 'star'; x: number; y: number }
   | { type: 'chain'; points: { x: number; y: number }[] }
   | { type: 'ability'; id: AbilityId; x: number; y: number; toX: number; toY: number }
   /** An SP move: its own move or its final, of size `r` at x, y. `to` is where it ends (a leap's
@@ -511,7 +515,10 @@ export interface Hero {
   waiting: boolean;
   /** Hits taken this run (what the run's recap shows, to set the bot against people). */
   hits: number;
-  cd: { attack: number; spark: number; nova: number; fireball: number };
+  cd: { attack: number; spark: number; nova: number; fireball: number; star: number; frost: number };
+  /** Momentum (a run skill): kills stacked, and when they run out. */
+  rush: number;
+  rushUntil: number;
   ups: Partial<Record<UpgradeId, number>>;
   flames: number;
   orbit: number;
@@ -719,7 +726,9 @@ function newHero(hs: HeroSetup, id: number): Hero {
     waiting: false,
     shots: 0,
     hits: 0,
-    cd: { attack: 0.5, spark: 2, nova: 3, fireball: 2.5 },
+    cd: { attack: 0.5, spark: RUN_SKILL.spark.every, nova: RUN_SKILL.nova.every, fireball: 2.5, star: RUN_SKILL.star.every, frost: 0 },
+    rush: 0,
+    rushUntil: 0,
     ups: {},
     flames: power.flames,
     orbit: 0,
@@ -2760,9 +2769,10 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
   f.hitAt = run.t;
   if (f === run.warden && run.dim !== null) run.dim = Math.min(DIM.full, run.dim + DIM.back);
   // A crit: the hit does CRIT_HIT times, plus crit damage from what you wear (CRIT in src/balance/stats.ts).
-  const critShare = by.power.crit + spCrit(by),
+  // Keen eye and Giant slayer (run skills) add to what you wear.
+  const critShare = by.power.crit + spCrit(by) + RUN_SKILL.keen.crit * (by.ups.keen ?? 0),
     crit = !knight && !scriptedBoss && critShare > 0 && run.critRnd() < critShare,
-    slay = f.elite || f.kind === 'golem' || boss || f === run.warden ? 1 + by.gearFx.slayer : 1,
+    slay = f.elite || f.kind === 'golem' || boss || f === run.warden ? 1 + by.gearFx.slayer + RUN_SKILL.giant.dmg * (by.ups.giant ?? 0) : 1,
     dmg = knight || scriptedBoss ? 1 : Math.max(1, Math.round(amount * slay * spMore(by) * spMark(run, by, f) * (crit ? CRIT_HIT + by.gearFx.critDmg : 1)));
   if (f.kind === 'reflection' || f.kind === 'image') {
     // A copy of you, or of the Mirror: it shatters, and you feel it.
@@ -2813,6 +2823,16 @@ function kill(run: Run, f: Foe, by: Hero) {
   by.kills++;
   emit(run, { type: 'kill', id: f.id, x: f.x, y: f.y, kind: f.kind, elite: f.elite });
   if (f.def.xp > 0) run.gems.push({ id: ++run.ids, x: f.x, y: f.y, value: f.def.xp, pulled: false });
+  // Momentum: one more stack, and they all last a while longer.
+  if (by.ups.rush) {
+    by.rush = run.t < by.rushUntil ? Math.min(RUN_SKILL.rush.stacks, by.rush + 1) : 1;
+    by.rushUntil = run.t + RUN_SKILL.rush.secs;
+  }
+  // Last breath: it bursts (a copy of you or of the Mirror only shatters).
+  if (by.ups.blast && f.kind !== 'reflection' && f.kind !== 'image') {
+    const hit = blastHit(by.ups.blast);
+    burst(run, by, f.x, f.y, hit.r, pow(by, hit.dmg), 'blast', f, 90);
+  }
   const fang = relic(by, 'fang') + by.gearFx.heal;
   if (fang && f !== run.boss) by.hp = Math.min(by.maxHp, by.hp + fang);
   // Harvest (the Wolfcaller's passive): each one you bring down gives back a little.
@@ -2939,7 +2959,8 @@ function attack(run: Run, h: Hero) {
     target = locked(run, h, reach) ?? b ?? nearest(run, h.x, h.y, undefined, reach);
   if (!target && kind !== 'wave') return;
   if (kind === 'wave' && !nearest(run, h.x, h.y, undefined, 150)) return;
-  h.cd.attack = (attackCooldown(cls, h.power, h.ups) * (w?.cd ?? 1)) / (1 + DIALS.relic * 0.1 * relic(h, 'quick')) / bodyOf(h).haste;
+  const rush = h.ups.rush && run.t < h.rushUntil ? 1 + RUN_SKILL.rush.rate * h.ups.rush * h.rush : 1;
+  h.cd.attack = (attackCooldown(cls, h.power, h.ups) * (w?.cd ?? 1)) / (1 + DIALS.relic * 0.1 * relic(h, 'quick')) / bodyOf(h).haste / rush;
   const n = 1 + (h.ups.multi ?? 0),
     dmg = pow(h, ATTACK[cls].dmg * (w?.dmg ?? 1)),
     angle = target ? Math.atan2(target.y - h.y, target.x - h.x) : h.facing,
@@ -3136,7 +3157,7 @@ function skills(run: Run, h: Hero) {
   if (spark > 0) {
     h.cd.spark -= STEP;
     if (h.cd.spark <= 0) {
-      h.cd.spark = 2;
+      h.cd.spark = RUN_SKILL.spark.every;
       const hit = sparkHit(spark);
       chain(run, h, hit.jumps, pow(h, hit.dmg));
     }
@@ -3145,11 +3166,41 @@ function skills(run: Run, h: Hero) {
   if (nova > 0) {
     h.cd.nova -= STEP;
     if (h.cd.nova <= 0) {
-      h.cd.nova = 3;
+      h.cd.nova = RUN_SKILL.nova.every;
       const hit = novaHit(nova);
       // The burst of light also wipes the shots inside it.
       clearBullets(run, h.x, h.y, hit.r);
       burst(run, h, h.x, h.y, hit.r, pow(h, hit.dmg), 'nova');
+    }
+  }
+  const star = h.ups.star ?? 0;
+  if (star > 0) {
+    h.cd.star -= STEP;
+    if (h.cd.star <= 0) {
+      // Falling star: on the foe nearest you; with none in range it tries again soon.
+      const target = nearest(run, h.x, h.y, undefined, RANGE);
+      h.cd.star = target ? RUN_SKILL.star.every : 0.3;
+      if (target) {
+        const hit = starHit(star),
+          tx = target.x,
+          ty = target.y;
+        emit(run, { type: 'star', x: tx, y: ty });
+        later(run, 0.35, () => burst(run, h, tx, ty, hit.r, pow(h, hit.dmg), 'star'));
+      }
+    }
+  }
+  // Cold air: the monsters near you walk slower (a stronger slow already on them stays).
+  const frost = h.ups.frost ?? 0;
+  if (frost > 0) {
+    h.cd.frost -= STEP;
+    if (h.cd.frost <= 0) {
+      h.cd.frost = 0.25;
+      const k = RUN_SKILL.frost.slow * frost;
+      for (const f of run.foes) {
+        if (!f.alive || f === run.boss || !closer(f.x - h.x, f.y - h.y, RUN_SKILL.frost.r + f.def.r)) continue;
+        if (f.slow && run.t < f.slow.until && f.slow.k > k) continue;
+        f.slow = { until: run.t + 0.35, k };
+      }
     }
   }
 }
@@ -3192,7 +3243,7 @@ function pullGems(run: Run) {
   // Each bit of light flies to the hero nearest it, and every standing hero gets its XP.
   run.gems = run.gems.filter((g) => {
     const h = prey(run, g.x, g.y),
-      reach = gemReach(h.power, h.ups),
+      reach = gemReach(h.power),
       dx = h.x - g.x,
       dy = h.y - g.y,
       d = Math.hypot(dx, dy);
@@ -3448,7 +3499,9 @@ function hurt(run: Run, h: Hero, dmg: number, by: 'shot' | 'touch') {
     emit(run, { type: 'evade', x: h.x, y: h.y });
     return;
   }
-  const hit = spGuard(run, h, dmg * (1 - armorOf(h.power, h.ups)) / (1 + DIALS.relic * 0.14 * relic(h, 'iron')));
+  // Stand your ground (a run skill): standing still a moment, you take less.
+  const planted = h.ups.stand && h.stillFor >= RUN_SKILL.stand.after ? 1 - RUN_SKILL.stand.less * h.ups.stand : 1;
+  const hit = spGuard(run, h, (dmg * planted * (1 - armorOf(h.power, h.ups))) / (1 + DIALS.relic * 0.14 * relic(h, 'iron')));
   // In the first dungeon you can't fall: HP stops at 1.
   const taken = run.setup.tutorial ? Math.min(hit, h.hp - 1) : hit;
   if (taken <= 0) {
@@ -3505,6 +3558,17 @@ function end(run: Run, won: boolean, why: RunEnd['why']) {
 /** Developer mode: end the run as if the boss fell. */
 export function winNow(run: Run) {
   end(run, true, 'boss');
+}
+
+/** Developer mode: a level up now (and `skills` levels' picks taken first, by the bot's order, to
+    see the card with a few skills already in hand). */
+export function levelNow(run: Run, skills = 0) {
+  const h = run.hero;
+  for (let i = 0; i < skills; i++) {
+    if (!h.offer) gain(run, h, xpToNext(h.level) - h.xp);
+    if (h.offer) pick(run, BOT_PICKS.find((id) => h.offer!.choices.includes(id)) ?? h.offer.choices[0], h);
+  }
+  if (!h.offer) gain(run, h, xpToNext(h.level) - h.xp);
 }
 
 /** Developer mode: down to the next floor's first room. */

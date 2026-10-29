@@ -1,6 +1,6 @@
 import { daysSinceLastSession, type GameState } from './game';
 import { dayKey } from './days';
-import { PICKUP_REACH, RUN_LEVELS, TUTORIAL } from '@/balance';
+import { PICKUP_REACH, RUN_LEVELS, RUN_SKILL, TUTORIAL } from '@/balance';
 import { buildOf, pointsFree, statPower } from './stats';
 import { CHAPTERS } from '@/story/chapters';
 import { FIRST_FOG } from '@/story/opening';
@@ -212,39 +212,57 @@ export function nextGrowth(state: GameState): string {
 
 // ---------- skills you pick during a run ----------
 
-export type UpgradeId = 'power' | 'haste' | 'multi' | 'flame' | 'spark' | 'nova' | 'swift' | 'vital' | 'magnet' | 'guard';
+export type UpgradeId =
+  | 'power' | 'haste' | 'multi' | 'flame' | 'spark' | 'nova' | 'swift' | 'vital' | 'star' | 'guard'
+  | 'frost' | 'keen' | 'giant' | 'blast' | 'rush' | 'stand' | 'wide';
+
+/** What a skill is about, for its card's color: hitting, magic on a timer, staying alive, or the rest. */
+export type SkillKind = 'attack' | 'magic' | 'guard' | 'craft';
 
 export interface Upgrade {
   id: UpgradeId;
   name: string;
+  kind: SkillKind;
   /** What the next level does. */
   text: (next: number) => string;
   max: number;
 }
 
+const pc = (n: number) => `${Math.round(n * 100)}%`;
+const K = RUN_SKILL;
+
+/** Every skill a level-up can offer, in the order the roll shuffles them (keep it, or replays move).
+    Their numbers are in src/balance/skills.ts. */
 export const UPGRADES: Upgrade[] = [
-  { id: 'power', name: 'Heavy hands', text: () => 'Your attack hits 25% harder.', max: 5 },
-  { id: 'haste', name: 'Quick hands', text: () => 'You attack 18% faster.', max: 5 },
-  { id: 'multi', name: 'One more', text: (n) => (n === 1 ? 'Your attack fires twice.' : `Your attack fires ${n + 1} times.`), max: 3 },
-  { id: 'flame', name: "{flame}'s fire", text: () => 'One more flame circles you, burning what it touches.', max: 3 },
-  { id: 'spark', name: 'Spark', text: (n) => (n === 1 ? 'Every 2 s, lightning jumps between 3 foes.' : `Lightning jumps to ${2 + n} foes and hits harder.`), max: 4 },
-  { id: 'nova', name: 'Ash nova', text: (n) => (n === 1 ? 'Every 3 s, a burst of light pushes foes back.' : 'The burst grows wider and hits harder.'), max: 4 },
-  { id: 'swift', name: 'Swift feet', text: () => 'You move 12% faster.', max: 3 },
-  { id: 'vital', name: 'Second breath', text: () => '+25 max HP, and you heal fully.', max: 4 },
-  { id: 'magnet', name: 'Pull', text: () => 'You pick up light from 50% further away.', max: 3 },
-  { id: 'guard', name: 'Stand firm', text: () => 'You take 10% less damage.', max: 3 },
+  { id: 'power', name: 'Heavy hands', kind: 'attack', text: () => `Your attack hits ${pc(K.power.dmg)} harder.`, max: K.power.max },
+  { id: 'haste', name: 'Quick hands', kind: 'attack', text: () => `You attack ${pc(K.haste.rate)} faster.`, max: K.haste.max },
+  { id: 'multi', name: 'One more', kind: 'attack', text: (n) => (n === 1 ? 'Your attack fires twice.' : `Your attack fires ${n + 1} times.`), max: K.multi.max },
+  { id: 'flame', name: "{flame}'s fire", kind: 'magic', text: () => 'One more flame circles you, burning what it touches.', max: K.flame.max },
+  { id: 'spark', name: 'Spark', kind: 'magic', text: (n) => (n === 1 ? `Every ${K.spark.every} s, lightning jumps between ${K.spark.jumps + 1} foes.` : `Lightning jumps to ${K.spark.jumps + n} foes and hits harder.`), max: K.spark.max },
+  { id: 'nova', name: 'Ash nova', kind: 'magic', text: (n) => (n === 1 ? `Every ${K.nova.every} s, a burst of light pushes foes back.` : 'The burst grows wider and hits harder.'), max: K.nova.max },
+  { id: 'swift', name: 'Swift feet', kind: 'craft', text: () => `You move ${pc(K.swift.move)} faster.`, max: K.swift.max },
+  { id: 'vital', name: 'Second breath', kind: 'guard', text: () => `+${K.vital.hp} max HP, and you heal fully.`, max: K.vital.max },
+  { id: 'star', name: 'Falling star', kind: 'magic', text: (n) => (n === 1 ? `Every ${K.star.every} s, a star falls on a foe near you.` : 'The star hits harder.'), max: K.star.max },
+  { id: 'guard', name: 'Stand firm', kind: 'guard', text: () => `You take ${pc(K.guard.armor)} less damage.`, max: K.guard.max },
+  { id: 'frost', name: 'Cold air', kind: 'craft', text: () => `Monsters near you walk ${pc(K.frost.slow)} slower.`, max: K.frost.max },
+  { id: 'keen', name: 'Keen eye', kind: 'attack', text: () => `+${pc(K.keen.crit)} chance to crit.`, max: K.keen.max },
+  { id: 'giant', name: 'Giant slayer', kind: 'attack', text: () => `Hit elites, mid-bosses and bosses ${pc(K.giant.dmg)} harder.`, max: K.giant.max },
+  { id: 'blast', name: 'Last breath', kind: 'magic', text: (n) => (n === 1 ? 'A monster you bring down bursts, hurting the ones around it.' : 'The burst hits harder.'), max: K.blast.max },
+  { id: 'rush', name: 'Momentum', kind: 'attack', text: (n) => `Each kill: attack ${pc(K.rush.rate * n)} faster for ${K.rush.secs} s, up to ${K.rush.stacks} times.`, max: K.rush.max },
+  { id: 'stand', name: 'Stand your ground', kind: 'guard', text: () => `Stand still ${K.stand.after} s: take ${pc(K.stand.less)} less damage until you move.`, max: K.stand.max },
+  { id: 'wide', name: 'Wider choice', kind: 'craft', text: () => 'Every level-up from now on shows one more card.', max: K.wide.max },
 ];
 
 export const getUpgrade = (id: UpgradeId) => UPGRADES.find((u) => u.id === id)!;
 
-/** Three different skills that aren't maxed, picked at random. */
+/** Three different skills that aren't maxed, picked at random (one more with Wider choice). */
 export function rollUpgrades(levels: Partial<Record<UpgradeId, number>>, rng: () => number = Math.random): UpgradeId[] {
   const pool = UPGRADES.filter((u) => (levels[u.id] ?? 0) < u.max).map((u) => u.id);
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-  return pool.slice(0, 3);
+  return pool.slice(0, 3 + K.wide.cards * (levels.wide ?? 0));
 }
 
 /** Light needed to go from `level` to the next one. */

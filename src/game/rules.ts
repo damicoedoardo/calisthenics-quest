@@ -1,7 +1,7 @@
 import type { ClassId } from '@/lib/gear';
 import type { Power, UpgradeId } from '@/lib/fog';
 import type { Sheet } from '@/sprites/registry';
-import { ATTACK } from '@/balance';
+import { ATTACK, RUN_SKILL } from '@/balance';
 
 /* The Fog's shared numbers and sprite sheet names, as plain data and math with no Phaser: the dungeon engine
    (dungeon/engine.ts) and its scene read them. */
@@ -35,7 +35,7 @@ export type BossSheetKey =
 export type Sheets = Record<Exclude<SheetKey, BossSheetKey>, Sheet> & Partial<Record<BossSheetKey, Sheet>>;
 
 /** Skills the bot takes first. */
-export const BOT_PICKS: UpgradeId[] = ['multi', 'power', 'haste', 'vital', 'spark', 'flame', 'nova', 'guard', 'swift', 'magnet'];
+export const BOT_PICKS: UpgradeId[] = ['multi', 'power', 'haste', 'vital', 'wide', 'spark', 'keen', 'rush', 'flame', 'nova', 'star', 'giant', 'blast', 'guard', 'stand', 'frost', 'swift'];
 
 export const HERO_SPEED = 150;
 export const HERO_HP = 100;
@@ -60,15 +60,19 @@ type Ups = Partial<Record<UpgradeId, number>>;
 // ---------- the hero ----------
 
 export const heroMaxHp = (power: Power) => HERO_HP + power.health;
-export const heroSpeed = (ups: Ups) => HERO_SPEED * (1 + 0.12 * (ups.swift ?? 0));
-export const heroDamage = (base: number, power: Power, ups: Ups) => base * (1 + power.damage) * (1 + 0.25 * (ups.power ?? 0));
-export const attackCooldown = (kind: AttackKind, power: Power, ups: Ups) => ATTACK[kind].cd / ((1 + power.speed) * (1 + 0.18 * (ups.haste ?? 0)));
-export const armorOf = (power: Power, ups: Ups) => Math.min(0.6, power.armor + 0.1 * (ups.guard ?? 0));
-export const gemReach = (power: Power, ups: Ups) => 60 * (1 + power.reach + 0.5 * (ups.magnet ?? 0));
+const K = RUN_SKILL;
+export const heroSpeed = (ups: Ups) => HERO_SPEED * (1 + K.swift.move * (ups.swift ?? 0));
+export const heroDamage = (base: number, power: Power, ups: Ups) => base * (1 + power.damage) * (1 + K.power.dmg * (ups.power ?? 0));
+export const attackCooldown = (kind: AttackKind, power: Power, ups: Ups) => ATTACK[kind].cd / ((1 + power.speed) * (1 + K.haste.rate * (ups.haste ?? 0)));
+export const armorOf = (power: Power, ups: Ups) => Math.min(0.6, power.armor + K.guard.armor * (ups.guard ?? 0));
+export const gemReach = (power: Power) => 60 * (1 + power.reach);
 
 /** Skills on a timer, per level. */
-export const sparkHit = (lv: number) => ({ jumps: 2 + lv, dmg: 14 + 6 * (lv - 1) });
-export const novaHit = (lv: number) => ({ r: 90 + 20 * (lv - 1), dmg: 10 + 5 * (lv - 1) });
+export const sparkHit = (lv: number) => ({ jumps: K.spark.jumps + lv, dmg: K.spark.dmg + K.spark.dmgPer * (lv - 1) });
+export const novaHit = (lv: number) => ({ r: K.nova.r + K.nova.rPer * (lv - 1), dmg: K.nova.dmg + K.nova.dmgPer * (lv - 1) });
+export const blastHit = (lv: number) => ({ r: K.blast.r, dmg: K.blast.dmg + K.blast.dmgPer * (lv - 1) });
+export const starHit = (lv: number) => ({ r: K.star.r, dmg: K.star.dmg + K.star.dmgPer * (lv - 1) });
+
 export const FLAME = { orbit: 68, spin: 2.6, touch: 22, every: 500, dmg: 7 };
 export const FIREBALL = { every: 2.5, r: 52, dmg: 16, flightMs: 320 };
 export const FAIRY = { below: 0.35, heal: 0.25, restMs: 25000 };
