@@ -54,12 +54,15 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
         <div className="flex-1">
           <LookEditor look={look} onChange={(l) => update((s) => ({ ...s, profile: { ...s.profile, look: l } }))} gear={gear} classId={state.profile.classId} />
         </div>
-        <button
-          onClick={() => setEditingLook(false)}
-          className="mt-5 w-full rounded-2xl land:mt-3 land:py-3 bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
-        >
-          Done
-        </button>
+        {/* Pinned to the bottom, so Done is in reach without scrolling past every choice. */}
+        <div className="sticky bottom-0 z-10 -mx-4 mt-3 bg-ink-950 px-4 pb-1 pt-3 land:mt-2">
+          <button
+            onClick={() => setEditingLook(false)}
+            className="w-full rounded-2xl land:py-3 bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
+          >
+            Done
+          </button>
+        </div>
       </div>
     </Overlay>
   );

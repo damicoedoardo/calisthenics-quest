@@ -104,7 +104,7 @@ upright layout inside it. Add computer changes only as `desk:` classes. The Fog'
 | `SpTransform` | The SP waking, over the whole screen, played by a story line with `art: 'sp-transform'`: the card turns, the SP's element storms in (prop `n`: which SP), a flash, you in the SP's look under its name. A tap skips to the end; reduced motion shows only the end |
 | `BookOfDays` | Every day the app was opened, newest first; each page's date with the day's icon |
 | `Hero`, `Characters`, `Sprite` | Draw sprites; `Hero` only decides when to attack, `Sprite` renders any sprite id. Screens that show your hero (header, Hero tab, after a workout) pass `variant={heroVariant(state)}`, so once the flame has fused with you in the finale you are drawn on fire |
-| `Look`, `LookEditor` | The player's look, shared through `LookProvider`, and its editor |
+| `Look`, `LookEditor` | The player's look, shared through `LookProvider`, and its editor: body, hair (nineteen styles), hair color, eyes, skin and a face mark (the clothes come from items). Upright, the preview stays in view while the choices scroll, and the button to close it (Done on the Hero tab, This is me in the opening) stays pinned at the bottom |
 | `Place`, `Weather` | A story place's backdrop; rain, ash, snow, embers, fog over the screen |
 | `Sound` | `useMusic` (a track while a screen is on), the mute toggle |
 | `DevPanel` | Developer mode's wrench and its tabbed panel (Go, Wallet, Gear, Hero, Story, Fog, Save), see [dev-mode-and-labs.md](dev-mode-and-labs.md) |

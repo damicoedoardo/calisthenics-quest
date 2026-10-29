@@ -1,6 +1,6 @@
 import type { ClassId, Gear, GearSlot } from '@/lib/gear';
 import type { ClipFrame, ClipId } from '../clips';
-import { HAIRSTYLES, drawFigure, eyeBoxes, type Ctx, type FigureSpec, type Look } from '../engine/figure';
+import { FACE_MARKS, HAIRSTYLES, drawFigure, eyeBoxes, type Ctx, type FigureSpec, type Look } from '../engine/figure';
 import { NIGHT, aura, grid, mix, painter, rampOf, tint, type Grid, type Ramp } from '../engine/grid';
 import { ARM_DOWN, bone, hangs, limbs, paintArm } from '../engine/drawn';
 import { drawBow, drawStaff, drawStick, drawSword, drawWand, type WeaponLook } from '../parts/weapons';
@@ -9,7 +9,7 @@ import { spGirlCut, spLook, spWeapon } from './spLooks';
 import { SP_WEAPON_ART } from '../parts/spWeapons';
 import { BANDS } from '@/balance';
 import { bandOf } from '@/game/dungeon/items';
-import { CAPE, FLAME, GOLD_GHOST, HAIR, HOLLOW_EYES, LINEN, R, SHADOW, SKIN, TROUSERS } from '../palette';
+import { CAPE, EYE_COLORS, FLAME, GOLD_GHOST, HAIR, HOLLOW_EYES, LINEN, R, SHADOW, SKIN, TROUSERS } from '../palette';
 
 /* Your hero. One sprite carries the whole story: gear colors and class weapons as you train, and
    the variants the story needs (the gold Echo, the Best Self, the Hollow, and you with the flame
@@ -29,12 +29,12 @@ export interface HeroOpts {
   sp?: boolean | number;
 }
 
-export const DEFAULT_LOOK: Look = { sex: 'm', style: 'spiky', hair: 'brown', skin: 'light', head: 'manga' };
+export const DEFAULT_LOOK: Look = { sex: 'm', style: 'spiky', hair: 'brown', skin: 'light', eyes: 'brown', mark: 'none', head: 'manga' };
 
 /** What picking boy or girl before the opening gives you. The rest is changed after it. */
 export const STARTER_LOOKS: Record<Look['sex'], Look> = {
   m: DEFAULT_LOOK,
-  f: { sex: 'f', style: 'long', hair: 'brown', skin: 'light', head: 'manga' },
+  f: { sex: 'f', style: 'long', hair: 'brown', skin: 'light', eyes: 'brown', mark: 'none', head: 'manga' },
 };
 
 /** A saved look made safe to draw: anything missing or unknown falls back to the starter look. */
@@ -46,6 +46,8 @@ export function normalizeLook(look?: Partial<Look> | null): Look {
     style: look.style && look.style in HAIRSTYLES ? look.style : base.style,
     hair: look.hair && look.hair in HAIR ? look.hair : base.hair,
     skin: look.skin && look.skin in SKIN ? look.skin : base.skin,
+    eyes: look.eyes && look.eyes in EYE_COLORS ? look.eyes : base.eyes,
+    mark: look.mark && FACE_MARKS.includes(look.mark) ? look.mark : base.mark,
     head: look.head === 'classic' ? 'classic' : 'manga',
   };
 }

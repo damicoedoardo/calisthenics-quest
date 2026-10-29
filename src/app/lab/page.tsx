@@ -8,8 +8,8 @@ import { makeGear, uniformGear, type ClassId, type Gear, type GearSlot, type Tie
 import { RARITY, seedOf, type ItemArt, type ItemLook, type Rarity } from '@/game/dungeon/items';
 import { CLIPS, type SpriteAction } from '@/sprites/clips';
 import { DEFAULT_LOOK, type HeroVariant } from '@/sprites/characters/hero';
-import { HAIRSTYLES, type Look } from '@/sprites/engine/figure';
-import { HAIR, SKIN, type HairColor, type SkinTone } from '@/sprites/palette';
+import { FACE_MARKS, HAIRSTYLES, type Look } from '@/sprites/engine/figure';
+import { EYE_COLORS, HAIR, SKIN, type EyeColor, type HairColor, type SkinTone } from '@/sprites/palette';
 import { SPRITES, clipFor, labelFor, type SpriteId } from '@/sprites/registry';
 
 /* Sprite Lab: every sprite and animation in one place, to check art changes on a phone.
@@ -152,6 +152,8 @@ export default function Lab() {
           <Chips label="HAIR" options={Object.keys(HAIRSTYLES) as Look['style'][]} value={look.style} onChange={(style) => setLook({ ...look, style })} />
           <Chips label="HAIR COLOR" options={Object.keys(HAIR) as HairColor[]} value={look.hair} onChange={(hair) => setLook({ ...look, hair })} />
           <Chips label="SKIN" options={Object.keys(SKIN) as SkinTone[]} value={look.skin} onChange={(skin) => setLook({ ...look, skin })} />
+          <Chips label="EYES" options={Object.keys(EYE_COLORS) as EyeColor[]} value={look.eyes ?? 'brown'} onChange={(eyes) => setLook({ ...look, eyes })} />
+          <Chips label="FACE" options={[...FACE_MARKS]} value={look.mark ?? 'none'} onChange={(mark) => setLook({ ...look, mark })} />
           <Chips label="SIZE" options={SIZES} value={size} onChange={setSize} name={(s) => `${s}px`} />
           <Chips label="STAGE" options={[false, true]} value={light} onChange={setLight} name={(l) => (l ? 'Light' : 'Dark')} />
         </div>

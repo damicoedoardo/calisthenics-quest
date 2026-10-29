@@ -4,7 +4,9 @@ import { makeGear, uniformGear, type ClassId, type Gear, type GearSlot, type Tie
 import { seedOf, type ItemArt, type ItemLook, type Rarity } from '@/game/dungeon/items';
 import { CLIPS, type SpriteAction } from './clips';
 import { DEFAULT_LOOK, STARTER_LOOKS, normalizeLook } from './characters/hero';
-import { HAIRSTYLES, SIZE, type HairStyle } from './engine/figure';
+import { FACE_MARKS, HAIRSTYLES, SIZE, type HairStyle } from './engine/figure';
+import { EYE_COLORS, type EyeColor } from './palette';
+import { STYLES } from '@/components/LookEditor';
 import { MANGA_HAIR } from './engine/manga';
 import { tint, type Grid } from './engine/grid';
 import { planExercises } from '@/lib/program';
@@ -129,9 +131,26 @@ describe('sprite registry', () => {
   it('saved looks are made safe to draw', () => {
     expect(normalizeLook()).toEqual(DEFAULT_LOOK);
     expect(normalizeLook({ sex: 'f' })).toEqual(STARTER_LOOKS.f);
-    const broken = { sex: 'f', style: 'mohawk', hair: 'green', skin: 'blue' } as unknown as Parameters<typeof normalizeLook>[0];
+    const broken = { sex: 'f', style: 'dreadnought', hair: 'neon', skin: 'blue', eyes: 'plaid', mark: 'tattoo' } as unknown as Parameters<typeof normalizeLook>[0];
     expect(normalizeLook(broken)).toEqual(STARTER_LOOKS.f);
     expect(normalizeLook({ ...STARTER_LOOKS.f, hair: 'red', style: 'pony' })).toEqual({ ...STARTER_LOOKS.f, hair: 'red', style: 'pony' });
+    const picked = { ...STARTER_LOOKS.f, style: 'twin', hair: 'teal', skin: 'ebony', eyes: 'violet', mark: 'freckles' } as const;
+    expect(normalizeLook(picked)).toEqual(picked);
+    // a save from before eyes and marks draws with brown eyes and a clear face
+    const { eyes: _e, mark: _m, ...old } = DEFAULT_LOOK;
+    expect(normalizeLook(old)).toEqual(DEFAULT_LOOK);
+  });
+
+  it('the look editor offers every hairstyle', () => {
+    expect(new Set(STYLES.map((s) => s.id))).toEqual(new Set(Object.keys(HAIRSTYLES)));
+  });
+
+  it('every eye color and face mark changes the face', () => {
+    const prints = new Set<string>();
+    for (const eyes of Object.keys(EYE_COLORS) as EyeColor[]) prints.add(hash(framesFor('hero', 'idle', { look: { ...DEFAULT_LOOK, eyes } })));
+    expect(prints.size).toBe(Object.keys(EYE_COLORS).length);
+    const marks = new Set(FACE_MARKS.map((mark) => hash(framesFor('hero', 'idle', { look: { ...DEFAULT_LOOK, mark } }))));
+    expect(marks.size).toBe(FACE_MARKS.length);
   });
 
   it('the regular monsters have a variant for each zone, with the same eyes', () => {
