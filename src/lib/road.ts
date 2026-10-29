@@ -14,6 +14,9 @@ export interface RoadProgress {
   from: number;
   /** Chapters whose boss fell to your party, in order. */
   beaten: number;
+  /** Friends who beat a road boss with you, by name, in the order they first did: stitched on the
+      Road Banner. Older saves have none. */
+  walked?: string[];
 }
 
 export interface RoadAt {
@@ -59,13 +62,17 @@ export function startRoad(state: GameState): GameState {
   return state.road ? state : { ...state, road: { from: state.sessions.length, beaten: 0 } };
 }
 
-/** Your party beat chapter `n`'s boss. It counts once that chapter is the one you're on; a hero who
-    hadn't set out yet sets out with it (a friend brought them along). */
-export function wonRoad(state: GameState, n: number): GameState {
+/** Your party (`friends`, by name) beat chapter `n`'s boss. It counts once that chapter is the one
+    you're on; a hero who hadn't set out yet sets out with it (a friend brought them along). Every
+    friend who was there is stitched on the Road Banner, whether or not the win moved your road. */
+export function wonRoad(state: GameState, n: number, friends: string[] = []): GameState {
   const s = startRoad(state),
-    at = roadAt(s);
-  if (n !== at.beaten + 1 || n > at.open) return s;
-  return { ...s, road: { ...s.road!, beaten: n } };
+    at = roadAt(s),
+    had = s.road!.walked ?? [],
+    walked = [...had, ...friends.filter((f, i) => f && !had.includes(f) && friends.indexOf(f) === i)],
+    road = walked.length > had.length ? { ...s.road!, walked } : s.road!;
+  if (n !== at.beaten + 1 || n > at.open) return road === s.road ? s : { ...s, road };
+  return { ...s, road: { ...road, beaten: n } };
 }
 
 /** Halfway (in workouts) through chapter `n`, when Tamsin's note waits by the fire. */

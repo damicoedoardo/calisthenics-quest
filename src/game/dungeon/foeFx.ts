@@ -142,6 +142,46 @@ export const SHOT_ART: Record<string, ShotArt> = {
       g.fillStyle(0xffffff).fillRect(8, 8, 3, 3);
     },
   },
+  // The Unsent's words, and the Distance's fog.
+  'shot-word': {
+    w: 14,
+    h: 10,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0x97a0cc, 0.35).fillEllipse(7, 5, 14, 10);
+      g.fillStyle(0xfffdf5).fillRect(2, 2, 10, 6);
+      g.fillStyle(0x1e1b2e).fillRect(3, 3, 3, 1).fillRect(7, 3, 4, 1).fillRect(3, 5, 6, 1);
+    },
+  },
+  'shot-fog': {
+    w: 16,
+    h: 16,
+    paint: (g) => {
+      g.fillStyle(0x55609a, 0.35).fillCircle(8, 8, 8);
+      g.fillStyle(0xc8ceea, 0.8).fillCircle(8, 8, 5);
+      g.fillStyle(0xffffff, 0.9).fillCircle(7, 7, 2);
+    },
+  },
+  // The Silent Bell's toll, and the Tollkeeper's stones.
+  'shot-toll': {
+    w: 16,
+    h: 16,
+    paint: (g) => {
+      g.fillStyle(0xe0b45c, 0.3).fillCircle(8, 8, 8);
+      g.lineStyle(2, 0xfbe3a0, 0.95).strokeCircle(8, 8, 6);
+      g.fillStyle(0xfffbeb).fillCircle(8, 8, 2);
+    },
+  },
+  'shot-plank': {
+    w: 14,
+    h: 14,
+    spin: 7,
+    paint: (g) => {
+      g.fillStyle(0xbf9460, 0.35).fillCircle(7, 7, 7);
+      g.fillStyle(0x8a6038).fillRect(2, 5, 10, 4);
+      g.fillStyle(0xecd3a4).fillRect(3, 6, 8, 1);
+    },
+  },
   // The Grinder's sparks, struck off the stone.
   'shot-whet': {
     w: 14,
@@ -311,6 +351,7 @@ export const STYLE_SHOT = { plain: 'bullet', homing: 'bullet-homing', bounce: 'b
 export const BOSS_SHOTS: Partial<Record<FogBoss, string[]>> = {
   tomorrow: ['shot-z', 'shot-alarm'],
   lull: ['shot-note', 'shot-hum', 'shot-note'],
+  distance: ['shot-fog', 'shot-word'],
 };
 
 /** The picture for a shot fired by `from` (a boss's when `boss`), in `style`. A boss's shot
@@ -400,6 +441,8 @@ export const BOSS_LOOKS: Record<FogBoss, Look> = {
   hollow: { tex: 'hollow', scale: 1.5, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
   summit: { tex: 'hollow', scale: 1.5, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
   lull: { tex: 'slime', scale: 1.6, bits: [0x8a83a0, 0x4d7a3a, 0xd1d5db] },
+  distance: { tex: 'mirror', scale: 1.35, bits: [0x55609a, 0xc8ceea, 0xfde68a] },
+  alone: { tex: 'knight', scale: 1.15, bits: [0x8e96a5, 0x5f4630, 0xc8ced8] },
 };
 
 /** Each zone boss's own art, in the stages of its fight (the Knight's plates falling, the
@@ -413,11 +456,13 @@ export const BOSS_ART: Partial<Record<FogBoss, { stages: BossSheetKey[]; size: n
   hollow: { stages: ['hollowBoss'], size: 1.3, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
   summit: { stages: ['summitBoss'], size: 1.9, bits: [0xe2e8f0, 0xfde68a, 0xffffff] },
   lull: { stages: ['lullBoss'], size: 1.9, bits: [0x8a83a0, 0x4d7a3a, 0xd1d5db] },
+  distance: { stages: ['distanceBoss'], size: 1.5, bits: [0x55609a, 0xc8ceea, 0xfde68a] },
+  alone: { stages: ['aloneBoss', 'aloneBoss1', 'aloneBoss2'], size: 1.5, bits: [0x8e96a5, 0x5f4630, 0xc8ced8] },
 };
 
 /** Which stage of its art a boss is in: the Knight by plates left, the Plateau by its cracks. */
 export function bossStage(which: FogBoss, f: Foe): number {
-  if (which === 'knight') return f.hp > f.maxHp * (2 / 3) ? 0 : f.hp > f.maxHp / 3 ? 1 : 2;
+  if (which === 'knight' || which === 'alone') return f.hp > f.maxHp * (2 / 3) ? 0 : f.hp > f.maxHp / 3 ? 1 : 2;
   if (which === 'plateau') return f.phase <= 3 ? 0 : f.phase <= 6 ? 1 : 2;
   return 0;
 }
@@ -623,6 +668,31 @@ export const FOE_FX: Record<MonsterKind, FoeFx> = {
       fx.fillStyle(0xf97316, 0.18).fillCircle(f.x, f.y, f.def.r * 1.4);
     },
   },
+  // The Unsent (the Quiet Miles): words fly off it, and it tears apart into scraps.
+  unsent: {
+    look: { tex: 'unsent', scale: 0.6, bits: [0xece6d2, 0xb91c1c, 0x55609a] },
+    shot: 'shot-word',
+    death: (k, e, R) => {
+      k.sfx('kill', 1.4);
+      k.burst('bits', 10, e.x, e.y, -6, 0xece6d2);
+      puff(k, e, R, 0x97a0cc, 5);
+    },
+  },
+  // The Loner (the Long Bridge): its shield's side is marked on the floor, so you see where to come
+  // at it from.
+  loner: {
+    look: { tex: 'loner', scale: 0.65, bits: [0x6b4226, 0x4a4a52, 0x646380] },
+    shot: 'shot-plank',
+    tell: ({ f, fx }) => {
+      if (f.face === undefined) return;
+      const R = f.def.r + 9;
+      fx.lineStyle(3, 0xc9975e, 0.55).beginPath().arc(f.x, f.y, R, f.face - 1.1, f.face + 1.1).strokePath();
+    },
+  },
+  // The Silent Bell: a ring marks where its toll comes back from.
+  bell: { look: { tex: 'bellMid', scale: 1.3, bits: [0xb07c32, 0x5f9a86, 0xfbe3a0] }, shot: 'shot-toll', heavy: true },
+  // The Tollkeeper: stones (its plank's splinters) and a stamp.
+  toll: { look: { tex: 'tollMid', scale: 1.3, bits: [0x5f4630, 0x9ca3af, 0xfde047] }, shot: 'shot-plank', heavy: true },
 };
 
 /** The Mirror breaking (the boss): like its images, bigger. */

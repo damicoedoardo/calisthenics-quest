@@ -18,7 +18,9 @@ and works offline.
   `music-zones.ts` (each Fog world's run theme and boss theme, the Warden's theme, the zone-end
   stings). `ZONE_MUSIC` / `zoneMusic` pick a world's tracks, by `worldOf(zone)`: the six story
   zones, then the Ember Road's own worlds (the Whetstone Pass: `pass`, and the Lull's lullaby
-  `passBoss`).
+  `passBoss`; the Quiet Miles: `miles`, a call answered from far off, and `milesBoss`, two voices
+  drifting apart; the Long Bridge: `bridge`, a rope-hauling song, and `bridgeBoss`, a march that
+  gains a voice every four bars).
 - **Sound effects**: `SfxId` and `SFX_IDS` in `music.ts`; the Fog scene turns game events into them.
 - **Playing**: `useMusic(id)` in `src/components/Sound.tsx` plays a track while a screen is on and
   fades it when it leaves; `SoundToggle` mutes. **Menu music**: `useMenuTrack(on)` (in `page.tsx`, on the tabs only) sets the `menu` track as the engine's base (`music.setBase`): it plays whenever no screen asks for a song, and comes back when a screen with its own song (a scene, sitting by the fire) closes. `useMenuMusic` / `music.setMenuMusic` is its own on/off, saved in `localStorage` and shown in the Hero tab's Settings. `music.tryStart()` wakes the sound without a tap where the browser allows it and says if it did (the app opening uses it; iPhones always need a tap). Story scenes name their song in `music` (see

@@ -28,7 +28,11 @@ import {
   DIM,
   LIGHT,
   LULL,
+  LANTERN,
+  BELL,
   asleep,
+  lit,
+  shownFalse,
   MIDS,
   CREW,
   GALE,
@@ -1636,6 +1640,11 @@ class DungeonScene extends Phaser.Scene {
         e = { s, base: look.scale * (f.elite ? ELITE.r : 1), born: now, squash: 0, flash: 0, tex: look.tex, attackAt: 0 };
         this.foes.set(f.id, e);
       }
+      // The Distance, past half, says its second line (its art has one stage).
+      if (f === r.boss && this.setup.zone.boss === 'distance' && this.stage < 1 && f.hp < f.maxHp * 0.5) {
+        this.stage = 1;
+        this.speak(this.setup.lines?.stages[0]);
+      }
       // A boss changes as its fight goes: the Knight's plates fall, the Plateau cracks.
       if (f === r.boss) {
         const look = this.bossLook(f);
@@ -1654,7 +1663,7 @@ class DungeonScene extends Phaser.Scene {
           }
           this.shake(200, 0.006);
           // Half the Knight's armor goes at once; the Plateau splits further.
-          if (this.setup.zone.boss === 'knight') {
+          if (this.setup.zone.boss === 'knight' || this.setup.zone.boss === 'alone') {
             this.sfx('crash');
             this.shake(320, 0.01);
             this.hitStop(60);
@@ -1673,6 +1682,9 @@ class DungeonScene extends Phaser.Scene {
       if (born < 1) s.setAlpha(born).setScale(base * (1.25 - 0.25 * born), base * (0.25 + 0.75 * born));
       else if (now < e.squash) s.setAlpha(1).setScale(base * 1.22, base * 0.8);
       else s.setAlpha(1).setScale(base * (aboutToFire(f, r.t) ? 1.14 : 1));
+      // The Quiet Miles: an Unsent out of every lantern's light, and a false shape a lantern showed
+      // up, are only shapes in the fog.
+      if (born >= 1 && ((f.kind === 'unsent' && !lit(r, f)) || shownFalse(f))) s.setAlpha(0.3);
       if (e.flash && now >= e.flash) {
         e.flash = 0;
         const tint = f.kind === 'boss' || f.kind === 'image' ? undefined : looks(f.kind, this.setup.zone).tint;
@@ -2237,6 +2249,31 @@ class DungeonScene extends Phaser.Scene {
         this.fade(300, (g, p) => g.lineStyle(3 * (1 - p) + 1, 0xc4b5fd, 0.7 * (1 - p)).lineBetween(x, y, toX, toY));
         break;
       }
+      case 'shown': {
+        // A lantern shows a false shape of the Distance: a soft chime, a gold ring.
+        this.sfx('chime', 1.6);
+        this.fade(500, (g, p) => g.lineStyle(3, 0xfde68a, 0.8 * (1 - p)).strokeCircle(e.x, e.y, 18 + 30 * p));
+        break;
+      }
+      case 'toll': {
+        // The Silent Bell tolls; a ring fills where the toll will come back from.
+        const { x, y, toX, toY } = e;
+        this.sfx('chime', 0.5);
+        this.bossAttack(this.run.warden);
+        this.fade(500, (g, p) => g.lineStyle(5 * (1 - p) + 1, 0xfbe3a0, 0.7 * (1 - p)).strokeCircle(x, y, 30 + 120 * p));
+        this.fade(BELL.echo * 1000, (g, p) => {
+          g.lineStyle(2, 0xfbe3a0, 0.25 + 0.5 * p).strokeCircle(toX, toY, 40 - 28 * p);
+          g.fillStyle(0xe0b45c, 0.12 + 0.2 * p).fillCircle(toX, toY, 12);
+        });
+        break;
+      }
+      case 'block': {
+        // A hit on a Loner's shield: a dull clank and a spark.
+        this.sfx('clank', 1.2);
+        this.bits.particleTint = 0xc9975e;
+        this.burst(this.bits, 4, e.x, e.y);
+        break;
+      }
       case 'inhale':
         // The Bellows breathes in: a long drawn whoosh.
         this.sfx('whoosh', 0.6);
@@ -2385,7 +2422,7 @@ class DungeonScene extends Phaser.Scene {
         const { x, y } = e;
         this.sfx('roar', 1.3);
         this.cameras.main.shake(300, 0.006);
-        this.bossLabel?.setText('NOT GOOD ENOUGH!');
+        this.bossLabel?.setText(this.setup.zone.boss === 'alone' ? 'ON YOUR OWN!' : 'NOT GOOD ENOUGH!');
         this.time.delayedCall(1800, () => this.bossLabel?.setText(''));
         this.fade(500, (g, p) => g.lineStyle(6 * (1 - p) + 1, 0xfecaca, 0.8 * (1 - p)).strokeCircle(x, y, 40 + 220 * p));
         break;
@@ -2779,6 +2816,10 @@ class DungeonScene extends Phaser.Scene {
       const far = Math.hypot(r.boss.x - r.hero.x, r.boss.y - r.hero.y) > 200;
       this.fx.lineStyle(2, far ? 0x86efac : 0x94a3b8, far ? 0.5 : 0.18).strokeCircle(r.boss.x, r.boss.y, 200);
     }
+    // The Quiet Miles: each hero's lantern light, warm and faint, the reach that makes an Unsent
+    // real and shows a false shape up.
+    if (zoneDungeon(this.setup.zone).lanterns)
+      for (const o of r.party) if (o.hp > 0) this.fx.fillStyle(0xfbbf24, o === r.hero ? 0.07 : 0.05).fillCircle(o.x, o.y, LANTERN.r).lineStyle(1, 0xfde68a, 0.18).strokeCircle(o.x, o.y, LANTERN.r);
     // The Lull's song: his reach (inside it his song can't put you to sleep), a violet ring that
     // fills round a hero growing drowsy, and Zs over one asleep.
     if (r.boss?.alive && this.setup.zone.boss === 'lull') {

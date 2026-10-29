@@ -115,9 +115,13 @@ leaves fires and notes. The data is `road.ts`; the rules are `src/lib/road.ts`.
 - **Its own worlds**: a chapter with `world` (and `fog.boss`) plays a dungeon of its own, built
   like a story zone's (see "Worlds" in [dungeon.md](dungeon.md)). Chapter 1, the Whetstone Pass, is
   world 6: its own ground, monsters (the Grinder), mid-boss (the Bellows), boss fight (the Lull's
-  sleep song), look and music. Chapters 2 and 3 still borrow Mirror Lake's and the Village's.
-- Not yet: the Distance's and the Bridge's own worlds and fights, and the Road Banner on the friend
-  card.
+  sleep song), look and music. Chapter 2, the Quiet Miles, is world 7 (lanterns, the Unsent, the
+  Silent Bell, the Distance's false shapes) and chapter 3, the Long Bridge, world 8 (the Loner,
+  the Tollkeeper, the One Who Walks Alone's plates, broken one at a time by each of you).
+- **The Road Banner**: every friend who beat a road boss with you is saved by name
+  (`road.walked`, `wonRoad(state, n, friends)` from `onEnd` in `page.tsx`); once the road is
+  walked, the road card on the Friends tab shows the banner (`roadBanner` sprite) with your name
+  and theirs (`RoadBanner` in `FriendsTab.tsx`).
 
 ## How to change things
 

@@ -476,7 +476,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           // Ember Road boss beaten together moves the road on.
           onEnd={(r) =>
             update((s) => {
-              const moved = partyRun ? (run.road && r.won ? wonRoad(s, run.road) : s) : recordRun(s, r);
+              const moved = partyRun ? (run.road && r.won ? wonRoad(s, run.road, partyRun.friends.map((f) => f.name)) : s) : recordRun(s, r);
               return spAfterRun(settleGear(moved, r).state, r);
             })
           }

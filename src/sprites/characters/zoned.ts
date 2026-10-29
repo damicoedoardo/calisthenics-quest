@@ -10,6 +10,10 @@ import { grid, luma, mix, type Grid } from '../engine/grid';
    - 5 Forma (the Summit): ice, crystals on its head, frost, snow drifting past.
    - 6 the Whetstone Pass (the Ember Road): whetstone slate, its top edge honed to a bright steel
      line, grit speckled on it, sparks flying off where it was sharpened.
+   - 7 the Quiet Miles: night-blue mist, its bottom edge trailing off into fog, a small lantern
+     light glowing on it as if someone far off held one up.
+   - 8 the Long Bridge: weathered plank wood, grain lines across it, a band of rope lashed round
+     its middle with a knot.
    Zone 0 (the Ashlands) is the monster as drawn. */
 
 export const ZONE_RAMPS: Record<number, string[]> = {
@@ -19,8 +23,10 @@ export const ZONE_RAMPS: Record<number, string[]> = {
   4: ['#1d4038', '#3f7e6c', '#79bea6', '#bdeedb', '#f0fff8'],
   5: ['#1e2f4a', '#4a6c94', '#8fb3d9', '#d6e9f7', '#ffffff'],
   6: ['#1f2533', '#3b4558', '#64708a', '#9aa6bf', '#dfe6f2'],
+  7: ['#141a33', '#2c3766', '#55609a', '#97a0cc', '#dfe3f5'],
+  8: ['#2a1a10', '#5a3a22', '#8a6038', '#bf9460', '#ecd3a4'],
 };
-export const ZONE_PLACE = ['Ashlands', 'Mirror Lake', 'Cold Forges', 'Plateau', 'Fog', 'Summit', 'Whetstone Pass'];
+export const ZONE_PLACE = ['Ashlands', 'Mirror Lake', 'Cold Forges', 'Plateau', 'Fog', 'Summit', 'Whetstone Pass', 'Quiet Miles', 'Long Bridge'];
 
 const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
 /** A warm, saturated color: eyes, sparks, fuses, embers. Those stay as drawn. */
@@ -214,6 +220,36 @@ export function dress(src: Grid, zone: number, f: number): Grid {
         put(x + 2 + k, y + 1 - k, '#f97316');
       }
     }
+  } else if (zone === 7) {
+    // the bottom thins into fog (every other pixel gone, then pale wisps below), and a lantern's
+    // warm glint on one side that brightens and dims
+    bottoms.forEach(([x, y], i) => {
+      if ((x + y) % 2 === 0) g[y][x] = null;
+      if (i % 4 === f % 4) put(x, y + 1 + (i % 2), ramp[3]);
+    });
+    const [lx, ly] = spots(1, 2)[0] ?? [32, 32],
+      glow = f % 6 < 3 ? '#fde68a' : '#fbbf24';
+    put(lx, ly, glow);
+    put(lx + 1, ly, '#fff7ed');
+    put(lx, ly + 1, '#f59e0b');
+    put(lx + 1, ly + 1, glow);
+  } else if (zone === 8) {
+    // plank grain across the body, and a rope lashed round its middle, knotted on one side
+    for (let y = y0 + 3; y <= y1; y += 5)
+      for (let x = 0; x < w; x++) if (on(x, y) && inside(x, y, 1) && hash(x, y) % 3) {
+        const cur = g[y][x];
+        if (cur && !accent(cur)) g[y][x] = ramp[1];
+      }
+    const ry = Math.round(y0 + (y1 - y0) * 0.55);
+    for (let x = 0; x < w; x++)
+      if (on(x, ry)) {
+        put(x, ry, (x + f) % 3 ? '#d6b47a' : '#8a6a3a');
+        put(x, ry + 1, x % 2 ? '#a8854e' : '#6b4f2a');
+      }
+    const kx = bottoms.length ? bottoms[Math.floor(bottoms.length * 0.25)][0] : 24;
+    put(kx, ry + 2, '#d6b47a');
+    put(kx, ry + 3, '#a8854e');
+    put(kx - 1, ry + 4, '#d6b47a');
   }
   return g;
 }

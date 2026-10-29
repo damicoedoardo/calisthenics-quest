@@ -32,6 +32,8 @@ import { drawShade } from './characters/shade';
 import { drawWarden } from './characters/warden';
 import { drawAshGolem } from './characters/ashGolem';
 import { drawBellowsMid, drawGrinder, drawLullBoss } from './characters/whetstone';
+import { drawBellMid, drawDistanceBoss, drawUnsent } from './characters/quietmiles';
+import { drawAloneBoss, drawLoner, drawRoadBanner, drawTollMid, type AloneOpts } from './characters/longbridge';
 import { drawLancer } from './characters/lancer';
 import { drawClock } from './characters/clock';
 import { drawImp, drawJar, drawJarPop } from './characters/jar';
@@ -181,6 +183,7 @@ export const SPRITES = {
   }),
   mira: drawn<NoOpts>({ label: () => 'Mira the Smith', defaults: {}, clips: () => ({ idle: 'idle', attack: 'swing' }), draw: drawMira, look: () => ({ shadow: true }) }),
   knight: drawn<NoOpts>({ label: () => 'The Perfect Knight', defaults: {}, clips: () => ({ idle: 'idle', attack: 'swing' }), draw: drawKnight, look: () => ({ shadow: true }) }),
+  roadBanner: drawn<NoOpts>({ label: () => 'The Road Banner', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawRoadBanner }),
   tamsin: drawn<NoOpts>({ label: () => 'Tamsin, on the Ember Road', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawTamsin, look: () => ({ shadow: true }) }),
   kid: drawn<NoOpts>({ label: () => 'The kid inside the armor', defaults: {}, clips: () => ({ idle: 'idle' }), draw: drawKid, look: () => ({ shadow: true }) }),
   // Villagers: { after: true } is how they look once you've helped them.
@@ -223,6 +226,11 @@ export const SPRITES = {
   // the Ember Road's first world, the Whetstone Pass: its own monster and mid-boss
   grinder: zoned('Grinder', drawGrinder),
   bellowsMid: creature('The Bellows', drawBellowsMid, 'lunge'),
+  // the Quiet Miles and the Long Bridge (the Ember Road's second and third worlds)
+  unsent: zoned('Unsent', drawUnsent),
+  bellMid: creature('The Silent Bell', drawBellMid, 'lunge'),
+  loner: zoned('Loner', drawLoner),
+  tollMid: creature('The Tollkeeper', drawTollMid, 'lunge'),
   // The dungeon bosses. The Mirror is you in glass (pass the player's look and gear, like the hero).
   // app icons, hand-drawn at 16x16 (keepsakes) and 12x12 (Book of Days)
   keepsake: icon<KeepsakeOpts>((o) => `Keepsake ${o.zone + 1}`, { zone: 0 }, (o) => KEEPSAKE_ICONS[o.zone] ?? KEEPSAKE_ICONS[0]),
@@ -286,6 +294,13 @@ export const SPRITES = {
   tomorrowBoss: creature('Tomorrow, awake for once', drawTomorrowBoss, 'lunge'),
   hollowBoss: creature('The Hollow', drawHollowBoss, 'lunge'),
   lullBoss: creature('The Lull, singing', drawLullBoss, 'lunge'),
+  distanceBoss: creature('The Distance', drawDistanceBoss, 'lunge'),
+  aloneBoss: drawn<AloneOpts>({
+    label: ({ stage }) => ['The One Who Walks Alone', 'The One Who Walks Alone, plates falling', 'The One Who Walks Alone, helm off'][stage],
+    defaults: { stage: 0 },
+    clips: () => ({ idle: 'hover', attack: 'lunge' }),
+    draw: drawAloneBoss,
+  }),
   summitBoss: creature('The Summit, the mountain spirit', drawSummitSpirit, 'lunge'),
   hollowBossFade: drawn<NoOpts>({ label: () => 'The Hollow, letting go', defaults: {}, clips: () => ({ idle: 'pop' }), draw: drawHollowFade }),
 };

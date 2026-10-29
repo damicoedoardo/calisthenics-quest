@@ -113,6 +113,12 @@ export const PARTY = {
       `PARTY=2 pnpm fog:sim` (and 3, 4). A solo run never reads these. */
   more: { hp: 0.9, crowd: 0.5, dmg: 0.3, boss: 1 },
 };
+
+/** How tough each Ember Road chapter's run is, on top of the story zone it stands in for (its hp and
+    dmg times this). Goal: with 2 to 4 players each chapter wins about as often as its story zone
+    does for a party, though its own world plays differently (the Quiet Miles' monsters are gentler
+    until their lanterns come close). */
+export const ROAD_TOUGH: Record<number, number> = { 1: 1, 2: 1.1, 3: 1 };
 /** The first dungeon a new player walks, in the opening (`RunSetup.tutorial`). Goal: everyone gets
     to the bottom on the first try (you can't fall: HP stops at 1), learns to move, dodge and take
     the stairs in about two minutes, and then loses to the Hollow, as the story needs. */

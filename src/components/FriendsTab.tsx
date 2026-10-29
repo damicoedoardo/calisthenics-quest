@@ -8,6 +8,7 @@ import { ROAD_LENGTH, roadAt, startRoad } from '@/lib/road';
 import { inviteToParty, setLobbyOpen, usePartyView } from '@/lib/party-client';
 import { FriendHero, FriendsCard, type Friends } from './Friends';
 import { useLand } from './useLand';
+import { Sprite } from './Sprite';
 
 type Update = (fn: (s: GameState) => GameState) => void;
 
@@ -160,7 +161,23 @@ function RoadCard({ state, update }: { state: GameState; update: Update }) {
           </li>
         </ol>
       )}
+      {at.done && <RoadBanner state={state} />}
     </section>
+  );
+}
+
+/** The Road Banner, kept at the road's end: your name and every friend who beat a road boss with you. */
+function RoadBanner({ state }: { state: GameState }) {
+  const names = [state.profile.name || 'You', ...(state.road?.walked ?? [])];
+  return (
+    <div className="mt-3 flex items-center gap-3 rounded-xl bg-ink-900/60 p-3 ring-1 ring-gold-400/30">
+      <Sprite id="roadBanner" size={56} />
+      <div className="min-w-0">
+        <p className="font-pixel text-[10px] text-gold-300">{ROAD_BANNER.name}</p>
+        <p className="mt-1 text-[11px] text-slate-400">{ROAD_BANNER.text}</p>
+        <p className="mt-1.5 text-xs text-orange-200">{names.join(' · ')}</p>
+      </div>
+    </div>
   );
 }
 

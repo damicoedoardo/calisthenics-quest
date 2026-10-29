@@ -25,6 +25,16 @@ function bossJobs(zone: Zone, hero: Pick<HeroOpts, 'gear' | 'classId' | 'look'>)
       ['lullBoss', () => sheetFor('lullBoss', 'idle')],
       ['lullBossAttack', () => sheetFor('lullBoss', 'attack')],
     ];
+  if (zone.boss === 'distance')
+    return [
+      ['distanceBoss', () => sheetFor('distanceBoss', 'idle')],
+      ['distanceBossAttack', () => sheetFor('distanceBoss', 'attack')],
+    ];
+  if (zone.boss === 'alone')
+    return ([0, 1, 2] as const).flatMap((stage): [BossSheetKey, () => Sheet][] => [
+      [`aloneBoss${stage || ''}` as BossSheetKey, () => sheetFor('aloneBoss', 'idle', { stage })],
+      [`aloneBoss${stage || ''}Attack` as BossSheetKey, () => sheetFor('aloneBoss', 'attack', { stage })],
+    ]);
   const staged = (id: 'knightBoss' | 'plateauBoss'): [BossSheetKey, () => Sheet][] =>
     ([0, 1, 2] as const).flatMap((stage) => [
       [`${id}${stage || ''}` as BossSheetKey, () => sheetFor(id, 'idle', { stage })],
@@ -62,7 +72,7 @@ function bossJobs(zone: Zone, hero: Pick<HeroOpts, 'gear' | 'classId' | 'look'>)
 
 /** The zone's floor-5 mid-boss attacking (its idle sheet is a plain one): by world, like MIDS. */
 function midJobs(world: number): [BossSheetKey, () => Sheet][] {
-  const ids = [['warden'], ['lanternMid'], ['foremanMid'], ['sandGolemMid', 'sandGolemMidStone'], ['whisperMid'], ['galeMid'], ['bellowsMid']] as const;
+  const ids = [['warden'], ['lanternMid'], ['foremanMid'], ['sandGolemMid', 'sandGolemMidStone'], ['whisperMid'], ['galeMid'], ['bellowsMid'], ['bellMid'], ['tollMid']] as const;
   return (ids[Math.min(Math.max(world, 0), ids.length - 1)] ?? []).map((id) => [`${id}Attack` as BossSheetKey, () => sheetFor(id, 'attack')]);
 }
 
@@ -73,10 +83,10 @@ function jobs(state: GameState, zone: Zone): Job[] {
     hero = { gear, classId, look };
   // Once the flame has fused with you, you burn with it down there too; with the SP on, you wear its look.
   const you = { ...hero, variant: heroVariant(state), ...(spWorn(state) ? { sp: spWorn(state) } : {}) };
-  const plain = ['ember', 'mirror', 'knight', 'summit', 'jarPop', 'warden', 'lanternMid', 'foremanMid', 'sandGolemMid', 'sandGolemMidStone', 'whisperMid', 'galeMid', 'bellowsMid'] as const;
+  const plain = ['ember', 'mirror', 'knight', 'summit', 'jarPop', 'warden', 'lanternMid', 'foremanMid', 'sandGolemMid', 'sandGolemMidStone', 'whisperMid', 'galeMid', 'bellowsMid', 'bellMid', 'tollMid'] as const;
   // The regular monsters dressed for this zone's world (wet glass at the lake, scrap iron at the
   // forges...), standing and firing.
-  const dressed: DressedKey[] = ['slime', 'wisp', 'lancer', 'clock', 'smoke', 'seeker', 'jar', 'imp', 'shade', 'ashGolem', 'grinder'],
+  const dressed: DressedKey[] = ['slime', 'wisp', 'lancer', 'clock', 'smoke', 'seeker', 'jar', 'imp', 'shade', 'ashGolem', 'grinder', 'unsent', 'loner'],
     world = worldOf(zone);
   return [
     ['hero', () => sheetFor('hero', 'idle', you)],

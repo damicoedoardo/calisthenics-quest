@@ -83,7 +83,8 @@ A world is one row of the dungeon's content: `ZONE_DUNGEONS` and `MIDS` (`conten
 `THEMES` (`themes.ts`), `ZONE_MUSIC` (`src/lib/music-zones.ts`) and `ZONE_RAMPS` (the regular
 monsters' dress, `src/sprites/characters/zoned.ts`). `worldOf(zone)` picks it: a story zone is
 world 0-5, its own id; an Ember Road chapter with `world` set uses that (6 on). Everything else
-about the run (loot, records, toughness) still goes by `zone.id`.
+about the run (loot, records, toughness) still goes by `zone.id`; a road chapter's toughness is
+its story zone's times `ROAD_TOUGH` (`src/balance/dungeon.ts`).
 
 World 6 is the Whetstone Pass (the Ember Road, chapter 1):
 
@@ -100,6 +101,33 @@ World 6 is the Whetstone Pass (the Ember Road, chapter 1):
   `asleep`: no moving, no attacking) unless a friend comes within `wake`, or a hit wakes them.
   Under half his HP he sings `louder` (a `louder` event). The scene draws his reach, a violet ring
   filling round a drowsy hero and Zs over one asleep; the bot stays inside his reach.
+
+World 7 is the Quiet Miles (chapter 2). Its `ZoneDungeon` has `sight` (fog) and `lanterns`: each
+hero carries a light of `LANTERN.r` (`lit(run, f)`; the scene draws it). The rule holds anywhere:
+
+- **The Unsent** (`unsent`): out of every lantern's light it is only a shape (`untouchable`, no
+  touch, no shots, drawn faint); inside one it is a plain monster. The bot walks its lantern to it.
+- **The Silent Bell** mid-boss (`bell`, `BELL`): every `every` s it tolls a ring, and `echo` s
+  later the same ring comes back from the point across the middle of the room (a `toll` event;
+  the scene marks where).
+- **The Distance** (boss `distance`, `DISTANCE`): keeps its range and splits among false shapes
+  (`splitMirror`, the Mirror's images, `shapes` of them, `more` under half, one more per friend);
+  only the real one shoots, and hitting a false one hurts you. A false shape inside a lantern's
+  light is shown up (`phase` 2, `shownFalse`, a `shown` event): drawn see-through, and nothing
+  aims at it. It sends Unsent letters every `call` s. `splits(run)` covers both bosses.
+
+World 8 is the Long Bridge (chapter 3):
+
+- **The Loner** (`loner`, `LONER`): it turns its shield (`Foe.face`) toward you at `turn` rad/s;
+  a hit from within `arc` of it glances off (`shielded`, a `block` event), from the side or behind
+  it lands. Auto-aim picks a shielded Loner last; the bot walks round to its side.
+- **The Tollkeeper** mid-boss (`toll`, `TOLL`): a hit lands `alone` as hard unless another hero
+  hit it in the last `pair` s (`Foe.hitters`, `tollBrace`).
+- **The One Who Walks Alone** (boss `alone`, `ALONE`): plates like the Knight, but each hero
+  breaks one per `PLATE_EVERY` (`Hero.plateAt`), so more hitters break them faster; each friend
+  adds `more` of its plates (`summonBoss`). Past a third of its plates (phase 2) it throws everyone
+  away from the middle of the party every `apart` s (a `shout`); past two thirds it slows and only
+  fights. Its art has three stages, like the Knight's.
 
 ## The first dungeon
 
