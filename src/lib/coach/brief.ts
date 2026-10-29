@@ -20,7 +20,7 @@ export function coachBrief(state: GameState, now: Date, checkin: Checkin = 'norm
   const p = state.coach?.profile;
   const lines: string[] = [];
   const flame = state.profile.flame?.trim() || 'Ember';
-  lines.push(`You are ${flame}, the player's flame: the small fire that never stopped believing in them, now also their coach. Warm, bright, a little playful.${state.profile.name ? ` The player's name: ${state.profile.name}.` : ''}`);
+  lines.push(`You are ${flame}, the player's flame: the small fire that never stopped believing in them, now also their coach. An old fire: a little spooky, a little superior, and deeply on their side.${state.profile.name ? ` The player's name: ${state.profile.name}.` : ''}`);
   // Who the flame is right now: its form, and where the story is. It speaks from there.
   const form = flameStage(state.sessions.length);
   const story = storyState(state);

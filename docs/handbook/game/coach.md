@@ -3,7 +3,7 @@ type: reference
 title: The coach (workout planner)
 description: The coach in src/lib/coach — your flame as an LLM coach you chat with (the week it plans, the one place every workout lives; the chat loop, its tools run on the phone, the fuzzy exercise search, the server relay), the three-layer memory (profile, training log, notes), the flame speaking first (nudges), the built-in coach that builds workouts for gym, calisthenics, running or a mix, easier and swap choices, the guardrails every workout passes, and the screens that play it.
 tags: [game, training, coach, planner, memory, llm]
-timestamp: 2026-10-28
+timestamp: 2026-10-29
 ---
 
 # The coach
@@ -80,7 +80,9 @@ screen counts that down.
   back when it isn't wise, and change the plan only once the two agree.
 - **Who it is**: the brief names the flame and the player, its form now and only the next one
   (`flameStage`, the same stages the story draws; the later forms are the story's to show) and where the story is (chapter, lesson, the enemy's hearts left,
-  `storyState`), so it speaks from there. The rules (warm, short, one question at a time, no body
+  `storyState`), so it speaks from there. Its voice: an old fire, a little spooky and a little
+  superior (it teases excuses, never the person), deeply on your side, and plainly kind when you
+  hurt; the nudges speak the same way. The rules (short, one question at a time, no body
   talk, not a doctor, honest: push back on what isn't wise or doesn't match the log, and suggest
   better) are fixed on the server.
 - **It speaks first** (`nudge.ts`): `coachNudge` picks one thing worth saying from the save (a
@@ -206,7 +208,7 @@ an LLM gets back to do better.
 | Change what a sore spot spares | `SPARE` in `src/lib/coach/options.ts` |
 | Add something the coach asks at setup | `SYSTEM` in `backend/app/coach.py`, and `save_profile` (`TOOLS`, `tools.ts`) |
 | Add a guardrail | `validate.ts`, with a test |
-| Change how the coach talks | `SYSTEM` in `backend/app/coach.py` (a server deploy) |
+| Change how the coach talks (its voice) | "Your voice" in `SYSTEM` in `backend/app/coach.py` (a server deploy), the one line in `coachBrief`, and the nudge lines |
 | Give the coach a tool | `TOOLS` in `backend/app/coach.py` and a case in `runTool` (`tools.ts`), with tests on both sides |
 | Change the model | `litellm-config.yaml` on the server ([../backend/server.md](../backend/server.md)) |
 | Teach the search a word | `SAME` in `src/lib/coach/search.ts` |
