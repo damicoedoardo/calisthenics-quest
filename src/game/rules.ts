@@ -64,7 +64,8 @@ const K = RUN_SKILL;
 export const heroSpeed = (ups: Ups) => HERO_SPEED * (1 + K.swift.move * (ups.swift ?? 0));
 export const heroDamage = (base: number, power: Power, ups: Ups) => base * (1 + power.damage) * (1 + K.power.dmg * (ups.power ?? 0));
 export const attackCooldown = (kind: AttackKind, power: Power, ups: Ups) => ATTACK[kind].cd / ((1 + power.speed) * (1 + K.haste.rate * (ups.haste ?? 0)));
-export const armorOf = (power: Power, ups: Ups) => Math.min(0.6, power.armor + K.guard.armor * (ups.guard ?? 0));
+/** All armor, `more` included (Stand your ground), stops at 60%. */
+export const armorOf = (power: Power, ups: Ups, more = 0) => Math.min(0.6, power.armor + K.guard.armor * (ups.guard ?? 0) + more);
 export const gemReach = (power: Power) => 60 * (1 + power.reach);
 
 /** Skills on a timer, per level. */
