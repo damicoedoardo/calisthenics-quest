@@ -8,6 +8,7 @@ import { ROAD_BANNER, ROAD_CHAPTERS } from '@/story/road';
 import { ROAD_LENGTH, roadAt, startRoad } from '@/lib/road';
 import { inviteToParty, setLobbyOpen, usePartyView } from '@/lib/party-client';
 import { CheerPage, Doing, FriendHero, FriendsCard, type Friends } from './Friends';
+import { FeedView, type Feed } from './Feed';
 import { useLand } from './useLand';
 import { Sprite } from './Sprite';
 
@@ -110,8 +111,34 @@ function PartyCard() {
   );
 }
 
-export function FriendsTab({ state, update, friends }: { state: GameState; update: Update; friends: Friends }) {
+export type FriendsView = 'friends' | 'feed';
+
+export function FriendsTab({ state, update, friends, feed, view, setView }: { state: GameState; update: Update; friends: Friends; feed: Feed; view: FriendsView; setView: (v: FriendsView) => void }) {
   const land = useLand();
+  return (
+    <div className="space-y-4 land:space-y-3">
+      {feed.shown && (
+        <div role="tablist" aria-label="Friends or feed" className="mx-auto grid max-w-xs grid-cols-2 gap-1 rounded-xl bg-ink-800 p-1">
+          {(['friends', 'feed'] as const).map((v) => (
+            <button key={v} role="tab" aria-selected={view === v} onClick={() => setView(v)} className={`relative rounded-lg py-2 text-xs font-semibold ${view === v ? 'bg-ink-600 text-slate-50' : 'text-slate-400'}`}>
+              {v === 'friends' ? 'Friends' : 'Feed'}
+              {v === 'feed' && feed.fresh > 0 && <span aria-label={`${feed.fresh} new`} className="absolute right-3 top-2 h-2 w-2 rounded-full bg-orange-400" />}
+            </button>
+          ))}
+        </div>
+      )}
+      {view === 'feed' && feed.shown ? (
+        <div className="mx-auto max-w-lg">
+          <FeedView feed={feed} />
+        </div>
+      ) : (
+        <FriendsLists state={state} update={update} friends={friends} land={land} />
+      )}
+    </div>
+  );
+}
+
+function FriendsLists({ state, update, friends, land }: { state: GameState; update: Update; friends: Friends; land: boolean }) {
   return (
     <div className={land ? 'grid grid-cols-2 items-start gap-3' : 'space-y-4'}>
       <div className="space-y-4 land:space-y-3">

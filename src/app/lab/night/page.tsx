@@ -316,6 +316,7 @@ export default function NightLab() {
       <Panel title="MENUS" note="Five tabs, one job each: Play is your story, Friends is everything with others, Hero holds your gear, vault and forge, stats and class. Tap your hero at the top for the You page.">
         <Row icon={<Swords size={16} />} label="Fog: Story" note="The worlds, then the ready strip: what you wear (tap it for Hero > Gear), warmed up, rested, the boss's hearts" onClick={() => open(geared(), 'tab=play')} />
         <Row icon={<Swords size={16} />} label="Friends" note="The Friends tab: who is online (tap to invite), your party, the Ember Road, every friend (sample friends here)" onClick={() => open(geared(), 'tab=friends')} />
+        <Row icon={<Swords size={16} />} label="The Feed" note="Shared workouts with flames and comments (two sample posts). Finish a workout and tap Share with friends to add yours" onClick={() => open(geared(), 'tab=friends&feed')} />
         <Row icon={<Gem size={16} />} label="Hero > Gear" note="What you wear, the vault, and Mira's forge for the item you tap: the only place for them" onClick={() => open(forged(7), 'tab=hero&hero=gear')} />
         <Row icon={<Sparkles size={16} />} label="Hero > Stats" note="Your champion's points, and what your flame gives you" onClick={() => open(veteran(30, 2), 'tab=hero&hero=stats')} />
         <Row icon={<Swords size={16} />} label="Hero > Class" note="Your class and Change class" onClick={() => open(veteran(30, 2), 'tab=hero&hero=class')} />
