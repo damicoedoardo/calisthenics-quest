@@ -1,4 +1,4 @@
-import type { GameState } from './game';
+import { offOtherClass, type GameState } from './game';
 import type { ClassId } from './gear';
 import type { Build, StatId } from './stats';
 import { buildOf, refundPoint, spendPoint } from './stats';
@@ -60,7 +60,8 @@ export function classCost(state: GameState): number {
   return (state.sweat?.changes ?? 0) < SWEAT.freeChanges ? 0 : SWEAT.classChange;
 }
 
-/** Become another class, paying in sweat coins. Nothing happens if you can't pay. */
+/** Become another class, paying in sweat coins. Nothing happens if you can't pay. The old class's
+    weapon comes off into the vault, kept for when you switch back. */
 export function changeClass(state: GameState, id: ClassId): GameState {
   if (state.profile.classId === id) return state;
   const first = !state.profile.classId,
@@ -68,7 +69,8 @@ export function changeClass(state: GameState, id: ClassId): GameState {
   if (coins(state) < cost) return state;
   const paid = cost ? spend(state, cost) : state;
   const sweat = first ? paid.sweat : { spent: paid.sweat?.spent ?? 0, changes: (paid.sweat?.changes ?? 0) + 1 };
-  return { ...paid, profile: { ...paid.profile, classId: id }, ...(sweat ? { sweat } : {}) };
+  const fogGear = paid.fogGear && offOtherClass(paid.fogGear, id);
+  return { ...paid, profile: { ...paid.profile, classId: id }, ...(sweat ? { sweat } : {}), ...(fogGear ? { fogGear } : {}) };
 }
 
 /** Put a point into a stat (noting your points first, so it can come back free until your next workout). */

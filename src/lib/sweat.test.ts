@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { initialState, type GameState, type Session } from './game';
+import { initialState, migrate, type GameState, type Session } from './game';
+import { starterKit, type Item } from '@/game/dungeon/items';
 import { changeClass, classCost, coins, putPoint, respec, respecCost, takeBack } from './sweat';
 import { SWEAT } from '@/balance';
 
@@ -42,5 +43,19 @@ describe('sweat coins', () => {
     s = changeClass(after(s, 1), 'monk');
     expect(s.profile.classId).toBe('monk');
     expect(coins(s)).toBe(0);
+  });
+
+  it("a class change puts the old class's weapon in the vault, and keeps the armor on", () => {
+    const sword: Item = { ...starterKit('warrior').weapon, id: 'sword', name: 'Sword', starter: undefined, rarity: 'rare' },
+      armor: Item = { ...sword, id: 'mail', slot: 'armor', cls: null };
+    let s: GameState = { ...after(initialState(), 3), profile: { ...initialState().profile, classId: 'warrior' }, fogGear: { worn: { weapon: sword, armor }, vault: [] } };
+    s = changeClass(s, 'archer');
+    expect(s.fogGear?.worn.weapon).toBeUndefined();
+    expect(s.fogGear?.worn.armor?.id).toBe('mail');
+    expect(s.fogGear?.vault.map((x) => x.id)).toEqual(['sword']);
+    // A save that already wears another class's weapon gets it put away on load.
+    const old = { ...s, version: 3, fogGear: { worn: { weapon: sword }, vault: [] } };
+    expect(migrate(old).fogGear?.worn.weapon).toBeUndefined();
+    expect(migrate(old).fogGear?.vault.map((x) => x.id)).toEqual(['sword']);
   });
 });
