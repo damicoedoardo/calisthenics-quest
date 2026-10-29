@@ -1,5 +1,5 @@
 import type { ArmLeft, ArmRight, ClipFrame, ClipId, Fx } from '../clips';
-import { EYES, HAIR, R, SKIN, type HairColor, type SkinTone } from '../palette';
+import { EYES, EYE_COLORS, HAIR, R, SKIN, type EyeColor, type HairColor, type SkinTone } from '../palette';
 import { autoshade, grid, outline, painter, scale2x, stamp, type Grid, type Painter, type Ramp } from './grid';
 import { MANGA_FACE, isManga, mangaHair, mangaHead } from './manga';
 import { drawnBody, drawnTorso } from './drawn';
@@ -10,13 +10,21 @@ import { drawnBody, drawnTorso } from './drawn';
 
 export const SIZE = 64;
 
-export type HairStyle = 'spiky' | 'swept' | 'short' | 'long' | 'pony';
+export type HairStyle = 'spiky' | 'swept' | 'short' | 'buzz' | 'wild' | 'long' | 'pony' | 'bob' | 'bun' | 'twin' | 'curly';
+
+/** A small mark on the face: freckles, a blush, a scar over the brow, a plaster on the nose, a mole. */
+export const FACE_MARKS = ['none', 'freckles', 'blush', 'scar', 'plaster', 'mole'] as const;
+export type FaceMark = (typeof FACE_MARKS)[number];
 
 export interface Look {
   sex: 'm' | 'f';
   style: HairStyle;
   hair: HairColor;
   skin: SkinTone;
+  /** Eye color; brown when missing (older saves). */
+  eyes?: EyeColor;
+  /** A mark on the face; none when missing. */
+  mark?: FaceMark;
   /** Head drawing: 'classic' (designed at 32, doubled) or 'manga' (drawn at 64, see manga.ts).
       A hairstyle without a manga version falls back to classic. */
   head?: 'classic' | 'manga';
@@ -42,13 +50,24 @@ export const BODY = {
 
 const SPIKY_ROWS: [number, number, number, number][] = [[1, 11, 11, 2], [1, 15, 15, 2], [1, 19, 19, 1], [2, 10, 12, 2], [2, 14, 16, 2], [2, 18, 20, 1], [3, 9, 22, 1], [3, 9, 13, 2], [4, 8, 23, 1], [4, 9, 12, 2], [5, 8, 23, 1], [6, 8, 23, 1], [7, 8, 23, 1], [5, 23, 23, 0], [6, 23, 23, 0], [7, 23, 23, 0], [8, 8, 11, 0], [8, 13, 14, 0], [8, 17, 18, 0], [8, 21, 23, 0], [9, 8, 8, 0], [10, 8, 8, 0], [11, 8, 8, 0], [9, 23, 23, 0], [10, 23, 23, 0], [11, 23, 23, 0]];
 
-/** Hair shapes: [y, x0, x1, tone] rows, tone = index into the hair ramp (0 dark, 2 light). */
+const SWEPT_ROWS: [number, number, number, number][] = [[2, 11, 20, 1], [2, 12, 15, 2], [3, 9, 22, 1], [3, 10, 15, 2], [4, 8, 23, 1], [4, 10, 13, 2], [5, 8, 23, 1], [6, 8, 23, 1], [7, 8, 23, 1], [8, 8, 16, 1], [8, 14, 16, 0], [8, 21, 23, 0], [9, 8, 10, 0], [9, 23, 23, 0], [10, 8, 8, 0], [10, 23, 23, 0], [5, 23, 23, 0], [6, 23, 23, 0], [7, 23, 23, 0]];
+const LONG_ROWS: [number, number, number, number][] = [[2, 11, 20, 1], [2, 12, 16, 2], [3, 9, 22, 1], [3, 10, 14, 2], [4, 8, 23, 1], [5, 8, 23, 1], [6, 8, 23, 1], [7, 8, 23, 1], [8, 8, 12, 1], [8, 15, 16, 0], [8, 19, 23, 1], [5, 23, 23, 0], [6, 23, 23, 0], [7, 23, 23, 0]];
+const PONY_ROWS: [number, number, number, number][] = [[2, 11, 20, 1], [2, 12, 16, 2], [3, 9, 22, 1], [3, 10, 14, 2], [4, 8, 23, 1], [5, 8, 23, 1], [6, 8, 23, 1], [7, 8, 23, 1], [8, 8, 12, 1], [8, 15, 16, 0], [8, 19, 23, 1], [9, 8, 9, 1], [10, 8, 9, 1], [11, 8, 9, 0], [9, 22, 23, 1], [10, 22, 23, 1], [11, 22, 23, 0]];
+
+/** Hair shapes: [y, x0, x1, tone] rows, tone = index into the hair ramp (0 dark, 2 light). The
+    newer styles are drawn for the manga head only; on the classic head they borrow a near one. */
 export const HAIRSTYLES: Record<HairStyle, [number, number, number, number][]> = {
   spiky: SPIKY_ROWS,
+  swept: SWEPT_ROWS,
   short: SPIKY_ROWS,
-  swept: [[2, 11, 20, 1], [2, 12, 15, 2], [3, 9, 22, 1], [3, 10, 15, 2], [4, 8, 23, 1], [4, 10, 13, 2], [5, 8, 23, 1], [6, 8, 23, 1], [7, 8, 23, 1], [8, 8, 16, 1], [8, 14, 16, 0], [8, 21, 23, 0], [9, 8, 10, 0], [9, 23, 23, 0], [10, 8, 8, 0], [10, 23, 23, 0], [5, 23, 23, 0], [6, 23, 23, 0], [7, 23, 23, 0]],
-  long: [[2, 11, 20, 1], [2, 12, 16, 2], [3, 9, 22, 1], [3, 10, 14, 2], [4, 8, 23, 1], [5, 8, 23, 1], [6, 8, 23, 1], [7, 8, 23, 1], [8, 8, 12, 1], [8, 15, 16, 0], [8, 19, 23, 1], [5, 23, 23, 0], [6, 23, 23, 0], [7, 23, 23, 0]],
-  pony: [[2, 11, 20, 1], [2, 12, 16, 2], [3, 9, 22, 1], [3, 10, 14, 2], [4, 8, 23, 1], [5, 8, 23, 1], [6, 8, 23, 1], [7, 8, 23, 1], [8, 8, 12, 1], [8, 15, 16, 0], [8, 19, 23, 1], [9, 8, 9, 1], [10, 8, 9, 1], [11, 8, 9, 0], [9, 22, 23, 1], [10, 22, 23, 1], [11, 22, 23, 0]],
+  buzz: SPIKY_ROWS,
+  wild: SPIKY_ROWS,
+  long: LONG_ROWS,
+  pony: PONY_ROWS,
+  bob: LONG_ROWS,
+  bun: SWEPT_ROWS,
+  twin: PONY_ROWS,
+  curly: LONG_ROWS,
 };
 
 // ---------- the face, in sprite pixels (64 grid) ----------
@@ -269,7 +288,8 @@ function ponytail32(P: Pose, look: Look): Grid {
 function face(g: Grid, P: Pose, look: Look) {
   const u = painter(g, P.bob),
     Sk = SKIN[look.skin],
-    ink: Record<string, string> = { L: EYES.line, d: EYES.iris[0], m: EYES.iris[1], l: EYES.iris[2], W: EYES.shine };
+    I = !look.eyes || look.eyes === 'brown' ? EYES.iris : EYE_COLORS[look.eyes],
+    ink: Record<string, string> = { L: EYES.line, d: I[0], m: I[1], l: I[2], W: EYES.shine };
   FACE.eyes.x.forEach((ex, i) => {
     EYE_PATTERN.forEach((rowStr, j) => [...rowStr].forEach((ch, k) => ink[ch] && u.p(ex + k, FACE.eyes.y + j, ink[ch])));
     if (P.fem)

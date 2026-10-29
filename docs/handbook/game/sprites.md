@@ -15,7 +15,7 @@ Open **/lab** in the app to see every sprite and animation, with controls for cl
 variant and look.
 
 ```
-palette.ts            every color ramp (materials, hair, skin, story looks)
+palette.ts            every color ramp (materials, hair, skin, eye colors, story looks)
 clips.ts              animations as data: frames + timing
 registry.ts           every sprite by id, and how to get its sheet
 engine/grid.ts        pixel grids and drawing tools (painter, outline, shading, aura, tint)
@@ -91,7 +91,9 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Change the hero's face (eyes, chin, mouth) | the `MANGA_FACE.art` text rows in `engine/manga.ts` |
 | Change the hero's hair (spikes, bangs, headband) | its entry in `MANGA_HAIR` (`engine/manga.ts`): each lock is a list of points |
 | Change the hero's default look | `DEFAULT_LOOK` in `characters/hero.ts` |
-| Add a hairstyle | a new entry in `HAIRSTYLES` (`engine/figure.ts`), plus one in `MANGA_HAIR` for the manga head (without it, that style falls back to the classic head) |
+| Add a hairstyle | a new entry in `HAIRSTYLES` (`engine/figure.ts`, the classic head; a new style may borrow a near one's rows), plus one in `MANGA_HAIR` for the manga head (`mirror` and `both` copy a lock to the other side, `oval` makes round puffs), plus its label in `STYLES` (`src/components/LookEditor.tsx`). There are eleven: spiky, swept, headband (`short`), buzz, wild, curly, bob, long, ponytail, twin tails, bun |
+| Add a hair color, skin tone or eye color | a new ramp in `HAIR`, `SKIN` or `EYE_COLORS` (`palette.ts`); the editor shows them in that order. Brown eyes are each head's own brown |
+| Add or redraw a face mark (freckles, blush, scar, plaster, mole) | its id in `FACE_MARKS` (`engine/figure.ts`), its drawing in `MARKS` (`engine/manga.ts`, painted over the manga face), and its label in `MARKS` (`src/components/LookEditor.tsx`) |
 | Change the classic face | `EYE_PATTERN` and `FACE` in `engine/figure.ts` |
 | Redraw a weapon | `parts/weapons.ts` |
 | Redraw an SP's look | its entry in `characters/spLooks.ts`; check `/lab/sp` |
@@ -111,7 +113,7 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Change a story backdrop's props (Vela's lamp tower, the road, a campfire) | its function in `places.ts` (`lampTower`, `road`...); which place has which props is in `src/story/places.ts` |
 | Change how a backdrop widens held sideways (what spreads across, what stays on the stage) | `drawPlace` and its `PlaceCanvas` (`w`, `st`) in `places.ts`: props add `st` to their x; see [story.md](story.md) |
 | Change Vela's far tower on the Plateau, or how its lamp flashes | `FAR_TOWER` rows in `places.ts`; a place with it is drawn lit and unlit, and the `beacon` animation in `tailwind.config.ts` flashes the lit copy |
-| Change the looks a player starts with (boy, girl) | `STARTER_LOOKS` in `characters/hero.ts`; the editor's options are in `src/components/LookEditor.tsx` |
+| Change the looks a player starts with (boy, girl) | `STARTER_LOOKS` in `characters/hero.ts`; the editor's options are in `src/components/LookEditor.tsx`. A saved look goes through `normalizeLook` before it is drawn (here, in the Fog's sheets and on friends' cards), so an unknown or missing hair, skin, eye color or mark falls back to the starter look's |
 | Redraw a dungeon monster | the `ROWS` text art in its file (`smoke.ts`, `seeker.ts`, `shade.ts`, `ashGolem.ts`; `lancer.ts`, `clock.ts`, `jar.ts` are painted by pose); which sprite a monster wears is its `FOE_FX` entry in `src/game/dungeon/foeFx.ts`. The old `ram.ts` and `splitter.ts` art stays in the registry for /lab only |
 | Change which sprite a dungeon monster uses, or its size | its `look` in `FOE_FX` (`src/game/dungeon/foeFx.ts`; a new sheet also needs a `SheetKey` in `src/game/rules.ts` and its sheet in `src/game/sheets.ts`) |
 | Redraw the dungeon's pillars, barrels, chests, shrine, stairs, torches | the text rows in `src/game/dungeon/props.ts` (floor, walls, door, water and spikes are drawn in `scene.ts`) |

@@ -1,6 +1,6 @@
-import { EYES, HAIR, SKIN } from '../palette';
-import { grid, painter, type Grid } from './grid';
-import type { HairStyle, Look, Pose } from './figure';
+import { EYES, EYE_COLORS, HAIR, SKIN } from '../palette';
+import { grid, mix, painter, type Grid, type Painter } from './grid';
+import type { FaceMark, HairStyle, Look, Pose } from './figure';
 
 /* The manga head: drawn at full 64 resolution (no Scale2x) so the eyes, the chin and every hair
    lock can be sharp. Everything is a table: edit the numbers to reshape it. */
@@ -40,7 +40,8 @@ export const MANGA_FACE = {
     '.......SSSSSSSSSSSSSs.......',
     '..........SSSSSSSs..........',
   ],
-  iris: ['#3a2416', '#7a4a2a', '#c08a52'],
+  /** Brown, the default; a look's `eyes` picks another from EYE_COLORS. */
+  iris: EYE_COLORS.brown,
   pupil: '#1a1014',
   white: '#f4f1f6',
   mouth: '#9a4a3a',
@@ -81,8 +82,26 @@ const SOFT_BANGS: Shape[] = [
   [[[36, 10], [44, 10], [41, 17]], 1],
   [[[42, 10], [48, 10], [46, 19]], 1],
 ];
+/** The curly style's puffs [x, y, r]: over the top, then the bangs; and the ones behind. */
+const CURLS: [number, number, number][] = [
+  [21, 5, 4], [28, 4, 4], [35, 4, 4], [42, 5, 4],
+  [17, 9, 4], [24, 8, 4], [31, 8, 4], [38, 8, 4], [46, 9, 4],
+  [19, 12, 3], [25, 12, 3], [31, 12, 3], [37, 12, 3], [43, 12, 3],
+];
+const CURLS_BACK: Pt[] = [[14, 9], [12, 15], [13, 21], [17, 26], [50, 9], [52, 15], [51, 21], [47, 26]];
 const BAND = { base: '#c0392b', light: '#e8604c', dark: '#7a1f18' };
 const RIBBON = { base: '#db2777', light: '#f472b6' };
+
+/** The same shape on the other side of the face (the face is centered on x 32). */
+const mirror = ([pts, c]: Shape): Shape => [pts.map(([x, y]) => [64 - x, y] as Pt), c];
+const both = (s: Shape): Shape[] => [s, mirror(s)];
+/** An oval as points. */
+function oval(cx: number, cy: number, rx: number, ry: number, n = 16): Pt[] {
+  return Array.from({ length: n }, (_, i) => {
+    const a = (i / n) * Math.PI * 2;
+    return [Math.round(cx + Math.cos(a) * rx), Math.round(cy + Math.sin(a) * ry)] as Pt;
+  });
+}
 
 export const MANGA_HAIR: Partial<Record<HairStyle, MangaHair>> = {
   /** Shonen hero: big spikes up and out, pointed bangs. */
@@ -161,6 +180,54 @@ export const MANGA_HAIR: Partial<Record<HairStyle, MangaHair>> = {
     ],
     shine: [[24, 6, 28, 5]],
   },
+  /** Cropped short all over: a neat fringe and short sides. */
+  buzz: {
+    cap: { cx: 32, cy: 13, rx: 15, ry: 9, cutY: 10 },
+    back: [],
+    front: [
+      [[[17, 8], [47, 8], [47, 11], [44, 13], [41, 11], [37, 12], [33, 11], [29, 13], [25, 11], [21, 12], [17, 11]], 1],
+      ...both([[[17, 10], [20, 10], [20, 16], [18, 15]], 1]),
+    ],
+    shine: [
+      [22, 7, 27, 6],
+      [33, 6, 37, 6],
+    ],
+    strands: [
+      [24, 9, 25, 11],
+      [32, 9, 32, 11],
+      [40, 9, 39, 11],
+    ],
+  },
+  /** A wild mane: spikes everywhere and long spiky locks down the back. */
+  wild: {
+    cap: { cx: 32, cy: 13, rx: 16, ry: 10, cutY: 11 },
+    back: [...both([[[17, 12], [9, 34], [15, 28], [13, 40], [22, 26]], 0]), ...both([[[16, 10], [5, 18], [15, 20]], 0])],
+    front: [
+      [[[16, 13], [20, 5], [5, 7]], 1],
+      [[[18, 8], [25, 3], [11, 0]], 1],
+      [[[23, 5], [32, 3], [24, 0]], 1],
+      [[[30, 3], [38, 4], [36, 0]], 1],
+      [[[36, 4], [44, 5], [52, 0]], 1],
+      [[[42, 5], [48, 12], [59, 6]], 1],
+      [[[17, 10], [25, 10], [17, 20]], 1],
+      [[[22, 10], [30, 10], [27, 18]], 1],
+      [[[29, 10], [36, 10], [31, 16]], 1],
+      [[[34, 10], [42, 10], [40, 18]], 1],
+      [[[40, 10], [48, 10], [48, 21]], 1],
+      ...SIDE_LOCKS,
+    ],
+    shine: [
+      [20, 7, 24, 5],
+      [30, 5, 34, 5],
+    ],
+    strands: [
+      [11, 7, 17, 10],
+      [21, 2, 24, 7],
+      [34, 1, 33, 5],
+      [46, 3, 41, 7],
+      [55, 7, 46, 10],
+    ],
+  },
   /** Long and loose: soft bangs, locks framing the face, hair down past the shoulders. */
   long: {
     cap: { cx: 32, cy: 13, rx: 16, ry: 10, cutY: 12 },
@@ -195,10 +262,101 @@ export const MANGA_HAIR: Partial<Record<HairStyle, MangaHair>> = {
       [35, 5, 40, 6],
     ],
   },
+  /** A chin-length bob with blunt bangs. */
+  bob: {
+    cap: { cx: 32, cy: 13, rx: 16, ry: 10, cutY: 12 },
+    back: [[[[15, 10], [49, 10], [50, 29], [45, 31], [19, 31], [14, 29]], 0]],
+    front: [
+      [[[17, 9], [47, 9], [47, 14], [42, 15], [37, 14], [32, 15], [27, 14], [22, 15], [17, 14]], 1],
+      ...both([[[15, 11], [21, 11], [21, 24], [23, 30], [16, 30], [14, 23]], 1]),
+    ],
+    shine: [
+      [21, 6, 27, 5],
+      [35, 5, 41, 6],
+    ],
+    strands: [
+      [26, 10, 26, 14],
+      [38, 10, 38, 14],
+    ],
+  },
+  /** Pulled back into a bun up on the head, two soft locks by the ears. */
+  bun: {
+    cap: { cx: 32, cy: 13, rx: 15, ry: 10, cutY: 11 },
+    back: [[oval(43, 4, 6, 5), 1]],
+    front: [
+      [[[17, 11], [24, 6], [31, 9], [26, 11]], 1],
+      [[[33, 9], [40, 6], [47, 11], [38, 11]], 1],
+      ...both([[[17, 10], [20, 10], [20, 25], [17, 21]], 1]),
+      [[[38, 4], [42, 2], [44, 6], [40, 8]], RIBBON.base],
+      [[[39, 4], [41, 3], [42, 4], [40, 5]], RIBBON.light],
+    ],
+    shine: [
+      [22, 6, 27, 5],
+      [42, 1, 46, 2],
+    ],
+    strands: [
+      [32, 3, 32, 9],
+      [26, 4, 22, 9],
+      [38, 4, 42, 9],
+    ],
+  },
+  /** Twin tails tied high on both sides, swinging down past the shoulders. */
+  twin: {
+    cap: { cx: 32, cy: 13, rx: 16, ry: 10, cutY: 12 },
+    back: [...both([[[19, 5], [13, 3], [8, 10], [6, 24], [9, 36], [12, 28], [14, 17], [17, 10]], 1]), ...both([[[13, 5], [9, 11], [8, 24], [10, 30], [11, 16]], 0])],
+    front: [
+      ...SOFT_BANGS,
+      ...both([[[16, 11], [21, 11], [21, 26], [17, 27]], 1]),
+      ...both([[[14, 3], [19, 2], [19, 7], [15, 7]], RIBBON.base]),
+      ...both([[[15, 3], [18, 3], [18, 4], [15, 4]], RIBBON.light]),
+    ],
+    shine: [
+      [22, 6, 27, 5],
+      [35, 5, 40, 6],
+    ],
+  },
+  /** Big soft curls all round the head: round puffs, each with its own light and shadow. */
+  curly: {
+    cap: { cx: 32, cy: 13, rx: 16, ry: 10, cutY: 11 },
+    back: CURLS_BACK.map(([x, y]): Shape => [oval(x, y, 5, 5, 12), 0]),
+    front: [...CURLS.map(([x, y, r]): Shape => [oval(x, y, r, r, 12), 1]), ...both([[[15, 12], [20, 12], [21, 22], [17, 25], [14, 20]], 1])],
+    shine: CURLS.map(([x, y]) => [x - 2, y - 1, x - 1, y - 2]),
+    strands: CURLS.map(([x, y, r]) => [x + 1, y + r - 1, x + r - 1, y + 1]),
+  },
 };
 
 /** Whether a look gets the manga head: hairstyles without a manga version stay classic. */
 export const isManga = (look: Look) => look.head === 'manga' && !!MANGA_HAIR[look.style];
+
+/** The face marks, painted over the face (63 - x is the same spot on the other cheek). */
+const MARKS: Record<Exclude<FaceMark, 'none'>, (u: Painter, Sk: string[]) => void> = {
+  freckles: (u, Sk) => {
+    const c = mix(Sk[0], '#6a3018', 0.35);
+    [[21, 24], [23, 25], [25, 24], [22, 26]].forEach(([x, y]) => (u.p(x, y, c), u.p(63 - x, y, c)));
+  },
+  blush: (u, Sk) => {
+    const c = mix(Sk[1], '#e8506a', 0.45),
+      soft = mix(Sk[1], '#e8506a', 0.3);
+    u.row(24, 21, 25, c);
+    u.row(24, 38, 42, c);
+    u.row(25, 22, 24, soft);
+    u.row(25, 39, 41, soft);
+  },
+  scar: (u, Sk) => {
+    const c = mix(Sk[0], '#9a2a3a', 0.55);
+    u.line(42, 9, 40, 14, c);
+    u.line(40, 24, 38, 28, c);
+  },
+  plaster: (u) => {
+    u.r(28, 23, 8, 2, '#f2dfbc');
+    u.row(23, 29, 34, '#fff3dc');
+    u.col(28, 23, 24, '#c9a878');
+    u.col(35, 23, 24, '#c9a878');
+    u.p(31, 24, '#c9a878');
+    u.p(32, 23, '#c9a878');
+  },
+  mole: (u, Sk) => u.r(40, 26, 2, 1, mix(Sk[0], '#1a1014', 0.6)),
+};
 
 /**
  * Paints the manga head (skin and face) onto `g`, the body grid at 64. With `hair` (the front hair
@@ -208,6 +366,7 @@ export function mangaHead(g: Grid, P: Pose, look: Look, hair?: Grid) {
   const u = painter(g, P.bob),
     Sk = SKIN[look.skin],
     F = MANGA_FACE,
+    iris = look.eyes ? EYE_COLORS[look.eyes] : F.iris,
     ink: Record<string, string> = {
       S: Sk[1],
       s: Sk[0],
@@ -216,14 +375,15 @@ export function mangaHead(g: Grid, P: Pose, look: Look, hair?: Grid) {
       L: EYES.line,
       w: F.white,
       W: EYES.shine,
-      d: F.iris[0],
-      m: F.iris[1],
-      l: F.iris[2],
+      d: iris[0],
+      m: iris[1],
+      l: iris[2],
       p: F.pupil,
       r: F.mouth,
     };
   F.art.forEach((row, j) => [...row].forEach((ch, i) => ink[ch] && u.p(F.at[0] + i, F.at[1] + j, ink[ch])));
   if (look.sex === 'f') F.lashes.forEach(([x, y]) => u.p(x, y, EYES.line));
+  if (look.mark && look.mark !== 'none') MARKS[look.mark](u, Sk);
   if (!hair) return;
   for (let y = 0; y < g.length - 2; y++)
     for (let x = 0; x < g[0].length; x++)
