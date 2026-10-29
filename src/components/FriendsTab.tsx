@@ -1,12 +1,13 @@
 'use client';
 
-import { BookLock, Check, Flame, Lock, Shield, Sparkles, Swords, Users } from 'lucide-react';
+import { useState } from 'react';
+import { BookLock, Check, Flame, Lock, Megaphone, Shield, Sparkles, Swords, Users } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { statusOf, type FriendCard } from '@/lib/friends';
 import { ROAD_BANNER, ROAD_CHAPTERS } from '@/story/road';
 import { ROAD_LENGTH, roadAt, startRoad } from '@/lib/road';
 import { inviteToParty, setLobbyOpen, usePartyView } from '@/lib/party-client';
-import { FriendHero, FriendsCard, type Friends } from './Friends';
+import { CheerPage, Doing, FriendHero, FriendsCard, type Friends } from './Friends';
 import { useLand } from './useLand';
 import { Sprite } from './Sprite';
 
@@ -24,9 +25,11 @@ const TOGETHER_FACTS: { icon: typeof Users; text: string; blue?: boolean }[] = [
   { icon: Sparkles, text: '+6 materials drop here', blue: true },
 ];
 
-/** Friends online now, or in the Fog, as heroes in a row: tap one to invite them to your party. */
+/** Friends online now, or in the Fog, as heroes in a row, with a bubble saying what they're doing:
+    tap one to invite them to your party, or to cheer them on while they work out. */
 function OnlineNow({ friends }: { friends: Friends }) {
   const online = (friends.list?.friends ?? []).filter((f) => f.online || f.playing);
+  const [cheering, setCheering] = useState<FriendCard | null>(null);
   const invite = async (f: FriendCard) => {
     try {
       await inviteToParty(f.id);
@@ -44,22 +47,42 @@ function OnlineNow({ friends }: { friends: Friends }) {
         <ul className="-mx-1 mt-2 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {online.map((f) => (
             <li key={f.id} className="shrink-0">
-              <button onClick={() => invite(f)} aria-label={`${f.name || 'A hero'}, ${statusOf(f, friends.now)}. Invite to your party`} className="flex w-[5.5rem] flex-col items-center rounded-xl bg-ink-900 px-1 pb-2 pt-1 active:scale-95">
+              <button
+                onClick={() => (f.training ? setCheering(f) : invite(f))}
+                aria-label={`${f.name || 'A hero'}, ${statusOf(f, friends.now)}. ${f.training ? 'Cheer them on' : 'Invite to your party'}`} className="flex w-[5.5rem] flex-col items-center rounded-xl bg-ink-900 px-1 pb-2 pt-1 active:scale-95">
                 <span className="relative">
                   <FriendHero f={f} size={56} />
-                  <span className={`absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full ring-2 ring-ink-900 ${f.playing ? 'bg-gold-300' : 'bg-emerald-400'}`} aria-hidden />
+                  <span className={`absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full ring-2 ring-ink-900 ${f.training ? 'bg-orange-400' : f.playing ? 'bg-gold-300' : 'bg-emerald-400'}`} aria-hidden />
+                  <Doing f={f} />
                 </span>
                 <span className="mt-0.5 w-full truncate text-center text-xs font-semibold text-slate-100">{f.name || 'A hero'}</span>
-                <span className={`w-full truncate text-center text-[10px] ${f.playing ? 'text-gold-300' : 'text-emerald-300'}`}>{f.playing ? 'In the Fog' : 'Online'}</span>
-                <span className="mt-1 flex items-center gap-1 rounded-md bg-ink-700 px-1.5 py-0.5 text-[10px] text-slate-200">
-                  <Swords size={11} aria-hidden /> Invite
-                </span>
+                <span className={`w-full truncate text-center text-[10px] ${f.training ? 'text-orange-300' : f.playing ? 'text-gold-300' : 'text-emerald-300'}`}>{f.training ? 'Training' : f.playing ? 'In the Fog' : 'Online'}</span>
+                {f.training ? (
+                  <span className="mt-1 flex items-center gap-1 rounded-md bg-orange-400 px-1.5 py-0.5 text-[10px] font-semibold text-ink-950">
+                    <Megaphone size={11} aria-hidden /> Cheer
+                  </span>
+                ) : (
+                  <span className="mt-1 flex items-center gap-1 rounded-md bg-ink-700 px-1.5 py-0.5 text-[10px] text-slate-200">
+                    <Swords size={11} aria-hidden /> Invite
+                  </span>
+                )}
               </button>
             </li>
           ))}
         </ul>
       ) : (
         <p className="mt-2 text-xs text-slate-500">Nobody online right now.</p>
+      )}
+      {cheering && (
+        <CheerPage
+          f={cheering}
+          demo={friends.demo}
+          onClose={() => setCheering(null)}
+          done={(m) => {
+            friends.setMsg(m);
+            setCheering(null);
+          }}
+        />
       )}
     </section>
   );

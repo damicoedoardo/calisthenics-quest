@@ -3,7 +3,7 @@ type: conceptual
 title: API
 description: The FastAPI app in backend/ — Supabase token check (JWKS), the save backup routes (GET/PUT/DELETE /save) and the rev rule that stops a stale phone overwriting newer progress, and POST /coach, the relay to the coach's LLM.
 tags: [backend, api, auth, saves]
-timestamp: 2026-10-28
+timestamp: 2026-10-29
 ---
 
 # API
@@ -25,6 +25,7 @@ live on a server).
 | `backend/app/voice.py` | The party voice pass for `POST /party/voice` ([friends.md](friends.md#party-voice)) |
 | `backend/app/play.py` | The live run pass for `POST /party/play` ([live-runs.md](live-runs.md)); `FORMA_PLAY_URL`, `FORMA_PLAY_SECRET` |
 | `backend/app/gifts.py`, `routes/gifts.py` | Forge materials friends give each other: `POST /gifts`, `GET /gifts`, `POST /gifts/claim` ([friends.md](friends.md)); creates its table on start |
+| `backend/app/cheers.py`, `routes/cheers.py` | Cheers between friends: `POST /cheers`, `POST /cheers/take` ([friends.md](friends.md#cheers)); creates its table on start |
 | `backend/app/coach.py`, `routes/coach.py` | `POST /coach`: the coach's rules (`SYSTEM`), its tools (`TOOLS`), the call to the LLM through the LiteLLM proxy, and a daily cap per player; creates its table on start (below) |
 | `backend/db/init.sql` | The schema, run by Postgres on first boot |
 | `backend/tests/` | pytest: the save rules and the token check, no database needed |
@@ -51,7 +52,7 @@ runs them and calls again with the results. So the server keeps no chat and no s
 ## Login
 
 Supabase does the login (its own `forma` project, not minlit's) and signs a token; the api only
-checks it, with Supabase's public keys (JWKS), and never issues tokens. Every `/save`, `/me`, `/friends` and `/gifts` route needs
+checks it, with Supabase's public keys (JWKS), and never issues tokens. Every `/save`, `/me`, `/friends`, `/gifts` and `/cheers` route needs
 `Authorization: Bearer <token>`; the player is the token's `sub`.
 
 ## The save rules

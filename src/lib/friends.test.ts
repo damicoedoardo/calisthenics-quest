@@ -22,6 +22,7 @@ describe('friends', () => {
   it('says where a friend is', () => {
     expect(statusOf(card({ online: true, playing: 'The Ember Road' }), now)).toBe('In the Fog: The Ember Road');
     expect(statusOf(card({ online: true }), now)).toBe('Online');
+    expect(statusOf(card({ online: true, training: 'Push day' }), now)).toBe('Training now: Push day');
     expect(statusOf(card(), now)).toBe('Seen 2 h ago');
   });
 
@@ -49,6 +50,8 @@ describe('friends', () => {
     expect(c.level).toBe(1);
     expect(c.trained_at).toBeNull();
     expect(c.playing).toBe('The Ember Road');
+    expect(c.training).toBeNull();
+    expect(myCard(initialState(), null, 'Push day').training).toBe('Push day');
     expect(c.look.gear?.weapon).toBeDefined();
   });
 });
