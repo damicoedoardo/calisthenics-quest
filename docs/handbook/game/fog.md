@@ -3,7 +3,7 @@ type: conceptual
 title: The Fog (the game between workouts)
 description: The rules around a Fog run in src/lib/fog.ts — zones from the story's chapters, when a zone opens, power from real training, run skills, records — and how a run is loaded and drawn.
 tags: [game, fog, rules]
-timestamp: 2026-10-28
+timestamp: 2026-10-29
 ---
 
 # The Fog
@@ -128,7 +128,8 @@ minimap in the corner fills in as you go), played by a pure engine and drawn by 
 [dungeon.md](dungeon.md) has the files and the how-to table. `src/game/rules.ts` holds numbers
 shared between the hero and the engine (speed, HP, attacks) and the sprite sheet names;
 `src/game/sheets.ts` builds the sheets a run needs (after the story's finale the hero's are drawn
-on fire, `heroVariant` in `src/story/flame.ts`); `src/game/calm.ts` drops shake and flashes for
+on fire, `heroVariant` in `src/story/flame.ts`; the regular monsters, `DressedKey`, in the zone's dress,
+standing and firing; only the run's own boss, `bossJobs`); `src/game/calm.ts` drops shake and flashes for
 `prefers-reduced-motion`.
 
 `src/components/FogRun.tsx` loads `src/game/dungeon/scene.ts` with `import()` only when a run
