@@ -232,6 +232,7 @@ export default function NightLab() {
       </Panel>
 
       <Panel title="CLASSES, SP AND SWEAT COINS" note="Your class at the start, weapons that belong to one class, the first SP with its trial, and sweat coins to change class or start your points over.">
+        <Row icon={<Sparkles size={16} />} label="Level up in a run: the skill cards" note="Five skills already taken, then a level up: three cards colored by kind (red attack, purple magic, green guard, blue craft), level pips, your skills under them" onClick={() => open(veteran(14, 1), 'run=0&at=skills')} />
         <Row icon={<Swords size={16} />} label="After the boss: pick up, then go home" note="The boss's room goes quiet, HOME stairs come up; walk over what's left first" onClick={() => open(veteran(14, 1), 'run=0&at=boss')} />
         <Row icon={<Play size={16} />} label="The opening, with the class pick" note="A new player: after the name, pick a class (you can change it later)" onClick={() => open(initialState(), '')} />
         <Row icon={<Gem size={16} />} label="Another class's weapon" note="Hero > Gear: an archer's bow in a warrior's vault says 'Archer only' and can't be worn" onClick={() => open(otherBow(), 'tab=hero&hero=gear')} />

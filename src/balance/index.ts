@@ -8,6 +8,7 @@ export * from './economy';
 export * from './items';
 export * from './dungeon';
 export * from './upgrades';
+export * from './skills';
 export * from './power';
 export * from './classes';
 export * from './coach';

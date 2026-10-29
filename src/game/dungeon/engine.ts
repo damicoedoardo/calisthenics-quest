@@ -1,5 +1,5 @@
 import type { ClassId } from '@/lib/gear';
-import { MAT_DROPS, MAT_IDS, PARTY, TUTORIAL, type MatId } from '@/balance';
+import { MAT_DROPS, MAT_IDS, PARTY, RUN_SKILL, TUTORIAL, type MatId } from '@/balance';
 import { rollUpgrades, xpToNext, type Edge, type Power, type UpgradeId, type Zone } from '@/lib/fog';
 import {
   ATTACK,
@@ -714,7 +714,7 @@ function newHero(hs: HeroSetup, id: number): Hero {
     waiting: false,
     shots: 0,
     hits: 0,
-    cd: { attack: 0.5, spark: 2, nova: 3, fireball: 2.5 },
+    cd: { attack: 0.5, spark: RUN_SKILL.spark.every, nova: RUN_SKILL.nova.every, fireball: 2.5 },
     ups: {},
     flames: power.flames,
     orbit: 0,
@@ -3129,7 +3129,7 @@ function skills(run: Run, h: Hero) {
   if (spark > 0) {
     h.cd.spark -= STEP;
     if (h.cd.spark <= 0) {
-      h.cd.spark = 2;
+      h.cd.spark = RUN_SKILL.spark.every;
       const hit = sparkHit(spark);
       chain(run, h, hit.jumps, pow(h, hit.dmg));
     }
@@ -3138,7 +3138,7 @@ function skills(run: Run, h: Hero) {
   if (nova > 0) {
     h.cd.nova -= STEP;
     if (h.cd.nova <= 0) {
-      h.cd.nova = 3;
+      h.cd.nova = RUN_SKILL.nova.every;
       const hit = novaHit(nova);
       // The burst of light also wipes the shots inside it.
       clearBullets(run, h.x, h.y, hit.r);
@@ -3498,6 +3498,17 @@ function end(run: Run, won: boolean, why: RunEnd['why']) {
 /** Developer mode: end the run as if the boss fell. */
 export function winNow(run: Run) {
   end(run, true, 'boss');
+}
+
+/** Developer mode: a level up now (and `skills` levels' picks taken first, by the bot's order, to
+    see the card with a few skills already in hand). */
+export function levelNow(run: Run, skills = 0) {
+  const h = run.hero;
+  for (let i = 0; i < skills; i++) {
+    if (!h.offer) gain(run, h, xpToNext(h.level) - h.xp);
+    if (h.offer) pick(run, BOT_PICKS.find((id) => h.offer!.choices.includes(id)) ?? h.offer.choices[0], h);
+  }
+  if (!h.offer) gain(run, h, xpToNext(h.level) - h.xp);
 }
 
 /** Developer mode: down to the next floor's first room. */

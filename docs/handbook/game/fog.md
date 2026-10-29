@@ -3,7 +3,7 @@ type: conceptual
 title: The Fog (the game between workouts)
 description: The rules around a Fog run in src/lib/fog.ts — zones from the story's chapters, when a zone opens, power from real training, run skills, records — and how a run is loaded and drawn.
 tags: [game, fog, rules]
-timestamp: 2026-10-28
+timestamp: 2026-10-29
 ---
 
 # The Fog
@@ -38,6 +38,10 @@ level or story.
   `id`, dungeon and boss fight, the road's own names and words, and `guide: 'Tamsin'` speaks after
   a win. See [story.md](story.md).
 - **Run skills**: `UPGRADES` and `rollUpgrades` (three random choices per level-up), `xpToNext`.
+  Each skill has a `kind` (attack, magic, guard, craft) that colors its card; their numbers are
+  `RUN_SKILL` in `src/balance/skills.ts`. The level-up pick is `SkillPick`
+  (`src/components/SkillPick.tsx`): three cards with the kind's band, the icon (`SKILL_ICONS`),
+  level pips, and the skills already taken in a row under them.
 - **Records**: `recordRun` saves runs, clears and each zone's bests (deepest, most monsters,
   fastest win) and the last run for the flame to talk about. The mid-boss guards floor
   `MID_FLOOR` (5).

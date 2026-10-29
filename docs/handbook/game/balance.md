@@ -3,7 +3,7 @@ type: conceptual
 title: Balance (design for balance)
 description: The rule every feature follows so FORMA stays tunable — every balance number named in src/balance/ with its goal, the balance sheet (pnpm balance) that shows what they add up to, the map of numbers not moved yet, and the balance changelog.
 tags: [game, balance, rules, changelog]
-timestamp: 2026-10-28
+timestamp: 2026-10-29
 ---
 
 # Balance
@@ -52,6 +52,7 @@ kept there as aliases, so callers didn't change).
 | `src/balance/power.ts` | the target split of power growth (training / gear / upgrades) and its slack | the balance sheet |
 | `src/balance/dungeon.ts` | `DIALS`, elites, run levels, what the bot should win in a zone (`ZONE_WINS`), how human the bot plays (`HUMAN`), the gear it walks in with (`SEASONED`), the ways of spending points the sim plays (`BUILD_PROFILES`, fair within `BUILD_FAIR`) | `src/game/dungeon/content.ts`, `src/lib/fog.ts` |
 | `src/balance/upgrades.ts` | Mira's forge +1 to +15 (`STEPS`: embers, materials, odds, strength), misses (`FORGE_RISK`), safe marks, co-op material drops and gifts, the look bands | `src/lib/forge.ts`, `src/lib/fog-gear.ts`, `src/game/dungeon/items.ts`, `engine.ts`, `PlusGlow.tsx` |
+| `src/balance/skills.ts` | the run skills a level-up offers (`RUN_SKILL`): each one's size per level, its timer and how many levels it has. Run-only, so measured by `fog:sheet`, not `powerScore` | `src/game/rules.ts`, `src/game/dungeon/engine.ts`, `src/lib/fog.ts` (`UPGRADES`: names, words, card kind) |
 | `src/balance/classes.ts` | the classes: base attacks (`ATTACK`), bodies (`CLASS_BODY`), abilities (`ABILITY`: clocks and sizes), the monk's calm (`CALM`), the two stats each leans to (`CLASS_LEAN`, `SECOND_LEAN`), how fair they must be (`CLASS_FAIR`), and the SPs (`SP_TRIAL`, `SP_GIFTS`, `SP_SKILL`, `SP_FINAL`, `SURGE`, `SP_PASSIVE`, and each SP weapon's basic attack `SP_WEAPON` with `cut`) | `src/game/rules.ts`, `src/game/dungeon/content.ts`, `engine.ts`, `src/lib/stats.ts`, `src/lib/sp.ts` |
 | `src/balance/coach.ts` | the coach's dose: sets and reps by goal (`DOSE`), body-weight reps and holds by level, moves per minutes, set length, caps per family and per workout, running (`RUN`), choices per exercise, notes kept, when a level moves (`LEVEL_SHIFT`). Real-world dose only: a workout's XP and points don't depend on it | `src/lib/coach/` |
 | `src/balance/index.ts` | exports them all | |
@@ -62,7 +63,6 @@ until they are):
 | Area | Where it lives now | Hidden in formulas |
 |---|---|---|
 | The hero's base (every class) | `DODGE` in `content.ts`; `HERO_HP`, `HERO_SPEED` in `src/game/rules.ts` | |
-| Run skills | `UPGRADES` in `src/lib/fog.ts` (names); what each does, in `engine.ts` | each skill's size per level |
 | Boss edge (boss weaker, free skills after a chapter's hearts are gone) | `EDGE` in `src/lib/fog.ts` | |
 | The flame's helpers | `FLAME_AT` in `fog.ts`; `FLAME`, `FIREBALL`, `FAIRY` in `rules.ts` | |
 | Floor layout, cleared-room speed | `LAYOUT`, `ROOM_ODDS`, `CLEAR_RUN` in `content.ts` | |
@@ -138,6 +138,7 @@ before and after.
 
 | Date | Change | Why | Before → after | PR |
 |---|---|---|---|---|
+| 2026-10-29 | Run skills' numbers moved out of `rules.ts` and `engine.ts` into `RUN_SKILL` (`src/balance/skills.ts`), same values; the cards read their words from it | The level-up cards were redone; Edoardo kept the ten skills as they are ("so we don't have to rebalance") | No change: `pnpm balance` and the Fog replays identical | this thread's PR |
 | 2026-10-28 | `LEVEL_NEED.slack` 2 → 0: an item asks for the level a weekly-goal player has the very workout it becomes wearable (`WEAR_AFTER`), not two workouts earlier | Edoardo won zone 1 at 0 workouts after wearing a zone 1 legendary armor at level 1: a level spans three or four workouts, so with slack 2 every zone 1 item from floors 1-3 asked for level 1 | A zone 1 legendary now asks level 2 (4 workouts). Bot at 0 workouts, archer, zone 1 (240 runs): 1.3%; with that legendary armor 0.8%, rested 3.3%, no bow crit 0%, crit x3 4.6%, damage-first picks 2.5%: none of these is what won it, his dodging is (a top dodger wins about 11%, row below). `fog:sheet` open/later 25/69% → 21/67%, all fair; zone 6 open 17% at 48 runs (off by 1), 23% at 96 runs, left. Also: the boss's drop no longer overfills a full bag (it lands on the floor) | this thread's PR |
 | 2026-10-28 | A fall keeps what you wear: `FLAME_GUARD_DAYS` (the flame keeping one item) and `FALL_KEEP` (+10 gear slipping home) removed; `SAFE_POINTS` now only for forge misses | Edoardo: with upgrades, losing worn gear makes no sense; a fall loses only the bag | `pnpm balance` and `fog:sheet` unchanged (25%/69%, every zone on target, all four classes fair): the bot already walks in with kept gear (`SEASONED`), so the sim now matches the rule | this thread's PR |
 | 2026-10-28 | Armor asks only for a hero level, no Armor points (older armor's need cleared by `armorAsksNoPoints` in `migrate`); weapons still ask for their class's stat | Edoardo, from the build sim: one-stat builds should be playable, not a trap | `BUILDS=even,glass,tank,quick fog:sim steady 24`: open 37/17/38/9% → 30/25/29/14%, all fair; later 82/39/76/28% → 76/55/68/45% (quick 16 points under the average: the bot gains nothing from walk speed, so it measures Speed builds low; +50% worth per Speed point didn't move it). `fog:sheet` unchanged at 25%/69%, every zone on target | this thread's PR |

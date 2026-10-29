@@ -53,6 +53,7 @@ import {
   pick,
   skipFloor,
   skipToBoss,
+  levelNow,
   skipToWarden,
   stepRun,
   takeEvents,
@@ -271,6 +272,8 @@ export interface RunHandle {
   dropItem: (id: string) => void;
   stairs: (choice: 'deeper' | 'leave' | 'stay') => void;
   winNow: () => void;
+  /** Developer mode: a level up now (after `skills` picks taken for you). */
+  levelNow: (skills?: number) => void;
   autopilot: (on: boolean) => void;
   destroy: () => void;
 }
@@ -3091,6 +3094,13 @@ class DungeonScene extends Phaser.Scene {
     winNow(this.run);
   }
 
+  levelNow(skills = 0) {
+    this.whenBuilt(() => {
+      levelNow(this.run, skills);
+      this.offered = false;
+    });
+  }
+
   pickRelic(id: RelicId) {
     this.offered = false;
     if (this.net) this.answer({ t: 'relic', id }, askKey('relic', this.run.hero.relicOffer));
@@ -3199,6 +3209,7 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
     dropItem: (id) => scene.gear(() => dropFromBag(scene.run, id), { t: 'drop', id }),
     stairs: (choice) => scene.stairsChoice(choice),
     winNow: () => scene.winNow(),
+    levelNow: (skills) => scene.levelNow(skills),
     autopilot: (on) => (scene.bot = on),
     destroy: () => {
       setup.net?.close();
