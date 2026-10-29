@@ -95,6 +95,13 @@ const RIBBON = { base: '#db2777', light: '#f472b6' };
 /** The same shape on the other side of the face (the face is centered on x 32). */
 const mirror = ([pts, c]: Shape): Shape => [pts.map(([x, y]) => [64 - x, y] as Pt), c];
 const both = (s: Shape): Shape[] => [s, mirror(s)];
+/** Round puffs of radius `r`, spread around an oval (from angle a0 to a1). */
+function ring(cx: number, cy: number, rx: number, ry: number, n: number, r: number, a0 = 0, a1 = 2 * Math.PI): Pt[][] {
+  return Array.from({ length: n }, (_, i) => {
+    const a = a0 + ((a1 - a0) * i) / (a1 - a0 < 2 * Math.PI ? n - 1 : n);
+    return oval(Math.round(cx + Math.cos(a) * rx), Math.round(cy + Math.sin(a) * ry), r, r, 12);
+  });
+}
 /** An oval as points. */
 function oval(cx: number, cy: number, rx: number, ry: number, n = 16): Pt[] {
   return Array.from({ length: n }, (_, i) => {
@@ -322,6 +329,156 @@ export const MANGA_HAIR: Partial<Record<HairStyle, MangaHair>> = {
     front: [...CURLS.map(([x, y, r]): Shape => [oval(x, y, r, r, 12), 1]), ...both([[[15, 12], [20, 12], [21, 22], [17, 25], [14, 20]], 1])],
     shine: CURLS.map(([x, y]) => [x - 2, y - 1, x - 1, y - 2]),
     strands: CURLS.map(([x, y, r]) => [x + 1, y + r - 1, x + r - 1, y + 1]),
+  },
+  /** Sides cut close, one tall crest of spikes down the middle. */
+  mohawk: {
+    cap: { cx: 32, cy: 13, rx: 15, ry: 8, cutY: 9 },
+    back: [],
+    front: [
+      ...both([[[17, 7], [26, 5], [26, 10], [17, 10]], 0]),
+      [[[26, 10], [21, 3], [27, 4], [27, -1], [31, 3], [33, -2], [35, 3], [39, 0], [37, 5], [43, 3], [38, 10]], 1],
+    ],
+    shine: [[29, 2, 31, 6]],
+    strands: [
+      [32, 1, 32, 8],
+      [36, 2, 35, 8],
+    ],
+  },
+  /** A big round afro. */
+  afro: {
+    cap: { cx: 32, cy: 13, rx: 18, ry: 10, cutY: 11 },
+    back: [[oval(32, 15, 21, 14, 24), 0], ...ring(32, 15, 20, 12, 14, 4).map((pts): Shape => [pts, 0])],
+    front: [
+      [oval(32, 10, 19, 7, 24), 1],
+      ...ring(32, 10, 17, 6, 9, 4, Math.PI, 2 * Math.PI).map((pts): Shape => [pts, 1]),
+      ...both([[[14, 10], [19, 10], [19, 18], [15, 16]], 1]),
+    ],
+    shine: [
+      [21, 4, 25, 2],
+      [30, 1, 34, 1],
+    ],
+    strands: [
+      [22, 7, 24, 9],
+      [32, 5, 33, 7],
+      [41, 7, 39, 9],
+    ],
+  },
+  /** Two braids over the shoulders, parted in the middle. */
+  braids: {
+    cap: { cx: 32, cy: 13, rx: 16, ry: 10, cutY: 12 },
+    back: [],
+    front: [
+      ...both([[[17, 10], [31, 9], [24, 12], [19, 17]], 1]),
+      ...both([[[16, 11], [21, 11], [21, 24], [17, 26]], 1]),
+      ...[24, 28, 32, 36, 40].flatMap((y): Shape[] => both([oval(18, y, 3, 2, 10), 1])),
+      ...both([[[16, 43], [20, 43], [20, 45], [16, 45]], RIBBON.base]),
+    ],
+    shine: [
+      [22, 6, 27, 5],
+      [36, 5, 41, 6],
+    ],
+    strands: [
+      [32, 3, 32, 10],
+      ...[26, 30, 34, 38].flatMap((y): [number, number, number, number][] => [
+        [16, y, 20, y],
+        [44, y, 48, y],
+      ]),
+    ],
+  },
+  /** One long sweep of fringe across to the side, over one eye. */
+  sidepart: {
+    cap: { cx: 32, cy: 13, rx: 16, ry: 10, cutY: 12 },
+    back: [[[[15, 10], [49, 10], [50, 30], [44, 32], [20, 32], [14, 30]], 0]],
+    front: [
+      [[[17, 9], [24, 4], [48, 8], [48, 24], [45, 26], [42, 19], [37, 15], [30, 13], [23, 13], [19, 17]], 1],
+      [[[15, 11], [20, 11], [20, 26], [16, 29]], 1],
+    ],
+    shine: [
+      [24, 7, 34, 8],
+      [38, 10, 44, 14],
+    ],
+    strands: [
+      [30, 9, 40, 14],
+      [36, 8, 45, 15],
+      [26, 6, 23, 10],
+    ],
+  },
+  /** Combed straight back, smooth and neat. */
+  slick: {
+    cap: { cx: 32, cy: 12, rx: 15, ry: 9, cutY: 9 },
+    back: [...both([[[16, 10], [18, 18], [14, 16]], 0])],
+    front: [[[[28, 8], [36, 8], [32, 11]], 1], ...both([[[17, 8], [20, 8], [20, 15], [18, 14]], 1])],
+    shine: [
+      [22, 5, 30, 4],
+      [36, 4, 42, 6],
+    ],
+    strands: [
+      [25, 8, 23, 3],
+      [32, 8, 32, 3],
+      [39, 8, 41, 3],
+    ],
+  },
+  /** Princess cut: blunt bangs, straight cheek locks, long straight hair behind. */
+  hime: {
+    cap: { cx: 32, cy: 13, rx: 16, ry: 10, cutY: 12 },
+    back: [[[[15, 10], [49, 10], [51, 46], [13, 46]], 0]],
+    front: [[[[17, 9], [47, 9], [47, 14], [17, 14]], 1], ...both([[[15, 11], [21, 11], [21, 29], [15, 29]], 1])],
+    shine: [
+      [21, 6, 27, 5],
+      [35, 5, 41, 6],
+    ],
+    strands: [
+      [24, 10, 24, 14],
+      [32, 10, 32, 14],
+      [40, 10, 40, 14],
+    ],
+  },
+  /** Tied up in a samurai knot on top, two loose strands by the face. */
+  topknot: {
+    cap: { cx: 32, cy: 13, rx: 15, ry: 9, cutY: 10 },
+    back: [],
+    front: [
+      [oval(32, 3, 5, 4, 12), 1],
+      [[[28, 6], [36, 6], [36, 7], [28, 7]], BAND.base],
+      ...both([[[19, 10], [21, 10], [22, 24], [20, 22]], 1]),
+    ],
+    shine: [
+      [24, 7, 28, 6],
+      [31, 1, 33, 1],
+    ],
+    strands: [
+      [22, 9, 29, 6],
+      [42, 9, 35, 6],
+      [32, 10, 32, 7],
+    ],
+  },
+  /** Bedhead: tufts sticking out every which way. */
+  messy: {
+    cap: { cx: 32, cy: 13, rx: 16, ry: 10, cutY: 11 },
+    back: [...both([[[16, 13], [11, 20], [18, 22]], 0])],
+    front: [
+      [[[17, 11], [16, 3], [23, 6]], 1],
+      [[[22, 5], [25, -1], [29, 4]], 1],
+      [[[30, 4], [37, 0], [36, 5]], 1],
+      [[[38, 5], [46, 2], [44, 9]], 1],
+      [[[45, 8], [53, 9], [47, 14]], 1],
+      [[[17, 9], [11, 9], [17, 15]], 1],
+      [[[17, 10], [24, 10], [21, 17]], 1],
+      [[[23, 10], [29, 10], [30, 16]], 1],
+      [[[29, 10], [35, 10], [31, 15]], 1],
+      [[[35, 10], [41, 10], [42, 17]], 1],
+      [[[41, 10], [48, 10], [44, 19]], 1],
+      ...SIDE_LOCKS,
+    ],
+    shine: [
+      [21, 6, 25, 4],
+      [33, 4, 36, 3],
+    ],
+    strands: [
+      [20, 4, 22, 8],
+      [33, 2, 32, 6],
+      [44, 4, 41, 8],
+    ],
   },
 };
 

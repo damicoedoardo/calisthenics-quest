@@ -10,7 +10,26 @@ import { drawnBody, drawnTorso } from './drawn';
 
 export const SIZE = 64;
 
-export type HairStyle = 'spiky' | 'swept' | 'short' | 'buzz' | 'wild' | 'long' | 'pony' | 'bob' | 'bun' | 'twin' | 'curly';
+export type HairStyle =
+  | 'spiky'
+  | 'swept'
+  | 'short'
+  | 'buzz'
+  | 'wild'
+  | 'long'
+  | 'pony'
+  | 'bob'
+  | 'bun'
+  | 'twin'
+  | 'curly'
+  | 'mohawk'
+  | 'afro'
+  | 'braids'
+  | 'sidepart'
+  | 'slick'
+  | 'hime'
+  | 'topknot'
+  | 'messy';
 
 /** A small mark on the face: freckles, a blush, a scar over the brow, a plaster on the nose, a mole. */
 export const FACE_MARKS = ['none', 'freckles', 'blush', 'scar', 'plaster', 'mole'] as const;
@@ -68,6 +87,14 @@ export const HAIRSTYLES: Record<HairStyle, [number, number, number, number][]> =
   bun: SWEPT_ROWS,
   twin: PONY_ROWS,
   curly: LONG_ROWS,
+  mohawk: SPIKY_ROWS,
+  afro: LONG_ROWS,
+  braids: PONY_ROWS,
+  sidepart: SWEPT_ROWS,
+  slick: SWEPT_ROWS,
+  hime: LONG_ROWS,
+  topknot: SWEPT_ROWS,
+  messy: SPIKY_ROWS,
 };
 
 // ---------- the face, in sprite pixels (64 grid) ----------

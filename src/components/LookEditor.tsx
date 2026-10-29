@@ -13,18 +13,26 @@ const BODIES: { id: Look['sex']; label: string }[] = [
   { id: 'm', label: 'Boy' },
   { id: 'f', label: 'Girl' },
 ];
-const STYLES: { id: HairStyle; label: string }[] = [
+export const STYLES: { id: HairStyle; label: string }[] = [
   { id: 'spiky', label: 'Spiky' },
   { id: 'swept', label: 'Swept' },
   { id: 'short', label: 'Headband' },
   { id: 'buzz', label: 'Buzz' },
   { id: 'wild', label: 'Wild' },
+  { id: 'messy', label: 'Messy' },
+  { id: 'mohawk', label: 'Mohawk' },
+  { id: 'slick', label: 'Slick' },
+  { id: 'sidepart', label: 'Side sweep' },
   { id: 'curly', label: 'Curly' },
+  { id: 'afro', label: 'Afro' },
   { id: 'bob', label: 'Bob' },
+  { id: 'hime', label: 'Hime' },
   { id: 'long', label: 'Long' },
   { id: 'pony', label: 'Ponytail' },
   { id: 'twin', label: 'Twin tails' },
+  { id: 'braids', label: 'Braids' },
   { id: 'bun', label: 'Bun' },
+  { id: 'topknot', label: 'Top knot' },
 ];
 const MARKS: { id: FaceMark; label: string }[] = [
   { id: 'none', label: 'None' },

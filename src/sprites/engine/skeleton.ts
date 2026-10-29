@@ -228,7 +228,7 @@ export function drawHead(g: Grid, p: Pose, c: Colors, look?: Look) {
       g[y][x] = hair ? c.hair[1] : c.skin[1];
     }
   // a long tail of hair falls with gravity from the back of the head
-  if (look && !p.front && (look.style === 'long' || look.style === 'pony' || look.style === 'twin')) {
+  if (look && !p.front && (look.style === 'long' || look.style === 'hime' || look.style === 'pony' || look.style === 'twin')) {
     // long hair falls past the shoulders; a pony tail flicks out from higher on the head
     const pony = look.style === 'pony' || look.style === 'twin',
       back = add(p.head, add(mul(p.face, -3.5), mul(p.up, pony ? 3 : 1.5)));
