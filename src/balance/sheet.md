@@ -122,7 +122,7 @@ Co-op materials: the chance each source drops one, for each hero in a party (sol
 | boss | 50.0% | 10.0% | 8.0% | - |
 | clear | - | - | - | 3.3% |
 
-Found by one hero in a co-op run of zone 1 (two bots, 3 runs, on average): 1.7 ember thread, 0.7 bond shard, 0.3 warden coal, 0.3 heartstone.
+Found by one hero in a co-op run of zone 1 (two bots, 3 runs, on average): 2.7 ember thread, 0.3 bond shard.
 
 ## Weapons
 

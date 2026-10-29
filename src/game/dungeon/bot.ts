@@ -1,6 +1,6 @@
 import { HUMAN } from '@/balance';
 import { clamp, HERO_SPEED, RANGE } from '../rules';
-import { abilityReady, attackKind, canOpen, onStairs, outSide, finalReady, skillReady, BARREL, CHARGE, createRun, GALE, LIGHT, ROOM, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup, type SpMoveId } from './engine';
+import { abilityReady, attackKind, canOpen, onStairs, outSide, finalReady, skillReady, BARREL, CHARGE, createRun, GALE, LIGHT, LULL, ROOM, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup, type SpMoveId } from './engine';
 
 /* The bot: a steady, careful player on a phone, not a great one (how human: HUMAN in
    src/balance/dungeon.ts). It notices a shot only after a reaction of its own, misses more of them
@@ -291,6 +291,9 @@ function decide(run: Run, h: Hero): Input {
           ? 60
           : rule === 'tomorrow'
             ? TOMORROW_REACH - 60
+            : rule === 'lull'
+              ? // Inside his reach, so his song never puts it to sleep.
+                LULL.reach - 60
             : rule === 'knight'
               ? 110
               : rule === 'mirror'
@@ -442,8 +445,10 @@ const SP_USE: Record<SpMoveId, (s: Sense) => boolean> = {
 /** Plays one whole run with the bot, as fast as the computer goes. */
 export function playRun(setup: RunSetup): RunEnd {
   const run = createRun({ ...setup, autoPick: true });
+  // With friends, a bot plays each hero (scripts/fog-sim.mjs PARTY=2 to 4).
+  const party = run.party.length > 1;
   while (!run.over) {
-    stepRun(run, botInput(run));
+    stepRun(run, party ? run.party.map((h) => botInput(run, h)) : botInput(run));
     run.events.length = 0;
   }
   return run.over;

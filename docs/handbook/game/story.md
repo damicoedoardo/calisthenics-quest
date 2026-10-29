@@ -3,7 +3,7 @@ type: reference
 title: Story (scenes, chapters, daily lines)
 description: The six-month story as data in src/story — scene format, when scenes play, the daily flame lines and Book of Days, rules for the words, and where to edit what.
 tags: [game, story, content]
-timestamp: 2026-10-28
+timestamp: 2026-10-29
 ---
 # Story
 
@@ -112,8 +112,12 @@ leaves fires and notes. The data is `road.ts`; the rules are `src/lib/road.ts`.
   boss fell; asks `road1`-`road3`, kept like heart answers and never shared) and `{ end: true }`
   (the hearth; the road is done once `road-end` is seen).
 - Its places are `whetstone-pass`, `quiet-miles`, `long-bridge` and `road-hearth` (`places.ts`).
-- Not yet: each boss's own fight (the Lull's doze, the Distance's fog lanes, the Bridge's plates)
-  and art, and the Road Banner on the friend card.
+- **Its own worlds**: a chapter with `world` (and `fog.boss`) plays a dungeon of its own, built
+  like a story zone's (see "Worlds" in [dungeon.md](dungeon.md)). Chapter 1, the Whetstone Pass, is
+  world 6: its own ground, monsters (the Grinder), mid-boss (the Bellows), boss fight (the Lull's
+  sleep song), look and music. Chapters 2 and 3 still borrow Mirror Lake's and the Village's.
+- Not yet: the Distance's and the Bridge's own worlds and fights, and the Road Banner on the friend
+  card.
 
 ## How to change things
 

@@ -1,25 +1,42 @@
 import { describe, expect, it } from 'vitest';
-import { FIRST_FOG_ZONE, powerOf, ZONES } from '@/lib/fog';
+import { FIRST_FOG_ZONE, powerOf, ROAD_ZONES, ZONES } from '@/lib/fog';
 import { initialState } from '@/lib/game';
 import { CALM, HUMAN, PARTY, SP_SKILL, SP_WEAPON, TUTORIAL } from '@/balance';
 import { seeded } from '@/lib/random';
 import { botInput, playRun } from './bot';
 import { rollItem } from './items';
-import { ACROSS, BAG, attackKind, canOpen, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, makeFloor, MIDS, mine, pickRelic, SAND, skipToBoss, skipToWarden, SP_NOS, SPLIT, stepRun, takeEvents, wardenFloor, type GameEvent, type Run, type Side, type SpNo } from './engine';
+import { ACROSS, addFoe, asleep, BAG, attackKind, BELLOWS, canOpen, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LIGHT, LULL, makeFloor, MIDS, ROLL, mine, pickRelic, SAND, skipToBoss, skipToWarden, SP_NOS, SPLIT, stepRun, takeEvents, wardenFloor, worldOf, type GameEvent, type Run, type Side, type SpNo } from './engine';
 import type { ClassId } from '@/lib/gear';
 
 describe('mid-bosses', () => {
   const power = powerOf(initialState(), new Date());
   const still = { x: 0, y: 0, ability: false };
+  // Every world: the six story zones, then the Ember Road's chapters that have one of their own.
+  const WORLDS = [...ZONES, ...ROAD_ZONES.filter((z) => z.world !== undefined)];
   const midRun = (z: number) => {
-    const run = createRun({ zone: ZONES[z], power, classId: undefined, seed: 5 });
+    const run = createRun({ zone: WORLDS[z], power, classId: undefined, seed: 5 });
     skipToWarden(run);
     return run;
   };
 
-  it('each zone has its own, and it guards the middle floor', () => {
-    expect(new Set(MIDS.map((m) => m.kind)).size).toBe(ZONES.length);
-    ZONES.forEach((_, i) => expect(midRun(i).warden?.kind).toBe(MIDS[i].kind));
+  it('each world has its own, and it guards the middle floor', () => {
+    expect(new Set(MIDS.map((m) => m.kind)).size).toBe(WORLDS.length);
+    WORLDS.forEach((z, i) => expect(midRun(i).warden?.kind).toBe(MIDS[worldOf(z)].kind));
+  });
+
+  it('the Bellows pulls you in as it breathes, and blows you back out', () => {
+    const run = midRun(WORLDS.findIndex((z) => worldOf(z) === 6)),
+      b = run.warden!;
+    expect(b.kind).toBe('bellows');
+    run.hero.x = b.x;
+    run.hero.y = b.y + 250;
+    let pulled = false;
+    for (let i = 0; i < 60 * 5 && !run.over; i++) {
+      stepRun(run, still);
+      if (run.t < b.windUntil && run.hero.wind.y < 0) pulled = true;
+    }
+    expect(pulled).toBe(true);
+    expect(BELLOWS.open).toBeGreaterThan(1);
   });
 
   it('the Drowned Lantern dims the room, and the dark lifts when it falls', () => {
@@ -49,11 +66,81 @@ describe('mid-bosses', () => {
   it('the bot beats each of them', () => {
     const strong = { ...power, damage: 6, armor: 0.95, health: 2000 };
     MIDS.forEach((_, z) => {
-      const run = createRun({ zone: ZONES[z], power: strong, classId: 'archer', seed: 9, autoPick: true });
+      const run = createRun({ zone: WORLDS[z], power: strong, classId: 'archer', seed: 9, autoPick: true });
       skipToWarden(run);
       for (let i = 0; i < 60 * 120 && run.warden?.alive && !run.over; i++) stepRun(run, botInput(run));
       expect(run.warden?.alive, MIDS[z].name).toBe(false);
     });
+  });
+});
+
+describe("the Ember Road's own worlds", () => {
+  const power = powerOf(initialState(), new Date());
+  const still = { x: 0, y: 0, ability: false };
+  const pass = ROAD_ZONES[0];
+
+  it('the Whetstone Pass is its own world, with the Lull at the bottom', () => {
+    expect(worldOf(pass)).toBe(6);
+    expect(pass.boss).toBe('lull');
+    expect(worldOf(ROAD_ZONES[1])).toBe(ROAD_ZONES[1].id);
+  });
+
+  it("the Lull's song puts a lone hero to sleep, and a friend close by wakes them", () => {
+    const run = createRun({ zone: pass, power: { ...power, health: 5000 }, classId: 'archer', seed: 4, friends: [{ power: { ...power, health: 5000 }, classId: 'warrior' }] });
+    skipToBoss(run);
+    while (!run.boss) stepRun(run, [still, still]);
+    const [me, friend] = run.party;
+    const b = run.boss!;
+    // you far from him and from your friend: you grow drowsy, then sleep
+    const away = () => {
+      me.x = run.area.w / 2;
+      me.y = Math.min(run.area.h - 60, b.y + LULL.reach + 120);
+      friend.x = run.area.w - 60;
+      friend.y = b.y;
+    };
+    let slept = false;
+    for (let i = 0; i < 60 * (2 / LULL.fill) && !slept; i++) {
+      away();
+      stepRun(run, [still, still]);
+      slept = asleep(run, me);
+    }
+    expect(slept).toBe(true);
+    // the friend walks over: you wake
+    friend.x = me.x + 10;
+    friend.y = me.y;
+    stepRun(run, [still, still]);
+    expect(asleep(run, me)).toBe(false);
+    // close to him, alone, you never get drowsy
+    me.drowse = 0;
+    for (let i = 0; i < 60 * 3; i++) {
+      me.x = b.x;
+      me.y = b.y + LULL.reach - 40;
+      friend.x = run.area.w - 60;
+      stepRun(run, [still, still]);
+    }
+    expect(me.drowse).toBe(0);
+  });
+
+  it('a Grinder rolls until it meets a wall, then throws its sparks', () => {
+    const run = createRun({ zone: pass, power: { ...power, health: 5000 }, classId: undefined, seed: 2 });
+    run.foes = [];
+    run.waves = [];
+    run.hero.x = run.area.w / 2;
+    run.hero.y = run.area.h - 80;
+    const g = addFoe(run, 'grinder', run.area.w / 2, 120);
+    // tough enough that your attacks don't end the test
+    g.bornUntil = 0;
+    g.hp = g.maxHp = 1e6;
+    takeEvents(run);
+    let rolled = false,
+      shots = 0;
+    for (let i = 0; i < 60 * (2 + ROLL.wind + ROLL.most + 1); i++) {
+      stepRun(run, still);
+      if (Math.hypot(g.vx, g.vy) >= ROLL.speed - 1) rolled = true;
+      shots += takeEvents(run).filter((e) => e.type === 'shoot' && e.kind === 'grinder').length;
+    }
+    expect(rolled).toBe(true);
+    expect(shots).toBeGreaterThan(0);
   });
 });
 

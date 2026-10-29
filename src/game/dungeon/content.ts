@@ -4,6 +4,10 @@ import type { FogBoss } from '@/story/types';
 import { clamp, type AttackKind } from '../rules';
 import { ABILITY, DIALS, ELITE } from '@/balance';
 
+/** The world a zone's dungeon is built from: its own id, unless it names another (an Ember Road
+    chapter's own world). It picks the zone's row of ZONE_DUNGEONS, MIDS, THEMES and ZONE_MUSIC. */
+export const worldOf = (z: Pick<Zone, 'id' | 'world'>) => z.world ?? z.id;
+
 /* What the dungeon is made of, as plain data: the ground, the doors and chest items, every monster
    and how it shoots, each zone's dungeon and mid-boss, the bosses, and the classes' abilities.
    Adding a monster, a zone or a relic starts here; engine.ts plays it. */
@@ -91,14 +95,15 @@ export { DIALS };
 
 // ---------- monsters ----------
 
-export type MonsterKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'ram' | 'book' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade' | 'warden' | 'image' | MidKind;
-/** The floor-5 mid-bosses, one per zone (MIDS). */
-export type MidKind = 'warden' | 'lantern' | 'foreman' | 'sandGolem' | 'whisper' | 'gale';
+export type MonsterKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'ram' | 'book' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade' | 'grinder' | 'warden' | 'image' | MidKind;
+/** The floor-5 mid-bosses, one per world (MIDS). */
+export type MidKind = 'warden' | 'lantern' | 'foreman' | 'sandGolem' | 'whisper' | 'gale' | 'bellows';
 export type FoeKind = MonsterKind | 'boss';
 
 /** How a monster moves: walks at you, keeps its distance, circles you at its range, stands still,
-    winds up and charges in a line, or vanishes and appears somewhere near you. */
-export type Move = 'chase' | 'keep' | 'orbit' | 'still' | 'charge' | 'blink';
+    winds up and charges in a line, vanishes and appears somewhere near you, or rolls at you until
+    it hits a wall (ROLL). */
+export type Move = 'chase' | 'keep' | 'orbit' | 'still' | 'charge' | 'blink' | 'roll';
 
 /** What a shot does on its way: curve after you, bounce off walls, start slow and speed up, wiggle. */
 export type ShotStyle = 'plain' | 'homing' | 'bounce' | 'ramp' | 'wiggle';
@@ -178,6 +183,9 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
   splitling: { hp: 9, speed: 74, dmg: 5, r: 10, xp: 0, move: 'chase', shoots: [], cost: 0 },
   // A shade of you: vanishes, lands near you (watch for the mark) and fires a ring that starts slow.
   shade: { hp: 30, speed: 60, dmg: 9, r: 13, xp: 3, move: 'blink', range: 190, shoots: [{ every: 0, on: 'move', kind: 'ring', n: 10, speed: 140, dmg: 8, style: 'ramp' }], cost: 3 },
+  // The Grinder (the Whetstone Pass): a runaway whetstone. It turns to face you, rolls at you until
+  // it hits a wall, and throws a fan of sparks at you off the stone.
+  grinder: { hp: 32, speed: 0, dmg: 12, r: 14, xp: 2, move: 'roll', shoots: [{ every: 0, on: 'move', kind: 'spread', n: 5, arc: 1.1, speed: 105, dmg: 7 }], cost: 2.5 },
   // The Warden of the Ashes, halfway down: a great golem that guards the stairs. First it turns a
   // slow cross of shots (walk around it with the arms); hurt past half, it stops turning and fires
   // aimed bursts at you, with a ring now and then. It never joins an ordinary room.
@@ -261,6 +269,23 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
     ],
     cost: 0,
   },
+  // The Bellows (the Whetstone Pass): a forge's great bellows that breathes in, pulling everyone
+  // toward it, then blows them back out with a burst of embers (BELLOWS).
+  bellows: {
+    hp: 850,
+    speed: 30,
+    dmg: 10,
+    r: 24,
+    xp: 30,
+    move: 'keep',
+    range: 170,
+    shoots: [
+      { every: 1.8, kind: 'aimed', n: 2, speed: 120, dmg: 9, first: 1.8 },
+      { every: 2.4, kind: 'spread', n: 7, arc: 1, speed: 110, dmg: 9, first: 2.6 },
+      { every: 0.2, kind: 'spiral', n: 2, speed: 80, dmg: 8, turn: 0.26, below: 0.5 },
+    ],
+    cost: 0,
+  },
   // The Gale (the Summit): gusts that blow you toward the edge of the room, where the drop bites.
   gale: {
     hp: 640,
@@ -300,8 +325,10 @@ export const MIDS: MidBoss[] = [
   { kind: 'sandGolem', name: 'the Sand Golem', tip: 'It only takes hits while it walks', enter: "Stand still. Nothing's moving anyway.", hot: 'Cracks? Probably nothing.', fall: 'Sand, all along. It was moving.' },
   { kind: 'whisper', name: 'the Whisper', tip: 'Find the one that glows, and stay on it', enter: 'Shh. Nobody will notice if you stop.', hot: 'Louder now. Still only a whisper.', fall: 'Quiet. You kept walking anyway.' },
   { kind: 'gale', name: 'the Gale', tip: 'Lean into a gust, and stay off the edges', enter: 'Turn back. The top is too far.', hot: 'Harder. Everyone else turns back here.', fall: 'Just a breeze now. Keep climbing.' },
+  // The Ember Road's worlds (6 on: the Whetstone Pass)
+  { kind: 'bellows', name: 'the Bellows', tip: 'Walk away as it breathes in, and hit it then: it is open', enter: "Let the fire go out. It's warm enough.", hot: 'Why keep stoking it? Sit down.', fall: 'Hear that? The forge is roaring again.' },
 ];
-export const midBoss = (zone: Pick<Zone, 'id'>) => MIDS[clamp(zone.id, 0, MIDS.length - 1)];
+export const midBoss = (zone: Pick<Zone, 'id' | 'world'>) => MIDS[clamp(worldOf(zone), 0, MIDS.length - 1)];
 /** The Warden of the Ashes, the first zone's mid-boss. */
 export const WARDEN = MIDS[0];
 /** The Drowned Lantern's dark: how far you see when it rises, at its darkest, how fast it dims
@@ -317,6 +344,12 @@ export const SWAP = { crowd: 5, every: 4.2, wind: 0.8 };
 /** The Gale: how often it gusts (s), the warning, how long a gust blows, how hard (px/s), how
     close to the wall the drop bites, and what it costs. */
 export const GALE = { every: 5.5, wind: 1, blow: 2, push: 105, edge: 60, bite: 10 };
+/** The Bellows: how often it breathes (s), how long it breathes in, how hard that pulls you to it
+    (px/s), how hard and long its blow shoves you away, the embers it blows out, and how much more a
+    hit lands while it breathes in (it is open); the embers come `after` s, once you're thrown clear.
+    The pull fades out from 150 px further than `close` down to nothing at `close` (a fighter up
+    close isn't dragged onto it). */
+export const BELLOWS = { every: 5, draw: 2, pull: 85, close: 90, push: 300, shove: 0.4, after: 0.3, embers: { every: 0, kind: 'ring', n: 14, speed: 120, dmg: 8 } as Pattern, open: 1.5 };
 
 /** Monsters that join deeper down, by the floor (of 10) they first show on and how common they are. */
 export const UNLOCK: [MonsterKind, number, number][] = [
@@ -331,11 +364,12 @@ export const UNLOCK: [MonsterKind, number, number][] = [
   ['shade', 7, 1.6],
 ];
 
-/** How each zone's dungeon differs from the first: who lives there and when they join (by the
+/** How each world's dungeon differs from the first: who lives there and when they join (by the
     floor of 10 they first show on, and how common they are), what lies on the ground (each a
-    multiplier on the first zone's amounts), and how far you see. Zones are the story's chapters,
-    so each dungeon looks and fights like its chapter: a lake, a village, a plateau, the fog, the
-    climb. */
+    multiplier on the first zone's amounts), and how far you see. Worlds 0-5 are the story's
+    chapters, so each dungeon looks and fights like its chapter: a lake, a village, a plateau, the
+    fog, the climb. Worlds from 6 are the Ember Road's (a road chapter's `world`, src/story/road.ts).
+    A world is also a row of MIDS, THEMES (themes.ts), ZONE_MUSIC and ZONE_RAMPS. */
 export interface ZoneDungeon {
   unlock: [MonsterKind, number, number][];
   ground: { water: number; spikes: number; barrels: number; pillars: number };
@@ -422,9 +456,28 @@ export const ZONE_DUNGEONS: ZoneDungeon[] = [
     ],
     ground: { water: 1.2, spikes: 1.3, barrels: 1, pillars: 1.3 },
   },
+  // The Whetstone Pass (the Ember Road, chapter 1): a mountain road of cold forges. Runaway
+  // whetstones roll down it from the first floor, the Lull's snooze clocks tick in the doorways,
+  // lancer husks stand guard, mirrors of polished steel; coal barrels, rock to walk around, quench
+  // troughs.
+  {
+    unlock: [
+      ['slime', 0, 2],
+      ['wisp', 0, 2.2],
+      ['grinder', 0, 1.4],
+      ['book', 1, 1.6],
+      ['ram', 2, 1.8],
+      ['mirror', 2, 1.4],
+      ['smoke', 3, 1.6],
+      ['seeker', 4, 1.5],
+      ['splitter', 5, 1.5],
+      ['shade', 6, 1.6],
+    ],
+    ground: { water: 0.4, spikes: 1.2, barrels: 1.6, pillars: 1.3 },
+  },
 ];
-/** The dungeon of a run's zone. */
-export const zoneDungeon = (zone: Pick<Zone, 'id'>) => ZONE_DUNGEONS[clamp(zone.id, 0, ZONE_DUNGEONS.length - 1)];
+/** The dungeon of a run's zone (by its world). */
+export const zoneDungeon = (zone: Pick<Zone, 'id' | 'world'>) => ZONE_DUNGEONS[clamp(worldOf(zone), 0, ZONE_DUNGEONS.length - 1)];
 
 /** A line about each monster the first time it shows up in a run. */
 export const MEET: Partial<Record<MonsterKind, string>> = {
@@ -446,6 +499,9 @@ export const MEET: Partial<Record<MonsterKind, string>> = {
  * - The Plateau never shows its HP: it cracks, and nothing seems to change, until it shatters.
  * - The Hollow can't be brought down: stand in its light long enough, and take its hand.
  * - The Summit is a climb with no top: ledge after ledge with your friends, as high as you go.
+ * The Ember Road's, each about a friendship:
+ * - The Lull sings to sleep whoever is left on their own, and heals while you all hang back: stay
+ *   together and push in.
  */
 export const BOSSES: Record<FogBoss, MonsterDef & { plates?: number }> = {
   tomorrow: {
@@ -520,6 +576,23 @@ export const BOSSES: Record<FogBoss, MonsterDef & { plates?: number }> = {
   },
   // The Summit is never fought: it is the climb itself (see CLIMB).
   summit: { hp: 1, speed: 0, dmg: 0, r: 20, xp: 0, move: 'still', shoots: [], cost: 0 },
+  // A sleepy giant at the top of the Whetstone Pass, who sings (LULL).
+  lull: {
+    hp: 1100,
+    speed: 34,
+    dmg: 16,
+    r: 24,
+    xp: 0,
+    move: 'chase',
+    shoots: [
+      // his song: a slow ring of notes that sway as they go, and a big yawn thrown at you
+      { every: 2.8, kind: 'ring', n: 12, speed: 80, dmg: 10, style: 'wiggle', first: 2 },
+      { every: 2, kind: 'aimed', n: 1, speed: 105, dmg: 11, r: 10, first: 1.2 },
+      // louder (under half): a ring that starts soft and swells
+      { every: 4, kind: 'ring', n: 16, speed: 95, dmg: 9, style: 'ramp', below: 0.5 },
+    ],
+    cost: 0,
+  },
 } as Record<FogBoss, MonsterDef & { plates?: number }>;
 
 /** Bosses are as tough as the floor they guard (like its monsters), so the fight lasts long
@@ -546,6 +619,16 @@ export interface Ally {
 
 /** Tomorrow heals while you're further than this. */
 export const TOMORROW_REACH = 200;
+/** The Lull's song. Each hero has a drowse (0 to 1) that fills while they are on their own: no
+    friend within `near` and further than `reach` from him; at 1 they fall asleep for `sleep` s (no
+    moving, no attacking) unless a friend comes within `wake` of them or a hit wakes them. Out of the
+    song it drains at `clear`. Under half his HP he sings `louder` (it fills that much faster). He
+    heals `heal` of his HP a second while every hero is past `reach`, like Tomorrow. Goal: a party
+    that sticks together never sleeps; one that scatters loses a hero for a few seconds at a time. */
+export const LULL = { reach: 200, near: 160, fill: 0.24, clear: 0.6, sleep: 2.2, wake: 46, louder: 1.6, heal: 0.03 };
+/** A Grinder's roll: how long it turns to face you first (it glows), how fast it rolls, the longest
+    roll (s), and the pause after it hits a wall. */
+export const ROLL = { wind: 0.6, speed: 200, most: 2.6, rest: 0.5 };
 /** A ram's charge: how often, how long it glows first, how long and fast it rushes. */
 export const CHARGE = { every: 3.6, wind: 0.75, dash: 0.6, speed: 330 };
 /** A shade's blink: how often, how long its landing spot is marked, how close to you it lands. */

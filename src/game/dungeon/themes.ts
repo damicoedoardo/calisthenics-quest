@@ -96,7 +96,21 @@ export const THEMES: Theme[] = [
     glow: '#fde68a',
     water: ['#102a4a', '#1f5590', '#4f9be0', '#ffffff'],
   },
+  {
+    // The Whetstone Pass (the Ember Road): blue-grey whetstone and slate, lichen, forge fires
+    // burning orange along the road, dark quench water in the troughs.
+    name: 'Whetstone Pass',
+    ground: '#191c25',
+    fog: '#3a4458',
+    stone: ['#0c0e14', '#1c212d', '#2a3142', '#384156', '#4a556e', '#5f6b86', '#9aa6bf'],
+    moss: '#8a9a5b',
+    fire: ['#9a3412', '#f97316', '#fdba74', '#fff7ed'],
+    glow: '#fb923c',
+    water: ['#06090f', '#121a26', '#27364a', '#8fa3bf'],
+    litter: ['#2a3142', '#4a556e', '#2f3a2a', '#56653f', '#9c8f7a'],
+  },
 ];
 
-/** The theme for a zone (by its id, from 0); zones past the table reuse the last one. */
-export const themeFor = (zoneId: number): Theme => THEMES[Math.min(Math.max(0, zoneId), THEMES.length - 1)];
+/** The theme for a world (a zone's id, or an Ember Road chapter's own world, from 0); worlds past
+    the table reuse the last one. */
+export const themeFor = (world: number): Theme => THEMES[Math.min(Math.max(0, world), THEMES.length - 1)];

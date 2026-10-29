@@ -11,10 +11,14 @@ export interface RoadChapter {
   n: number;
   name: string;
   place: PlaceId;
-  /** The story zone whose dungeon, monsters and boss fight the chapter's run borrows (an index
-      into ZONES). The boss gets the road's own name, words and rule. */
+  /** The story zone the chapter's run stands in for (an index into ZONES): its loot, records and
+      toughness, and, without a `world`, its dungeon, monsters and boss fight too. */
   base: number;
-  fog: Pick<FogZone, 'name' | 'hint' | 'after' | 'keepsake' | 'lines'> & { bossName: string };
+  /** The chapter's own world (WORLDS in src/game/dungeon/content.ts): its ground, monsters,
+      mid-boss, look and music. Left out, the run borrows the base zone's. */
+  world?: number;
+  /** The boss's name, rule, words and keepsake; `boss` gives it its own fight (else the base zone's). */
+  fog: Pick<FogZone, 'name' | 'hint' | 'after' | 'keepsake' | 'lines'> & Partial<Pick<FogZone, 'boss'>> & { bossName: string };
 }
 
 export const ROAD_CHAPTERS: RoadChapter[] = [
@@ -23,15 +27,17 @@ export const ROAD_CHAPTERS: RoadChapter[] = [
     name: 'Iron and Ember',
     place: 'whetstone-pass',
     base: 0,
+    world: 6,
     fog: {
       name: 'The Whetstone Pass',
+      boss: 'lull',
       bossName: 'The Lull',
-      hint: 'The Lull heals while you hang back. Push in together, and keep each other close.',
+      hint: 'His song puts to sleep anyone left on their own, away from friends and from him, and he heals while you all hang back. Stay close and push in. A friend next to you wakes you.',
       after: "A friend who lets you settle isn't being kind. You pushed each other. That's kind.",
       keepsake: { name: "Tamsin's Whetstone", text: 'Two things rubbing together, both getting sharper.' },
       lines: {
         enter: "Shh... you've done enough. Rest here.",
-        stages: ['Two of me. Twice as sleepy.'],
+        stages: ['Louder now. Sleep, all of you.'],
         end: "...Your friends wouldn't let you sleep.",
         taunts: ['Good enough is good enough.', 'Why try harder? Stay here.', "They'll go on without you. Let them.", 'Sit down. Just for a while.'],
       },

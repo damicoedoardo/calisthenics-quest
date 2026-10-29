@@ -18,7 +18,8 @@ items.ts            the things you wear, as data: slots, rarity, bonuses, class 
                     wear, from itemScore; an empty weapon slot counts as the plain weapon),
                     and who can wear what: otherClass and canWear (a weapon is its class's own)
 content.ts          what a dungeon is made of, as data: ground, rooms, chest items, monsters and how they
-                    shoot, each zone's dungeon and mid-boss, the bosses, the classes' abilities
+                    shoot, each world's dungeon and mid-boss (`worldOf`), the bosses, the classes'
+                    abilities
 engine.ts           plays it: a pure step function (60 a second, seeded), no Phaser
 bot.ts              a player for balance tests (scripts/fog-sim.mjs) and the autopilot; it plays
                     like a person on a phone (HUMAN in src/balance/dungeon.ts: its own reaction
@@ -32,7 +33,7 @@ foeFx.ts            how each monster looks, one entry each in FOE_FX: its sprite
                     (body), its flourish as it fires (fire), its death, its kill sound; the
                     bombs (drawMine), the bosses' looks and art (BOSS_LOOKS, BOSS_ART, bossStage)
                     and their own shots (BOSS_SHOTS)
-themes.ts           each zone's colors (floor, stone, torches, water)
+themes.ts           each world's colors (floor, stone, torches, water)
 props.ts            pillars, barrels, chests, shrine, stairs and torches as text rows
 src/game/rules.ts   numbers shared with the hero (HP, reach, from the stat points; the class attacks come from src/balance/classes.ts) and the sprite sheet names
 src/game/sheets.ts  which sprite sheets a run draws with
@@ -51,6 +52,8 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change how a boss fights | its entry in `BOSSES` (`content.ts`) and its branch in `steerBoss` (`engine.ts`) |
 | Change a boss's art | `BOSS_ART` in `foeFx.ts` (its stand-in `BOSS_LOOKS`, its own shots `BOSS_SHOTS`, by pattern), and its sheets in `src/game/sheets.ts` (`bossJobs`) |
 | Add a zone | the chapter's `fog` in `src/story/chapters/`, then an entry in `ZONE_DUNGEONS` and `MIDS` (`content.ts`), `THEMES` (`themes.ts`) and `ZONE_MUSIC` (`src/lib/music-zones.ts`) |
+| Give an Ember Road chapter a world of its own | `world` and `fog.boss` on the chapter in `src/story/road.ts`, then a row at that index in `ZONE_DUNGEONS`, `MIDS`, `THEMES`, `ZONE_MUSIC` and `ZONE_RAMPS` (`src/sprites/characters/zoned.ts`), its boss in `FogBoss`, `BOSS_NAME`, `BOSSES`, `steerBoss`, `BOSS_LOOKS`/`BOSS_ART` and `bossJobs` (`src/game/sheets.ts`); see "Worlds" below |
+| Change how much tougher a party makes the dungeon | `PARTY.more` in `src/balance/dungeon.ts` (`partyMore` in `engine.ts`); measure with `PARTY=2 pnpm fog:sim` (and 3, 4) |
 | Change how much easier a boss gets once its chapter's hearts are gone | `EDGE` in `src/lib/fog.ts` (`edgeFor`); the engine reads `edge` (on `HeroSetup`) in `summonBoss` and `newHero` |
 | Balance | the `DIALS` in `src/balance/dungeon.ts` (see [balance.md](balance.md)); measure with `pnpm sim`, then `pnpm fog:sim` |
 | Change how fast you cross a cleared room | `CLEAR_RUN` in `content.ts` (the engine multiplies the hero's speed by it once a room has no monsters; the scene quickens the steps and the dust) |
@@ -73,6 +76,30 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change an SP weapon's basic attack | which kind it is (swing, shot, orb, wave) in `SP_WEAPONS` (`content.ts`); how fast, hard, far and wide in `SP_WEAPON` (`src/balance/classes.ts`: `cd`, `dmg`, `reach`, `arc`, `cut`, `pierce`, `blast`, `back`, `heal`); played by `attack`, `slash`, `moveShots` (`engine.ts`, `attackKind(h)`); its hit and shot on screen in `WEAPON_FX` (`spFx.ts`); the hero's animation and the weapon's art in `SP_WEAPON_ART` (see [sprites.md](sprites.md)) |
 | Add something each hero has (a cooldown, a count, a buff for the run) | `Hero` in `engine.ts` and its start in `newHero` (see "The hero, and the party") |
 | Change the bag panel, the pickup note or the stairs card | `BagPanel` and the `stairs` card in `src/components/FogRun.tsx` |
+
+## Worlds
+
+A world is one row of the dungeon's content: `ZONE_DUNGEONS` and `MIDS` (`content.ts`),
+`THEMES` (`themes.ts`), `ZONE_MUSIC` (`src/lib/music-zones.ts`) and `ZONE_RAMPS` (the regular
+monsters' dress, `src/sprites/characters/zoned.ts`). `worldOf(zone)` picks it: a story zone is
+world 0-5, its own id; an Ember Road chapter with `world` set uses that (6 on). Everything else
+about the run (loot, records, toughness) still goes by `zone.id`.
+
+World 6 is the Whetstone Pass (the Ember Road, chapter 1):
+
+- **The Grinder** (`grinder`, move `roll`, numbers in `ROLL`): it turns to face you (a line
+  glows the way it will go), rolls at you in a straight line until a wall stops it (or `ROLL.most`
+  s), throws a fan of sparks at you (`on: 'move'`) and rests a moment.
+- **The Bellows** mid-boss (`bellows`, `BELLOWS`): it breathes in for `draw` s, pulling everyone
+  toward it (`Hero.wind`, fading to nothing within `close` px, so a fighter up close isn't dragged
+  onto it), and while it breathes in hits land `open` times harder; then it blows (`blow`): a shove
+  away from it, and a ring of embers `after` s later.
+- **The Lull** (boss `lull`, `LULL`): he plods after you and heals while every hero is past
+  `reach`, like Tomorrow. His song: each hero's `drowse` fills while they are on their own (no
+  friend within `near` and past his `reach`); full, they sleep for `sleep` s (`Hero.sleepUntil`,
+  `asleep`: no moving, no attacking) unless a friend comes within `wake`, or a hit wakes them.
+  Under half his HP he sings `louder` (a `louder` event). The scene draws his reach, a violet ring
+  filling round a drowsy hero and Zs over one asleep; the bot stays inside his reach.
 
 ## The first dungeon
 
@@ -150,6 +177,10 @@ party order. The rules treat every hero the same:
   own on kills, chests, the mid-boss, the boss and a clear with nobody down, counted on
   `Hero.mats` (a `mat` event for you) and handed home in `RunEnd.mats`. A solo run never calls
   the rng for them, so solo replays are unchanged ([forge.md](forge.md)).
+- A party makes the dungeon tougher (`PARTY.more`, `partyMore`): for each friend, monster HP
+  (the mid-boss's too), monsters per room, how hard every hit on a hero lands (`hurt`), and the
+  boss's HP (not the Knight's plates: they fall one at a time whoever hits). A solo run reads none
+  of it, so solo replays don't move.
 - A hero at 0 HP is down (`fall`) and stops acting; the run ends when the whole party is down.
   `RunEnd` is still yours: `run.over` is the first hero's, and `overFor(run, h)` gives any
   hero's own (their kills, items, materials), which the scene's recap uses for you. A friend standing within `PARTY.revive.r` of one who is down for

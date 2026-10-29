@@ -31,6 +31,7 @@ import { drawSplitling, drawSplitter, drawSplitterPop } from './characters/split
 import { drawShade } from './characters/shade';
 import { drawWarden } from './characters/warden';
 import { drawAshGolem } from './characters/ashGolem';
+import { drawBellowsMid, drawGrinder, drawLullBoss } from './characters/whetstone';
 import { drawLancer } from './characters/lancer';
 import { drawClock } from './characters/clock';
 import { drawImp, drawJar, drawJarPop } from './characters/jar';
@@ -219,6 +220,9 @@ export const SPRITES = {
   sandGolemMidStone: creature('The Sand Golem, set to stone', drawSandGolemMid(true), 'lunge'),
   whisperMid: creature('The Whisper', drawWhisperMid, 'lunge'),
   galeMid: creature('The Gale', drawGaleMid, 'lunge'),
+  // the Ember Road's first world, the Whetstone Pass: its own monster and mid-boss
+  grinder: zoned('Grinder', drawGrinder),
+  bellowsMid: creature('The Bellows', drawBellowsMid, 'lunge'),
   // The dungeon bosses. The Mirror is you in glass (pass the player's look and gear, like the hero).
   // app icons, hand-drawn at 16x16 (keepsakes) and 12x12 (Book of Days)
   keepsake: icon<KeepsakeOpts>((o) => `Keepsake ${o.zone + 1}`, { zone: 0 }, (o) => KEEPSAKE_ICONS[o.zone] ?? KEEPSAKE_ICONS[0]),
@@ -281,6 +285,7 @@ export const SPRITES = {
   }),
   tomorrowBoss: creature('Tomorrow, awake for once', drawTomorrowBoss, 'lunge'),
   hollowBoss: creature('The Hollow', drawHollowBoss, 'lunge'),
+  lullBoss: creature('The Lull, singing', drawLullBoss, 'lunge'),
   summitBoss: creature('The Summit, the mountain spirit', drawSummitSpirit, 'lunge'),
   hollowBossFade: drawn<NoOpts>({ label: () => 'The Hollow, letting go', defaults: {}, clips: () => ({ idle: 'pop' }), draw: drawHollowFade }),
 };
