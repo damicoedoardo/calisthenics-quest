@@ -30,7 +30,7 @@ export type BossSheetKey =
 export type Sheets = Record<Exclude<SheetKey, BossSheetKey>, Sheet> & Partial<Record<BossSheetKey, Sheet>>;
 
 /** Skills the bot takes first. */
-export const BOT_PICKS: UpgradeId[] = ['multi', 'power', 'haste', 'vital', 'spark', 'flame', 'nova', 'guard', 'swift', 'star'];
+export const BOT_PICKS: UpgradeId[] = ['multi', 'power', 'haste', 'vital', 'wide', 'spark', 'keen', 'rush', 'flame', 'nova', 'star', 'giant', 'blast', 'guard', 'stand', 'frost', 'swift'];
 
 export const HERO_SPEED = 150;
 export const HERO_HP = 100;
@@ -65,6 +65,7 @@ export const gemReach = (power: Power) => 60 * (1 + power.reach);
 /** Skills on a timer, per level. */
 export const sparkHit = (lv: number) => ({ jumps: K.spark.jumps + lv, dmg: K.spark.dmg + K.spark.dmgPer * (lv - 1) });
 export const novaHit = (lv: number) => ({ r: K.nova.r + K.nova.rPer * (lv - 1), dmg: K.nova.dmg + K.nova.dmgPer * (lv - 1) });
+export const blastHit = (lv: number) => ({ r: K.blast.r, dmg: K.blast.dmg + K.blast.dmgPer * (lv - 1) });
 export const starHit = (lv: number) => ({ r: K.star.r, dmg: K.star.dmg + K.star.dmgPer * (lv - 1) });
 
 export const FLAME = { orbit: 68, spin: 2.6, touch: 22, every: 500, dmg: 7 };

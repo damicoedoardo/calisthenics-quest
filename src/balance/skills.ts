@@ -28,4 +28,24 @@ export const RUN_SKILL = {
   star: { every: 4, r: 58, dmg: 34, dmgPer: 16, max: 3 },
   /** Stand firm: less damage taken per level (armor; all armor stops at 60%). */
   guard: { armor: 0.1, max: 3 },
+
+  /* Added 2026-10-29 (Edoardo's picks). Each one pushes a different way to play. */
+  /** Cold air: monsters within `r` of you walk `slow` slower per level (not the boss). Goal: more
+      time to step out of the way, as useful to the melee classes as to the ranged. */
+  frost: { r: 120, slow: 0.15, max: 3 },
+  /** Keen eye: crit chance per level, on top of what you wear. Goal: makes crit gear a choice in a run. */
+  keen: { crit: 0.12, max: 3 },
+  /** Giant slayer: more damage per level to elites, golems, mid-bosses and bosses. */
+  giant: { dmg: 0.3, max: 3 },
+  /** Last breath: a monster you bring down bursts, hitting all within `r` for `dmg` (`dmgPer` more a
+      level), as hard as your damage. Its burst can bring down the next: kills chain through a pack. */
+  blast: { r: 64, dmg: 18, dmgPer: 10, max: 3 },
+  /** Momentum: each kill adds a stack for `secs` s (a new kill renews them all), up to `stacks`;
+      each stack makes you attack `rate` faster per level. Goal: rewards rushing a room. */
+  rush: { rate: 0.06, stacks: 5, secs: 4, max: 3 },
+  /** Stand your ground: after `after` s standing still you take `less` less damage per level, until
+      you move. Goal: rewards planting your feet; the opposite of Momentum. */
+  stand: { after: 1, less: 0.15, max: 3 },
+  /** Wider choice: one more card at every level-up after this one. One level. */
+  wide: { cards: 1, max: 1 },
 } as const;

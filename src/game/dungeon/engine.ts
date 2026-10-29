@@ -20,6 +20,7 @@ import {
   novaHit,
   sparkHit,
   starHit,
+  blastHit,
   type AttackKind,
 } from '../rules';
 import {
@@ -293,7 +294,7 @@ export type GameEvent =
   /** A hero took a hit; `hero` is whose (their id), so a phone shakes only for its own. */
   | { type: 'hurt'; x: number; y: number; dmg: number; by: 'shot' | 'touch' | 'image' | 'reflection'; hero?: number }
   | { type: 'shoot'; x: number; y: number; boss: boolean }
-  | { type: 'burst'; x: number; y: number; r: number; color: 'nova' | 'orb' | 'wave' | 'fire' | 'ability' | 'star' }
+  | { type: 'burst'; x: number; y: number; r: number; color: 'nova' | 'orb' | 'wave' | 'fire' | 'ability' | 'star' | 'blast' }
   /** Falling star (a run skill): a star on its way down to (x, y); its burst follows. */
   | { type: 'star'; x: number; y: number }
   | { type: 'chain'; points: { x: number; y: number }[] }
@@ -509,7 +510,10 @@ export interface Hero {
   waiting: boolean;
   /** Hits taken this run (what the run's recap shows, to set the bot against people). */
   hits: number;
-  cd: { attack: number; spark: number; nova: number; fireball: number; star: number };
+  cd: { attack: number; spark: number; nova: number; fireball: number; star: number; frost: number };
+  /** Momentum (a run skill): kills stacked, and when they run out. */
+  rush: number;
+  rushUntil: number;
   ups: Partial<Record<UpgradeId, number>>;
   flames: number;
   orbit: number;
@@ -717,7 +721,9 @@ function newHero(hs: HeroSetup, id: number): Hero {
     waiting: false,
     shots: 0,
     hits: 0,
-    cd: { attack: 0.5, spark: RUN_SKILL.spark.every, nova: RUN_SKILL.nova.every, fireball: 2.5, star: RUN_SKILL.star.every },
+    cd: { attack: 0.5, spark: RUN_SKILL.spark.every, nova: RUN_SKILL.nova.every, fireball: 2.5, star: RUN_SKILL.star.every, frost: 0 },
+    rush: 0,
+    rushUntil: 0,
     ups: {},
     flames: power.flames,
     orbit: 0,
@@ -2756,9 +2762,10 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
   f.hitAt = run.t;
   if (f === run.warden && run.dim !== null) run.dim = Math.min(DIM.full, run.dim + DIM.back);
   // A crit: the hit does CRIT_HIT times, plus crit damage from what you wear (CRIT in src/balance/stats.ts).
-  const critShare = by.power.crit + spCrit(by),
+  // Keen eye and Giant slayer (run skills) add to what you wear.
+  const critShare = by.power.crit + spCrit(by) + RUN_SKILL.keen.crit * (by.ups.keen ?? 0),
     crit = !knight && !scriptedBoss && critShare > 0 && run.critRnd() < critShare,
-    slay = f.elite || f.kind === 'golem' || boss || f === run.warden ? 1 + by.gearFx.slayer : 1,
+    slay = f.elite || f.kind === 'golem' || boss || f === run.warden ? 1 + by.gearFx.slayer + RUN_SKILL.giant.dmg * (by.ups.giant ?? 0) : 1,
     dmg = knight || scriptedBoss ? 1 : Math.max(1, Math.round(amount * slay * spMore(by) * spMark(run, by, f) * (crit ? CRIT_HIT + by.gearFx.critDmg : 1)));
   if (f.kind === 'reflection' || f.kind === 'image') {
     // A copy of you, or of the Mirror: it shatters, and you feel it.
@@ -2809,6 +2816,16 @@ function kill(run: Run, f: Foe, by: Hero) {
   by.kills++;
   emit(run, { type: 'kill', id: f.id, x: f.x, y: f.y, kind: f.kind, elite: f.elite });
   if (f.def.xp > 0) run.gems.push({ id: ++run.ids, x: f.x, y: f.y, value: f.def.xp, pulled: false });
+  // Momentum: one more stack, and they all last a while longer.
+  if (by.ups.rush) {
+    by.rush = run.t < by.rushUntil ? Math.min(RUN_SKILL.rush.stacks, by.rush + 1) : 1;
+    by.rushUntil = run.t + RUN_SKILL.rush.secs;
+  }
+  // Last breath: it bursts (a copy of you or of the Mirror only shatters).
+  if (by.ups.blast && f.kind !== 'reflection' && f.kind !== 'image') {
+    const hit = blastHit(by.ups.blast);
+    burst(run, by, f.x, f.y, hit.r, pow(by, hit.dmg), 'blast', f, 90);
+  }
   const fang = relic(by, 'fang') + by.gearFx.heal;
   if (fang && f !== run.boss) by.hp = Math.min(by.maxHp, by.hp + fang);
   // Harvest (the Wolfcaller's passive): each one you bring down gives back a little.
@@ -2935,7 +2952,8 @@ function attack(run: Run, h: Hero) {
     target = locked(run, h, reach) ?? b ?? nearest(run, h.x, h.y, undefined, reach);
   if (!target && kind !== 'wave') return;
   if (kind === 'wave' && !nearest(run, h.x, h.y, undefined, 150)) return;
-  h.cd.attack = (attackCooldown(cls, h.power, h.ups) * (w?.cd ?? 1)) / (1 + DIALS.relic * 0.1 * relic(h, 'quick')) / bodyOf(h).haste;
+  const rush = h.ups.rush && run.t < h.rushUntil ? 1 + RUN_SKILL.rush.rate * h.ups.rush * h.rush : 1;
+  h.cd.attack = (attackCooldown(cls, h.power, h.ups) * (w?.cd ?? 1)) / (1 + DIALS.relic * 0.1 * relic(h, 'quick')) / bodyOf(h).haste / rush;
   const n = 1 + (h.ups.multi ?? 0),
     dmg = pow(h, ATTACK[cls].dmg * (w?.dmg ?? 1)),
     angle = target ? Math.atan2(target.y - h.y, target.x - h.x) : h.facing,
@@ -3161,6 +3179,20 @@ function skills(run: Run, h: Hero) {
           ty = target.y;
         emit(run, { type: 'star', x: tx, y: ty });
         later(run, 0.35, () => burst(run, h, tx, ty, hit.r, pow(h, hit.dmg), 'star'));
+      }
+    }
+  }
+  // Cold air: the monsters near you walk slower (a stronger slow already on them stays).
+  const frost = h.ups.frost ?? 0;
+  if (frost > 0) {
+    h.cd.frost -= STEP;
+    if (h.cd.frost <= 0) {
+      h.cd.frost = 0.25;
+      const k = RUN_SKILL.frost.slow * frost;
+      for (const f of run.foes) {
+        if (!f.alive || f === run.boss || !closer(f.x - h.x, f.y - h.y, RUN_SKILL.frost.r + f.def.r)) continue;
+        if (f.slow && run.t < f.slow.until && f.slow.k > k) continue;
+        f.slow = { until: run.t + 0.35, k };
       }
     }
   }
@@ -3460,7 +3492,9 @@ function hurt(run: Run, h: Hero, dmg: number, by: 'shot' | 'touch') {
     emit(run, { type: 'evade', x: h.x, y: h.y });
     return;
   }
-  const hit = spGuard(run, h, dmg * (1 - armorOf(h.power, h.ups)) / (1 + DIALS.relic * 0.14 * relic(h, 'iron')));
+  // Stand your ground (a run skill): standing still a moment, you take less.
+  const planted = h.ups.stand && h.stillFor >= RUN_SKILL.stand.after ? 1 - RUN_SKILL.stand.less * h.ups.stand : 1;
+  const hit = spGuard(run, h, (dmg * planted * (1 - armorOf(h.power, h.ups))) / (1 + DIALS.relic * 0.14 * relic(h, 'iron')));
   // In the first dungeon you can't fall: HP stops at 1.
   const taken = run.setup.tutorial ? Math.min(hit, h.hp - 1) : hit;
   if (taken <= 0) {

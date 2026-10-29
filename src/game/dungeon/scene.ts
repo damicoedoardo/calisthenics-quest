@@ -2123,7 +2123,7 @@ class DungeonScene extends Phaser.Scene {
         break;
       }
       case 'burst': {
-        const color = { nova: 0xf8fafc, orb: 0xa78bfa, wave: 0xfbbf24, fire: 0xf97316, ability: 0x7dd3fc, star: 0xfde68a }[e.color],
+        const color = { nova: 0xf8fafc, orb: 0xa78bfa, wave: 0xfbbf24, fire: 0xf97316, ability: 0x7dd3fc, star: 0xfde68a, blast: 0xc084fc }[e.color],
           { x, y, r: R } = e;
         if (e.color === 'nova') this.sfx('nova');
         if (e.color === 'star') this.sfx('stomp', 1.3);

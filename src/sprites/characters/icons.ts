@@ -825,6 +825,133 @@ export const SKILL_ICONS: Record<UpgradeId, PixelArt> = {
 
 
   guard: RELIC_ICONS.iron,
+  // a snowflake
+  frost: {
+    rows: [
+      '.....kk.....',
+      '..k..kSk..k.',
+      '..kSkkSkkSk.',
+      '...kSkSkSk..',
+      '.kkkkSSSkkkk',
+      'kSSSSSWSSSSk',
+      '.kkkkSSSkkkk',
+      '...kSkSkSk..',
+      '..kSkkSkkSk.',
+      '..k..kSk..k.',
+      '.....kk.....',
+      '............',
+    ],
+    palette: KIT,
+  },
+  // an open eye
+  keen: {
+    rows: [
+      '............',
+      '............',
+      '....kkkk....',
+      '..kkWWWWkk..',
+      '.kWWWkkWWWk.',
+      'kWWWkssSkWWk',
+      'kWWWksskkWWk',
+      '.kWWWkkWWWk.',
+      '..kkWWWWkk..',
+      '....kkkk....',
+      '............',
+      '............',
+    ],
+    palette: KIT,
+  },
+  // a crown, cut through
+  giant: {
+    rows: [
+      '...........k',
+      '..........kW',
+      'k...k...kkWk',
+      'kgk.kgk.kWkk',
+      'kggkgggkWkgk',
+      'kgGggGgWkggk',
+      'kggggggkgggk',
+      'kkkkkkWkkkkk',
+      'kRgRgWkgRggk',
+      'kkkkWkkkkkkk',
+      '...kk.......',
+      '............',
+    ],
+    palette: KIT,
+  },
+  // a last breath bursting out
+  blast: {
+    rows: [
+      '.v...kk...v.',
+      '..v.kVVk.v..',
+      '...kVvvVk...',
+      '.kkVvWWvVkk.',
+      'kVVvWWWWvVVk',
+      '.kkVvWWvVkk.',
+      '...kVvvVk...',
+      '..v.kVVk.v..',
+      '.v...kk...v.',
+      '............',
+      '............',
+      '............',
+    ],
+    palette: KIT,
+  },
+  // running, faster and faster
+  rush: {
+    rows: [
+      '............',
+      '.kk...kk....',
+      '.kRk..kRk...',
+      '..kRk..kRk..',
+      '...kRk..kRk.',
+      '....kRk..kRk',
+      '...kRk..kRk.',
+      '..kRk..kRk..',
+      '.kRk..kRk...',
+      '.kk...kk....',
+      '............',
+      '............',
+    ],
+    palette: KIT,
+  },
+  // feet planted, the ground holding
+  stand: {
+    rows: [
+      '....kkkk....',
+      '...kllllk...',
+      '...kllllk...',
+      '....kllk....',
+      '...kmllmk...',
+      '..kmmllmmk..',
+      '..kmk..kmk..',
+      '..kmk..kmk..',
+      '.kkmk..kmkk.',
+      'kmmmk..kmmmk',
+      'kkkkkkkkkkkk',
+      'kbBbBbBbBbBk',
+    ],
+    palette: KIT,
+  },
+  // one more card on the pile
+  wide: {
+    rows: [
+      '..kkkkkkkk..',
+      '..kmmmmmmk..',
+      '.kkkkkkkkkk.',
+      '.kllllllllk.',
+      'kkkkkkkkkkkk',
+      'kWWWWkkWWWWk',
+      'kWWWkyykWWWk',
+      'kWkkyyyykkWk',
+      'kWkkyyyykkWk',
+      'kWWWkyykWWWk',
+      'kWWWWkkWWWWk',
+      'kkkkkkkkkkkk',
+    ],
+    palette: KIT,
+  },
+
 };
 
 /** Marks on the run's floor track and recap: the Warden of the Ashes, and the zone's boss. */

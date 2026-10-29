@@ -212,7 +212,9 @@ export function nextGrowth(state: GameState): string {
 
 // ---------- skills you pick during a run ----------
 
-export type UpgradeId = 'power' | 'haste' | 'multi' | 'flame' | 'spark' | 'nova' | 'swift' | 'vital' | 'star' | 'guard';
+export type UpgradeId =
+  | 'power' | 'haste' | 'multi' | 'flame' | 'spark' | 'nova' | 'swift' | 'vital' | 'star' | 'guard'
+  | 'frost' | 'keen' | 'giant' | 'blast' | 'rush' | 'stand' | 'wide';
 
 /** What a skill is about, for its card's color: hitting, magic on a timer, staying alive, or the rest. */
 export type SkillKind = 'attack' | 'magic' | 'guard' | 'craft';
@@ -242,18 +244,25 @@ export const UPGRADES: Upgrade[] = [
   { id: 'vital', name: 'Second breath', kind: 'guard', text: () => `+${K.vital.hp} max HP, and you heal fully.`, max: K.vital.max },
   { id: 'star', name: 'Falling star', kind: 'magic', text: (n) => (n === 1 ? `Every ${K.star.every} s, a star falls on a foe near you.` : 'The star hits harder.'), max: K.star.max },
   { id: 'guard', name: 'Stand firm', kind: 'guard', text: () => `You take ${pc(K.guard.armor)} less damage.`, max: K.guard.max },
+  { id: 'frost', name: 'Cold air', kind: 'craft', text: () => `Monsters near you walk ${pc(K.frost.slow)} slower.`, max: K.frost.max },
+  { id: 'keen', name: 'Keen eye', kind: 'attack', text: () => `+${pc(K.keen.crit)} chance to crit.`, max: K.keen.max },
+  { id: 'giant', name: 'Giant slayer', kind: 'attack', text: () => `Hit elites, mid-bosses and bosses ${pc(K.giant.dmg)} harder.`, max: K.giant.max },
+  { id: 'blast', name: 'Last breath', kind: 'magic', text: (n) => (n === 1 ? 'A monster you bring down bursts, hurting the ones around it.' : 'The burst hits harder.'), max: K.blast.max },
+  { id: 'rush', name: 'Momentum', kind: 'attack', text: (n) => `Each kill: attack ${pc(K.rush.rate * n)} faster for ${K.rush.secs} s, up to ${K.rush.stacks} times.`, max: K.rush.max },
+  { id: 'stand', name: 'Stand your ground', kind: 'guard', text: () => `Stand still ${K.stand.after} s: take ${pc(K.stand.less)} less damage until you move.`, max: K.stand.max },
+  { id: 'wide', name: 'Wider choice', kind: 'craft', text: () => 'Every level-up from now on shows one more card.', max: K.wide.max },
 ];
 
 export const getUpgrade = (id: UpgradeId) => UPGRADES.find((u) => u.id === id)!;
 
-/** Three different skills that aren't maxed, picked at random. */
+/** Three different skills that aren't maxed, picked at random (one more with Wider choice). */
 export function rollUpgrades(levels: Partial<Record<UpgradeId, number>>, rng: () => number = Math.random): UpgradeId[] {
   const pool = UPGRADES.filter((u) => (levels[u.id] ?? 0) < u.max).map((u) => u.id);
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(rng() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-  return pool.slice(0, 3);
+  return pool.slice(0, 3 + K.wide.cards * (levels.wide ?? 0));
 }
 
 /** Light needed to go from `level` to the next one. */

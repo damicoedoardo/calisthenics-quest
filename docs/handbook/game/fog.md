@@ -38,7 +38,7 @@ level or story.
   `id`, dungeon and boss fight, the road's own names and words, and `guide: 'Tamsin'` speaks after
   a win. See [story.md](story.md).
 - **Run skills**: `UPGRADES` and `rollUpgrades` (three random choices per level-up), `xpToNext`.
-  Each skill has a `kind` (attack, magic, guard, craft) that colors its card; their numbers are
+  Seventeen skills; Wider choice adds a fourth card. Each has a `kind` (attack, magic, guard, craft) that colors its card; their numbers are
   `RUN_SKILL` in `src/balance/skills.ts`. The level-up pick is `SkillPick`
   (`src/components/SkillPick.tsx`): three cards with the kind's band, the icon (`SKILL_ICONS`),
   level pips, and the skills already taken in a row under them.

@@ -3,7 +3,7 @@ type: reference
 title: The Fog's dungeon (engine, content, scene)
 description: How a Fog run is built — data in content.ts, a pure seeded engine, a bot, and a Phaser scene — and which file to edit for each kind of change.
 tags: [game, fog, dungeon, phaser]
-timestamp: 2026-10-28
+timestamp: 2026-10-29
 ---
 # The Fog's dungeon
 
@@ -62,6 +62,7 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change how often co-op runs drop forge materials | `MAT_DROPS` in `src/balance/upgrades.ts` (`findMats` in `engine.ts`; see [forge.md](forge.md)) |
 | Add an item kind or a class's weapon | `WEAPONS`, `ARMORS`, `ItemIcon` (and `ItemArt`, `looksOf`) in `items.ts`; its art in `ITEM_ROWS` and `LEGEND_ROWS` (`src/sprites/characters/items.ts`), and how the hero wears it in `heroSpec` (`src/sprites/characters/hero.ts`), see [sprites.md](sprites.md) |
 | Change how an item looks (its kind, the seed that picks its colors) | `looksOf` and `seedOf` in `items.ts` (the seed comes from the name, so one name always looks the same) |
+| Add or change a run skill (a level-up pick) | numbers in `RUN_SKILL` (`src/balance/skills.ts`); name, words and card kind in `UPGRADES` (`src/lib/fog.ts`, keep the order: the roll shuffles it); what it does in `engine.ts` (timers in `skills`, hits in `damage`, kills in `kill`, hits taken in `hurt`) or `rules.ts` (stat-like ones); its icon in `SKILL_ICONS`; the bot's order in `BOT_PICKS` (`rules.ts`); then `pnpm fog:sheet` |
 | Change an SP's moves (its own move, its final, its passive) | numbers in `SP_SKILL`, `SP_FINAL`, `SURGE`, `SP_PASSIVE` (`src/balance/classes.ts`; move damage is times the class's `ATTACK`); names, words, kind (`shape`) and target (`aim`) in `SP_CARDS`, `SP_MOVES`, `SP_PASSIVES` (`content.ts`); what each kind does in `SHAPES` (one function per shape, given a `MoveCtx`) and the passives in `kindle`/`burnTick`, `dodge`, `attack`, `flow` (`engine.ts`); their icons in `SP_ICONS` (`src/sprites/characters/icons.ts`); their look on screen in `spFx.ts` (`SP_FX` per move, else `SHAPE_FX` per shape; patches on the floor `FIELD_FX`, `FIELD_SHAPE_FX`; sounds `SP_SOUND`), and `passive` (`scene.ts`, colors from `spLook`); when the bot uses each move: `SP_USE` in `bot.ts` (one rule per move, from what it sees: `Sense`) |
 | Change an SP weapon's basic attack | which kind it is (swing, shot, orb, wave) in `SP_WEAPONS` (`content.ts`); how fast, hard, far and wide in `SP_WEAPON` (`src/balance/classes.ts`: `cd`, `dmg`, `reach`, `arc`, `cut`, `pierce`, `blast`, `back`, `heal`); played by `attack`, `slash`, `moveShots` (`engine.ts`, `attackKind(h)`); its hit and shot on screen in `WEAPON_FX` (`spFx.ts`); the hero's animation and the weapon's art in `SP_WEAPON_ART` (see [sprites.md](sprites.md)) |
 | Add something each hero has (a cooldown, a count, a buff for the run) | `Hero` in `engine.ts` and its start in `newHero` (see "The hero, and the party") |
