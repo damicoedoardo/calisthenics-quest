@@ -496,7 +496,8 @@ export function migrate(raw: unknown): GameState {
     const kept = noCrit(old.build, old.fogGear);
     // The flame used to keep one chosen item through a fall (`guard`); now all you wear comes home.
     const { guard: _guard, ...gear } = armorAsksNoPoints(kept.fogGear) as FogGear & { guard?: unknown };
-    return { ...fresh, ...s, profile: profileOf(s.profile), build: kept.build, fogGear: gear, ...(s.coach ? { coach: fromLegacy(s.coach) } : {}) };
+    // A class change used to leave the old class's weapon worn; now it goes back to the vault.
+    return { ...fresh, ...s, profile: profileOf(s.profile), build: kept.build, fogGear: s.profile?.classId ? offOtherClass(gear, s.profile.classId) : gear, ...(s.coach ? { coach: fromLegacy(s.coach) } : {}) };
   }
   if (r.version === 2) {
     const { progress: _progress, tests: _tests, reps: _reps, ...s } = r as unknown as GameState & { progress?: unknown; tests?: unknown };
@@ -565,6 +566,15 @@ function noCrit(build: GameState['build'], fogGear: FogGear): { build: GameState
     build: old ? rest : build,
     fogGear: { ...fogGear, vault: fogGear.vault.map(fix), worn: Object.fromEntries(Object.entries(fogGear.worn).map(([k, it]) => [k, it && fix(it)])) },
   };
+}
+
+/** Take off what another class wears (its weapon) and put it in the vault, kept for when you
+    switch back. It goes in even past the vault's size, so a class change never loses an item. */
+export function offOtherClass(fogGear: FogGear, cls: ClassId | undefined): FogGear {
+  const off = Object.values(fogGear.worn).filter((it): it is Item => !!it && !!otherClass(it, cls));
+  if (!off.length) return fogGear;
+  const worn = Object.fromEntries(Object.entries(fogGear.worn).filter(([, it]) => !off.includes(it!))) as FogGear['worn'];
+  return { ...fogGear, worn, vault: [...fogGear.vault, ...off.filter((it) => !it.starter)] };
 }
 
 /** Armor stopped asking for Armor points (it asks only for a level, so any build can wear it):
