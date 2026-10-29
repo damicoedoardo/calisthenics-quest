@@ -39,6 +39,10 @@ interface Props {
   /** You wear your SP's look (once it has woken). */
   /** The SP you wear (1 to 4), or 0: the hero's portraits show it. */
   sp?: number;
+  /** What Skip does, when it isn't just the end (a story scene marks itself skipped). */
+  onSkip?: () => void;
+  /** A Later button beside Skip: the scene waits in Story so far. */
+  onLater?: () => void;
 }
 
 /** One step of a scene: a camera beat on its own, or a line (which can carry a beat). */
@@ -137,7 +141,7 @@ const TAG = { gold: 'text-gold-300', red: 'text-red-400', sky: 'text-sky-300', a
  * A scene: portrait above, a text box below, tap to reveal and advance. With a place it plays
  * over a backdrop, and shots move the camera, cut, fade, shake or bring someone in.
  */
-export function Dialogue({ lines, gear, classId, onDone, cinematic = false, backdrop, music = 'rise', words, place, shots = [], flame = 'candle', sp = 0 }: Props) {
+export function Dialogue({ lines, gear, classId, onDone, cinematic = false, backdrop, music = 'rise', words, place, shots = [], flame = 'candle', sp = 0, onSkip, onLater }: Props) {
   const beats = useMemo<Beat[]>(() => [...shots.map((shot) => ({ shot })), ...lines.map((line) => ({ line, shot: line.shot }))], [shots, lines]);
   const [index, setIndex] = useState(0);
   const [shown, setShown] = useState(0);
@@ -247,15 +251,28 @@ export function Dialogue({ lines, gear, classId, onDone, cinematic = false, back
 
         <div className="safe-top land-safe-x relative z-10 flex justify-between px-4">
           <SoundToggle />
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onDone();
-            }}
-            className="rounded-md px-3 py-2 text-xs text-slate-400"
-          >
-            Skip
-          </button>
+          <div className="flex gap-1">
+            {onLater && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onLater();
+                }}
+                className="rounded-md px-3 py-2 text-xs text-slate-400"
+              >
+                Later
+              </button>
+            )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                (onSkip ?? onDone)();
+              }}
+              className="rounded-md px-3 py-2 text-xs text-slate-400"
+            >
+              Skip
+            </button>
+          </div>
         </div>
 
         {shot && 'title' in shot && (

@@ -146,7 +146,8 @@ function askFor(ask: Ask | undefined, keep: (ls: Line[]) => Line[]): Ask | undef
  */
 export function pendingScenes(state: GameState, now: Date): Scene[] {
   const st = storyState(state);
-  const seen = new Set(state.seenScenes);
+  // Scenes put off with Later wait in Story so far, not here.
+  const seen = new Set([...state.seenScenes, ...(state.laterScenes ?? [])]);
   const current = st.index + 1;
   const due = ALL_SCENES.filter(({ scene, chapter }) => {
     if (seen.has(savedId(scene, state))) return false;
@@ -181,6 +182,105 @@ export function sawScene(state: GameState, id: string, now: Date): GameState {
   const at = sceneMoment(state, now);
   const count = (state.sceneMark?.at === at ? state.sceneMark.count : 0) + 1;
   return { ...state, seenScenes: state.seenScenes.includes(id) ? state.seenScenes : [...state.seenScenes, id], sceneMark: { at, count } };
+}
+
+/** How a scene was opened: when its moment came, from the scenes put off, or watched again. */
+export type SceneMode = 'due' | 'later' | 'again';
+
+/** How a scene ended: put off with Later, or with its words or question skipped. */
+export interface SceneEnd {
+  later?: boolean;
+  skipped?: boolean;
+}
+
+const without = (ids: string[] | undefined, id: string) => (ids ?? []).filter((x) => x !== id);
+const withId = (ids: string[] | undefined, id: string) => (ids?.includes(id) ? ids : [...(ids ?? []), id]);
+
+/** Put the scenes due now off with Later. Nothing else plays this moment: the player said not now. */
+export function putOff(state: GameState, ids: string[], now: Date): GameState {
+  return { ...state, laterScenes: ids.reduce(withId, state.laterScenes), sceneMark: { at: sceneMoment(state, now), count: MAX_SCENES_AT_ONCE } };
+}
+
+/**
+ * The save's story lists after a scene ends. A due scene is seen (and counts against the moment);
+ * one from the put-off list is seen and leaves it; one watched again stays seen. A skip marks it
+ * in Story so far, and watching it to the end clears the mark.
+ */
+export function endedScene(state: GameState, id: string, mode: SceneMode, end: SceneEnd, now: Date): GameState {
+  if (end.later && mode !== 'again') return putOff(state, [id], now);
+  const seen = mode === 'due' ? sawScene(state, id, now) : { ...state, seenScenes: withId(state.seenScenes, id) };
+  const next = { ...seen, laterScenes: without(state.laterScenes, id) };
+  return { ...next, skippedScenes: end.skipped ? withId(state.skippedScenes, id) : without(state.skippedScenes, id) };
+}
+
+/** Scenes waiting for the player in Story so far: put off, or skipped. */
+export function waitingCount(state: GameState): number {
+  return (state.laterScenes?.length ?? 0) + (state.skippedScenes?.length ?? 0);
+}
+
+/** Watched again, does a scene ask its question for real? Only when it was never answered:
+    the flame's name skipped (it kept the default), or a choice with no answer saved. Gifts (an SP,
+    a class) never come twice. */
+export function asksAgain(scene: Scene, state: GameState): boolean {
+  const ask = scene.ask;
+  if (ask?.kind === 'name') return !!state.skippedScenes?.includes(scene.id) && (state.profile.flame ?? DEFAULT_FLAME_NAME) === DEFAULT_FLAME_NAME;
+  if (ask?.kind === 'choice') return state.answers?.[ask.id] === undefined;
+  return false;
+}
+
+/** Watched again without its question: the lines that followed the answer the player gave. */
+export function answeredLines(scene: Scene, state: GameState): Line[] {
+  const ask = scene.ask;
+  if (ask?.kind === 'name') return ask.after;
+  if (ask?.kind !== 'choice') return [];
+  const value = state.answers?.[ask.id];
+  const picked = ask.choices.find((c) => c.value === value);
+  return picked?.after ?? ask.after ?? [];
+}
+
+export interface StoryEntry {
+  /** The id it's saved under (with its workout count for a scene that repeats). */
+  id: string;
+  scene: Scene;
+  title: string;
+  waits?: 'later' | 'skipped';
+}
+
+export interface StoryGroup {
+  title: string;
+  entries: StoryEntry[];
+}
+
+/** A scene's name in Story so far: its own title, else its first line as the player reads it. */
+export function sceneTitle(scene: Scene, state: GameState): string {
+  if (scene.title) return scene.title;
+  const first = renderLines(sceneFor(scene, state).lines, storyWords(state))[0];
+  return first?.text ?? scene.id;
+}
+
+/**
+ * Story so far: every scene the player has reached, in story order, by chapter, then the scenes
+ * that come any time, then the Ember Road. A scene not reached yet never shows (no spoilers).
+ * A scene that repeats (coming back after time away) shows once, its latest time.
+ */
+export function storySoFar(state: GameState): StoryGroup[] {
+  const later = state.laterScenes ?? [];
+  const skipped = state.skippedScenes ?? [];
+  const reached = [...state.seenScenes, ...later];
+  const road = new Set(ROAD_SCENES.map((s) => s.id));
+  const entry = ({ scene }: Placed): StoryEntry | null => {
+    const id = scene.when.away ? reached.filter((x) => x.startsWith(`${scene.id}-`)).at(-1) : reached.includes(scene.id) ? scene.id : undefined;
+    if (!id) return null;
+    const waits = later.includes(id) ? 'later' : skipped.includes(id) ? 'skipped' : undefined;
+    const s = sceneFor(scene.when.away ? { ...scene, id } : scene, state);
+    return { id, scene: s, title: sceneTitle(s, state), ...(waits ? { waits } : {}) };
+  };
+  const group = (title: string, placed: Placed[]): StoryGroup => ({ title, entries: placed.map(entry).filter((e): e is StoryEntry => !!e) });
+  return [
+    ...CHAPTERS.map((c) => group(`Chapter ${c.n}: ${c.name}`, ALL_SCENES.filter((p) => p.chapter === c.n))),
+    group('Along the way', ALL_SCENES.filter((p) => p.chapter === 0 && !road.has(p.scene.id))),
+    group('The Ember Road', ALL_SCENES.filter((p) => road.has(p.scene.id))),
+  ].filter((g) => g.entries.length > 0);
 }
 
 export function sceneById(id: string): Placed | undefined {

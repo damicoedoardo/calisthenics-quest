@@ -3,7 +3,7 @@ type: reference
 title: Game state (the save)
 description: GameState in src/lib/game.ts is the one save; useGameState persists it to localStorage, migrate() upgrades old saves, Backup/Restore exports JSON, ?sandbox uses a separate key.
 tags: [architecture, state, storage]
-timestamp: 2026-10-28
+timestamp: 2026-10-29
 ---
 
 # Game state (the save)
@@ -24,6 +24,7 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 | `fogGear` | Optional. What you wear into the Fog and the vault at home (`src/lib/fog-gear.ts`, see [../game/fog.md](../game/fog.md)); embers found and spent, co-op materials for the forge (`mats`), `deaths`, and the starter kit's look (`kit`, set by `migrate()` from the old forge) ([../game/forge.md](../game/forge.md)) |
 | `draft` | The workout in progress, or null (`runAt`: when the run on screen started). A draft left from an earlier day is closed onto that day (`closeStaleDraft`). `open` marks the workout screen as open (the app reopens on it) and `restUntil` is when the running rest ends (ms), both optional |
 | `seenScenes`, `sceneMark` | Story scenes already played, and how many played at the last story moment |
+| `laterScenes`, `skippedScenes`, `skipNoteSeen` | Story scenes put off with Later (not played yet), and scenes whose words or question were skipped: both wait in Story so far ([../game/story.md](../game/story.md)); whether the note on where skipped scenes go was shown. All optional |
 | `answers` | What the player chose in the story (heart moments, villager stories, the Ember Road's three questions `road1`-`road3`) |
 | `road` | Optional. The Ember Road, the story walked with friends: `from` (workouts done when you set out) and `beaten` (its bosses your party beat) (`src/lib/road.ts`, see [../game/story.md](../game/story.md)) |
 | `fog` | Zones cleared, runs, best records per zone, the last run |

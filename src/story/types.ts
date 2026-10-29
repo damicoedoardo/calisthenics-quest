@@ -155,6 +155,8 @@ export type Ask =
 export interface Scene {
   /** Saved once played, so it never plays twice. Never rename a live scene's id. */
   id: string;
+  /** Its name in Story so far, where scenes are watched again; left out, its first line stands in. */
+  title?: string;
   when: When;
   /** The background. Defaults to the chapter's place. */
   place?: PlaceId;

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Dialogue } from './Dialogue';
 import { Ember } from './Characters';
 import { PlaceBackdrop } from './Place';
@@ -8,12 +8,12 @@ import { PixelSnap, useSideways } from './sideways';
 import { useMusic } from './Sound';
 import { gearOf, type GameState } from '@/lib/game';
 import { flameStage, DEFAULT_FLAME_NAME } from '@/story/flame';
-import { renderLines, scenePlace, storyWords } from '@/story/engine';
+import { answeredLines, asksAgain, renderLines, scenePlace, storyWords, type SceneEnd, type SceneMode } from '@/story/engine';
 import { spWorn } from '@/lib/sp';
 import type { AnswerId, Ask, Line, Scene, Words } from '@/story/types';
 import type { SpNo } from '@/game/dungeon/content';
 
-export interface SceneResult {
+export interface SceneResult extends SceneEnd {
   answer?: { id: AnswerId; value: string };
   flame?: string;
   pickClass?: boolean;
@@ -25,13 +25,19 @@ interface Props {
   scene: Scene;
   state: GameState;
   onDone: (r: SceneResult) => void;
+  /** 'again': watched again from Story so far, with no gifts, and its question only if never answered. */
+  mode?: SceneMode;
 }
 
 /** Plays a story scene: its lines, then its question if it has one, then the lines that answer it. */
-export function ScenePlayer({ scene, state, onDone }: Props) {
+export function ScenePlayer({ scene, state, onDone, mode = 'due' }: Props) {
   const [phase, setPhase] = useState<'lines' | 'ask' | 'after'>('lines');
   const [result, setResult] = useState<SceneResult>({});
   const [after, setAfter] = useState<Line[]>([]);
+  // Skipping the words or the question marks the scene in Story so far, to watch later.
+  const skipped = useRef(false);
+  const done = (r: SceneResult) => onDone(skipped.current ? { ...r, skipped: true } : r);
+  const again = mode === 'again';
   const gear = gearOf(state);
   const place = scenePlace(scene, state);
   const music = scene.music ?? 'rise';
@@ -47,15 +53,23 @@ export function ScenePlayer({ scene, state, onDone }: Props) {
 
   const endLines = () => {
     const ask = scene.ask;
-    if (!ask) return onDone({});
-    if (ask.kind === 'class') return onDone({ pickClass: true });
-    if (ask.kind === 'sp') return onDone({ sp: ask.n ?? 1 });
+    if (!ask) return done({});
+    // Watched again: the answer you gave and what followed it, unless it was never answered.
+    if (again && !asksAgain(scene, state)) {
+      const lines = answeredLines(scene, state);
+      if (!lines.length) return done({});
+      setAfter(lines);
+      return setPhase('after');
+    }
+    if (ask.kind === 'class') return done({ pickClass: true });
+    if (ask.kind === 'sp') return done({ sp: ask.n ?? 1 });
     setPhase('ask');
   };
 
-  const answered = (r: SceneResult, lines: Line[] | undefined) => {
+  const answered = (r: SceneResult, lines: Line[] | undefined, skip = false) => {
+    if (skip) skipped.current = true;
     setResult(r);
-    if (!lines?.length) return onDone(r);
+    if (!lines?.length) return done(r);
     setAfter(lines);
     setPhase('after');
   };
@@ -75,7 +89,14 @@ export function ScenePlayer({ scene, state, onDone }: Props) {
       words={unnamed ? { ...words, flame: '' } : words}
       flame={stage}
       sp={spWorn(state)}
-      onDone={phase === 'lines' ? endLines : () => onDone(result)}
+      onDone={phase === 'lines' ? endLines : () => done(result)}
+      onSkip={() => {
+        skipped.current = true;
+        if (phase === 'lines') endLines();
+        else done(result);
+      }}
+      // Not now (after a workout with people around): it waits in Story so far. A class pick can't wait.
+      onLater={!again && phase === 'lines' && scene.ask?.kind !== 'class' ? () => onDone({ later: true }) : undefined}
     />
   );
 }
@@ -94,7 +115,7 @@ function AskCard({
   place: ReturnType<typeof scenePlace>;
   music: NonNullable<Scene['music']>;
   stage: ReturnType<typeof flameStage>['id'];
-  onAnswer: (r: SceneResult, after: Line[] | undefined) => void;
+  onAnswer: (r: SceneResult, after: Line[] | undefined, skipped?: boolean) => void;
 }) {
   const [text, setText] = useState('');
   const sideways = useSideways();
@@ -137,7 +158,7 @@ function AskCard({
                 <button type="submit" disabled={!text.trim()} className={goldButton}>
                   That&apos;s your name
                 </button>
-                <button type="button" onClick={() => onAnswer({ flame: DEFAULT_FLAME_NAME }, ask.after)} className="w-full py-2 text-xs text-slate-500">
+                <button type="button" onClick={() => onAnswer({ flame: DEFAULT_FLAME_NAME }, ask.after, true)} className="w-full py-2 text-xs text-slate-500">
                   Skip: call it {DEFAULT_FLAME_NAME}
                 </button>
               </form>
@@ -173,7 +194,7 @@ function AskCard({
                     </button>
                   </form>
                 )}
-                <button onClick={() => onAnswer({}, undefined)} className="w-full pt-2 text-xs text-slate-500">
+                <button onClick={() => onAnswer({}, undefined, true)} className="w-full pt-2 text-xs text-slate-500">
                   Skip
                 </button>
               </div>

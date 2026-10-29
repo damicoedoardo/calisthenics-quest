@@ -154,6 +154,12 @@ export interface GameState {
   seenScenes: string[];
   /** How many scenes played at the last story moment (a day and a workout count). */
   sceneMark?: { at: string; count: number };
+  /** Story scenes put off with Later: not played yet, they wait in Story so far (src/story/engine.ts). */
+  laterScenes?: string[];
+  /** Story scenes skipped (the words or the question): played, but marked in Story so far until watched. */
+  skippedScenes?: string[];
+  /** The note on where a skipped scene goes has been shown once. */
+  skipNoteSeen?: boolean;
   /** Runs in the Fog: zones cleared and best results. */
   fog?: FogProgress;
   /** What you wear into the Fog, and the vault that keeps items safe (src/lib/fog-gear.ts). */
