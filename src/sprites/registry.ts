@@ -18,7 +18,7 @@ import { drawMirror } from './characters/mirror';
 import { drawPixelArt, type PixelArt } from './characters/pixel';
 import { drawPlateau } from './characters/plateau';
 import { drawSummit } from './characters/summit';
-import { drawTomorrow } from './characters/tomorrow';
+import { drawTomorrow, drawTomorrowBoss } from './characters/tomorrow';
 import { drawWanderer } from './characters/wanderer';
 import { drawKid, drawLia, drawSol, drawTamsin, type VillagerOpts } from './characters/villagers';
 import { drawVela } from './characters/vela';
@@ -30,6 +30,10 @@ import { drawSeeker } from './characters/seeker';
 import { drawSplitling, drawSplitter, drawSplitterPop } from './characters/splitter';
 import { drawShade } from './characters/shade';
 import { drawWarden } from './characters/warden';
+import { drawAshGolem } from './characters/ashGolem';
+import { drawLancer } from './characters/lancer';
+import { drawClock } from './characters/clock';
+import { drawImp, drawJar, drawJarPop } from './characters/jar';
 import { drawLanternMid } from './characters/lanternMid';
 import { drawForemanMid } from './characters/foremanMid';
 import { drawSandGolemMid } from './characters/sandGolemMid';
@@ -203,6 +207,12 @@ export const SPRITES = {
   splitterPop: drawn<NoOpts>({ label: () => 'The Splitter splitting', defaults: {}, clips: () => ({ idle: 'pop' }), draw: drawSplitterPop }),
   shade: zoned('Shade', drawShade),
   warden: creature('The Warden of the Ashes', drawWarden, 'lunge'),
+  ashGolem: zoned('Ash Golem', drawAshGolem),
+  lancer: zoned('Lancer Husk', drawLancer),
+  clock: zoned('Snooze Clock', drawClock),
+  jar: zoned('Excuse Jar', drawJar),
+  imp: zoned('Jar Imp', drawImp),
+  jarPop: drawn<NoOpts>({ label: () => 'The Excuse Jar shattering', defaults: {}, clips: () => ({ idle: 'pop' }), draw: drawJarPop }),
   lanternMid: creature('The Drowned Lantern', drawLanternMid, 'lunge'),
   foremanMid: creature('The Foreman', drawForemanMid, 'lunge'),
   sandGolemMid: creature('The Sand Golem', drawSandGolemMid(false), 'lunge'),
@@ -269,6 +279,7 @@ export const SPRITES = {
     clips: () => ({ idle: 'hover', attack: 'lunge' }),
     draw: drawPlateauBoss,
   }),
+  tomorrowBoss: creature('Tomorrow, awake for once', drawTomorrowBoss, 'lunge'),
   hollowBoss: creature('The Hollow', drawHollowBoss, 'lunge'),
   summitBoss: creature('The Summit, the mountain spirit', drawSummitSpirit, 'lunge'),
   hollowBossFade: drawn<NoOpts>({ label: () => 'The Hollow, letting go', defaults: {}, clips: () => ({ idle: 'pop' }), draw: drawHollowFade }),

@@ -27,6 +27,11 @@ bot.ts              a player for balance tests (scripts/fog-sim.mjs) and the aut
                     floor before the stairs, as people do looking for gear)
 scene.ts            draws a run with Phaser and turns events into sound and sparks; a monster
                     swells TELL (0.35 s) before a volley, so you see the shots coming
+foeFx.ts            how each monster looks, one entry each in FOE_FX: its sprite and size, its
+                    own shots (SHOT_ART), its warning before it attacks (tell), its body language
+                    (body), its flourish as it fires (fire), its death, its kill sound; the
+                    bombs (drawMine), the bosses' looks and art (BOSS_LOOKS, BOSS_ART, bossStage)
+                    and their own shots (BOSS_SHOTS)
 themes.ts           each zone's colors (floor, stone, torches, water)
 props.ts            pillars, barrels, chests, shrine, stairs and torches as text rows
 src/game/rules.ts   numbers shared with the hero (HP, reach, from the stat points; the class attacks come from src/balance/classes.ts) and the sprite sheet names
@@ -39,11 +44,12 @@ src/game/sheets.ts  which sprite sheets a run draws with
 |---|---|
 | Tune a monster (HP, speed, how it shoots) | its entry in `MONSTERS` (`content.ts`) |
 | Change who lives in a zone, and how deep they show up | the zone's entry in `ZONE_DUNGEONS` (`content.ts`) |
-| Add a monster | `MonsterKind` and `MONSTERS` (and a `MEET` line) in `content.ts`; its sprite in `src/sprites/characters/` and `SPRITES`; a `SheetKey` in `src/game/rules.ts`, its sheet in `src/game/sheets.ts`, and its look in `DUNGEON_LOOKS` (`scene.ts`) |
+| Add a monster | `MonsterKind` and `MONSTERS` (and a `MEET` line) in `content.ts`; its sprite in `src/sprites/characters/` and `SPRITES`; a `SheetKey` in `src/game/rules.ts`, its sheet in `src/game/sheets.ts` (a dressed monster: `DressedKey`, which also gets its attack sheet), and its entry in `FOE_FX` (`foeFx.ts`) |
+| Change how a monster looks or feels (sprite, size, its shots, the warning before it fires, its death) | its entry in `FOE_FX` (`foeFx.ts`); a new shot picture goes in `SHOT_ART` (drawn once as a texture, `spin` or `point` to turn it). Shots and bombs carry who fired them (`Bullet.from`, `Bullet.pat`, `Mine.from`), and the `shoot` event its `id` and `kind`, so the scene picks the look; nothing there changes the game. A regular monster plays its attack clip as it fires. Rule: warnings stay small, under the monster or on the spot that will be hit |
 | Add a chest item | `RelicId`, `RELICS` and `RELIC_BOT` in `content.ts`; what it does where engine.ts reads `relic(run, ...)`; its icon in `RELIC_ICONS` (`src/sprites/characters/icons.ts`) |
 | Change a mid-boss | its entry in `MIDS` and its numbers (`DIM`, `CREW`, `SAND`, `SWAP`, `GALE`) in `content.ts`; its rule in `stepMid` (`engine.ts`) |
 | Change how a boss fights | its entry in `BOSSES` (`content.ts`) and its branch in `steerBoss` (`engine.ts`) |
-| Change a boss's art | `BOSS_ART` in `scene.ts`, and its sheets in `src/game/sheets.ts` |
+| Change a boss's art | `BOSS_ART` in `foeFx.ts` (its stand-in `BOSS_LOOKS`, its own shots `BOSS_SHOTS`, by pattern), and its sheets in `src/game/sheets.ts` (`bossJobs`) |
 | Add a zone | the chapter's `fog` in `src/story/chapters/`, then an entry in `ZONE_DUNGEONS` and `MIDS` (`content.ts`), `THEMES` (`themes.ts`) and `ZONE_MUSIC` (`src/lib/music-zones.ts`) |
 | Change how much easier a boss gets once its chapter's hearts are gone | `EDGE` in `src/lib/fog.ts` (`edgeFor`); the engine reads `edge` (on `HeroSetup`) in `summonBoss` and `newHero` |
 | Balance | the `DIALS` in `src/balance/dungeon.ts` (see [balance.md](balance.md)); measure with `pnpm sim`, then `pnpm fog:sim` |

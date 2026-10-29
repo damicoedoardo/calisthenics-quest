@@ -40,7 +40,7 @@ export const DIALS = {
 export const ELITE = { hp: 2.4, dmg: 1.25, r: 1.25, xp: 1.5, crowd: 0.5 };
 
 /** Light (XP) to the next level in a run: base + level * perLevel + level² / squareEvery (rounded down). */
-export const RUN_LEVELS = { base: 5, perLevel: 3, squareEvery: 4 } as const;
+export const RUN_LEVELS = { base: 4, perLevel: 3, squareEvery: 4 } as const;
 
 /** The bot that measures the zones plays like a person on a phone, not a machine (`src/game/dungeon/bot.ts`).
     Goal: its win rates are what a steady, careful player gets, so ZONE_WINS means the same for people.
