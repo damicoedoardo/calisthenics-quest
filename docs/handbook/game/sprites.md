@@ -31,8 +31,10 @@ parts/spColors.ts     the colors the SP looks and weapons share
 characters/*.ts       one file per character: hero, wanderer, mira, ember, book, vela (old Vela),
                       kindled (a kid made of fire, from the old finale; no scene uses it now), villagers (Lia, Sol, the kid, and Tamsin of the Ember Road), and the chapter
                       enemies tomorrow, mirror, plateau, summit, and the Fog's wisp, plus the
-                      dungeon's monsters: ram, smoke (the Smoker, a soot imp), seeker, splitter (the
-                      Splitling, and splitterPop, its one-shot death), shade, ashGolem (the big
+                      dungeon's monsters: lancer (the Lancer Husk, kind `ram`), clock (the Snooze
+                      Clock, kind `book`), jar.ts (the Excuse Jar, kind `splitter`, its Jar Imps
+                      `imp`, kind `splitling`, and jarPop, its one-shot death), smoke (the Smoker,
+                      a soot imp), seeker, shade, ashGolem (the big
                       one at the end of each floor; the story's `golem` stays the Plateau), and the mid-boss
                       warden (the Warden of the Ashes); the dungeon bosses: tomorrow.ts
                       (tomorrowBoss, under its quilt with its alarm clock), glass.ts
@@ -110,7 +112,7 @@ characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recol
 | Change how a backdrop widens held sideways (what spreads across, what stays on the stage) | `drawPlace` and its `PlaceCanvas` (`w`, `st`) in `places.ts`: props add `st` to their x; see [story.md](story.md) |
 | Change Vela's far tower on the Plateau, or how its lamp flashes | `FAR_TOWER` rows in `places.ts`; a place with it is drawn lit and unlit, and the `beacon` animation in `tailwind.config.ts` flashes the lit copy |
 | Change the looks a player starts with (boy, girl) | `STARTER_LOOKS` in `characters/hero.ts`; the editor's options are in `src/components/LookEditor.tsx` |
-| Redraw a dungeon monster | the `ROWS` text art in its file (`ram.ts`, `smoke.ts`, `seeker.ts`, `splitter.ts`, `shade.ts`); its palette sits under the rows |
+| Redraw a dungeon monster | the `ROWS` text art in its file (`smoke.ts`, `seeker.ts`, `shade.ts`, `ashGolem.ts`; `lancer.ts`, `clock.ts`, `jar.ts` are painted by pose); which sprite a monster wears is its `FOE_FX` entry in `src/game/dungeon/foeFx.ts`. The old `ram.ts` and `splitter.ts` art stays in the registry for /lab only |
 | Change which sprite a dungeon monster uses, or its size | its `look` in `FOE_FX` (`src/game/dungeon/foeFx.ts`; a new sheet also needs a `SheetKey` in `src/game/rules.ts` and its sheet in `src/game/sheets.ts`) |
 | Redraw the dungeon's pillars, barrels, chests, shrine, stairs, torches | the text rows in `src/game/dungeon/props.ts` (floor, walls, door, water and spikes are drawn in `scene.ts`) |
 | Fix an exercise demo's form (depth, lean, where the hands go) | its case in `poseFor` (`characters/exercise.ts`); a new exercise in the plan (`src/lib/program.ts`) needs one too (a test checks every plan exercise has a demo) |

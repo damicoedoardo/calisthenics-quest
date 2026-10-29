@@ -6,18 +6,18 @@ import { ATTACK } from '@/balance';
 /* The Fog's shared numbers and sprite sheet names, as plain data and math with no Phaser: the dungeon engine
    (dungeon/engine.ts) and its scene read them. */
 
-export type SheetKey = 'hero' | 'heroAttack' | 'heroWalk' | 'ember' | 'hollow' | 'slime' | 'wisp' | 'mirror' | 'golem' | 'knight' | 'echo' | 'book' | 'summit'
+export type SheetKey = 'hero' | 'heroAttack' | 'heroWalk' | 'ember' | 'hollow' | 'slime' | 'wisp' | 'mirror' | 'knight' | 'echo' | 'summit'
   // the dungeon's own monsters
-  | 'ram' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade' | 'ashGolem'
+  | 'lancer' | 'clock' | 'smoke' | 'seeker' | 'jar' | 'imp' | 'shade' | 'ashGolem'
   // the regular monsters firing (played once as they shoot)
   | `${DressedKey}Attack`
-  // the Splitter splitting (played once), and the mid-boss
-  | 'splitterPop' | 'warden'
+  // the Excuse Jar shattering (played once), and the mid-boss
+  | 'jarPop' | 'warden'
   // the other zones' mid-bosses (the Sand Golem also set to stone)
   | 'lanternMid' | 'foremanMid' | 'sandGolemMid' | 'sandGolemMidStone' | 'whisperMid' | 'galeMid'
   | BossSheetKey;
 /** The regular monsters, drawn in each zone's dress (zoned.ts). */
-export type DressedKey = 'slime' | 'wisp' | 'ram' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade' | 'ashGolem';
+export type DressedKey = 'slime' | 'wisp' | 'lancer' | 'clock' | 'smoke' | 'seeker' | 'jar' | 'imp' | 'shade' | 'ashGolem';
 /** The dungeon bosses: idle, attack (played once), stages for the Knight and the Plateau, and the
     Mirror's and the Hollow's ends (played once). A run only builds its own zone's (FogRun.tsx). */
 export type BossSheetKey =

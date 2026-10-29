@@ -65,10 +65,10 @@ function jobs(state: GameState, zone: Zone): Job[] {
     hero = { gear, classId, look };
   // Once the flame has fused with you, you burn with it down there too; with the SP on, you wear its look.
   const you = { ...hero, variant: heroVariant(state), ...(spWorn(state) ? { sp: spWorn(state) } : {}) };
-  const plain = ['ember', 'mirror', 'golem', 'knight', 'book', 'summit', 'splitterPop', 'warden', 'lanternMid', 'foremanMid', 'sandGolemMid', 'sandGolemMidStone', 'whisperMid', 'galeMid'] as const;
+  const plain = ['ember', 'mirror', 'knight', 'summit', 'jarPop', 'warden', 'lanternMid', 'foremanMid', 'sandGolemMid', 'sandGolemMidStone', 'whisperMid', 'galeMid'] as const;
   // The regular monsters dressed for this zone (wet glass at the lake, scrap iron at the forges...),
   // standing and firing.
-  const dressed: DressedKey[] = ['slime', 'wisp', 'ram', 'smoke', 'seeker', 'splitter', 'splitling', 'shade', 'ashGolem'];
+  const dressed: DressedKey[] = ['slime', 'wisp', 'lancer', 'clock', 'smoke', 'seeker', 'jar', 'imp', 'shade', 'ashGolem'];
   return [
     ['hero', () => sheetFor('hero', 'idle', you)],
     ['heroAttack', () => sheetFor('hero', 'attack', you)],

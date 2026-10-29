@@ -176,8 +176,7 @@ export const SHOT_ART: Record<string, ShotArt> = {
       g.fillStyle(0xffffff).fillPoints([{ x: 6, y: 2 }, { x: 8, y: 8 }, { x: 6, y: 12 }, { x: 4, y: 8 }], true);
     },
   },
-  // Stones a ram kicks up, and the Ash Golem's cinders: rock with a hot core.
-  'shot-rock': { w: 14, h: 14, spin: 4, paint: (g) => rock(g, 0xe89a48, 0x8a5a2b, 0xfde68a) },
+  // The Ash Golem's cinders: rock with a hot core.
   'shot-cinder': { w: 14, h: 14, spin: 3, paint: (g) => rock(g, 0xf97316, 0x44403c, 0xfdba74) },
   // A Seeker's tear: it curves after you.
   'shot-tear': {
@@ -190,14 +189,39 @@ export const SHOT_ART: Record<string, ShotArt> = {
       g.fillStyle(0xecfeff).fillCircle(5, 10, 2);
     },
   },
-  // A Splitter's goo, which bounces off the walls.
-  'shot-goo': {
+  // An Excuse Jar's shards of clay, which bounce off the walls.
+  'shot-clay': {
     w: 14,
     h: 14,
+    spin: 5,
     paint: (g) => {
-      g.fillStyle(0x84cc16, 0.35).fillCircle(7, 7, 7);
-      g.fillStyle(0x4ade80).fillEllipse(7, 8, 11, 9);
-      g.fillStyle(0xbbf7d0).fillCircle(5, 6, 2);
+      g.fillStyle(0x84cc16, 0.4).fillCircle(7, 7, 7);
+      g.fillStyle(0xd9814e).fillTriangle(2, 4, 12, 3, 7, 12);
+      g.fillStyle(0xfde68a).fillTriangle(5, 5, 9, 5, 7, 8);
+    },
+  },
+  // A Lancer Husk's iron spikes, thrown out where its charge stops.
+  'shot-spike': {
+    w: 10,
+    h: 16,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0xef4444, 0.35).fillEllipse(5, 8, 10, 16);
+      g.fillStyle(0xd4d4d8).fillTriangle(5, 0, 1, 12, 9, 12);
+      g.fillStyle(0xef4444).fillRect(3, 11, 4, 4);
+      g.fillStyle(0xffffff).fillRect(4, 3, 1, 6);
+    },
+  },
+  // A Snooze Clock's hands, ticking out in a spiral.
+  'shot-hand': {
+    w: 10,
+    h: 16,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0xfbbf24, 0.35).fillEllipse(5, 8, 10, 16);
+      g.fillStyle(0xf2dc8a).fillTriangle(5, 0, 2, 6, 8, 6);
+      g.fillStyle(0xc9a23a).fillRect(4, 5, 2, 9);
+      g.fillStyle(0xfff7d6).fillCircle(5, 13, 2);
     },
   },
   // A Shade's ring: dark at first, its rim lighting up as it speeds.
@@ -431,11 +455,16 @@ export const FOE_FX: Record<MonsterKind, FoeFx> = {
     look: { tex: 'echo', scale: 0.75, bits: [0xfde68a, 0xfbbf24, 0xffffff], tint: 0xfde68a },
     death: (k, e, R) => glass(k, e, R, 12, 240, 1.2),
   },
-  // Glows red before it charges, along the line it will take.
+  // The Lancer Husk (kind 'ram'), an empty suit of armor: glows red before it charges, along the
+  // line it will take, throws a ring of iron spikes where it stops, and falls apart into plates.
   ram: {
-    look: { tex: 'ram', scale: 0.62, bits: [0xe89a48, 0xb8651e, 0xe8dcc0] },
-    shot: 'shot-rock',
-    death: (k, e, R) => puff(k, e, R, 0xe8dcc0),
+    look: { tex: 'lancer', scale: 0.62, bits: [0x55555f, 0x8a8a96, 0xc0392b] },
+    shot: 'shot-spike',
+    death: (k, e, R) => {
+      k.sfx('clank', 1.2);
+      k.burst('bits', 10, e.x, e.y, -6, 0x8a8a96);
+      puff(k, e, R, 0xc0392b, 3);
+    },
     tell: ({ f, fx, t }) => {
       if (t >= f.windUntil) return;
       const p = 1 - (f.windUntil - t) / 0.75,
@@ -444,18 +473,23 @@ export const FOE_FX: Record<MonsterKind, FoeFx> = {
     },
     body: (s, { f, t, now, look }) => void s.setTint(t < f.windUntil && Math.floor(now / 90) % 2 ? 0xff4d4d : (look.tint ?? 0xffffff)),
   },
-  // The Book of Days: its pages flutter loose when it's gone.
+  // The Snooze Clock (kind 'book'), one of Tomorrow's: never moves, ticks out a spiral of clock
+  // hands, and springs apart into gears when it's gone.
   book: {
-    look: { tex: 'book', scale: 0.62, bits: [0xfef3c7, 0xd6d3d1, 0x92400e] },
+    look: { tex: 'clock', scale: 0.62, bits: [0x6b4226, 0xc9a23a, 0xf4ecd8] },
+    shot: 'shot-hand',
     death: (k, e) => {
+      k.sfx('clank', 1.5);
       const [X, Y] = k.P(e.x, e.y);
       k.fade(
         700,
         (g, p) => {
           for (let i = 0; i < 5; i++) {
-            const x = X + (i - 2) * 9 + Math.sin(p * 9 + i) * 6,
-              y = Y - 10 + p * 30 + (i % 2) * 6;
-            g.fillStyle(0xfef3c7, 1 - p).fillRect(x, y, 6, 7);
+            const a = (i / 5) * Math.PI * 2 - Math.PI / 2,
+              x = X + Math.cos(a) * 26 * p,
+              y = Y - 8 + Math.sin(a) * 18 * p + 30 * p * p;
+            g.lineStyle(2, 0xc9a23a, 1 - p).strokeCircle(x, y, 3);
+            g.fillStyle(0xf2dc8a, 1 - p).fillRect(x - 1, y - 1, 2, 2);
           }
         },
         true,
@@ -483,13 +517,14 @@ export const FOE_FX: Record<MonsterKind, FoeFx> = {
     },
     death: (k, e, R) => puff(k, e, R, 0x67e8f9),
   },
-  // Falls apart into its three Splitlings.
+  // The Excuse Jar (kind 'splitter'): bounces shards of clay off the walls, and shatters into
+  // three Jar Imps (kind 'splitling').
   splitter: {
-    look: { tex: 'splitter', scale: 0.78, bits: [0x86efac, 0x15803d, 0xdcfce7] },
-    shot: 'shot-goo',
-    death: (k, e, _R, look) => k.once('splitterPop', e.x, e.y, look.scale),
+    look: { tex: 'jar', scale: 0.72, bits: [0xa4502c, 0xd9814e, 0x4b4260] },
+    shot: 'shot-clay',
+    death: (k, e, _R, look) => k.once('jarPop', e.x, e.y, look.scale),
   },
-  splitling: { look: { tex: 'splitling', scale: 0.5, bits: [0x86efac, 0x15803d] } },
+  splitling: { look: { tex: 'imp', scale: 0.5, bits: [0x4b4260, 0xa4502c] } },
   // Fades out, and marks where it will land.
   shade: {
     look: { tex: 'shade', scale: 0.65, bits: [0xa78bfa, 0x6b21a8, 0x1e1b4b] },

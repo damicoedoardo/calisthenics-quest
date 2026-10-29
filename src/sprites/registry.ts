@@ -31,6 +31,9 @@ import { drawSplitling, drawSplitter, drawSplitterPop } from './characters/split
 import { drawShade } from './characters/shade';
 import { drawWarden } from './characters/warden';
 import { drawAshGolem } from './characters/ashGolem';
+import { drawLancer } from './characters/lancer';
+import { drawClock } from './characters/clock';
+import { drawImp, drawJar, drawJarPop } from './characters/jar';
 import { drawLanternMid } from './characters/lanternMid';
 import { drawForemanMid } from './characters/foremanMid';
 import { drawSandGolemMid } from './characters/sandGolemMid';
@@ -205,6 +208,11 @@ export const SPRITES = {
   shade: zoned('Shade', drawShade),
   warden: creature('The Warden of the Ashes', drawWarden, 'lunge'),
   ashGolem: zoned('Ash Golem', drawAshGolem),
+  lancer: zoned('Lancer Husk', drawLancer),
+  clock: zoned('Snooze Clock', drawClock),
+  jar: zoned('Excuse Jar', drawJar),
+  imp: zoned('Jar Imp', drawImp),
+  jarPop: drawn<NoOpts>({ label: () => 'The Excuse Jar shattering', defaults: {}, clips: () => ({ idle: 'pop' }), draw: drawJarPop }),
   lanternMid: creature('The Drowned Lantern', drawLanternMid, 'lunge'),
   foremanMid: creature('The Foreman', drawForemanMid, 'lunge'),
   sandGolemMid: creature('The Sand Golem', drawSandGolemMid(false), 'lunge'),
