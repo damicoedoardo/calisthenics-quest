@@ -3123,6 +3123,8 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
     levelNow: (skills) => scene.levelNow(skills),
     autopilot: (on) => (scene.bot = on),
     destroy: () => {
+      // Leaving a live run before its end ends it for the whole party.
+      if (setup.net && !scene.run.over) setup.net.send({ t: 'quit' });
       setup.net?.close();
       sized?.disconnect();
       game.destroy(true);

@@ -157,8 +157,8 @@ party order. The rules treat every hero the same:
   down gets up on the way down the stairs (`PARTY.stairsUp`). A hero who is down is carried
   through doors with the party.
 - The party moves as one: a door (`outSide`) or the stairs (`onStairs`) take you on only when
-  every hero standing is in that doorway or on the stairs. Until then you wait there (`Hero.waiting`,
-  a line for you once). The stairs then ask once for everyone.
+  every hero standing is in that doorway or on the stairs. Until then you wait there (`Hero.waiting`;
+  a line for that hero only, once a run, `Hero.toldWait`). The stairs then ask once for everyone.
 - The chest opens once per hero in a party (`canOpen`, `chest.took`): each gets their own pick of
   chest items, their own item roll and materials. The shrine heals the whole party.
 - Moves that heal or guard help friends within `PARTY.near` (`friendsNear`): Blessing, Soul

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { initialState } from '@/lib/game';
 import { powerOf, ZONES, zoneByCode } from '@/lib/fog';
-import { createRun, stepRun, type HeroSetup } from '../dungeon/engine';
+import { createRun, heard, stepRun, type HeroSetup } from '../dungeon/engine';
 import { botInput } from '../dungeon/bot';
 import { NET, Room } from './room';
 import { applySnapshot, type Press } from './wire';
@@ -95,17 +95,57 @@ describe('a live party run', () => {
     expect(applySnapshot(phone, room.snapshot(), 0).ack[0]).toBe(3);
   });
 
-  it('plays a phone that went away with the bot, so the run goes on', () => {
+  it('plays a phone that went away with the bot for a while, so the run goes on', () => {
     const { room } = twoRoom();
-    room.leave('ben');
+    room.leave('ben', 0);
     const b = room.run!.party[1],
       from = { x: b.x, y: b.y };
-    for (let i = 0; i < 60 * 20; i++) room.tick(i / 60);
+    for (let i = 0; i < 60 * (NET.goneSeconds - 1); i++) room.tick(i / 60);
     expect(Math.hypot(b.x - from.x, b.y - from.y)).toBeGreaterThan(20);
     expect(room.here).toEqual(['ana']);
-    // Back again: the same hero.
-    expect(room.join('ben', hero('archer'), 30)).toBe(true);
+    // Back again: the same hero, and the run goes on past the wait.
+    expect(room.join('ben', hero('archer'), NET.goneSeconds - 1)).toBe(true);
     expect(room.placeOf('ben')).toBe(1);
+    room.tick(NET.goneSeconds + 5);
+    expect(room.run!.over).toBeNull();
+  });
+
+  it('ends the run for everyone when a phone stays gone', () => {
+    const { room } = twoRoom();
+    room.leave('ben', 0);
+    room.tick(NET.goneSeconds - 0.1);
+    expect(room.run!.over).toBeNull();
+    room.tick(NET.goneSeconds);
+    expect(room.run!.over?.why).toBe('left');
+    expect(room.done).toBe(true);
+  });
+
+  it('tells only the hero waiting on the stairs that everyone has to be there, once a run', () => {
+    const { room } = twoRoom();
+    const run = room.run!,
+      [ana, ben] = run.party;
+    ben.x += 200;
+    const told = () => run.events.filter((e) => e.type === 'say' && e.text.startsWith('Waiting for your party'));
+    run.stairs = { x: ana.x, y: ana.y };
+    room.tick(0);
+    expect(told()).toHaveLength(1);
+    expect(heard(told()[0], 0)).toBe(true);
+    expect(heard(told()[0], 1)).toBe(false);
+    // Off the stairs and back on: not again.
+    run.events = [];
+    run.stairs = { x: ana.x + 300, y: ana.y };
+    room.tick(0.1);
+    run.stairs = { x: ana.x, y: ana.y };
+    room.tick(0.2);
+    expect(told()).toHaveLength(0);
+  });
+
+  it('ends the run for everyone when someone leaves it', () => {
+    const { room } = twoRoom();
+    room.tick(0);
+    room.take('ben', { t: 'quit' });
+    expect(room.run!.over?.why).toBe('left');
+    expect(room.run!.events.some((e) => e.type === 'say')).toBe(true);
   });
 
   it("doesn't hold the run forever on a pick", () => {

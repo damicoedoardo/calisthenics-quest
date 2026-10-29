@@ -513,6 +513,8 @@ export interface Hero {
       and whether you're out at a door or on the stairs, waiting for the rest. */
   reviving: number;
   waiting: boolean;
+  /** Told once this run that everyone has to be there to go on. */
+  toldWait?: boolean;
   /** Hits taken this run (what the run's recap shows, to set the bot against people). */
   hits: number;
   cd: { attack: number; spark: number; nova: number; fireball: number; star: number; frost: number };
@@ -1348,11 +1350,13 @@ export function stepRun(run: Run, input: Input | Input[]) {
   if (run.foes.length > 40) run.foes = run.foes.filter((f) => f.alive);
 }
 
-/** Out at a door or on the stairs before the rest of the party: say so once. */
+/** Out at a door or on the stairs before the rest of the party: told once a run, to that hero only. */
 function wait(run: Run, h: Hero) {
   if (h.waiting) return;
   h.waiting = true;
-  if (h === run.hero) emit(run, { type: 'say', text: 'Waiting for your party. Everyone has to be here to go on.' });
+  if (h.toldWait) return;
+  h.toldWait = true;
+  emitTo(run, h, { type: 'say', text: 'Waiting for your party. Everyone has to be here to go on.' });
 }
 
 /** In a party: a friend standing next to one who is down brings them back up, given a moment. */
@@ -3479,6 +3483,13 @@ export function takeStairs(run: Run, choice: 'deeper' | 'leave' | 'stay') {
     emit(run, { type: 'say', text: 'You walk back up into the light, with everything you carry.' });
     end(run, false, 'left');
   } else if (run.stairs) for (const h of run.party) h.y = run.stairs.y + 50;
+}
+
+/** A live party run: someone left, so it ends here for everyone, and each keeps what they carry. */
+export function leaveRun(run: Run, text: string) {
+  if (run.over) return;
+  emit(run, { type: 'say', text });
+  end(run, false, 'left');
 }
 
 // ---------- getting hit, ending ----------
