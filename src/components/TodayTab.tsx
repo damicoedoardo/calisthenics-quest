@@ -21,14 +21,14 @@ import {
 } from '@/lib/game';
 import { ROLE_COLOR, ROLE_LABEL } from '@/lib/program';
 import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
-import { dayKey, daysApart, daysSinceTraining, isRestDay, trainedToday } from '@/lib/days';
+import { dayKey, daysApart, daysInRow, daysSinceTraining, isRestDay, trainedToday } from '@/lib/days';
 import { storyState, storyWords } from '@/story/engine';
 import { flameStage } from '@/story/flame';
 import { currentPlan, dayLabel, nextDay, nextMonday, restToday, weekdayOf } from '@/lib/coach/week';
 import { ExerciseSheet } from './ExerciseDetail';
 import { LootGuide, NextLoot, type LootGo } from './Purse';
 import type { LootId } from '@/lib/loot';
-import { fireLine, flameLine, flameMood, restTruth, todayPage, updateTodayPage } from '@/story/daily';
+import { doneTitle, fireLine, flameLine, flameMood, restTruth, todayPage, updateTodayPage } from '@/story/daily';
 
 interface Props {
   state: GameState;
@@ -67,7 +67,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
   const streak = weekStreak(state, now);
   const day = dayType(state);
   const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
-  // After today's workout the quest below is the next one, not one still owed today.
+  // After today's workout Today says so and stops there: the next one is on the Train tab.
   const doneToday = !inProgress && trainedToday(state, now);
   // The week is the one place a workout comes from: none planned (or all done), no quest.
   const plan = currentPlan(state.coach);
@@ -114,7 +114,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
     </>
   );
   const items = inProgress ? todaysQuest(state) : quest;
-  const startLabel = inProgress ? 'Continue quest' : doneToday ? 'Start the next quest' : 'Start quest';
+  const startLabel = inProgress ? 'Continue quest' : 'Start quest';
   const questTitle = checkin === 'rough' && !inProgress ? 'Minimum quest' : (plan?.title ?? `Day ${day} quest`);
   const xp = previewXp(state, inProgress ? state.draft!.checkin : checkin, now);
   const reps = (q: (typeof items)[number]) => {
@@ -132,7 +132,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
         hero={hero}
         story={story}
         items={items}
-        noPlan={noPlan ? <NoPlan state={state} now={now} onTrain={onTrain} land /> : null}
+        instead={doneToday ? <DoneToday state={state} now={now} onTrain={onTrain} land /> : noPlan ? <NoPlan state={state} now={now} onTrain={onTrain} land /> : null}
         restDay={restDay}
         aheadNote={aheadNote}
         onHowTo={(q) => setHowTo({ id: q.id, demo: q.demo })}
@@ -142,7 +142,6 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
         xp={xp}
         checkin={checkin}
         onCheckin={inProgress ? undefined : setCheckin}
-        doneToday={doneToday}
         startLabel={startLabel}
         onStart={() => onStart(inProgress ? state.draft!.checkin : checkin)}
         onReplayOpening={onReplayOpening}
@@ -198,17 +197,14 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
 
       <QuoteCard state={state} now={now} update={update} onOpenBook={() => setOverlay('book')} />
 
-      {noPlan ? (
+      {doneToday ? (
+        <DoneToday state={state} now={now} onTrain={onTrain} />
+      ) : noPlan ? (
         <NoPlan state={state} now={now} onTrain={onTrain} />
       ) : (
         <>
       {!inProgress && (
         <section>
-          {doneToday && (
-            <div className="mb-3 flex items-center gap-2 text-xs text-emerald-300">
-              <Sprite id="uiIcon" opts={{ name: 'check' }} size={14} label="" /> Done for today. The next one is ready.
-            </div>
-          )}
           {aheadNote && <p className="mb-3 text-xs text-orange-200">{aheadNote}</p>}
           <div className="flex items-center gap-3">
             <p className="shrink-0 font-pixel text-[8px] leading-relaxed text-slate-500">
@@ -462,8 +458,8 @@ interface LandProps {
   story: ReturnType<typeof storyState>;
   items: ReturnType<typeof todaysQuest>;
   reps: (q: ReturnType<typeof todaysQuest>[number]) => string;
-  /** Shown in place of the quest board when no workout is planned. */
-  noPlan: ReactNode;
+  /** Shown in place of the quest board: today's workout done, or none planned. */
+  instead: ReactNode;
   restDay: boolean;
   aheadNote: string | null;
   /** An exercise tapped: open how to do it. */
@@ -475,7 +471,6 @@ interface LandProps {
   checkin: Checkin;
   /** Left out while a quest is under way: the check-in is set then. */
   onCheckin?: (c: Checkin) => void;
-  doneToday: boolean;
   startLabel: string;
   onStart: () => void;
   onReplayOpening: () => void;
@@ -551,14 +546,13 @@ function LandToday(p: LandProps) {
         </div>
       </div>
 
-      {p.noPlan ?? (
+      {p.instead ?? (
       <section className="flex min-h-0 flex-1 flex-col rounded-2xl bg-ink-800 p-3">
         <div className="flex items-baseline gap-3">
           <h3 className="shrink-0 font-pixel text-[10px] text-gold-300">{p.title}</h3>
           <p className="shrink-0 font-mono text-[11px] text-slate-400">
             {p.onCheckin && `${CHECKINS.find((c) => c.id === p.checkin)!.minutes} min · `}+{p.xp} XP
           </p>
-          {p.doneToday && <p className="min-w-0 flex-1 truncate text-xs text-emerald-300">Done for today. The next one is ready.</p>}
           {p.aheadNote && <p className="min-w-0 flex-1 truncate text-xs text-orange-200">{p.aheadNote}</p>}
         </div>
 
@@ -641,6 +635,52 @@ function NoPlan({ state, now, onTrain, land }: { state: GameState; now: Date; on
           </button>
         </>
       )}
+    </section>
+  );
+}
+
+/**
+ * Today's workout is done, so Today says so and stops there: the big words, what you've built
+ * (workouts in all, days in a row or this week, today's XP), and one line on what's next, which
+ * the Train tab shows in full.
+ */
+function DoneToday({ state, now, onTrain, land }: { state: GameState; now: Date; onTrain: () => void; land?: boolean }) {
+  const today = dayKey(now);
+  const total = state.sessions.length;
+  const xp = state.sessions.filter((s) => dayKey(new Date(s.date)) === today).reduce((a, s) => a + s.xp, 0);
+  const inRow = daysInRow(state, now);
+  const week = sessionsThisWeek(state, now);
+  const coachWeek = state.coach?.week;
+  const next = nextDay(coachWeek);
+  const ends = coachWeek ? nextMonday(coachWeek) : null;
+  const name = storyWords(state).flame;
+  const cells: { n: string; label: string }[] = [
+    { n: String(total), label: total === 1 ? 'workout' : 'workouts' },
+    inRow >= 2 ? { n: String(inRow), label: 'days in a row' } : { n: `${Math.min(week, WEEKLY_GOAL)}/${WEEKLY_GOAL}`, label: 'this week' },
+    { n: `+${xp}`, label: 'XP today' },
+  ];
+  const nextWords = next
+    ? `Next: ${dayLabel(next.date, now)} · ${next.plan.title}`
+    : coachWeek && ends
+      ? `Every workout this week is done. Your next week starts ${daysApart(now, ends) <= 1 ? 'tomorrow' : weekdayOf(dayKey(ends))}.`
+      : `Plan your next week with ${name}.`;
+  return (
+    <section className={`rounded-2xl bg-gradient-to-b from-[#132a22] to-ink-900 text-center ring-1 ring-emerald-400/25 ${land ? 'flex min-h-0 flex-1 flex-col items-center justify-center p-3' : 'p-5'}`}>
+      <Sprite id="uiIcon" opts={{ name: 'check' }} size={land ? 20 : 28} label="" className="mx-auto" />
+      <p className={`mt-2 font-pixel leading-relaxed text-emerald-200 ${land ? 'text-[11px]' : 'text-sm'}`}>{doneTitle(now)}</p>
+      <p className={`text-slate-300 ${land ? 'mt-1 text-xs' : 'mt-2 text-sm'}`}>Today&apos;s workout is done. Rest well, the next one can wait.</p>
+      <div className={`grid w-full max-w-sm grid-cols-3 gap-2 ${land ? 'mt-2' : 'mt-4'}`}>
+        {cells.map((c) => (
+          <div key={c.label} className={`rounded-xl bg-ink-950/60 ${land ? 'py-1.5' : 'py-2.5'}`}>
+            <p className={`font-pixel text-gold-300 ${land ? 'text-[11px]' : 'text-sm'}`}>{c.n}</p>
+            <p className="mt-1 text-[10px] text-slate-400">{c.label}</p>
+          </div>
+        ))}
+      </div>
+      <button onClick={onTrain} className={`flex w-full max-w-sm items-center justify-center gap-2 rounded-xl bg-ink-800 text-slate-200 ring-1 ring-ink-600 active:scale-[.98] ${land ? 'mt-2 py-2 text-xs' : 'mt-4 py-3 text-sm'}`}>
+        <span className="min-w-0 truncate">{nextWords}</span>
+        <Sprite id="uiIcon" opts={{ name: 'chevron' }} size={12} label="" className="shrink-0" />
+      </button>
     </section>
   );
 }

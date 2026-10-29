@@ -106,7 +106,10 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
   const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
   if (!week) return <p className="rounded-2xl bg-ink-800 p-3 text-sm text-slate-400">Getting your week ready…</p>;
   const slots = weekSlots(week);
-  const slot = slots.find((s) => s.date === picked) ?? slots.find((s) => s.date === today) ?? slots[0];
+  // Opens on today; once today's workout is done, on the next one, so you see what's coming.
+  const todaySlot = slots.find((s) => s.date === today);
+  const ahead = todaySlot?.day?.done && next ? slots.find((s) => s.day === next) : undefined;
+  const slot = slots.find((s) => s.date === picked) ?? ahead ?? todaySlot ?? slots[0];
   const day = slot.day;
   return (
     <section className="rounded-2xl bg-ink-800 p-3">

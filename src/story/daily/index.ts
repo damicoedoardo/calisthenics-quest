@@ -5,7 +5,7 @@ import type { DailyLine, FlameMood, Moment, Quote } from '../types';
 import { CALLBACKS, FLAME_LINES, MOMENT_MOOD } from './flame-lines';
 import { QUOTES } from './quotes';
 import { FIRE_LINES, REST_TRUTHS } from './rest';
-import { AFTER_LINES, MARGIN_NOTES, type AfterKind, type MarginKind } from './after';
+import { AFTER_LINES, DONE_TITLES, MARGIN_NOTES, type AfterKind, type MarginKind } from './after';
 import { FIRST_CLEAR, RUN_LINES, type RunKind } from './fog-lines';
 
 /* Every day: the flame's line, the day's words for the road and the rest card, and the Book of
@@ -171,6 +171,11 @@ export function restTruth(now: Date): string {
 
 export function fireLine(state: GameState, now: Date): string {
   return pick(usableLines(FIRE_LINES, state), daySeed(now), 4) ?? '';
+}
+
+/** Today's big words once the workout is done: fixed for the day. */
+export function doneTitle(now: Date): string {
+  return pick(DONE_TITLES, daySeed(now), 8) ?? DONE_TITLES[0];
 }
 
 /** The kind of workout `state`'s last one was: the first, a comeback, a new best, short, or full. */

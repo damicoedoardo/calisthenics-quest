@@ -68,3 +68,14 @@ export const MARGIN_NOTES: Record<MarginKind, string[]> = {
   rest: ['Rested. Good.', 'Day off, on purpose.', 'Rest day. No guilt.', 'Did nothing much. Well done, me.'],
   visit: ['Opened the book.', 'Just checking in.', ''],
 };
+
+/** The big words on Today once the day's workout is done: one a day, short, about showing up. */
+export const DONE_TITLES: string[] = [
+  'You did it.',
+  'Done. That one is yours.',
+  'Today: won.',
+  'You showed up.',
+  'Promise kept.',
+  'That counts. All of it.',
+  "Today's page is written.",
+];
