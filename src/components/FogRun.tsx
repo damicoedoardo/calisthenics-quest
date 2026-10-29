@@ -27,7 +27,7 @@ import { runEndEvent, runStartEvent } from '@/lib/analytics';
 import { joinLive, type PlayLink, type Waiting } from '@/lib/play-client';
 import { partyMe } from '@/lib/party-client';
 import type { FreePick, Hud, MiniMap, RunEnd, RunHandle } from '@/game/dungeon/scene';
-import { ABILITIES, BAG, DODGE, RELICS, ROOM_KINDS, SP_MOVES, midBoss, type AbilityId, type CellKind, type RelicId, type SpMoveId } from '@/game/dungeon/engine';
+import { ABILITIES, BAG, DODGE, RELICS, ROOM_KINDS, SP_MOVES, midBoss, worldOf, type AbilityId, type CellKind, type RelicId, type SpMoveId } from '@/game/dungeon/engine';
 
 interface Props {
   state: GameState;
@@ -53,7 +53,7 @@ export type RunStart = 'mid' | 'boss' | 'win' | 'sp' | 'skills';
 
 
 /** The zone's floor-5 mid-boss (the Warden of the Ashes, the Drowned Lantern...), at the start of a line. */
-const midName = (zone: Pick<Zone, 'id'>) => midBoss(zone).name.replace(/^the/, 'The');
+const midName = (zone: Pick<Zone, 'id' | 'world'>) => midBoss(zone).name.replace(/^the/, 'The');
 
 /** The boss's lines with the player's own words filled in; a line left empty (no words for it) is dropped. */
 function bossLines(zone: Zone, state: GameState): FogLines {
@@ -141,7 +141,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party, tutor
   upright.current = portrait;
 
   // Each zone has its own run and boss themes; the Warden halfway down has his own.
-  const tunes = zoneMusic(zone.id);
+  const tunes = zoneMusic(worldOf(zone));
   useMusic(end ? null : hud?.boss ? (tutorial ? 'hollow' : tunes.boss) : hud?.warden ? 'warden' : tunes.run);
 
   useEffect(() => {
@@ -220,7 +220,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party, tutor
             jump = window.setTimeout(() => tutorial.onDone(), 2400);
             return;
           }
-          music.sting(r.won ? (zoneMusic(zone.id).win ?? 'victory') : r.why === 'left' ? 'levelup' : 'defeat');
+          music.sting(r.won ? (zoneMusic(worldOf(zone)).win ?? 'victory') : r.why === 'left' ? 'levelup' : 'defeat');
           const result: RunResult = { ...r, zone: zone.id };
           track(runEndEvent(state, result, how));
           setBroken(recordsBroken(state.fog?.records?.[zone.id], result));

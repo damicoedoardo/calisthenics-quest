@@ -204,7 +204,8 @@ export interface FogZone {
   lines: FogLines;
 }
 
-export type FogBoss = 'tomorrow' | 'mirror' | 'knight' | 'plateau' | 'hollow' | 'summit';
+/** The six story bosses, then the Ember Road's own (src/story/road.ts). */
+export type FogBoss = 'tomorrow' | 'mirror' | 'knight' | 'plateau' | 'hollow' | 'summit' | 'lull';
 
 export interface Chapter {
   n: number;

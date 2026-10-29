@@ -8,6 +8,8 @@ import { grid, luma, mix, type Grid } from '../engine/grid';
    - 3 Plateau: sandstone, cracks, sand trickling from it.
    - 4 The Fog: pale green ghost, its lower half thinning into mist.
    - 5 Forma (the Summit): ice, crystals on its head, frost, snow drifting past.
+   - 6 the Whetstone Pass (the Ember Road): whetstone slate, its top edge honed to a bright steel
+     line, grit speckled on it, sparks flying off where it was sharpened.
    Zone 0 (the Ashlands) is the monster as drawn. */
 
 export const ZONE_RAMPS: Record<number, string[]> = {
@@ -16,8 +18,9 @@ export const ZONE_RAMPS: Record<number, string[]> = {
   3: ['#2a1c0e', '#5e4024', '#9a6d3c', '#d1a868', '#f5e2b8'],
   4: ['#1d4038', '#3f7e6c', '#79bea6', '#bdeedb', '#f0fff8'],
   5: ['#1e2f4a', '#4a6c94', '#8fb3d9', '#d6e9f7', '#ffffff'],
+  6: ['#1f2533', '#3b4558', '#64708a', '#9aa6bf', '#dfe6f2'],
 };
-export const ZONE_PLACE = ['Ashlands', 'Mirror Lake', 'Cold Forges', 'Plateau', 'Fog', 'Summit'];
+export const ZONE_PLACE = ['Ashlands', 'Mirror Lake', 'Cold Forges', 'Plateau', 'Fog', 'Summit', 'Whetstone Pass'];
 
 const rgb = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
 /** A warm, saturated color: eyes, sparks, fuses, embers. Those stay as drawn. */
@@ -196,6 +199,21 @@ export function dress(src: Grid, zone: number, f: number): Grid {
       put(sx, sy, '#ffffff');
       if (k % 2) put(sx + 1, sy, ramp[3]);
     });
+  } else if (zone === 6) {
+    // the honed edge: a bright steel line along the top, grit specks, sparks spitting off one side
+    tops.forEach(([x, y]) => {
+      const cur = g[y]?.[x];
+      if (cur && !accent(cur)) put(x, y, ramp[4]);
+    });
+    spots(4, 1).forEach(([x, y], i) => put(x, y, i % 2 ? '#9c8f7a' : ramp[4]));
+    if (tops.length) {
+      const [x, y] = tops[Math.floor(tops.length * 0.8)],
+        k = f % 6;
+      if (k < 4) {
+        put(x + 1 + k, y - 1 - k, k % 2 ? '#fbbf24' : '#fef3c7');
+        put(x + 2 + k, y + 1 - k, '#f97316');
+      }
+    }
   }
   return g;
 }

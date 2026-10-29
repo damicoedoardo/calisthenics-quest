@@ -106,6 +106,12 @@ export const PARTY = {
   near: 160,
   /** The share of the heal a friend gets, as a share of their own HP (1 = the same as you). */
   share: 1,
+  /** Each hero past the first makes the dungeon this much tougher: monster HP (the mid-boss's too),
+      monsters per room, how hard every hit on a hero lands, and the boss's HP (not the Knight's plates, which fall one at a time
+      whoever hits). Harder = higher. Goal: a party of
+      2 to 4 wins about as often as one player alone (ZONE_WINS), measured with
+      `PARTY=2 pnpm fog:sim` (and 3, 4). A solo run never reads these. */
+  more: { hp: 0.9, crowd: 0.5, dmg: 0.3, boss: 1 },
 };
 /** The first dungeon a new player walks, in the opening (`RunSetup.tutorial`). Goal: everyone gets
     to the bottom on the first try (you can't fall: HP stops at 1), learns to move, dodge and take

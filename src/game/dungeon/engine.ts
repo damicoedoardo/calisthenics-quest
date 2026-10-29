@@ -38,6 +38,7 @@ import {
   type AllyKind,
   type CellKind,
   BARREL,
+  BELLOWS,
   BLINK,
   BOSSES,
   BOSS_HP,
@@ -56,6 +57,7 @@ import {
   LAYOUT,
   wardenFloor,
   LIGHT,
+  LULL,
   type Layout,
   MEET,
   MINE,
@@ -67,6 +69,7 @@ import {
   RAMP,
   RELICS,
   RELIC_BOT,
+  ROLL,
   ROOM_KINDS,
   ROOM_ODDS,
   type RelicId,
@@ -345,6 +348,14 @@ export type GameEvent =
   | { type: 'repair'; x: number; y: number }
   | { type: 'swap'; x: number; y: number; toX: number; toY: number }
   | { type: 'gust'; x: number; y: number }
+  /** The Bellows breathes in (it pulls everyone to it), and blows them back out with embers. */
+  | { type: 'inhale'; id: number }
+  | { type: 'blow'; x: number; y: number }
+  /** The Lull's song: a hero fell asleep, or woke (`by` a friend, a hit, or on their own). */
+  | { type: 'sleep'; hero: number; x: number; y: number }
+  | { type: 'wake'; hero: number; x: number; y: number; by: 'friend' | 'hit' | 'self' }
+  /** The Lull sings louder (under half his HP). */
+  | { type: 'louder'; x: number; y: number }
   /** The mid-boss speaks (in the speech bubble, over it). */
   | { type: 'midSay'; text: string }
   | { type: 'say'; text: string }
@@ -515,6 +526,10 @@ export interface Hero {
   waiting: boolean;
   /** Told once this run that everyone has to be there to go on. */
   toldWait?: boolean;
+  /** The Lull's song (LULL): how drowsy you are (0 to 1), and asleep until then (no moving, no
+      attacking). */
+  drowse: number;
+  sleepUntil: number;
   /** Hits taken this run (what the run's recap shows, to set the bot against people). */
   hits: number;
   cd: { attack: number; spark: number; nova: number; fireball: number; star: number; frost: number };
@@ -726,6 +741,8 @@ function newHero(hs: HeroSetup, id: number): Hero {
     sneak: 0,
     reviving: 0,
     waiting: false,
+    drowse: 0,
+    sleepUntil: 0,
     shots: 0,
     hits: 0,
     cd: { attack: 0.5, spark: RUN_SKILL.spark.every, nova: RUN_SKILL.nova.every, fireball: 2.5, star: RUN_SKILL.star.every, frost: 0 },
@@ -947,7 +964,7 @@ function fillRoom(run: Run): MonsterKind[][] {
     deep = depth(run),
     fl = floorOf10(run),
     size = Math.sqrt((run.area.w * run.area.h) / (ROOM.w * ROOM.h));
-  const budget = (6 + 10 * deep + room + (run.climb ?? 0) * 1.5) * DIALS.crowd * size * (run.kind === 'elite' ? ELITE.crowd : 1);
+  const budget = (6 + 10 * deep + room + (run.climb ?? 0) * 1.5) * DIALS.crowd * size * (run.kind === 'elite' ? ELITE.crowd : 1) * partyMore(run, 'crowd');
   const mix = zoneDungeon(run.setup.zone).unlock.filter(([, from]) => fl >= from).map(([k, from, w]): [MonsterKind, number] => [k, from === fl && fl > 0 ? w * 2.5 : k === 'slime' ? Math.max(1, w - fl * 0.25) : w]);
   const total = mix.reduce((n, [, w]) => n + w, 0);
   const pickKind = (): MonsterKind => {
@@ -1145,14 +1162,17 @@ function nextWave(run: Run) {
   for (const k of wave) addFoe(run, k, ...spawnPoint(run));
 }
 
-function addFoe(run: Run, kind: MonsterKind, x: number, y: number): Foe {
+/** How much tougher a party makes the dungeon (PARTY.more): 1 alone, more for each friend. */
+const partyMore = (run: Run, k: keyof typeof PARTY.more) => 1 + PARTY.more[k] * (run.setup.friends?.length ?? 0);
+
+export function addFoe(run: Run, kind: MonsterKind, x: number, y: number): Foe {
   const def = MONSTERS[kind],
     { zone } = run.setup;
   // Deeper is tougher: three times the HP on the boss's floor.
   const elite = run.kind === 'elite' && def.xp > 0;
   // On the Summit, each ledge climbed is tougher.
   const up = 1 + CLIMB.tougher * (run.climb ?? 0),
-    hp = Math.round(def.hp * zone.hp * DIALS.hp * (1 + DIALS.deep * depth(run)) * (elite ? ELITE.hp : 1) * up),
+    hp = Math.round(def.hp * zone.hp * DIALS.hp * (1 + DIALS.deep * depth(run)) * (elite ? ELITE.hp : 1) * up * partyMore(run, 'hp')),
     hard = zone.dmg * (1 + DIALS.deepDmg * depth(run)) * up;
   const f: Foe = {
     id: ++run.ids,
@@ -1195,7 +1215,10 @@ function summonBoss(run: Run) {
     def = BOSSES[which],
     { zone } = run.setup;
   const weak = run.setup.edge?.bossHp ?? 1;
-  const hp = run.setup.tutorial ? TUTORIAL.bossHp : def.plates ? Math.round(def.plates * weak) : Math.round(def.hp * zone.hp * BOSS_HP * weak);
+  // A party makes the boss tougher, but not the Knight: his plates fall one at a time however
+  // many hit him (PLATE_EVERY), so more plates would only make the fight longer.
+  const more = partyMore(run, 'boss'),
+    hp = run.setup.tutorial ? TUTORIAL.bossHp : def.plates ? Math.round(def.plates * weak) : Math.round(def.hp * zone.hp * BOSS_HP * weak * more);
   const b: Foe = {
     id: ++run.ids,
     kind: 'boss',
@@ -1320,7 +1343,7 @@ export function stepRun(run: Run, input: Input | Input[]) {
   const inputs = Array.isArray(input) ? input : [input],
     up = standing(run);
   for (const h of up) {
-    const i = inputs[h.id] ?? IDLE;
+    const i = asleep(run, h) ? IDLE : (inputs[h.id] ?? IDLE);
     acting = h.id;
     if (i.lock !== undefined) h.lock = i.lock;
     if (i.dodge) dodge(run, h, i);
@@ -1336,6 +1359,7 @@ export function stepRun(run: Run, input: Input | Input[]) {
   moveBullets(run);
   if (run.over) return;
   for (const h of standing(run)) {
+    if (asleep(run, h)) continue;
     acting = h.id;
     attack(run, h);
     skills(run, h);
@@ -1349,6 +1373,9 @@ export function stepRun(run: Run, input: Input | Input[]) {
   checkRoom(run);
   if (run.foes.length > 40) run.foes = run.foes.filter((f) => f.alive);
 }
+
+/** Asleep in the Lull's song: the hero stands where they are and doesn't fight. */
+export const asleep = (run: Pick<Run, 't'>, h: Hero) => run.t < h.sleepUntil;
 
 /** Out at a door or on the stairs before the rest of the party: told once a run, to that hero only. */
 function wait(run: Run, h: Hero) {
@@ -2241,6 +2268,43 @@ function steer(run: Run, f: Foe) {
       f.vx = (dx / d) * f.speed;
       f.vy = (dy / d) * f.speed;
       return;
+    case 'roll': {
+      // Turn to face you (it glows), then roll at you in a straight line until a wall stops it,
+      // throw its sparks at you off the stone, and rest a moment.
+      if (now < f.windUntil) {
+        f.vx = f.vy = 0;
+        f.dashX = dx / d;
+        f.dashY = dy / d;
+        return;
+      }
+      if (f.windUntil && now < f.dashUntil) {
+        const { w, h: H } = run.area,
+          r = f.def.r + 2,
+          nx = f.x + f.dashX * ROLL.speed * STEP,
+          ny = f.y + f.dashY * ROLL.speed * STEP;
+        if (nx > ROOM.wall + r && nx < w - ROOM.wall - r && ny > ROOM.wall + r && ny < H - ROOM.wall - r) {
+          f.vx = f.dashX * ROLL.speed;
+          f.vy = f.dashY * ROLL.speed;
+          return;
+        }
+      }
+      if (f.windUntil) {
+        // It hit a wall (or rolled as far as it goes).
+        f.windUntil = f.dashUntil = 0;
+        f.act = now + ROLL.rest;
+        f.vx = f.vy = 0;
+        moved(run, f);
+        return;
+      }
+      f.vx = f.vy = 0;
+      if (now < f.act) return;
+      f.windUntil = now + ROLL.wind;
+      f.dashUntil = f.windUntil + ROLL.most;
+      f.dashX = dx / d;
+      f.dashY = dy / d;
+      emit(run, { type: 'wind', id: f.id });
+      return;
+    }
     case 'blink':
       // Drift at its range; every few seconds, mark a spot near you, vanish, land there and fire.
       if (now < f.windUntil) {
@@ -2487,6 +2551,20 @@ function steerBoss(run: Run, b: Foe) {
     }
     return;
   }
+  if (which === 'lull') {
+    // He plods after you, singing, and heals while you all hang back, like Tomorrow. Under half
+    // his HP he sings louder.
+    b.vx = (dx / d) * b.speed;
+    b.vy = (dy / d) * b.speed;
+    if (b.phase === 1 && b.hp <= b.maxHp * 0.5) {
+      b.phase = 2;
+      emit(run, { type: 'louder', x: b.x, y: b.y });
+      emit(run, { type: 'say', text: 'The Lull sings louder. Keep together.' });
+    }
+    if (d > LULL.reach) b.hp = Math.min(b.maxHp, b.hp + b.maxHp * LULL.heal * STEP);
+    sing(run, b);
+    return;
+  }
   if (which === 'mirror') {
     const v = d > 220 ? b.speed : d < 160 ? -b.speed : 0;
     b.vx = (dx / d) * v;
@@ -2588,6 +2666,32 @@ function steerBoss(run: Run, b: Foe) {
   }
 }
 
+/** The Lull's song on each hero: drowsy while on their own (no friend near, and far from him),
+    asleep once it's full, awake again when a friend comes close, a hit lands, or it wears off. */
+function sing(run: Run, b: Foe) {
+  const now = run.t,
+    louder = b.phase === 2 ? LULL.louder : 1;
+  for (const h of standing(run)) {
+    if (h.sleepUntil) {
+      if (now >= h.sleepUntil) wake(run, h, 'self');
+      else if (run.party.some((o) => o !== h && o.hp > 0 && !asleep(run, o) && Math.hypot(o.x - h.x, o.y - h.y) < LULL.wake)) wake(run, h, 'friend');
+      continue;
+    }
+    const alone = dist(h, b) > LULL.reach && friendsNear(run, h, h.x, h.y, LULL.near).length === 0;
+    h.drowse = clamp(h.drowse + (alone ? LULL.fill * louder : -LULL.clear) * STEP, 0, 1);
+    if (h.drowse < 1) continue;
+    h.drowse = 0;
+    h.sleepUntil = now + LULL.sleep;
+    emit(run, { type: 'sleep', hero: h.id, x: h.x, y: h.y });
+    if (h === run.hero) emit(run, { type: 'say', text: run.party.length > 1 ? 'You fall asleep. A friend next to you wakes you.' : 'You fall asleep. Stay close to him.' });
+  }
+}
+
+function wake(run: Run, h: Hero, by: 'friend' | 'hit' | 'self') {
+  h.sleepUntil = 0;
+  emit(run, { type: 'wake', hero: h.id, x: h.x, y: h.y, by });
+}
+
 /** The first dungeon's Hollow: it walks at you, says your line, and then strikes you down, however
     well you fight. `bossClock` counts what it has done: 1 once it has spoken. */
 function scripted(run: Run, b: Foe, ux: number, uy: number) {
@@ -2634,7 +2738,7 @@ function startMid(run: Run, f: Foe) {
     for (let i = 0; i < SWAP.crowd; i++) addFoe(run, 'wisp', run.area.w * (0.15 + 0.175 * i), 230 + (i % 2) * 70).bornUntil = t0;
     f.act = t0 + SWAP.every;
   }
-  if (f.kind === 'gale') f.act = t0 + 2;
+  if (f.kind === 'gale' || f.kind === 'bellows') f.act = t0 + 2;
 }
 
 /** A mid-boss's own rule, every step (after it has chosen where to walk). */
@@ -2691,6 +2795,40 @@ function stepMid(run: Run, f: Foe) {
         emit(run, { type: 'swap', x, y, toX: f.x, toY: f.y });
       }
       if (wisps.length < SWAP.crowd) addFoe(run, 'wisp', run.area.w * (0.2 + 0.6 * run.rnd()), 200 + run.rnd() * 200).bornUntil = now + 0.5;
+      return;
+    }
+    case 'bellows': {
+      // It breathes in (everyone is pulled toward it, and it is open to hits), then blows them
+      // back out with a ring of embers.
+      for (const h of run.party) h.wind = { x: 0, y: 0 };
+      if (!f.windUntil) {
+        if (now < f.act) return;
+        f.windUntil = now + BELLOWS.draw;
+        emit(run, { type: 'inhale', id: f.id });
+        return;
+      }
+      if (now < f.windUntil) {
+        for (const h of standing(run)) {
+          const dx = f.x - h.x,
+            dy = f.y - h.y,
+            d = Math.hypot(dx, dy) || 1,
+            // it draws you in from afar; already close, you stand in its breath
+            pull = BELLOWS.pull * (hot ? 1.2 : 1) * clamp((d - BELLOWS.close) / 150, 0, 1);
+          h.wind = { x: (dx / d) * pull, y: (dy / d) * pull };
+        }
+        return;
+      }
+      f.windUntil = 0;
+      f.act = now + BELLOWS.every * (hot ? 0.8 : 1);
+      emit(run, { type: 'blow', x: f.x, y: f.y });
+      // The embers follow the blast a moment later, once it has thrown you clear.
+      later(run, BELLOWS.after, () => f.alive && shoot(run, f, BELLOWS.embers));
+      for (const h of standing(run)) {
+        const dx = h.x - f.x,
+          dy = h.y - f.y,
+          d = Math.hypot(dx, dy) || 1;
+        h.shove = { until: now + BELLOWS.shove, x: (dx / d) * BELLOWS.push, y: (dy / d) * BELLOWS.push };
+      }
       return;
     }
     case 'gale': {
@@ -2777,7 +2915,9 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
   const critShare = by.power.crit + spCrit(by) + RUN_SKILL.keen.crit * (by.ups.keen ?? 0),
     crit = !knight && !scriptedBoss && critShare > 0 && run.critRnd() < critShare,
     slay = f.elite || f.kind === 'golem' || boss || f === run.warden ? 1 + by.gearFx.slayer + RUN_SKILL.giant.dmg * (by.ups.giant ?? 0) : 1,
-    dmg = knight || scriptedBoss ? 1 : Math.max(1, Math.round(amount * slay * spMore(by) * spMark(run, by, f) * (crit ? CRIT_HIT + by.gearFx.critDmg : 1)));
+    // The Bellows breathing in is open: hits land harder.
+    open = f === run.warden && f.kind === 'bellows' && run.t < f.windUntil ? BELLOWS.open : 1,
+    dmg = knight || scriptedBoss ? 1 : Math.max(1, Math.round(amount * slay * open * spMore(by) * spMark(run, by, f) * (crit ? CRIT_HIT + by.gearFx.critDmg : 1)));
   if (f.kind === 'reflection' || f.kind === 'image') {
     // A copy of you, or of the Mirror: it shatters, and you feel it.
     hitYourself(run, by, f.kind);
@@ -2889,6 +3029,11 @@ function bossDown(run: Run) {
   run.bullets = [];
   run.mines = [];
   run.timers = [];
+  // The song stops: everyone wakes.
+  for (const h of run.party) {
+    h.drowse = 0;
+    if (asleep(run, h)) wake(run, h, 'self');
+  }
   // The stairs go at the far end of the room from you, so you don't walk out by accident.
   const { w, h: H } = run.area,
     y = run.hero.y > H / 2 ? 110 : H - 110;
@@ -3513,7 +3658,7 @@ function hurt(run: Run, h: Hero, dmg: number, by: 'shot' | 'touch') {
   // Stand your ground (a run skill): standing still a moment, you take less. It counts as armor, so
   // it stops at the same cap: standing still with full armor is never a way to take almost nothing.
   const planted = h.ups.stand && h.stillFor >= RUN_SKILL.stand.after ? RUN_SKILL.stand.less * h.ups.stand : 0;
-  const hit = spGuard(run, h, (dmg * (1 - armorOf(h.power, h.ups, planted))) / (1 + DIALS.relic * 0.14 * relic(h, 'iron')));
+  const hit = spGuard(run, h, (dmg * partyMore(run, 'dmg') * (1 - armorOf(h.power, h.ups, planted))) / (1 + DIALS.relic * 0.14 * relic(h, 'iron')));
   // In the first dungeon you can't fall: HP stops at 1.
   const taken = run.setup.tutorial ? Math.min(hit, h.hp - 1) : hit;
   if (taken <= 0) {
@@ -3523,6 +3668,8 @@ function hurt(run: Run, h: Hero, dmg: number, by: 'shot' | 'touch') {
   h.hp -= taken;
   h.hits++;
   h.hurtUntil = now + INVULNERABLE;
+  // A hit wakes you from the Lull's song.
+  if (asleep(run, h)) wake(run, h, 'hit');
   calmer(run, h, CALM.taken, true);
   emit(run, { type: 'hurt', x: h.x, y: h.y, dmg: Math.round(taken), by, hero: h.id });
   if (h.hp <= 0) fall(run, h);

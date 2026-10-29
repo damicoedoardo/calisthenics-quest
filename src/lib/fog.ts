@@ -29,6 +29,10 @@ export interface Zone extends FogZone {
   road?: number;
   /** Who speaks after a win (the Wanderer when left out). */
   guide?: string;
+  /** The world its dungeon is built from: monsters, ground, look, music and mid-boss (`worldOf`,
+      `ZONE_DUNGEONS` in src/game/dungeon/content.ts). The story zones are worlds 0-5, their own id;
+      an Ember Road chapter with a world of its own has one past them. */
+  world?: number;
 }
 
 export const BOSS_NAME: Record<FogBoss, string> = {
@@ -38,6 +42,7 @@ export const BOSS_NAME: Record<FogBoss, string> = {
   plateau: 'The Plateau',
   hollow: 'The Hollow',
   summit: 'The Summit',
+  lull: 'The Lull',
 };
 
 export const ZONES: Zone[] = CHAPTERS.map((c, i) => ({ ...c.fog, id: i, chapter: c.n, workouts: chapterStart(c.n), bossName: BOSS_NAME[c.fog.boss] }));
@@ -46,9 +51,11 @@ export const ZONES: Zone[] = CHAPTERS.map((c, i) => ({ ...c.fog, id: i, chapter:
     in src/balance/dungeon.ts), with the Hollow at the bottom. Played with `RunSetup.tutorial`. */
 export const FIRST_FOG_ZONE: Zone = { ...ZONES[0], ...FIRST_FOG, firstTry: undefined, boss: 'hollow', bossName: BOSS_NAME.hollow, hp: TUTORIAL.hp, dmg: TUTORIAL.dmg };
 
-/** The Ember Road's runs, one per chapter: each borrows a story zone's dungeon and boss fight (and
-    its id, which the dungeon, look, music and loot go by), with the road's own names and words. */
-export const ROAD_ZONES: Zone[] = ROAD_CHAPTERS.map((c) => ({ ...ZONES[c.base], ...c.fog, firstTry: undefined, road: c.n, guide: 'Tamsin' }));
+/** The Ember Road's runs, one per chapter. Each takes a story zone's id (which its loot and records
+    go by) and toughness, with the road's own names and words. A chapter with a world of its own
+    (`world`) fights its own monsters, mid-boss and boss there; one without borrows the story zone's
+    dungeon and boss fight as they are. */
+export const ROAD_ZONES: Zone[] = ROAD_CHAPTERS.map((c) => ({ ...ZONES[c.base], ...c.fog, firstTry: undefined, road: c.n, guide: 'Tamsin', ...(c.world === undefined ? {} : { world: c.world }) }));
 
 /** A party's zone as the server keeps it: a story zone's id, or ROAD_CODE plus a road chapter. */
 export const ROAD_CODE = 20;

@@ -121,6 +121,38 @@ export const SHOT_ART: Record<string, ShotArt> = {
   'bullet-bounce': { w: 14, h: 14, paint: round(0x84cc16, 0xbef264, 0xf7fee7) },
   'bullet-ramp': { w: 14, h: 14, paint: round(0xf97316, 0xfdba74, 0xfff7ed) },
   // Tomorrow's yawns: a sleepy bubble, and the Z it lets out (its boss shots).
+  // The Lull's song: a note that sways as it goes, and a slow hum, big and soft (his boss shots).
+  'shot-note': {
+    w: 16,
+    h: 16,
+    paint: (g) => {
+      g.fillStyle(0xa78bfa, 0.4).fillCircle(8, 8, 8);
+      g.fillStyle(0xede9fe).fillEllipse(6, 11, 6, 4.5);
+      g.fillRect(8, 3, 2, 8);
+      g.fillRect(8, 3, 5, 2);
+    },
+  },
+  'shot-hum': {
+    w: 24,
+    h: 24,
+    paint: (g) => {
+      g.fillStyle(0x8b5cf6, 0.3).fillCircle(12, 12, 12);
+      g.fillStyle(0xc4b5fd, 0.85).fillCircle(12, 12, 8);
+      g.lineStyle(2, 0xf5f3ff, 0.9).strokeCircle(12, 12, 8);
+      g.fillStyle(0xffffff).fillRect(8, 8, 3, 3);
+    },
+  },
+  // The Grinder's sparks, struck off the stone.
+  'shot-whet': {
+    w: 14,
+    h: 14,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0xf97316, 0.35).fillCircle(7, 7, 7);
+      g.fillStyle(0xfbbf24).fillTriangle(7, 1, 11, 9, 3, 9);
+      g.fillStyle(0xfef3c7).fillRect(6, 4, 2, 5);
+    },
+  },
   'shot-yawn': {
     w: 14,
     h: 14,
@@ -278,6 +310,7 @@ export const STYLE_SHOT = { plain: 'bullet', homing: 'bullet-homing', bounce: 'b
     looks like its style. */
 export const BOSS_SHOTS: Partial<Record<FogBoss, string[]>> = {
   tomorrow: ['shot-z', 'shot-alarm'],
+  lull: ['shot-note', 'shot-hum', 'shot-note'],
 };
 
 /** The picture for a shot fired by `from` (a boss's when `boss`), in `style`. A boss's shot
@@ -366,6 +399,7 @@ export const BOSS_LOOKS: Record<FogBoss, Look> = {
   plateau: { tex: 'hollow', scale: 1.5, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
   hollow: { tex: 'hollow', scale: 1.5, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
   summit: { tex: 'hollow', scale: 1.5, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
+  lull: { tex: 'slime', scale: 1.6, bits: [0x8a83a0, 0x4d7a3a, 0xd1d5db] },
 };
 
 /** Each zone boss's own art, in the stages of its fight (the Knight's plates falling, the
@@ -378,6 +412,7 @@ export const BOSS_ART: Partial<Record<FogBoss, { stages: BossSheetKey[]; size: n
   plateau: { stages: ['plateauBoss', 'plateauBoss1', 'plateauBoss2'], size: 1.7, bits: [0xd9b47a, 0x8f6b3d, 0x5a4124] },
   hollow: { stages: ['hollowBoss'], size: 1.3, bits: [0xa78bfa, 0x6b21a8, 0xffffff] },
   summit: { stages: ['summitBoss'], size: 1.9, bits: [0xe2e8f0, 0xfde68a, 0xffffff] },
+  lull: { stages: ['lullBoss'], size: 1.9, bits: [0x8a83a0, 0x4d7a3a, 0xd1d5db] },
 };
 
 /** Which stage of its art a boss is in: the Knight by plates left, the Plateau by its cracks. */
@@ -541,6 +576,26 @@ export const FOE_FX: Record<MonsterKind, FoeFx> = {
       k.fade(500, (g, p) => g.fillStyle(0x6b21a8, 0.5 * (1 - p)).fillEllipse(X, Y - 20 * p, 20 * (1 - p) + 4, 30 * (1 - p) + 4), true);
     },
   },
+  // The Grinder (the Whetstone Pass): a line glows the way it will roll while it turns to face you,
+  // its sparks fly as it hits the wall, and it cracks apart into grit.
+  grinder: {
+    look: { tex: 'grinder', scale: 0.6, bits: [0x64708a, 0x9c8f7a, 0xfbbf24] },
+    shot: 'shot-whet',
+    tell: ({ f, fx, t }) => {
+      if (t >= f.windUntil) return;
+      const p = 1 - (f.windUntil - t) / 0.6;
+      fx.lineStyle(f.def.r * 1.6, 0xf97316, 0.08 + 0.22 * p).lineBetween(f.x, f.y, f.x + f.dashX * 160, f.y + f.dashY * 160);
+    },
+    fire: (k, f) => {
+      k.sfx('clank', 1.6);
+      k.burst('bits', 6, f.x, f.y, 0, 0xfbbf24);
+    },
+    death: (k, e, R) => {
+      k.sfx('crack', 1.3);
+      k.burst('bits', 10, e.x, e.y, -4, 0x64708a);
+      puff(k, e, R, 0xfbbf24, 4);
+    },
+  },
   // The Warden of the Ashes: the golem, much bigger, the grey of cold ash, embers glowing under it.
   warden: { look: { tex: 'warden', scale: 1.3, bits: [0x78716c, 0xf97316, 0xfde68a] }, shot: 'shot-ember-big', heavy: true },
   // The Mirror's images look exactly like it (the scene swaps in the Mirror's own art, BOSS_ART).
@@ -552,6 +607,22 @@ export const FOE_FX: Record<MonsterKind, FoeFx> = {
   sandGolem: { look: { tex: 'sandGolemMid', scale: 1.25, bits: [0xe8c48a, 0xb08850, 0x8f6b3d] }, heavy: true },
   whisper: { look: { tex: 'whisperMid', scale: 0.85, bits: [0xc4b5fd, 0x7c3aed, 0xffffff] }, heavy: true },
   gale: { look: { tex: 'galeMid', scale: 1.15, bits: [0xe2e8f0, 0x94a3b8, 0xffffff] }, heavy: true },
+  // The Bellows (the Whetstone Pass): while it breathes in, rings of air close in on it and it
+  // glows, open to hits.
+  bellows: {
+    look: { tex: 'bellowsMid', scale: 1.4, bits: [0x9a6a3e, 0x4a4a52, 0xf97316] },
+    shot: 'shot-ember',
+    heavy: true,
+    tell: ({ f, fx, t, now }) => {
+      if (t >= f.windUntil) return;
+      for (let i = 0; i < 3; i++) {
+        const p = ((now / 700 + i / 3) % 1),
+          r = f.def.r * (6 - 5 * p);
+        fx.lineStyle(2, 0xfde68a, 0.15 + 0.4 * p).strokeCircle(f.x, f.y, r);
+      }
+      fx.fillStyle(0xf97316, 0.18).fillCircle(f.x, f.y, f.def.r * 1.4);
+    },
+  },
 };
 
 /** The Mirror breaking (the boss): like its images, bigger. */

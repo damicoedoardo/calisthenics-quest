@@ -73,9 +73,13 @@ characters/worlds.ts  the Play tab's world picker: the big padlock on a shut wor
                       bank of fog that drifts over it (`fogBank`)
 characters/install.ts the install guide's pictures (`installStep`, opts { step }): a small phone with
                       the button to tap ringed in gold, drawn on a character grid
-characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-5 }): recolored onto the zone's
-                      ramp and dressed (lake glass and drips, forge scrap and glowing cracks,
-                      plateau sandstone, fog mist, summit ice)
+characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-6, a world }): recolored onto the
+                      zone's ramp and dressed (lake glass and drips, forge scrap and glowing cracks,
+                      plateau sandstone, fog mist, summit ice, the Whetstone Pass's slate with a
+                      honed steel edge and sparks)
+characters/whetstone.ts  the Ember Road's first world: the Grinder (`grinder`, a runaway whetstone),
+                      the Bellows mid-boss (`bellowsMid`) and the Lull (`lullBoss`), a mossy giant
+                      who sings
 ```
 
 ## How to change things

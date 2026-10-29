@@ -15,9 +15,13 @@ import type { Track } from './music';
  *                          tune back in major when you take the Hollow's hand
  *   zone 6 the Summit      summit / summitBoss: wide and rising, allies joining as layers
  *   the Warden of the Ashes (halfway down every dungeon)    warden
+ *   the Ember Road's worlds:
+ *   the Whetstone Pass     pass / passBoss: a walking tune up a mountain road, two voices that
+ *                          answer each other; the Lull's boss theme is a lullaby that tries to rock
+ *                          you to sleep while the drums keep you awake
  */
 
-export type ZoneTrackId = 'lake' | 'lakeBoss' | 'forge' | 'forgeBoss' | 'plateau' | 'plateauBoss' | 'woods' | 'woodsBoss' | 'summit' | 'summitBoss' | 'warden';
+export type ZoneTrackId = 'lake' | 'lakeBoss' | 'forge' | 'forgeBoss' | 'plateau' | 'plateauBoss' | 'woods' | 'woodsBoss' | 'summit' | 'summitBoss' | 'warden' | 'pass' | 'passBoss';
 export type ZoneStingId = 'shatter' | 'warmth';
 
 // ---------- helpers ----------
@@ -117,6 +121,47 @@ const KNIGHT_TUNE = bars(
   'D5 - - - F5 - G5 -',
 );
 
+// ---------- the Ember Road: the Whetstone Pass ----------
+
+// G major, walking pace up the pass. One voice calls, a second answers a bar later: friends on the
+// road, pushing each other on. A whetstone's ring now and then.
+const PASS_BASS = bars('G2 . D3 . G2 . D3 .', 'C3 . G2 . C3 . G2 .', 'E2 . B2 . E2 . B2 .', 'D2 . A2 . D2 . F#2 .', 'G2 . D3 . G2 . D3 .', 'C3 . G2 . C3 . E3 .', 'A2 . E3 . D2 . A2 .', 'D2 . F#2 . A2 . D3 .');
+const PASS_CALL = bars(
+  'D5 - G5 - B5 - - -',
+  '. . . . . . . .',
+  'B5 - A5 - G5 - E5 -',
+  '. . . . . . . .',
+  'D5 - G5 - B5 - D6 -',
+  '. . . . . . . .',
+  'C6 - B5 - A5 - - -',
+  '. . . . . . . .',
+);
+const PASS_ANSWER = bars(
+  '. . . . . . . .',
+  'E5 - G5 - C6 - - -',
+  '. . . . . . . .',
+  'F#5 - A5 - D6 - - -',
+  '. . . . . . . .',
+  'E5 - G5 - C6 - E6 -',
+  '. . . . . . . .',
+  'D6 - C6 - A5 - F#5 -',
+);
+const PASS_RING = loop(8, 'G6 . . . . . . .');
+
+// The Lull: a lullaby in D, rocking low and slow under a music-box tune. The drums keep coming in
+// under it, louder each time, the party keeping each other awake.
+const LULL_ROCK = bars('D2 - A2 - D3 - A2 -', 'D2 - A2 - D3 - A2 -', 'G2 - D3 - G3 - D3 -', 'A2 - E3 - A3 - E3 -', 'D2 - A2 - D3 - A2 -', 'B1 - F#2 - B2 - F#2 -', 'G2 - D3 - A2 - E3 -', 'A2 - C#3 - E3 - A2 -');
+const LULL_TUNE = bars(
+  'A5 - - F#5 - - D5 -',
+  'E5 - F#5 - G5 - - -',
+  'B5 - - G5 - - E5 -',
+  'C#6 - - - A5 - - -',
+  'A5 - - F#5 - - D5 -',
+  'D5 - F#5 - B5 - - -',
+  'G5 - F#5 - E5 - D5 -',
+  'E5 - - - A4 - - -',
+);
+
 // ---------- zone 4: the Plateau ----------
 
 // D dorian. One figure, over and over, like a flat road. Something joins every four bars, so you
@@ -193,6 +238,35 @@ const WARDEN_TUNE = bars('A4 - A#4 A4 - - E5 -', 'D5 - C5 - A#4 - A4 -', 'A4 - A
    a theme, measure it again rather than trusting your ears on a laptop. */
 
 export const ZONE_TRACKS: Record<ZoneTrackId | ZoneStingId, Track> = {
+  pass: {
+    level: 1.45,
+    bpm: 108,
+    stepsPerBeat: 2,
+    dry: true,
+    voices: [
+      { wave: 'triangle', gain: 0.13, pattern: twice(PASS_BASS) },
+      { wave: 'square', gain: 0.03, cutoff: 2400, pattern: bars(rest(8), PASS_CALL) },
+      { wave: 'triangle', gain: 0.09, pattern: bars(rest(8), PASS_ANSWER) },
+      { wave: 'anvil', gain: 0.04, pattern: twice(PASS_RING) },
+      { wave: 'thump', gain: 0.32, pattern: loop(16, 'x . . . x . . .') },
+      { wave: 'hat', gain: 0.016, pattern: loop(16, '. . x . . . x x') },
+    ],
+  },
+  passBoss: {
+    level: 1.5,
+    bpm: 120,
+    stepsPerBeat: 2,
+    dry: true,
+    voices: [
+      { wave: 'triangle', gain: 0.14, pattern: twice(LULL_ROCK) },
+      { wave: 'glass', gain: 0.06, pattern: twice(LULL_TUNE) },
+      { wave: 'sine', gain: 0.07, pattern: bars(rest(8), transpose(LULL_TUNE, -12)) },
+      // the drums that keep you awake: soft at first, then all in
+      { wave: 'thump', gain: 0.4, pattern: bars(loop(8, 'x . . . . . x .'), loop(8, 'x . . x . . x .')) },
+      { wave: 'snare', gain: 0.08, pattern: bars(rest(4), loop(3, '. . . . x . . .'), '. . x . x x x x', loop(7, '. . x . . . x .'), 'x x x x x x x x') },
+      { wave: 'hat', gain: 0.018, pattern: bars(rest(8), loop(8, 'x x x x x x x x')) },
+    ],
+  },
   lake: {
     level: 1.36,
     bpm: 104,
@@ -377,7 +451,7 @@ export const ZONE_TRACKS: Record<ZoneTrackId | ZoneStingId, Track> = {
   },
 };
 
-/** Which music each Fog zone plays (by zone id, 0 = the Ashlands). */
+/** Which music each Fog world plays (a zone's id, 0 = the Ashlands; from 6 the Ember Road's). */
 export const ZONE_MUSIC: { run: ZoneTrackId | 'fog'; boss: ZoneTrackId | 'fogBoss'; win?: ZoneStingId }[] = [
   { run: 'fog', boss: 'fogBoss' },
   { run: 'lake', boss: 'lakeBoss' },
@@ -385,6 +459,8 @@ export const ZONE_MUSIC: { run: ZoneTrackId | 'fog'; boss: ZoneTrackId | 'fogBos
   { run: 'plateau', boss: 'plateauBoss', win: 'shatter' },
   { run: 'woods', boss: 'woodsBoss', win: 'warmth' },
   { run: 'summit', boss: 'summitBoss' },
+  // the Ember Road's worlds
+  { run: 'pass', boss: 'passBoss' },
 ];
 
 export const zoneMusic = (zone: number) => ZONE_MUSIC[Math.max(0, Math.min(ZONE_MUSIC.length - 1, zone))];

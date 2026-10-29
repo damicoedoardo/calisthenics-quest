@@ -8,16 +8,16 @@ import { ATTACK, RUN_SKILL } from '@/balance';
 
 export type SheetKey = 'hero' | 'heroAttack' | 'heroWalk' | 'ember' | 'hollow' | 'slime' | 'wisp' | 'mirror' | 'knight' | 'echo' | 'summit'
   // the dungeon's own monsters
-  | 'lancer' | 'clock' | 'smoke' | 'seeker' | 'jar' | 'imp' | 'shade' | 'ashGolem'
+  | 'lancer' | 'clock' | 'smoke' | 'seeker' | 'jar' | 'imp' | 'shade' | 'ashGolem' | 'grinder'
   // the regular monsters firing (played once as they shoot)
   | `${DressedKey}Attack`
   // the Excuse Jar shattering (played once), and the mid-boss
   | 'jarPop' | 'warden'
   // the other zones' mid-bosses (the Sand Golem also set to stone)
-  | 'lanternMid' | 'foremanMid' | 'sandGolemMid' | 'sandGolemMidStone' | 'whisperMid' | 'galeMid'
+  | 'lanternMid' | 'foremanMid' | 'sandGolemMid' | 'sandGolemMidStone' | 'whisperMid' | 'galeMid' | 'bellowsMid'
   | BossSheetKey;
 /** The regular monsters, drawn in each zone's dress (zoned.ts). */
-export type DressedKey = 'slime' | 'wisp' | 'lancer' | 'clock' | 'smoke' | 'seeker' | 'jar' | 'imp' | 'shade' | 'ashGolem';
+export type DressedKey = 'slime' | 'wisp' | 'lancer' | 'clock' | 'smoke' | 'seeker' | 'jar' | 'imp' | 'shade' | 'ashGolem' | 'grinder';
 /** The dungeon bosses: idle, attack (played once), stages for the Knight and the Plateau, and the
     Mirror's and the Hollow's ends (played once). A run only builds its own zone's (FogRun.tsx). */
 export type BossSheetKey =
@@ -27,10 +27,12 @@ export type BossSheetKey =
   | 'plateauBoss' | 'plateauBossAttack' | 'plateauBoss1' | 'plateauBoss1Attack' | 'plateauBoss2' | 'plateauBoss2Attack'
   | 'hollowBoss' | 'hollowBossAttack' | 'hollowBossFade'
   | 'summitBoss' | 'summitBossAttack'
+  // the Ember Road's
+  | 'lullBoss' | 'lullBossAttack'
   // the friends who climb the Summit with you
   | 'wanderer' | 'mira' | 'vela'
   // the run's own mid-boss attacking (played once)
-  | 'wardenAttack' | 'lanternMidAttack' | 'foremanMidAttack' | 'sandGolemMidAttack' | 'sandGolemMidStoneAttack' | 'whisperMidAttack' | 'galeMidAttack';
+  | 'wardenAttack' | 'lanternMidAttack' | 'foremanMidAttack' | 'sandGolemMidAttack' | 'sandGolemMidStoneAttack' | 'whisperMidAttack' | 'galeMidAttack' | 'bellowsMidAttack';
 /** Every sheet a run gets: all of the regular ones, and only its own zone's boss sheets. */
 export type Sheets = Record<Exclude<SheetKey, BossSheetKey>, Sheet> & Partial<Record<BossSheetKey, Sheet>>;
 

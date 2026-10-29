@@ -27,6 +27,8 @@ import {
   ELITE,
   DIM,
   LIGHT,
+  LULL,
+  asleep,
   MIDS,
   CREW,
   GALE,
@@ -36,6 +38,7 @@ import {
   midBoss,
   RELICS,
   zoneDungeon,
+  worldOf,
   createRun,
   dropFromBag,
   looksOf,
@@ -476,7 +479,7 @@ class DungeonScene extends Phaser.Scene {
     private bus: RunEvents,
   ) {
     super('dungeon');
-    this.theme = themeFor(setup.zone.id);
+    this.theme = themeFor(worldOf(setup.zone));
     this.net = setup.net ?? null;
     if (this.net) {
       this.run = runFromStart(this.net.start, this.net.me);
@@ -1705,6 +1708,10 @@ class DungeonScene extends Phaser.Scene {
         const far = Math.hypot(r.boss.x - r.hero.x, r.boss.y - r.hero.y) > 200;
         this.bossLabel.setText(far ? 'Zzz... later...' : '');
       }
+      if (this.setup.zone.boss === 'lull') {
+        const far = r.party.every((o) => o.hp <= 0 || Math.hypot(r.boss!.x - o.x, r.boss!.y - o.y) > LULL.reach);
+        this.bossLabel.setText(far ? '~ hush now... ~' : '');
+      }
     }
 
     this.syncMap(this.bullets, r.bullets, (b) => this.add.image(...this.P(b.x, b.y), shotOf(b.from, b.boss, b.style, this.setup.zone.boss, b.pat)).setDepth(this.dark ? 145000 : 80000), (img, b) => {
@@ -2230,6 +2237,43 @@ class DungeonScene extends Phaser.Scene {
         this.fade(300, (g, p) => g.lineStyle(3 * (1 - p) + 1, 0xc4b5fd, 0.7 * (1 - p)).lineBetween(x, y, toX, toY));
         break;
       }
+      case 'inhale':
+        // The Bellows breathes in: a long drawn whoosh.
+        this.sfx('whoosh', 0.6);
+        this.bossAttack(this.run.warden);
+        break;
+      case 'blow': {
+        const { x, y } = e;
+        this.sfx('gust', 1.2);
+        this.shake(260, 0.005);
+        this.bits.particleTint = 0xf97316;
+        this.burst(this.bits, 16, x, y);
+        this.burst(this.puffs, 8, x, y, 10);
+        this.fade(600, (g, p) => g.lineStyle(8 * (1 - p) + 1, 0xfdba74, 0.7 * (1 - p)).strokeCircle(x, y, 30 + 300 * p));
+        break;
+      }
+      case 'sleep': {
+        // Lulled to sleep: a soft low hum, the hero's sprite sinks a little.
+        this.sfx('hum', 0.6);
+        if (e.hero === this.run.hero.id) buzz([30, 60, 30]);
+        this.fade(700, (g, p) => g.lineStyle(3, 0xc4b5fd, 0.8 * (1 - p)).strokeCircle(e.x, e.y, 40 - 20 * p));
+        break;
+      }
+      case 'wake': {
+        if (e.by === 'self') break;
+        this.sfx('chime', e.by === 'friend' ? 1.4 : 1.1);
+        this.fade(400, (g, p) => g.lineStyle(3, 0xfde68a, 0.9 * (1 - p)).strokeCircle(e.x, e.y, 16 + 40 * p));
+        if (e.by === 'friend' && e.hero === this.run.hero.id) this.bus.say('A friend woke you up.');
+        break;
+      }
+      case 'louder': {
+        this.speak(this.setup.lines?.stages[0]);
+        this.sfx('roar', 0.8);
+        this.bossAttack();
+        this.shake(300, 0.006);
+        this.fade(900, (g, p) => g.lineStyle(4 * (1 - p) + 1, 0xc4b5fd, 1 - p).strokeCircle(e.x, e.y, 40 + 260 * p));
+        break;
+      }
       case 'gust': {
         const { x, y } = e;
         this.sfx('gust');
@@ -2734,6 +2778,32 @@ class DungeonScene extends Phaser.Scene {
     if (r.boss?.alive && this.setup.zone.boss === 'tomorrow') {
       const far = Math.hypot(r.boss.x - r.hero.x, r.boss.y - r.hero.y) > 200;
       this.fx.lineStyle(2, far ? 0x86efac : 0x94a3b8, far ? 0.5 : 0.18).strokeCircle(r.boss.x, r.boss.y, 200);
+    }
+    // The Lull's song: his reach (inside it his song can't put you to sleep), a violet ring that
+    // fills round a hero growing drowsy, and Zs over one asleep.
+    if (r.boss?.alive && this.setup.zone.boss === 'lull') {
+      const b = r.boss,
+        near = Math.hypot(b.x - r.hero.x, b.y - r.hero.y) <= LULL.reach;
+      this.fx.lineStyle(2, near ? 0xc4b5fd : 0x94a3b8, near ? 0.35 : 0.18).strokeCircle(b.x, b.y, LULL.reach);
+      for (const o of r.party) {
+        if (o.hp <= 0) continue;
+        if (asleep(r, o)) {
+          const [X, Y] = this.P(o.x, o.y);
+          this.fx.fillStyle(0x4c1d95, 0.25).fillCircle(o.x, o.y, 26);
+          for (let i = 0; i < 3; i++) {
+            const k = ((now / 500 + i / 3) % 1),
+              zx = X + 8 + i * 5 + 4 * Math.sin(now / 200 + i),
+              zy = Y - 28 - k * 22,
+              sz = 3 + i;
+            mk.lineStyle(2, 0xe9d5ff, 1 - k).lineBetween(zx, zy, zx + sz, zy).lineBetween(zx + sz, zy, zx, zy + sz).lineBetween(zx, zy + sz, zx + sz, zy + sz);
+          }
+          if (r.party.length > 1) this.fx.lineStyle(2, 0xffffff, 0.3).strokeCircle(o.x, o.y, LULL.wake);
+        } else if (o.drowse > 0.04) {
+          this.fx.lineStyle(4, 0xa78bfa, 0.35 + 0.6 * o.drowse).beginPath();
+          this.fx.arc(o.x, o.y, 24, -Math.PI / 2, -Math.PI / 2 + o.drowse * Math.PI * 2);
+          this.fx.strokePath();
+        }
+      }
     }
     // Embers under the Warden: amber while it turns its cross, red once it's past half.
     const wd = r.warden;

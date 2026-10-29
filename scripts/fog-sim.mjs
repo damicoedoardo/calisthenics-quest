@@ -14,6 +14,9 @@
 // hearts (a weaker boss and free skills at the start; edgeFor in src/lib/fog.ts). SP=2 wears the
 // class's second SP (3, 4 likewise) once the model player has one; NOSP=1 wears none. OUT=file.json
 // also writes every run (won, seconds, hits taken) per snapshot and class, to compare in a script.
+// PARTY=2 (to 4) plays each run as a party of bots (the class named, then the next ones along),
+// as the Ember Road and party runs are played; the win counts for the party.
+// ROAD=1 plays the Ember Road's chapter 1 (its own world) in place of the zone it stands in for.
 // BUILDS=even,glass,tank,quick plays each way of spending points (BUILD_PROFILES in
 // src/balance/dungeon.ts) with the save's points, the four classes averaged, and checks no build
 // runs away (BUILD_FAIR).
@@ -46,7 +49,9 @@ if (!isMainThread) {
   const { SP_WEAPON } = await import(`${root}src/balance/classes.ts`);
   for (const [w, k] of Object.entries(JSON.parse(process.env.WEAPON || '{}'))) Object.assign(SP_WEAPON[w], k);
   Object.assign(DIALS, dials);
-  const { ZONES, powerOf, edgeFor } = await import(`${root}src/lib/fog.ts`);
+  const { ZONES, ROAD_ZONES, powerOf, edgeFor } = await import(`${root}src/lib/fog.ts`);
+  // ROAD=1 plays the Ember Road's chapter 1 in place of the story zone it stands in for (its base).
+  const road = process.env.ROAD ? ROAD_ZONES[Number(process.env.ROAD) - 1] : null;
   const forced = process.env.EDGE ? JSON.parse(process.env.EDGE) : null;
   const { buildOf } = await import(`${root}src/lib/stats.ts`);
   const { heroLevel } = await import(`${root}src/lib/game.ts`);
@@ -59,6 +64,9 @@ if (!isMainThread) {
   // NOSP=1 plays every run without the SP, to see what it adds; SP=2 (to 4) wears that SP instead
   // of the first, to check each SP wins about as often as the first.
   const noSp = !!process.env.NOSP;
+  // PARTY=2 (to 4) plays every run as a party of bots together, the run's class first.
+  const party = Math.max(1, Math.min(4, Number(process.env.PARTY || 1)));
+  const ALL_CLASSES = ['archer', 'mage', 'warrior', 'monk'];
   const spNo = Number(process.env.SP || 1);
   const now = Date.now();
   parentPort.on('message', (job) => {
@@ -68,7 +76,7 @@ if (!isMainThread) {
     const build = job.build ? buildFor(state, job.build) : buildOf(state),
       power = powerOf(shift({ ...state, build }, now), new Date(now)),
       level = heroLevel(state);
-    const z = ZONES[job.zone];
+    const z = road && ZONES[job.zone].id === road.id ? road : ZONES[job.zone];
     const zone = { ...z, hp: z.hp * job.scale, dmg: z.dmg * job.scale };
     const edge = forced ?? edgeFor(state, z);
     const out = [];
@@ -77,7 +85,12 @@ if (!isMainThread) {
       const worn = geared ? seasonedKit(seeded(seed ^ 0x5eed), ZONES, job.zone, state.sessions.length, job.cls, build, level) : undefined;
       // The model player wears the SP once its trial is done (SP_MODEL_AT workouts).
       const sp = !noSp && state.sessions.length >= SP_MODEL_AT ? spNo : false;
-      out.push({ ...playRun({ zone, power, classId: job.cls, seed, build, heroLevel: level, edge, worn, sp }), seed });
+      // PARTY=n: n-1 friends walk in too, each the next class along, as strong and as geared.
+      const friends = Array.from({ length: party - 1 }, (_, k) => {
+        const cls = ALL_CLASSES[(ALL_CLASSES.indexOf(job.cls) + 1 + k) % ALL_CLASSES.length];
+        return { power, classId: cls, build, heroLevel: level, edge, sp, worn: geared ? seasonedKit(seeded((seed + k + 1) ^ 0x5eed), ZONES, job.zone, state.sessions.length, cls, build, level) : undefined };
+      });
+      out.push({ ...playRun({ zone, power, classId: job.cls, seed, build, heroLevel: level, edge, worn, sp, ...(party > 1 ? { friends } : {}) }), seed });
     }
     parentPort.postMessage(out);
   });

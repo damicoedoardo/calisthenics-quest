@@ -34,9 +34,11 @@ level or story.
   plates), and each workout since starts a run with one more free skill (`'past'` picks, up to
   `EDGE.picks`). Playing well still beats it sooner. The Play tab's ready strip says how many hearts are left,
   or what the edge gives (`BossEdge` in `PlayTab.tsx`).
-- The Ember Road's runs (`ROAD_ZONES`, played Together) are story zones in other clothes: same
-  `id`, dungeon and boss fight, the road's own names and words, and `guide: 'Tamsin'` speaks after
-  a win. See [story.md](story.md).
+- The Ember Road's runs (`ROAD_ZONES`, played Together) keep a story zone's `id` (loot, records,
+  toughness) with the road's own names and words, and `guide: 'Tamsin'` speaks after a win. A
+  chapter with its own `world` (`Zone.world`, read through `worldOf`) fights in a dungeon of its
+  own, with its own boss (`fog.boss`, e.g. `lull`); one without borrows the story zone's dungeon
+  and boss as they are. See [story.md](story.md) and "Worlds" in [dungeon.md](dungeon.md).
 - **Run skills**: `UPGRADES` and `rollUpgrades` (three random choices per level-up), `xpToNext`.
   Seventeen skills; Wider choice adds a fourth card. Each has a `kind` (attack, magic, guard, craft) that colors its card; their numbers are
   `RUN_SKILL` in `src/balance/skills.ts`. The level-up pick is `SkillPick`

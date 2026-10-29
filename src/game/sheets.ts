@@ -1,6 +1,7 @@
 import { spWorn } from '@/lib/sp';
 import { gearOf, type GameState } from '@/lib/game';
 import type { Zone } from '@/lib/fog';
+import { worldOf } from './dungeon/content';
 import { sheetFor, type Sheet } from '@/sprites/registry';
 import { normalizeLook, type HeroOpts } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
@@ -15,8 +16,15 @@ import type { BossSheetKey, DressedKey, Sheets } from './rules';
 type Job = [string, () => Sheet];
 
 /** The dungeon boss sheets for a zone (by id: 0 Tomorrow, 1 the Mirror, 2 the Knight, 3 the Plateau, 4 the
-    Hollow, 5 the Summit). Only the run's own boss is drawn: they're big and there are many. */
-function bossJobs(zoneId: number, hero: Pick<HeroOpts, 'gear' | 'classId' | 'look'>): [BossSheetKey, () => Sheet][] {
+    Hollow, 5 the Summit; an Ember Road boss of its own by its name). Only the run's own boss is
+    drawn: they're big and there are many. */
+function bossJobs(zone: Zone, hero: Pick<HeroOpts, 'gear' | 'classId' | 'look'>): [BossSheetKey, () => Sheet][] {
+  const zoneId = zone.id;
+  if (zone.boss === 'lull')
+    return [
+      ['lullBoss', () => sheetFor('lullBoss', 'idle')],
+      ['lullBossAttack', () => sheetFor('lullBoss', 'attack')],
+    ];
   const staged = (id: 'knightBoss' | 'plateauBoss'): [BossSheetKey, () => Sheet][] =>
     ([0, 1, 2] as const).flatMap((stage) => [
       [`${id}${stage || ''}` as BossSheetKey, () => sheetFor(id, 'idle', { stage })],
@@ -52,10 +60,10 @@ function bossJobs(zoneId: number, hero: Pick<HeroOpts, 'gear' | 'classId' | 'loo
   return [];
 }
 
-/** The zone's floor-5 mid-boss attacking (its idle sheet is a plain one): by zone id, like MIDS. */
-function midJobs(zoneId: number): [BossSheetKey, () => Sheet][] {
-  const ids = [['warden'], ['lanternMid'], ['foremanMid'], ['sandGolemMid', 'sandGolemMidStone'], ['whisperMid'], ['galeMid']] as const;
-  return (ids[Math.min(Math.max(zoneId, 0), ids.length - 1)] ?? []).map((id) => [`${id}Attack` as BossSheetKey, () => sheetFor(id, 'attack')]);
+/** The zone's floor-5 mid-boss attacking (its idle sheet is a plain one): by world, like MIDS. */
+function midJobs(world: number): [BossSheetKey, () => Sheet][] {
+  const ids = [['warden'], ['lanternMid'], ['foremanMid'], ['sandGolemMid', 'sandGolemMidStone'], ['whisperMid'], ['galeMid'], ['bellowsMid']] as const;
+  return (ids[Math.min(Math.max(world, 0), ids.length - 1)] ?? []).map((id) => [`${id}Attack` as BossSheetKey, () => sheetFor(id, 'attack')]);
 }
 
 function jobs(state: GameState, zone: Zone): Job[] {
@@ -65,10 +73,11 @@ function jobs(state: GameState, zone: Zone): Job[] {
     hero = { gear, classId, look };
   // Once the flame has fused with you, you burn with it down there too; with the SP on, you wear its look.
   const you = { ...hero, variant: heroVariant(state), ...(spWorn(state) ? { sp: spWorn(state) } : {}) };
-  const plain = ['ember', 'mirror', 'knight', 'summit', 'jarPop', 'warden', 'lanternMid', 'foremanMid', 'sandGolemMid', 'sandGolemMidStone', 'whisperMid', 'galeMid'] as const;
-  // The regular monsters dressed for this zone (wet glass at the lake, scrap iron at the forges...),
-  // standing and firing.
-  const dressed: DressedKey[] = ['slime', 'wisp', 'lancer', 'clock', 'smoke', 'seeker', 'jar', 'imp', 'shade', 'ashGolem'];
+  const plain = ['ember', 'mirror', 'knight', 'summit', 'jarPop', 'warden', 'lanternMid', 'foremanMid', 'sandGolemMid', 'sandGolemMidStone', 'whisperMid', 'galeMid', 'bellowsMid'] as const;
+  // The regular monsters dressed for this zone's world (wet glass at the lake, scrap iron at the
+  // forges...), standing and firing.
+  const dressed: DressedKey[] = ['slime', 'wisp', 'lancer', 'clock', 'smoke', 'seeker', 'jar', 'imp', 'shade', 'ashGolem', 'grinder'],
+    world = worldOf(zone);
   return [
     ['hero', () => sheetFor('hero', 'idle', you)],
     ['heroAttack', () => sheetFor('hero', 'attack', you)],
@@ -76,10 +85,10 @@ function jobs(state: GameState, zone: Zone): Job[] {
     ['hollow', () => sheetFor('hero', 'idle', { ...hero, variant: 'hollow' })],
     ['echo', () => sheetFor('hero', 'idle', { ...hero, variant: 'echo' })],
     ...plain.map((id): Job => [id, () => sheetFor(id, 'idle')]),
-    ...dressed.map((id): Job => [id, () => sheetFor(id, 'idle', { zone: zone.id })]),
-    ...dressed.map((id): Job => [`${id}Attack`, () => sheetFor(id, 'attack', { zone: zone.id })]),
-    ...bossJobs(zone.id, hero),
-    ...midJobs(zone.id),
+    ...dressed.map((id): Job => [id, () => sheetFor(id, 'idle', { zone: world })]),
+    ...dressed.map((id): Job => [`${id}Attack`, () => sheetFor(id, 'attack', { zone: world })]),
+    ...bossJobs(zone, hero),
+    ...midJobs(world),
   ];
 }
 
