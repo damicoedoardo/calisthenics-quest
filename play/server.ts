@@ -65,7 +65,7 @@ wss.on('connection', (ws) => {
     const room = rooms.get(key);
     if (!room) return;
     if (sockets.get(key)?.get(user) === ws) sockets.get(key)!.delete(user);
-    room.leave(user);
+    room.leave(user, Date.now() / 1000);
     if (!room.run) everyone(key, { t: 'wait', here: room.here, need: room.users });
   });
 });

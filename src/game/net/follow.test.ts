@@ -193,6 +193,13 @@ describe('following a live run', () => {
     expect(ben.run.hero.relicOffer).toBeNull();
   });
 
+  it('draws a friend walking, not floating', () => {
+    const { phones } = play(0.7, 70, 30);
+    // Ana is on the first leg of her square: on Ben's phone she's drawn walking.
+    const ana = phones[1].f.run.party.find((h) => h.id === 0)!;
+    expect(Math.hypot(ana.vx, ana.vy)).toBeGreaterThan(100);
+  });
+
   it('ends up where the server has you', () => {
     const { room, phones } = play(8.8, 70, 30);
     const server = room.run!.party[0],

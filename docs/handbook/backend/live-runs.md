@@ -23,7 +23,7 @@ attempt is **one real run** that everyone plays together. "Try again" after it i
   order. The game server checks it with the secret both share (`play/pass.ts`). 503 means live runs
   aren't set up, 404 not in a party, 409 no run started.
 - **What goes over the line** is all in `src/game/net/wire.ts`: `Up` (phone to server: hello with
-  the pass and your `HeroSetup`, the steps you pressed, picks, the stairs, gear) and `Down` (wait,
+  the pass and your `HeroSetup`, the steps you pressed, picks, the stairs, gear, quit) and `Down` (wait,
   start, run, error). `snapshot`/`applySnapshot` turn a run into text and back: what each phone
   already has (setup, layout, dice, closures) stays out, heroes and monsters held elsewhere go as
   their id, numbers are cut to 3 decimals.
@@ -35,7 +35,9 @@ attempt is **one real run** that everyone plays together. "Try again" after it i
   exactly as many steps as your phone did, and your phone almost never has to pull you back. A
   phone that runs a little fast has two steps played as one once more than `NET.steady` wait.
 - **Nobody holds the run up.** A phone that drops is played by the bot until it's back
-  (`botInput`); a pick waits at most `NET.pickSeconds`, then the bot picks; the stairs go deeper
+  (`botInput`). If it isn't back within `NET.goneSeconds`, or its player leaves the run (the phone
+  sends `quit` when the run screen closes before the end), the run ends for everyone, each keeping
+  what they carry (`leaveRun` in `engine.ts`, ended as `left`). A pick waits at most `NET.pickSeconds`, then the bot picks; the stairs go deeper
   after the same wait. Any member can answer the stairs for everyone.
 
 ## On the phone
@@ -57,7 +59,8 @@ message (`runFromStart`: same setup, same seed, you first) and hands it to a `Fo
 3. sends your numbered steps every `FOLLOW.sendMs`;
 4. before drawing, puts everyone else (friends, monsters, shots) where they were `FOLLOW.behindMs`
    ago on the server's clock, between two snapshots (`place`), so they glide instead of jumping
-   20 times a second.
+   20 times a second. `place` also gives friends and monsters the speed they're drawn moving at
+   (`vx`, `vy`), so a friend plays their walk and faces the way they go.
 
 `follow.test.ts` plays two phones, then three, and the server over a slow, uneven line (70 ms
 each way, give or take 30) and checks that your hero is almost never pulled back, and that a

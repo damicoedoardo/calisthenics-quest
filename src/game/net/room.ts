@@ -1,13 +1,13 @@
 import { botInput } from '../dungeon/bot';
-import { createRun, dropFromBag, pick, pickRelic, stepRun, takeOff, takeStairs, wear, type Hero, type HeroSetup, type Input, type Run } from '../dungeon/engine';
+import { createRun, dropFromBag, leaveRun, pick, pickRelic, stepRun, takeOff, takeStairs, wear, type Hero, type HeroSetup, type Input, type Run } from '../dungeon/engine';
 import { BOT_PICKS } from '../rules';
 import { zoneByCode } from '@/lib/fog';
 import { snapshot, type Press, type Start, type Up } from './wire';
 
 /* One party's live run on the game server: who's in, what each has pressed, and the one real run.
    The server (play/server.ts) only moves messages; every rule is here, and tested without sockets.
-   A hero whose phone is gone (locked, closed) is played by the bot until it's back, so the run
-   never stops for the others. */
+   A hero whose phone drops (locked, a bad line) is played by the bot for a little while; if it
+   isn't back by then, or its player leaves the run, the run ends for the whole party. */
 
 interface Seat {
   user: string;
@@ -26,6 +26,8 @@ interface Seat {
   got: number;
   /** Buttons from steps passed over, for the next step played. */
   held: Press | null;
+  /** Since when the phone has been gone in a run (real seconds), or null. */
+  offSince: number | null;
 }
 
 /** Buttons pressed in a step that's passed over go with the next one. */
@@ -49,7 +51,12 @@ export const NET = {
   maxQueue: 8,
   /** Steps that may wait before two are played as one (a phone whose clock runs a little fast). */
   steady: 6,
+  /** A phone gone this long in a run (real seconds) ends it for everyone: they aren't coming back. */
+  goneSeconds: 20,
 };
+
+/** What the others are told when someone leaves. */
+const LEFT = 'A friend left the run, so it ends here for everyone. You keep what you carry.';
 
 export class Room {
   readonly users: string[];
@@ -78,19 +85,23 @@ export class Room {
     if (this.run && !seat) return false;
     if (seat) {
       seat.online = true;
+      seat.offSince = null;
       seat.queue = [];
       seat.held = null;
       if (!this.run) seat.hero = hero;
-    } else this.seats.set(user, { user, hero, online: true, queue: [], stick: { x: 0, y: 0 }, ack: 0, askedAt: null, got: 0, held: null });
+    } else this.seats.set(user, { user, hero, online: true, queue: [], stick: { x: 0, y: 0 }, ack: 0, askedAt: null, got: 0, held: null, offSince: null });
     this.firstAt ??= now;
     return true;
   }
 
-  leave(user: string) {
+  /** A phone's line closed, at `now` (real seconds). In a run the bot plays them until they're back. */
+  leave(user: string, now = 0) {
     const seat = this.seats.get(user);
     if (!seat) return;
-    if (this.run) seat.online = false;
-    else this.seats.delete(user);
+    if (this.run) {
+      seat.online = false;
+      seat.offSince ??= now;
+    } else this.seats.delete(user);
   }
 
   get here(): string[] {
@@ -155,6 +166,9 @@ export class Room {
       case 'drop':
         dropFromBag(run, m.id, h);
         break;
+      case 'quit':
+        leaveRun(run, LEFT);
+        break;
     }
   }
 
@@ -168,6 +182,8 @@ export class Room {
   tick(now: number) {
     const run = this.run;
     if (!run || run.over) return;
+    for (const s of this.seats.values())
+      if (s.offSince !== null && now - s.offSince >= NET.goneSeconds) return leaveRun(run, LEFT);
     const inputs = run.party.map((h, i) => this.inputFor(this.seats.get(this.order[i])!, h));
     stepRun(run, inputs);
     this.waitOnPicks(now);

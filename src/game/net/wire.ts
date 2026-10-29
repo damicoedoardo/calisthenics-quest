@@ -23,7 +23,9 @@ export type Up =
   | { t: 'stairs'; choice: 'deeper' | 'leave' | 'stay' }
   | { t: 'wear'; id: string }
   | { t: 'takeOff'; slot: ItemSlot }
-  | { t: 'drop'; id: string };
+  | { t: 'drop'; id: string }
+  /** You left the run: it ends for the whole party. */
+  | { t: 'quit' };
 
 /** The run as everyone starts it: the same as createRun gets, so each phone can build its own copy. */
 export interface Start {

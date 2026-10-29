@@ -123,17 +123,24 @@ export class Follower {
     const a = fs[i],
       b = fs[i + 1],
       u = Math.max(0, Math.min(1, (t - a.at) / Math.max(1, b.at - a.at)));
-    const put = (key: string, o: { x: number; y: number }) => {
+    const dt = Math.max(1, b.at - a.at) / 1000;
+    const put = (key: string, o: { x: number; y: number; vx: number; vy: number }, moving = true) => {
       const p = a.where.get(key),
         q = b.where.get(key);
       if (!p || !q) return;
       o.x = p[0] + (q[0] - p[0]) * u;
       o.y = p[1] + (q[1] - p[1]) * u;
+      // How fast they're drawn moving, so a friend walks (and faces) the way they go: this
+      // phone's own steps stand them still between the server's runs.
+      if (moving) {
+        o.vx = (q[0] - p[0]) / dt;
+        o.vy = (q[1] - p[1]) / dt;
+      }
     };
     const r = this.run;
     for (const h of r.party) if (h !== r.hero) put(`h${h.id}`, h);
     for (const f of r.foes) put(`f${f.id}`, f);
-    for (const s of r.shots) put(`s${s.id}`, s);
+    for (const s of r.shots) put(`s${s.id}`, s, false);
   }
 
   /** One step: you as pressed; the others stand where the server last had them (`place` moves
