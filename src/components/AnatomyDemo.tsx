@@ -7,7 +7,7 @@ import { INK, MUSCLE_NAME, WORKS, scene, type AnatomyId, type View } from '@/spr
 const REP = 3.2;
 
 /** The anatomy demo (sprites/anatomy/body.ts): the body doing one rep on a loop, the worked
-    muscles colored in, an arrow lit for the way it moves. Still under reduced motion. */
+    muscles colored in, an arrow lit for the way it moves. Still under reduced motion and for holds. */
 export function AnatomyDemo({ exercise, view, label, className }: { exercise: AnatomyId; view: View; label: string; className?: string }) {
   const [t, setT] = useState(0);
   const [still, setStill] = useState(false);
@@ -61,10 +61,12 @@ export function MuscleKey({ exercise }: { exercise: AnatomyId }) {
         <span className="h-2.5 w-2.5 rounded-full" style={{ background: INK.work }} />
         {main.map((m) => MUSCLE_NAME[m]).join(', ')}
       </span>
-      <span className="flex items-center gap-1.5 text-slate-400">
-        <span className="h-2.5 w-2.5 rounded-full" style={{ background: INK.help }} />
-        {help.map((m) => MUSCLE_NAME[m]).join(', ')}
-      </span>
+      {help.length > 0 && (
+        <span className="flex items-center gap-1.5 text-slate-400">
+          <span className="h-2.5 w-2.5 rounded-full" style={{ background: INK.help }} />
+          {help.map((m) => MUSCLE_NAME[m]).join(', ')}
+        </span>
+      )}
     </div>
   );
 }

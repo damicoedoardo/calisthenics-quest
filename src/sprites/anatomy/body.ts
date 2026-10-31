@@ -5,8 +5,9 @@
 
    How it is built:
    - A 3D skeleton in centimeters (x forward, y up, z to the body's right; the floor is y = 0),
-     with an adult's segment lengths. Each exercise is a pose function of how deep in the rep you
-     are (0 = top, 1 = bottom); knees and elbows come from two-bone IK.
+     with an adult's segment lengths (skeleton.ts). Each exercise is a pose function of how deep
+     in the rep you are, with its muscles, cameras and gear (moves.ts); knees and elbows come from
+     two-bone IK.
    - Each body part is a tube around its bone whose cross-section is an oval with four radii
      (front, back, outside, inside) that change along the bone. Seen from any camera, its outline is
      the widest edge of each cross-section, smoothed into curves.
@@ -14,13 +15,11 @@
      it (angle: 0 = front, 90 = outside, 180 = back, -90 = inside). Every muscle gets a faint line, so
      the body reads as anatomy; the worked ones are filled. */
 
-export const ANATOMY_DEMOS = ['pushup', 'barbell-squat'] as const;
-export type AnatomyId = (typeof ANATOMY_DEMOS)[number];
-export const hasAnatomy = (id: string): id is AnatomyId => (ANATOMY_DEMOS as readonly string[]).includes(id);
+import { DEMOS, type AnatomyId, type View } from './moves';
+import { add, cross, dot, len, lerp, mul, phase, rad, sub, unit, type Pose, type Prop, type V2, type V3 } from './skeleton';
 
-export type View = 'side' | 'front';
-type V3 = [number, number, number];
-type V2 = [number, number];
+export { ANATOMY_DEMOS, hasAnatomy, viewName, type AnatomyId, type View } from './moves';
+export { phase } from './skeleton';
 
 /* ---------- Colors ---------- */
 
@@ -44,159 +43,10 @@ export const INK = {
   arrowOn: '#38bdf8',
 };
 
-/* ---------- Vectors ---------- */
-
-const add = (a: V3, b: V3): V3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
-const sub = (a: V3, b: V3): V3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
-const mul = (a: V3, k: number): V3 => [a[0] * k, a[1] * k, a[2] * k];
-const dot = (a: V3, b: V3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
-const len = (a: V3) => Math.hypot(a[0], a[1], a[2]);
-const unit = (a: V3): V3 => mul(a, 1 / (len(a) || 1));
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-const rad = (deg: number) => (deg * Math.PI) / 180;
-
-/** Two-bone IK: the middle joint of a limb from A to C, bending toward `pole`. */
-function ik(a: V3, c: V3, l1: number, l2: number, pole: V3): V3 {
-  const d = sub(c, a);
-  const dist = Math.min(Math.max(len(d), Math.abs(l1 - l2) + 0.01), l1 + l2 - 0.01);
-  const u = unit(d);
-  const along = (l1 * l1 - l2 * l2 + dist * dist) / (2 * dist);
-  const h = Math.sqrt(Math.max(0, l1 * l1 - along * along));
-  const p = unit(sub(pole, mul(u, dot(pole, u))));
-  return add(add(a, mul(u, along)), mul(p, h));
-}
-
-/* ---------- The body: lengths (cm) ---------- */
-
-const L = { torso: 52, neck: 8, head: 22, upper: 30, fore: 26, thigh: 45, shin: 44, ankle: 8 };
-/** Shoulder joints sit this far up the torso and out from the middle; hip joints out from it. */
-const SHOULDER_UP = 46;
-const SHOULDER_OUT = 18;
-const HIP_OUT = 9;
-
-/** One side's joints. */
-interface Side {
-  shoulder: V3;
-  elbow: V3;
-  wrist: V3;
-  tip: V3;
-  hip: V3;
-  knee: V3;
-  ankle: V3;
-  heel: V3;
-  toe: V3;
-  /** Which way the top of the foot faces. */
-  instep: V3;
-}
-
-interface Pose {
-  pelvis: V3;
-  neck: V3;
-  headBase: V3;
-  headTop: V3;
-  /** Which way the chest faces. */
-  front: V3;
-  right: Side;
-  left: Side;
-  bar?: V3;
-}
-
-/* ---------- Poses ---------- */
-
-/** Ease in and out. */
-const ease = (t: number) => t * t * (3 - 2 * t);
-
-/** Where a moment of the loop is: how deep (0 top, 1 bottom) and which way it moves. */
-export function phase(t: number): { depth: number; dir: 'down' | 'up' | null } {
-  const x = ((t % 1) + 1) % 1;
-  if (x < 0.08) return { depth: 0, dir: null };
-  if (x < 0.48) return { depth: ease((x - 0.08) / 0.4), dir: 'down' };
-  if (x < 0.56) return { depth: 1, dir: null };
-  if (x < 0.92) return { depth: 1 - ease((x - 0.56) / 0.36), dir: 'up' };
-  return { depth: 0, dir: null };
-}
-
-/** Barbell back squat: feet a bit wider than the hips, toes a little out, the bar on the upper
-    back, hips back and down until the thighs are level, the bar staying over the middle of the
-    foot, knees out over the toes. */
-function squat(d: number): Pose {
-  const pelvis: V3 = [lerp(-3, -20, d), lerp(94, 47, d), 0];
-  const lean = lerp(6, 40, d);
-  const up: V3 = [Math.sin(rad(lean)), Math.cos(rad(lean)), 0];
-  const front: V3 = [Math.cos(rad(lean)), -Math.sin(rad(lean)), 0];
-  const neck = add(pelvis, mul(up, L.torso));
-  const nod = lean * 0.5;
-  const headUp: V3 = [Math.sin(rad(lean - nod)), Math.cos(rad(lean - nod)), 0];
-  const headBase = add(neck, mul(headUp, L.neck));
-  const headTop = add(headBase, mul(headUp, L.head));
-  const bar = add(add(neck, mul(front, -9)), mul(up, -4));
-  const side = (s: number): Side => {
-    const hip = add(pelvis, [0, 0, s * HIP_OUT]);
-    const ankle: V3 = [0, L.ankle, s * 15];
-    const knee = ik(hip, ankle, L.thigh, L.shin, [1, 0.1, s * 0.5]);
-    const shoulder = add(add(pelvis, mul(up, SHOULDER_UP)), [0, 0, s * SHOULDER_OUT]);
-    const wrist = add(bar, [-1, -5, s * 27]);
-    const elbow = ik(shoulder, wrist, L.upper, L.fore, add(mul(front, -0.45), [0, -1, s * 0.25]));
-    const tip = add(bar, [4, 3, s * 27]);
-    return {
-      shoulder, elbow, wrist, tip, hip, knee, ankle,
-      heel: [-6, 3.5, s * 14], toe: [18.5, 2.5, s * 19.5], instep: [0, 1, 0],
-    };
-  };
-  return { pelvis, neck, headBase, headTop, front, right: side(1), left: side(-1), bar };
-}
-
-/** Push-up: hands under the shoulders, a bit wider; the body one straight line from heels to head,
-    pivoting on the toes; elbows back at about 45 degrees; chest to a fist from the floor. */
-function pushup(d: number): Pose {
-  const ankle0: V3 = [-103, 13, 0];
-  const body = L.shin + L.thigh;
-  const wristX = 27;
-  // The angle of the body line: arms straight at the top, shoulders a hand above the floor at the bottom.
-  const shoulderY = lerp(4 + L.upper + L.fore - 1, 17, d);
-  const a = Math.asin((shoulderY - ankle0[1]) / (body + SHOULDER_UP));
-  const dir: V3 = [Math.cos(a), Math.sin(a), 0];
-  const front: V3 = [Math.sin(a), -Math.cos(a), 0];
-  const pelvis = add(ankle0, mul(dir, body));
-  const neck = add(pelvis, mul(dir, L.torso));
-  const headUp = unit(add(dir, [0, 0.1, 0]));
-  const headBase = add(neck, mul(headUp, L.neck));
-  const headTop = add(headBase, mul(headUp, L.head));
-  const side = (s: number): Side => {
-    const hip = add(pelvis, [0, 0, s * HIP_OUT]);
-    const ankle = add(ankle0, [0, 0, s * 10]);
-    const knee = add(ankle, mul(dir, L.shin));
-    const shoulder = add(add(pelvis, mul(dir, SHOULDER_UP)), [0, 0, s * SHOULDER_OUT]);
-    const wrist: V3 = [wristX, 4, s * 23];
-    const elbow = ik(shoulder, wrist, L.upper, L.fore, [-0.75, 0.25, s * 0.6]);
-    const tip: V3 = [wristX + 17, 1, s * 25];
-    return {
-      shoulder, elbow, wrist, tip, hip, knee, ankle,
-      heel: [-105.5, 16.5, s * 10], toe: [-94, 1, s * 10], instep: unit([18, 13, 0]),
-    };
-  };
-  return { pelvis, neck, headBase, headTop, front, right: side(1), left: side(-1) };
-}
-
-const POSES: Record<AnatomyId, (d: number) => Pose> = { pushup, 'barbell-squat': squat };
-
-/** The cameras: which way you look from (toward the camera). Side on is level with the floor;
-    from the front it is turned a little and looks a little down, so the body reads in depth. */
-const CAMERAS: Record<AnatomyId, Record<View, V3>> = {
-  pushup: { side: [0, 0, 1], front: unit([0.8, 0.12, 0.7]) },
-  'barbell-squat': { side: [0, 0, 1], front: unit([1, 0.32, 0.4]) },
-};
-
-/** The floor under each exercise: its middle and how far it reaches. */
-const FLOOR: Record<AnatomyId, { x: number; r: number }> = {
-  pushup: { x: -35, r: 88 },
-  'barbell-squat': { x: 0, r: 46 },
-};
 
 /** The floor as seen: a line side on, an oval from above. */
 function floorShape(exercise: AnatomyId, cam: Camera): V2[] {
-  const { x, r } = FLOOR[exercise];
+  const { x, r } = DEMOS[exercise].floor;
   const pts: V2[] = [];
   for (let i = 0; i < 24; i++) {
     const t = (i / 24) * Math.PI * 2;
@@ -327,10 +177,7 @@ const MUSCLES: Muscle[] = [
 const MARKS: Muscle[] = [{ id: 'traps', part: 'head', u: [0.34, 0.58], angle: [92, 120], both: true }];
 
 /** Which muscles each exercise works: the main movers, then the helpers. */
-export const WORKS: Record<AnatomyId, { main: MuscleId[]; help: MuscleId[] }> = {
-  pushup: { main: ['chest', 'triceps', 'frontDelt'], help: ['abs', 'obliques'] },
-  'barbell-squat': { main: ['quads', 'glutes'], help: ['adductors', 'hamstrings', 'lowerBack', 'calves'] },
-};
+export const WORKS = Object.fromEntries(Object.entries(DEMOS).map(([id, d]) => [id, d.works])) as Record<AnatomyId, { main: MuscleId[]; help: MuscleId[] }>;
 
 export const MUSCLE_NAME: Record<MuscleId, string> = {
   chest: 'Chest', frontDelt: 'Front shoulders', sideDelt: 'Shoulders', rearDelt: 'Rear shoulders',
@@ -642,8 +489,9 @@ function partsOf(pose: Pose): { right: Limbs; left: Limbs; torso: Part; neck: Pa
 
 /** Everything to draw for one moment of a rep. */
 export function scene(exercise: AnatomyId, view: View, t: number, opts: { still?: boolean } = {}): Scene {
-  const { depth, dir } = opts.still ? { depth: 1, dir: null } : phase(t);
-  const cam = camera(CAMERAS[exercise][view]);
+  const demo = DEMOS[exercise];
+  const { depth, dir } = opts.still || !demo.mover ? { depth: 1, dir: null } : phase(t);
+  const cam = camera(demo.cameras[view]);
   const box = frame(exercise, view);
   const level = Math.abs(cam.c[1]) < 0.01;
   const shapes: Shape[] = [
@@ -651,13 +499,74 @@ export function scene(exercise: AnatomyId, view: View, t: number, opts: { still?
   ];
   shapes.push(...draw(exercise, cam, depth));
   const lit = opts.still ? 'both' : dir === 'down' ? 'to' : dir === 'up' ? 'from' : null;
-  shapes.push(...arrow(box.arrow[0], box.arrow[1], lit));
+  if (box.arrow) shapes.push(...arrow(box.arrow[0], box.arrow[1], lit));
   return { viewBox: `${f1(box.x)} ${f1(box.y)} ${f1(box.w)} ${f1(box.h)}`, shapes };
 }
 
-/** The body (and bar) for one depth. */
+/* ---------- Gear ---------- */
+
+/** A barbell: 2.2 m long, a 45 cm plate near each end. */
+const BAR = { half: 108, plateAt: 84, plateR: 22.5 };
+/** A dumbbell: a short handle with a small plate at each end. */
+const DUMBBELL = { half: 9, plateAt: 6.5, plateR: 7.5 };
+/** A flat bench: its pad's width and thickness. */
+const BENCH = { half: 14, thick: 7 };
+
+const line = (a: V2, b: V2) => `M${f1(a[0])} ${f1(a[1])}L${f1(b[0])} ${f1(b[1])}`;
+
+/** A bar along z with plates, the far plate first. */
+function weight(cam: Camera, at: V3, o: { half: number; plateAt: number; plateR: number }, handle: number): Shape[] {
+  const out: Shape[] = [{ d: line(project(cam, add(at, [0, 0, -o.half])), project(cam, add(at, [0, 0, o.half]))), stroke: INK.bar, width: handle, round: true }];
+  const sides = [-1, 1].sort((a, b) => a * cam.c[2] - b * cam.c[2]);
+  const t = o.plateR / 9;
+  for (const s of sides) {
+    for (const dz of [-t, 0, t]) out.push({ d: closed(disc(cam, add(at, [0, 0, s * (o.plateAt + dz)]), o.plateR)), fill: INK.plate, stroke: INK.plateRim, width: 1 });
+    out.push({ d: closed(disc(cam, add(at, [0, 0, s * (o.plateAt + t)]), o.plateR * 0.14)), fill: INK.plateRim });
+  }
+  return out;
+}
+
+/** The corners of a bench pad. */
+function benchBox(from: V3, to: V3): V3[] {
+  const pts: V3[] = [];
+  for (const end of [from, to]) for (const z of [-BENCH.half, BENCH.half]) for (const y of [0, -BENCH.thick]) pts.push(add(end, [0, y, z]));
+  return pts;
+}
+
+/** One piece of gear as shapes. */
+function gear(cam: Camera, prop: Prop): Shape[] {
+  if (prop.kind === 'barbell') return weight(cam, prop.at, BAR, 2.8);
+  if (prop.kind === 'dumbbell') return weight(cam, prop.at, DUMBBELL, 2.4);
+  if (prop.kind === 'pullbar') {
+    const ends = [add(prop.at, [0, 0, -75]), add(prop.at, [0, 0, 75])].map((q) => project(cam, q));
+    return [
+      { d: line(ends[0], ends[1]), stroke: INK.plateRim, width: 4.4, round: true },
+      { d: line(ends[0], ends[1]), stroke: INK.bar, width: 2.8, round: true },
+    ];
+  }
+  const out: Shape[] = [];
+  for (const k of [0.12, 0.88]) {
+    const top = add(prop.from, mul(sub(prop.to, prop.from), k));
+    for (const z of [-BENCH.half + 4, BENCH.half - 4]) {
+      out.push({ d: line(project(cam, add(top, [0, -BENCH.thick, z])), project(cam, [top[0], 0, z])), stroke: INK.plate, width: 2.6, round: true });
+    }
+  }
+  out.push({ d: closed(hull(benchBox(prop.from, prop.to).map((q) => project(cam, q)))), fill: INK.plate, stroke: INK.plateRim, width: 1.2 });
+  return out;
+}
+
+/** Points that bound a piece of gear (for the frame). */
+function gearPoints(cam: Camera, prop: Prop): V2[] {
+  if (prop.kind === 'bench') return [...benchBox(prop.from, prop.to), [prop.from[0], 0, 0] as V3, [prop.to[0], 0, 0] as V3].map((q) => project(cam, q));
+  const o = prop.kind === 'barbell' ? BAR : prop.kind === 'dumbbell' ? DUMBBELL : { half: 75, plateAt: 0, plateR: 0 };
+  const pts = [-1, 1].map((s) => project(cam, add(prop.at, [0, 0, s * o.half])));
+  if (o.plateR) for (const s of [-1, 1]) pts.push(...disc(cam, add(prop.at, [0, 0, s * o.plateAt]), o.plateR));
+  return pts;
+}
+
+/** The body and its gear for one depth. */
 function draw(exercise: AnatomyId, cam: Camera, depth: number): Shape[] {
-  const pose = POSES[exercise](depth);
+  const pose = DEMOS[exercise].pose(depth);
   const work = WORKS[exercise];
   const shapes: Shape[] = [];
   const { right, left, torso, neck, head } = partsOf(pose);
@@ -716,42 +625,50 @@ function draw(exercise: AnatomyId, cam: Camera, depth: number): Shape[] {
     for (const piece of pieces) group(piece);
   };
 
-  if (pose.bar) {
-    // The bar runs side to side with a plate near each end, behind the body.
-    const bar = pose.bar;
-    const ends = [add(bar, [0, 0, -108]), add(bar, [0, 0, 108])].map((p) => project(cam, p));
-    shapes.push({ d: `M${f1(ends[0][0])} ${f1(ends[0][1])}L${f1(ends[1][0])} ${f1(ends[1][1])}`, stroke: INK.bar, width: 2.8, round: true });
-    const plates = [-1, 1].sort((a, b) => a * cam.c[2] - b * cam.c[2]);
-    for (const s of plates) {
-      for (const dz of [-2.5, 0, 2.5]) shapes.push({ d: closed(disc(cam, add(bar, [0, 0, s * (84 + dz)]), 22.5)), fill: INK.plate, stroke: INK.plateRim, width: 1 });
-      shapes.push({ d: closed(disc(cam, add(bar, [0, 0, s * 87]), 3)), fill: INK.plateRim });
-    }
-  }
+  // Bars and benches sit behind the body (so it stays readable); a dumbbell sits in front of the
+  // hand that holds it.
+  const bells = pose.props.filter((p): p is Extract<Prop, { kind: 'dumbbell' }> => p.kind === 'dumbbell');
+  const nearSide = (p: { at: V3 }) => dot(p.at, cam.c) > dot(pose.pelvis, cam.c);
+  // When the chest faces you, a barbell in front of the chest goes over the trunk, under the near arm.
+  const overTrunk = (p: Prop) => {
+    if (p.kind !== 'barbell' || dot(pose.front, cam.c) < 0.45) return false;
+    const line = sub(pose.neck, pose.pelvis);
+    const k = Math.min(1, Math.max(0, dot(sub(p.at, pose.pelvis), line) / dot(line, line)));
+    return dot(sub(p.at, add(pose.pelvis, mul(line, k))), pose.front) > 0;
+  };
+  for (const p of pose.props) if (p.kind !== 'dumbbell' && !overTrunk(p)) shapes.push(...gear(cam, p));
+  const farBells = () => bells.filter((b) => !nearSide(b)).forEach((b) => shapes.push(...gear(cam, b)));
 
   if (sideOn) {
     group([...arm(far), ...leg(far)], true);
+    farBells();
     if (profile) group([torso, neck, head, ...leg(near)]);
     else {
       group([torso, neck, head]);
       group(leg(near));
     }
+    for (const p of pose.props) if (overTrunk(p)) shapes.push(...gear(cam, p));
     nearArm(near);
   } else {
     group(arm(far));
+    farBells();
     group([torso, neck, head, ...leg(far), ...leg(near)]);
+    for (const p of pose.props) if (overTrunk(p)) shapes.push(...gear(cam, p));
     nearArm(near);
   }
+  bells.filter(nearSide).forEach((b) => shapes.push(...gear(cam, b)));
   return shapes;
 }
 
 /** The frame of each exercise and view, the same for the whole rep, and where its arrow goes. */
-const frames = new Map<string, { x: number; y: number; w: number; h: number; arrow: [V2, V2] }>();
+const frames = new Map<string, { x: number; y: number; w: number; h: number; arrow: [V2, V2] | null }>();
 
 function frame(exercise: AnatomyId, view: View) {
   const key = `${exercise}/${view}`;
   const hit = frames.get(key);
   if (hit) return hit;
-  const cam = camera(CAMERAS[exercise][view]);
+  const demo = DEMOS[exercise];
+  const cam = camera(demo.cameras[view]);
   let x0 = Infinity;
   let x1 = -Infinity;
   let y0 = Infinity;
@@ -764,23 +681,22 @@ function frame(exercise: AnatomyId, view: View) {
   };
   if (Math.abs(cam.c[1]) >= 0.01) floorShape(exercise, cam).forEach(take);
   for (const d of [0, 0.25, 0.5, 0.75, 1]) {
-    const pose = POSES[exercise](d);
+    const pose = demo.pose(d);
     const { right, left, torso, neck, head } = partsOf(pose);
     for (const p of [torso, neck, head, ...Object.values(right), ...Object.values(left)]) outline(p, cam).forEach(take);
-    if (pose.bar) {
-      for (const s of [-1, 1]) disc(cam, add(pose.bar, [0, 0, s * 87]), 22.5).forEach(take);
-      for (const s of [-1, 1]) take(project(cam, add(pose.bar, [0, 0, s * 108])));
-    }
+    for (const p of pose.props) gearPoints(cam, p).forEach(take);
   }
   // The arrow: beside the body, as tall as the move.
-  const mover = (d: number) => {
-    const pose = POSES[exercise](d);
-    return project(cam, exercise === 'pushup' ? pose.neck : pose.pelvis);
-  };
-  const ax = exercise === 'pushup' ? x1 + 12 : x0 - 12;
-  const arrowLine: [V2, V2] = [[ax, mover(0)[1] - 6], [ax, mover(1)[1] + 6]];
-  x0 = Math.min(x0, ax - 8);
-  x1 = Math.max(x1, ax + 8);
+  let arrowLine: [V2, V2] | null = null;
+  if (demo.mover) {
+    const mover = demo.mover;
+    const at = (d: number) => project(cam, mover(demo.pose(d)))[1];
+    const ax = demo.arrow === 'right' ? x1 + 12 : x0 - 12;
+    const sign = Math.sign(at(1) - at(0)) || 1;
+    arrowLine = [[ax, at(0) - 6 * sign], [ax, at(1) + 6 * sign]];
+    x0 = Math.min(x0, ax - 8);
+    x1 = Math.max(x1, ax + 8);
+  }
   const pad = 6;
   const out = { x: x0 - pad, y: y0 - pad, w: x1 - x0 + pad * 2, h: y1 - y0 + pad * 2, arrow: arrowLine };
   frames.set(key, out);

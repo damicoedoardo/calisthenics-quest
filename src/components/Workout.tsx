@@ -11,7 +11,7 @@ import { ensurePlan } from './useCoach';
 import { doseOf } from './CoachPanel';
 import { ROLE_COLOR, ROLE_LABEL } from '@/lib/program';
 import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
-import { hasAnatomy, type AnatomyId } from '@/sprites/anatomy/body';
+import { hasAnatomy, viewName, type AnatomyId } from '@/sprites/anatomy/body';
 import { AnatomyDemo, MuscleKey } from './AnatomyDemo';
 import { useLook } from './Look';
 import { Ember } from './Characters';
@@ -433,8 +433,8 @@ function Demo({ state, exercise, name, cue }: { state: GameState; exercise: stri
   );
 }
 
-/** The anatomy demo (a trial on a couple of exercises, sprites/anatomy/body.ts): a plain body side
-    on with the worked muscles colored in; tap for side on and from the front together, with which
+/** The anatomy demo (sprites/anatomy/, the first moves): a plain body side
+    on with the worked muscles colored in; tap for side on and a second view together, with which
     muscles it works. */
 function BodyDemo({ exercise, name, cue }: { exercise: AnatomyId; name: string; cue: string }) {
   const [big, setBig] = useState(false);
@@ -451,8 +451,8 @@ function BodyDemo({ exercise, name, cue }: { exercise: AnatomyId; name: string; 
             <div className="mt-4 flex w-full max-w-sm flex-col gap-3 [@media(orientation:landscape)_and_(max-height:600px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:600px)]:flex-row">
               {(['side', 'front'] as const).map((view) => (
                 <figure key={view} className="flex-1 overflow-hidden rounded-2xl ring-1 ring-ink-700">
-                  <AnatomyDemo exercise={exercise} view={view} label={`${name}, ${view === 'side' ? 'from the side' : 'from the front'}`} className="block max-h-[36vh] w-full" />
-                  <figcaption className="bg-ink-900 py-1 text-[11px] text-slate-400">{view === 'side' ? 'Side' : 'Front'}</figcaption>
+                  <AnatomyDemo exercise={exercise} view={view} label={`${name}, ${viewName(exercise, view).toLowerCase()} view`} className="block max-h-[36vh] w-full" />
+                  <figcaption className="bg-ink-900 py-1 text-[11px] text-slate-400">{viewName(exercise, view)}</figcaption>
                 </figure>
               ))}
             </div>

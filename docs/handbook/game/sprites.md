@@ -65,17 +65,23 @@ characters/spCard.ts  the SP card (sprite `spCard`, opts { classId, n, awake, ge
 characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look, kit }): you
                       doing each exercise of the program (hand-posed), one rep per loop of the
                       16-frame `rep` clip, or one of the exercise library's movements from moves.ts
-anatomy/body.ts       the anatomy demos, a trial on two exercises (`ANATOMY_DEMOS`: the push-up and
-                      the barbell back squat). Not pixel art: a plain, faceless body as smooth
+anatomy/body.ts       the anatomy demos (`ANATOMY_DEMOS`, twelve so far: push-up, back squat,
+                      squat, lunge, deadlift, bench press, overhead press, barbell row, pull-up,
+                      plank, curl, glute bridge). Not pixel art: a plain, faceless body as smooth
                       vector shapes, with the muscle map on it and the worked muscles colored
-                      (`WORKS`: main orange, helpers light orange). A 3D skeleton in cm with real
-                      adult lengths (`L`), a pose per exercise from rep depth 0..1 (IK knees and
-                      elbows), each part a tube with four radii along its bone (`SHAPES`: front,
-                      back, out, in), each muscle a patch by length and angle around the bone
-                      (`MUSCLES`), cameras per view (`CAMERAS`: 'side' level, 'front' turned and a
-                      little from above). `scene(exercise, view, t)` gives SVG paths and a fixed
-                      frame; components/AnatomyDemo.tsx plays it (about 30 fps, still under
-                      reduced motion). Add an exercise: a pose, its `WORKS`, `CAMERAS`, `FLOOR`.
+                      (main orange, helpers light orange). Each part a tube with four radii along
+                      its bone (`SHAPES`: front, back, out, in), each muscle a patch by length and
+                      angle around the bone (`MUSCLES`), gear drawn from the pose's props (barbell,
+                      dumbbells, bench, pull-up bar). `scene(exercise, view, t)` gives SVG paths
+                      and a fixed frame; components/AnatomyDemo.tsx plays it (about 30 fps, still
+                      under reduced motion and for holds)
+anatomy/skeleton.ts   its 3D skeleton in cm with real adult lengths (`L`), two-bone IK, and
+                      `assemble()`, which builds a pose from the pelvis, torso line, hands and feet
+anatomy/moves.ts      one entry per anatomy demo (`DEMOS`): the pose from rep depth 0..1, the
+                      muscles it works, the camera per view ('side' level; the second view turned,
+                      named by `names`, e.g. 'Back'), the floor, the point the arrow follows (none
+                      for a hold) and its side. Add an exercise: one entry here, its id from the
+                      exercise ids in src/exercises/coaching.ts
 characters/moves.ts   the exercise library's 81 movements (lifts, machines, core, cardio, stretches,
                       mobility) and the gear each can hold (`Kit`: barbell, dumbbell, cable, band...)
 engine/skeleton.ts    the jointed skeleton both use: IK elbows and knees, props (bench, bar, floor),
