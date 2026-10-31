@@ -111,6 +111,8 @@ export interface When {
   better?: number;
   /** No class picked yet. */
   noClass?: boolean;
+  /** No line of the letter written yet (it's asked after the first workout). */
+  noLetter?: boolean;
   /** The first SP's trial is done (src/lib/sp.ts). */
   spReady?: boolean;
   /** The player gave this answer (or any answer when `is` is left out). */
@@ -147,6 +149,8 @@ export type Ask =
   | { kind: 'name'; prompt: string; placeholder: string; after: Line[] }
   /** Pick an answer, or write your own when `write` is given (its text is the placeholder). */
   | { kind: 'choice'; id: AnswerId; prompt: string; choices: Choice[]; write?: string; after?: Line[] }
+  /** Write the letter to your future self (src/components/LetterForm.tsx). */
+  | { kind: 'letter'; after: Line[] }
   /** Pick a class. */
   | { kind: 'class' }
   /** The Wanderer hands over the first SP (src/lib/sp.ts): its trial starts. */

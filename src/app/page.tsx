@@ -176,12 +176,17 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   }, [ready]);
   // Anything that takes the screen (a scene, a run, a workout) closes the panel for good.
   const busy = !!(run || training || after || scene || picker);
-  // After the prologue, a phone in a browser tab installs FORMA before playing on. Never in the
-  // sandbox (unless ?gate= asks for the screen), never once installed or on a computer.
+  // Hook first, ask later: the opening plays in the browser, signed out. Right after it comes the
+  // sign-in, since the flame plans the first week through the coach api, then (signed in, so the
+  // hero is in the cloud) a phone in a browser tab installs FORMA before playing on (Edoardo,
+  // 2026-10-31). Never in the sandbox (unless ?gate= asks for the screen), never once installed or
+  // on a computer.
   const inst = useInstall();
-  const gated = inst.known && !inst.standalone && !inst.skipped && mustInstall(inst.platform) && (inst.forced || !inSandbox());
+  const askSignIn = !inSandbox() && signInDue(signedIn);
+  const gated = (!askSignIn || inst.forced) && inst.known && !inst.standalone && !inst.skipped && mustInstall(inst.platform) && (inst.forced || !inSandbox());
+  // Never over the workout, the screen after it or its scenes: the gates wait until they're done.
+  const asking = !busy && !sharing && (!ready || scenesToPlay(state, new Date()).length === 0);
   // The menus' music, on the tabs only: the opening, story, workouts and runs have their own.
-  const askSignIn = !gated && !inSandbox() && signInDue(signedIn);
   useMenuTrack(ready && state.profile.onboarded && !opening && !replaying && !busy && !gated && !askSignIn);
   useEffect(() => {
     if (busy) setDevOpen(false);
@@ -223,6 +228,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     root.current.querySelectorAll(':scope > header, :scope > main, :scope > nav').forEach((el) => el.toggleAttribute('inert', covered));
   });
   const lvl = levelInfo(totalXp(state));
+  const workouts = state.sessions.length;
   const gear = gearOf(state);
 
   // Play the next story scene whenever the player is back on the main screen.
@@ -258,7 +264,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         update((s) => {
           const next = {
             ...endedScene(s, scene.id, sceneMode, r, now),
-            profile: r.flame ? { ...s.profile, flame: r.flame } : s.profile,
+            profile: { ...s.profile, ...(r.flame ? { flame: r.flame } : {}), ...(r.letter ? { letter: r.letter } : {}) },
             answers: r.answer ? { ...s.answers, [r.answer.id]: r.answer.value } : s.answers,
             // The first skip says where skipped scenes go.
             skipNoteSeen: s.skipNoteSeen || !!r.skipped,
@@ -320,21 +326,6 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
   if (!ready) return <div className="min-h-dvh bg-ink-950" />;
 
-  // A new player's opening pauses after the first dungeon for the install step; the installed app
-  // picks it up at the class pick.
-  if (!state.profile.onboarded && !replaying && state.profile.opening === 'class' && gated && !welcome)
-    return (
-      <InstallGate
-        state={state}
-        platform={inst.platform}
-        canPrompt={inst.canPrompt}
-        installed={inst.installed}
-        onInstall={inst.install}
-        onSkip={dev ? inst.skip : undefined}
-        midway
-      />
-    );
-
   if (!state.profile.onboarded || replaying) {
     return (
       <Prologue
@@ -347,9 +338,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         askLogin={welcome}
         onResume={() => setWelcomed(true)}
         onLook={(look) => update((s) => ({ ...s, profile: { ...s.profile, look } }))}
-        onPause={({ voice }) => update((s) => ({ ...s, profile: { ...s.profile, voice, opening: 'class' } }))}
-        onFinish={({ letter, voice, kit, name, classId }) => {
-          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, opening: undefined, letter, voice, kit: kit ?? s.profile.kit, name: name ?? s.profile.name, classId: classId ?? s.profile.classId } }));
+        onFinish={({ voice, kit, name, classId }) => {
+          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, opening: undefined, voice, kit: kit ?? s.profile.kit, name: name ?? s.profile.name, classId: classId ?? s.profile.classId } }));
           setReplaying(false);
         }}
         // On iPhones each browser and the installed app keep their own saves: a hero copied in
@@ -359,7 +349,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     );
   }
 
-  if (gated)
+  if (gated && asking)
     return (
       <InstallGate
         state={state}
@@ -371,7 +361,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       />
     );
 
-  if (askSignIn && !opening) return <SignInGate />;
+  if (askSignIn && asking && !opening && !gated) return <SignInGate />;
 
   return (
     // Held sideways (the `land` screen), the tab bar becomes a rail down the left, the header shrinks
@@ -404,24 +394,22 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           <button onClick={() => setYou(true)} aria-label="You: your letter, quest log and settings" className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800 active:scale-95 land:hidden desk:hidden">
             <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
           </button>
-          <div className="min-w-0 flex-1 land:flex land:items-center land:gap-4">
-            <div className="flex items-baseline justify-between land:shrink-0 land:items-center land:gap-4">
-              <div className="flex items-center gap-2">
-                <p className="font-pixel text-sm tracking-widest text-gold-400">
-                  FORMA
-                </p>
-                {dev && <DevButton onClick={() => setDevOpen(true)} />}
-              </div>
-              <p className="text-xs text-slate-400">
-                Lv {lvl.level} · <span className="text-slate-200">{lvl.title}</span>
+          {/* One line: FORMA, and how many workouts you've done in all (your level small beside it). */}
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <p className="font-pixel text-sm tracking-widest text-gold-400">
+                FORMA
               </p>
+              {dev && <DevButton onClick={() => setDevOpen(true)} />}
             </div>
-            <div className="mt-1.5 h-2.5 overflow-hidden rounded-sm bg-ink-700 land:mt-0 land:flex-1">
-              <div className="h-full bg-gradient-to-r from-gold-500 to-gold-300 transition-all duration-700" style={{ width: `${lvl.pct * 100}%` }} />
+            <div className="flex shrink-0 items-center gap-3">
+              <span className="text-[11px] text-slate-500">Lv {lvl.level}</span>
+              <span className="flex items-center gap-1.5" role="img" aria-label={`${workouts} ${workouts === 1 ? 'workout' : 'workouts'} done`}>
+                <Sprite id="uiIcon" opts={{ name: 'tabTrain' }} size={18} label="" />
+                <span className="font-pixel text-xs text-gold-300">{workouts}</span>
+                <span className="text-[11px] text-slate-400">{workouts === 1 ? 'workout' : 'workouts'}</span>
+              </span>
             </div>
-            <p className="mt-1 text-right font-mono text-[11px] text-slate-500 land:mt-0 land:shrink-0">
-              {lvl.into} / {lvl.needed} XP
-            </p>
           </div>
         </div>
       </header>
@@ -430,12 +418,6 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         {tab === 'today' ? (
           <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook}
             onTrain={() => setTab('train')}
-            onHero={(part) => {
-              setHeroPart(part);
-              setTab('hero');
-              window.scrollTo({ top: 0 });
-              main.current?.scrollTo({ top: 0 });
-            }}
           />
         ) : tab === 'train' ? (
           <TrainTab state={state} update={update} onStart={start} />

@@ -23,9 +23,14 @@ anytime.ts            scenes that can happen in any chapter (beating last time, 
 road.ts               the Ember Road, the story walked with friends: its chapters, their runs, its scenes
 flame.ts              the flame's stages (spark to fire fairy), the default name, and heroVariant:
                       after the finale the flame has fused with you and your hero burns red
-opening.ts            the opening, before the first workout: the first dungeon's words (WAKE,
-                      FIRST_FOG, FIRST_FOG_TIPS), the Hollow over you after it (HOLLOW_MEET),
-                      and the Wanderer's offer of help before the class pick (HELP)
+opening.ts            the opening, before the first workout, kept short (about 40 lines, Edoardo
+                      2026-10-31: hook first): the cold open and FADING, the first dungeon's words
+                      (WAKE, FIRST_FOG, FIRST_FOG_TIPS), the Hollow over you after it (HOLLOW_MEET,
+                      FALLEN), the Wanderer (MEET, HELP before the class pick), then the spark's
+                      hello and the first quest (SPARK). The letter's prompts (LETTER_PROMPTS) are
+                      here too, but the letter is asked after the first workout: the scene
+                      `first-letter` in chapter 1 (`noLetter: true`, so a written letter is never
+                      asked again)
 daily/flame-lines.ts  what the flame says on Today, by kind of day, and its face
 daily/quotes.ts       words for the road, by chapter
 daily/rest.ts         rest-day truths, and what the flame says after a minute by the fire
@@ -75,7 +80,8 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
   card held up), or `'sp-transform'` (the whole screen plays your class's SP waking, then the scene
   goes on; its text is only read out by screen readers). `spn` says which of the four SPs (1 when left out).
 - **ask**: `name` (name the flame), `choice` (saved under its id; `write` adds a free-text box),
-  `class` (opens the class picker), or `sp` (the Wanderer gives an SP: the first, or `n`, see
+  `letter` (the letter to your future self, `LetterForm`, saved in `profile.letter`; its `after`
+  lines follow the seal), `class` (opens the class picker), or `sp` (the Wanderer gives an SP: the first, or `n`, see
   [fog.md](fog.md); the later ones in `sp-second`, `sp-third`, `sp-fourth`, after `SP_GIFTS` chapters). `spReady: true` in a `when` waits for the SP's trial to be done.
 
 ## When scenes play
@@ -157,7 +163,7 @@ leaves fires and notes. The data is `road.ts`; the rules are `src/lib/road.ts`.
 | Change a portrait's size or name color | its entry in `cast.ts` |
 | Add or repaint a place | `places.ts` (sky colors, kind of land, props, weather) |
 | Change chapter length | `workouts` in the chapter file (they add up to the story's length: `STORY_MONTHS` in `src/balance/training.ts` is the goal, five to six months; `pnpm balance` checks it) |
-| Change a Fog boss's words, keepsake or toughness | the chapter's `fog` (toughness: `hp` and `dmg`, set with `pnpm fog:tune` and checked by `pnpm fog:sheet`; last retuned 2026-10-31, after the bot learned to lose close shots and zones began opening when the boss before falls, see [balance.md](balance.md)) |
+| Change a Fog boss's words, keepsake or toughness | the chapter's `fog` (toughness: `hp` and `dmg`, set with `pnpm fog:tune` and checked by `pnpm fog:sheet`; last retuned 2026-10-31, when zones 2-6 got their own monsters, see [balance.md](balance.md)) |
 | Change how a Fog boss fights | its entry in `BOSSES` (`src/game/dungeon/content.ts`) and its branch in `steerBoss` (`engine.ts`) |
 | Change when the flame grows, or what it gives | `flame.ts` (its art: `src/sprites/characters/ember.ts`) |
 | Add daily lines or quotes | `daily/flame-lines.ts`, `daily/quotes.ts` (keep quote authors real) |

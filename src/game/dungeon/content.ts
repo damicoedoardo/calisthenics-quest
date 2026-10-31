@@ -95,25 +95,38 @@ export { DIALS };
 
 // ---------- monsters ----------
 
-export type MonsterKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'ram' | 'book' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade' | 'grinder' | 'unsent' | 'loner' | 'warden' | 'image' | MidKind;
+export type MonsterKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'ram' | 'book' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade' | 'grinder' | 'unsent' | 'loner' | 'warden' | 'image' | ZoneKind | MidKind;
+/** The monsters each story world (zones 2-6) brings of its own, five each (ZONE_DUNGEONS). */
+export type ZoneKind =
+  | 'lakeEcho' | 'swan' | 'frog' | 'eel' | 'lily'
+  | 'measure' | 'squire' | 'rat' | 'bat' | 'kiln'
+  | 'mole' | 'devil' | 'scarab' | 'cactus' | 'lizard'
+  | 'maybe' | 'undertow' | 'moth' | 'hound' | 'shroom'
+  | 'hawk' | 'cairn' | 'yeti' | 'frost' | 'boulder';
 /** The floor-5 mid-bosses, one per world (MIDS). */
 export type MidKind = 'warden' | 'lantern' | 'foreman' | 'sandGolem' | 'whisper' | 'gale' | 'bellows' | 'bell' | 'toll';
 export type FoeKind = MonsterKind | 'boss';
 
 /** How a monster moves: walks at you, keeps its distance, circles you at its range, stands still,
-    winds up and charges in a line, vanishes and appears somewhere near you, or rolls at you until
-    it hits a wall (ROLL). */
-export type Move = 'chase' | 'keep' | 'orbit' | 'still' | 'charge' | 'blink' | 'roll';
+    winds up and charges in a line, vanishes and appears somewhere near you, rolls at you until
+    it hits a wall (ROLL), walks where your mirror image would stand (mimic), digs under the ground
+    and comes up under you (burrow, MOLE), or circles high and swoops across the room (SWOOP). */
+export type Move = 'chase' | 'keep' | 'orbit' | 'still' | 'charge' | 'blink' | 'roll' | 'mimic' | 'burrow' | 'swoop';
 
-/** What a shot does on its way: curve after you, bounce off walls, start slow and speed up, wiggle. */
-export type ShotStyle = 'plain' | 'homing' | 'bounce' | 'ramp' | 'wiggle';
+/** What a shot does on its way: curve after you, bounce off walls, start slow and speed up, wiggle,
+    fly out and come back (back, BACK), burst into a small ring (burst, BURST), or stop, wait, then
+    dart at you (stall, STALL). */
+export type ShotStyle = 'plain' | 'homing' | 'bounce' | 'ramp' | 'wiggle' | 'back' | 'burst' | 'stall';
 
 /** One way a monster shoots, every `every` seconds. */
 export interface Pattern {
   every: number;
   /** aimed: n bullets at you; spread: n in a fan of `arc` radians; ring: n all around; spiral: n
-      around, turning a bit each time; mine: lobbed where you stand, it blows up a moment later. */
-  kind: 'aimed' | 'spread' | 'ring' | 'spiral' | 'mine';
+      around, turning a bit each time; mine: lobbed where you stand, it blows up a moment later;
+      wall: n side by side coming at you, with a gap to slip through (WALL); side: a pair thrown
+      out either side of the way it flies (a swoop's trail); rain: n drops around you, one where
+      you stand, each landing a moment later (no shots out of them). */
+  kind: 'aimed' | 'spread' | 'ring' | 'spiral' | 'mine' | 'wall' | 'side' | 'rain';
   n: number;
   arc?: number;
   speed: number;
@@ -129,8 +142,9 @@ export interface Pattern {
   above?: number;
   /** How far a spiral turns between volleys (radians). */
   turn?: number;
-  /** Fired only when a charge ends or a blink lands, not on a clock. */
-  on?: 'move';
+  /** Fired only when a charge ends or a blink lands (move), or now and then while it swoops (dash,
+      every SWOOP.drop s), not on a clock. */
+  on?: 'move' | 'dash';
 }
 
 export interface MonsterDef {
@@ -192,6 +206,113 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
   // The Loner (the Long Bridge): a traveller behind a great shield it turns toward you. A hit on the
   // shield does nothing; from the side or behind it lands (LONER).
   loner: { hp: 30, speed: 40, dmg: 12, r: 15, xp: 3, move: 'chase', shoots: [{ every: 2.6, kind: 'spread', n: 3, arc: 0.4, speed: 130, dmg: 8, first: 1.6 }], cost: 2.5 },
+  // ----- the story worlds' own monsters (zones 2-6), five each. Two in each world bring an attack
+  // nobody else has; the rest are plain fun monsters of the place, mixing the usual moves. -----
+  // Mirror Lake: the Puddle Frog leaps at you and splashes a ring where it lands; the Glass Eel
+  // weaves round you spitting wiggling shots; the Lily never moves and opens in a ring of petals.
+  frog: { hp: 24, speed: 50, dmg: 10, r: 13, xp: 2, move: 'charge', shoots: [{ every: 0, on: 'move', kind: 'ring', n: 8, speed: 95, dmg: 7 }], cost: 2 },
+  eel: { hp: 22, speed: 90, dmg: 8, r: 12, xp: 2, move: 'orbit', range: 170, shoots: [{ every: 2.4, kind: 'spread', n: 3, arc: 0.5, speed: 120, dmg: 7, style: 'wiggle', first: 1.2 }], cost: 2 },
+  lily: { hp: 30, speed: 0, dmg: 6, r: 14, xp: 2, move: 'still', shoots: [{ every: 3.2, kind: 'ring', n: 12, speed: 90, dmg: 7, style: 'ramp', first: 1.6 }], cost: 2 },
+  // The Cold Forges: Soot Rats come in packs; Cinder Bats flit round you with sparks that follow;
+  // the Kiln sits still, lobbing hot coals and puffing rings.
+  rat: { hp: 10, speed: 95, dmg: 7, r: 10, xp: 1, move: 'chase', shoots: [{ every: 3, kind: 'aimed', n: 1, speed: 130, dmg: 6, first: 1.5 }], cost: 1 },
+  bat: { hp: 14, speed: 100, dmg: 6, r: 11, xp: 1, move: 'orbit', range: 140, shoots: [{ every: 2.6, kind: 'aimed', n: 1, speed: 120, dmg: 7, style: 'homing', first: 1.2 }], cost: 1.5 },
+  kiln: {
+    hp: 44,
+    speed: 0,
+    dmg: 8,
+    r: 16,
+    xp: 3,
+    move: 'still',
+    shoots: [
+      { every: 3.4, kind: 'mine', n: 6, speed: 90, dmg: 11, r: 46, first: 1.6 },
+      { every: 4, kind: 'ring', n: 10, speed: 95, dmg: 7, first: 3 },
+    ],
+    cost: 3,
+  },
+  // The Plateau: the Scarab rolls its ball at you and sprays grit where it stops; the Cactus stands
+  // and shoots needles all round (and hurts to touch); the Sun Lizard keeps back, throwing sunbeams
+  // that start slow.
+  scarab: { hp: 30, speed: 0, dmg: 12, r: 14, xp: 2, move: 'roll', shoots: [{ every: 0, on: 'move', kind: 'spread', n: 5, arc: 1.1, speed: 105, dmg: 7 }], cost: 2.5 },
+  cactus: {
+    hp: 36,
+    speed: 0,
+    dmg: 14,
+    r: 15,
+    xp: 2,
+    move: 'still',
+    shoots: [
+      { every: 2.8, kind: 'ring', n: 14, speed: 100, dmg: 7, first: 1.6 },
+      { every: 2, kind: 'aimed', n: 2, speed: 130, dmg: 7, first: 1 },
+    ],
+    cost: 2.5,
+  },
+  lizard: { hp: 26, speed: 55, dmg: 8, r: 13, xp: 2, move: 'keep', range: 230, shoots: [{ every: 3, kind: 'spread', n: 5, arc: 0.9, speed: 120, dmg: 7, style: 'ramp', first: 1.5 }], cost: 2 },
+  // The Fog: Lamp Moths circle with shots that follow; the Pale Hound vanishes and lands by you
+  // with a fan of bites; the Fog Shroom puffs clouds of spores where you stand.
+  moth: { hp: 16, speed: 85, dmg: 6, r: 12, xp: 2, move: 'orbit', range: 160, shoots: [{ every: 2.8, kind: 'aimed', n: 1, speed: 110, dmg: 7, style: 'homing', first: 1.4 }], cost: 1.5 },
+  hound: { hp: 28, speed: 70, dmg: 10, r: 13, xp: 3, move: 'blink', range: 200, shoots: [{ every: 0, on: 'move', kind: 'spread', n: 3, arc: 0.7, speed: 115, dmg: 8 }], cost: 2.5 },
+  shroom: { hp: 34, speed: 0, dmg: 6, r: 14, xp: 2, move: 'still', shoots: [{ every: 3, kind: 'mine', n: 6, speed: 85, dmg: 10, r: 44, first: 1.4 }], cost: 2 },
+  // The Summit: the Yeti Cub stomps rings and throws snowballs; Frost Sprites throw icicles that
+  // fly out and come back; the Boulder rolls down at you and bursts into a ring of stones.
+  yeti: {
+    hp: 46,
+    speed: 44,
+    dmg: 14,
+    r: 16,
+    xp: 3,
+    move: 'chase',
+    shoots: [
+      { every: 3.4, kind: 'ring', n: 12, speed: 90, dmg: 8, style: 'ramp', first: 2 },
+      { every: 2.2, kind: 'aimed', n: 1, speed: 140, dmg: 10, r: 8, first: 1.2 },
+    ],
+    cost: 3,
+  },
+  frost: { hp: 18, speed: 80, dmg: 6, r: 12, xp: 2, move: 'orbit', range: 180, shoots: [{ every: 2.8, kind: 'spread', n: 4, arc: 0.9, speed: 145, dmg: 7, style: 'back', first: 1.4 }], cost: 2 },
+  boulder: { hp: 40, speed: 0, dmg: 14, r: 16, xp: 3, move: 'roll', shoots: [{ every: 0, on: 'move', kind: 'ring', n: 10, speed: 100, dmg: 8 }], cost: 3 },
+  // The ones with an attack nobody else has:
+  // The Lake Echo (Mirror Lake): you as you were, in lake glass. It walks where your mirror image
+  // would stand, across the middle of the room, and throws shards at you.
+  lakeEcho: { hp: 28, speed: 70, dmg: 9, r: 13, xp: 2, move: 'mimic', shoots: [{ every: 2.6, kind: 'aimed', n: 3, speed: 120, dmg: 7, first: 1.4 }], cost: 2 },
+  // The Glass Swan (Mirror Lake): glides round you and throws a fan of glass feathers that fly out,
+  // stop, and come back to it (BACK). The past keeps coming back.
+  swan: { hp: 24, speed: 60, dmg: 7, r: 14, xp: 2, move: 'orbit', range: 190, shoots: [{ every: 3, kind: 'spread', n: 3, arc: 0.7, speed: 150, dmg: 7, style: 'back', first: 1.6 }], cost: 2 },
+  // The Measure (the Cold Forges): a smith's rule that stands back and fires a wall of nails, all
+  // level, with one gap to slip through (WALL). Nothing gets past unless it's exact.
+  measure: { hp: 30, speed: 40, dmg: 8, r: 14, xp: 3, move: 'keep', range: 240, shoots: [{ every: 3.6, kind: 'wall', n: 11, speed: 85, dmg: 8, first: 2 }], cost: 2.5 },
+  // The Scrap Squire (the Cold Forges): a tin soldier of offcuts. Brought down, it falls into a pile
+  // and puts itself back together a moment later, unless someone stands on the pile (SQUIRE).
+  squire: { hp: 22, speed: 52, dmg: 10, r: 13, xp: 2, move: 'chase', shoots: [{ every: 2.6, kind: 'spread', n: 3, arc: 0.5, speed: 125, dmg: 7, first: 1.3 }], cost: 2 },
+  // The Dune Mole (the Plateau): digs under the sand, where nothing can hit it, and comes up under
+  // you (a mound shows where) with a ring of sand (MOLE).
+  mole: {
+    hp: 30,
+    speed: 40,
+    dmg: 11,
+    r: 14,
+    xp: 2,
+    move: 'burrow',
+    shoots: [
+      { every: 2.2, kind: 'aimed', n: 2, speed: 125, dmg: 7, first: 1 },
+      { every: 0, on: 'move', kind: 'ring', n: 8, speed: 100, dmg: 8 },
+    ],
+    cost: 2.5,
+  },
+  // The Dust Devil (the Plateau): a whirl of grit circling you, throwing balls of sand that burst
+  // into a small ring on the way (BURST).
+  devil: { hp: 22, speed: 75, dmg: 7, r: 13, xp: 2, move: 'orbit', range: 180, shoots: [{ every: 2.8, kind: 'aimed', n: 1, speed: 110, dmg: 9, r: 8, style: 'burst', first: 1.5 }], cost: 2 },
+  // The Maybe (the Fog): a pale little doubt. Its shots stop halfway and hang there, then make up
+  // their mind and come straight at you, fast (STALL).
+  maybe: { hp: 26, speed: 50, dmg: 8, r: 13, xp: 2, move: 'keep', range: 220, shoots: [{ every: 3.2, kind: 'spread', n: 5, arc: 1, speed: 130, dmg: 8, style: 'stall', first: 1.5 }], cost: 2.5 },
+  // The Undertow (the Fog): a sinking pool with eyes that drifts after you and slowly pulls you in
+  // (UNDERTOW); walk away from it, or bring it down. Rings that start slow.
+  undertow: { hp: 40, speed: 22, dmg: 12, r: 16, xp: 3, move: 'chase', shoots: [{ every: 3.4, kind: 'ring', n: 8, speed: 85, dmg: 8, style: 'ramp', first: 2 }], cost: 3 },
+  // The Ridge Hawk (the Summit): circles high, then swoops across the room through where you
+  // stand, dropping feathers out either side as it goes (SWOOP).
+  hawk: { hp: 26, speed: 85, dmg: 12, r: 14, xp: 3, move: 'swoop', range: 230, shoots: [{ every: 0, on: 'dash', kind: 'side', n: 2, speed: 70, dmg: 7 }], cost: 2.5 },
+  // The Cairn (the Summit): a stack of stones that never moves. It shakes icicles off the ledge
+  // above: drops round you and one where you stand (rain; a shadow shows where each lands).
+  cairn: { hp: 40, speed: 0, dmg: 8, r: 15, xp: 3, move: 'still', shoots: [{ every: 3.4, kind: 'rain', n: 4, speed: 0, dmg: 11, r: 30, first: 2 }], cost: 2.5 },
   // The Warden of the Ashes, halfway down: a great golem that guards the stairs. First it turns a
   // slow cross of shots (walk around it with the arms); hurt past half, it stops turning and fires
   // aimed bursts at you, with a ring now and then. It never joins an ordinary room.
@@ -434,80 +555,81 @@ export interface ZoneDungeon {
 export const ZONE_DUNGEONS: ZoneDungeon[] = [
   // The Ashlands: the first dungeon, everything met one floor at a time.
   { unlock: UNLOCK, ground: { water: 1, spikes: 1, barrels: 1, pillars: 1 } },
-  // Mirror Lake: mirrors early and seekers soon after, shades (shadows of you) sooner; a pool in most rooms.
+  // Each story world after the first brings five monsters of its own (two of them with an attack
+  // nobody else has), and keeps only one or two of the Ashlands'; the Summit, at the end of the
+  // road, sees a few from earlier worlds again.
+  // Mirror Lake: Puddle Frogs leaping, Lake Echoes walking as your mirror image, Glass Eels, Glass
+  // Swans whose feathers come back, Lilies on the water; wisps, and a Mirror deeper down. A pool in
+  // most rooms.
   {
     unlock: [
-      ['slime', 0, 2.5],
-      ['wisp', 0, 2.5],
-      ['mirror', 0, 1.1],
-      ['seeker', 2, 1.6],
-      ['ram', 2, 1.6],
-      ['shade', 3, 1.8],
-      ['book', 4, 1.4],
-      ['splitter', 5, 1.6],
-      ['smoke', 6, 1.6],
+      ['frog', 0, 2.2],
+      ['lakeEcho', 0, 1.8],
+      ['eel', 0, 1.6],
+      ['wisp', 0, 1.2],
+      ['swan', 1, 1.6],
+      ['lily', 2, 1.4],
+      ['mirror', 4, 1.2],
     ],
     ground: { water: 1.7, spikes: 0.6, barrels: 0.5, pillars: 1 },
   },
-  // The Village of Almosts, its forges gone cold: rams and smoke from the chimneys, the Book of
-  // Days in every doorway, barrels everywhere, houses (pillars) to walk around.
+  // The Village of Almosts, its forges gone cold: packs of Soot Rats, Scrap Squires that put
+  // themselves back together, Cinder Bats, Measures firing walls of nails, Kilns lobbing coals;
+  // lancer husks and a snooze clock now and then. Barrels everywhere, houses (pillars) to walk round.
   {
     unlock: [
-      ['slime', 0, 2],
-      ['ram', 0, 2.2],
-      ['wisp', 0, 1.5],
-      ['smoke', 1, 1.8],
-      ['book', 2, 1.6],
-      ['mirror', 3, 1.4],
-      ['splitter', 4, 1.6],
-      ['seeker', 5, 1.6],
-      ['shade', 6, 1.6],
+      ['rat', 0, 2.5],
+      ['squire', 0, 2],
+      ['bat', 1, 1.6],
+      ['measure', 1, 1.6],
+      ['kiln', 2, 1.4],
+      ['ram', 3, 1.4],
+      ['book', 5, 1.2],
     ],
     ground: { water: 0.5, spikes: 1, barrels: 2.5, pillars: 1.8 },
   },
-  // The Plateau: open flat ground with little to hide behind; stone things, rams and seekers.
+  // The Plateau: open flat ground with little to hide behind. Scarabs rolling, Dust Devils, Dune
+  // Moles under the sand, Sun Lizards, Cacti; a seeker and an excuse jar deeper down.
   {
     unlock: [
-      ['slime', 0, 2],
-      ['ram', 0, 2],
-      ['seeker', 0, 1.4],
-      ['splitter', 1, 1.8],
-      ['mirror', 2, 1.5],
-      ['wisp', 3, 1.5],
-      ['smoke', 4, 1.6],
-      ['book', 5, 1.5],
-      ['shade', 6, 1.7],
+      ['scarab', 0, 1.8],
+      ['devil', 0, 1.8],
+      ['mole', 0, 1.6],
+      ['lizard', 1, 1.6],
+      ['cactus', 2, 1.4],
+      ['seeker', 4, 1.2],
+      ['splitter', 5, 1.2],
     ],
     ground: { water: 0.3, spikes: 1.3, barrels: 0.6, pillars: 0.3 },
   },
-  // The Fog: you see only a little way; wisps, shades and smoke live in it.
+  // The Fog: you see only a little way. Lamp Moths, Maybes whose shots hesitate, Pale Hounds,
+  // Undertows that pull you in, Fog Shrooms; wisps, and shades deeper down.
   {
     unlock: [
-      ['wisp', 0, 3],
-      ['slime', 0, 1.5],
-      ['shade', 0, 1.2],
-      ['smoke', 1, 1.8],
-      ['seeker', 2, 1.6],
-      ['splitter', 3, 1.6],
-      ['ram', 4, 1.6],
-      ['mirror', 5, 1.4],
-      ['book', 6, 1.4],
+      ['moth', 0, 2.2],
+      ['maybe', 0, 1.8],
+      ['wisp', 0, 1.2],
+      ['hound', 1, 1.6],
+      ['undertow', 1, 1.4],
+      ['shroom', 2, 1.4],
+      ['shade', 4, 1.2],
     ],
     ground: { water: 1, spikes: 1, barrels: 0.8, pillars: 1.2 },
     sight: 190,
   },
-  // The Summit: everything the road has met, from the start; ledges of rock and ice water.
+  // The Summit: Frost Sprites, Ridge Hawks swooping, Yeti Cubs, Cairns shaking icicles down,
+  // Boulders rolling; and on the way up, a few from the worlds behind you. Ledges of rock and ice water.
   {
     unlock: [
-      ['slime', 0, 1.5],
-      ['wisp', 0, 2],
-      ['ram', 0, 1.6],
-      ['mirror', 1, 1.5],
-      ['seeker', 1, 1.6],
-      ['smoke', 2, 1.6],
-      ['book', 3, 1.5],
-      ['splitter', 3, 1.6],
-      ['shade', 4, 1.7],
+      ['frost', 0, 2],
+      ['hawk', 0, 1.8],
+      ['yeti', 1, 1.6],
+      ['cairn', 1, 1.6],
+      ['boulder', 2, 1.4],
+      ['frog', 3, 1.2],
+      ['scarab', 4, 1.2],
+      ['hound', 5, 1.2],
+      ['squire', 6, 1.2],
     ],
     ground: { water: 1.2, spikes: 1.3, barrels: 1, pillars: 1.3 },
   },
@@ -581,6 +703,31 @@ export const MEET: Partial<Record<MonsterKind, string>> = {
   seeker: 'Seekers fire shots that curve after you.',
   splitter: 'Excuse Jars bounce shards off the walls, and break into imps when hit hard enough.',
   shade: 'Shades vanish and land next to you. Watch for the mark.',
+  lakeEcho: 'Lake Echoes walk where your mirror image would. Cross the middle and they meet you.',
+  swan: 'Glass Swans throw feathers that fly out and come back. Watch both ways.',
+  measure: 'Measures fire a wall of nails. Find the gap.',
+  squire: 'Scrap Squires put themselves back together. Stand on the pile to stop them.',
+  mole: 'Dune Moles dig under you. Step off the mound before they come up.',
+  devil: 'Dust Devils throw sand that bursts into a ring. Keep your distance.',
+  maybe: 'Maybes fire shots that stop, wait, then come at you fast.',
+  undertow: 'Undertows pull you in. Walk away, or bring them down.',
+  hawk: 'Ridge Hawks swoop across the room. Step off their line.',
+  cairn: 'Cairns shake icicles down around you. Watch the shadows.',
+  frog: 'Puddle Frogs leap at you and splash where they land.',
+  eel: 'Glass Eels weave round you. Their shots wiggle.',
+  lily: 'Lilies never move. They open in a ring of petals.',
+  rat: 'Soot Rats come in packs. Keep moving.',
+  bat: 'Cinder Bats flit round you. Their sparks follow.',
+  kiln: 'Kilns lob hot coals where you stand.',
+  scarab: 'Scarabs roll their ball at you. Step off its line.',
+  cactus: 'Cacti shoot needles all round. Don\'t touch.',
+  lizard: 'Sun Lizards throw sunbeams that start slow.',
+  moth: 'Lamp Moths circle you. Their shots follow.',
+  hound: 'Pale Hounds vanish and land beside you.',
+  shroom: 'Fog Shrooms puff spores where you stand.',
+  yeti: 'Yeti Cubs stomp and throw snowballs.',
+  frost: 'Frost Sprites throw icicles that come back.',
+  boulder: 'Boulders roll down at you. Step aside.',
 };
 
 /**
@@ -772,6 +919,27 @@ export const CHARGE = { every: 3.6, wind: 0.75, dash: 0.6, speed: 330 };
 export const BLINK = { every: 3.8, mark: 0.8, near: 110 };
 /** A smoke bomb's flight and fuse (s). */
 export const MINE = { flight: 0.55, fuse: 1.1 };
+/** The story worlds' monsters (zones 2-6). A Glass Swan's feathers fly out for `out` s, slowing,
+    and come back as long again. */
+export const BACK = { out: 0.9 };
+/** A Dust Devil's sand ball bursts after `at` s into `n` shots this fast (px/s). */
+export const BURST = { at: 0.85, n: 6, speed: 95 };
+/** A Maybe's shots fly `go` s, hang still for `wait` s, then dart at you `fast` times as fast. */
+export const STALL = { go: 0.45, wait: 0.7, fast: 1.25 };
+/** A Measure's wall: shots `space` px apart, and the gap (two shots left out) to slip through. */
+export const WALL = { space: 26 };
+/** A Scrap Squire's pile: it stands up again after `rebuild` s with `back` of its HP, unless a hero
+    stands within `stamp` px of it; then it's gone for good. Once rebuilt it falls for good. */
+export const SQUIRE = { rebuild: 2.4, stamp: 40, back: 0.6 };
+/** A Dune Mole: `up` s above ground, then `under` s digging after you (px/s `speed`), then `mark` s
+    with the mound still, where it comes up. */
+export const MOLE = { up: 3.2, under: 1.6, speed: 150, mark: 0.6 };
+/** An Undertow's pull: within `reach` px it draws you toward it at up to `pull` px/s, fading to
+    nothing at `close` (so it never drags you onto it); two pull no more than `most` times one. */
+export const UNDERTOW = { reach: 220, pull: 40, close: 60, most: 1.5 };
+/** A Ridge Hawk's swoop: how often (s), how long it hangs and aims first, how fast it dives, how
+    long at most, and how often it drops its feathers on the way (s). */
+export const SWOOP = { every: 3.8, wind: 0.7, speed: 300, most: 1.6, drop: 0.14 };
 /** Homing shots turn this fast (rad/s), for this long (s). */
 export const HOMING = { turn: 1.9, for: 1.3 };
 /** Slow-then-fast shots start at this share of their speed and reach it over `over` s. */

@@ -3,7 +3,7 @@ type: reference
 title: Game state (the save)
 description: GameState in src/lib/game.ts is the one save; useGameState persists it to localStorage, migrate() upgrades old saves, Backup/Restore exports JSON, ?sandbox uses a separate key.
 tags: [architecture, state, storage]
-timestamp: 2026-10-29
+timestamp: 2026-10-31
 ---
 
 # Game state (the save)
@@ -14,7 +14,7 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 | Field | What |
 |---|---|
 | `version` | 3. Older saves go through `migrate()`; version 3 dropped the calisthenics skill tree and max tests (a v2 save keeps its sessions, story, Fog and Book of Days) |
-| `profile` | `onboarded`, the `letter` (why, want, forWho, remind), the Hollow's `voice`, `classId`, `look`, the flame's name, `kit` (gym or home), the hero's `name` (asked after the look; what friends see), `opening` (`'class'` while a new player's opening waits for the install step; cleared when it ends) |
+| `profile` | `onboarded`, the `letter` (why, want, forWho, remind), the Hollow's `voice`, `classId`, `look`, the flame's name, `kit` (gym or home), the hero's `name` (asked after the look; what friends see), `opening` (old saves only: `'class'` while a new player's opening waited for the install step, which now comes after the first workout; cleared when it ends), the `letter` is written after the first workout (scene `first-letter`) |
 | `reps` | Current per-set target by exercise id |
 | `sessions` | Every finished workout: entries (with name and family), sets with reps in reserve (optional kg, km), XP breakdown, raises, `heavier`, `better`; from a coach workout also `mode`, `plannedBy`, `skipped`, `changed`, and `felt` and `comment` |
 | `build` | Stat points spent on the champion, per stat (earned points are counted from `sessions`) |
