@@ -62,6 +62,18 @@ export const ANATOMY_DEMOS = [
   'bench-dip',
   'dead-hang',
   'carry',
+  'standing-quad-stretch',
+  'wall-calf-stretch',
+  'seated-hamstring-stretch',
+  'forward-fold',
+  'childs-pose',
+  'knees-to-chest',
+  'hip-flexor-stretch',
+  'triceps-stretch',
+  'cross-body-stretch',
+  'chest-opener',
+  'side-reach',
+  'neck-side-stretch',
 ] as const;
 export type AnatomyId = (typeof ANATOMY_DEMOS)[number];
 export const hasAnatomy = (id: string): id is AnatomyId => (ANATOMY_DEMOS as readonly string[]).includes(id);
@@ -1862,6 +1874,327 @@ export const DEMOS: Record<AnatomyId, Demo> = {
     arrow: 'right',
   },
 
+  /** Standing quad stretch: tall on one leg, the other heel pulled to the glute, knees together,
+      hips pushed a little forward. A hold. */
+  'standing-quad-stretch': {
+    pose: () => {
+      const pelvis: V3 = [-1, 94, -2];
+      const t = lean(1);
+      const knee = add(add(pelvis, [0, 0, 7]), mul(unit([-0.28, -1, 0]), L.thigh));
+      const ankle = add(knee, mul(unit([-0.5, 1, 0]), L.shin - 2));
+      return assemble({
+        pelvis,
+        ...t,
+        limb: (s) => {
+          const sh = shoulderOf(pelvis, t.up, s);
+          if (s > 0) {
+            const wrist = add(ankle, [-6, 1, 4]);
+            return { wrist, tip: add(wrist, [3, -4, -5]), elbowPole: [-1, -0.3, 0.6], knee, ...footFrom(ankle, [-0.35, 0.95, 0], [-0.95, -0.35, 0]) };
+          }
+          const wrist = add(sh, [10, -50, -12]);
+          return { wrist, tip: handOut(sh, wrist, 16), elbowPole: [-1, 0, 0], ...flatFoot(0, 8, s), kneePole: [1, 0, 0] };
+        },
+      });
+    },
+    works: { main: ['quads'], help: [] },
+    cameras: { side: SIDE, front: unit([1, 0.15, 0.45]) },
+    floor: { x: 0, r: 46 },
+    arrow: 'right',
+  },
+
+  /** Wall calf stretch: hands on a wall, one foot forward, the back leg straight with its heel
+      pressed down; lean in until the calf pulls. A hold. */
+  'wall-calf-stretch': {
+    pose: () => {
+      const pelvis: V3 = [-6, 88, 0];
+      const t = lean(24);
+      return assemble({
+        pelvis,
+        ...t,
+        headUp: lean(14).up,
+        limb: (s) => ({
+          wrist: [48, 130, s * 22],
+          tip: [54, 145, s * 22],
+          elbowPole: [-0.4, -1, s],
+          ...(s > 0 ? flatFoot(-42, 10, s, 2) : flatFoot(20, 10, s)),
+          kneePole: [1, 0, s * 0.2],
+        }),
+        props: [{ kind: 'box', at: [62, 0, 0], size: [14, 215, 110] }],
+      });
+    },
+    works: { main: ['calves'], help: ['hamstrings'] },
+    cameras: { side: SIDE, front: unit([-0.5, 0.25, 0.85]) },
+    floor: { x: 5, r: 70 },
+    arrow: 'right',
+  },
+
+  /** Seated hamstring stretch: sitting tall with the legs straight out, toes up; fold forward
+      from the hips and reach for the feet. A hold. */
+  'seated-hamstring-stretch': {
+    pose: () => {
+      const pelvis: V3 = [-32, 12, 0];
+      const t = lean(58);
+      return assemble({
+        pelvis,
+        ...t,
+        headUp: lean(68).up,
+        limb: (s) => {
+          const sh = shoulderOf(pelvis, t.up, s);
+          const wrist = add(sh, mul(unit(sub([54, 16, s * 11], sh)), 54));
+          const ankle: V3 = [55, 8, s * 9];
+          return { wrist, tip: handOut(sh, wrist, 16), elbowPole: [0, 1, s * 0.3], ...footFrom(ankle, [0.2, 1, 0], [-1, 0.2, 0]), kneePole: [0, 1, 0] };
+        },
+      });
+    },
+    works: { main: ['hamstrings'], help: ['calves', 'lowerBack'] },
+    cameras: { side: SIDE, front: unit([0.3, 0.65, 0.7]) },
+    names: { front: 'Above' },
+    floor: { x: 5, r: 75 },
+    arrow: 'right',
+  },
+
+  /** Standing forward fold: feet together, knees soft, hinge at the hips and let the head and
+      arms hang toward the toes. A hold. */
+  'forward-fold': {
+    pose: () => {
+      const pelvis: V3 = [-14, 95, 0];
+      const t = lean(148);
+      return assemble({
+        pelvis,
+        ...t,
+        headUp: lean(165).up,
+        limb: (s) => {
+          const sh = shoulderOf(pelvis, t.up, s);
+          const wrist = add(sh, mul(unit(sub([16, 10, s * 12], sh)), 52));
+          return { wrist, tip: handOut(sh, wrist, 16), elbowPole: [-1, 0, s * 0.3], ...flatFoot(0, 9, s), kneePole: [1, 0, 0] };
+        },
+      });
+    },
+    works: { main: ['hamstrings'], help: ['calves', 'lowerBack'] },
+    cameras: { side: SIDE, front: unit([1, 0.2, 0.5]) },
+    floor: { x: 0, r: 50 },
+    arrow: 'right',
+  },
+
+  /** Child's pose: knees on the floor, sitting back on the heels, arms reaching long in front,
+      forehead down; breathe into the back. A hold. */
+  'childs-pose': {
+    pose: () => {
+      const knee: V3 = [18, 6, 0];
+      const pelvis = add(knee, mul(unit([-0.93, 0.37, 0]), L.thigh));
+      const up = unit([1, -0.16, 0]);
+      return assemble({
+        pelvis,
+        up,
+        front: [-0.16, -1, 0],
+        headUp: unit([1, -0.45, 0]),
+        limb: (s) => {
+          const wrist: V3 = [74, 4, s * 18];
+          return {
+            wrist,
+            tip: add(wrist, [16, -1, 0]),
+            elbowPole: [0, 1, s * 0.4],
+            knee: add(knee, [0, 0, s * 12]),
+            ...footFrom([pelvis[0] - 4, 7, s * 9], [-1, -0.25, 0], [0.25, -1, 0]),
+          };
+        },
+      });
+    },
+    works: { main: ['lowerBack', 'lats'], help: ['glutes'] },
+    cameras: { side: SIDE, front: unit([-0.5, 0.6, 0.6]) },
+    names: { front: 'Back' },
+    floor: { x: 10, r: 75 },
+    arrow: 'right',
+  },
+
+  /** Knees to chest: on the back, hug both knees in to the chest, the lower back long on the
+      floor. A hold. */
+  'knees-to-chest': {
+    pose: () => {
+      const pelvis: V3 = [-10, 12, 0];
+      const a = rad(1);
+      const up: V3 = [Math.cos(a), Math.sin(a), 0];
+      const thigh: V3 = [Math.cos(rad(58)), Math.sin(rad(58)), 0];
+      const shin = unit([-0.75, -0.62, 0]);
+      return assemble({
+        pelvis,
+        up,
+        front: [-Math.sin(a), Math.cos(a), 0],
+        headUp: unit([1, 0.12, 0]),
+        limb: (s) => {
+          const knee = add(add(pelvis, [0, 0, s * 9]), mul(thigh, L.thigh));
+          const ankle = add(knee, mul(shin, L.shin));
+          const wrist = add(add(knee, mul(shin, 12)), [0, 0, s * 5]);
+          return { wrist, tip: add(wrist, [-4, -8, -s * 3]), elbowPole: [0, 0.3, s], knee, ...footFrom(ankle, [shin[1], -shin[0], 0], mul(shin, -1)) };
+        },
+      });
+    },
+    works: { main: ['lowerBack', 'glutes'], help: ['hamstrings'] },
+    cameras: { side: SIDE, front: unit([0.35, 0.45, 0.8]) },
+    floor: { x: 0, r: 70 },
+    arrow: 'right',
+  },
+
+  /** Kneeling hip flexor stretch: one knee down, the other foot forward; squeeze the glute and
+      shift the hips forward, chest tall. A hold. */
+  'hip-flexor-stretch': {
+    pose: () => {
+      const pelvis: V3 = [-12, 48, 0];
+      const t = lean(-4);
+      return assemble({
+        pelvis,
+        ...t,
+        limb: (s) => {
+          const wrist = add(pelvis, [3, 9, s * 19]);
+          const arms = { wrist, tip: add(wrist, [7, -9, -s * 2]), elbowPole: [-0.3, 0, s] as V3 };
+          if (s < 0) return { ...arms, ...flatFoot(30, 11, s), kneePole: [1, 0, 0] };
+          return { ...arms, knee: [-28, 6, 10], ...tucked([-70, 12, 0], s) };
+        },
+      });
+    },
+    works: { main: ['quads'], help: ['abs'] },
+    cameras: { side: SIDE, front: unit([1, 0.2, 0.55]) },
+    floor: { x: -10, r: 65 },
+    arrow: 'right',
+  },
+
+  /** Overhead triceps stretch: one hand reaching down the back, the elbow by the head; the other
+      hand gently pulls the elbow back. A hold. */
+  'triceps-stretch': {
+    pose: () => {
+      const pelvis: V3 = [-2, 94, 0];
+      const t = lean(1);
+      const elbow = add(shoulderOf(pelvis, t.up, 1), mul(unit([-0.05, 1, -0.28]), L.upper));
+      const wrist = add(elbow, mul(unit([-0.35, -1, -0.3]), L.fore));
+      return assemble({
+        pelvis,
+        ...t,
+        headUp: lean(6).up,
+        limb: (s) => {
+          if (s > 0) return { elbow, wrist, tip: add(wrist, mul(unit([-0.35, -1, -0.3]), 15)), ...flatFoot(0, 12, s), kneePole: [1, 0, 0] };
+          const w = add(elbow, [4, 3, -6]);
+          return { wrist: w, tip: add(w, [0, 4, 12]), elbowPole: [0.6, 0.2, -1], ...flatFoot(0, 12, s), kneePole: [1, 0, 0] };
+        },
+      });
+    },
+    works: { main: ['triceps'], help: ['lats'] },
+    cameras: { side: unit([-0.3, 0.1, 0.95]), front: unit([-0.9, 0.2, 0.35]) },
+    names: { front: 'Back' },
+    floor: { x: 0, r: 46 },
+    arrow: 'right',
+  },
+
+  /** Cross-body shoulder stretch: one arm straight across the chest, the other forearm pulling it
+      in just above the elbow. A hold. */
+  'cross-body-stretch': {
+    pose: () => {
+      const pelvis: V3 = [-2, 94, 0];
+      const t = lean(1);
+      const sh = shoulderOf(pelvis, t.up, 1);
+      const wrist = add(sh, mul(unit([0.42, -0.05, -1]), 54));
+      return assemble({
+        pelvis,
+        ...t,
+        limb: (s) => {
+          if (s > 0) return { wrist, tip: handOut(sh, wrist, 16), elbowPole: [-1, 0, 0], ...flatFoot(0, 12, s), kneePole: [1, 0, 0] };
+          const w = add(mix(sh, wrist, 0.45), [6, 2, 0]);
+          return { wrist: w, tip: add(w, [-2, 3, 14]), elbowPole: [0.3, -1, -0.4], ...flatFoot(0, 12, s), kneePole: [1, 0, 0] };
+        },
+      });
+    },
+    works: { main: ['rearDelt'], help: ['sideDelt', 'traps'] },
+    cameras: { side: unit([1, 0.15, 0.3]), front: unit([-0.7, 0.2, 0.7]) },
+    names: { side: 'Front', front: 'Back' },
+    floor: { x: 0, r: 46 },
+    arrow: 'right',
+  },
+
+  /** Chest opener: hands clasped behind the back, arms straight, chest lifted and the shoulder
+      blades squeezed. A hold. */
+  'chest-opener': {
+    pose: () => {
+      const pelvis: V3 = [-2, 94, 0];
+      const t = lean(-4);
+      return assemble({
+        pelvis,
+        ...t,
+        headUp: lean(-8).up,
+        limb: (s) => {
+          const wrist: V3 = [-36, 104, s * 5];
+          return { wrist, tip: add(wrist, [-6, -14, -s * 2]), elbowPole: [0, -1, s], ...flatFoot(0, 12, s), kneePole: [1, 0, 0] };
+        },
+      });
+    },
+    works: { main: ['chest', 'frontDelt'], help: ['biceps'] },
+    cameras: { side: SIDE, front: unit([0.85, 0.2, 0.5]) },
+    floor: { x: 0, r: 46 },
+    arrow: 'right',
+  },
+
+  /** Standing side reach: one arm up and over the head, lean the other way in a long arc, hips
+      still. A hold. */
+  'side-reach': {
+    pose: () => {
+      const pelvis: V3 = [-2, 94, 3];
+      const a = rad(-20);
+      const up: V3 = [0, Math.cos(a), Math.sin(a)];
+      const front: V3 = [1, 0, 0];
+      const side = unit(cross(front, up));
+      return assemble({
+        pelvis,
+        up,
+        front,
+        side,
+        headUp: unit([0, Math.cos(a * 1.3), Math.sin(a * 1.3)]),
+        limb: (s) => {
+          const sh = add(add(pelvis, mul(up, SHOULDER_UP)), mul(side, s * SHOULDER_OUT));
+          if (s > 0) {
+            const wrist = add(sh, mul(unit(add(up, mul(side, -0.75))), 54));
+            return { wrist, tip: handOut(sh, wrist, 16), elbowPole: [0, 0.3, 1], ...flatFoot(0, 12, s), kneePole: [1, 0, 0] };
+          }
+          const wrist = add(pelvis, [3, 9, -19]);
+          return { wrist, tip: add(wrist, [7, -9, 2]), elbowPole: [-0.3, 0, -1], ...flatFoot(0, 12, s), kneePole: [1, 0, 0] };
+        },
+      });
+    },
+    works: { main: ['obliques', 'lats'], help: [] },
+    cameras: { side: unit([1, 0.1, 0.25]), front: unit([-1, 0.15, 0.3]) },
+    names: { side: 'Front', front: 'Back' },
+    floor: { x: 0, r: 46 },
+    arrow: 'right',
+  },
+
+  /** Side neck stretch: sitting or standing tall, tip one ear toward its shoulder, the hand on
+      that side resting on the head; the other shoulder stays down. A hold. */
+  'neck-side-stretch': {
+    pose: () => {
+      const pelvis: V3 = [-2, 94, 0];
+      const t = lean(1);
+      const hu = unit([0, 1, -0.95]);
+      const neck = add(pelvis, mul(t.up, L.torso));
+      const top = add(neck, mul(hu, L.neck + L.head));
+      return assemble({
+        pelvis,
+        ...t,
+        headUp: hu,
+        limb: (s) => {
+          const sh = shoulderOf(pelvis, t.up, s);
+          if (s < 0) {
+            const wrist = add(top, [0, -2, 9]);
+            return { wrist, tip: add(wrist, [0, -6, 7]), elbowPole: [0, 0.5, -1], ...flatFoot(0, 12, s), kneePole: [1, 0, 0] };
+          }
+          const wrist = add(sh, [3, -54, 4]);
+          return { wrist, tip: handOut(sh, wrist, 16), elbowPole: [-1, 0, 0], ...flatFoot(0, 12, s), kneePole: [1, 0, 0] };
+        },
+      });
+    },
+    works: { main: ['traps'], help: [] },
+    cameras: { side: unit([1, 0.1, 0.25]), front: unit([-1, 0.15, 0.3]) },
+    names: { side: 'Front', front: 'Back' },
+    floor: { x: 0, r: 46 },
+    arrow: 'right',
+  },
+
 };
 
 /** Other movements that look the same as a demo. */
@@ -1871,6 +2204,24 @@ const ALIAS: Record<string, AnatomyId> = {
   negatives: 'pullup',
   'push-press': 'shoulder-press',
   'diamond-pushup': 'pushup',
+};
+
+/** Movements that hold many different exercises (most stretches): the demo for each by its name. */
+const NAMED: Record<string, [RegExp, AnatomyId][]> = {
+  'quad-stretch': [[/^quad stretch$|dancer/i, 'standing-quad-stretch'], [/hip flexor and quad/i, 'hip-flexor-stretch']],
+  'calf-stretch': [[/against wall|standing gastrocnemius|standing soleus/i, 'wall-calf-stretch'], [/^seated (hamstring and )?calf/i, 'seated-hamstring-stretch']],
+  'seated-stretch': [[/^seated (floor )?hamstring/i, 'seated-hamstring-stretch']],
+  'reach-stretch': [[/^hamstring stretch$/i, 'forward-fold'], [/standing lateral stretch/i, 'side-reach']],
+  'toe-touch': [[/standing toe touches|toe touchers/i, 'forward-fold']],
+  'child-pose': [[/child's pose/i, 'childs-pose']],
+  'knee-hug': [[/hug knees to chest/i, 'knees-to-chest']],
+  'lunge-stretch': [[/kneeling hip flexor/i, 'hip-flexor-stretch']],
+  'arm-stretch': [
+    [/^triceps stretch$|^overhead triceps$/i, 'triceps-stretch'],
+    [/^shoulder stretch$/i, 'cross-body-stretch'],
+    [/chest and front of shoulder|^elbows back$/i, 'chest-opener'],
+  ],
+  neck: [[/side neck stretch/i, 'neck-side-stretch']],
 };
 
 /** How an exercise's name changes its demo ("Dumbbell Bench Press", "Incline...", "Goblet Squat"). */
@@ -1883,7 +2234,7 @@ export function variantOf(name: string): Variant {
 
 /** The anatomy demo for an exercise: its movement (`demo`) and its name, or null when there is none. */
 export function anatomyFor(demo: string, name: string): { id: AnatomyId; variant: Variant } | null {
-  const base = ALIAS[demo] ?? demo;
+  const base = NAMED[demo]?.find(([re]) => re.test(name))?.[1] ?? ALIAS[demo] ?? demo;
   if (!hasAnatomy(base)) return null;
   const v = variantOf(name);
   // A back or front squat done with dumbbells or a goblet is the free squat holding them.
