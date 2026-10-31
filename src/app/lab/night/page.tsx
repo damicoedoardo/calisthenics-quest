@@ -7,6 +7,7 @@ import { addFakeWorkouts, clearNextZone, skipDueScenes, skipIntro } from '@/lib/
 import { initialState, type GameState } from '@/lib/game';
 import { ZONES } from '@/lib/fog';
 import { SANDBOX_KEY } from '@/lib/store';
+import { TabLooks } from '@/components/TabLooks';
 import { withTodayPage } from '@/story/daily';
 import { DEFAULT_FLAME_NAME } from '@/story/flame';
 import { midBoss } from '@/game/dungeon/engine';
@@ -265,6 +266,10 @@ export default function NightLab() {
       <p className="rounded-lg border border-dashed border-sky-400/60 px-3 py-2 text-xs text-sky-300">
         Everything here opens on a sandbox save. Your real progress on this phone is untouched; the app shows a blue bar while you&apos;re in the sandbox.
       </p>
+
+      <Panel title="TAB SWITCH LOOKS" note="Four looks for the switches (Friends | Feed, Gear | Stats | Class, the vault filter). Tap them; the app uses A for now.">
+        <TabLooks />
+      </Panel>
 
       <Panel title="DEVELOPER MODE, IN TABS" note="The wrench next to FORMA opens one menu with tabs: Go (any screen, every Lab), Wallet (embers, sweat coins, co-op materials), Gear (any item, any rarity, +0 to +15), Hero (class, SPs, stat points), Story (chapter jump, scenes, days), Fog (bosses beaten, a run in any zone at any spot), Save (copy, load, wipe).">
         <Row icon={<Sparkles size={16} />} label="Open the developer menu" note="A hero 30 workouts in, the menu open on top" onClick={() => open(veteran(30, 2), 'tab=today&dev')} />
