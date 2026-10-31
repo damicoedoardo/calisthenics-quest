@@ -7,6 +7,7 @@ import { NO_GEAR, salvageValue, takeOffToVault, vaultSize, wearFromVault } from 
 import { canWear, ITEM_SLOTS, itemScore, MAX_PLUS, nameOf, RARITY, SLOT_NAME, starterKit, type Item, type ItemSlot, type Rarity } from '@/game/dungeon/items';
 import { meltable, salvage, salvageMany, type MeltPick } from '@/lib/forge';
 import { ItemCard, ItemTile } from './ItemCard';
+import { PixelTabs } from './PixelTabs';
 import { ForgeSheet } from './Forge';
 import { Sprite } from './Sprite';
 
@@ -91,33 +92,31 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
           })}
         </div>
 
-        <p className="mt-4 flex items-baseline justify-between font-pixel text-[9px] text-gold-300">
+        <div className="mt-4 flex items-center gap-2 font-pixel text-[9px] text-gold-300">
           <span>Vault</span>
           <span className="text-slate-500">
             {gear.vault.length}/{size}
           </span>
-        </p>
-        {gear.vault.length > 0 && (
-          <div className="mt-2 flex flex-wrap items-center gap-1">
-            {[null, ...ITEM_SLOTS].map((s) => (
-              <button
-                key={s ?? 'all'}
-                onClick={() => setSlot(s)}
-                aria-pressed={slot === s}
-                className={`rounded-md px-2 py-1 text-[11px] ${slot === s ? 'bg-gold-400 font-semibold text-ink-950' : 'bg-ink-900/60 text-slate-300'}`}
-              >
-                {s ? SLOT_NAME[s] : 'All'}
-              </button>
-            ))}
+          {gear.vault.length > 0 && (
             <button
               onClick={() => setMany(!many)}
               aria-expanded={many}
-              className={`ml-auto flex items-center gap-1 rounded-md px-2 py-1 text-[11px] ring-1 ${many ? 'bg-orange-500/20 text-orange-200 ring-orange-400/60' : 'text-orange-300 ring-orange-400/40'}`}
+              className={`ml-auto flex items-center gap-1 rounded-md px-2 py-1.5 font-sans text-[11px] ring-1 ${many ? 'bg-orange-500/20 text-orange-200 ring-orange-400/60' : 'text-orange-300 ring-orange-400/40'}`}
             >
               <Sprite id="uiIcon" opts={{ name: 'flame' }} size={12} label="" />
               Melt many
             </button>
-          </div>
+          )}
+        </div>
+        {gear.vault.length > 0 && (
+          <PixelTabs
+            small
+            label="Show"
+            className="mt-2"
+            tabs={[{ id: 'all', label: 'All' }, ...ITEM_SLOTS.map((s) => ({ id: s, label: SLOT_NAME[s] }))]}
+            value={slot ?? 'all'}
+            onChange={(id) => setSlot(id === 'all' ? null : id)}
+          />
         )}
         {many && gear.vault.length > 0 && (
           <VaultMelt

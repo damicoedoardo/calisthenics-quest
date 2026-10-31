@@ -5,6 +5,7 @@ import type { GameState } from '@/lib/game';
 import { canUpgrade, embersOf, findItem, matsOf, REROLL_COST, reroll, rested, tryUpgrade, upgradeCost, upgradeMats, upgradeOdds, type Forged } from '@/lib/forge';
 import { bandOf, boostAt, BONUSES, MAX_PLUS, nameOf, RARITY, safeFloor } from '@/game/dungeon/items';
 import { BANDS, EMBERS, FORGE_RISK, MAT_IDS, MATS, SAFE_POINTS, type MatId } from '@/balance';
+import { PixelTabs } from './PixelTabs';
 import { ItemTile } from './ItemCard';
 import { Sprite } from './Sprite';
 import { useModal } from './useModal';
@@ -154,19 +155,7 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
             </section>
 
             {/* What to do with it: two tabs, one job each. */}
-            <div role="tablist" aria-label="What to do" className="grid grid-cols-2 gap-1 rounded-xl bg-ink-900 p-1">
-              {MODES.map((m) => (
-                <button
-                  key={m.id}
-                  role="tab"
-                  aria-selected={mode === m.id}
-                  onClick={() => pickMode(m.id)}
-                  className={`rounded-lg py-2.5 font-pixel text-[9px] transition active:scale-95 ${mode === m.id ? 'bg-gold-400 text-ink-950' : 'text-slate-300'}`}
-                >
-                  {m.label}
-                </button>
-              ))}
-            </div>
+            <PixelTabs label="What to do" tabs={MODES} value={mode} onChange={pickMode} />
           </div>
 
           <div role="tabpanel" className="space-y-3">
