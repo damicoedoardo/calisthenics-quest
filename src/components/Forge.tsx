@@ -2,10 +2,9 @@
 
 import { useState } from 'react';
 import type { GameState } from '@/lib/game';
-import { salvageValue } from '@/lib/fog-gear';
-import { canUpgrade, embersOf, findItem, matsOf, REROLL_COST, reroll, rested, salvage, tryUpgrade, upgradeCost, upgradeMats, upgradeOdds, type Forged } from '@/lib/forge';
+import { canUpgrade, embersOf, findItem, matsOf, REROLL_COST, reroll, rested, tryUpgrade, upgradeCost, upgradeMats, upgradeOdds, type Forged } from '@/lib/forge';
 import { bandOf, boostAt, BONUSES, MAX_PLUS, nameOf, RARITY, safeFloor } from '@/game/dungeon/items';
-import { BANDS, EMBERS, FORGE_RISK, MATS, SAFE_POINTS, type MatId } from '@/balance';
+import { BANDS, EMBERS, FORGE_RISK, MAT_IDS, MATS, SAFE_POINTS, type MatId } from '@/balance';
 import { ItemTile } from './ItemCard';
 import { Sprite } from './Sprite';
 import { useModal } from './useModal';
@@ -15,25 +14,25 @@ type Update = (fn: (s: GameState) => GameState) => void;
 /** Set once the forge's guide has been shown on this phone. */
 const SEEN = 'forma-forge-guide-seen';
 
-/* Mira's forge for one item, on its own page over the Hero tab. Three tabs, one job each:
-   Upgrade (what the next plus gives, what it costs, the chance, one button), Reroll (swap one bonus
-   for a random other, showing what it was), Melt down (embers for the item, with a second tap). */
+/* Mira's forge for one item, on its own page over the Hero tab. Two tabs, one job each:
+   Upgrade (what the next plus gives, what it costs, the chance, one button) and Reroll (swap one
+   bonus for a random other, showing what it was). Melting down lives on the item's card. */
 
-type Mode = 'up' | 'reroll' | 'melt';
+type Mode = 'up' | 'reroll';
 const MODES: { id: Mode; label: string }[] = [
   { id: 'up', label: 'Upgrade' },
   { id: 'reroll', label: 'Reroll' },
-  { id: 'melt', label: 'Melt down' },
 ];
 
 /** What Mira says on each tab, before anything happens. */
 const MIRA: Record<Mode, (plus: number, next: number, top: boolean) => string> = {
   up: (plus, next, top) => (top ? 'As good as anything can be made.' : plus === 0 ? "Bring it here. Let's make it stronger." : `I can take it to +${next}.`),
   reroll: () => "Don't like a bonus? I can turn it into another one.",
-  melt: () => 'No use to you? I can melt it into embers.',
 };
 
 const BIG = 'w-full rounded-xl bg-gold-400 py-3.5 font-pixel text-[11px] text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none disabled:bg-ink-700 disabled:text-slate-500 disabled:shadow-none';
+/** The number in a bonus's line ("+12% damage" → "+12%"). */
+const num = (line: string) => line.match(/[+-]?\d[\d.,]*%?/)?.[0] ?? line;
 const ember = (size: number) => <Sprite id="uiIcon" opts={{ name: 'flame' }} size={size} label="" />;
 
 /** What Mira says after a try. */
@@ -49,7 +48,6 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
   const [mode, setMode] = useState<Mode>('up');
   // The last swap: which bonus, and what it was before.
   const [rolled, setRolled] = useState<{ i: number; was: string } | null>(null);
-  const [sure, setSure] = useState(false);
   // The first time the forge opens it starts on how it works; after that, a button away.
   const [help, setHelp] = useState(() => {
     try {
@@ -82,16 +80,10 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
     if (r.forged) setSaid(SAID[r.forged](findItem(r.state, item.id)?.plus ?? 0));
     update((s) => tryUpgrade(s, item.id, now).state);
   };
-  const melt = () => {
-    if (!sure) return setSure(true);
-    update((s) => salvage(s, item.id));
-    onClose();
-  };
 
   const pickMode = (m: Mode) => {
     setMode(m);
     setSaid(null);
-    setSure(false);
     setRolled(null);
   };
   const rollOne = (i: number) => {
@@ -99,10 +91,9 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
     setRolled({ i, was: BONUSES[b.id].show(b.v * boostAt(plus)).toLowerCase() });
     update((s) => reroll(s, item.id, i));
   };
-  const wornNow = Object.values(state.fogGear?.worn ?? {}).some((w) => w?.id === item.id);
   // What changes: each line now and after the next plus, only the ones that move.
   const lines = [...item.base, ...item.bonuses]
-    .map((b) => ({ now: BONUSES[b.id].show(b.v * boostAt(plus)), next: BONUSES[b.id].show(b.v * boostAt(next)) }))
+    .map((b) => ({ name: BONUSES[b.id].name, now: num(BONUSES[b.id].show(b.v * boostAt(plus))), next: num(BONUSES[b.id].show(b.v * boostAt(next))) }))
     .filter((l) => top || l.now !== l.next);
 
   return (
@@ -123,6 +114,15 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
         {help ? (
           <HowItWorks onDone={() => setHelp(false)} />
         ) : (
+        <>
+        {/* What you have to spend here, always in sight: embers and the four co-op materials. */}
+        <div className="mb-3 flex flex-wrap gap-1.5" aria-label="What you have">
+          <Have icon={ember(14)} n={embers} label="embers" tone="text-orange-300" />
+          {MAT_IDS.map((m) => (
+            <Have key={m} icon={<span aria-hidden className="h-2.5 w-2.5 rotate-45 rounded-[1px]" style={{ background: MATS[m].color }} />} n={have[m] ?? 0} label={MATS[m].name} tone="text-slate-100" />
+          ))}
+        </div>
+
         <div className="space-y-3 land:grid land:grid-cols-2 land:gap-4 land:space-y-0">
           <div className="space-y-3">
             {/* Mira and what she says. */}
@@ -153,8 +153,8 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
               </div>
             </section>
 
-            {/* What to do with it: three tabs, one job each. */}
-            <div role="tablist" aria-label="What to do" className="grid grid-cols-3 gap-1 rounded-xl bg-ink-900 p-1">
+            {/* What to do with it: two tabs, one job each. */}
+            <div role="tablist" aria-label="What to do" className="grid grid-cols-2 gap-1 rounded-xl bg-ink-900 p-1">
               {MODES.map((m) => (
                 <button
                   key={m.id}
@@ -175,9 +175,15 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
                 {lines.length > 0 && (
                   <ul className="space-y-1.5 rounded-2xl bg-ink-800 p-4 text-sm">
                     {lines.map((l, i) => (
-                      <li key={i} className="flex items-center justify-between gap-2">
-                        <span className="text-slate-400">{l.now}</span>
-                        {!top && <span className="font-semibold text-emerald-300">{l.next}</span>}
+                      <li key={i} className="flex items-center gap-2">
+                        <span className="min-w-0 flex-1 truncate text-slate-300">{l.name}</span>
+                        <span className="font-pixel text-[10px] text-slate-400">{l.now}</span>
+                        {!top && (
+                          <>
+                            <span className="text-[9px] text-slate-500">▶</span>
+                            <span className="font-pixel text-[10px] text-emerald-300">{l.next}</span>
+                          </>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -241,31 +247,11 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
                     The item&apos;s base stays: {item.base.map((b) => BONUSES[b.id].show(b.v * boostAt(plus))).join(', ')}.
                   </p>
                 )}
-                <p className="mt-3 text-center text-xs text-slate-500">You have {embers} embers.</p>
-              </section>
-            )}
-
-            {mode === 'melt' && (
-              <section className="rounded-2xl bg-ink-800 p-4">
-                <p className="text-sm leading-snug text-slate-300">Break the item into embers for the forge. The item is gone for good.</p>
-                <div className="mt-4 flex items-center justify-center gap-3 rounded-xl bg-ink-900 py-4">
-                  <span className="text-sm text-slate-400">You get</span>
-                  {ember(22)}
-                  <span className="font-pixel text-lg text-orange-300">+{salvageValue(item)}</span>
-                </div>
-                {wornNow && <p className="mt-3 text-center text-[13px] text-slate-400">You wear this now. Its slot will be empty.</p>}
-                <button onClick={melt} className={`mt-4 w-full rounded-xl py-3.5 font-pixel text-[11px] ${sure ? 'bg-red-500 text-white shadow-[0_4px_0_#991b1b]' : 'bg-ink-700 text-slate-100 shadow-[0_4px_0_#0b0d14]'} active:translate-y-1 active:shadow-none`}>
-                  {sure ? 'Tap again: melt it' : 'Melt it down'}
-                </button>
-                {sure && (
-                  <button onClick={() => setSure(false)} className="mt-2 w-full py-2 text-sm text-slate-400">
-                    Keep it
-                  </button>
-                )}
               </section>
             )}
           </div>
         </div>
+        </>
         )}
       </div>
     </div>
@@ -293,10 +279,10 @@ function Pips({ plus }: { plus: number }) {
 function Cost({ icon, n, have, label }: { icon: React.ReactNode; n: number; have: number; label: string }) {
   const short = have < n;
   return (
-    <span aria-label={`${n} ${label}, you have ${have}`} className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 ${short ? 'bg-red-500/15 ring-1 ring-red-400/50' : 'bg-ink-900'}`}>
+    <span aria-label={`You have ${have} ${label}, it needs ${n}`} className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 ${short ? 'bg-red-500/15 ring-1 ring-red-400/50' : 'bg-ink-900'}`}>
       {icon}
-      <span className={`font-pixel text-[9px] ${short ? 'text-red-300' : 'text-slate-100'}`}>{n}</span>
-      <span className="text-xs text-slate-500">/ {have}</span>
+      <span className={`font-pixel text-[9px] ${short ? 'text-red-300' : 'text-slate-100'}`}>{have}</span>
+      <span className="text-xs text-slate-500">/ {n}</span>
     </span>
   );
 }
@@ -374,5 +360,15 @@ function HowItWorks({ onDone }: { onDone: () => void }) {
         Got it
       </button>
     </div>
+  );
+}
+
+/** One thing you have, as a chip: its icon and how many (faded at none). */
+function Have({ icon, n, label, tone }: { icon: React.ReactNode; n: number; label: string; tone: string }) {
+  return (
+    <span aria-label={`${n} ${label}`} title={label} className={`flex items-center gap-1.5 rounded-lg bg-ink-800 px-2.5 py-1.5 ${n ? '' : 'opacity-40'}`}>
+      {icon}
+      <span className={`font-pixel text-[9px] ${tone}`}>{n}</span>
+    </span>
   );
 }

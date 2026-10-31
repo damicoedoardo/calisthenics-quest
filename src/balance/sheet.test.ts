@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { EMBERS, FORGE, FORGE_RISK, MAT_DROPS, MAT_IDS, MATS, MELT, SAFE_POINTS, STARTING_POINTS, STEPS, WEEKLY_GOAL, XP, type MatId } from '@/balance';
 import { initialState, levelInfo, totalXp } from '@/lib/game';
 import { embersEarned, upgradeCost } from '@/lib/forge';
-import { salvageValue, vaultSize } from '@/lib/fog-gear';
+import { salvageValue } from '@/lib/fog-gear';
 import { pointsEarned, statPower, STATS } from '@/lib/stats';
 import { evenPoints, MAX_PLUS, rollItem, wearAfter, rollRarity, RARITY, starterKit, type Item, type Rarity } from '@/game/dungeon/items';
 import { DROP_LUCK, DROPS } from '@/balance';
@@ -39,7 +39,7 @@ function training(): string {
     at.map((days) => {
       const s = playSeason(k, days).state;
       const p = statPower(s.build ?? {}, s.profile.classId);
-      return [k.id, days, s.sessions.length, levelInfo(totalXp(s)).level, pointsEarned(s).total, `+${pct(p.damage)} / +${Math.round(p.health)} HP`, embersEarned(s), vaultSize(s.sessions.length)];
+      return [k.id, days, s.sessions.length, levelInfo(totalXp(s)).level, pointsEarned(s).total, `+${pct(p.damage)} / +${Math.round(p.health)} HP`, embersEarned(s)];
     }),
   );
   return [
@@ -47,7 +47,7 @@ function training(): string {
     '',
     'Played by the season simulator (`src/sim/players.ts`): `steady` trains 3 times a week and spreads points, `twice-a-week` trains twice, `eager` trains every weekday and puts every point in Damage.',
     '',
-    table(['Player', 'Day', 'Workouts', 'Level', 'Stat points', 'Damage / HP from points', 'Embers earned', 'Vault slots'], rows),
+    table(['Player', 'Day', 'Workouts', 'Level', 'Stat points', 'Damage / HP from points', 'Embers earned'], rows),
   ].join('\n');
 }
 

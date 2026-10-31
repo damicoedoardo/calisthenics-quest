@@ -55,20 +55,20 @@ Each class with the same model (and how far above or below the four's average). 
 
 Played by the season simulator (`src/sim/players.ts`): `steady` trains 3 times a week and spreads points, `twice-a-week` trains twice, `eager` trains every weekday and puts every point in Damage.
 
-| Player | Day | Workouts | Level | Stat points | Damage / HP from points | Embers earned | Vault slots |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| steady | 7 | 3 | 1 | 18 | +16% / +7 HP | 30 | 4 |
-| steady | 30 | 13 | 4 | 64 | +26% / +22 HP | 130 | 6 |
-| steady | 91 | 39 | 14 | 185 | +49% / +57 HP | 390 | 11 |
-| steady | 182 | 78 | 28 | 366 | +79% / +104 HP | 780 | 19 |
-| twice-a-week | 7 | 2 | 1 | 12 | +14% / +5 HP | 20 | 4 |
-| twice-a-week | 30 | 9 | 2 | 40 | +23% / +14 HP | 90 | 5 |
-| twice-a-week | 91 | 26 | 6 | 108 | +37% / +36 HP | 260 | 9 |
-| twice-a-week | 182 | 52 | 11 | 211 | +56% / +66 HP | 520 | 14 |
-| eager | 7 | 5 | 2 | 26 | +43% / +0 HP | 50 | 5 |
-| eager | 30 | 22 | 7 | 99 | +100% / +0 HP | 220 | 8 |
-| eager | 91 | 65 | 21 | 289 | +195% / +0 HP | 650 | 17 |
-| eager | 182 | 130 | 43 | 573 | +279% / +0 HP | 1300 | 20 |
+| Player | Day | Workouts | Level | Stat points | Damage / HP from points | Embers earned |
+| --- | --- | --- | --- | --- | --- | --- |
+| steady | 7 | 3 | 1 | 18 | +16% / +7 HP | 30 |
+| steady | 30 | 13 | 4 | 64 | +26% / +22 HP | 130 |
+| steady | 91 | 39 | 14 | 185 | +49% / +57 HP | 390 |
+| steady | 182 | 78 | 28 | 366 | +79% / +104 HP | 780 |
+| twice-a-week | 7 | 2 | 1 | 12 | +14% / +5 HP | 20 |
+| twice-a-week | 30 | 9 | 2 | 40 | +23% / +14 HP | 90 |
+| twice-a-week | 91 | 26 | 6 | 108 | +37% / +36 HP | 260 |
+| twice-a-week | 182 | 52 | 11 | 211 | +56% / +66 HP | 520 |
+| eager | 7 | 5 | 2 | 26 | +43% / +0 HP | 50 |
+| eager | 30 | 22 | 7 | 99 | +100% / +0 HP | 220 |
+| eager | 91 | 65 | 21 | 289 | +195% / +0 HP | 650 |
+| eager | 182 | 130 | 43 | 573 | +279% / +0 HP | 1300 |
 
 ## What stat points give
 

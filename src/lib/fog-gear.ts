@@ -24,8 +24,8 @@ export interface FogGear {
 
 export const NO_GEAR: FogGear = { worn: {}, vault: [] };
 
-/** Vault slots: 4, and one more every 5 workouts, up to 20. */
-export const vaultSize = (workouts: number) => Math.min(VAULT.max, VAULT.start + Math.floor(workouts / VAULT.every));
+/** Spaces in the vault at home (VAULT in src/balance/economy.ts). */
+export const vaultSize = () => VAULT.size;
 
 const gearOf = (s: GameState): FogGear => s.fogGear ?? NO_GEAR;
 
@@ -77,7 +77,7 @@ export function settleGear(state: GameState, end: { won: boolean; why?: string; 
   // A benched item whose slot you now fill goes home with the bag.
   const worn = { ...benched, ...run.worn },
     home = [...bag, ...Object.entries(benched).filter(([slot]) => run.worn[slot as ItemSlot]).map(([, it]) => it!)];
-  const room = vaultSize(state.sessions.length) - g.vault.length,
+  const room = vaultSize() - g.vault.length,
     best = [...home].sort((a, b) => itemScore(b) - itemScore(a)),
     stored = best.slice(0, Math.max(0, room)),
     left = best.slice(Math.max(0, room));
@@ -104,7 +104,7 @@ export function wearFromVault(state: GameState, id: string): GameState {
 export function takeOffToVault(state: GameState, slot: ItemSlot): GameState {
   const g = gearOf(state),
     it = g.worn[slot];
-  if (!it || g.vault.length >= vaultSize(state.sessions.length)) return state;
+  if (!it || g.vault.length >= vaultSize()) return state;
   const worn = { ...g.worn };
   delete worn[slot];
   return { ...state, fogGear: { ...g, worn, vault: [...g.vault, it] } };

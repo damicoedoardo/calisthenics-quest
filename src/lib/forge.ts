@@ -1,7 +1,7 @@
 import { daysSinceLastSession, type GameState } from './game';
 import { seeded } from './random';
 import { NO_GEAR, salvageValue, type FogGear } from './fog-gear';
-import { MAX_PLUS, rerollBonus, safeFloor, type Item } from '@/game/dungeon/items';
+import { betterBy, MAX_PLUS, rerollBonus, safeFloor, type Item, type Rarity } from '@/game/dungeon/items';
 import { EMBERS, FORGE, FORGE_RISK, MAT_IDS, STEPS, type MatId } from '@/balance';
 
 /* Mira's forge, on the Hero tab's Gear part. Workouts earn embers, and the forge spends them: upgrade an item
@@ -135,6 +135,33 @@ export function salvage(state: GameState, id: string): GameState {
   const it = findItem(state, id);
   if (!it || it.starter) return state;
   return change(state, id, null, -salvageValue(it));
+}
+
+/** What "Melt many" can take from the vault: every item of one rarity, or every item weaker than
+    what you wear in its slot. */
+export type MeltPick = Rarity | 'weaker';
+
+/** The vault items a pick melts. Never what you wear, a starter, or an item you forged (+1 or
+    more): those you melt one at a time from their card. */
+export function meltable(state: GameState, pick: MeltPick): Item[] {
+  const g = gearOf(state);
+  return g.vault.filter((it) => {
+    if (it.starter || (it.plus ?? 0) > 0) return false;
+    if (pick !== 'weaker') return it.rarity === pick;
+    const pct = betterBy(it, g.worn[it.slot]);
+    return pct !== null && pct < 0;
+  });
+}
+
+/** Melt many vault items at once (worn and starter ones are skipped): their embers all go to you. */
+export function salvageMany(state: GameState, ids: readonly string[]): GameState {
+  const g = gearOf(state),
+    want = new Set(ids),
+    gone = g.vault.filter((it) => want.has(it.id) && !it.starter);
+  if (!gone.length) return state;
+  const e = g.embers ?? { found: 0, spent: 0 },
+    found = gone.reduce((n, it) => n + salvageValue(it), 0);
+  return { ...state, fogGear: { ...g, vault: g.vault.filter((it) => !gone.includes(it)), embers: { ...e, found: e.found + found } } };
 }
 
 /** Give a friend some materials: they leave your save once the server has taken the gift. */

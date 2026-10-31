@@ -114,6 +114,16 @@ function forged(plus: number): GameState {
   };
 }
 
+/** The forged save with a busy vault: 40 found items of every rarity and slot, to sort and melt many. */
+function bigVault(): GameState {
+  const s = forged(7),
+    g = s.fogGear!,
+    rnd = seeded(31),
+    rarities: Item['rarity'][] = ['common', 'common', 'common', 'magic', 'magic', 'rare'];
+  const more = Array.from({ length: 37 }, (_, i) => rollItem(rnd, { zone: 1 + (i % 3), workouts: ZONES[1].workouts, floor: 1 + (i % 8), cls: 'warrior' }, i === 20 ? 'legendary' : rarities[i % rarities.length])).map((it) => ({ ...it, need: null, needLevel: undefined }));
+  return { ...s, fogGear: { ...g, vault: [...g.vault, ...more] } };
+}
+
 /** The forged save with the vault's legendary worn as the sword, at +0 and wearable now: its fire, no shine. */
 function legendWorn(): GameState {
   const s = forged(0),
@@ -320,6 +330,7 @@ export default function NightLab() {
         <Row icon={<Swords size={16} />} label="Friends" note="The Friends tab: who is online (tap to invite), your party, the Ember Road, every friend (sample friends here)" onClick={() => open(geared(), 'tab=friends')} />
         <Row icon={<Swords size={16} />} label="The Feed" note="Shared workouts with flames and comments (two sample posts). Finish a workout and tap Share with friends to add yours" onClick={() => open(geared(), 'tab=friends&feed')} />
         <Row icon={<Gem size={16} />} label="Hero > Gear" note="What you wear, the vault, and Mira's forge for the item you tap: the only place for them" onClick={() => open(forged(7), 'tab=hero&hero=gear')} />
+        <Row icon={<Gem size={16} />} label="A busy vault" note="Hero > Gear with 40 items: rarest first, filter by slot, Melt many (a rarity, or weaker than yours)" onClick={() => open(bigVault(), 'tab=hero&hero=gear')} />
         <Row icon={<Sparkles size={16} />} label="Hero > Stats" note="Your champion's points, and what your flame gives you" onClick={() => open(veteran(30, 2), 'tab=hero&hero=stats')} />
         <Row icon={<Swords size={16} />} label="Hero > Class" note="Your class and Change class" onClick={() => open(veteran(30, 2), 'tab=hero&hero=class')} />
         <Row icon={<BookOpen size={16} />} label="The You page" note="Tap your hero at the top: letter, quest log, settings (your name), backup, cloud save" onClick={() => open(veteran(30, 2), 'you')} />

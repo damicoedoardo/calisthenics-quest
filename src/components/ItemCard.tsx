@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from 'react';
 import { getStat, type Build } from '@/lib/stats';
-import { bandOf, betterBy, foundAt, itemLines, levelShort, looksOf, nameOf, otherClass, RARITY, SLOT_NAME, shortOf, type Item, type Rarity } from '@/game/dungeon/items';
+import { bandOf, betterBy, boostAt, BONUSES, foundAt, levelShort, type BonusId, looksOf, nameOf, otherClass, RARITY, SLOT_NAME, shortOf, type Item, type Rarity } from '@/game/dungeon/items';
 import { getClass, type ClassId } from '@/lib/gear';
 import { BANDS } from '@/balance';
 import { PlusGlow } from './PlusGlow';
@@ -116,20 +116,51 @@ export function ItemCard({ item, build, level, cls, than, children }: { item: It
           {at && ` · item level ${at.level} · zone ${at.zone}, floor ${at.floor}`}
         </p>
         {pct !== null && (
-          <p className={`mt-1 text-xs font-semibold ${pct > 0 ? 'text-emerald-300' : pct < 0 ? 'text-red-300' : 'text-slate-400'}`}>
+          <p className={`mt-2 inline-block rounded-md px-2 py-1 text-xs font-semibold ${pct > 0 ? 'bg-emerald-500/15 text-emerald-300' : pct < 0 ? 'bg-red-500/15 text-red-300' : 'bg-ink-700 text-slate-300'}`}>
             {pct > 0 ? `▲ ${pct}% stronger than yours` : pct < 0 ? `▼ ${-pct}% weaker than yours` : 'About the same as yours'}
           </p>
         )}
-        <ul className="mt-1 space-y-0.5 text-xs text-slate-300">
-          {itemLines(item).map((l, i) => (
-            <li key={i}>{l}</li>
-          ))}
+        {/* What it gives: the base lines, then its bonuses in its rarity's color; the number on the right. */}
+        <ul className="mt-3 divide-y divide-ink-700/70 rounded-lg bg-ink-900/70 px-3 text-[13px]">
+          {[...item.base.map((b) => ({ b, bonus: false })), ...item.bonuses.map((b) => ({ b, bonus: true }))].map(({ b, bonus }, i) => {
+            const { label, value } = splitLine(b.id, BONUSES[b.id].show(b.v * boostAt(item.plus ?? 0)));
+            return (
+              <li key={i} className="flex items-center justify-between gap-3 py-1.5">
+                <span className="flex min-w-0 items-center gap-2 text-slate-300">
+                  <span aria-hidden className="h-1.5 w-1.5 shrink-0 rotate-45" style={{ background: bonus ? color : '#94a3b8' }} />
+                  <span className="truncate">{label}</span>
+                </span>
+                <span className="shrink-0 font-pixel text-[10px]" style={{ color: bonus ? color : '#e2e8f0' }}>
+                  {value}
+                </span>
+              </li>
+            );
+          })}
         </ul>
-        {other && <p className="mt-1 text-xs font-semibold text-red-300">{getClass(other)?.name ?? other} only</p>}
-        {needLv && <p className={`mt-1 text-xs ${needLv.ok ? 'text-slate-500' : 'text-red-300'}`}>{needLv.text}</p>}
-        {need && <p className={`mt-1 text-xs ${need.ok ? 'text-slate-500' : 'text-red-300'}`}>{need.text}</p>}
+        {/* What it asks: a chip each, red while you are short. */}
+        {(other || needLv || need) && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {other && <Need ok={false} text={`${getClass(other)?.name ?? other} only`} />}
+            {needLv && <Need ok={needLv.ok} text={needLv.text} />}
+            {need && <Need ok={need.ok} text={need.text} />}
+          </div>
+        )}
         {children && <div className="mt-3 flex gap-2">{children}</div>}
       </div>
     </div>
   );
+}
+
+/** Words after a bonus's number where its name alone doesn't say it. */
+const UNIT: Partial<Record<BonusId, string>> = { health: ' HP', heal: ' HP', armor: ' hurt', cooldown: ' faster' };
+
+/** A line of what an item gives, as the bonus's name and its number ("+12% damage" → "Damage", "+12%"). */
+function splitLine(id: BonusId, line: string): { label: string; value: string } {
+  const m = line.match(/[+-]?\d[\d.,]*%?/);
+  return { label: BONUSES[id].name, value: m ? m[0] + (UNIT[id] ?? '') : line };
+}
+
+/** One thing an item asks for, as a chip: green once you have it, red while you don't. */
+function Need({ ok, text }: { ok: boolean; text: string }) {
+  return <span className={`rounded-md px-2 py-1 text-[11px] ${ok ? 'bg-emerald-500/10 text-emerald-300' : 'bg-red-500/15 text-red-300 ring-1 ring-red-400/40'}`}>{ok ? '✓ ' : ''}{text}</span>;
 }
