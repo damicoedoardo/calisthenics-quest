@@ -87,6 +87,8 @@ It is mostly CSS, so the workout keeps one markup:
   (pixel sizes one step up), pixel bevels (`shadow-[…]`) go flat, `pixel-notch` turns round (the
   set boxes are circles), full-screen layers are solid, and `gym-hide` hides the game's characters
   (every `Ember` carries it).
+- A friend's cheer during the workout (`CheerToast` with `plain`) is a plain grey card: who, and
+  their words, no hero and no orange.
 - In `Workout.tsx`: the rest is one ring that fills as it runs out, the clock in its middle
   (`Rest`, `gym`), and "Finish workout" / "Short workout" for "Complete quest" / "Minimum quest".
 

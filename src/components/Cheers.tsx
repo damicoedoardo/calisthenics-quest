@@ -72,7 +72,7 @@ export function useCheers(off: boolean, fast: boolean, demo: boolean) {
 }
 
 /** One cheer at the top of the screen: the friend's hero, their name and their line. */
-export function CheerToast({ cheer, friends, onDone }: { cheer: Cheer | null; friends: FriendCard[]; onDone: () => void }) {
+export function CheerToast({ cheer, friends, onDone, plain }: { cheer: Cheer | null; friends: FriendCard[]; onDone: () => void; /** Gym mode mid-workout: no hero, no color, just who and what. */ plain?: boolean }) {
   useEffect(() => {
     if (!cheer) return;
     const t = window.setTimeout(onDone, SHOW_MS);
@@ -81,6 +81,20 @@ export function CheerToast({ cheer, friends, onDone }: { cheer: Cheer | null; fr
   if (!cheer) return null;
   const f = friends.find((x) => x.id === cheer.from);
   const name = cheer.from_name || f?.name || 'A friend';
+  if (plain)
+    return (
+      <div className="gym pointer-events-none fixed inset-x-0 top-0 z-[70] flex justify-center px-4 safe-top">
+        <button
+          key={cheer.id}
+          onClick={onDone}
+          aria-label={`${name} cheers you on: ${cheer.text}. Tap to close.`}
+          className="pointer-events-auto mt-2 w-full max-w-sm rounded-2xl bg-ink-800/95 px-4 py-3 text-left shadow-xl backdrop-blur motion-safe:animate-fadein"
+        >
+          <span className="block text-xs text-slate-400">{name}</span>
+          <span className="mt-0.5 block break-words text-sm font-medium text-slate-50">{cheer.text}</span>
+        </button>
+      </div>
+    );
   return (
     <div className="pointer-events-none fixed inset-x-0 top-0 z-[70] flex justify-center px-4 safe-top">
       <button

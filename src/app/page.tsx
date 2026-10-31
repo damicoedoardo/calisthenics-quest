@@ -526,7 +526,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />
         </div>
       )}
-      <CheerToast cheer={cheers.cheer} friends={friends.list?.friends ?? []} onDone={cheers.next} />
+      <CheerToast cheer={cheers.cheer} friends={friends.list?.friends ?? []} onDone={cheers.next} plain={gym && training} />
       {after && (
         <AfterSession
           result={after.result}

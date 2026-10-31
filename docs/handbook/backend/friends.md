@@ -108,7 +108,7 @@ in `Friends.tsx`) with a box for your own words and quick lines with their name 
 that only fill the box. **Send** stores it on the server; their phone looks for cheers every 8 s
 during a workout and every minute otherwise (`useCheers` in `Cheers.tsx`, in `page.tsx`) and
 shows each one at the top, over the workout too: your hero, "<name> cheers you on" and your line
-(`CheerToast`, 6 s, a tap closes it). Each cheer shows once.
+(`CheerToast`, 6 s, a tap closes it). Each cheer shows once. In gym mode, mid-workout, it is a plain grey card (`plain`: the name and the words, no hero), see [../app/screens.md](../app/screens.md#gym-mode-a-plain-look-for-training).
 
 - Only to an accepted friend, at most 80 letters, at most 20 a day from one friend to another
   (`CHEER_LIMIT` in `src/lib/cheers.ts`; the server's copies are `PER_DAY` and `LENGTH` in
