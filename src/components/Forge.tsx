@@ -2,8 +2,7 @@
 
 import { useState } from 'react';
 import type { GameState } from '@/lib/game';
-import { salvageValue } from '@/lib/fog-gear';
-import { canUpgrade, embersOf, findItem, matsOf, REROLL_COST, reroll, rested, salvage, tryUpgrade, upgradeCost, upgradeMats, upgradeOdds, type Forged } from '@/lib/forge';
+import { canUpgrade, embersOf, findItem, matsOf, REROLL_COST, reroll, rested, tryUpgrade, upgradeCost, upgradeMats, upgradeOdds, type Forged } from '@/lib/forge';
 import { bandOf, boostAt, BONUSES, MAX_PLUS, nameOf, RARITY, safeFloor } from '@/game/dungeon/items';
 import { BANDS, EMBERS, FORGE_RISK, MAT_IDS, MATS, SAFE_POINTS, type MatId } from '@/balance';
 import { ItemTile } from './ItemCard';
@@ -15,22 +14,20 @@ type Update = (fn: (s: GameState) => GameState) => void;
 /** Set once the forge's guide has been shown on this phone. */
 const SEEN = 'forma-forge-guide-seen';
 
-/* Mira's forge for one item, on its own page over the Hero tab. Three tabs, one job each:
-   Upgrade (what the next plus gives, what it costs, the chance, one button), Reroll (swap one bonus
-   for a random other, showing what it was), Melt down (embers for the item, with a second tap). */
+/* Mira's forge for one item, on its own page over the Hero tab. Two tabs, one job each:
+   Upgrade (what the next plus gives, what it costs, the chance, one button) and Reroll (swap one
+   bonus for a random other, showing what it was). Melting down lives on the item's card. */
 
-type Mode = 'up' | 'reroll' | 'melt';
+type Mode = 'up' | 'reroll';
 const MODES: { id: Mode; label: string }[] = [
   { id: 'up', label: 'Upgrade' },
   { id: 'reroll', label: 'Reroll' },
-  { id: 'melt', label: 'Melt down' },
 ];
 
 /** What Mira says on each tab, before anything happens. */
 const MIRA: Record<Mode, (plus: number, next: number, top: boolean) => string> = {
   up: (plus, next, top) => (top ? 'As good as anything can be made.' : plus === 0 ? "Bring it here. Let's make it stronger." : `I can take it to +${next}.`),
   reroll: () => "Don't like a bonus? I can turn it into another one.",
-  melt: () => 'No use to you? I can melt it into embers.',
 };
 
 const BIG = 'w-full rounded-xl bg-gold-400 py-3.5 font-pixel text-[11px] text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none disabled:bg-ink-700 disabled:text-slate-500 disabled:shadow-none';
@@ -51,7 +48,6 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
   const [mode, setMode] = useState<Mode>('up');
   // The last swap: which bonus, and what it was before.
   const [rolled, setRolled] = useState<{ i: number; was: string } | null>(null);
-  const [sure, setSure] = useState(false);
   // The first time the forge opens it starts on how it works; after that, a button away.
   const [help, setHelp] = useState(() => {
     try {
@@ -84,16 +80,10 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
     if (r.forged) setSaid(SAID[r.forged](findItem(r.state, item.id)?.plus ?? 0));
     update((s) => tryUpgrade(s, item.id, now).state);
   };
-  const melt = () => {
-    if (!sure) return setSure(true);
-    update((s) => salvage(s, item.id));
-    onClose();
-  };
 
   const pickMode = (m: Mode) => {
     setMode(m);
     setSaid(null);
-    setSure(false);
     setRolled(null);
   };
   const rollOne = (i: number) => {
@@ -101,7 +91,6 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
     setRolled({ i, was: BONUSES[b.id].show(b.v * boostAt(plus)).toLowerCase() });
     update((s) => reroll(s, item.id, i));
   };
-  const wornNow = Object.values(state.fogGear?.worn ?? {}).some((w) => w?.id === item.id);
   // What changes: each line now and after the next plus, only the ones that move.
   const lines = [...item.base, ...item.bonuses]
     .map((b) => ({ name: BONUSES[b.id].name, now: num(BONUSES[b.id].show(b.v * boostAt(plus))), next: num(BONUSES[b.id].show(b.v * boostAt(next))) }))
@@ -164,8 +153,8 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
               </div>
             </section>
 
-            {/* What to do with it: three tabs, one job each. */}
-            <div role="tablist" aria-label="What to do" className="grid grid-cols-3 gap-1 rounded-xl bg-ink-900 p-1">
+            {/* What to do with it: two tabs, one job each. */}
+            <div role="tablist" aria-label="What to do" className="grid grid-cols-2 gap-1 rounded-xl bg-ink-900 p-1">
               {MODES.map((m) => (
                 <button
                   key={m.id}
@@ -257,26 +246,6 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
                   <p className="mt-3 text-xs leading-snug text-slate-500">
                     The item&apos;s base stays: {item.base.map((b) => BONUSES[b.id].show(b.v * boostAt(plus))).join(', ')}.
                   </p>
-                )}
-              </section>
-            )}
-
-            {mode === 'melt' && (
-              <section className="rounded-2xl bg-ink-800 p-4">
-                <p className="text-sm leading-snug text-slate-300">Break the item into embers for the forge. The item is gone for good.</p>
-                <div className="mt-4 flex items-center justify-center gap-3 rounded-xl bg-ink-900 py-4">
-                  <span className="text-sm text-slate-400">You get</span>
-                  {ember(22)}
-                  <span className="font-pixel text-lg text-orange-300">+{salvageValue(item)}</span>
-                </div>
-                {wornNow && <p className="mt-3 text-center text-[13px] text-slate-400">You wear this now. Its slot will be empty.</p>}
-                <button onClick={melt} className={`mt-4 w-full rounded-xl py-3.5 font-pixel text-[11px] ${sure ? 'bg-red-500 text-white shadow-[0_4px_0_#991b1b]' : 'bg-ink-700 text-slate-100 shadow-[0_4px_0_#0b0d14]'} active:translate-y-1 active:shadow-none`}>
-                  {sure ? 'Tap again: melt it' : 'Melt it down'}
-                </button>
-                {sure && (
-                  <button onClick={() => setSure(false)} className="mt-2 w-full py-2 text-sm text-slate-400">
-                    Keep it
-                  </button>
                 )}
               </section>
             )}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { seeded } from './random';
 import { initialState, type GameState, type Session } from './game';
-import { canUpgrade, EMBERS, embersOf, giveMats, matsShort, takeGifts, REROLL_COST, reroll, salvage, tryUpgrade, upgrade, upgradeCost, upgradeOdds } from './forge';
+import { canUpgrade, EMBERS, embersOf, giveMats, matsShort, meltable, takeGifts, REROLL_COST, reroll, salvage, salvageMany, tryUpgrade, upgrade, upgradeCost, upgradeOdds } from './forge';
 import { salvageValue, settleGear } from './fog-gear';
 import { bandOf, boostOf, itemScore, MAX_PLUS, nameOf, rollItem, safeFloor, starterKit, type Item } from '@/game/dungeon/items';
 import { FORGE_RISK, STEPS } from '@/balance';
@@ -133,6 +133,20 @@ describe("Mira's forge", () => {
     expect(out.fogGear!.worn).toEqual({});
     expect(embersOf(out)).toBe(salvageValue(it));
     expect(salvageValue({ ...it, plus: 2 })).toBe(salvageValue(it) * 2);
+  });
+
+  it('melts many at once: a rarity, or what is weaker than yours, keeping forged and worn items', () => {
+    const worn = sword(),
+      weak = (id: string, rarity: Item['rarity'], plus = 0): Item => ({ ...worn, id, rarity, plus, base: worn.base.map((b) => ({ ...b, v: b.v / 4 })), bonuses: [] }),
+      vault = [weak('a', 'common'), weak('b', 'common', 2), weak('c', 'magic'), { ...worn, id: 'd', plus: 3 }];
+    const s: GameState = { ...withSword(0, worn), fogGear: { worn: { weapon: worn }, vault } };
+    expect(meltable(s, 'common').map((x) => x.id)).toEqual(['a']);
+    expect(meltable(s, 'weaker').map((x) => x.id)).toEqual(['a', 'c']);
+    const out = salvageMany(s, ['a', 'c', worn.id]);
+    expect(out.fogGear!.vault.map((x) => x.id)).toEqual(['b', 'd']);
+    expect(out.fogGear!.worn.weapon).toBe(worn);
+    expect(embersOf(out)).toBe(salvageValue(vault[0]) + salvageValue(vault[2]));
+    expect(salvageMany(s, [])).toBe(s);
   });
 });
 

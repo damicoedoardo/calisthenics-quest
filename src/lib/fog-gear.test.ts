@@ -14,11 +14,12 @@ const item = (slot: Item['slot']): Item => {
 };
 const strong = (s: GameState): GameState => ({ ...s, build: { damage: 99, health: 99, armor: 99 } });
 
+/** A vault with room for 4 more. */
+const nearlyFull = (): GameState => ({ ...initialState(), fogGear: { worn: {}, vault: Array.from({ length: vaultSize() - 4 }, (_, i) => ({ ...item('charm'), id: `old${i}` })) } });
+
 describe('Fog gear between runs', () => {
-  it('the vault starts at 4 and grows one every 5 workouts, up to 20', () => {
-    expect(vaultSize(0)).toBe(4);
-    expect(vaultSize(9)).toBe(5);
-    expect(vaultSize(500)).toBe(20);
+  it('the vault holds 200 items', () => {
+    expect(vaultSize()).toBe(200);
   });
 
   it('a win or a walk out keeps what you wore, and the bag goes into the vault', () => {
@@ -48,8 +49,8 @@ describe('Fog gear between runs', () => {
 
   it("a full vault leaves the rest behind, keeping the best", () => {
     const bag = Array.from({ length: 6 }, () => item('charm'));
-    const { state, out } = settleGear(initialState(), { won: true, why: 'boss', gear: { worn: {}, bag } });
-    expect(state.fogGear?.vault).toHaveLength(4);
+    const { state, out } = settleGear(nearlyFull(), { won: true, why: 'boss', gear: { worn: {}, bag } });
+    expect(state.fogGear?.vault).toHaveLength(vaultSize());
     expect(out.left).toHaveLength(2);
   });
 
@@ -106,7 +107,7 @@ describe('Fog gear between runs', () => {
 
   it('what the full vault leaves behind, Mira melts into embers', () => {
     const bag = Array.from({ length: 6 }, () => item('charm'));
-    const { state, out } = settleGear(initialState(), { won: true, why: 'boss', gear: { worn: {}, bag } });
+    const { state, out } = settleGear(nearlyFull(), { won: true, why: 'boss', gear: { worn: {}, bag } });
     expect(out.embers).toBe(2 * 6);
     expect(state.fogGear?.embers?.found).toBe(12);
   });
