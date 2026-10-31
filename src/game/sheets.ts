@@ -7,7 +7,7 @@ import { normalizeLook, type HeroOpts } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
 import { makeGear, type ClassId, type Gear, type GearSlot, type Tier } from '@/lib/gear';
 import { heroVariant } from '@/story/flame';
-import type { BossSheetKey, DressedKey, Sheets } from './rules';
+import { NATIVE, type BossSheetKey, type DressedKey, type NativeKey, type Sheets } from './rules';
 
 /* Every sprite sheet a Fog run draws with. sheetFor caches what it builds, so drawing them while
    the Play tab sits idle (one at a time, so the page never stalls) makes the tap on Play start the
@@ -86,8 +86,10 @@ function jobs(state: GameState, zone: Zone): Job[] {
   const plain = ['ember', 'mirror', 'knight', 'summit', 'jarPop', 'warden', 'lanternMid', 'foremanMid', 'sandGolemMid', 'sandGolemMidStone', 'whisperMid', 'galeMid', 'bellowsMid', 'bellMid', 'tollMid'] as const;
   // The regular monsters dressed for this zone's world (wet glass at the lake, scrap iron at the
   // forges...), standing and firing.
-  const dressed: DressedKey[] = ['slime', 'wisp', 'lancer', 'clock', 'smoke', 'seeker', 'jar', 'imp', 'shade', 'ashGolem', 'grinder', 'unsent', 'loner'],
-    world = worldOf(zone);
+  const dressed: DressedKey[] = ['slime', 'wisp', 'lancer', 'clock', 'smoke', 'seeker', 'jar', 'imp', 'shade', 'ashGolem', 'grinder', 'unsent', 'loner', ...(Object.keys(NATIVE) as NativeKey[])],
+    world = worldOf(zone),
+    // a world's own monsters as drawn at home, dressed anywhere else
+    dressFor = (id: DressedKey) => (NATIVE[id as NativeKey] === world ? 0 : world);
   return [
     ['hero', () => sheetFor('hero', 'idle', you)],
     ['heroAttack', () => sheetFor('hero', 'attack', you)],
@@ -95,8 +97,8 @@ function jobs(state: GameState, zone: Zone): Job[] {
     ['hollow', () => sheetFor('hero', 'idle', { ...hero, variant: 'hollow' })],
     ['echo', () => sheetFor('hero', 'idle', { ...hero, variant: 'echo' })],
     ...plain.map((id): Job => [id, () => sheetFor(id, 'idle')]),
-    ...dressed.map((id): Job => [id, () => sheetFor(id, 'idle', { zone: world })]),
-    ...dressed.map((id): Job => [`${id}Attack`, () => sheetFor(id, 'attack', { zone: world })]),
+    ...dressed.map((id): Job => [id, () => sheetFor(id, 'idle', { zone: dressFor(id) })]),
+    ...dressed.map((id): Job => [`${id}Attack`, () => sheetFor(id, 'attack', { zone: dressFor(id) })]),
     ...bossJobs(zone, hero),
     ...midJobs(world),
   ];

@@ -44,7 +44,8 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | I want to... | Edit |
 |---|---|
 | Tune a monster (HP, speed, how it shoots) | its entry in `MONSTERS` (`content.ts`) |
-| Change who lives in a zone, and how deep they show up | the zone's entry in `ZONE_DUNGEONS` (`content.ts`) |
+| Change who lives in a zone, and how deep they show up | the zone's entry in `ZONE_DUNGEONS` (`content.ts`); a test in `engine.test.ts` keeps every story world bringing at least five monsters not met before, and no more than two of the Ashlands' |
+| Tune one of the story worlds' own monsters' tricks (the Swan's feathers, the Measure's wall, the Squire's pile, the Mole's dig, the Devil's sand ball, the Maybe's hanging shots, the Undertow's pull, the Hawk's swoop, the Cairn's icicles) | `BACK`, `WALL`, `SQUIRE`, `MOLE`, `BURST`, `STALL`, `UNDERTOW`, `SWOOP` in `content.ts`; the rain is a `Pattern` (`kind: 'rain'`) on the Cairn |
 | Add a monster | `MonsterKind` and `MONSTERS` (and a `MEET` line) in `content.ts`; its sprite in `src/sprites/characters/` and `SPRITES`; a `SheetKey` in `src/game/rules.ts`, its sheet in `src/game/sheets.ts` (a dressed monster: `DressedKey`, which also gets its attack sheet), and its entry in `FOE_FX` (`foeFx.ts`) |
 | Change how a monster looks or feels (sprite, size, its shots, the warning before it fires, its death) | its entry in `FOE_FX` (`foeFx.ts`); a new shot picture goes in `SHOT_ART` (drawn once as a texture, `spin` or `point` to turn it). Shots and bombs carry who fired them (`Bullet.from`, `Bullet.pat`, `Mine.from`), and the `shoot` event its `id` and `kind`, so the scene picks the look; nothing there changes the game. A regular monster plays its attack clip as it fires. Rule: warnings stay small, under the monster or on the spot that will be hit |
 | Add a chest item | `RelicId`, `RELICS` and `RELIC_BOT` in `content.ts`; what it does where engine.ts reads `relic(run, ...)`; its icon in `RELIC_ICONS` (`src/sprites/characters/icons.ts`) |
@@ -128,6 +129,26 @@ World 8 is the Long Bridge (chapter 3):
   adds `more` of its plates (`summonBoss`). Past a third of its plates (phase 2) it throws everyone
   away from the middle of the party every `apart` s (a `shout`); past two thirds it slows and only
   fights. Its art has three stages, like the Knight's.
+
+## The story worlds' own monsters
+
+Each story world after the Ashlands (zones 2-6, worlds 1-5) brings five monsters of its own
+(`ZoneKind` in `content.ts`, art in `src/sprites/characters/zoneFoes.ts`) and keeps one or two of the
+Ashlands'; the Summit also sees a few from the worlds before it. Two per world have an attack nobody
+else has; the other three are plain fun monsters of the place mixing the usual moves and shots
+(a frog that leaps like a Lancer, a scarab that rolls like the Grinder, a hound that blinks like a
+Shade).
+
+| World | Its own trick | The plain ones |
+|---|---|---|
+| Mirror Lake | Lake Echo (move `mimic`: walks where your mirror image would stand, left and right swapped across the room); Glass Swan (shot style `back`: feathers fly out, stop and come back, `BACK`) | Puddle Frog (`frog`, leaps), Glass Eel (`eel`), Lily (`lily`) |
+| The Cold Forges | Measure (pattern `wall`: a row of nails with a two-shot gap, `WALL`); Scrap Squire (falls into a pile, `Foe.pileUntil`, and stands again with `SQUIRE.back` of its HP unless a hero stands within `stamp`: `stepPile`) | Soot Rat (`rat`, packs), Cinder Bat (`bat`), Kiln (`kiln`, lobs coals) |
+| The Plateau | Dune Mole (move `burrow`: under the sand it can't be hit or hurt, `Foe.under`, digs after you, its mound stops and shakes, then it comes up with a ring, `MOLE`, `dig` events); Dust Devil (shot style `burst`: the sand ball bursts into a ring of grit, `BURST`; the grit is `pat` -1, drawn by its `hatch` art) | Scarab (`scarab`, rolls), Cactus (`cactus`), Sun Lizard (`lizard`) |
+| The Fog | Maybe (shot style `stall`: flies, hangs still, then darts at you, `STALL`, `Bullet.turned`); Undertow (pulls heroes toward it, fading to nothing up close, `UNDERTOW`, `Hero.tow`, `undertow()`) | Lamp Moth (`moth`), Pale Hound (`hound`, blinks), Fog Shroom (`shroom`, spores) |
+| The Summit | Ridge Hawk (move `swoop`: circles, aims, dives across the room through you, dropping feathers either side, pattern `side` with `on: 'dash'`, `SWOOP`); Cairn (pattern `rain`: icicles land round you and one where you stand, a darkening shadow first, no shots out of them) | Yeti Cub (`yeti`), Frost Sprite (`frost`, icicles that come back), Boulder (`boulder`, rolls) |
+
+The bot plays them like a person: it stands on a Squire's pile, keeps off a Mole's mound, steps off
+any charge, roll or swoop line, steps back from a hanging shot, and leans against an Undertow.
 
 ## The first dungeon
 

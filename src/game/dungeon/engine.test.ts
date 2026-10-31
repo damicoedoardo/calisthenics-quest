@@ -5,7 +5,7 @@ import { CALM, HUMAN, PARTY, SP_SKILL, SP_WEAPON, TUTORIAL } from '@/balance';
 import { seeded } from '@/lib/random';
 import { botInput, playRun } from './bot';
 import { rollItem } from './items';
-import { ACROSS, addFoe, asleep, BAG, attackKind, BELLOWS, canOpen, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LANTERN, LIGHT, lit, LULL, makeFloor, MIDS, ROLL, mine, pickRelic, SAND, skipToBoss, skipToWarden, SP_NOS, SPLIT, stepRun, takeEvents, wardenFloor, worldOf, type GameEvent, type Run, type Side, type SpNo } from './engine';
+import { ACROSS, addFoe, BURST, MEET, MOLE, MONSTERS, SQUIRE, UNDERTOW, ZONE_DUNGEONS, asleep, BAG, attackKind, BELLOWS, canOpen, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LANTERN, LIGHT, lit, LULL, makeFloor, MIDS, ROLL, mine, pickRelic, SAND, skipToBoss, skipToWarden, SP_NOS, SPLIT, stepRun, takeEvents, wardenFloor, worldOf, type GameEvent, type Run, type Side, type SpNo } from './engine';
 import type { ClassId } from '@/lib/gear';
 
 describe('mid-bosses', () => {
@@ -987,5 +987,133 @@ describe("the opening's first dungeon", () => {
     for (let i = 0; i < 60 * (TUTORIAL.lose + 3) && !run.over; i++) stepRun(run, still);
     expect(run.over?.why).toBe('hp');
     expect(run.boss?.hp).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("the story worlds' own monsters", () => {
+  const power = powerOf(initialState(), new Date());
+  const still = { x: 0, y: 0, ability: false };
+  /** A quiet room in `zone` with only the monster given, far from you and too tough to fall. */
+  function alone(kind: Parameters<typeof addFoe>[1], zone = 1, x?: number, y = 140) {
+    const run = createRun({ zone: ZONES[zone], power: { ...power, health: 5000 }, classId: undefined, seed: 4 });
+    run.foes = [];
+    run.waves = [];
+    run.hero.x = run.area.w / 2;
+    run.hero.y = run.area.h - 80;
+    const f = addFoe(run, kind, x ?? run.area.w / 2, y);
+    f.bornUntil = 0;
+    f.hp = f.maxHp = 1e6;
+    takeEvents(run);
+    return { run, f };
+  }
+
+  it('every story world after the first brings at least five monsters not met before', () => {
+    const seen = new Set(ZONE_DUNGEONS[0].unlock.map(([k]) => k));
+    for (let w = 1; w <= 5; w++) {
+      const kinds = ZONE_DUNGEONS[w].unlock.map(([k]) => k),
+        fresh = kinds.filter((k) => !seen.has(k));
+      expect(fresh.length).toBeGreaterThanOrEqual(5);
+      // and keeps no more than two of the Ashlands' monsters
+      expect(kinds.filter((k) => ZONE_DUNGEONS[0].unlock.some(([a]) => a === k)).length).toBeLessThanOrEqual(2);
+      kinds.forEach((k) => seen.add(k));
+      for (const k of fresh) expect(MEET[k]).toBeTruthy();
+    }
+  });
+
+  it('a Scrap Squire falls into a pile when brought down, and stands again', () => {
+    const { run, f } = alone('squire', 2);
+    f.hp = 1;
+    // next to you, so your attack brings it down
+    run.hero.x = f.x;
+    run.hero.y = f.y + 60;
+    for (let i = 0; i < 60 * 2 && f.pileUntil === undefined; i++) stepRun(run, still);
+    expect(f.pileUntil).toBeDefined();
+    expect(f.alive).toBe(true);
+    // walk off: nobody stamps it out, so it stands up again
+    run.hero.y = run.area.h - 60;
+    for (let i = 0; i < 60 * (SQUIRE.rebuild + 0.2); i++) stepRun(run, still);
+    expect(f.alive && f.pileUntil === undefined && f.rebuilt).toBe(true);
+  });
+
+  it('stamping out a Scrap Squire pile brings it down for good', () => {
+    const { run, f } = alone('squire', 2);
+    f.pileUntil = run.t + SQUIRE.rebuild;
+    f.hp = 0;
+    stepRun(run, still);
+    expect(f.alive).toBe(true);
+    run.hero.x = f.x;
+    run.hero.y = f.y;
+    stepRun(run, still);
+    expect(f.alive).toBe(false);
+  });
+
+  it('a Dune Mole under the sand cannot be hit, and comes up with a ring', () => {
+    const { run, f } = alone('mole', 3);
+    let under = false,
+      dug = 0,
+      rings = 0;
+    for (let i = 0; i < 60 * (MOLE.up * 1.3 + MOLE.under + MOLE.mark + 1); i++) {
+      stepRun(run, still);
+      if (f.under) {
+        under = true;
+        const hp = f.hp;
+        expect(hp).toBe(f.maxHp);
+      }
+      for (const e of takeEvents(run)) {
+        if (e.type === 'dig' && e.up) dug++;
+        if (e.type === 'shoot' && e.kind === 'mole') rings++;
+      }
+    }
+    expect(under).toBe(true);
+    expect(dug).toBeGreaterThan(0);
+    expect(rings).toBeGreaterThan(0);
+  });
+
+  it("a Measure's wall leaves a gap, a Dust Devil's sand ball bursts, a Maybe's shots hang, a Swan's come back", () => {
+    const wall = alone('measure', 2);
+    for (let i = 0; i < 60 * 4 && !wall.run.bullets.length; i++) stepRun(wall.run, still);
+    expect(wall.run.bullets.length).toBeGreaterThan(0);
+    expect(wall.run.bullets.length).toBeLessThan(MONSTERS.measure.shoots[0].n);
+
+    const devil = alone('devil', 3);
+    let grit = 0;
+    for (let i = 0; i < 60 * 5; i++) {
+      stepRun(devil.run, still);
+      grit = Math.max(grit, devil.run.bullets.filter((b) => b.pat === -1).length);
+    }
+    expect(grit).toBeGreaterThanOrEqual(BURST.n);
+
+    const maybe = alone('maybe', 4);
+    let hung = false,
+      darted = false;
+    for (let i = 0; i < 60 * 5; i++) {
+      stepRun(maybe.run, still);
+      for (const b of maybe.run.bullets) {
+        if (!b.vx && !b.vy) hung = true;
+        if (b.turned) darted = true;
+      }
+    }
+    expect(hung && darted).toBe(true);
+
+    const swan = alone('swan', 1);
+    let back = false;
+    for (let i = 0; i < 60 * 5; i++) {
+      stepRun(swan.run, still);
+      // flying back toward where it was thrown from
+      for (const b of swan.run.bullets) if (b.vx * Math.cos(b.ang) + b.vy * Math.sin(b.ang) < -1) back = true;
+    }
+    expect(back).toBe(true);
+  });
+
+  it('an Undertow pulls you toward it, never onto it', () => {
+    const { run, f } = alone('undertow', 4);
+    f.speed = 0;
+    run.hero.x = f.x;
+    run.hero.y = f.y + 150;
+    stepRun(run, still);
+    expect(run.hero.tow.y).toBeLessThan(0);
+    run.hero.y = f.y + UNDERTOW.close - 10;
+    stepRun(run, still);
+    expect(run.hero.tow.y).toBe(0);
   });
 });

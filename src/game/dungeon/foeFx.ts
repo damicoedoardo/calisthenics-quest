@@ -62,6 +62,8 @@ export interface FoeFx {
   look: Look;
   /** Its own shots (a key in SHOT_ART). Without one they look like their style (STYLE_SHOT). */
   shot?: string;
+  /** What its shots burst into (a Dust Devil's sand ball into grit), a key in SHOT_ART. */
+  hatch?: string;
   /** Every frame it's alive: its warnings (a charge's line, where it will land). */
   tell?(c: FoeCtx): void;
   /** Every frame it's alive and not flashing from a hit: its sprite's tint and fade. */
@@ -329,6 +331,186 @@ export const SHOT_ART: Record<string, ShotArt> = {
       g.fillStyle(0xffffff).fillCircle(7, 14, 2);
     },
   },
+  // ----- the story worlds' own monsters' shots -----
+  // A Glass Swan's feather of glass, out and back.
+  'shot-feather': {
+    w: 10,
+    h: 18,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0x7dd3fc, 0.35).fillEllipse(5, 9, 10, 18);
+      g.fillStyle(0xe0f2fe).fillEllipse(5, 8, 6, 14);
+      g.fillStyle(0x3a7ea3).fillRect(4, 3, 2, 14);
+    },
+  },
+  // A Measure's nails, flat and level.
+  'shot-nail': {
+    w: 8,
+    h: 16,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0xfbbf24, 0.35).fillEllipse(4, 8, 8, 16);
+      g.fillStyle(0xb9bcc6).fillTriangle(4, 0, 2, 5, 6, 5).fillRect(3, 4, 2, 9);
+      g.fillStyle(0xe5e7eb).fillRect(1, 12, 6, 2);
+    },
+  },
+  // A Scrap Squire's offcuts.
+  'shot-scrap': {
+    w: 14,
+    h: 14,
+    spin: 6,
+    paint: (g) => {
+      g.fillStyle(0xf97316, 0.35).fillCircle(7, 7, 7);
+      g.fillStyle(0x7b7b86).fillTriangle(2, 3, 12, 5, 5, 12);
+      g.fillStyle(0xc2410c).fillRect(5, 6, 3, 2);
+      g.fillStyle(0xe5e7eb).fillRect(4, 4, 2, 1);
+    },
+  },
+  // A Dune Mole's clods of sand.
+  'shot-sand': {
+    w: 14,
+    h: 14,
+    spin: 4,
+    paint: (g, rim) => rock(g, rim ? 0x1c1712 : 0xfbbf24, 0xb08850, 0xf1dcae),
+  },
+  // A Dust Devil's sand ball, and the grit it bursts into.
+  'shot-sandball': {
+    w: 20,
+    h: 20,
+    spin: 6,
+    paint: (g) => {
+      g.fillStyle(0xf59e0b, 0.35).fillCircle(10, 10, 10);
+      g.fillStyle(0x1c1712).fillCircle(10, 10, 8);
+      g.fillStyle(0xd9b47a).fillCircle(10, 10, 7);
+      g.fillStyle(0x7a5a32).fillRect(5, 9, 10, 2);
+      g.fillStyle(0xf1dcae).fillRect(7, 5, 3, 2);
+    },
+  },
+  'shot-grit': {
+    w: 12,
+    h: 12,
+    spin: 8,
+    paint: (g, rim) => rock(g, rim ? 0x1c1712 : 0xfbbf24, 0x9a6d3c, 0xf5e2b8),
+  },
+  // A Maybe's doubts: pale rings with a dot, that hang in the air before they come.
+  'shot-doubt': {
+    w: 16,
+    h: 16,
+    paint: (g) => {
+      g.fillStyle(0xc4b5fd, 0.35).fillCircle(8, 8, 8);
+      g.lineStyle(2, 0xf6f5ff, 0.95).strokeCircle(8, 8, 5);
+      g.fillStyle(0x7c3aed).fillCircle(8, 8, 2);
+    },
+  },
+  // An Undertow's bubbles.
+  'shot-bubble': {
+    w: 14,
+    h: 14,
+    paint: (g) => {
+      g.fillStyle(0x2dd4bf, 0.35).fillCircle(7, 7, 7);
+      g.fillStyle(0x0f3a45).fillCircle(7, 7, 5);
+      g.lineStyle(1, 0x99f6e4).strokeCircle(7, 7, 5);
+      g.fillStyle(0xffffff).fillRect(4, 4, 2, 2);
+    },
+  },
+  // A Ridge Hawk's quills.
+  'shot-quill': {
+    w: 10,
+    h: 16,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0xf59e0b, 0.35).fillEllipse(5, 8, 10, 16);
+      g.fillStyle(0x9a6a3e).fillEllipse(5, 7, 6, 12);
+      g.fillStyle(0xfafaf9).fillRect(4, 1, 2, 4);
+      g.fillStyle(0x3b2414).fillRect(4, 5, 2, 9);
+    },
+  },
+  // The plain fun ones' shots.
+  'shot-drop': {
+    w: 12,
+    h: 16,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0x38bdf8, 0.35).fillEllipse(6, 9, 12, 14);
+      g.fillStyle(0x7dd3fc).fillTriangle(6, 0, 1, 10, 11, 10).fillCircle(6, 10, 5);
+      g.fillStyle(0xf0f9ff).fillCircle(5, 10, 2);
+    },
+  },
+  'shot-petal': {
+    w: 12,
+    h: 14,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0xec4899, 0.35).fillEllipse(6, 7, 12, 14);
+      g.fillStyle(0xf9a8d4).fillEllipse(6, 7, 7, 12);
+      g.fillStyle(0xfff1f8).fillRect(5, 3, 2, 6);
+    },
+  },
+  'shot-needle': {
+    w: 8,
+    h: 16,
+    point: true,
+    paint: (g, rim) => {
+      g.fillStyle(rim ? 0x1c1712 : 0x84cc16, 0.4).fillEllipse(4, 8, 8, 16);
+      g.fillStyle(0xf5f5dc).fillTriangle(4, 0, 2, 14, 6, 14);
+      g.fillStyle(0x2f7a3b).fillRect(3, 12, 2, 3);
+    },
+  },
+  'shot-sun': {
+    w: 14,
+    h: 14,
+    paint: (g, rim) => {
+      g.fillStyle(0xfbbf24, 0.4).fillCircle(7, 7, 7);
+      if (rim) g.fillStyle(0x1c1712).fillCircle(7, 7, 5.5);
+      g.fillStyle(0xf97316).fillCircle(7, 7, 4.5);
+      g.fillStyle(0xfef08a).fillCircle(6, 6, 2.5);
+    },
+  },
+  'shot-dust': {
+    w: 14,
+    h: 14,
+    paint: (g) => {
+      g.fillStyle(0xfde68a, 0.35).fillCircle(7, 7, 7);
+      g.fillStyle(0xfef3c7).fillCircle(7, 7, 4);
+      g.fillStyle(0xffffff).fillCircle(6, 6, 2);
+    },
+  },
+  'shot-spore': {
+    w: 12,
+    h: 12,
+    spin: 3,
+    paint: (g) => {
+      g.fillStyle(0xa78bfa, 0.4).fillCircle(6, 6, 6);
+      g.fillStyle(0xc4b5fd).fillCircle(6, 6, 4);
+      g.fillStyle(0x6a5a9a).fillRect(4, 4, 2, 2).fillRect(7, 6, 2, 2);
+    },
+  },
+  'shot-snow': {
+    w: 16,
+    h: 16,
+    spin: 4,
+    paint: (g) => {
+      g.fillStyle(0x93c5fd, 0.35).fillCircle(8, 8, 8);
+      g.fillStyle(0xf8fafc).fillCircle(8, 8, 6);
+      g.fillStyle(0xcbd5e1).fillCircle(10, 10, 2.5);
+    },
+  },
+  'shot-icicle': {
+    w: 8,
+    h: 16,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0x7dd3fc, 0.35).fillEllipse(4, 8, 8, 16);
+      g.fillStyle(0xbae6fd).fillTriangle(1, 2, 7, 2, 4, 16);
+      g.fillStyle(0xffffff).fillRect(3, 3, 1, 7);
+    },
+  },
+  'shot-stone': {
+    w: 14,
+    h: 14,
+    spin: 3,
+    paint: (g) => rock(g, 0x93c5fd, 0x4c5566, 0xdbeafe),
+  },
   // The Book's pages.
   'bullet-page': {
     w: 12,
@@ -344,7 +526,7 @@ export const SHOT_ART: Record<string, ShotArt> = {
 
 /** Each kind of shot has its own color, so you learn what it will do. A monster's own shot
     (FoeFx.shot) wins over this; a boss's plain shot is `bullet-boss`. */
-export const STYLE_SHOT = { plain: 'bullet', homing: 'bullet-homing', bounce: 'bullet-bounce', ramp: 'bullet-ramp', wiggle: 'bullet-page' } as const;
+export const STYLE_SHOT = { plain: 'bullet', homing: 'bullet-homing', bounce: 'bullet-bounce', ramp: 'bullet-ramp', wiggle: 'bullet-page', back: 'shot-feather', burst: 'shot-sandball', stall: 'shot-doubt' } as const;
 
 /** A zone boss's own shots, by its patterns' order in BOSSES (content.ts); a pattern without one
     looks like its style. */
@@ -357,7 +539,8 @@ export const BOSS_SHOTS: Partial<Record<FogBoss, string[]>> = {
 /** The picture for a shot fired by `from` (a boss's when `boss`), in `style`. A boss's shot
     (`from` 'boss') is its BOSS_SHOTS entry for pattern `n`. */
 export function shotOf(from: Foe['kind'] | undefined, boss: boolean, style: keyof typeof STYLE_SHOT, which?: FogBoss, n?: number): string {
-  const own = from === 'boss' ? (which && n !== undefined ? BOSS_SHOTS[which]?.[n] : undefined) : from ? FOE_FX[from].shot : undefined;
+  // n -1: shots thrown by another shot (a Dust Devil's sand ball bursting into grit)
+  const own = from === 'boss' ? (which && n !== undefined ? BOSS_SHOTS[which]?.[n] : undefined) : from ? ((n === -1 ? FOE_FX[from].hatch : undefined) ?? FOE_FX[from].shot) : undefined;
   return own ?? (boss && style === 'plain' ? 'bullet-boss' : STYLE_SHOT[style]);
 }
 
@@ -366,7 +549,21 @@ export function shotOf(from: Foe['kind'] | undefined, boss: boolean, style: keyo
 /** A lobbed bomb on its way (p 0 to 1 of the flight), then on the ground filling up until it
     bursts (p 0 to 1 of the fuse). */
 export function drawMine(fx: G, mk: G, P: FoeCtx['P'], m: Mine, flying: boolean, p: number, now: number) {
-  const golem = m.from === 'golem';
+  // A Cairn's icicle: a shadow on the floor that darkens, then the icicle falls onto it.
+  if (m.from === 'cairn') {
+    const q = flying ? 0.3 * p : 0.3 + 0.7 * p;
+    fx.fillStyle(0x0c1a2e, 0.15 + 0.3 * q).fillEllipse(m.x, m.y, m.r * 2 * (0.5 + 0.5 * q), m.r * 1.4 * (0.5 + 0.5 * q));
+    fx.lineStyle(2, 0x7dd3fc, 0.4 + 0.5 * q).strokeEllipse(m.x, m.y, m.r * 2, m.r * 1.4);
+    if (!flying && p > 0.55) {
+      const [X, Y] = P(m.x, m.y),
+        y = Y - 90 * (1 - (p - 0.55) / 0.45);
+      mk.fillStyle(0x7dd3fc).fillTriangle(X - 4, y - 16, X + 4, y - 16, X, y);
+      mk.fillStyle(0xe0f2fe).fillTriangle(X - 1, y - 15, X + 2, y - 15, X, y - 5);
+    }
+    return;
+  }
+  // the Ash Golem's boulders, and a Kiln's hot coals
+  const golem = m.from === 'golem' || m.from === 'kiln';
   if (flying) {
     // its shadow grows as it falls; the bomb (a Smoker's, fuse lit) or a boulder arcs over
     fx.fillStyle(0x000000, 0.25).fillCircle(m.x, m.y, 4 + 6 * p);
@@ -466,6 +663,31 @@ export function bossStage(which: FogBoss, f: Foe): number {
   if (which === 'plateau') return f.phase <= 3 ? 0 : f.phase <= 6 ? 1 : 2;
   return 0;
 }
+
+/** The warnings the plain fun monsters share by how they move: a line where a leap or charge will
+    go, a line where a roll will go, the mark where a blink lands. */
+const chargeLine =
+  (color: number, len = 330 * 0.6) =>
+  ({ f, fx, t }: FoeCtx) => {
+    if (t >= f.windUntil) return;
+    const p = 1 - (f.windUntil - t) / 0.75;
+    fx.lineStyle(f.def.r * 2, color, 0.1 + 0.25 * p).lineBetween(f.x, f.y, f.x + f.dashX * len, f.y + f.dashY * len);
+  };
+const rollLine =
+  (color: number) =>
+  ({ f, fx, t }: FoeCtx) => {
+    if (t >= f.windUntil) return;
+    const p = 1 - (f.windUntil - t) / 0.6;
+    fx.lineStyle(f.def.r * 1.6, color, 0.08 + 0.22 * p).lineBetween(f.x, f.y, f.x + f.dashX * 160, f.y + f.dashY * 160);
+  };
+const blinkMark =
+  (ring: number, fill: number) =>
+  ({ f, fx, t }: FoeCtx) => {
+    if (t >= f.windUntil) return;
+    const p = 1 - (f.windUntil - t) / 0.8;
+    fx.lineStyle(2, ring, 0.9).strokeCircle(f.dashX, f.dashY, 26 - 10 * p);
+    fx.fillStyle(fill, 0.2 + 0.3 * p).fillCircle(f.dashX, f.dashY, 16);
+  };
 
 /** Every monster, each with its own sprite (src/sprites/characters) and effects. */
 export const FOE_FX: Record<MonsterKind, FoeFx> = {
@@ -687,6 +909,269 @@ export const FOE_FX: Record<MonsterKind, FoeFx> = {
       if (f.face === undefined) return;
       const R = f.def.r + 9;
       fx.lineStyle(3, 0xc9975e, 0.55).beginPath().arc(f.x, f.y, R, f.face - 1.1, f.face + 1.1).strokePath();
+    },
+  },
+  // ----- the story worlds' own monsters (zones 2-6): two per world with an attack of their own -----
+  // The Lake Echo (Mirror Lake): a faint line on the water to where it is headed (your mirror
+  // image), and it breaks like glass.
+  lakeEcho: {
+    look: {
+      tex: 'lakeEcho',
+      scale: 0.55,
+      bits: [0xa8e4f5, 0x4fa3c7, 0xe8fbff],
+    },
+    shot: 'shot-shard',
+    tell: ({ f, fx, t }) => {
+      const p = soon(f, t);
+      if (p >= 0) fx.lineStyle(2, 0xe8fbff, 0.3 + 0.5 * p).strokeCircle(f.x, f.y, f.def.r * (1.8 - 0.6 * p));
+    },
+    death: (k, e, R) => glass(k, e, R, 10, 240, 1.3),
+  },
+  // The Glass Swan (Mirror Lake): its wings flash before the feathers, and it breaks like glass.
+  swan: {
+    look: { tex: 'swan', scale: 0.6, bits: [0xdff4fb, 0x9fd3ea, 0xffffff] },
+    shot: 'shot-feather',
+    fire: (k, f) => k.burst('bits', 4, f.x, f.y, -6, 0xe0f2fe),
+    death: (k, e, R) => glass(k, e, R, 12, 280, 1.15),
+  },
+  // The Measure (the Cold Forges): a level line across where its wall will fly, and it clatters
+  // apart.
+  measure: {
+    look: { tex: 'measure', scale: 0.6, bits: [0x7b7b86, 0xc9a23a, 0xb9bcc6] },
+    shot: 'shot-nail',
+    tell: ({ f, fx, t }) => {
+      const p = soon(f, t);
+      if (p < 0) return;
+      fx.fillStyle(0xfbbf24, 0.25 + 0.5 * p).fillRect(f.x - 3, f.y + f.def.r + 4, 6, 3);
+      fx.fillRect(f.x - 14 * p - 3, f.y + f.def.r + 5, 28 * p + 6, 1);
+    },
+    fire: (k) => k.sfx('clank', 1.9),
+    death: (k, e, R) => {
+      k.sfx('clank', 1.4);
+      k.burst('bits', 8, e.x, e.y, -6, 0xb9bcc6);
+      puff(k, e, R, 0xc9a23a, 3);
+    },
+  },
+  // The Scrap Squire (the Cold Forges): fallen, it's a pile of scrap on the floor with a ring
+  // round it (stand in it to stamp it out) that fills until it stands again.
+  squire: {
+    look: { tex: 'squire', scale: 0.58, bits: [0x7b7b86, 0xc2410c, 0xb9bcc6] },
+    shot: 'shot-scrap',
+    tell: ({ f, fx, t }) => {
+      if (f.pileUntil === undefined) return;
+      const p = Math.max(0, Math.min(1, 1 - (f.pileUntil - t) / 2.4));
+      fx.lineStyle(2, 0xfbbf24, 0.5 + 0.4 * Math.sin(t * 12)).strokeCircle(f.x, f.y, 40);
+      fx.fillStyle(0xc2410c, 0.12 + 0.2 * p).fillCircle(f.x, f.y, 40 * p);
+      // the pile: scraps of iron and rust
+      for (let i = 0; i < 7; i++) {
+        const a = i * 2.3,
+          r = 4 + (i % 3) * 4;
+        fx.fillStyle(i % 3 ? 0x7b7b86 : 0xc2410c).fillRect(f.x + Math.cos(a) * r - 3, f.y + Math.sin(a) * r * 0.6 - 2, 6, 3);
+      }
+    },
+    body: (s, { f }) => void s.setAlpha(f.pileUntil !== undefined ? 0 : 1),
+    death: (k, e, R) => {
+      k.sfx('clank', 1.1);
+      k.burst('bits', 10, e.x, e.y, -6, 0x7b7b86);
+      puff(k, e, R, 0xc2410c, 3);
+    },
+  },
+  // The Dune Mole (the Plateau): under the sand it is a mound moving across the floor, and where it
+  // will come up the mound shakes and a ring closes in.
+  mole: {
+    look: { tex: 'mole', scale: 0.6, bits: [0x9c7448, 0xd9b47a, 0xf2a5bc] },
+    shot: 'shot-sand',
+    tell: ({ f, fx, t, now }) => {
+      if (!f.under) return;
+      const wob = t < f.windUntil ? Math.sin(now / 30) * 2 : 0;
+      fx.fillStyle(0x7a5a32, 0.9).fillEllipse(f.x + wob, f.y, 26, 12);
+      fx.fillStyle(0xd9b47a).fillEllipse(f.x + wob, f.y - 2, 18, 7);
+      for (let i = 0; i < 3; i++) fx.fillStyle(0xf1dcae).fillRect(f.x - 10 + ((now / 40 + i * 7) % 20), f.y - 6 - (i % 2) * 2, 2, 2);
+      if (t < f.windUntil) {
+        const p = 1 - (f.windUntil - t) / 0.6;
+        fx.lineStyle(2, 0xfbbf24, 0.9).strokeCircle(f.x, f.y, 48 - 26 * p);
+      }
+    },
+    body: (s, { f }) => void s.setAlpha(f.under ? 0 : 1),
+    death: (k, e, R) => {
+      k.burst('puffs', 5, e.x, e.y, 4);
+      puff(k, e, R, 0xd9b47a, 6);
+    },
+  },
+  // The Dust Devil (the Plateau): grit whirls round it, and it blows apart into dust.
+  devil: {
+    look: { tex: 'devil', scale: 0.55, bits: [0xd9b47a, 0xb08850, 0x7a5a32] },
+    shot: 'shot-sandball',
+    hatch: 'shot-grit',
+    tell: ({ f, fx, now }) => {
+      for (let i = 0; i < 3; i++) {
+        const a = now / 140 + i * 2.1;
+        fx.fillStyle(0xd9b47a, 0.6).fillRect(f.x + Math.cos(a) * 18 - 1, f.y + 6 + Math.sin(a) * 6, 2, 2);
+      }
+    },
+    death: (k, e, R) => {
+      k.burst('puffs', 8, e.x, e.y, 0);
+      puff(k, e, R, 0xd9b47a, 6);
+    },
+  },
+  // The Maybe (the Fog): it flinches, see-through, and fades away like a thought let go.
+  maybe: {
+    look: { tex: 'maybe', scale: 0.55, bits: [0xd6d3ea, 0x9d9ab8, 0xffffff] },
+    shot: 'shot-doubt',
+    body: (s, { now, f }) => void s.setAlpha(0.75 + 0.2 * Math.sin(now / 200 + f.id)),
+    death: (k, e) => {
+      const [X, Y] = k.P(e.x, e.y);
+      k.fade(600, (g, p) => g.fillStyle(0xd6d3ea, 0.5 * (1 - p)).fillCircle(X, Y - 26 * p, 12 * (1 - p) + 3), true);
+    },
+  },
+  // The Undertow (the Fog): rings of water drawn in toward it show how far it pulls; it drains away.
+  undertow: {
+    look: { tex: 'undertow', scale: 0.7, bits: [0x1f6b78, 0x5fb3bd, 0x0f3a45] },
+    shot: 'shot-bubble',
+    tell: ({ f, fx, now }) => {
+      for (let i = 0; i < 2; i++) {
+        const p = (now / 1400 + i / 2) % 1;
+        fx.lineStyle(2, 0x5fb3bd, 0.25 * p).strokeCircle(f.x, f.y, 260 - 190 * p);
+      }
+    },
+    death: (k, e, R) => {
+      const { x, y } = e;
+      k.sfx('kill', 0.7);
+      k.fade(700, (g, p) => g.fillStyle(0x0f3a45, 0.6 * (1 - p)).fillEllipse(x, y, R * 2.4 * (1 - p * 0.6), R * (1 - p * 0.6)));
+      k.burst('bits', 6, x, y, -4, 0x5fb3bd);
+    },
+  },
+  // The Ridge Hawk (the Summit): a line across the room where it will swoop, and feathers when it's
+  // gone.
+  hawk: {
+    look: { tex: 'hawk', scale: 0.6, bits: [0x9a6a3e, 0xe7e5e4, 0x3b2414] },
+    shot: 'shot-quill',
+    tell: ({ f, fx, t }) => {
+      if (t >= f.windUntil) return;
+      const p = 1 - (f.windUntil - t) / 0.7,
+        len = 300 * 1.6;
+      fx.lineStyle(f.def.r * 2, 0xf59e0b, 0.08 + 0.22 * p).lineBetween(f.x, f.y, f.x + f.dashX * len, f.y + f.dashY * len);
+    },
+    body: (s, { f, t, now, look }) => void s.setTint(t < f.windUntil && Math.floor(now / 90) % 2 ? 0xffd27a : (look.tint ?? 0xffffff)),
+    death: (k, e, R) => {
+      k.burst('bits', 10, e.x, e.y, -10, 0x9a6a3e);
+      puff(k, e, R, 0xe7e5e4, 5);
+    },
+  },
+  // The Cairn (the Summit): it shudders before the icicles fall, and tumbles into stones.
+  cairn: {
+    look: { tex: 'cairn', scale: 0.62, bits: [0x7a8599, 0xdbeafe, 0x7dd3fc] },
+    heavy: true,
+    tell: ({ f, fx, t }) => {
+      const p = soon(f, t);
+      if (p >= 0) fx.fillStyle(0x7dd3fc, 0.12 + 0.2 * p).fillCircle(f.x, f.y, f.def.r * (1.2 + 0.5 * p));
+    },
+    death: (k, e, R) => {
+      k.sfx('crack', 1.1);
+      k.burst('bits', 12, e.x, e.y, 0, 0x7a8599);
+      puff(k, e, R, 0xdbeafe, 6);
+    },
+  },
+  // ----- the plain fun ones, three per story world -----
+  frog: {
+    look: { tex: 'frog', scale: 0.55, bits: [0x2f8f5b, 0x6fd39a, 0x7dd3fc] },
+    shot: 'shot-drop',
+    tell: chargeLine(0x38bdf8),
+    death: (k, e, R) => puff(k, e, R, 0x6fd39a, 8),
+  },
+  eel: {
+    look: { tex: 'eel', scale: 0.55, bits: [0x2b78ad, 0x7cc8ea, 0xd9f4ff] },
+    shot: 'shot-tear',
+    death: (k, e, R) => glass(k, e, R, 8, 220, 1.4),
+  },
+  lily: {
+    look: { tex: 'lily', scale: 0.6, bits: [0xec4899, 0x22804a, 0xfbcfe8] },
+    shot: 'shot-petal',
+    death: (k, e, R) => puff(k, e, R, 0xf9a8d4, 10),
+  },
+  rat: {
+    look: { tex: 'rat', scale: 0.45, bits: [0x3b3436, 0x6b6264, 0xf97316] },
+    shot: 'shot-ember',
+    killPitch: 1.6,
+    death: (k, e, R) => puff(k, e, R, 0x6b6264, 5),
+  },
+  bat: {
+    look: { tex: 'bat', scale: 0.5, bits: [0x3b3436, 0xf97316, 0xfbbf24] },
+    shot: 'shot-ember',
+    killPitch: 1.5,
+    death: (k, e, R) => puff(k, e, R, 0xf97316, 6),
+  },
+  kiln: {
+    look: { tex: 'kiln', scale: 0.65, bits: [0x8f3a22, 0xf97316, 0x6b6264] },
+    shot: 'shot-cinder',
+    heavy: true,
+    tell: ({ f, fx, t }) => {
+      const p = soon(f, t);
+      if (p >= 0) fx.fillStyle(0xf97316, 0.12 + 0.25 * p).fillCircle(f.x, f.y, f.def.r * (1.2 + 0.6 * p));
+    },
+    death: (k, e, R) => {
+      k.sfx('crack', 1.2);
+      k.burst('bits', 12, e.x, e.y, 0, 0x8f3a22);
+      puff(k, e, R, 0xf97316, 4);
+    },
+  },
+  scarab: {
+    look: { tex: 'scarab', scale: 0.6, bits: [0xc99a3a, 0xb08850, 0x3b2a10] },
+    shot: 'shot-grit',
+    tell: rollLine(0xd9b47a),
+    death: (k, e, R) => puff(k, e, R, 0xc99a3a, 8),
+  },
+  cactus: {
+    look: { tex: 'cactus', scale: 0.6, bits: [0x5fae5a, 0xf472b6, 0xf5f5dc] },
+    shot: 'shot-needle',
+    death: (k, e, R) => puff(k, e, R, 0x5fae5a, 10),
+  },
+  lizard: {
+    look: { tex: 'lizard', scale: 0.6, bits: [0xf97316, 0xfde047, 0xc2410c] },
+    shot: 'shot-sun',
+    death: (k, e, R) => puff(k, e, R, 0xf97316, 7),
+  },
+  moth: {
+    look: { tex: 'moth', scale: 0.55, bits: [0xb9b6cf, 0xfde68a, 0x7a7794] },
+    shot: 'shot-dust',
+    killPitch: 1.4,
+    death: (k, e, R) => puff(k, e, R, 0xfde68a, 8),
+  },
+  hound: {
+    look: { tex: 'hound', scale: 0.6, bits: [0x8f97a8, 0xcfd5e0, 0x2f3442] },
+    shot: 'shot-void',
+    tell: blinkMark(0xcfd5e0, 0x5b6273),
+    body: (s, { f, t }) => void s.setAlpha(t < f.windUntil ? 0.25 : 1),
+    death: (k, e, R) => {
+      k.burst('puffs', 6, e.x, e.y, -6);
+      puff(k, e, R, 0xcfd5e0, 4);
+    },
+  },
+  shroom: {
+    look: { tex: 'shroom', scale: 0.6, bits: [0x6a5a9a, 0xe7dcc8, 0xa294d0] },
+    shot: 'shot-spore',
+    death: (k, e, R) => puff(k, e, R, 0xa294d0, 10),
+  },
+  yeti: {
+    look: { tex: 'yeti', scale: 0.62, bits: [0xf1f5f9, 0x60a5fa, 0xcbd5e1] },
+    shot: 'shot-snow',
+    heavy: true,
+    death: (k, e, R) => puff(k, e, R, 0xf1f5f9, 12),
+  },
+  frost: {
+    look: { tex: 'frost', scale: 0.5, bits: [0x7dd3fc, 0xe0f2fe, 0xffffff] },
+    shot: 'shot-icicle',
+    killPitch: 1.5,
+    death: (k, e, R) => glass(k, e, R, 10, 240, 1.5),
+  },
+  boulder: {
+    look: { tex: 'boulder', scale: 0.65, bits: [0x7a8599, 0xdbeafe, 0x4c5566] },
+    shot: 'shot-stone',
+    tell: rollLine(0x93c5fd),
+    death: (k, e, R) => {
+      k.sfx('crack', 0.9);
+      k.burst('bits', 14, e.x, e.y, 0, 0x7a8599);
+      puff(k, e, R, 0xdbeafe, 4);
     },
   },
   // The Silent Bell: a ring marks where its toll comes back from.

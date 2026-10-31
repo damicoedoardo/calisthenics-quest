@@ -1,6 +1,6 @@
 import { HUMAN } from '@/balance';
 import { clamp, HERO_SPEED, RANGE } from '../rules';
-import { abilityReady, attackKind, canOpen, onStairs, outSide, finalReady, skillReady, BARREL, CHARGE, createRun, GALE, LANTERN, LIGHT, LONER, LULL, ROOM, lit as inLantern, type Foe, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup, type SpMoveId } from './engine';
+import { abilityReady, attackKind, canOpen, onStairs, outSide, finalReady, skillReady, BARREL, CHARGE, ROLL, SWOOP, UNDERTOW, createRun, GALE, LANTERN, LIGHT, LONER, LULL, ROOM, lit as inLantern, type Foe, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup, type SpMoveId } from './engine';
 
 /* The bot: a steady, careful player on a phone, not a great one (how human: HUMAN in
    src/balance/dungeon.ts). It notices a shot only after a reaction of its own, misses more of them
@@ -133,6 +133,17 @@ function decide(run: Run, h: Hero): Input {
     const rx = h.x - b.x,
       ry = h.y - b.y,
       v2 = b.vx * b.vx + b.vy * b.vy;
+    // A Maybe's shot hanging still: it will dart at you, so step back from it while it waits.
+    if (!v2 && b.style === 'stall' && !b.turned) {
+      const d2 = rx * rx + ry * ry;
+      if (d2 < 120 * 120 && d2 > 0) {
+        const d = Math.sqrt(d2);
+        x += (rx / d) * 1.2;
+        y += (ry / d) * 1.2;
+        danger += 0.5;
+      }
+      continue;
+    }
     if (rx * rx + ry * ry > see * see || !v2) continue;
     if (!noticed(b.id, now - b.born, Math.sqrt(v2), busy, Math.sqrt(rx * rx + ry * ry))) continue;
     const tc = (rx * b.vx + ry * b.vy) / v2;
@@ -219,16 +230,33 @@ function decide(run: Run, h: Hero): Input {
     const dx = h.x - f.x,
       dy = h.y - f.y,
       d = Math.hypot(dx, dy) || 1;
+    // A Scrap Squire's pile: go and stand on it (below), it can't be hit or hurt. A Dune Mole under
+    // the sand: keep off the mound, most of all where it is about to come up.
+    if (f.pileUntil !== undefined) continue;
+    if (f.under) {
+      const keep = now < f.windUntil ? 75 : 40;
+      if (d < keep) {
+        x += (dx / d) * 3;
+        y += (dy / d) * 3;
+        danger += 2;
+        if (now < f.windUntil && d < 50) imminent = true;
+      }
+      continue;
+    }
     if (f !== run.boss && d < nd) {
       nd = d;
       near = f;
     }
     if (d < 170) close++;
     // A ram about to charge, or charging: off its line.
-    if (f.kind === 'ram' && (now < f.windUntil || now < f.dashUntil)) {
+    // A charge, leap, swoop or roll about to start, or under way: off its line.
+    const mv = f.def.move,
+      swooping = mv === 'swoop';
+    if ((mv === 'charge' || mv === 'roll' || swooping) && (now < f.windUntil || now < f.dashUntil)) {
       const along = -dx * f.dashX + -dy * f.dashY,
-        side = -dx * -f.dashY + -dy * f.dashX;
-      if (along > -20 && along < CHARGE.speed * CHARGE.dash + 40 && Math.abs(side) < f.def.r + 34) {
+        side = -dx * -f.dashY + -dy * f.dashX,
+        reach = swooping ? SWOOP.speed * SWOOP.most + 40 : mv === 'roll' ? ROLL.speed * ROLL.most + 40 : CHARGE.speed * CHARGE.dash + 40;
+      if (along > -20 && along < reach && Math.abs(side) < f.def.r + 34) {
         if (now >= f.windUntil && along < 90) imminent = true;
         const s = side >= 0 ? -1 : 1;
         x += -f.dashY * s * 3;
@@ -247,7 +275,7 @@ function decide(run: Run, h: Hero): Input {
       }
     }
     // A shade's mark: where it lands and fires.
-    if (f.kind === 'shade' && now < f.windUntil) {
+    if (f.def.move === 'blink' && now < f.windUntil) {
       const mx = h.x - f.dashX,
         my = h.y - f.dashY,
         md = Math.hypot(mx, my) || 1;
@@ -281,6 +309,20 @@ function decide(run: Run, h: Hero): Input {
     if (h.y < e) y += 2;
     if (h.y > run.area.h - e) y -= 2;
     danger += 1;
+  }
+  // An Undertow's pull: lean against it.
+  if (h.tow.x || h.tow.y) {
+    x -= (h.tow.x / UNDERTOW.pull) * 1.2;
+    y -= (h.tow.y / UNDERTOW.pull) * 1.2;
+  }
+  // A Scrap Squire's pile close by: stamp it out before it stands again.
+  const pile = run.foes.find((f) => f.alive && f.pileUntil !== undefined && Math.hypot(f.x - h.x, f.y - h.y) < 280);
+  if (pile && danger < 2) {
+    const dx = pile.x - h.x,
+      dy = pile.y - h.y,
+      d = Math.hypot(dx, dy) || 1;
+    x += (dx / d) * 2.2;
+    y += (dy / d) * 2.2;
   }
   const shrine = T.shrine && !T.shrine.used && h.hp < h.maxHp * 0.6 ? T.shrine : null;
   if (shrine) {
