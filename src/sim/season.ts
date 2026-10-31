@@ -168,6 +168,10 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
         state = { ...state, sceneMark: mark, seenScenes: seen, answers: how === 'skip' ? state.answers : { ...state.answers, [ask.id]: value } };
         const after = how === 'skip' ? undefined : (choice?.after ?? ask.after);
         if (after) checkLines(scene, after);
+      } else if (ask?.kind === 'letter') {
+        note('ask', 'writes the letter');
+        state = { ...state, sceneMark: mark, seenScenes: seen, profile: { ...state.profile, letter: { why: 'I miss it', want: 'run again', forWho: 'me', remind: 'it gets easier' } } };
+        checkLines(scene, ask.after);
       } else if (ask?.kind === 'class') {
         if (state.profile.classId) note('problem', `${scene.id} asks for a class, but one was already picked`);
         const id = kind.class ?? 'warrior';

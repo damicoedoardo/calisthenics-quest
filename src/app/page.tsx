@@ -258,7 +258,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         update((s) => {
           const next = {
             ...endedScene(s, scene.id, sceneMode, r, now),
-            profile: r.flame ? { ...s.profile, flame: r.flame } : s.profile,
+            profile: { ...s.profile, ...(r.flame ? { flame: r.flame } : {}), ...(r.letter ? { letter: r.letter } : {}) },
             answers: r.answer ? { ...s.answers, [r.answer.id]: r.answer.value } : s.answers,
             // The first skip says where skipped scenes go.
             skipNoteSeen: s.skipNoteSeen || !!r.skipped,
@@ -348,8 +348,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         onResume={() => setWelcomed(true)}
         onLook={(look) => update((s) => ({ ...s, profile: { ...s.profile, look } }))}
         onPause={({ voice }) => update((s) => ({ ...s, profile: { ...s.profile, voice, opening: 'class' } }))}
-        onFinish={({ letter, voice, kit, name, classId }) => {
-          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, opening: undefined, letter, voice, kit: kit ?? s.profile.kit, name: name ?? s.profile.name, classId: classId ?? s.profile.classId } }));
+        onFinish={({ voice, kit, name, classId }) => {
+          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, opening: undefined, voice, kit: kit ?? s.profile.kit, name: name ?? s.profile.name, classId: classId ?? s.profile.classId } }));
           setReplaying(false);
         }}
         // On iPhones each browser and the installed app keep their own saves: a hero copied in

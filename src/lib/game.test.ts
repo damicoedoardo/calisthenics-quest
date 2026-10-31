@@ -198,10 +198,18 @@ describe('story', () => {
   });
 
   it('asks for the flame name first, then the class after the third session', () => {
-    const state = { ...initialState(), sessions: fakeSessions(3), seenScenes: ['first-quest'] };
+    const state = { ...initialState(), sessions: fakeSessions(3), seenScenes: ['first-quest', 'first-letter'] };
     expect(pendingScenes(state, new Date(2026, 8, 6)).map((s) => s.id).slice(0, 2)).toEqual(['flame-name', 'class-choice']);
-    const named = { ...state, seenScenes: ['first-quest', 'flame-name'] };
+    const named = { ...state, seenScenes: ['first-quest', 'first-letter', 'flame-name'] };
     expect(pendingScenes(named, new Date(2026, 8, 6))[0].id).toBe('class-choice');
+  });
+
+  it('asks for the letter after the first workout, never in the opening, and only if it was never written', () => {
+    expect(pendingScenes(initialState(), new Date(2026, 8, 6)).map((s) => s.id)).not.toContain('first-letter');
+    const one = { ...initialState(), sessions: fakeSessions(1) };
+    expect(pendingScenes(one, new Date(2026, 8, 6)).map((s) => s.id).slice(0, 2)).toEqual(['first-quest', 'first-letter']);
+    const wrote = { ...one, profile: { ...one.profile, letter: { ...one.profile.letter, why: 'I miss it' } } };
+    expect(pendingScenes(wrote, new Date(2026, 8, 6)).map((s) => s.id)).not.toContain('first-letter');
   });
 
   it('fills the letter into lines and drops empty parts', () => {

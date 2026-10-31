@@ -3,7 +3,7 @@
 import { useCallback, useState, type ReactNode } from 'react';
 import { Headphones } from 'lucide-react';
 import { Dialogue } from './Dialogue';
-import { Book, Ember, Enemy, Hollow, Wanderer } from './Characters';
+import { Ember, Hollow, Wanderer } from './Characters';
 import { ClassPicker } from './ClassPicker';
 import { Hero } from './Hero';
 import { FogRun } from './FogRun';
@@ -15,21 +15,21 @@ import { Weather } from './Weather';
 import { PixelSnap } from './sideways';
 import { SignInGate } from './SignInGate';
 import { useCloudStatus } from '@/lib/cloud-client';
-import type { GameState, Kit, Letter } from '@/lib/game';
+import type { GameState, Kit } from '@/lib/game';
 import { equippedGear, type ClassId, type Gear, type GearSlot } from '@/lib/gear';
 import { music } from '@/lib/music';
 import { SWEAT } from '@/balance';
-import { COLD_OPEN, FADING, FIRST_QUEST, HELP, HOLLOW_MEET, LETTER_PROMPTS, MEET, SEALED, VOICES, WAKE } from '@/story/opening';
+import { COLD_OPEN, FADING, HELP, HOLLOW_MEET, MEET, SPARK, VOICES, WAKE } from '@/story/opening';
 import { FIRST_FOG_ZONE } from '@/lib/fog';
 import { renderLines, storyWords } from '@/story/engine';
 import { STARTER_LOOKS } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
 
-type Step = 'start' | 'login' | 'title' | 'cold' | 'fading' | 'voice' | 'wake' | 'fog' | 'hollow' | 'fallen' | 'meet' | 'class' | 'write' | 'letter' | 'sealed' | 'kit' | 'quest' | 'look' | 'name';
+type Step = 'start' | 'login' | 'title' | 'cold' | 'fading' | 'voice' | 'wake' | 'fog' | 'hollow' | 'fallen' | 'meet' | 'class' | 'spark' | 'kit' | 'look' | 'name';
 
 interface Props {
   state: GameState;
-  onFinish: (patch: { letter: Letter; voice: string; kit?: Kit; name?: string; classId?: ClassId }) => void;
+  onFinish: (patch: { voice: string; kit?: Kit; name?: string; classId?: ClassId }) => void;
   /** Saves the player's look right away (the boy/girl pick, then the editor after the story). */
   onLook: (look: Look) => void;
   /** Shown on the title screen when the opening is replayed. */
@@ -54,7 +54,7 @@ interface Props {
 const goldButton =
   'w-full rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none disabled:opacity-40';
 
-/** Held sideways, the letter, the kit pick and the look editor go in two columns: who speaks and the
+/** Held sideways, the kit pick and the look editor go in two columns: who speaks and the
     button on the left, the form on the right. */
 const SIDE = 'land-safe-x [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:max-w-4xl [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-[16rem_minmax(0,1fr)] [@media(orientation:landscape)_and_(max-height:600px)]:grid-rows-[auto_1fr] [@media(orientation:landscape)_and_(max-height:600px)]:gap-x-8 [@media(orientation:landscape)_and_(max-height:600px)]:pb-4';
 // The button stays in reach when the form is taller than the screen (the look editor).
@@ -81,7 +81,8 @@ function fadingBackdrop(gear: ReturnType<typeof equippedGear>) {
 
 /**
  * First run: pick boy or girl, the story opens, the player meets the voice in their head, loses,
- * gets up, writes their letter, and finally makes the hero look like them. Held sideways, every
+ * gets up, meets the Wanderer and the spark, and finally makes the hero look like them. The letter
+ * waits until the first workout is done (the scene 'first-letter'). Held sideways, every
  * figure in it is drawn at a whole multiple of its pixels (PixelSnap).
  */
 export function Prologue(props: Props) {
@@ -99,7 +100,6 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, dev = false, o
   const cloud = useCloudStatus();
   const look = useLook();
   const firstRun = !state.profile.onboarded;
-  const [letter, setLetter] = useState<Letter>(state.profile.letter);
   const [voice, setVoice] = useState(state.profile.voice);
   const [custom, setCustom] = useState(!!state.profile.voice && !VOICES.includes(state.profile.voice));
   const [kit, setKit] = useState<Kit>(state.profile.kit ?? 'gym');
@@ -113,7 +113,7 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, dev = false, o
   // Only brand-new players are asked where they train; anyone replaying keeps their answer.
   const asksKit = !state.profile.onboarded && state.sessions.length === 0;
   // The flame gets its name after the first workout; until then it's "A spark".
-  const words = { ...storyWords(state), ...letter, voice: voice.trim() || "You're not enough.", flame: state.profile.flame ?? '' };
+  const words = { ...storyWords(state), voice: voice.trim() || "You're not enough.", flame: state.profile.flame ?? '' };
   const go = useCallback((s: Step) => () => setStep(s), []);
   // On from the first screen: where the opening was left, or from the top.
   const resume = () => {
@@ -121,7 +121,7 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, dev = false, o
     setStep(paused ? 'class' : 'title');
   };
 
-  const finish = () => onFinish({ letter, voice: voice.trim(), kit: asksKit ? kit : undefined, name: name.trim() || undefined, classId });
+  const finish = () => onFinish({ voice: voice.trim(), kit: asksKit ? kit : undefined, name: name.trim() || undefined, classId });
   const begin = () => {
     music.unlock();
     setStep('cold');
@@ -285,11 +285,11 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, dev = false, o
     case 'fallen':
       return <RiseUp gear={fightGear} onDone={go('meet')} />;
     case 'meet':
-      // A new hero: "I'll help you", and the class pick before the letter.
+      // A new hero: "I'll help you", then (after the install step) the class pick.
       return (
         <Dialogue
           key="meet"
-          lines={asksClass ? [...MEET.slice(0, -1), ...HELP] : MEET}
+          lines={asksClass ? [...MEET, ...HELP] : MEET}
           gear={fightGear}
           backdrop={() => <Wanderer size={140} />}
           onDone={
@@ -298,7 +298,7 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, dev = false, o
                   onPause?.({ voice: voice.trim() });
                   setStep('class');
                 }
-              : go('letter')
+              : go('spark')
           }
         />
       );
@@ -308,32 +308,27 @@ function PrologueSteps({ state, onFinish, onLook, onExit, onSkip, dev = false, o
           workouts={state.sessions.length}
           onPick={(c) => {
             setClassId(c);
-            setStep('write');
+            setStep('spark');
           }}
           note={`Don't worry, you can change it later. Your first change is free; after that it costs ${SWEAT.classChange} sweat coins, and every workout earns one.`}
         />
       );
-    case 'write':
-      return <Dialogue key="write" lines={MEET.slice(-1)} gear={gear} backdrop={() => <Wanderer size={140} />} onDone={go('letter')} />;
-    case 'letter':
-      return <LetterForm letter={letter} setLetter={setLetter} onDone={go('sealed')} />;
-    case 'sealed':
+    case 'spark': {
+      // The flame wakes (lines up to the quest), the Wanderer gives the first quest, the flame chimes in.
+      const quest = SPARK.findIndex((l) => l.who === 'wanderer');
       return (
         <Dialogue
-          key="sealed"
-          lines={SEALED}
+          key="spark"
+          lines={SPARK}
           gear={gear}
-          backdrop={(i) => (i < 2 ? <Wanderer size={140} /> : i < 5 ? <Book size={120} /> : <Ember size={72} stage="spark" mood="soft" />)}
+          backdrop={(i) => (i === quest ? <Wanderer size={140} /> : <Ember size={72} stage="spark" mood="soft" />)}
           flame="spark"
-          onDone={go(asksKit ? 'kit' : 'quest')}
+          onDone={asksKit ? go('kit') : firstRun ? go('look') : finish}
         />
       );
-    case 'quest':
-      return (
-        <Dialogue key="quest" lines={FIRST_QUEST} gear={gear} flame="spark" cinematic backdrop={() => <Enemy id="slime" size={110} />} onDone={firstRun ? go('look') : () => finish()} />
-      );
+    }
     case 'kit':
-      return <KitPick kit={kit} setKit={setKit} onDone={go('quest')} />;
+      return <KitPick kit={kit} setKit={setKit} onDone={firstRun ? go('look') : finish} />;
     case 'look':
       return <MakeItYours look={look} setLook={onLook} gear={gear} onDone={go('name')} />;
     case 'name':
@@ -471,39 +466,6 @@ function VoicePick({
         </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function LetterForm({ letter, setLetter, onDone }: { letter: Letter; setLetter: (l: Letter) => void; onDone: () => void }) {
-  useMusic('rise');
-  return (
-    // Held sideways: the Wanderer and the button on the left, the letter on the right.
-    <div className={`safe-top safe-bottom mx-auto flex min-h-dvh max-w-md flex-col px-4 pb-6 ${SIDE}`}>
-      <div className="mt-4 flex items-center gap-3 [@media(orientation:landscape)_and_(max-height:600px)]:col-start-1 [@media(orientation:landscape)_and_(max-height:600px)]:row-start-1">
-        <Wanderer size={56} />
-        <p className="flex-1 text-sm italic text-slate-300">&ldquo;Write to the person you want to become.&rdquo;</p>
-        <SoundToggle />
-      </div>
-      <div className="mt-5 flex-1 space-y-4 rounded-2xl bg-[#f5ecd7] p-5 text-[#3b2a1a] shadow-xl [@media(orientation:landscape)_and_(max-height:600px)]:col-start-2 [@media(orientation:landscape)_and_(max-height:600px)]:row-span-2 [@media(orientation:landscape)_and_(max-height:600px)]:row-start-1 [@media(orientation:landscape)_and_(max-height:600px)]:mt-4 [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-2 [@media(orientation:landscape)_and_(max-height:600px)]:gap-x-4 [@media(orientation:landscape)_and_(max-height:600px)]:gap-y-3 [@media(orientation:landscape)_and_(max-height:600px)]:space-y-0 [@media(orientation:landscape)_and_(max-height:600px)]:p-4">
-        <p className="font-pixel text-[11px] [@media(orientation:landscape)_and_(max-height:600px)]:col-span-2">A letter to my future self</p>
-        {LETTER_PROMPTS.map((p) => (
-          <label key={p.key} className="block">
-            <span className="text-sm font-semibold">{p.label}</span>
-            <textarea
-              value={letter[p.key]}
-              onChange={(e) => setLetter({ ...letter, [p.key]: e.target.value })}
-              placeholder={p.placeholder}
-              rows={2}
-              className="mt-1 w-full resize-none rounded-lg border border-[#d6c7a1] bg-[#fbf6ea] px-3 py-2 text-base outline-none placeholder:text-[#a8977a] focus:border-[#a16207]"
-            />
-          </label>
-        ))}
-        <p className="text-xs text-[#7a6a4f] [@media(orientation:landscape)_and_(max-height:600px)]:col-span-2">Every line is optional. Only you will ever read it.</p>
-      </div>
-      <button onClick={onDone} className={`mt-5 ${goldButton} ${SIDE_BUTTON}`}>
-        Seal the letter
-      </button>
     </div>
   );
 }

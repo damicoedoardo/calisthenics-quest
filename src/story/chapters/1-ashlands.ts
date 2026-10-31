@@ -47,6 +47,29 @@ export const ASHLANDS: Chapter = {
       ],
     },
     {
+      // The letter waits until the first workout is done: by then there is someone to write to.
+      id: 'first-letter',
+      title: 'A letter to who you will be',
+      when: { workouts: 1, noLetter: true },
+      lines: [
+        { who: 'wanderer', text: "That's the first page. Sit a minute." },
+        { who: 'you', text: "It's been so long. It feels stupid to start again now." },
+        { who: 'wanderer', text: "Coming back always feels stupid. That's how you know it's coming back, and not starting.", pause: 1 },
+        { who: 'you', text: 'Then why do I feel so ashamed?' },
+        { who: 'wanderer', text: "...Because you still care. You wouldn't feel a thing if you didn't.", pause: 1.4, pace: 'slow' },
+        { who: 'wanderer', text: 'One rule, from here on. That voice talks to you like an enemy. I never will. Try not to, either.' },
+        { who: 'wanderer', text: "Now write to the person you want to become. Not who you were. Who you're going to be." },
+      ],
+      ask: {
+        kind: 'letter',
+        after: [
+          { who: 'narrator', show: 'wanderer', text: 'The Wanderer folds your letter without reading it, and keeps it close.' },
+          { who: 'wanderer', text: "I'll carry this. One day I'll read it back to you. I promise." },
+          { who: 'wanderer', text: 'Your past is already written. Nobody can change it. You can stop rereading it, though.' },
+        ],
+      },
+    },
+    {
       id: 'flame-name',
       when: { workouts: 1 },
       lines: [
