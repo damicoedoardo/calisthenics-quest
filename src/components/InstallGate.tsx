@@ -4,11 +4,12 @@ import { useState, type ReactNode } from 'react';
 import { Ember } from './Characters';
 import { Sprite } from './Sprite';
 import type { GameState } from '@/lib/game';
+import { useCloudStatus } from '@/lib/cloud-client';
 import { heroCode, needsCarry, readHeroCode, type Platform } from '@/lib/install';
 import type { InstallStep } from '@/sprites/characters/install';
 
-/* After the first workout (and the letter after it), a phone that runs FORMA in a browser tab is
-   asked to install it before the game goes on: it opens full screen, works with no signal, and the browser won't clear the save.
+/* After the opening and the sign-in, a phone that runs FORMA in a browser tab is asked to install
+   it before the game goes on: it opens full screen, works with no signal, and the browser won't clear the save.
    The guide is for this phone's browser, a picture per step. On iPhones the installed app starts
    with its own empty storage, so the hero goes across as a code: copied here, pasted there
    (BringHero, on the installed app's first screen). The rules are in src/lib/install.ts. */
@@ -39,13 +40,21 @@ interface Props {
 export function InstallGate({ state, platform, canPrompt, installed, onInstall, onSkip }: Props) {
   const host = typeof window === 'undefined' ? '' : window.location.host;
   const copy = <CopyHero state={state} />;
+  // Signed in, the hero is in the cloud: the installed app gets it back with a sign-in, no copying.
+  const { signedIn } = useCloudStatus();
   const openIt: Step = {
     art: 'home',
     title: 'Open FORMA from your home screen',
     text: needsCarry(platform) ? (
-      <>
-        Tap <b className="text-gold-300">Paste my hero</b> on the first screen, and you&apos;re back where you left off.
-      </>
+      signedIn ? (
+        <>
+          Tap <b className="text-gold-300">I already have a hero</b> and sign in with the same email: you&apos;re back where you left off.
+        </>
+      ) : (
+        <>
+          Tap <b className="text-gold-300">Paste my hero</b> on the first screen, and you&apos;re back where you left off.
+        </>
+      )
     ) : (
       'Your hero is already there.'
     ),
@@ -55,6 +64,7 @@ export function InstallGate({ state, platform, canPrompt, installed, onInstall, 
     text: 'Your progress is saved in this browser. The app starts empty, so take your hero with you.',
     extra: copy,
   };
+  const carry = signedIn ? [] : [copyStep];
   const addStep: Step = {
     art: 'iosAdd',
     title: 'Tap Add to Home Screen',
@@ -68,7 +78,7 @@ export function InstallGate({ state, platform, canPrompt, installed, onInstall, 
   const steps: Step[] =
     platform === 'ios-safari'
       ? [
-          copyStep,
+          ...carry,
           {
             art: 'iosShare',
             title: 'Tap Share',
@@ -82,7 +92,7 @@ export function InstallGate({ state, platform, canPrompt, installed, onInstall, 
           openIt,
         ]
       : platform === 'ios-chrome'
-        ? [copyStep, { art: 'iosChromeShare', title: 'Tap Share', text: 'The square with the arrow, at the right end of the address bar.' }, addStep, openIt]
+        ? [...carry, { art: 'iosChromeShare', title: 'Tap Share', text: 'The square with the arrow, at the right end of the address bar.' }, addStep, openIt]
         : platform === 'ios-other'
           ? [
               copyStep,
@@ -131,7 +141,7 @@ export function InstallGate({ state, platform, canPrompt, installed, onInstall, 
           <Ember size={64} stage="spark" />
           <h1 className="mt-4 font-pixel text-sm leading-relaxed text-gold-400">Keep your hero</h1>
           <p className="mt-3 text-sm text-slate-300">
-            One workout in. Put FORMA on your home screen, so your hero is safe. It opens full screen and works with no signal.
+            Put FORMA on your home screen, so your hero is always close. It opens full screen and works with no signal.
           </p>
           {installed && (
             <p role="status" className="mt-4 rounded-xl bg-emerald-950/60 px-3 py-2 text-sm text-emerald-200 ring-1 ring-emerald-500/40">

@@ -25,13 +25,13 @@ signal.
 
 A phone that runs FORMA in a browser tab has to install it before the game goes on:
 `InstallGate` (`src/components/InstallGate.tsx`) takes the screen until FORMA is opened from the
-home screen. A computer is not asked (its browser keeps the save). It comes after the first
-workout and the letter (Edoardo, 2026-10-31: hook players before any costly step): the opening and
-the first workout play in the browser (signed in right after the opening, for the coach), then
-"Keep your hero" asks. On iPhones the installed app starts signed out too: "I already have a hero",
-or "Paste my hero". It never covers the workout, the screen after it or its scenes (`asking` in
-`page.tsx`). Saves from before, paused mid-opening for it (`profile.opening`), go on at the class
-pick in the browser.
+home screen. A computer is not asked (its browser keeps the save). It comes right after the
+sign-in, which comes right after the opening (Edoardo, 2026-10-31: hook players first; signed in,
+they'll install): the opening plays in the browser, signed out, then the sign-in (the coach needs
+it), then "Keep your hero". Signed in, the hero is in the cloud, so on an iPhone the guide skips
+copying it: the installed app starts signed out, and "I already have a hero" brings it back.
+It never covers a workout, the screen after it or its scenes (`asking` in `page.tsx`). Saves from
+before, paused mid-opening for it (`profile.opening`), go on at the class pick in the browser.
 
 | Piece | Where |
 |---|---|
