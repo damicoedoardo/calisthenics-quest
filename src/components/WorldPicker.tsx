@@ -6,8 +6,9 @@ import { Sprite } from './Sprite';
 import { Enemy } from './Characters';
 import { PlaceBackdrop } from './Place';
 import type { GameState } from '@/lib/game';
-import { ZONES, zoneStatus, type Zone } from '@/lib/fog';
+import { EDGE, ZONES, edgeFor, powerOf, workoutsPastHearts, zoneStatus, type Zone } from '@/lib/fog';
 import { CHAPTERS } from '@/story/chapters';
+import { chapterStart } from '@/story/engine';
 
 /* The road through the Fog as a row of worlds: one big card in the middle, its neighbours peeking
    in at the sides. Swipe (scroll snap), the arrows or the dots change world. Each world is its
@@ -280,6 +281,8 @@ function WorldCard({ zone: z, index, state, active, cardRef, artRef, onPick, onP
         )}
         {st.state === 'open' && !best && z.firstTry && <p className="mt-1 text-[11px] text-gold-300">{z.firstTry}</p>}
         {st.state === 'open' && !best?.won && <p className="mt-1 text-[11px] text-sky-300">{z.hint}</p>}
+        {st.state === 'open' && <Edge state={state} zone={z} />}
+        {cleared && <Won zone={z} />}
         </Wrap>
 
         <div className={land ? 'shrink-0 pt-2' : 'mt-auto pt-3'}>
@@ -299,6 +302,40 @@ function WorldCard({ zone: z, index, state, active, cardRef, artRef, onPick, onP
             </button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** What the world you're on gives you today, in one line: the boss's hearts (each workout takes
+    one; at zero it fights weaker) and the free skills your runs start with. */
+function Edge({ state, zone }: { state: GameState; zone: Zone }) {
+  const power = powerOf(state, new Date());
+  const past = workoutsPastHearts(state, zone);
+  const edge = edgeFor(state, zone);
+  const skills = (power.fresh ? 1 : 0) + (power.rested ? 1 : 0) + edge.picks;
+  const hearts = past === null ? Math.max(0, chapterStart(zone.chapter + 1) - state.sessions.length) : 0;
+  const words =
+    past === null
+      ? `${zone.bossName} has ${hearts} heart${hearts === 1 ? '' : 's'} left; each workout takes one`
+      : `${zone.bossName} has no hearts left and fights ${Math.round((1 - EDGE.bossHp) * 100)}% weaker`;
+  return (
+    <div role="note" className="mt-2 flex items-center gap-1.5 font-pixel text-[8px] text-slate-300" aria-label={`${words}. Your runs start with ${skills} free skill${skills === 1 ? '' : 's'}.`}>
+      <Sprite id="uiIcon" opts={{ name: hearts ? 'heart' : 'heartEmpty' }} size={12} label="" />
+      <span className={hearts ? '' : 'text-rose-300'}>{hearts ? hearts : 'weaker'}</span>
+      {skills > 0 && <span className="text-emerald-300">· +{skills} free skill{skills === 1 ? '' : 's'}</span>}
+    </div>
+  );
+}
+
+/** A cleared world: the keepsake you won from its boss. */
+function Won({ zone }: { zone: Zone }) {
+  return (
+    <div className="mt-2 flex items-start gap-2">
+      <Sprite id="keepsake" opts={{ zone: zone.id }} size={28} label="" className="shrink-0" />
+      <div className="min-w-0">
+        <p className="text-xs font-semibold leading-tight text-slate-100">{zone.keepsake.name}</p>
+        <p className="mt-0.5 text-[11px] leading-snug text-slate-400">{zone.keepsake.text}</p>
       </div>
     </div>
   );
