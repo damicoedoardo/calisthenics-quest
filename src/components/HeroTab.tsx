@@ -14,7 +14,7 @@ import { LootGuide, Purse } from './Purse';
 import type { LootId } from '@/lib/loot';
 import { useLand } from './useLand';
 import { getClass } from '@/lib/gear';
-import { gearOf, type GameState } from '@/lib/game';
+import { gearOf, levelInfo, totalXp, type GameState } from '@/lib/game';
 import { heroVariant } from '@/story/flame';
 import { pointsFree } from '@/lib/stats';
 import { spTrial, spWorn } from '@/lib/sp';
@@ -146,6 +146,7 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
       <div className="flex h-full flex-col gap-2">
         <div className="flex shrink-0 items-center gap-2">
           <div className="flex-1">{tabs}</div>
+          <div className="w-40 shrink-0"><LevelBar state={state} /></div>
           <div className="w-80">{purse}</div>
         </div>
         <div className="flex min-h-0 flex-1 gap-3">
@@ -173,6 +174,7 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
         <p className="font-pixel text-[10px] text-slate-400">{cls ? cls.name : 'Adventurer'}</p>
         <Hero gear={gear} classId={state.profile.classId} size={128} variant={heroVariant(state)} sp={spWorn(state)} />
         <div className="mt-3">{changeLook}</div>
+        <div className="mt-3 w-full px-3"><LevelBar state={state} /></div>
         <div className="mt-3 w-full px-3">{purse}</div>
       </section>
 
@@ -184,6 +186,26 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
 
       {lookEditor}
       {lootGuide}
+    </div>
+  );
+}
+
+/** Your level and how far into it you are: the XP bar that used to sit in the top bar. */
+function LevelBar({ state }: { state: GameState }) {
+  const lvl = levelInfo(totalXp(state));
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-2">
+        <p className="truncate text-xs text-slate-400">
+          Lv {lvl.level} · <span className="text-slate-200">{lvl.title}</span>
+        </p>
+        <p className="shrink-0 font-mono text-[11px] text-slate-500">
+          {lvl.into} / {lvl.needed} XP
+        </p>
+      </div>
+      <div className="mt-1.5 h-2.5 overflow-hidden rounded-sm bg-ink-700">
+        <div className="h-full bg-gradient-to-r from-gold-500 to-gold-300 transition-all duration-700 motion-reduce:transition-none" style={{ width: `${lvl.pct * 100}%` }} />
+      </div>
     </div>
   );
 }
