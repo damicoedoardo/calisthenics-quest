@@ -5,6 +5,7 @@ import { Check, ChevronDown, Download, Film, Mail, Upload, X } from 'lucide-reac
 import { SoundToggle, useMenuMusic } from './Sound';
 import { CloudSave } from './Cloud';
 import { StartOver } from './StartOver';
+import { DayQuote } from './DayQuote';
 import { useModal } from './useModal';
 import { music } from '@/lib/music';
 import { setStatsShared, statsConfigured, useStatsShared } from '@/lib/analytics-client';
@@ -80,6 +81,8 @@ export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: 
               <Stat label="Better" value={state.sessions.filter((s) => s.better).length} />
               <Stat label="Chapter" value={story.finished ? 'Done' : story.index + 1} />
             </section>
+
+            <DayQuote state={state} update={update} />
 
             {hasLetter && (
               <section className="rounded-2xl bg-ink-800 p-4">
