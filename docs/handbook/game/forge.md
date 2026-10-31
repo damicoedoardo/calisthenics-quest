@@ -9,9 +9,9 @@ timestamp: 2026-10-31
 # Mira's forge
 
 Between runs your gear lives on the Hero tab's Gear part (`src/components/FogGearCard.tsx`): the
-three slots you wear, the vault, and, for the item you tap, its card with Wear and **Forge**. Forge
+three slots you wear, the vault, and, for the item you tap, its card with Wear and a **Mira's forge** button (her face, "Upgrade to +N, reroll or melt down", Open). It
 opens Mira's forge for that item on its own page (`ForgeSheet` in `src/components/Forge.tsx`): what
-the next plus changes, the price, the chance as a bar with what a fail does, one button, and reroll and melt folded away. Its **How it works** page says the rules below in five short steps, and opens by itself the first time. Each vault
+the next plus changes, the price, the chance as a bar with what a fail does, one button, with Reroll and Melt down as their own tabs. Its **How it works** page says the rules below in five short steps, and opens by itself the first time. Each vault
 item carries a green ▲ or red ▼ against what you wear in its slot, and its card says by how much. (A walkable
 camp was tried for this and dropped: Edoardo wanted it on the normal screens.)
 
