@@ -45,6 +45,7 @@ export function AnatomyDemo({ exercise, view, label, className }: { exercise: An
           strokeWidth={p.width}
           strokeLinejoin="round"
           strokeLinecap={p.round ? 'round' : undefined}
+          fillOpacity={p.opacity}
         />
       ))}
     </svg>

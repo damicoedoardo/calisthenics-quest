@@ -173,7 +173,7 @@ function pushup(d: number): Pose {
     const tip: V3 = [wristX + 17, 1, s * 25];
     return {
       shoulder, elbow, wrist, tip, hip, knee, ankle,
-      heel: [-107, 18, s * 10], toe: [-94, 1, s * 10], instep: unit([18, 13, 0]),
+      heel: [-105.5, 16.5, s * 10], toe: [-94, 1, s * 10], instep: unit([18, 13, 0]),
     };
   };
   return { pelvis, neck, headBase, headTop, front, right: side(1), left: side(-1) };
@@ -184,7 +184,7 @@ const POSES: Record<AnatomyId, (d: number) => Pose> = { pushup, 'barbell-squat':
 /** The cameras: which way you look from (toward the camera). Side on is level with the floor;
     from the front it is turned a little and looks a little down, so the body reads in depth. */
 const CAMERAS: Record<AnatomyId, Record<View, V3>> = {
-  pushup: { side: [0, 0, 1], front: unit([0.6, 0.35, 1]) },
+  pushup: { side: [0, 0, 1], front: unit([0.8, 0.12, 0.7]) },
   'barbell-squat': { side: [0, 0, 1], front: unit([1, 0.32, 0.4]) },
 };
 
@@ -220,19 +220,21 @@ interface Profile {
 
 const SHAPES: Record<PartId, Profile> = {
   torso: {
-    u: [-0.17, 0, 0.14, 0.32, 0.5, 0.66, 0.8, 0.92, 1],
-    front: [5, 9, 9.5, 10.2, 10.8, 12, 12.5, 9.5, 5.5],
-    back: [9, 13.5, 12.5, 8, 8.5, 10.5, 11, 9.5, 6],
-    out: [13, 16.5, 16, 13.5, 14.5, 16, 16.5, 15, 6.5],
-    in: [13, 16.5, 16, 13.5, 14.5, 16, 16.5, 15, 6.5],
+    // Pelvis, waist, ribs, chest, then the trapezius sloping up from the shoulders to the neck.
+    u: [-0.17, 0, 0.14, 0.32, 0.5, 0.66, 0.8, 0.88, 0.95, 1.04],
+    front: [5, 9, 9.5, 10.2, 10.8, 12, 12.5, 10.5, 7.5, 5],
+    back: [9, 13.5, 12.5, 8, 8.5, 10.5, 11, 10.5, 8.5, 5.5],
+    out: [13, 16.5, 16, 13.5, 14.5, 16, 16.8, 15.5, 11, 6],
+    in: [13, 16.5, 16, 13.5, 14.5, 16, 16.8, 15.5, 11, 6],
   },
-  neck: { u: [-0.2, 0.5, 1.2], front: [5.5, 5, 5.5], back: [6, 5, 5], out: [6, 5.5, 6], in: [6, 5.5, 6] },
+  neck: { u: [-0.2, 0.5, 1.1], front: [5.5, 4.8, 5], back: [6, 4.8, 4.6], out: [6.5, 5.2, 5.2], in: [6.5, 5.2, 5.2] },
+  // Chin to crown; the front has a soft brow and nose so the face reads without features.
   head: {
-    u: [0, 0.16, 0.4, 0.64, 0.84, 0.97],
-    front: [6.8, 8.6, 9.6, 9.6, 8.2, 5],
-    back: [3.5, 6.5, 9, 9.6, 8.6, 5],
-    out: [5.2, 6.6, 7.4, 7.8, 7.2, 4.8],
-    in: [5.2, 6.6, 7.4, 7.8, 7.2, 4.8],
+    u: [0, 0.12, 0.3, 0.45, 0.6, 0.76, 0.9, 1],
+    front: [7.2, 8.6, 9.2, 10.3, 9.8, 9.2, 7.4, 3.2],
+    back: [3, 5.5, 8, 9.4, 10, 9.6, 7.8, 3.2],
+    out: [4.4, 6, 7, 7.5, 7.8, 7.6, 6.4, 3],
+    in: [4.4, 6, 7, 7.5, 7.8, 7.6, 6.4, 3],
   },
   upper: {
     u: [-0.12, 0, 0.3, 0.6, 0.85, 1.05],
@@ -296,7 +298,9 @@ interface Muscle {
 }
 
 const MUSCLES: Muscle[] = [
-  { id: 'abs', part: 'torso', u: [0.05, 0.64], angle: [3, 22], both: true },
+  { id: 'abs', part: 'torso', u: [0.05, 0.27], angle: [3, 21], both: true },
+  { id: 'abs', part: 'torso', u: [0.27, 0.46], angle: [3, 21], both: true },
+  { id: 'abs', part: 'torso', u: [0.46, 0.64], angle: [3, 21], both: true },
   { id: 'obliques', part: 'torso', u: [0.1, 0.58], angle: [28, 88], both: true },
   { id: 'chest', part: 'torso', u: [0.64, 0.9], angle: [5, 74], both: true },
   { id: 'lats', part: 'torso', u: [0.42, 0.84], angle: [92, 152], both: true },
@@ -309,15 +313,18 @@ const MUSCLES: Muscle[] = [
   { id: 'biceps', part: 'upper', u: [0.32, 0.92], angle: [-45, 45] },
   { id: 'triceps', part: 'upper', u: [0.25, 0.95], angle: [128, 232] },
   { id: 'forearm', part: 'fore', u: [0, 0.68], angle: [-60, 100] },
-  { id: 'quads', part: 'thigh', u: [0.06, 0.94], angle: [-30, 88] },
+  { id: 'quads', part: 'thigh', u: [0.06, 0.9], angle: [-8, 42] },
+  { id: 'quads', part: 'thigh', u: [0.14, 0.9], angle: [42, 98] },
+  { id: 'quads', part: 'thigh', u: [0.58, 0.95], angle: [-48, -4] },
   { id: 'adductors', part: 'thigh', u: [0.02, 0.6], angle: [-105, -38] },
   { id: 'hamstrings', part: 'thigh', u: [0.08, 0.88], angle: [112, 218] },
   { id: 'shins', part: 'shin', u: [0.08, 0.66], angle: [12, 70] },
-  { id: 'calves', part: 'shin', u: [0.04, 0.62], angle: [104, 236] },
+  { id: 'calves', part: 'shin', u: [0.04, 0.56], angle: [104, 178] },
+  { id: 'calves', part: 'shin', u: [0.04, 0.6], angle: [182, 250] },
 ];
 
 /** Not muscles, but they make the shape read: the ears. */
-const MARKS: Muscle[] = [{ id: 'traps', part: 'head', u: [0.3, 0.62], angle: [72, 112], both: true }];
+const MARKS: Muscle[] = [{ id: 'traps', part: 'head', u: [0.34, 0.58], angle: [92, 120], both: true }];
 
 /** Which muscles each exercise works: the main movers, then the helpers. */
 export const WORKS: Record<AnatomyId, { main: MuscleId[]; help: MuscleId[] }> = {
@@ -341,6 +348,8 @@ export interface Shape {
   width?: number;
   /** Rounded line caps (arrows). */
   round?: boolean;
+  /** See-through (shading). */
+  opacity?: number;
 }
 
 export interface Scene {
@@ -509,35 +518,60 @@ function hull(pts: V2[]): V2[] {
 function patch(p: Part, m: Muscle, mirror: boolean, cam: Camera): V2[] | null {
   const a0 = mirror ? -m.angle[1] : m.angle[0];
   const a1 = mirror ? -m.angle[0] : m.angle[1];
-  // The angle around this part that faces the camera.
-  const facing = Math.atan2(dot(cam.c, p.o), dot(cam.c, p.f)) * (180 / Math.PI);
+  return band(p, cam, a0, a1, m.u[0], m.u[1], { envelope: 0.4, inset: 0.94, edge: 84, min: 0.3 });
+}
+
+/** The angle around a part that faces a direction. */
+const facingOf = (p: Part, dir: V3) => Math.atan2(dot(dir, p.o), dot(dir, p.f)) * (180 / Math.PI);
+
+/** A band on a part's surface between two angles and two points along it, kept to the half the
+    camera sees. `envelope` rounds its ends (low = blunt), `inset` pulls it under the outline,
+    `edge` is how far round toward the outline it may go, `min` the share that must show. */
+function band(p: Part, cam: Camera, a0: number, a1: number, u0: number, u1: number, o: { envelope: number; inset: number; edge: number; min: number }): V2[] | null {
+  const facing = facingOf(p, cam.c);
   const lo = ((((a0 - facing) % 360) + 540) % 360) - 180;
   const hi = lo + (a1 - a0);
-  const vlo = Math.max(lo, -84);
-  const vhi = Math.min(hi, 84);
+  const vlo = Math.max(lo, -o.edge);
+  const vhi = Math.min(hi, o.edge);
   // Mostly out of sight: skip it.
-  if (vhi - vlo < (hi - lo) * 0.3 || vhi - vlo < 12) return null;
+  if (vhi - vlo < (hi - lo) * o.min || vhi - vlo < 12) return null;
   const bone = unit(sub(p.b, p.a));
   if (Math.abs(dot(bone, cam.c)) > 0.95) return null;
-  const steps = 10;
+  const steps = 12;
   const top: V2[] = [];
   const bottom: V2[] = [];
   const mid = (vlo + vhi) / 2;
   const half = (vhi - vlo) / 2;
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
-    const u = lerp(m.u[0], m.u[1], t);
-    const e = Math.pow(Math.sin(Math.PI * t), 0.55);
-    top.push(project(cam, inset(p, u, facing + mid + half * e)));
-    bottom.push(project(cam, inset(p, u, facing + mid - half * e)));
+    const u = lerp(u0, u1, t);
+    const e = Math.pow(Math.sin(Math.PI * t), o.envelope);
+    top.push(project(cam, inset(p, u, facing + mid + half * e, o.inset)));
+    bottom.push(project(cam, inset(p, u, facing + mid - half * e, o.inset)));
   }
   return [...top, ...bottom.slice(1, steps).reverse()];
 }
 
+/** Light falls from above, a little from the left and from the front of the picture. */
+const lightOf = (cam: Camera): V3 => unit(add(add(mul(cam.r, -0.45), mul(cam.up, 0.8)), mul(cam.c, 0.45)));
+
+/** The shade on a part: the side turned from the light, soft then deep. */
+function shade(p: Part, cam: Camera): { soft: V2[] | null; deep: V2[] | null; lit: V2[] | null } {
+  const pr = SHAPES[p.id];
+  const lf = facingOf(p, lightOf(cam));
+  const ends = [pr.u[0] + 0.02, pr.u[pr.u.length - 1] - 0.02] as const;
+  const opts = { envelope: 0.18, inset: 1, edge: 90, min: 0 };
+  return {
+    soft: band(p, cam, lf + 70, lf + 290, ends[0], ends[1], opts),
+    deep: band(p, cam, lf + 115, lf + 245, ends[0], ends[1], opts),
+    lit: band(p, cam, lf - 28, lf + 28, ends[0] + 0.08, ends[1] - 0.08, { ...opts, envelope: 0.5, inset: 0.97 }),
+  };
+}
+
 /** A point just inside the surface, so muscle lines sit inside the outline. */
-function inset(p: Part, u: number, deg: number): V3 {
+function inset(p: Part, u: number, deg: number, k = 0.94): V3 {
   const center = add(p.a, mul(sub(p.b, p.a), u));
-  return add(center, mul(sub(surface(p, u, deg), center), 0.94));
+  return add(center, mul(sub(surface(p, u, deg), center), k));
 }
 
 /** An arrow along a straight line, lit when the body moves its way. */
@@ -640,18 +674,18 @@ function draw(exercise: AnatomyId, cam: Camera, depth: number): Shape[] {
 
   /** One group: all outlines under all fills, so it reads as one body; then each part's muscles,
       nearest last. */
-  const group = (parts: Part[], shade = false) => {
+  const group = (parts: Part[], dim = false) => {
     const depthOf = (p: Part) => dot(add(p.a, p.b), cam.c);
     const sorted = [...parts].sort((a, b) => depthOf(a) - depthOf(b));
     const paths = sorted.map((p) => closed(outline(p, cam)));
     for (const d of paths) shapes.push({ d, stroke: INK.edge, width: 1.8 });
     sorted.forEach((p, i) => {
-      shapes.push({ d: paths[i], fill: shade ? INK.skinFar : INK.skin });
+      shapes.push({ d: paths[i], fill: dim ? INK.skinFar : INK.skin });
       for (const m of MARKS) {
         if (m.part !== p.id) continue;
         for (const mirror of [false, true]) {
           const pts = patch(p, m, mirror, cam);
-          if (pts) shapes.push({ d: closed(pts), fill: shade ? INK.skinFar : INK.skin, stroke: shade ? INK.lineFar : INK.edge, width: 0.9 });
+          if (pts) shapes.push({ d: closed(pts), fill: dim ? INK.skinFar : INK.skin, stroke: dim ? INK.lineFar : INK.edge, width: 0.9 });
         }
       }
       for (const m of MUSCLES) {
@@ -660,12 +694,26 @@ function draw(exercise: AnatomyId, cam: Camera, depth: number): Shape[] {
           const pts = patch(p, m, mirror, cam);
           if (!pts) continue;
           const d = closed(pts);
-          if (work.main.includes(m.id)) shapes.push({ d, fill: shade ? INK.workLine : INK.work, stroke: INK.workLine, width: 0.7 });
-          else if (work.help.includes(m.id)) shapes.push({ d, fill: shade ? INK.helpLine : INK.help, stroke: INK.helpLine, width: 0.6 });
-          else shapes.push({ d, stroke: shade ? INK.lineFar : INK.line, width: 0.6 });
+          if (work.main.includes(m.id)) shapes.push({ d, fill: dim ? INK.workLine : INK.work, stroke: INK.workLine, width: 0.7 });
+          else if (work.help.includes(m.id)) shapes.push({ d, fill: dim ? INK.helpLine : INK.help, stroke: INK.helpLine, width: 0.6 });
+          else shapes.push({ d, stroke: dim ? INK.lineFar : INK.line, width: 0.6 });
         }
       }
+      // Soft light and shade, so each part reads round.
+      const sh = shade(p, cam);
+      if (sh.lit && !dim) shapes.push({ d: closed(sh.lit), fill: '#ffffff', opacity: 0.22 });
+      if (sh.soft) shapes.push({ d: closed(sh.soft), fill: '#000000', opacity: 0.12 });
+      if (sh.deep) shapes.push({ d: closed(sh.deep), fill: '#000000', opacity: 0.1 });
     });
+  };
+
+  /** The near arm: upper arm and forearm each with its own edge, farther first, so a bent elbow
+      reads as two parts instead of one bag. */
+  const nearArm = (l: Limbs) => {
+    const depthOf = (p: Part) => dot(add(p.a, p.b), cam.c);
+    const pieces: Part[][] = [[l.upper], [l.fore, l.hand]];
+    pieces.sort((a, b) => depthOf(a[0]) - depthOf(b[0]));
+    for (const piece of pieces) group(piece);
   };
 
   if (pose.bar) {
@@ -687,11 +735,11 @@ function draw(exercise: AnatomyId, cam: Camera, depth: number): Shape[] {
       group([torso, neck, head]);
       group(leg(near));
     }
-    group(arm(near));
+    nearArm(near);
   } else {
     group(arm(far));
     group([torso, neck, head, ...leg(far), ...leg(near)]);
-    group(arm(near));
+    nearArm(near);
   }
   return shapes;
 }
