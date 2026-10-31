@@ -374,7 +374,7 @@ class DungeonScene extends Phaser.Scene {
   private asked = false;
   private fx!: Phaser.GameObjects.Graphics;
   private shadows!: Phaser.GameObjects.Graphics;
-  /** Upright marks over the room (eyes in the fog, a bomb in the air, the ring on the monster you tapped). */
+  /** Upright marks over the room (eyes in the fog, a bomb in the air, health bars). */
   private marks!: Phaser.GameObjects.Graphics;
   /** Glows on the floor under a mid-boss, redrawn each frame. */
   private under!: Phaser.GameObjects.Graphics;
@@ -405,8 +405,6 @@ class DungeonScene extends Phaser.Scene {
   private wantSkill = false;
   private wantFinal = false;
   private wantDodge = false;
-  /** A monster tapped since the last step (null: tapped again, let go). */
-  private wantLock: number | null | undefined = undefined;
   /** Hit-stop: the world holds still until then (the engine's steps wait, none are lost). */
   private stopUntil = 0;
   /** Small hit-stops don't come back before then, so a flurry of hits doesn't stutter. */
@@ -527,23 +525,6 @@ class DungeonScene extends Phaser.Scene {
     em.explode(n, X, Y + dy);
   }
 
-  /** The monster under a tap, if any (never a reflection of you: hitting those hurts). */
-  private foeAt(x: number, y: number): Foe | null {
-    let best: Foe | null = null,
-      bd = Infinity;
-    for (const f of this.run.foes) {
-      const e = this.foes.get(f.id);
-      if (!f.alive || !e || f.kind === 'reflection') continue;
-      const d = Math.hypot(e.s.x - x, e.s.y - y),
-        r = 28 * e.base + 18;
-      if (d < r && d < bd) {
-        bd = d;
-        best = f;
-      }
-    }
-    return best;
-  }
-
   /** Every sheet the run loads: the run's own and each friend's. */
   private allSheets(): [string, Sheet][] {
     return [...Object.entries(this.setup.sheets), ...(this.setup.friends ?? []).flatMap((f, i): [string, Sheet][] => [[`friend${i}`, f.idle], [`friend${i}Walk`, f.walk]])];
@@ -660,12 +641,7 @@ class DungeonScene extends Phaser.Scene {
       on([k.SPACE, k.E, k.SHIFT], () => (this.wantDodge = true));
     }
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
-      // A tap on a monster aims at it (again lets go); anywhere else, the move stick.
-      const f = this.foeAt(p.worldX, p.worldY);
-      if (f) {
-        this.wantLock = this.run.hero.lock === f.id ? null : f.id;
-        return;
-      }
+      // A touch anywhere is the move stick; attacks aim on their own.
       if (!this.stick) this.stick = { id: p.id, x: p.x, y: p.y, dx: 0, dy: 0 };
     });
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => {
@@ -1292,12 +1268,11 @@ class DungeonScene extends Phaser.Scene {
 
   /** What you press this step (the bot's, on autopilot). Buttons count once. */
   private myInput(): Input {
-    const input: Input = this.bot ? botInput(this.run) : { ...this.stickInput(), ability: this.wantAbility, skill: this.wantSkill, final: this.wantFinal, dodge: this.wantDodge, lock: this.wantLock };
+    const input: Input = this.bot ? botInput(this.run) : { ...this.stickInput(), ability: this.wantAbility, skill: this.wantSkill, final: this.wantFinal, dodge: this.wantDodge };
     this.wantAbility = false;
     this.wantSkill = false;
     this.wantFinal = false;
     this.wantDodge = false;
-    this.wantLock = undefined;
     // A live run doesn't stop for your bag or menu: you just stand still.
     return this.paused ? { x: 0, y: 0, ability: false } : input;
   }
@@ -2796,14 +2771,6 @@ class DungeonScene extends Phaser.Scene {
         this.fx.arc(o.x, o.y, PARTY.revive.r, -Math.PI / 2, -Math.PI / 2 + Math.min(1, o.reviving / PARTY.revive.secs) * Math.PI * 2);
         this.fx.strokePath();
       }
-    }
-    // The monster you tapped: a ring under it, and corner ticks round it.
-    const lk = r.hero.lock === null ? undefined : r.foes.find((f) => f.id === r.hero.lock && f.alive);
-    if (lk) {
-      const [X, Y] = this.P(lk.x, lk.y),
-        q = lk.def.r + 10 + 2 * Math.sin(now / 120);
-      mk.lineStyle(2, 0xfde68a, 0.9).strokeEllipse(X, Y + lk.def.r + 4, lk.def.r * 3, lk.def.r);
-      for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) mk.lineBetween(X + sx * q, Y + sy * q, X + sx * (q - 6), Y + sy * q).lineBetween(X + sx * q, Y + sy * q, X + sx * q, Y + sy * (q - 6));
     }
     // Monsters on fire from Embers: little flames dance on them till it goes out.
     for (const f of r.foes) {

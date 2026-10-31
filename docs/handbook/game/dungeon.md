@@ -380,8 +380,9 @@ stand upright at `P`. The stick is turned back the other way in `stickInput`. Th
 new drawing in engine points goes on a turned layer (or through `fade`), and anything that must stay
 upright goes through `P` (or `fade(..., true)`).
 
-A tap on a monster aims your attacks at it while it's in reach (`Input.lock`, `run.hero.lock`,
-`locked` in `engine.ts`); a second tap lets go. The bot never locks.
+Attacks aim on their own at the nearest monster; a touch anywhere is the move stick. Tap-to-aim
+and its gold ring were taken out of the scene (2026-10-31, Edoardo's call); the engine still reads
+`Input.lock` (`run.hero.lock`, `locked` in `engine.ts`), so an old client in a live run doesn't break.
 
 Effects are capped (`FX_CAP` in `scene.ts`: particles and faded drawings alive at once) so a
 pile-up can't stall a slow phone; real fights peak far below the caps.
