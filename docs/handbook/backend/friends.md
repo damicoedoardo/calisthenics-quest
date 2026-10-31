@@ -1,9 +1,9 @@
 ---
 type: conceptual
 title: Friends
-description: Friend codes, asks and accepts, who is online, in the Fog or trained today, and parties (invite, lobby, ready, start, practice run) — the tables, the /me, /friends and /party routes, and the screens.
-tags: [backend, friends, social, co-op, voice, livekit]
-timestamp: 2026-10-28
+description: Friend codes, asks and accepts, who is online, training, in the Fog or trained today, cheers mid-workout, the workout feed, and parties (invite, lobby, ready, start, practice run) — the tables, the /me, /friends and /party routes, and the screens.
+tags: [backend, friends, social, co-op, voice, livekit, cheers, feed]
+timestamp: 2026-10-29
 ---
 
 # Friends
@@ -15,11 +15,14 @@ itself never does.
 ## What a friend sees
 
 Each player has a public **card** on the server: the hero's name (from the save, asked after the look in the opening; older saves are asked on the Friends card), class, level,
-look and worn gear tiers, when they last trained, and whether the app is open (`online`) or in a
-run (`playing`, the zone's name). Nothing else of the save is shared. A friend shows as:
+look and worn gear tiers, when they last trained, and whether the app is open (`online`), in a
+run (`playing`, the zone's name) or in a workout (`training`, the plan's name, `trainingLabel` in
+`src/lib/cheers.ts`). Nothing else of the save is shared. A friend shows as:
 
-- **In the Fog: <world>** while their run is going, **Online** while the app is open, else
-  **Seen 2 h ago**.
+- **Training now: <workout>** while they work out, **In the Fog: <world>** while their run is
+  going, **Online** while the app is open, else **Seen 2 h ago**. Over the hero a small bubble
+  says it at a glance: a dumbbell while training, swords in the Fog, nothing otherwise (`Doing`
+  in `Friends.tsx`).
 - A flame and **trained today** when their last workout was on this phone's today. This is the
   part that nudges friends to train.
 
@@ -97,6 +100,71 @@ With the mic on, the iPhone may play the game's sound lower.
 | `backend/tests/test_voice.py` | Members get a pass to their room; no party, no pass; off until set up |
 | `src/lib/voice-client.ts` | `joinVoice`, `leaveVoice`, `setMic`, `silence`, `useVoice` (who's here, talking, quiet) |
 
+## Cheers
+
+A friend who is working out can be cheered on. Their hero shows **Cheer** (in **Online** on the
+Friends tab, and instead of Party on their row in the Friends card); it opens a page (`CheerPage`
+in `Friends.tsx`) with a box for your own words and quick lines with their name in ("Push, Ben!")
+that only fill the box. **Send** stores it on the server; their phone looks for cheers every 8 s
+during a workout and every minute otherwise (`useCheers` in `Cheers.tsx`, in `page.tsx`) and
+shows each one at the top, over the workout too: your hero, "<name> cheers you on" and your line
+(`CheerToast`, 6 s, a tap closes it). Each cheer shows once.
+
+- Only to an accepted friend, at most 80 letters, at most 20 a day from one friend to another
+  (`CHEER_LIMIT` in `src/lib/cheers.ts`; the server's copies are `PER_DAY` and `LENGTH` in
+  `routes/cheers.py`, keep them the same). Over it, 429.
+- A friend sees a cheer only while the app is open (it is, during a workout); there are no phone
+  notifications yet. The cheers of a workout also show on its feed post.
+- In the sandbox Ben is training (tap Cheer to see the page) and a workout gets a sample cheer from
+  Ana after 4 s.
+
+| File | What |
+|---|---|
+| `backend/app/cheers.py` | Table `cheers` (made on start), `PgStore`, `MemoryStore` |
+| `backend/app/routes/cheers.py` | `POST /cheers` (send), `POST /cheers/take` (what waits, each once) |
+| `backend/tests/test_cheers.py` | Send and see once, only friends, not empty, so many a day, `training` on the card |
+| `src/lib/cheers.ts` | Pure: the limits, `quickCheers`, `cleanCheer`, `trainingLabel` |
+| `src/components/Cheers.tsx` | `useCheers` and `CheerToast` |
+
+## The feed
+
+Finished workouts, shared with friends. After a workout the loot card has **Share with friends**
+(signed in only): it opens `SharePage` (`Feed.tsx`) with the workout as a card (the coach's name
+for the day or "A workout", minutes, sets and exercises without the warm-up and the stretch:
+`workoutCard` in `src/lib/feed.ts`, built in `page.tsx` when the workout ends), a line about it,
+and a photo if you like. **Share** sends it; then the app opens the Feed.
+
+The **Feed** is the second half of the Friends tab (a Friends | Feed switch at the top,
+`FriendsTab.tsx`; `?tab=friends&feed` in the sandbox, and the "The Feed" jump on `/lab/night`).
+Each post shows the hero and name, how long ago, the workout card, the line, the photo, who
+cheered during that workout ("Cheered on by Ana"), a flame button with its count, and the
+comments with a box to add one. You can delete your own posts and comments, and any comment on
+your own post (no browser pop-up: Delete then Delete or Keep). The Feed button, and the Friends
+tab when no friend is online, get an orange dot for friends' posts since you last opened it
+(`newPosts`, `forma-feed-seen-v1` in localStorage). It refreshes every 30 s while open, every 2
+minutes otherwise (`useFeed`).
+
+- **Who sees what:** your posts, photos and comments only reach you and your accepted friends.
+  Anyone else gets 404, as if the post weren't there. Unfriending hides each other's posts.
+- **The photo** is made small on the phone (`shrinkPhoto` in `feed-client.ts`: at most 1080 px
+  on its long side, a JPEG under 600 KB, lower quality until it fits) and sent as base64. The
+  server keeps only JPEGs (checks the first bytes) in `post_photos` (Postgres). A photo needs
+  sign-in, so the app fetches it into a blob link when its post nears the screen (`photoUrl`).
+- **Cheers on the post:** the server adds the friends who cheered you since the workout started
+  (at most 6 h back; `senders_since` in `cheers.py`).
+- Limits: a line up to 280 letters, a comment up to 200, 5 posts a day (`FEED_LIMIT` in
+  `src/lib/feed.ts`; the server's copies are `TEXT`, `COMMENT`, `PHOTO_BYTES`, `PER_DAY` in
+  `routes/feed.py`, keep them the same). There are no notifications for comments yet.
+
+| File | What |
+|---|---|
+| `backend/app/feed.py` | Tables `posts`, `post_photos`, `post_flames`, `post_comments` (made on start), `PgStore`, `MemoryStore` |
+| `backend/app/routes/feed.py` | `POST /feed`, `GET /feed?before=`, `GET /feed/{id}/photo`, `POST /feed/{id}/flame`, `POST /feed/{id}/comments`, `DELETE /feed/{id}`, `DELETE /feed/comments/{id}` |
+| `backend/tests/test_feed.py` | Share and friends see it, strangers don't, flames, comments, deleting, cheers on the post, photos and limits |
+| `src/lib/feed.ts` | Pure: types, `FEED_LIMIT`, `workoutCard`, `workoutLine`, `newPosts`, `cleanLine` |
+| `src/lib/feed-client.ts` | The calls, `photoUrl`, `shrinkPhoto` |
+| `src/components/Feed.tsx` | `useFeed` (in `page.tsx`), `FeedView`, `PostCard`, `PostPhoto`, `SharePage`; two sample posts in the sandbox |
+
 ## Gifts of forge materials
 
 Friends can give each other co-op materials for Mira's forge ([../game/forge.md](../game/forge.md)).
@@ -125,3 +193,10 @@ what waits on each refresh (`POST /gifts/claim`, each gift handed out once) into
 | Change what a voice pass allows | `voice_pass` in `backend/app/voice.py` |
 | Change how much can be given a day | `GIFTS.perDay` in `src/balance/upgrades.ts` and `PER_DAY` in `backend/app/routes/gifts.py` |
 | Change the gift picker | `GiveMats` in `Friends.tsx` |
+| Change the cheer page or the quick lines | `CheerPage` in `Friends.tsx`, `quickCheers` in `src/lib/cheers.ts` |
+| Change how a cheer pops up, or how often the app looks | `CheerToast`, `FAST_MS`/`SLOW_MS`/`SHOW_MS` in `Cheers.tsx` |
+| Change how many cheers a day, or how long | `CHEER_LIMIT` in `src/lib/cheers.ts` and `PER_DAY`/`LENGTH` in `backend/app/routes/cheers.py` |
+| Change the bubble over a friend's hero | `Doing` in `Friends.tsx` |
+| Change what a post shows | `PostCard` in `Feed.tsx`; the workout card in `workoutCard` (`src/lib/feed.ts`) |
+| Change the share page | `SharePage` in `Feed.tsx`; its button in `AfterSession.tsx` |
+| Change the feed's limits or photo size | `FEED_LIMIT` in `src/lib/feed.ts` and the constants in `backend/app/routes/feed.py` |

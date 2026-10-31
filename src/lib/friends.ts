@@ -24,6 +24,8 @@ export interface MyCard {
   trained_at: string | null;
   /** The world of the run you are in, or null. */
   playing: string | null;
+  /** The workout you are doing right now, or null. */
+  training: string | null;
   name?: string;
 }
 
@@ -37,6 +39,8 @@ export interface FriendCard {
   trained_at: string | null;
   online: boolean;
   playing: string | null;
+  /** The workout they are doing right now (only while online); older servers leave it out. */
+  training?: string | null;
   seen_at: string;
 }
 
@@ -48,7 +52,7 @@ export interface FriendsList {
 }
 
 /** Your card, from the save. */
-export function myCard(state: GameState, playing: string | null): MyCard {
+export function myCard(state: GameState, playing: string | null, training: string | null = null): MyCard {
   const gear = gearOf(state);
   return {
     class_id: state.profile.classId ?? null,
@@ -56,6 +60,7 @@ export function myCard(state: GameState, playing: string | null): MyCard {
     look: { ...state.profile.look, gear: { weapon: gear.weapon.tier, armor: gear.armor.tier, shield: gear.shield.tier } },
     trained_at: state.sessions.at(-1)?.date ?? null,
     playing,
+    training,
     ...(state.profile.name ? { name: state.profile.name } : {}),
   };
 }
@@ -66,6 +71,7 @@ export const friendTrainedToday = (f: Pick<FriendCard, 'trained_at'>, now: Date)
 
 /** The status line under a friend's name. */
 export function statusOf(f: FriendCard, now: Date): string {
+  if (f.training) return `Training now: ${f.training}`;
   if (f.playing) return `In the Fog: ${f.playing}`;
   if (f.online) return 'Online';
   return `Seen ${ago(new Date(f.seen_at), now)}`;

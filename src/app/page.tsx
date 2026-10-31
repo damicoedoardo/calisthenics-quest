@@ -6,7 +6,9 @@ import { startsToday } from '@/lib/coach/week';
 import { TrainTab } from '@/components/TrainTab';
 import { HeroTab, type HeroPart } from '@/components/HeroTab';
 import { PlayTab } from '@/components/PlayTab';
-import { FriendsTab } from '@/components/FriendsTab';
+import { FriendsTab, type FriendsView } from '@/components/FriendsTab';
+import { SharePage, useFeed } from '@/components/Feed';
+import { workoutCard, type WorkoutCard } from '@/lib/feed';
 import { YouPage } from '@/components/YouPage';
 import { StorySoFar } from '@/components/StorySoFar';
 import { FogRun, type RunStart } from '@/components/FogRun';
@@ -26,6 +28,8 @@ import { Sprite } from '@/components/Sprite';
 import { LookProvider } from '@/components/Look';
 import { useCloudSync } from '@/components/Cloud';
 import { onlineCount, useFriends, useFriendsBeat } from '@/components/Friends';
+import { CheerToast, useCheers } from '@/components/Cheers';
+import { trainingLabel } from '@/lib/cheers';
 import { SignInGate, signInDue } from '@/components/SignInGate';
 import { PartyButton, PartyInviteCard, PartyLobby, usePartyPoll } from '@/components/Party';
 import { others, startToJoin } from '@/lib/party';
@@ -33,7 +37,7 @@ import { partyMe, setLobbyOpen, usePartyView } from '@/lib/party-client';
 import type { FriendCard } from '@/lib/friends';
 import { cloudConfigured, maybeSignedIn, useCloudStatus } from '@/lib/cloud-client';
 import { BringHero, InstallGate } from '@/components/InstallGate';
-import { closeStaleDraft, finishSession, gearOf, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
+import { closeStaleDraft, finishSession, gearOf, isTap, todaysQuest, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { endedScene, putOff, scenesToPlay, storyState, waitingCount, type SceneMode, type StoryState } from '@/story/engine';
 import { withTodayPage } from '@/story/daily';
 import { heroVariant } from '@/story/flame';
@@ -85,7 +89,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   // The You page, opened by tapping your hero at the top.
   const [you, setYou] = useState(false);
   const [training, setTraining] = useState(false);
-  const [after, setAfter] = useState<{ result: FinishResult; before: StoryState; after: StoryState } | null>(null);
+  const [after, setAfter] = useState<{ result: FinishResult; before: StoryState; after: StoryState; card: WorkoutCard } | null>(null);
   const [scene, setScene] = useState<Scene | null>(null);
   // How the scene was opened: its moment came, or from Story so far (put off, or watched again).
   const [sceneMode, setSceneMode] = useState<SceneMode>('due');
@@ -107,11 +111,19 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   // The cloud backup, when signed in. Never before the save has loaded, never in the sandbox or
   // on the developer save.
   useCloudSync(state, update, !ready || offRecord());
-  // Shows you online to your friends while the app is open, and in the Fog during a run.
-  useFriendsBeat(state, run?.name ?? null, !ready || offRecord());
+  // Shows you online to your friends while the app is open, in the Fog during a run, and
+  // training during a workout (so they can cheer you on).
+  useFriendsBeat(state, run?.name ?? null, training ? trainingLabel(state) : null, !ready || offRecord());
   // Your friends: the Friends tab, and how many are online on its tab button.
   const friends = useFriends(update, !ready || offRecord(), sandbox, tab === 'friends');
   const online = onlineCount(friends);
+  // The Feed on the Friends tab: workouts you and your friends share.
+  const [friendsView, setFriendsView] = useState<FriendsView>('friends');
+  const feed = useFeed(!ready || offRecord(), sandbox, tab === 'friends' && friendsView === 'feed');
+  // The workout just finished, to share with friends from the screen after it.
+  const [sharing, setSharing] = useState<WorkoutCard | null>(null);
+  // Cheers from friends: looked for every few seconds during a workout.
+  const cheers = useCheers(!ready || offRecord(), training, sandbox);
   // After the install step, an account: a hard rule, no playing on without one (SignInGate).
   const { signedIn } = useCloudStatus();
   const [welcomed, setWelcomed] = useState(false);
@@ -131,6 +143,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     if (part === 'gear' || part === 'stats' || part === 'class') setHeroPart(part);
     // The old jump to the Fog's Together: now the Friends tab.
     if (q.get('fog') === 'together') setTab('friends');
+    // ?tab=friends&feed: the Feed, with two sample posts.
+    if (q.has('feed')) setFriendsView('feed');
     if (q.has('you')) setYou(true);
     // ?run=road1: an Ember Road run (try it with &party).
     const zone = ZONES.find((z) => String(z.id) === q.get('run')) ?? ROAD_ZONES.find((z) => `road${z.road}` === q.get('run'));
@@ -279,8 +293,11 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     const res = finishSession(state, new Date());
     if (!res) return;
     const before = storyState(state);
+    // The post friends would see, from the workout as it was (its start and its one-tap parts).
+    const taps = new Set(todaysQuest(state, state.draft?.checkin).filter(isTap).map((q) => q.id));
+    const card = workoutCard(res.session, { title: trainingLabel(state), startedAt: state.draft?.startedAt, taps });
     update(() => res.state);
-    setAfter({ result: res, before, after: storyState(res.state) });
+    setAfter({ result: res, before, after: storyState(res.state), card });
     setTraining(false);
     setTab('today');
   };
@@ -435,7 +452,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
             }}
           />
         ) : tab === 'friends' ? (
-          <FriendsTab state={state} update={update} friends={friends} />
+          <FriendsTab state={state} update={update} friends={friends} feed={feed} view={friendsView} setView={setFriendsView} />
         ) : (
           <HeroTab state={state} update={update} onChangeClass={() => setPicker('manual')} part={heroPart} onPart={setHeroPart} />
         )}
@@ -471,6 +488,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
                 {/* Story scenes put off or skipped wait in Story so far. */}
                 {id === 'play' && waitingCount(state) > 0 && <span aria-label="Story scenes waiting" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-gold-300 ring-2 ring-ink-900" />}
                 {/* How many friends are online. */}
+                {id === 'friends' && online === 0 && feed.fresh > 0 && <span aria-label="New in the feed" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-orange-400 ring-2 ring-ink-900" />}
                 {id === 'friends' && online > 0 && <span aria-label={`${online} online`} className="absolute -right-2.5 -top-1 min-w-[1rem] rounded-full bg-emerald-500 px-1 text-center font-mono text-[9px] font-bold leading-4 text-ink-950 ring-2 ring-ink-900">{online}</span>}
               </span>
               {label}
@@ -525,13 +543,29 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         </>
       )}
       {training && <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />}
+      <CheerToast cheer={cheers.cheer} friends={friends.list?.friends ?? []} onDone={cheers.next} />
       {after && (
         <AfterSession
           result={after.result}
           before={after.before}
           after={after.after}
           onClose={() => setAfter(null)}
+          onShare={feed.shown && feed.signedIn ? () => setSharing(after.card) : undefined}
           onFelt={(felt, comment) => update((s) => ({ ...s, sessions: s.sessions.map((x) => (x.id === after.result.session.id ? { ...x, felt, ...(comment ? { comment } : {}) } : x)) }))}
+        />
+      )}
+      {sharing && (
+        <SharePage
+          state={state}
+          card={sharing}
+          feed={feed}
+          onClose={() => setSharing(null)}
+          onShared={() => {
+            setSharing(null);
+            setAfter(null);
+            setTab('friends');
+            setFriendsView('feed');
+          }}
         />
       )}
       {scene && <ScenePlayer key={scene.id} scene={scene} state={state} mode={sceneMode} onDone={endScene} />}

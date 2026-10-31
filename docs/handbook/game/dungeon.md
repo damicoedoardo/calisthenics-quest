@@ -295,7 +295,9 @@ beam over rare ones (`syncLoot`). Walking over one puts it in the bag (`run.hero
 You wear three things: a weapon and armor made for your class, and a charm. A weapon belongs to
 its class: no other class can wear it (`otherClass`, `canWear` in `items.ts`; `wear` and `wearsIt`
 in the engine, `wornFor` and `wearFromVault` in `src/lib/fog-gear.ts`), and the cards say
-"Archer only" in red. Changing class leaves the old weapon at home, safe, until you switch back. A run
+"Archer only" in red. Changing class takes the old weapon off into the vault (`offOtherClass` in `src/lib/game.ts`,
+called by `changeClass`, and by `migrate` for saves that still wore one), even past the vault's
+size, so it waits there safe until you switch back. A run
 starts in what the save says you wear (`RunSetup.worn`); with no weapon (or another class's) the
 starter kit (`starterKit`) gives a plain weapon, and nothing else: an empty armor slot stays empty
 (`STARTER` in `src/balance/items.ts`). An item asks for a hero level (`needLevel`, the level from

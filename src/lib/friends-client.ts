@@ -1,6 +1,7 @@
 'use client';
 
 import { api, Offline } from './cloud-client';
+import type { Cheer } from './cheers';
 import type { FriendsList, MyCard } from './friends';
 
 /* The talking side of friends (rules and types in friends.ts). Every call needs sign-in. */
@@ -44,3 +45,9 @@ export const giveGift = async (to: string, mat: string, n: number) => json<{ sta
 
 /** Take home what friends gave you (each gift only once). */
 export const claimGifts = async () => json<{ gifts: Gift[] }>(await api('POST', '/gifts/claim'));
+
+/** Cheer a friend on (app/routes/cheers.py): "sent", with how many more you can send them today. */
+export const sendCheer = async (to: string, text: string) => json<{ status: string; left_today: number }>(await api('POST', '/cheers', { to, text }));
+
+/** What friends cheered you since the last look (each cheer only once). */
+export const takeCheers = async () => json<{ cheers: Cheer[] }>(await api('POST', '/cheers/take'));

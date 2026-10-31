@@ -25,7 +25,8 @@ CREATE TABLE IF NOT EXISTS profiles (
     look        jsonb,
     trained_at  timestamptz,
     playing     text,
-    seen_at     timestamptz NOT NULL DEFAULT now()
+    seen_at     timestamptz NOT NULL DEFAULT now(),
+    training    text
 );
 CREATE TABLE IF NOT EXISTS friends (
     a           uuid NOT NULL,
@@ -72,6 +73,48 @@ CREATE TABLE IF NOT EXISTS gifts (
     claimed_at  timestamptz
 );
 CREATE INDEX IF NOT EXISTS gifts_receiver ON gifts (receiver) WHERE claimed_at IS NULL;
+
+-- Cheers: a short line one friend sends another, mostly mid-workout, waiting until seen
+-- (app/cheers.py).
+CREATE TABLE IF NOT EXISTS cheers (
+    id          uuid PRIMARY KEY,
+    sender      uuid NOT NULL,
+    receiver    uuid NOT NULL,
+    text        text NOT NULL,
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    seen_at     timestamptz
+);
+CREATE INDEX IF NOT EXISTS cheers_receiver ON cheers (receiver) WHERE seen_at IS NULL;
+
+-- The feed (app/feed.py): shared workouts, their photos, flames and comments. Also created by
+-- the api on start.
+CREATE TABLE IF NOT EXISTS posts (
+    id          uuid PRIMARY KEY,
+    author      uuid NOT NULL,
+    workout     jsonb NOT NULL,
+    text        text NOT NULL DEFAULT '',
+    has_photo   boolean NOT NULL DEFAULT false,
+    cheered_by  jsonb NOT NULL DEFAULT '[]',
+    created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS posts_author ON posts (author, created_at DESC);
+CREATE TABLE IF NOT EXISTS post_photos (
+    post_id     uuid PRIMARY KEY REFERENCES posts (id) ON DELETE CASCADE,
+    data        bytea NOT NULL
+);
+CREATE TABLE IF NOT EXISTS post_flames (
+    post_id     uuid NOT NULL REFERENCES posts (id) ON DELETE CASCADE,
+    user_id     uuid NOT NULL,
+    PRIMARY KEY (post_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS post_comments (
+    id          uuid PRIMARY KEY,
+    post_id     uuid NOT NULL REFERENCES posts (id) ON DELETE CASCADE,
+    author      uuid NOT NULL,
+    text        text NOT NULL,
+    created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS post_comments_post ON post_comments (post_id, created_at);
 
 -- How many messages each player sent the coach today, to cap the bill (app/coach.py).
 CREATE TABLE IF NOT EXISTS coach_usage (

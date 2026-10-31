@@ -3,7 +3,7 @@ type: reference
 title: Training rules
 description: The real-world side of FORMA in src/lib — the built-in plan (gym or home), today's quest, logging sets, progression, "better than last time", XP and levels, stat points for the champion, classes and gear.
 tags: [game, training, rules, xp, stats]
-timestamp: 2026-10-28
+timestamp: 2026-10-29
 ---
 
 # Training rules
@@ -87,7 +87,8 @@ falloff, armor, class lean) are in `src/balance/stats.ts`.
 - **Sweat coins** (`src/lib/sweat.ts`, numbers `SWEAT` in `src/balance/economy.ts`): every workout
   earns one (`coins` counts them from the sessions; only `sweat.spent` is saved). Starting your
   points over costs `SWEAT.respec`, changing class `SWEAT.classChange` (`changeClass`,
-  `classCost`); the pick in the opening and the first change after it are free.
+  `classCost`); the pick in the opening and the first change after it are free. A change puts the
+  old class's weapon in the vault.
 - Each point in the same stat is worth a little less (`statValue`, `FALLOFF`), so spreading pays.
 - `BASE` is what every champion has before any point. What a point is worth is set so points are
   about 40% of a player's power growth (`POWER_SPLIT`, see [balance.md](balance.md)); check with
