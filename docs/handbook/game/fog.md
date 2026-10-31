@@ -164,7 +164,7 @@ on the "turn your phone" card. The engine side is in [dungeon.md](dungeon.md#the
 
 On a computer (mouse or trackpad: `useKeyboardPlay` in `src/components/useDesk.ts`) the run is
 played with keys and never asks you to turn anything. The scene's own keys: WASD or the arrows
-move, Q is the class ability, R and F the SP's move and final, Space (or E, or Shift) dodges, a click on a monster aims at it; they
+move, Q is the class ability, R and F the SP's move and final, Space (or E, or Shift) dodges (attacks aim at the nearest monster on their own); they
 do nothing while a card or the bag holds the run. `FogRun`'s keys: Esc or P pauses (and closes
 whatever is open), B or I the bag, M the map, 1 2 3 pick a skill, chest or stairs choice, Enter
 runs again at the end. Each button shows its key (`Key`), the pause menu lists them all
