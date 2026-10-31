@@ -3,7 +3,7 @@ type: reference
 title: Training rules
 description: The real-world side of FORMA in src/lib — the built-in plan (gym or home), today's quest, logging sets, progression, "better than last time", XP and levels, stat points for the champion, classes and gear.
 tags: [game, training, rules, xp, stats]
-timestamp: 2026-10-29
+timestamp: 2026-10-31
 ---
 
 # Training rules
@@ -21,9 +21,11 @@ works"); keep the two in step.
 (`profile.kit`, missing means gym). Every day is a list of `Slot`s, each a library exercise by its
 demo id (so it has a pixel demo and coaching), with a role:
 
-- `warmup` and `stretch`: one tap ("Done"), no reps logged, no rest timer. Every day opens with
-  the warm-up and ends with the stretch.
-- `main` and `core`: sets logged with reps left in the tank.
+- `warmup` and `stretch` (shown as "Cool-down"): one tap ("Done"), no reps logged, no rest timer.
+  Every day opens with the warm-up and ends with the stretch.
+- `main`, `accessory` and `core`: sets logged with reps left in the tank. A coach's workout runs
+  the five in this order (warm-up, main, accessory, core, cool-down; `craft.ts`, see
+  [coach.md](coach.md)).
 
 A slot has a target range (`low`..`high`); `weighted` slots are done with a weight the player
 picks. `cueOf(id)` is the exercise's first coaching tip.
