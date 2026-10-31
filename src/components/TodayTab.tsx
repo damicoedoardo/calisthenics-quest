@@ -12,7 +12,6 @@ import {
   WEEKLY_GOAL,
   dayType,
   gearOf,
-  previewXp,
   sessionsThisWeek,
   todaysQuest,
   weekStreak,
@@ -26,8 +25,6 @@ import { storyState, storyWords } from '@/story/engine';
 import { flameStage } from '@/story/flame';
 import { currentPlan, dayLabel, nextDay, nextMonday, todayIs, weekdayOf } from '@/lib/coach/week';
 import { ExerciseSheet } from './ExerciseDetail';
-import { LootGuide, NextLoot, type LootGo } from './Purse';
-import type { LootId } from '@/lib/loot';
 import { fireLine, flameLine, flameMood, restTruth, todayPage, updateTodayPage } from '@/story/daily';
 
 interface Props {
@@ -39,8 +36,6 @@ interface Props {
   openBook?: boolean;
   /** No plan yet: go and plan the week with the flame. */
   onTrain: () => void;
-  /** From the loot guide: open that part of the Hero tab. */
-  onHero?: (part: LootGo) => void;
 }
 
 const CHECKINS: { id: Checkin; label: string; note: string; minutes: number }[] = [
@@ -50,13 +45,14 @@ const CHECKINS: { id: Checkin; label: string; note: string; minutes: number }[] 
 ];
 
 
-export function TodayTab({ state, update, onStart, onReplayOpening, openBook, onTrain, onHero }: Props) {
+export function TodayTab({ state, update, onStart, onReplayOpening, openBook, onTrain }: Props) {
   const now = new Date();
   const [overlay, setOverlay] = useState<'fire' | 'book' | null>(openBook ? 'book' : null);
   // An exercise tapped in the quest: how to do it.
   const [howTo, setHowTo] = useState<{ id: string; demo: ExerciseId } | null>(null);
-  // A loot chip tapped: what training gives, and where each goes.
-  const [guide, setGuide] = useState<LootId | null>(null);
+  // The warm-up and the stretch start folded, so the main work gets the room.
+  const [unfolded, setUnfolded] = useState<Partial<Record<FoldRole, boolean>>>({});
+  const toggle = (role: FoldRole) => setUnfolded((u) => ({ ...u, [role]: !u[role] }));
   useEffect(() => {
     if (openBook) setOverlay('book');
   }, [openBook]);
@@ -99,27 +95,12 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
       )}
       {overlay === 'book' && <BookOfDays state={state} onClose={() => setOverlay(null)} />}
       {howTo && <ExerciseSheet state={state} id={howTo.id} demo={howTo.demo} onClose={() => setHowTo(null)} />}
-      {guide && (
-        <LootGuide
-          state={state}
-          focus={guide}
-          now={now}
-          onClose={() => setGuide(null)}
-          onGo={
-            onHero &&
-            ((to) => {
-              setGuide(null);
-              onHero(to);
-            })
-          }
-        />
-      )}
     </>
   );
   const items = inProgress ? todaysQuest(state) : quest;
   const startLabel = inProgress ? 'Continue quest' : ahead ? `Opens ${aheadDay === 'tomorrow' ? 'tomorrow' : `on ${aheadDay}`}` : 'Start quest';
   const questTitle = checkin === 'rough' && !inProgress ? 'Minimum quest' : (plan?.title ?? `Day ${day} quest`);
-  const xp = previewXp(state, inProgress ? state.draft!.checkin : checkin, now);
+  const rows = foldRows(items, unfolded);
   const reps = (q: (typeof items)[number]) => {
     const done = state.draft?.sets[q.id]?.length ?? 0;
     return inProgress ? `${Math.min(done, q.sets)}/${q.sets}` : q.run ? `${Math.round(q.reps / 60)} min` : `${q.sets > 1 ? `${q.sets}×` : ''}${q.reps}${q.unit === 'sec' ? 's' : ''}`;
@@ -134,15 +115,14 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
         streak={streak}
         hero={hero}
         story={story}
-        items={items}
+        rows={rows}
+        onToggle={toggle}
         instead={doneToday ? <DoneToday state={state} now={now} onTrain={onTrain} land /> : noPlan ? <NoPlan state={state} now={now} onTrain={onTrain} land /> : null}
         restDay={restDay}
         aheadNote={aheadNote}
         onHowTo={(q) => setHowTo({ id: q.id, demo: q.demo })}
         reps={reps}
-        loot={<NextLoot state={state} checkin={inProgress ? state.draft!.checkin : checkin} now={now} onOpen={setGuide} land />}
         title={questTitle}
-        xp={xp}
         checkin={checkin}
         onCheckin={inProgress ? undefined : setCheckin}
         startLabel={startLabel}
@@ -234,36 +214,36 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
       <section className="rounded-2xl bg-ink-800 p-4">
         <div className="flex items-baseline justify-between">
           <h3 className="font-pixel text-[9px] leading-relaxed text-gold-300">{questTitle}</h3>
-          <p className="shrink-0 pl-2 font-mono text-[11px] text-slate-400">
-            {!inProgress && `${CHECKINS.find((c) => c.id === checkin)!.minutes} min · `}+{xp} XP
-          </p>
+          {!inProgress && <p className="shrink-0 pl-2 font-mono text-[11px] text-slate-400">{CHECKINS.find((c) => c.id === checkin)!.minutes} min</p>}
         </div>
         <ul className="mt-3 space-y-1.5">
-          {items.map((q) => {
-            return (
-              <li key={q.id}>
-                <button onClick={() => setHowTo({ id: q.id, demo: q.demo })} aria-label={`How to do ${q.name}`} className="flex w-full items-center gap-3 rounded-xl bg-ink-900 py-1 pl-1 pr-3 text-left active:scale-[.98]">
+          {rows.map((r) =>
+            r.kind === 'fold' ? (
+              <li key={r.role}>
+                <FoldRow role={r.role} items={r.items} open={r.open} onToggle={() => toggle(r.role)} />
+              </li>
+            ) : (
+              <li key={r.q.id}>
+                <button onClick={() => setHowTo({ id: r.q.id, demo: r.q.demo })} aria-label={`How to do ${r.q.name}`} className="flex w-full items-center gap-3 rounded-xl bg-ink-900 py-1 pl-1 pr-3 text-left active:scale-[.98]">
                 {/* A still of you doing it: the demo's first frame, at 1:1 so it stays crisp. */}
-                {(EXERCISES as string[]).includes(q.demo) ? (
-                  <Sprite id="exercise" opts={{ exercise: q.demo, ...hero }} size={48} playing={false} label={`${q.name}, demo`} className="shrink-0 rounded-lg bg-ink-950" />
+                {(EXERCISES as string[]).includes(r.q.demo) ? (
+                  <Sprite id="exercise" opts={{ exercise: r.q.demo, ...hero }} size={48} playing={false} label={`${r.q.name}, demo`} className="shrink-0 rounded-lg bg-ink-950" />
                 ) : (
                   <span className="h-12 w-12 shrink-0" />
                 )}
                 <span className="min-w-0 flex-1">
-                  <span className="block text-[9px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[q.role] }}>
-                    {ROLE_LABEL[q.role]}
+                  <span className="block text-[9px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[r.q.role] }}>
+                    {ROLE_LABEL[r.q.role]}
                   </span>
-                  <span className="mt-0.5 block text-sm leading-snug text-slate-100">{q.name}</span>
+                  <span className="mt-0.5 block text-sm leading-snug text-slate-100">{r.q.name}</span>
                 </span>
-                <span className="shrink-0 font-mono text-sm text-slate-300">{reps(q)}</span>
+                <span className="shrink-0 font-mono text-sm text-slate-300">{reps(r.q)}</span>
                 </button>
               </li>
-            );
-          })}
+            ),
+          )}
         </ul>
       </section>
-
-      <NextLoot state={state} checkin={inProgress ? state.draft!.checkin : checkin} now={now} onOpen={setGuide} />
 
       <button
         onClick={() => onStart(inProgress ? state.draft!.checkin : checkin)}
@@ -454,6 +434,55 @@ function InstallHint({ land }: { land?: boolean }) {
   );
 }
 
+type Quest = ReturnType<typeof todaysQuest>;
+type FoldRole = 'warmup' | 'stretch';
+/** A row of the quest list: a folding header for the warm-up or the stretch, or one exercise. */
+type QuestRow = { kind: 'fold'; role: FoldRole; items: Quest; open: boolean } | { kind: 'item'; q: Quest[number] };
+
+/** The quest as rows: each run of warm-up or stretch moves under one header, shown only when unfolded. */
+function foldRows(items: Quest, unfolded: Partial<Record<FoldRole, boolean>>): QuestRow[] {
+  const rows: QuestRow[] = [];
+  for (let i = 0; i < items.length; ) {
+    const role = items[i].role;
+    if (role !== 'warmup' && role !== 'stretch') {
+      rows.push({ kind: 'item', q: items[i++] });
+      continue;
+    }
+    let j = i;
+    while (j < items.length && items[j].role === role) j++;
+    const group = items.slice(i, j);
+    const open = !!unfolded[role];
+    rows.push({ kind: 'fold', role, items: group, open });
+    if (open) for (const q of group) rows.push({ kind: 'item', q });
+    i = j;
+  }
+  return rows;
+}
+
+/** The warm-up or the stretch as one quiet row: its name, how many moves, and a chevron to open it. */
+function FoldRow({ role, items, open, onToggle, land }: { role: FoldRole; items: Quest; open: boolean; onToggle: () => void; land?: boolean }) {
+  return (
+    <button
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-label={`${ROLE_LABEL[role]}, ${items.length} ${items.length === 1 ? 'move' : 'moves'}. ${open ? 'Hide' : 'Show'}`}
+      className={
+        land
+          ? 'flex h-full w-full flex-col items-center justify-center gap-1.5 rounded-xl bg-ink-900/60 px-1 text-center active:scale-[.98]'
+          : 'flex w-full items-center gap-3 rounded-xl bg-ink-900/60 px-3 py-2 text-left active:scale-[.98]'
+      }
+    >
+      <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[role] }}>
+        {ROLE_LABEL[role]}
+      </span>
+      <span className={`font-mono text-[11px] text-slate-500 ${land ? '' : 'flex-1'}`}>
+        {items.length} {items.length === 1 ? 'move' : 'moves'}
+      </span>
+      <Sprite id="uiIcon" opts={{ name: 'chevron' }} size={10} label="" className={`shrink-0 transition-transform motion-reduce:transition-none ${land ? (open ? 'rotate-180' : '') : open ? '-rotate-90' : 'rotate-90'}`} />
+    </button>
+  );
+}
+
 interface LandProps {
   state: GameState;
   now: Date;
@@ -461,7 +490,9 @@ interface LandProps {
   streak: number;
   hero: { gear: ReturnType<typeof gearOf>; classId: GameState['profile']['classId']; look: ReturnType<typeof useLook> };
   story: ReturnType<typeof storyState>;
-  items: ReturnType<typeof todaysQuest>;
+  /** The quest's rows: the warm-up and the stretch folded unless opened. */
+  rows: QuestRow[];
+  onToggle: (role: FoldRole) => void;
   reps: (q: ReturnType<typeof todaysQuest>[number]) => string;
   /** Shown in place of the quest board: today's workout done, or none planned. */
   instead: ReactNode;
@@ -470,9 +501,6 @@ interface LandProps {
   /** An exercise tapped: open how to do it. */
   onHowTo: (q: ReturnType<typeof todaysQuest>[number]) => void;
   title: string;
-  /** What this workout gives, as chips. */
-  loot: ReactNode;
-  xp: number;
   checkin: Checkin;
   /** Left out while a quest is under way: the check-in is set then. */
   onCheckin?: (c: Checkin) => void;
@@ -557,31 +585,35 @@ function LandToday(p: LandProps) {
       <section className="flex min-h-0 flex-1 flex-col rounded-2xl bg-ink-800 p-3">
         <div className="flex items-baseline gap-3">
           <h3 className="shrink-0 font-pixel text-[10px] text-gold-300">{p.title}</h3>
-          <p className="shrink-0 font-mono text-[11px] text-slate-400">
-            {p.onCheckin && `${CHECKINS.find((c) => c.id === p.checkin)!.minutes} min · `}+{p.xp} XP
-          </p>
+          {p.onCheckin && <p className="shrink-0 font-mono text-[11px] text-slate-400">{CHECKINS.find((c) => c.id === p.checkin)!.minutes} min</p>}
           {p.aheadNote && <p className="min-w-0 flex-1 truncate text-xs text-orange-200">{p.aheadNote}</p>}
         </div>
 
         <div className="mt-2 flex min-h-0 flex-1 gap-3">
           {/* The exercises side by side; the dark box takes what height there is, the figure stands on its floor. */}
-          <ul className="grid min-w-0 flex-1 auto-cols-[minmax(4rem,1fr)] grid-flow-col gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {p.items.map((q) => (
-              <li key={q.id} className="flex min-h-0">
-                <button onClick={() => p.onHowTo(q)} aria-label={`How to do ${q.name}`} className="flex min-h-0 w-full flex-col rounded-xl bg-ink-900 p-1.5 text-center active:scale-[.98]">
+          <ul className="flex min-w-0 flex-1 gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {p.rows.map((r) =>
+              r.kind === 'fold' ? (
+                <li key={r.role} className="flex min-h-0 w-14 shrink-0">
+                  <FoldRow role={r.role} items={r.items} open={r.open} onToggle={() => p.onToggle(r.role)} land />
+                </li>
+              ) : (
+              <li key={r.q.id} className="flex min-h-0 min-w-[4rem] flex-1 basis-0">
+                <button onClick={() => p.onHowTo(r.q)} aria-label={`How to do ${r.q.name}`} className="flex min-h-0 w-full flex-col rounded-xl bg-ink-900 p-1.5 text-center active:scale-[.98]">
                 <span className="relative flex min-h-0 flex-1 items-end justify-center overflow-hidden rounded-lg bg-ink-950">
-                  {(EXERCISES as string[]).includes(q.demo) && (
-                    <Sprite id="exercise" opts={{ exercise: q.demo, ...p.hero }} size={64} playing={false} label={`${q.name}, demo`} className="shrink-0" />
+                  {(EXERCISES as string[]).includes(r.q.demo) && (
+                    <Sprite id="exercise" opts={{ exercise: r.q.demo, ...p.hero }} size={64} playing={false} label={`${r.q.name}, demo`} className="shrink-0" />
                   )}
-                  <span className="absolute left-1 top-1 rounded bg-ink-950/85 px-0.5 text-[9px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[q.role] }}>
-                    {ROLE_LABEL[q.role]}
+                  <span className="absolute left-1 top-1 rounded bg-ink-950/85 px-0.5 text-[9px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[r.q.role] }}>
+                    {ROLE_LABEL[r.q.role]}
                   </span>
                 </span>
-                <span className="mt-1 line-clamp-2 shrink-0 text-xs leading-tight text-slate-100">{q.name}</span>
-                <span className="shrink-0 font-mono text-xs text-slate-300">{p.reps(q)}</span>
+                <span className="mt-1 line-clamp-2 shrink-0 text-xs leading-tight text-slate-100">{r.q.name}</span>
+                <span className="shrink-0 font-mono text-xs text-slate-300">{p.reps(r.q)}</span>
                 </button>
               </li>
-            ))}
+              ),
+            )}
           </ul>
 
           <div className="flex w-40 shrink-0 flex-col min-[800px]:w-44">
@@ -602,7 +634,6 @@ function LandToday(p: LandProps) {
                 </div>
               </>
             )}
-            <div className="mb-2">{p.loot}</div>
             <button
               onClick={p.onStart}
               disabled={p.locked}

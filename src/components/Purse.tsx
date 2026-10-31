@@ -6,15 +6,15 @@ import { Sprite } from './Sprite';
 import { useLook } from './Look';
 import { useModal } from './useModal';
 import { STAT_ICON } from './StatPoints';
-import { gearOf, levelInfo, totalXp, type Checkin, type GameState } from '@/lib/game';
+import { gearOf, levelInfo, totalXp, type GameState } from '@/lib/game';
 import { LOOT_IDS, nextLoot, purseOf, spendable, workoutsToLevel, type LootId } from '@/lib/loot';
 import { STATS } from '@/lib/stats';
 import { EMBERS, MAT_IDS, MATS, MAX_PLUS, POINTS, SWEAT } from '@/balance';
 import { matsOf } from '@/lib/forge';
 
 /* What training gives, drawn the same everywhere: a pixel icon per kind of loot (XP, stat points,
-   embers, sweat coins, co-op materials). The purse on the Hero tab shows what you have, the strip on
-   Today what the next workout gives, and tapping either opens the guide: one picture of the loop
+   embers, sweat coins, co-op materials). The purse on the Hero tab shows what you have, and tapping
+   it opens the guide: one picture of the loop
    (a workout throws out every kind) and, for each, where it comes from and where it goes. Few words. */
 
 /** Where a loot's "go" button leads: a part of the Hero tab. */
@@ -45,28 +45,6 @@ export function Purse({ state, onOpen, land = false }: { state: GameState; onOpe
           <LootIcon id={id} size={18} />
           <span className={`font-pixel text-[9px] ${TEXT[id]}`}>{have[id]}</span>
           {ready[id] && <span aria-hidden className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-gold-300 motion-safe:animate-pulse" />}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-/** What the next workout gives, as pixel chips; tap for the guide. */
-export function NextLoot({ state, checkin, now, onOpen, land = false }: { state: GameState; checkin: Checkin; now: Date; onOpen: (id: LootId) => void; land?: boolean }) {
-  const loot = nextLoot(state, checkin, now);
-  const ids = (['xp', 'points', 'embers', 'coins'] as const).filter((id) => !land || id !== 'xp');
-  return (
-    <div className={land ? 'grid grid-cols-3 gap-1' : 'flex items-center gap-1.5'}>
-      {!land && <span className="font-pixel text-[7px] leading-tight text-slate-500">YOU GET</span>}
-      {ids.map((id) => (
-        <button
-          key={id}
-          onClick={() => onOpen(id)}
-          aria-label={`This workout gives ${loot[id]} ${id === 'xp' ? 'XP' : NAME[id].toLowerCase()}. What they are`}
-          className={`flex items-center justify-center gap-1 rounded-lg bg-ink-900 py-1.5 active:scale-95 ${land ? '' : 'flex-1'}`}
-        >
-          <LootIcon id={id} size={14} />
-          <span className={`font-pixel text-[8px] ${TEXT[id]}`}>+{loot[id]}</span>
         </button>
       ))}
     </div>

@@ -223,6 +223,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     root.current.querySelectorAll(':scope > header, :scope > main, :scope > nav').forEach((el) => el.toggleAttribute('inert', covered));
   });
   const lvl = levelInfo(totalXp(state));
+  const workouts = state.sessions.length;
   const gear = gearOf(state);
 
   // Play the next story scene whenever the player is back on the main screen.
@@ -404,24 +405,22 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           <button onClick={() => setYou(true)} aria-label="You: your letter, quest log and settings" className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800 active:scale-95 land:hidden desk:hidden">
             <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
           </button>
-          <div className="min-w-0 flex-1 land:flex land:items-center land:gap-4">
-            <div className="flex items-baseline justify-between land:shrink-0 land:items-center land:gap-4">
-              <div className="flex items-center gap-2">
-                <p className="font-pixel text-sm tracking-widest text-gold-400">
-                  FORMA
-                </p>
-                {dev && <DevButton onClick={() => setDevOpen(true)} />}
-              </div>
-              <p className="text-xs text-slate-400">
-                Lv {lvl.level} · <span className="text-slate-200">{lvl.title}</span>
+          {/* One line: FORMA, and how many workouts you've done in all (your level small beside it). */}
+          <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <p className="font-pixel text-sm tracking-widest text-gold-400">
+                FORMA
               </p>
+              {dev && <DevButton onClick={() => setDevOpen(true)} />}
             </div>
-            <div className="mt-1.5 h-2.5 overflow-hidden rounded-sm bg-ink-700 land:mt-0 land:flex-1">
-              <div className="h-full bg-gradient-to-r from-gold-500 to-gold-300 transition-all duration-700" style={{ width: `${lvl.pct * 100}%` }} />
+            <div className="flex shrink-0 items-center gap-3">
+              <span className="text-[11px] text-slate-500">Lv {lvl.level}</span>
+              <span className="flex items-center gap-1.5" role="img" aria-label={`${workouts} ${workouts === 1 ? 'workout' : 'workouts'} done`}>
+                <Sprite id="uiIcon" opts={{ name: 'tabTrain' }} size={18} label="" />
+                <span className="font-pixel text-xs text-gold-300">{workouts}</span>
+                <span className="text-[11px] text-slate-400">{workouts === 1 ? 'workout' : 'workouts'}</span>
+              </span>
             </div>
-            <p className="mt-1 text-right font-mono text-[11px] text-slate-500 land:mt-0 land:shrink-0">
-              {lvl.into} / {lvl.needed} XP
-            </p>
           </div>
         </div>
       </header>
@@ -430,12 +429,6 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         {tab === 'today' ? (
           <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook}
             onTrain={() => setTab('train')}
-            onHero={(part) => {
-              setHeroPart(part);
-              setTab('hero');
-              window.scrollTo({ top: 0 });
-              main.current?.scrollTo({ top: 0 });
-            }}
           />
         ) : tab === 'train' ? (
           <TrainTab state={state} update={update} onStart={start} />
