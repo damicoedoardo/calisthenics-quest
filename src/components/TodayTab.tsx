@@ -21,10 +21,10 @@ import {
 } from '@/lib/game';
 import { ROLE_COLOR, ROLE_LABEL } from '@/lib/program';
 import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
-import { dayKey, daysApart, daysSinceTraining, isRestDay, trainedToday } from '@/lib/days';
+import { dayKey, daysApart, daysSinceTraining } from '@/lib/days';
 import { storyState, storyWords } from '@/story/engine';
 import { flameStage } from '@/story/flame';
-import { currentPlan, dayLabel, nextDay, nextMonday, restToday, startsToday, weekdayOf } from '@/lib/coach/week';
+import { currentPlan, dayLabel, nextDay, nextMonday, todayIs, weekdayOf } from '@/lib/coach/week';
 import { ExerciseSheet } from './ExerciseDetail';
 import { LootGuide, NextLoot, type LootGo } from './Purse';
 import type { LootId } from '@/lib/loot';
@@ -67,16 +67,18 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
   const streak = weekStreak(state, now);
   const day = dayType(state);
   const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
+  // What today is comes from one place (`todayIs`), the same the Train tab and the Start button read.
+  const today = todayIs(state, now);
   // After today's workout Today says so and stops there: the next one is on the Train tab.
-  const doneToday = !inProgress && trainedToday(state, now);
+  const doneToday = !inProgress && today.kind === 'done';
   // The week is the one place a workout comes from: none planned (or all done), no quest.
   const plan = currentPlan(state.coach);
   const noPlan = !plan && !inProgress;
-  const restDay = isRestDay(state, now) || restToday(state.coach, now);
-  // Not its day yet (a rest day, say): the quest below is the next workout, to see, not to start.
-  const ahead = !inProgress && !doneToday && plan && !startsToday(state.coach, now) ? nextDay(state.coach?.week) : undefined;
+  const restDay = !inProgress && today.kind === 'rest';
+  // Not its day yet (a rest day): the quest below is the next workout, to see, not to start.
+  const ahead = restDay && plan ? today.next : undefined;
   const aheadDay = ahead ? (dayLabel(ahead.date, now) === 'Tomorrow' ? 'tomorrow' : weekdayOf(ahead.date)) : '';
-  const aheadNote = ahead ? `${restToday(state.coach, now) ? 'Today is a rest day. ' : ''}This is your next workout, for ${aheadDay}.` : null;
+  const aheadNote = ahead ? `Today is a rest day. This is your next workout, for ${aheadDay}.` : null;
   // You, in your gear and look, for the exercise stills in the quest list.
   const look = useLook();
   const hero = { gear: gearOf(state), classId: state.profile.classId, look };

@@ -1,5 +1,6 @@
 import { weekKey, WEEKLY_GOAL, type GameState } from '@/lib/game';
-import { dayKey, daysInRow, daysSinceTraining, isRestDay } from '@/lib/days';
+import { dayKey, daysInRow, daysSinceTraining } from '@/lib/days';
+import { isRestToday } from '@/lib/coach/week';
 import { ANYTIME } from './anytime';
 import { CAST, type CastId } from './cast';
 import { CHAPTERS } from './chapters';
@@ -76,7 +77,7 @@ export function holds(w: When, state: GameState, st: StoryState, now: Date): boo
     [w.chapter, () => current >= w.chapter!],
     [w.beaten, () => st.index >= w.beaten!],
     [w.inChapter, () => current === w.inChapter],
-    [w.restDay, () => isRestDay(state, now) === w.restDay],
+    [w.restDay, () => isRestToday(state, now) === w.restDay],
     [w.shortSession, () => (state.sessions[n - 1]?.kind === 'mini') === w.shortSession],
     [w.daysInRow, () => daysInRow(state, now) >= w.daysInRow!],
     [w.perfectWeek, () => hadPerfectWeek(state) === w.perfectWeek],

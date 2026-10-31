@@ -1,5 +1,6 @@
 import type { DayPage, GameState } from '@/lib/game';
-import { dayKey, daySeed, daysApart, daysInRow, daysSinceTraining, isRestDay } from '@/lib/days';
+import { dayKey, daySeed, daysApart, daysInRow, daysSinceTraining } from '@/lib/days';
+import { isRestToday } from '@/lib/coach/week';
 import { ALL_SCENES, fill, storyState, storyWords } from '../engine';
 import type { DailyLine, FlameMood, Moment, Quote } from '../types';
 import { CALLBACKS, FLAME_LINES, MOMENT_MOOD } from './flame-lines';
@@ -37,8 +38,11 @@ export function todayMoment(state: GameState, now: Date): Moment {
   if (last?.better) return 'best';
   if (last?.kind === 'mini') return 'rough';
   if (since === 0) return 'trained';
-  if (since === 1) return 'rest';
-  if (since === 2) return 'rested';
+  // A rest day is the week's to say (`isRestToday`), the same Today and Train read: never "rest"
+  // on a day with a workout to do.
+  const rest = isRestToday(state, now);
+  if (since === 1 && rest) return 'rest';
+  if (since === 2) return state.coach?.week && rest ? 'rest' : 'rested';
   // Late at night, when there's nothing more particular to say.
   const hour = now.getHours();
   if (hour >= 22 || hour < 4) return 'late';
@@ -112,7 +116,7 @@ export function callbackLine(state: GameState, now: Date): string | undefined {
   const due = CALLBACKS.find((c) => {
     // Exact id: sceneById would also match `ch4-vela` for `ch4-vela-down`.
     const at = ALL_SCENES.find((p) => p.scene.id === c.after)?.scene.when.workouts ?? 0;
-    return seen.has(c.after) && !said.has(c.text) && n <= at + c.within && (!c.restDay || isRestDay(state, now));
+    return seen.has(c.after) && !said.has(c.text) && n <= at + c.within && (!c.restDay || isRestToday(state, now));
   });
   return due?.text;
 }
@@ -157,7 +161,7 @@ export function flameLine(state: GameState, now: Date): string {
 export function dayQuote(state: GameState, now: Date): { text: string; by: string } {
   const words = storyWords(state);
   const chapter = storyState(state).chapter?.n ?? 6;
-  const fits = (q: Quote) => q.fits === 'any' || q.fits === chapter || (q.fits === 'rest' && isRestDay(state, now)) || (typeof q.fits === 'number' && q.fits < chapter);
+  const fits = (q: Quote) => q.fits === 'any' || q.fits === chapter || (q.fits === 'rest' && isRestToday(state, now)) || (typeof q.fits === 'number' && q.fits < chapter);
   const seen = new Set(recentPages(state, now).map((d) => d.quote.text));
   const pool = QUOTES.filter(fits);
   const fresh = pool.filter((q) => !seen.has(q.text));
