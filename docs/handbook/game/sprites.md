@@ -65,6 +65,13 @@ characters/spCard.ts  the SP card (sprite `spCard`, opts { classId, n, awake, ge
 characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look, kit }): you
                       doing each exercise of the program (hand-posed), one rep per loop of the
                       16-frame `rep` clip, or one of the exercise library's movements from moves.ts
+characters/hd.ts      HD workout demos, a trial on two exercises (`HD_DEMOS`: the push-up and the
+                      barbell back squat; sprite `exerciseHd`, opts { exercise, gear, look, view,
+                      arrows }): the same poses (`poseFor`, `drawMove`) drawn 3.5 times finer on a
+                      192x192 grid, framed closer on the body, with a real figure (tapered limbs
+                      shaded round from the top left, face, hair, tee, shorts, trainers), `view`
+                      'side' or 'front' (the front reuses the side pose's heights), and arrows for
+                      the way the body moves, the current half of the rep lit
 characters/moves.ts   the exercise library's 81 movements (lifts, machines, core, cardio, stretches,
                       mobility) and the gear each can hold (`Kit`: barbell, dumbbell, cable, band...)
 engine/skeleton.ts    the jointed skeleton both use: IK elbows and knees, props (bench, bar, floor),
