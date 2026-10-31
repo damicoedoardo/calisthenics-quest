@@ -21,7 +21,7 @@ run (`playing`, the zone's name) or in a workout (`training`, the plan's name, `
 
 - **Training now: <workout>** while they work out, **In the Fog: <world>** while their run is
   going, **Online** while the app is open, else **Seen 2 h ago**. Over the hero a small bubble
-  says it at a glance: a dumbbell while training, swords in the Fog, nothing otherwise (`Doing`
+  says it at a glance in pixel icons: a dumbbell while training, swords in the Fog, nothing otherwise (`Doing`
   in `Friends.tsx`).
 - A flame and **trained today** when their last workout was on this phone's today. This is the
   part that nudges friends to train.

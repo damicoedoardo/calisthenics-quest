@@ -1133,9 +1133,9 @@ export const ZONE_ICONS: PixelArt[] = [
 /** Small marks for the screens around the game: a heart (full or spent), a check, a padlock, a
     bookmark (kept or not), the Book of Days, an arrow on, a little flame (no face: that's Ember's),
     play, and close; the tab bar's five (crossed swords, a skill tree, a game pad, two friends, a shield), the
-    developer's wrench, and what a workout gives (an arrow up for XP, a green star for a stat point, a sweat coin,
+    developer's wrench, a gift, a cheer's horn and a plus for adding a friend, and what a workout gives (an arrow up for XP, a green star for a stat point, a sweat coin,
     a co-op material). */
-export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookmark' | 'bookmarkKept' | 'book' | 'chevron' | 'flame' | 'play' | 'close' | 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabHero' | 'tabFriends' | 'wrench' | 'xp' | 'point' | 'coin' | 'mat', PixelArt> = {
+export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookmark' | 'bookmarkKept' | 'book' | 'chevron' | 'flame' | 'play' | 'close' | 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabHero' | 'tabFriends' | 'wrench' | 'xp' | 'point' | 'coin' | 'mat' | 'gift' | 'cheer' | 'addFriend', PixelArt> = {
   heart: {
     rows: [
       '.rr.rr.',
@@ -1239,6 +1239,21 @@ export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookm
   tabFriends: {
     rows: ['.hh...gg.', 'hssh.gssg', 'hssh.gssg', '.ss...ss.', '.........', 'bbbb.eeee', 'bbbb.eeee', 'bbbb.eeee'],
     palette: { h: '#92400e', g: '#334155', s: '#fcd9b6', b: '#4a5fc0', e: '#10b981' },
+  },
+  // A present for a friend: a box tied with a gold ribbon.
+  gift: {
+    rows: ['.yy...yy.', 'y..y.y..y', '.yyyyyyy.', 'ooooyoooo', 'Woooyoood', '.oooyood.', '.oooyood.', '.ddddddd.'],
+    palette: { o: '#f97316', d: '#c2410c', y: '#fbbf24', W: '#fed7aa' },
+  },
+  // A cheer: a little horn, shouting.
+  cheer: {
+    rows: ['.......kk', '.....kkkk', 'ww.kkkkkk', 'wwkkkkkkk', 'wwkkkkkkk', 'ww.kkkkkk', '.h...kkkk', '.h.....kk'],
+    palette: { k: '#1c1917', w: '#1c1917', h: '#1c1917' },
+  },
+  // Add a friend: a plus.
+  addFriend: {
+    rows: ['..ggg..', '..gWg..', 'gggWggg', 'gWWWWWg', 'gggWggg', '..gWg..', '..ggg..'],
+    palette: { g: '#065f46', W: '#6ee7b7' },
   },
   wrench: {
     rows: ['.....xx..', '....x..x.', '....x...x', '.....x.x.', '....xxx..', '...xxx...', '..xxx....', '.xxx.....', '.xx......'],

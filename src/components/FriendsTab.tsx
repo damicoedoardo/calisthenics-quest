@@ -1,33 +1,20 @@
 'use client';
 
-import { Check, Flame, Lock, Swords } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { ROAD_BANNER, ROAD_CHAPTERS } from '@/story/road';
 import { ROAD_LENGTH, roadAt, startRoad } from '@/lib/road';
-import { setLobbyOpen, usePartyView } from '@/lib/party-client';
 import { FriendsCard, type Friends } from './Friends';
+import { Camp } from './Camp';
 import { FeedView, type Feed } from './Feed';
 import { useLand } from './useLand';
 import { Sprite } from './Sprite';
 
 type Update = (fn: (s: GameState) => GameState) => void;
 
-/* The Friends tab: everything you do with other people. Your party, every friend (online first,
-   each with Cheer or Party; your code and Add fold behind one button), and the Ember Road. Runs
+/* The Friends tab: everything you do with other people. The camp (friends online by the fire,
+   your party on four spots in front, `Camp`), every friend (online first, each with Cheer or Party;
+   your code and Add fold behind one button), and the Ember Road. Runs
    together never move your own story, which is the Play tab's. */
-
-/** Your party: back to its lobby, or start one. The lobby says the rules. */
-function PartyCard() {
-  const { party } = usePartyView();
-  return (
-      <button
-        onClick={() => setLobbyOpen(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gold-400 py-3.5 font-pixel text-[10px] text-ink-950 shadow-[0_3px_0_#b45309] active:translate-y-0.5 active:shadow-none"
-      >
-        <Swords size={15} /> {party ? `Back to your party · ${party.members.length}` : 'Start a party'}
-      </button>
-  );
-}
 
 export type FriendsView = 'friends' | 'feed';
 
@@ -60,7 +47,7 @@ function FriendsLists({ state, update, friends, land }: { state: GameState; upda
   return (
     <div className={land ? 'grid grid-cols-2 items-start gap-3' : 'space-y-4'}>
       <div className="space-y-4 land:space-y-3">
-        <PartyCard />
+        <Camp state={state} friends={friends} />
         {!land && <FriendsCard state={state} update={update} friends={friends} />}
         <RoadCard state={state} update={update} />
       </div>
@@ -80,16 +67,16 @@ function RoadCard({ state, update }: { state: GameState; update: Update }) {
   const at = roadAt(state);
   const plural = (n: number) => `${n} workout${n === 1 ? '' : 's'}`;
   return (
-    <section className="self-start rounded-2xl bg-ink-800 p-4 ring-1 ring-orange-500/30">
-      <p className="flex items-center gap-2 font-pixel text-[10px] text-orange-300">
-        <Flame size={14} /> The Ember Road
-      </p>
+    <section className="self-start rounded-2xl bg-ink-800 p-4 pixel-border">
+      <h2 className="flex items-center gap-2 font-pixel text-[10px] text-orange-300">
+        <Sprite id="uiIcon" opts={{ name: 'flame' }} size={14} label="" /> The Ember Road
+      </h2>
       {!at.started ? (
         <>
           <p className="mt-2 text-xs text-slate-300">
             A story for your party: three chapters, each ending in a boss you beat together.
           </p>
-          <button onClick={() => update(startRoad)} className="mt-3 w-full rounded-xl bg-orange-400 py-2.5 text-sm font-semibold text-ink-950">
+          <button onClick={() => update(startRoad)} className="mt-3 w-full rounded-xl bg-orange-400 py-3 font-pixel text-[9px] text-ink-950 shadow-[0_3px_0_#c2410c] active:translate-y-0.5 active:shadow-none">
             Set out on the road
           </button>
         </>
@@ -100,7 +87,7 @@ function RoadCard({ state, update }: { state: GameState; update: Update }) {
               here = !won && at.open >= c.n;
             return (
               <li key={c.n} className={`flex gap-2 text-xs ${won || here ? 'text-slate-200' : 'text-slate-500'}`}>
-                <span className="mt-0.5 shrink-0">{won ? <Check size={14} className="text-emerald-400" /> : here ? <Swords size={14} className="text-orange-300" /> : <Lock size={14} />}</span>
+                <span className="mt-0.5 shrink-0"><Sprite id="uiIcon" opts={{ name: won ? 'check' : here ? 'tabToday' : 'lock' }} size={14} label="" /></span>
                 <span>
                   <span className="font-semibold">
                     {c.n}. {c.name}
@@ -119,7 +106,7 @@ function RoadCard({ state, update }: { state: GameState; update: Update }) {
             );
           })}
           <li className={`flex gap-2 text-xs ${at.done ? 'text-gold-300' : 'text-slate-500'}`}>
-            <span className="mt-0.5 shrink-0">{at.done ? <Check size={14} className="text-gold-300" /> : <Lock size={14} />}</span>
+            <span className="mt-0.5 shrink-0"><Sprite id="uiIcon" opts={{ name: at.done ? 'check' : 'lock' }} size={14} label="" /></span>
             <span>
               <span className="font-semibold">The Hearth at the Road&apos;s End</span>
               {at.done ? (

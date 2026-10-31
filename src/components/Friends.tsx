@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Check, Dumbbell, Flame, Gift as GiftIcon, Megaphone, Send, Share2, Swords, UserPlus, Users, X } from 'lucide-react';
+import { Check, Gift as GiftIcon, Send, Share2, UserPlus, X } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { getClass, makeGear, type GearSlot } from '@/lib/gear';
 import { codeInUrl, friendTrainedToday, inviteLink, myCard, showCode, statusOf, type FriendCard, type FriendsList } from '@/lib/friends';
@@ -14,6 +14,7 @@ import { cloudConfigured, useCloudStatus } from '@/lib/cloud-client';
 import { normalizeLook } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
 import { Hero } from './Hero';
+import { Sprite } from './Sprite';
 import { useModal } from './useModal';
 
 /* Friends on screen: the heartbeat that shows you online to your friends (useFriendsBeat, in
@@ -86,23 +87,21 @@ export function Row({ f, now, children, as: Tag = 'li' }: { f: FriendCard; now: 
   const cls = getClass(f.class_id ?? undefined);
   const dot = f.training ? 'bg-orange-400' : f.playing ? 'bg-gold-300' : f.online ? 'bg-emerald-400' : 'bg-slate-600';
   return (
-    <Tag className="flex items-center gap-3 py-2">
+    <Tag className="flex items-center gap-3 rounded-xl bg-ink-900/70 py-1.5 pl-1.5 pr-2">
       <div className="relative shrink-0">
         <FriendHero f={f} />
         <span className={`absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full ring-2 ring-ink-800 ${dot}`} aria-hidden />
         <Doing f={f} />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="flex items-center gap-1.5 truncate text-sm font-semibold text-slate-100">
-          {f.name || 'A hero'}
-          {friendTrainedToday(f, now) && (
-            <span className="flex items-center gap-0.5 text-[10px] font-normal text-orange-300">
-              <Flame size={12} /> trained today
-            </span>
-          )}
-        </p>
-        <p className="truncate text-xs text-slate-400">
-          {cls ? `${cls.name}, level ${f.level}` : `Level ${f.level}`} · {statusOf(f, now)}
+        <div className="flex items-center gap-1.5 truncate">
+          <span className="truncate font-pixel text-[9px] leading-relaxed text-slate-100">{f.name || 'A hero'}</span>
+          <span className="shrink-0 rounded bg-ink-700 px-1 font-pixel text-[7px] leading-relaxed text-gold-300">Lv{f.level}</span>
+          {friendTrainedToday(f, now) && <Sprite id="uiIcon" opts={{ name: 'flame' }} size={11} label="Trained today" className="shrink-0" />}
+        </div>
+        <p className="mt-0.5 truncate text-[11px] text-slate-400">
+          {cls ? `${cls.name} · ` : ''}
+          {statusOf(f, now)}
         </p>
       </div>
       {children}
@@ -116,10 +115,10 @@ export function Doing({ f }: { f: Pick<FriendCard, 'training' | 'playing'> }) {
   if (!f.training && !f.playing) return null;
   const train = !!f.training;
   return (
-    <span aria-hidden className={`absolute -right-2 -top-1 rounded-md px-1 py-0.5 shadow ${train ? 'bg-orange-300 text-ink-950' : 'bg-gold-300 text-ink-950'}`}>
-      {train ? <Dumbbell size={12} /> : <Swords size={12} />}
+    <span aria-hidden className={`absolute -right-2 -top-1 flex rounded-md bg-slate-100 p-0.5 shadow ${train ? 'ring-2 ring-orange-300' : 'ring-2 ring-gold-300'}`}>
+      <Sprite id="uiIcon" opts={{ name: train ? 'tabTrain' : 'tabToday' }} size={12} label="" />
       {/* The bubble's tail, down towards the hero. */}
-      <span className={`absolute -bottom-1 left-1 h-2 w-2 rotate-45 ${train ? 'bg-orange-300' : 'bg-gold-300'}`} />
+      <span className="absolute -bottom-1 left-1 h-2 w-2 rotate-45 bg-slate-100" />
     </span>
   );
 }
@@ -338,16 +337,16 @@ export function FriendsCard({ state, update, friends }: { state: GameState; upda
     <section className="rounded-2xl bg-ink-800 p-4">
       <div className="flex items-center justify-between gap-2">
         <h2 className="flex items-center gap-2 font-pixel text-[10px] text-gold-300">
-          <Users size={14} /> Friends
+          <Sprite id="uiIcon" opts={{ name: 'tabFriends' }} size={16} label="" /> Friends
           {online > 0 && (
             <span className="flex items-center gap-1 text-emerald-300">
-              <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden /> {online} online
+              <span className="h-2 w-2 bg-emerald-400" aria-hidden /> {online}
             </span>
           )}
         </h2>
         {signedIn && list && list.friends.length > 0 && (
-          <button onClick={() => setAdding(!adding)} aria-expanded={adding} className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${adding ? 'bg-ink-600 text-slate-100' : 'bg-ink-700 text-slate-300'}`}>
-            {adding ? <X size={14} /> : <UserPlus size={14} />} {adding ? 'Close' : 'Add'}
+          <button onClick={() => setAdding(!adding)} aria-expanded={adding} className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-pixel text-[8px] shadow-[0_3px_0_#1c2033] active:translate-y-0.5 active:shadow-none ${adding ? 'bg-ink-600 text-slate-100' : 'bg-ink-700 text-slate-200'}`}>
+            <Sprite id="uiIcon" opts={{ name: adding ? 'close' : 'addFriend' }} size={12} label="" /> {adding ? 'Close' : 'Add'}
           </button>
         )}
       </div>
@@ -461,7 +460,7 @@ export function FriendsCard({ state, update, friends }: { state: GameState; upda
           )}
 
           {list.friends.length > 0 ? (
-            <ul className="divide-y divide-ink-700">
+            <ul className="space-y-1.5">
               {/* Training or in the Fog first, then online, then the rest. */}
               {[...list.friends].sort((a, b) => rank(a) - rank(b)).map((f) => (
                 <li key={f.id}>
@@ -474,9 +473,9 @@ export function FriendsCard({ state, update, friends }: { state: GameState; upda
                           setCheering(f.id);
                           setGiving(null);
                         }}
-                        className="flex items-center gap-1 rounded-lg bg-orange-400 px-2.5 py-2 text-xs font-semibold text-ink-950"
+                        className="flex items-center gap-1.5 rounded-lg bg-orange-400 px-2.5 py-2 font-pixel text-[8px] text-ink-950 shadow-[0_3px_0_#c2410c] active:translate-y-0.5 active:shadow-none"
                       >
-                        <Megaphone size={14} /> Cheer
+                        <Sprite id="uiIcon" opts={{ name: 'cheer' }} size={12} label="" /> Cheer
                       </button>
                     ) : (
                       <button
@@ -489,9 +488,9 @@ export function FriendsCard({ state, update, friends }: { state: GameState; upda
                             setMsg(e instanceof Error ? e.message : "Couldn't invite them right now.");
                           }
                         }}
-                        className="flex items-center gap-1 rounded-lg bg-ink-600 px-2.5 py-2 text-xs font-semibold"
+                        className="flex items-center gap-1.5 rounded-lg bg-ink-600 px-2.5 py-2 font-pixel text-[8px] text-slate-100 shadow-[0_3px_0_#1c2033] active:translate-y-0.5 active:shadow-none"
                       >
-                        <Swords size={14} /> Party
+                        <Sprite id="uiIcon" opts={{ name: 'tabToday' }} size={12} label="" /> Party
                       </button>
                     )}
                     <button
@@ -499,8 +498,8 @@ export function FriendsCard({ state, update, friends }: { state: GameState; upda
                       onClick={() => {
                         setGiving(giving === f.id ? null : f.id);
                         setCheering(null);
-                      }} className={`rounded-lg p-2 ${giving === f.id ? 'bg-gold-400 text-ink-950' : 'bg-ink-600 text-gold-200'}`}>
-                      <GiftIcon size={16} />
+                      }} className={`rounded-lg p-2 shadow-[0_3px_0_#1c2033] active:translate-y-0.5 active:shadow-none ${giving === f.id ? 'bg-gold-400' : 'bg-ink-600'}`}>
+                      <Sprite id="uiIcon" opts={{ name: 'gift' }} size={14} label="" />
                     </button>
                   </Row>
                   {cheering === f.id && (
