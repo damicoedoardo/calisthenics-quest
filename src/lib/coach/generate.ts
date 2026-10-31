@@ -1,5 +1,5 @@
-import { BODY_REPS, DOSE, FEW_REPS_RANGE, HOLD_SEC, MAIN_MOVES, RUN } from '@/balance';
-import { FEW_REPS, NEEDS_LEVEL, isStaple } from './staples';
+import { ACCESSORY_DOSE, ACCESSORY_MOVES, BODY_REPS, COOLDOWN, DOSE, FEW_REPS_RANGE, HOLD_SEC, MAIN_MOVES, RAMP, RUN, WARMUP_SEC } from '@/balance';
+import { FEW_REPS, MOVING_STRETCH, NEEDS_LEVEL, STRETCHES, WARMUP_MOVES, isStaple } from './staples';
 import type { Family } from '@/exercises/coaching';
 import type { LibraryExercise } from '@/exercises/library';
 import type { ExerciseId } from '@/sprites/characters/exercise';
@@ -26,17 +26,25 @@ export interface BuildInput {
   after?: Mode[];
 }
 
-/** The movement families of each day, per mode. Days alternate; the first few fit the minutes. */
-const DAYS: Record<Exclude<Mode, 'running'>, [Family[], Family[]]> = {
+/** Each day's movement families, per mode: the main moves (the first few that fit the minutes,
+    in the order they are done) and the accessories after them. Days A and B alternate. */
+const DAYS: Record<Exclude<Mode, 'running'>, [Day, Day]> = {
   gym: [
-    ['squat', 'push-horizontal', 'pull-vertical', 'lunge', 'arms'],
-    ['hinge', 'push-vertical', 'pull-horizontal', 'legs-isolation', 'shoulders'],
+    { main: ['squat', 'push-horizontal', 'pull-vertical', 'lunge'], accessory: ['arms', 'legs-isolation'] },
+    { main: ['hinge', 'push-vertical', 'pull-horizontal', 'lunge'], accessory: ['shoulders', 'arms'] },
   ],
   calisthenics: [
-    ['push-horizontal', 'pull-vertical', 'squat', 'push-vertical', 'lunge'],
-    ['pull-vertical', 'push-horizontal', 'lunge', 'pull-horizontal', 'hinge'],
+    { main: ['pull-vertical', 'push-horizontal', 'squat', 'push-vertical'], accessory: ['hinge', 'lunge'] },
+    { main: ['push-horizontal', 'pull-vertical', 'lunge', 'pull-horizontal'], accessory: ['push-vertical', 'hinge'] },
   ],
 };
+
+interface Day {
+  main: Family[];
+  accessory: Family[];
+}
+
+const UPPER: Family[] = ['push-horizontal', 'push-vertical', 'pull-horizontal', 'pull-vertical', 'arms', 'shoulders'];
 
 /** The warm-up and stretch every workout has, also when the library isn't loaded. */
 export const WARMUP: PlanItem = item('circles', 'Joint circles', 'circles', 'Start with small circles, get bigger.', 'mobility', 'warmup', 1, 90);
@@ -76,19 +84,20 @@ function strength(input: BuildInput, profile: CoachProfile, mode: Exclude<Mode, 
   const used = new Set(sessions.slice(-12).flatMap((s) => s.entries.map((e) => e.exerciseId)));
   const gear = mode === 'calisthenics' ? profile.gear.filter((g) => g === 'bar' || g === 'bands' || g === 'none' || g === 'gym') : profile.gear;
   const bodyOnly = mode === 'calisthenics';
-  let families = DAYS[mode][day];
+  const plan = DAYS[mode][day];
   // No bar: a pull-up day pulls with a table row instead.
-  if (!hasBar(gear)) families = families.map((f) => (f === 'pull-vertical' ? 'pull-horizontal' : f));
-  families = [...new Set(families)];
+  const noBar = (f: Family): Family => (f === 'pull-vertical' && !hasBar(gear) ? 'pull-horizontal' : f);
+  const families = [...new Set(plan.main.map(noBar))].slice(0, MAIN_MOVES[profile.minutes]);
+  const extras = [...new Set(plan.accessory.map(noBar))].filter((f) => !families.includes(f)).slice(0, ACCESSORY_MOVES[profile.minutes]);
 
   const picked: LibraryExercise[] = [];
-  const pick = (family: Family, kinds: LibraryExercise['kind'][] = ['strength']) => {
+  const pick = (family: Family, role: 'main' | 'accessory' | 'core') => {
     const pattern = patternOf(family) ?? 'core';
     const max = maxLevelFor(profile.levels[pattern].level);
     const ok = all.filter(
       (x) =>
         x.family === family &&
-        kinds.includes(x.kind) &&
+        x.kind === 'strength' &&
         usable(x, gear) &&
         (!bodyOnly || x.equipment === 'body only' || x.equipment === 'bands') &&
         levelIndex(x) <= max &&
@@ -96,11 +105,12 @@ function strength(input: BuildInput, profile: CoachProfile, mode: Exclude<Mode, 
         !avoid(x) &&
         !picked.some((p) => p.demo === x.demo),
     );
+    // Main moves: compound, a weight in the gym. Accessories: the plain isolation staples.
     const score = (x: LibraryExercise) =>
       (used.has(x.id) ? 5 : 0) +
       (isStaple(x.id) ? 8 : 0) +
-      (levelIndex(x) === max ? 2 : 0) +
-      (x.mechanic === 'compound' ? 2 : 0) +
+      (levelIndex(x) === max && role !== 'accessory' ? 2 : 0) +
+      (x.mechanic === 'compound' ? (role === 'accessory' ? -1 : 2) : 0) +
       (!bodyOnly && mode === 'gym' && isWeighted(x) ? 2 : 0) -
       plainness(x) * 0.6 +
       rng() * 1.5;
@@ -109,9 +119,20 @@ function strength(input: BuildInput, profile: CoachProfile, mode: Exclude<Mode, 
     return best;
   };
 
-  const mains = families.slice(0, MAIN_MOVES[profile.minutes]).map((f) => pick(f)).filter((x): x is LibraryExercise => !!x);
-  const core = pick('core');
-  const items: PlanItem[] = [WARMUP, ...mains.map((x) => dosed(x, 'main', profile, all, gear)), ...(core ? [dosed(core, 'core', profile, all, gear)] : []), stretchFor(all, mains, avoid)];
+  const mains = families.map((f) => pick(f, 'main')).filter((x): x is LibraryExercise => !!x);
+  const accessories = extras.map((f) => pick(f, 'accessory')).filter((x): x is LibraryExercise => !!x);
+  const core = pick('core', 'core');
+  const main = mains.map((x) => dosed(x, 'main', profile, all, gear));
+  // The first heavy lift is never cold: a few light sets of it first.
+  const heavy = main.findIndex((it) => it.weighted);
+  if (heavy !== -1) main[heavy] = { ...main[heavy], ramp: RAMP.sets };
+  const items: PlanItem[] = [
+    ...warmupFor(all, profile, [...mains, ...accessories], avoid),
+    ...main,
+    ...accessories.map((x) => dosed(x, 'accessory', profile, all, gear)),
+    ...(core ? [dosed(core, 'core', profile, all, gear)] : []),
+    ...cooldownFor(all, [...mains, ...accessories], COOLDOWN.stretches[profile.minutes], avoid),
+  ];
   const label = mode === 'gym' ? 'Gym' : 'Calisthenics';
   return { mode, items, by: 'built-in', at: input.now.toISOString(), title: `${label}, day ${day === 0 ? 'A' : 'B'}: ${mains.map((x) => short(x.family)).join(', ')}` };
 }
@@ -121,10 +142,11 @@ export function dosed(x: LibraryExercise, role: SlotRole, profile: CoachProfile,
   const level = profile.levels[patternOf(x.family) ?? 'core'].level;
   const hold = x.force === 'static' || HOLDS.includes(x.demo);
   const dose = DOSE[profile.goal];
-  const sets = role === 'core' ? (profile.minutes <= 20 ? 2 : 3) : profile.minutes <= 20 ? Math.min(dose.sets, 3) : dose.sets;
+  const sets = role === 'core' ? (profile.minutes <= 20 ? 2 : 3) : role === 'accessory' ? ACCESSORY_DOSE.sets : profile.minutes <= 20 ? Math.min(dose.sets, 3) : dose.sets;
   const weighted = isWeighted(x);
   const reps = FEW_REPS.includes(x.demo) ? FEW_REPS_RANGE : BODY_REPS;
-  const [low, high] = hold ? [HOLD_SEC.low[level - 1], HOLD_SEC.high[level - 1]] : weighted ? [dose.low, dose.high] : [reps.low[level - 1], reps.high[level - 1]];
+  const lift = role === 'accessory' ? ACCESSORY_DOSE : dose;
+  const [low, high] = hold ? [HOLD_SEC.low[level - 1], HOLD_SEC.high[level - 1]] : weighted ? [lift.low, lift.high] : [reps.low[level - 1], reps.high[level - 1]];
   return {
     ...item(x.id, x.name, x.demo, x.tips[0] ?? '', x.family, role, sets, low, high, hold ? 'sec' : 'reps'),
     ...(weighted ? { weighted: true } : {}),
@@ -133,14 +155,44 @@ export function dosed(x: LibraryExercise, role: SlotRole, profile: CoachProfile,
   };
 }
 
-/** A stretch for what the workout trained most. */
-function stretchFor(all: LibraryExercise[], trained: LibraryExercise[], avoid: (x: LibraryExercise) => boolean): PlanItem {
-  const muscles = trained.flatMap((x) => x.primary);
-  const top = muscles.sort((a, b) => muscles.filter((m) => m === b).length - muscles.filter((m) => m === a).length)[0];
-  const x = all
-    .filter((s) => s.kind === 'stretch' && s.equipment === 'body only' && !avoid(s) && (!top || s.primary.includes(top)))
-    .sort((a, b) => plainness(a) - Number(/stretch/i.test(a.name)) * 3 - (plainness(b) - Number(/stretch/i.test(b.name)) * 3))[0];
-  return x ? item(x.id, x.name, x.demo, x.tips[0] ?? '', x.family, 'stretch', 1, 60) : item('toe-touch', 'Toe touch stretch', 'toe-touch', 'Soft knees, let the head hang.', 'stretch', 'stretch', 1, 60);
+/** The warm-up: easy cardio to get warm, circles for the joints the day uses, and one dynamic move
+    for the whole body. A short workout keeps it short. Falls back to joint circles. */
+export function warmupFor(all: LibraryExercise[], profile: CoachProfile, trained: LibraryExercise[], avoid: (x: LibraryExercise) => boolean): PlanItem[] {
+  const ok = (id: string) => {
+    const x = all.find((e) => e.id === id);
+    return x && usable(x, profile.gear) && !avoid(x) ? x : undefined;
+  };
+  const first = (ids: readonly string[]) => ids.map(ok).find((x): x is LibraryExercise => !!x);
+  const upper = trained.some((x) => UPPER.includes(x.family));
+  const lower = trained.some((x) => !UPPER.includes(x.family));
+  const short = profile.minutes <= 20;
+  const parts: [LibraryExercise | undefined, number][] = [
+    [first(WARMUP_MOVES.pulse), short ? WARMUP_SEC.shortPulse : WARMUP_SEC.pulse],
+    ...(short ? [] : ([...(upper ? [[first(WARMUP_MOVES.upper), WARMUP_SEC.move]] : []), ...(lower ? [[first(WARMUP_MOVES.lower), WARMUP_SEC.move]] : [])] as [LibraryExercise | undefined, number][])),
+    [first(WARMUP_MOVES.whole), WARMUP_SEC.whole],
+  ];
+  const out = parts.filter((p): p is [LibraryExercise, number] => !!p[0]).map(([x, sec]) => item(x.id, x.name, x.demo, x.tips[0] ?? '', x.family, 'warmup', 1, sec));
+  return out.length ? out : [WARMUP];
+}
+
+/** The cool-down: a stretch for each of the muscles the workout trained most. */
+export function cooldownFor(all: LibraryExercise[], trained: LibraryExercise[], count: number, avoid: (x: LibraryExercise) => boolean): PlanItem[] {
+  const tally = new Map<string, number>();
+  trained.forEach((x, i) => x.primary.forEach((m) => tally.set(m, (tally.get(m) ?? 0) + (trained.length - i))));
+  const top = [...tally.entries()].sort((a, b) => b[1] - a[1]).map(([m]) => m);
+  const stretches = all.filter((s) => s.kind === 'stretch' && s.equipment === 'body only' && !MOVING_STRETCH.test(s.name) && !avoid(s));
+  const rank = (s: LibraryExercise, m: string) => {
+    const k = (STRETCHES[m] ?? []).indexOf(s.id);
+    return (k === -1 ? 10 : k - 10) + plainness(s) - Number(/stretch/i.test(s.name)) * 3;
+  };
+  const out: LibraryExercise[] = [];
+  for (const m of top) {
+    if (out.length >= count) break;
+    const x = stretches.filter((s) => s.primary.includes(m) && !out.some((o) => o.demo === s.demo)).sort((a, b) => rank(a, m) - rank(b, m))[0];
+    if (x) out.push(x);
+  }
+  const items = out.map((x) => item(x.id, x.name, x.demo, x.tips[0] ?? '', x.family, 'stretch', 1, COOLDOWN.sec));
+  return items.length ? items : [item('toe-touch', 'Toe touch stretch', 'toe-touch', 'Soft knees, let the head hang.', 'stretch', 'stretch', 1, COOLDOWN.sec)];
 }
 
 function running(input: BuildInput, profile: CoachProfile, avoid: (x: LibraryExercise) => boolean): CoachPlan {

@@ -5,7 +5,7 @@ import { initialState, type GameState } from '@/lib/game';
 import { applySetup, type SetupAnswers } from './setup';
 import { searchExercises } from './search';
 import { runTool, type ToolContext } from './tools';
-import { CHAT_KEEP, coachTurn, MAX_ROUNDS, OPENER, shownChat, trimChat, type Answer, type Ask } from './chat';
+import { CHAT_KEEP, coachTurn, MAX_ROUNDS, OPENER, shownChat, STEP_LABEL, trimChat, type Answer, type Ask } from './chat';
 import type { ChatMessage, ToolCall } from './types';
 import { currentPlan } from './week';
 
@@ -255,6 +255,14 @@ describe('coachTurn', () => {
     expect(sent[1]).toEqual(chat.slice(0, 3));
     expect(s.now().coach!.notes.some((n) => n.text === 'likes mornings')).toBe(true);
     expect(rest(s.now())).toEqual(rest(start));
+  });
+
+  it('says each step while it works, and nothing for the replies it offers', async () => {
+    const s = save(withSetup());
+    const steps: string[] = [];
+    const { ask } = fake([say('', [call('c1', 'training_guide', {}), call('c2', 'add_note', { type: 'like', text: 'x' })]), say('Done.', [call('c3', 'suggest_replies', { replies: ['Ok'] })])]);
+    await coachTurn({ text: 'plan me', get: s.get, set: s.set, ask, ctx, onStep: (l) => steps.push(l) });
+    expect(steps).toEqual([STEP_LABEL.training_guide, STEP_LABEL.add_note]);
   });
 
   it('suggest_replies alone ends the turn without asking again', async () => {

@@ -5,11 +5,13 @@ import type { SlotRole } from '../program';
 import { dosed, excluded, item, runWalk, WARMUP } from './generate';
 import { buildWeek, currentPlan, daysLeft, moveDay, restDay, setDay, weekdayOf, weekOver, weekText } from './week';
 import { dayKey, daysApart } from '../days';
-import { REST } from '@/balance';
+import { RAMP, REST } from '@/balance';
 import { addNote, liveNotes, removeNote } from './notes';
 import { HOLDS, isWeighted, patternOf, usable } from './options';
 import { searchExercises } from './search';
 import { askGuide } from './guide';
+import { askTraining } from './craft';
+import { minutesOf, restFor } from './time';
 import { answersOf, profileFrom } from './setup';
 import { validate } from './validate';
 import { PATTERNS, type Area, type CoachDay, type CoachPlan, type CoachProfile, type CoachState, type CoachWeek, type Experience, type Gear, type Goal, type Level, type Minutes, type Mode, type PlanItem, type RunStep } from './types';
@@ -41,7 +43,7 @@ const GEAR: Gear[] = ['gym', 'dumbbells', 'bar', 'bands', 'none'];
 const EXPERIENCE: Experience[] = ['new', 'on-off', 'steady', 'returning'];
 const AREAS: Area[] = ['knee', 'back', 'shoulder', 'wrist', 'other'];
 const MINUTES: Minutes[] = [20, 30, 40, 60];
-const ROLES: SlotRole[] = ['warmup', 'main', 'core', 'stretch'];
+const ROLES: SlotRole[] = ['warmup', 'main', 'accessory', 'core', 'stretch'];
 const NOTE_TYPES = ['like', 'dislike', 'pain', 'life', 'goal', 'other'] as const;
 const RUN_IDS = ['forma:easy-run', 'forma:run-walk', 'forma:interval-run', 'forma:long-run'];
 
@@ -76,10 +78,14 @@ const line = (x: LibraryExercise) => `${x.id} | ${x.name} | ${x.family} | ${x.le
 /** A workout as the model reads it: one line per item. */
 export function planText(plan: CoachPlan): string {
   const rows = plan.items.map((it) => {
-    const dose = it.run ? `${Math.round(it.low / 60)} min run (${it.run.map((s) => `${s.effort} ${Math.round(s.sec / 60) || 1}m`).join(', ')})` : it.role === 'warmup' || it.role === 'stretch' ? `${it.low}${it.unit === 'sec' ? 's' : ''}` : `${it.sets}x${it.low}-${it.high}${it.unit === 'sec' ? 's' : ''}`;
+    const dose = it.run
+      ? `${Math.round(it.low / 60)} min run (${it.run.map((s) => `${s.effort} ${Math.round(s.sec / 60) || 1}m`).join(', ')})`
+      : it.role === 'warmup' || it.role === 'stretch'
+        ? `${it.low}${it.unit === 'sec' ? 's' : ''}`
+        : `${it.sets}x${it.low}-${it.high}${it.unit === 'sec' ? 's' : ''}, rest ${restFor(it)}s${it.ramp ? `, ${it.ramp} ramp-up sets` : ''}`;
     return `- ${it.id} | ${it.name} | ${it.role} | ${dose}`;
   });
-  return [`${plan.mode}: ${plan.title}`, ...rows].join('\n');
+  return [`${plan.mode}: ${plan.title} (about ${minutesOf(plan.items)} min)`, ...rows].join('\n');
 }
 
 /** A run of so many minutes, by kind. */
@@ -101,7 +107,7 @@ function workoutFrom(input: Input, profile: CoachProfile, ctx: ToolContext): { p
   const byId = new Map(ctx.all.map((x) => [x.id, x]));
   const mode = one(input.mode, MODES) ?? profile.modes[0] ?? 'gym';
   const skipped: string[] = [];
-  const rows = Array.isArray(input.items) ? input.items.slice(0, 14) : [];
+  const rows = Array.isArray(input.items) ? input.items.slice(0, 16) : [];
   const items: PlanItem[] = [];
   for (const raw of rows) {
     if (!raw || typeof raw !== 'object') continue;
@@ -134,7 +140,8 @@ function workoutFrom(input: Input, profile: CoachProfile, ctx: ToolContext): { p
     const base = dosed(x, role, profile, ctx.all, profile.gear);
     const hold = base.unit === 'sec' || HOLDS.includes(x.demo);
     const low = int(r.low, 1, hold ? 300 : 50) ?? base.low;
-    items.push({ ...base, sets: int(r.sets, 1, 8) ?? base.sets, low, high: Math.max(low, int(r.high, 1, hold ? 300 : 50) ?? base.high), ...(isWeighted(x) ? { weighted: true } : {}), ...(rest ? { rest } : {}) });
+    const ramp = int(r.ramp, 0, RAMP.sets * 2);
+    items.push({ ...base, sets: int(r.sets, 1, 8) ?? base.sets, low, high: Math.max(low, int(r.high, 1, hold ? 300 : 50) ?? base.high), ...(isWeighted(x) ? { weighted: true } : {}), ...(rest ? { rest } : {}), ...(ramp ? { ramp } : {}) });
   }
   const title = str(input.title, 80) || 'From your coach';
   const checked = validate({ mode, items, by: 'coach', at: ctx.now.toISOString(), title }, { all: ctx.all, profile });
@@ -325,6 +332,8 @@ export function runTool(state: GameState, name: string, args: string, ctx: ToolC
       if (!coach.notes.some((n) => n.id === id)) return { state, result: `No note ${id}.` };
       return { state: withCoach(state, removeNote(coach, id)), result: 'Forgotten.' };
     }
+    case 'training_guide':
+      return { state, result: askTraining(str(input.topic, 200)) };
     case 'game_guide':
       return { state, result: askGuide(state, str(input.question, 200), ctx.now) };
     case 'suggest_replies': {

@@ -88,8 +88,10 @@ export interface PlanItem {
   low: number;
   high: number;
   weighted?: boolean;
-  /** Rest after each set, seconds (the coach's call; missing: the default). */
+  /** Rest after each set, seconds (the coach's call; missing: the default, `restFor`). */
   rest?: number;
+  /** Light ramp-up sets before the first work set, not logged (a first heavy lift). */
+  ramp?: number;
   /** A run: its steps, in order. The item's `low` is their total seconds. */
   run?: RunStep[];
   /** Easier moves of the same kind, easiest last. */

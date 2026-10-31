@@ -1,11 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { MessageCircle, Play, SendHorizontal, Shuffle, TrendingDown, X } from 'lucide-react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { Check, MessageCircle, Play, RotateCcw, SendHorizontal, Shuffle, TrendingDown, X } from 'lucide-react';
 import type { Checkin, GameState } from '@/lib/game';
 import { ROLE_COLOR, ROLE_LABEL } from '@/lib/program';
 import { changeItem } from '@/lib/coach/plan';
-import { minutesOf } from '@/lib/coach/validate';
+import { minutesOf, restFor } from '@/lib/coach/time';
 import { shownChat } from '@/lib/coach/chat';
 import type { Mode, PlanItem } from '@/lib/coach/types';
 import { dayLabel, nextDay, restKept, todayIs, weekdayOf, weekSlots } from '@/lib/coach/week';
@@ -227,7 +227,8 @@ export function WorkoutCards({ state, update, items, date }: { state: GameState;
                 <span className="line-clamp-2 text-xs font-semibold leading-tight text-slate-100">{it.name}</span>
                 <span className="mt-0.5 font-mono text-[11px] text-slate-400">
                   {doseOf(it, it.run ? undefined : state.reps[it.id])}
-                  {it.rest ? ` · rest ${it.rest}s` : ''}
+                  {!end && !it.run ? ` · rest ${restFor(it)}s` : ''}
+                  {it.ramp ? ` · ${it.ramp} light first` : ''}
                 </span>
               </button>
               {date && !end && !it.run && (it.easier.length > 0 || it.swaps.length > 0) && (
@@ -285,9 +286,17 @@ function useSignedIn(): boolean {
 
 /** The chat, at the camp fire: the flame above, its words and yours in dialogue boxes below. */
 function CoachChat({ state, update, onClose }: { state: GameState; update: Update; onClose: () => void }) {
-  const { send, busy, error } = useCoachChat(state, update);
+  const { send, busy, error, steps, since } = useCoachChat(state, update);
   const canTalk = useSignedIn();
   const [text, setText] = useState('');
+  // The box grows with what you write, up to a good part of the screen, then scrolls.
+  const box = useRef<HTMLTextAreaElement>(null);
+  useLayoutEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${el.scrollHeight}px`;
+  }, [text]);
   const end = useRef<HTMLDivElement>(null);
   const lines = shownChat(state.coach?.chat);
   const week = state.coach?.week;
@@ -307,7 +316,7 @@ function CoachChat({ state, update, onClose }: { state: GameState; update: Updat
 
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
-  }, [lines.length, busy, error]);
+  }, [lines.length, busy, error, steps.length]);
 
   const say = (t: string) => {
     const v = t.trim();
@@ -322,7 +331,10 @@ function CoachChat({ state, update, onClose }: { state: GameState; update: Updat
         <PlaceBackdrop id="ashlands-camp" className="absolute inset-0 h-full w-full" />
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-ink-950 to-transparent" />
         <div className="absolute inset-x-0 bottom-1 flex justify-center">
-          <Ember size={96} stage={stage} mood={busy ? 'bright' : 'happy'} />
+          {busy && <div aria-hidden className="absolute bottom-0 h-24 w-40 rounded-full bg-orange-400/25 blur-2xl motion-safe:animate-pulse" />}
+          <div className={busy ? 'motion-safe:animate-flicker' : ''}>
+            <Ember size={96} stage={stage} mood={busy ? 'bright' : 'happy'} />
+          </div>
         </div>
         <div className="safe-top land-safe-x absolute inset-x-0 top-0 flex justify-end px-4">
           <button onClick={onClose} aria-label="Close" className="mt-2 grid h-10 w-10 place-items-center rounded-lg bg-ink-900/80">
@@ -385,18 +397,14 @@ function CoachChat({ state, update, onClose }: { state: GameState; update: Updat
               </li>
             ),
           )}
-          {busy && (
-            <li className="rounded-xl bg-ink-800/95 p-3 pixel-border">
-              <p className="mb-1.5 font-pixel text-[10px] text-gold-300">{name}</p>
-              <p className="text-lg leading-none text-slate-300">
-                <span className="animate-blink">• • •</span>
-              </p>
-            </li>
-          )}
-          {error && (
+          {busy && <Working name={name} steps={steps} since={since} />}
+          {error && !busy && (
             <li className="rounded-xl bg-ink-800/95 p-3 pixel-border">
               <p className="mb-1.5 font-pixel text-[10px] text-gold-300">{name}</p>
               <p className="text-[15px] leading-snug text-slate-100">{error}</p>
+              <button onClick={() => void send()} className="mt-2 flex items-center gap-1.5 rounded-lg bg-ink-700 px-3 py-1.5 text-xs font-semibold text-gold-300 active:scale-95">
+                <RotateCcw size={13} /> Try again
+              </button>
             </li>
           )}
         </ul>
@@ -421,21 +429,26 @@ function CoachChat({ state, update, onClose }: { state: GameState; update: Updat
             }}
             className="flex items-end gap-2"
           >
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  say(text);
-                }
-              }}
-              rows={1}
-              maxLength={1000}
-              placeholder={`Tell ${name}…`}
-              aria-label={`Message to ${name}`}
-              className="max-h-28 min-h-[44px] flex-1 resize-none rounded-xl bg-ink-800 px-3 py-2.5 text-[15px] text-slate-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-gold-400"
-            />
+            <div className="relative min-w-0 flex-1">
+              <textarea
+                ref={box}
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                onKeyDown={(e) => {
+                  // Enter sends on a keyboard; on a phone it's a new line, and the button sends.
+                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing && window.matchMedia('(pointer: fine)').matches) {
+                    e.preventDefault();
+                    say(text);
+                  }
+                }}
+                rows={1}
+                maxLength={1000}
+                placeholder={busy ? `${name} is working… you can type` : `Tell ${name}…`}
+                aria-label={`Message to ${name}`}
+                className="block max-h-[40dvh] min-h-[44px] w-full resize-none overflow-y-auto rounded-xl bg-ink-800 px-3 py-2.5 text-[15px] leading-snug text-slate-100 transition-[height] duration-100 placeholder:text-slate-500 focus:outline-none focus:ring-1 focus:ring-gold-400 motion-reduce:transition-none"
+              />
+              {text.length > 800 && <span className="pointer-events-none absolute bottom-1 right-2 font-mono text-[10px] text-slate-500">{text.length}/1000</span>}
+            </div>
             <button type="submit" disabled={busy || !text.trim()} aria-label="Send" className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-gold-400 text-ink-950 disabled:opacity-30">
               <SendHorizontal size={18} />
             </button>
@@ -443,5 +456,39 @@ function CoachChat({ state, update, onClose }: { state: GameState; update: Updat
         )}
       </footer>
     </div>
+  );
+}
+
+/** The flame at work: what it did so far this turn, ticked off, and what it's on now. */
+function Working({ name, steps, since }: { name: string; steps: string[]; since: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const sec = Math.max(0, Math.round((now - since) / 1000));
+  return (
+    <li className="animate-fadein rounded-xl bg-ink-800/95 p-3 pixel-border" role="status" aria-live="polite">
+      <div className="mb-1.5 flex items-baseline justify-between">
+        <p className="font-pixel text-[10px] text-gold-300">{name}</p>
+        {sec >= 3 && <span className="font-mono text-[10px] text-slate-500">{sec}s</span>}
+      </div>
+      <ul className="space-y-1">
+        {steps.map((s, i) => (
+          <li key={`${s}${i}`} className="flex items-center gap-1.5 text-xs text-emerald-300/90 animate-fadein">
+            <Check size={12} /> {s}
+          </li>
+        ))}
+        <li className="flex items-center gap-2 text-sm text-slate-200">
+          <span className="flex items-end gap-1" aria-hidden>
+            {[0, 1, 2].map((i) => (
+              <span key={i} className="h-1.5 w-1.5 bg-gold-400 motion-safe:animate-bob" style={{ animationDelay: `${i * 0.15}s` }} />
+            ))}
+          </span>
+          {steps.length ? 'Working on it' : 'Thinking'}
+          {sec >= 15 ? ': a whole week takes a moment' : '…'}
+        </li>
+      </ul>
+    </li>
   );
 }

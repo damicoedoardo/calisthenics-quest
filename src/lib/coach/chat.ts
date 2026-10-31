@@ -37,8 +37,25 @@ const withChat = (s: GameState, chat: ChatMessage[], patch: Partial<CoachState> 
   coach: { notes: [], ...s.coach, ...patch, chat: trimChat(chat) },
 });
 
-/** One turn: the player's words (or none, for the coach to open), then the coach until it answers. */
-export async function coachTurn(opts: { text?: string; get: () => GameState; set: (fn: (s: GameState) => GameState) => void; ask: Ask; ctx: () => ToolContext; checkin?: Parameters<typeof coachBrief>[2] }): Promise<void> {
+/** What the flame is doing, said while it works: one line per tool it runs. */
+export const STEP_LABEL: Record<string, string> = {
+  find_exercises: 'Looked through the exercises',
+  draft_week: 'Sketched a week',
+  show_week: 'Read your week',
+  set_week: 'Wrote your week',
+  set_workout: 'Built the workout',
+  move_workout: 'Moved a workout',
+  rest_day: 'Made a rest day',
+  save_profile: 'Remembered you',
+  add_note: 'Made a note',
+  remove_note: 'Let a note go',
+  training_guide: 'Checked the playbook',
+  game_guide: 'Read the guide',
+};
+
+/** One turn: the player's words (or none, for the coach to open), then the coach until it answers.
+    `onStep` hears each tool it ran (STEP_LABEL), so the screen can show it working. */
+export async function coachTurn(opts: { text?: string; get: () => GameState; set: (fn: (s: GameState) => GameState) => void; ask: Ask; ctx: () => ToolContext; checkin?: Parameters<typeof coachBrief>[2]; onStep?: (label: string) => void }): Promise<void> {
   const { get, set, ask } = opts;
   const text = opts.text?.trim();
   if (text) set((s) => withChat(s, [...(s.coach?.chat ?? []), { role: 'user', content: text.slice(0, 1000) }], { replies: [] }));
@@ -54,6 +71,8 @@ export async function coachTurn(opts: { text?: string; get: () => GameState; set
     const results: ChatMessage[] = [];
     let waits = calls.length > 0;
     for (const c of calls) {
+      const label = STEP_LABEL[c.function.name];
+      if (label) opts.onStep?.(label);
       const run = runTool(after, c.function.name, c.function.arguments, opts.ctx());
       after = run.state;
       waits &&= !!run.waits;

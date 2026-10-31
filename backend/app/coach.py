@@ -93,12 +93,27 @@ the week fewer fit, so don't cram them. To change one day only, call set_workout
 the player keeps one by resting (sitting by the fire in the app). Plan them on purpose, and if \
 the player wants no rest days at all, push back.
 - Use only exercise ids from the library: find them with find_exercises.
-- Each item: id, role (warmup, main, core, stretch), sets, low and high (reps, or seconds for a \
-hold), and rest (seconds after each set: about 120-180 for heavy lifts, 60-90 for most moves, \
-45-60 for core). Runs take minutes instead.
-- The app checks every workout (gear, sore spots, a warm-up first and a stretch last, not too \
-many sets, about the minutes they have) and tells you what it fixed. If it lists problems, fix \
-them and call the tool again.
+- Each item: id, role (warmup, main, accessory, core, stretch), sets, low and high (reps, or \
+seconds for a hold), rest (seconds after each set), and ramp (light ramp-up sets before the \
+first heavy lift). Runs take minutes instead.
+- The app checks every workout (gear, sore spots, the blocks in order, not too many sets, about \
+the minutes they have) and tells you what it fixed. If it lists problems, fix them and call the \
+tool again.
+
+How a good workout is built (you are a real coach; build every strength day like this):
+- Before you plan a week or rebuild a day, call training_guide once (no topic gives the \
+session; ask for warmup, progression, week, calisthenics, returning or time when it matters).
+- Five blocks, in order: 1) warmup, about 5 minutes: easy cardio (rower, bike, jumping jacks), \
+then circles and a dynamic move for the joints the day uses, and 2 ramp-up sets on the first \
+heavy lift; 2) main: the big compound moves or the hard skill, freshest first, a push with a \
+pull and knees with hips; 3) accessory: 1-2 lighter moves for what the main work left out \
+(arms, rear shoulders, calves), 10-15 reps; 4) core: one move; 5) stretch: the cool-down, 2-3 \
+static stretches for the muscles trained most, 30-60 seconds each.
+- Rest: about 120-180 s after heavy sets, 90 for body weight moves, 60 for accessories and core.
+- Never to failure: every set ends with 1-3 reps in the tank. Progress by double progression: \
+the top of the range on every set with 2 left, then a little more weight or the next harder \
+step, back to the bottom of the range.
+- Fit the minutes: when time is short, keep warm-up and main, drop accessories first.
 - Easier versions and swaps for every exercise are added by the app: don't list them yourself.
 - Fit the week to the levels in the brief (1 is new, 5 is very strong), to what they did lately, \
 and to their notes: hard days apart, the same muscles not two days running. Start easy with a \
@@ -151,7 +166,7 @@ GEAR = ["gym", "dumbbells", "bar", "bands", "none"]
 EXPERIENCE = ["new", "on-off", "steady", "returning"]
 AREAS = ["knee", "back", "shoulder", "wrist", "other"]
 NOTE_TYPES = ["like", "dislike", "pain", "life", "goal", "other"]
-ROLES = ["warmup", "main", "core", "stretch"]
+ROLES = ["warmup", "main", "accessory", "core", "stretch"]
 # As in src/exercises/coaching.ts (Family).
 FAMILIES = [
     "squat",
@@ -208,6 +223,10 @@ _WORKOUT: dict[str, Any] = {
                 "low": {"type": "integer", "description": "Fewest reps (or seconds for a hold)."},
                 "high": {"type": "integer", "description": "Most reps or seconds."},
                 "rest": {"type": "integer", "description": "Seconds of rest after each set."},
+                "ramp": {
+                    "type": "integer",
+                    "description": "Light ramp-up sets before the work sets (first heavy lift).",
+                },
                 "minutes": {"type": "integer", "description": "Runs only."},
             },
             ["id", "role"],
@@ -325,6 +344,14 @@ TOOLS: list[dict[str, Any]] = [
         "remove_note",
         "Forget a note that is no longer true, by its id from the brief.",
         _obj({"id": {"type": "string"}}),
+    ),
+    _tool(
+        "training_guide",
+        "The coach's playbook: how a good workout and week are built (warm-up, main, "
+        "accessory, core, cool-down), sets, reps and rest, progression, splits, body weight "
+        "ladders, coming back after a break, fitting the minutes, running. Empty topic: how a "
+        "session is built, and the topics.",
+        _obj({"topic": {"type": "string"}}),
     ),
     _tool(
         "game_guide",

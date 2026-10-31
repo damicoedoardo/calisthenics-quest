@@ -1,7 +1,7 @@
 ---
 type: reference
 title: The coach (workout planner)
-description: The coach in src/lib/coach — your flame as an LLM coach you chat with (the week it plans, the one place every workout lives; the chat loop, its tools run on the phone, the fuzzy exercise search, the server relay), the three-layer memory (profile, training log, notes), the flame speaking first (nudges), the built-in coach that builds workouts for gym, calisthenics, running or a mix, easier and swap choices, the guardrails every workout passes, and the screens that play it.
+description: The coach in src/lib/coach — your flame as an LLM coach you chat with (the week it plans, the one place every workout lives; the chat loop, its tools run on the phone, the fuzzy exercise search, the server relay), the craft of a workout (warm-up, main, accessory, core, cool-down; the training playbook the coach reads; the time estimate), the three-layer memory (profile, training log, notes), the flame speaking first (nudges), the built-in coach that builds workouts for gym, calisthenics, running or a mix, easier and swap choices, the guardrails every workout passes, and the screens that play it.
 tags: [game, training, coach, planner, memory, llm]
 timestamp: 2026-10-31
 ---
@@ -18,7 +18,7 @@ the **built-in coach**, the plain-rules builder that runs offline, before setup 
 starting draft. The rule for both: **the coach chooses, the code keeps the facts and the
 numbers.** XP, stat points and story never depend on what the coach planned.
 
-Code: `src/lib/coach/` (pure, tested in `coach.test.ts`, `chat.test.ts` and `week.test.ts`). Numbers:
+Code: `src/lib/coach/` (pure, tested in `coach.test.ts`, `chat.test.ts`, `craft.test.ts` and `week.test.ts`). Numbers:
 `src/balance/coach.ts`. Screens: `CoachChat.tsx` (the Train tab's coach and the chat),
 the workout's overview and choices in `Workout.tsx`, `useCoach.ts`
 (keeps a week ready, runs the chat). How to do each exercise: `ExerciseDetail.tsx`.
@@ -57,8 +57,33 @@ Fog runs start Rested (`isRested`). A week runs to its Sunday even when every wo
 ## Rests
 
 Each item may carry `rest` (seconds after a set), set by the coach in the chat (clamped to
-`REST.min`-`REST.max`); without one, core rests `REST.core`, the rest `REST_SECONDS`. The rest
-screen counts that down.
+`REST.min`-`REST.max`); without one, `restFor` (`time.ts`) rests by role: a weighted main lift
+`REST.heavy`, another main move `REST.main`, an accessory `REST.accessory`, core `REST.core`. The
+rest screen counts that down, and the time estimate uses the same rule.
+
+## The craft of a workout (`craft.ts`)
+
+How a trainer builds a session, as data, so the built-in coach and the LLM build alike.
+
+- **Five blocks, in order** (`BLOCKS`; roles in `SlotRole`): `warmup` (about 5 minutes: easy
+  cardio, circles for the day's joints, a dynamic whole-body move), `main` (the compound moves or
+  the hard skill, freshest first), `accessory` (lighter moves the main work left out, 10-15 reps),
+  `core` (one move), `stretch` (the cool-down: static stretches for what was trained most; shown
+  as "Cool-down"). `validate` puts any workout back in this order (`inOrder`) and says so.
+- **Ramp-up sets** (`ramp` on an item): light sets before the first weighted lift, not logged; the
+  workout screen says so on its first set, the cards show "2 light first".
+- **The playbook** (`PLAYBOOK`, `askTraining`): the trainer's know-how in short topics (the
+  session, warm-up, main work, accessories, core, cool-down, progression, splits, body weight
+  ladders, coming back after a break, fitting the minutes, running), numbers read from
+  `src/balance`. The LLM reads it with the `training_guide` tool before it plans; the rules on the
+  server tell it the same blueprint in short.
+
+## The time a workout takes (`time.ts`)
+
+`minutesOf(items)` is the "about N min" on the Train tab, the workout overview, the nudges and the
+guardrail. Per exercise (`secondsOf`): each set's work (reps at `TIME.rep` seconds, `TIME.weightedRep`
+with a weight, or the hold) plus its rest (`restFor`), set-up (`TIME.setup`, `TIME.setupWeighted`),
+ramp-up sets; a warm-up or stretch part is its seconds plus `TIME.change`. Skipped items don't count.
 
 ## The chat (`chat.ts`, `tools.ts`)
 
@@ -70,7 +95,7 @@ screen counts that down.
   something you said). Older talk lives on as notes and the log.
 - **Tools** (the list and the rules are on the server, `backend/app/coach.py`; they run here):
   `find_exercises` (the fuzzy search below, only what your gear and sore spots allow),
-  `draft_week` (the built-in coach's week, a start to change), `show_week` (the week, and the next
+  `draft_week` (the built-in coach's week, a start to change), `training_guide` (the playbook, above), `show_week` (the week, and the next
   workout in full), `set_week` (every workout day: a weekday, today/tomorrow or a date from today to
   Sunday, `resolveDay`; workouts done this week stay), `move_workout` (a day's workout to another
   day; onto a workout day the two swap, `moveDay`), `rest_day` (a day's workout off the week,
@@ -149,9 +174,14 @@ This is what the LLM reads; it never reads or writes the save itself, only throu
 
 - **Mode**: the one asked for, else of your modes the one done longest ago (`nextMode`): a mix
   takes turns.
-- **Gym and calisthenics**: warm-up, the day's movement families (`DAYS`, days A and B alternate
-  per mode, `MAIN_MOVES[minutes]` of them), one core move, a stretch for what was trained most.
-  Calisthenics uses body weight and bands only; no bar turns pull-ups into rows.
+- **Gym and calisthenics**: the five blocks. Warm-up (`warmupFor`: `WARMUP_MOVES` in
+  `staples.ts`, a rower or jumping jacks, circles for an upper and a lower day, a dynamic move;
+  `WARMUP_SEC`), the day's main families (`DAYS[mode][A|B].main`, `MAIN_MOVES[minutes]` of them;
+  the first weighted one gets `RAMP.sets` ramp-up sets), its accessories (`DAYS...accessory`,
+  `ACCESSORY_MOVES[minutes]`, `ACCESSORY_DOSE`, isolation preferred), one core move, and the
+  cool-down (`cooldownFor`: `COOLDOWN.stretches[minutes]` static stretches, `STRETCHES` per muscle,
+  never a moving one, `MOVING_STRETCH`). Calisthenics uses body weight and bands only; no bar turns
+  pull-ups into rows.
 - **Picking an exercise**: from the library, in the family, with your gear (`usable`), at most the
   library level your pattern level reaches (`maxLevelFor`), not on a sore spot (`spares`) or a
   dislike note's words, and hard body-weight moves only from their level (`NEEDS_LEVEL`). Then it
@@ -178,9 +208,11 @@ too when a workout opens (`planFromQuest`), so it can be changed the same way.
 ## The guardrails (`validate.ts`)
 
 Every workout, whoever built it: only library exercises (or the built-in warm-ups and stretches),
-only your gear, nothing a sore spot spares, a warm-up first and a stretch last (added if missing),
-at most `MAX_SETS_PER_FAMILY` sets of a family and `MAX_SETS` in all, and about your minutes (a
-quarter over at most, trimmed a set at a time). It returns the fixed plan and the `problems`, which
+only your gear, nothing a sore spot spares, the blocks in order, a warm-up first and a stretch last
+(added if missing), at most `MAX_SETS_PER_FAMILY` sets of a family and `MAX_SETS` in all, and about
+your minutes (`TIME_SLACK` over at most, by `minutesOf`). Short on time it trims like a trainer:
+accessory and core sets down to two, then the accessories go, then core, then a set of the main
+moves from the last; the warm-up and cool-down stay. It returns the fixed plan and the `problems`, which
 an LLM gets back to do better.
 
 ## Screens
@@ -193,7 +225,11 @@ an LLM gets back to do better.
   day, offers a minute by the fire. Before the first week: only a line that says to talk to the flame. Tap a card (here or on Today) for how to
   do it (`ExerciseSheet`: both demos, facts, steps, tips, mistakes). Sideways the two sit side by side.
 - **The chat** (`CoachChat`): the camp fire at the top with the flame, the talk below in the
-  story's dialogue boxes, the taps it offers, and a box to type. A week or day it just set shows in
+  story's dialogue boxes, the taps it offers, and a box to type that grows with what you write (up
+  to 40% of the screen, then scrolls; a count past 800 of 1000). Enter sends on a keyboard, on a
+  phone it's a new line. While the flame works it glows and flickers, and its box (`Working`) ticks
+  off each tool it ran this turn (`STEP_LABEL` in `chat.ts`, heard through `onStep`), with the
+  seconds so far; a failed turn offers "Try again". A week or day it just set shows in
   the chat as the week, a strip of demos per day.
 - **Workout** (`Workout.tsx`): no pausing. Closing it after a set asks first ("Leave, don't
   count it"): leaving throws the sets away and the workout starts over next time. An overview before the first set (move up and down, Easier, Swap,
@@ -208,8 +244,11 @@ an LLM gets back to do better.
 | I want to... | Edit |
 |---|---|
 | Change sets, reps, run minutes, caps, which days of the week train, rests | `src/balance/coach.ts` |
+| Change how long a workout says it takes | `TIME`, `REST` in `src/balance/coach.ts`; the rule in `time.ts` |
+| Change the warm-up or the cool-down | `WARMUP_SEC`, `COOLDOWN` in `src/balance/coach.ts`; `WARMUP_MOVES`, `STRETCHES` in `staples.ts` |
+| Teach the coach more about training | a topic in `PLAYBOOK` (`craft.ts`), and the short blueprint in `SYSTEM` (`backend/app/coach.py`) |
 | Add something the flame brings up | `coachNudge` in `src/lib/coach/nudge.ts`, with a test |
-| Change which families a day trains | `DAYS` in `src/lib/coach/generate.ts` |
+| Change which families a day trains (main and accessory) | `DAYS` in `src/lib/coach/generate.ts` |
 | Prefer other exercises | `STAPLES` in `src/lib/coach/staples.ts` |
 | Change an easier ladder | `LADDER` in `src/lib/coach/options.ts` |
 | Change what a sore spot spares | `SPARE` in `src/lib/coach/options.ts` |

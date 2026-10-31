@@ -23,12 +23,41 @@ export const FEW_REPS_RANGE = { low: [1, 2, 3, 5, 6], high: [3, 4, 6, 8, 10] } a
 /** Core holds, seconds, per level 1..5. */
 export const HOLD_SEC = { low: [15, 20, 30, 40, 45], high: [30, 40, 60, 75, 90] } as const;
 
-/** How many main moves fit in your minutes (warm-up, core and stretch come on top).
-    Goal: the workout ends within a few minutes of what you said. */
-export const MAIN_MOVES: Record<20 | 30 | 40 | 60, number> = { 20: 2, 30: 3, 40: 4, 60: 5 };
+/** How many main moves (the big compound lifts or skills) fit in your minutes. Warm-up,
+    accessories, core and cool-down come on top. Goal: the workout ends within a few minutes of
+    what you said. */
+export const MAIN_MOVES: Record<20 | 30 | 40 | 60, number> = { 20: 2, 30: 3, 40: 3, 60: 4 };
 
-/** About how long one set takes with its rest, in seconds. Used to check the total time. */
-export const SET_SECONDS = 150;
+/** Accessory moves after the main ones (arms, shoulders, a leg isolation, lighter and higher
+    reps), by minutes. Goal: a short workout stays on the big moves; a long one rounds them out. */
+export const ACCESSORY_MOVES: Record<20 | 30 | 40 | 60, number> = { 20: 0, 30: 0, 40: 1, 60: 2 };
+
+/** Accessories: sets and reps, whatever the goal. Goal: lighter, controlled, close to the top of
+    the range without grinding. */
+export const ACCESSORY_DOSE = { sets: 3, low: 10, high: 15 } as const;
+
+/** The warm-up, seconds per part: `pulse` (easy cardio to get warm), each `move` (joint circles
+    and dynamic moves for what the day trains), and the most it holds for a short workout.
+    Goal: about 5 minutes, warm and moving before the first hard set. */
+export const WARMUP_SEC = { pulse: 180, shortPulse: 120, move: 45, whole: 60 } as const;
+
+/** Light ramp-up sets before the first weighted lift (not logged), and their rest. Goal: the
+    first heavy set never comes cold. */
+export const RAMP = { sets: 2, rest: 45 } as const;
+
+/** The cool-down: stretches by minutes, and seconds each. Goal: what was trained most gets
+    stretched, in two or three easy minutes. */
+export const COOLDOWN = { stretches: { 20: 1, 30: 2, 40: 2, 60: 3 } as Record<20 | 30 | 40 | 60, number>, sec: 45 } as const;
+
+/** How long a workout takes, for the "about N min" a workout shows and the check that it fits.
+    Seconds per rep (`rep`, slower with a weight: `weightedRep`), getting set up for an exercise
+    (loading a bar: `setupWeighted`, else `setup`), moving between warm-up or stretch parts
+    (`change`). Goal: the estimate lands within a few minutes of a real workout. */
+export const TIME = { rep: 3, weightedRep: 4, setup: 20, setupWeighted: 45, change: 10 } as const;
+
+/** How far over your minutes a workout may go before sets are trimmed. Goal: "40 minutes" never
+    turns into an hour. */
+export const TIME_SLACK = 0.1;
 
 /** The most sets of one movement family in a workout. Goal: no part of you gets hammered. */
 export const MAX_SETS_PER_FAMILY = 8;
@@ -73,6 +102,7 @@ export const WEEK_SPREAD: Record<number, number[]> = {
   6: [0, 1, 2, 3, 4, 5],
 };
 
-/** Rest after a set, seconds: core's default (other moves rest `REST_SECONDS`, 90), and the range
-    a coach may set per exercise. Goal: heavy sets get time to breathe, light ones keep moving. */
-export const REST = { core: 60, min: 30, max: 240 } as const;
+/** Rest after a set, seconds, when the coach didn't set one: a weighted main lift (`heavy`), any
+    other main move (`main`, as `REST_SECONDS`), an accessory, core; and the range a coach may set
+    per exercise. Goal: heavy sets get time to breathe, light ones keep moving. */
+export const REST = { heavy: 120, main: 90, accessory: 60, core: 60, min: 30, max: 240 } as const;

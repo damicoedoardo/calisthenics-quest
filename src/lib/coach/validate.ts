@@ -1,10 +1,12 @@
-import { MAX_SETS, MAX_SETS_PER_FAMILY, SET_SECONDS } from '@/balance';
+import { MAX_SETS, MAX_SETS_PER_FAMILY, TIME_SLACK } from '@/balance';
 import type { LibraryExercise } from '@/exercises/library';
 import { spares, usable } from './options';
+import { BLOCKS, inOrder } from './craft';
+import { minutesOf } from './time';
 import type { CoachPlan, CoachProfile, PlanItem } from './types';
 
-/* The guardrails every workout passes, whoever built it (the built-in coach or an LLM): a warm-up
-   first and a stretch last, only real exercises you have the gear for, nothing on a sore spot's
+/* The guardrails every workout passes, whoever built it (the built-in coach or an LLM): the blocks
+   in order (warm-up, main, accessory, core, cool-down; craft.ts), a warm-up first and a stretch last, only real exercises you have the gear for, nothing on a sore spot's
    list, no family hammered, and about the minutes you said. What it can fix it fixes, and says so;
    `problems` tells an LLM what to do better. */
 
@@ -16,9 +18,7 @@ export interface Checked {
 /** Warm-ups and stretches that need no library entry. */
 const BUILT_IN = new Set(['circles', 'toe-touch', 'quad-stretch', 'child-pose']);
 
-export function minutesOf(items: PlanItem[]): number {
-  return Math.round(items.filter((i) => !i.skipped).reduce((a, i) => a + (i.role === 'warmup' || i.role === 'stretch' || i.run ? i.low * i.sets : i.sets * SET_SECONDS), 0) / 60);
-}
+export { minutesOf };
 
 export function validate(plan: CoachPlan, ctx: { all: LibraryExercise[]; profile: CoachProfile }): Checked {
   const problems: string[] = [];
@@ -32,6 +32,10 @@ export function validate(plan: CoachPlan, ctx: { all: LibraryExercise[]; profile
     return true;
   });
   items = items.map((it) => ({ ...it, sets: Math.max(1, Math.round(it.sets)), low: Math.max(1, Math.round(it.low)), high: Math.max(Math.round(it.low), Math.round(it.high)) }));
+
+  const ordered = inOrder(items);
+  if (ordered.some((it, k) => it !== items[k])) problems.push(`put in order: ${BLOCKS.join(', ')}`);
+  items = ordered;
 
   const warm = items.filter((i) => i.role === 'warmup'),
     stretch = items.filter((i) => i.role === 'stretch'),
@@ -57,15 +61,25 @@ export function validate(plan: CoachPlan, ctx: { all: LibraryExercise[]; profile
     while (hard > MAX_SETS && capped[k].sets > 1 && !capped[k].run) (capped[k] = { ...capped[k], sets: capped[k].sets - 1 }), hard--;
   }
 
-  // About the minutes you said: a quarter over at most, trimming a set at a time from the end.
+  // About the minutes you said: a little over at most. Like a trainer short on time: accessories
+  // and core down to two sets, then the accessories go, then core, then a set of the main moves
+  // from the last. The warm-up and the cool-down stay.
   let all = [...first, ...capped, ...last];
-  const limit = ctx.profile.minutes * 1.25;
+  const limit = ctx.profile.minutes * (1 + TIME_SLACK);
   if (minutesOf(all) > limit) {
     problems.push(`about ${minutesOf(all)} min, more than your ${ctx.profile.minutes}: trimmed`);
-    for (let guard = 0; minutesOf(all) > limit && guard < 50; guard++) {
-      const k = all.findLastIndex((i) => i.role !== 'warmup' && i.role !== 'stretch' && !i.run && i.sets > 2);
-      if (k === -1) break;
-      all = all.map((it, j) => (j === k ? { ...it, sets: it.sets - 1 } : it));
+    const steps = [(i: PlanItem) => i.role === 'accessory' && i.sets > 2, (i: PlanItem) => i.role === 'core' && i.sets > 2, 'accessory', 'core', (i: PlanItem) => i.role === 'main' && !i.run && i.sets > 2] as const;
+    for (let guard = 0; minutesOf(all) > limit && guard < 60; guard++) {
+      let changed = false;
+      for (const step of steps) {
+        const drop = typeof step === 'string';
+        const k = drop ? all.findLastIndex((i) => i.role === step) : all.findLastIndex(step);
+        if (k === -1) continue;
+        all = drop ? all.filter((_, j) => j !== k) : all.map((it, j) => (j === k ? { ...it, sets: it.sets - 1 } : it));
+        changed = true;
+        break;
+      }
+      if (!changed) break;
     }
   }
   return { plan: { ...plan, items: all }, problems };
