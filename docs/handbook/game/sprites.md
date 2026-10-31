@@ -65,7 +65,7 @@ characters/spCard.ts  the SP card (sprite `spCard`, opts { classId, n, awake, ge
 characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look, kit }): you
                       doing each exercise of the program (hand-posed), one rep per loop of the
                       16-frame `rep` clip, or one of the exercise library's movements from moves.ts
-anatomy/body.ts       the anatomy demos (`ANATOMY_DEMOS`, 68 so far: push-ups (plain, incline),
+anatomy/body.ts       the anatomy demos (`ANATOMY_DEMOS`, 75 so far: push-ups (plain, incline),
                       squats (back, free, front, overhead), lunge, step-up, deadlift, RDL, good
                       morning, kettlebell swing, leg press, leg curl, leg extension, back
                       extension, glute kickback, bench, chest fly, pullover, overhead press,
@@ -76,19 +76,23 @@ anatomy/body.ts       the anatomy demos (`ANATOMY_DEMOS`, 68 so far: push-ups (p
                       twist, cable crunch, ab rollout, side bend, mountain climber; and
                       stretches held still: standing quad, wall calf, seated hamstring, forward
                       fold, child's pose, knees to chest, kneeling hip flexor, triceps,
-                      cross-body shoulder, chest opener, side reach, side neck).
+                      cross-body shoulder, chest opener, side reach, side neck; and mobility:
+                      cat-cow (the spine bends: `arch` on the pose bows the torso), foam rolling
+                      for quads, hamstrings, calves and upper back, arm and hip circles (`loop`:
+                      once round per rep, no arrow)).
                       Not pixel art: a plain, faceless body as smooth vector shapes, with the
                       muscle map on it and the worked muscles colored (main orange, helpers light
                       orange). Each part a tube with four radii along its bone (`SHAPES`), each
                       muscle a patch by length and angle around the bone (`MUSCLES`), gear drawn
-                      from the pose's props (barbell, dumbbells, kettlebell, bench or a bare pad
+                      from the pose's props (barbell, dumbbells, kettlebell, foam roller, bench or a bare pad
                       (`noLegs`), pull-up bar or cable handle, box, cable, dip bars). `scene(exercise, view, t, { variant })` gives
                       SVG paths and a fixed frame; the arrow stands beside the body, or above it
                       when the move goes across. components/AnatomyDemo.tsx plays it (about 30
                       fps, still under reduced motion and for holds)
 anatomy/skeleton.ts   its 3D skeleton in cm with real adult lengths (`L`), two-bone IK, and
                       `assemble()`, which builds a pose from the pelvis, torso line, hands and feet
-                      (`side` for a body on its side, `shrug` to lift the shoulders)
+                      (`side` for a body on its side, `shrug` to lift the shoulders, `arch` to bend
+                      the spine)
 anatomy/moves.ts      one entry per anatomy demo (`DEMOS`): the pose from rep depth 0..1 and a
                       `Variant`, the muscles it works, the camera per view ('side' level; the
                       second view named by `names`, e.g. 'Back'), the floor (none when hanging),

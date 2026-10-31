@@ -74,6 +74,13 @@ export const ANATOMY_DEMOS = [
   'chest-opener',
   'side-reach',
   'neck-side-stretch',
+  'cat-cow',
+  'roll-quads',
+  'roll-hamstrings',
+  'roll-calves',
+  'roll-upper-back',
+  'arm-circles',
+  'hip-circles',
 ] as const;
 export type AnatomyId = (typeof ANATOMY_DEMOS)[number];
 export const hasAnatomy = (id: string): id is AnatomyId => (ANATOMY_DEMOS as readonly string[]).includes(id);
@@ -106,6 +113,8 @@ export interface Demo {
   names?: Partial<Record<View, string>>;
   /** The floor under it: its middle and how far it reaches; none for a hanging move. */
   floor?: { x: number; r: number };
+  /** Goes round in a circle (arm circles): plays once round per rep, with no arrow. */
+  loop?: boolean;
   /** The point the arrow follows; none for a hold. */
   mover?: (p: Pose) => V3;
   /** Which side of the body the arrow stands on. */
@@ -147,6 +156,31 @@ const barOf = (p: Pose): V3 => {
   const bells = p.props.flatMap((g) => (g.kind === 'dumbbell' ? [g.at] : []));
   return bells.length ? mix(bells[0], bells[bells.length - 1], 0.5) : p.pelvis;
 };
+
+/** Seated on a foam roller's far side: hands on the floor behind, hips up, legs straight on the
+    roller, which sits `along` cm down the leg from the hip (the hamstring and calf rolls). */
+function rollSeated(along: number): Pose {
+  const leg = unit([1, -0.08, 0]);
+  const pelvis: V3 = [-along * leg[0], 21 + along * 0.08, 0];
+  const t = lean(-50);
+  return assemble({
+    pelvis,
+    ...t,
+    headUp: lean(-15).up,
+    limb: (s) => {
+      const hip = add(pelvis, [0, 0, s * 9]);
+      const wrist: V3 = [pelvis[0] - 48, 4, s * 21];
+      return {
+        wrist,
+        tip: add(wrist, [-14, -1, 0]),
+        elbowPole: [-1, 0, s * 0.3],
+        knee: add(hip, mul(leg, L.thigh)),
+        ...footFrom(add(hip, mul(leg, L.thigh + L.shin)), [0.1, 1, 0], [-1, 0.1, 0]),
+      };
+    },
+    props: [{ kind: 'roller', at: [0, 7.5, 0] }],
+  });
+}
 
 export const DEMOS: Record<AnatomyId, Demo> = {
   /** Hands under the shoulders, a bit wider; one straight line from heels to head; elbows back at
@@ -2195,6 +2229,168 @@ export const DEMOS: Record<AnatomyId, Demo> = {
     arrow: 'right',
   },
 
+  /** Cat-cow: on hands and knees; drop the belly and lift the head, then round the back up and
+      tuck the head, slowly, with the breath. */
+  'cat-cow': {
+    pose: (d) => {
+      const pelvis: V3 = [-25, 52, 0];
+      const up = unit([46, 6, 0]);
+      const nod = lerp(0.45, -0.75, d);
+      return assemble({
+        pelvis,
+        up,
+        front: unit([up[1], -up[0], 0]),
+        headUp: unit([1, nod, 0]),
+        arch: lerp(7, -9, d),
+        limb: (s) => {
+          const wrist: V3 = [24, 4, s * 18];
+          return { wrist, tip: add(wrist, [15, -2, 0]), elbowPole: [-1, 0, 0], knee: [-25, 6, s * 10], ...tucked([-67, 12, 0], s) };
+        },
+      });
+    },
+    fits: /cat stretch/i,
+    works: { main: ['lowerBack', 'abs'], help: [] },
+    cameras: { side: SIDE, front: unit([0.7, 0.3, 0.65]) },
+    floor: { x: -15, r: 70 },
+    mover: (p) => add(mix(p.pelvis, p.neck, 0.5), mul(p.front, p.arch)),
+    arrow: 'left',
+  },
+
+  /** Foam roll, quads: face down on the forearms, the roller under the thighs; roll slowly from
+      the hips to just above the knees. */
+  'roll-quads': {
+    pose: (d) => {
+      const f = lerp(0.12, 0.85, d);
+      const up = unit([1, 0.12, 0]);
+      const pelvis: V3 = [45 * f, 25, 0];
+      const toes = unit([-1, -0.25, 0]);
+      return assemble({
+        pelvis,
+        up,
+        front: unit([up[1], -up[0], 0]),
+        headUp: unit([1, 0.05, 0]),
+        limb: (s) => {
+          const sh = shoulderOf(pelvis, up, s);
+          const elbow: V3 = [sh[0], 4.5, s * 16];
+          const wrist = add(elbow, [24, -1, -s * 8]);
+          const knee = add(add(pelvis, [0, 0, s * 9]), mul(up, -L.thigh));
+          const ankle = add(knee, mul(up, -L.shin));
+          return { elbow, wrist, tip: add(wrist, [11, -1, -s * 2]), knee, ...footFrom(ankle, toes, [0.24, -0.97, 0]) };
+        },
+        props: [{ kind: 'roller', at: [0, 7.5, 0] }],
+      });
+    },
+    works: { main: ['quads'], help: [] },
+    cameras: { side: SIDE, front: unit([0.6, 0.45, 0.65]) },
+    floor: { x: 10, r: 90 },
+    mover: (p) => p.pelvis,
+    arrow: 'right',
+  },
+
+  /** Foam roll, hamstrings: seated, hands on the floor behind, the roller under the backs of the
+      thighs; lift the hips and roll from the knees to the glutes. */
+  'roll-hamstrings': {
+    pose: (d) => rollSeated(lerp(0.15, 0.85, d) * L.thigh),
+    works: { main: ['hamstrings'], help: [] },
+    cameras: { side: SIDE, front: unit([0.6, 0.45, 0.65]) },
+    floor: { x: 0, r: 90 },
+    mover: (p) => p.pelvis,
+    arrow: 'right',
+  },
+
+  /** Foam roll, calves: seated, hands behind, the roller under the calves; lift the hips and roll
+      from the ankles to below the knees. */
+  'roll-calves': {
+    pose: (d) => rollSeated(L.thigh + lerp(0.15, 0.8, d) * L.shin),
+    works: { main: ['calves'], help: [] },
+    cameras: { side: SIDE, front: unit([0.6, 0.45, 0.65]) },
+    floor: { x: 0, r: 100 },
+    mover: (p) => p.pelvis,
+    arrow: 'right',
+  },
+
+  /** Foam roll, upper back: the roller across the upper back, hands behind the head, knees bent,
+      hips a little up; roll from the middle of the back to the shoulders. */
+  'roll-upper-back': {
+    pose: (d) => {
+      const f = lerp(0.64, 0.9, d);
+      const a = Math.asin(Math.min(0.5, 3 / (L.torso * f)));
+      const up: V3 = [Math.cos(a), Math.sin(a), 0];
+      const front: V3 = [-Math.sin(a), Math.cos(a), 0];
+      const pelvis: V3 = [-L.torso * f * Math.cos(a), 23, 0];
+      const neck = add(pelvis, mul(up, L.torso));
+      return assemble({
+        pelvis,
+        up,
+        front,
+        limb: (s) => {
+          const foot = flatFoot(pelvis[0] - 52, 13, s, 2);
+          const knee = ik(add(pelvis, [0, 0, s * 9]), foot.ankle, L.thigh, L.shin, [0, 1, s * 0.2]);
+          const wrist = add(add(add(neck, mul(up, 15)), mul(front, -7)), [0, 0, s * 6]);
+          return { wrist, tip: add(wrist, [0, 0, -s * 9]), elbowPole: add(mul(front, 0.5), [0, 0, s]), ...foot, knee };
+        },
+        props: [{ kind: 'roller', at: [0, 7.5, 0] }],
+      });
+    },
+    works: { main: ['traps', 'lats'], help: ['lowerBack'] },
+    cameras: { side: SIDE, front: unit([0.35, 0.45, 0.8]) },
+    floor: { x: -20, r: 90 },
+    mover: (p) => p.neck,
+    arrow: 'right',
+  },
+
+  /** Arm circles: standing tall, arms straight out to the sides; draw small, slow circles with
+      the hands. */
+  'arm-circles': {
+    pose: (d) => {
+      const pelvis: V3 = [-2, 94, 0];
+      const t = lean(1);
+      const th = d * Math.PI * 2;
+      return assemble({
+        pelvis,
+        ...t,
+        limb: (s) => {
+          const sh = shoulderOf(pelvis, t.up, s);
+          const wrist = add(sh, mul(unit([0.28 * Math.sin(th), 0.08 + 0.28 * Math.cos(th), s]), 54));
+          return { wrist, tip: handOut(sh, wrist, 16), elbowPole: [0, -1, 0], ...flatFoot(0, 12, s), kneePole: [1, 0, 0] };
+        },
+      });
+    },
+    works: { main: ['sideDelt', 'frontDelt'], help: ['rearDelt'] },
+    cameras: { side: unit([0.55, 0.15, 0.82]), front: unit([1, 0.15, 0.2]) },
+    floor: { x: 0, r: 70 },
+    loop: true,
+    arrow: 'right',
+  },
+
+  /** Standing hip circles: hands on the hips, feet apart; draw big slow circles with the hips,
+      the head staying over the feet. */
+  'hip-circles': {
+    pose: (d) => {
+      const th = d * Math.PI * 2;
+      const pelvis: V3 = [-2 + 7 * Math.cos(th), 92, 7 * Math.sin(th)];
+      const up = unit([-0.13 * Math.cos(th), 1, -0.13 * Math.sin(th)]);
+      const front = unit(sub([1, 0, 0], mul(up, up[0])));
+      const side = unit(cross(front, up));
+      return assemble({
+        pelvis,
+        up,
+        front,
+        side,
+        limb: (s) => {
+          const wrist = add(add(pelvis, mul(up, 9)), add(mul(side, s * 19), mul(front, 3)));
+          return { wrist, tip: add(add(wrist, mul(up, -9)), mul(front, 7)), elbowPole: add(mul(side, s), mul(front, -0.3)), ...flatFoot(0, 15, s, 5), kneePole: [1, 0, s * 0.3] };
+        },
+      });
+    },
+    works: { main: ['obliques', 'lowerBack'], help: ['glutes'] },
+    cameras: { side: SIDE, front: unit([0.7, 0.6, 0.4]) },
+    names: { front: 'Above' },
+    floor: { x: 0, r: 50 },
+    loop: true,
+    arrow: 'right',
+  },
+
 };
 
 /** Other movements that look the same as a demo. */
@@ -2222,6 +2418,13 @@ const NAMED: Record<string, [RegExp, AnatomyId][]> = {
     [/chest and front of shoulder|^elbows back$/i, 'chest-opener'],
   ],
   neck: [[/side neck stretch/i, 'neck-side-stretch']],
+  'foam-roll': [
+    [/^quadriceps-smr/i, 'roll-quads'],
+    [/^hamstring-smr/i, 'roll-hamstrings'],
+    [/^calves-smr/i, 'roll-calves'],
+    [/^rhomboids-smr/i, 'roll-upper-back'],
+  ],
+  circles: [[/^arm circles$/i, 'arm-circles'], [/standing hip circles/i, 'hip-circles']],
 };
 
 /** How an exercise's name changes its demo ("Dumbbell Bench Press", "Incline...", "Goblet Squat"). */
