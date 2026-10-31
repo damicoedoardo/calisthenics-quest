@@ -3053,7 +3053,8 @@ function scripted(run: Run, b: Foe, ux: number, uy: number) {
 const pow = (h: Hero, base: number) => heroDamage(base, h.power, h.ups) * (1 + DIALS.relic * 0.12 * relic(h, 'whetstone'));
 
 /** The Hollow: nothing you throw at it lands. */
-const untouchable = (run: Run, f: Foe) => (f === run.boss && run.setup.zone.boss === 'hollow' && !run.setup.tutorial) || (f.kind === 'unsent' && !lit(run, f)) || !!f.under || f.pileUntil !== undefined;
+/** Nothing can hit it now: the Hollow, an Unsent out of the light, a Mole under the sand, a Squire's pile. */
+export const untouchable = (run: Run, f: Foe) => (f === run.boss && run.setup.zone.boss === 'hollow' && !run.setup.tutorial) || (f.kind === 'unsent' && !lit(run, f)) || !!f.under || f.pileUntil !== undefined;
 
 /** In a lantern's light (the Quiet Miles): some hero who is up stands within LANTERN.r of it. */
 export function lit(run: Pick<Run, 'party'>, f: Pick<Foe, 'x' | 'y' | 'def'>) {

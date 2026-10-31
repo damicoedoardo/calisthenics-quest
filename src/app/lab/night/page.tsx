@@ -365,7 +365,7 @@ export default function NightLab() {
           );
         })}
         <Row icon={<Swords size={16} />} label="The Play tab" note="Story: all six worlds open, the ready strip under them" onClick={() => open(veteran(78, 6), 'tab=play')} />
-        <Row icon={<Swords size={16} />} label="The Fog, sideways" note="Hold the phone across: rooms run left to right, tap a monster to aim at it" onClick={() => open(veteran(14, 1), 'run=0')} />
+        <Row icon={<Swords size={16} />} label="The Fog, sideways" note="Hold the phone across: rooms run left to right, a health bar over each monster" onClick={() => open(veteran(14, 1), 'run=0')} />
         <Row icon={<Swords size={16} />} label="New monsters: Mirror Lake" note="Puddle Frogs, Lake Echoes (your mirror image), Glass Eels, Glass Swans, Lilies; Next floor in the dev menu brings the rest" onClick={() => open(veteran(78, 6), 'run=1')} />
         <Row icon={<Swords size={16} />} label="New monsters: The Cold Forges" note="Soot Rats, Scrap Squires (stand on the pile), Cinder Bats, Measures (find the gap), Kilns; Next floor in the dev menu brings the rest" onClick={() => open(veteran(78, 6), 'run=2')} />
         <Row icon={<Swords size={16} />} label="New monsters: The Plateau" note="Scarabs, Dust Devils, Dune Moles (step off the mound), Sun Lizards, Cacti; Next floor in the dev menu brings the rest" onClick={() => open(veteran(78, 6), 'run=3')} />

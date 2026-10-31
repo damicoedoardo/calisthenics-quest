@@ -33,6 +33,7 @@ import {
   asleep,
   lit,
   shownFalse,
+  untouchable,
   MIDS,
   CREW,
   GALE,
@@ -294,6 +295,8 @@ const askKey = (kind: string, choices: readonly string[] | null | undefined) => 
 const SFX: Record<'slash' | 'arrow' | 'orb' | 'wave', SfxId> = { slash: 'slash', arrow: 'arrow', orb: 'orb', wave: 'wave' };
 const HEAL = '#86efac';
 const RISE_MS = 280;
+/** Where a monster's health bar sits: this share of its picture's height above its middle. */
+const HP_BAR = { top: 0.42 };
 /** The sounds that come in crowds (blows, hits, kills, light); others always play. */
 const CROWD: ReadonlySet<SfxId> = new Set(['slash', 'arrow', 'orb', 'wave', 'hit', 'bossHit', 'kill', 'gem', 'dash']);
 const SFX_PER_FRAME = 2;
@@ -371,7 +374,7 @@ class DungeonScene extends Phaser.Scene {
   private asked = false;
   private fx!: Phaser.GameObjects.Graphics;
   private shadows!: Phaser.GameObjects.Graphics;
-  /** Upright marks over the room (eyes in the fog, a bomb in the air, the ring on the monster you tapped). */
+  /** Upright marks over the room (eyes in the fog, a bomb in the air, health bars). */
   private marks!: Phaser.GameObjects.Graphics;
   /** Glows on the floor under a mid-boss, redrawn each frame. */
   private under!: Phaser.GameObjects.Graphics;
@@ -402,8 +405,6 @@ class DungeonScene extends Phaser.Scene {
   private wantSkill = false;
   private wantFinal = false;
   private wantDodge = false;
-  /** A monster tapped since the last step (null: tapped again, let go). */
-  private wantLock: number | null | undefined = undefined;
   /** Hit-stop: the world holds still until then (the engine's steps wait, none are lost). */
   private stopUntil = 0;
   /** Small hit-stops don't come back before then, so a flurry of hits doesn't stutter. */
@@ -524,23 +525,6 @@ class DungeonScene extends Phaser.Scene {
     em.explode(n, X, Y + dy);
   }
 
-  /** The monster under a tap, if any (never a reflection of you: hitting those hurts). */
-  private foeAt(x: number, y: number): Foe | null {
-    let best: Foe | null = null,
-      bd = Infinity;
-    for (const f of this.run.foes) {
-      const e = this.foes.get(f.id);
-      if (!f.alive || !e || f.kind === 'reflection') continue;
-      const d = Math.hypot(e.s.x - x, e.s.y - y),
-        r = 28 * e.base + 18;
-      if (d < r && d < bd) {
-        bd = d;
-        best = f;
-      }
-    }
-    return best;
-  }
-
   /** Every sheet the run loads: the run's own and each friend's. */
   private allSheets(): [string, Sheet][] {
     return [...Object.entries(this.setup.sheets), ...(this.setup.friends ?? []).flatMap((f, i): [string, Sheet][] => [[`friend${i}`, f.idle], [`friend${i}Walk`, f.walk]])];
@@ -657,12 +641,7 @@ class DungeonScene extends Phaser.Scene {
       on([k.SPACE, k.E, k.SHIFT], () => (this.wantDodge = true));
     }
     this.input.on(Phaser.Input.Events.POINTER_DOWN, (p: Phaser.Input.Pointer) => {
-      // A tap on a monster aims at it (again lets go); anywhere else, the move stick.
-      const f = this.foeAt(p.worldX, p.worldY);
-      if (f) {
-        this.wantLock = this.run.hero.lock === f.id ? null : f.id;
-        return;
-      }
+      // A touch anywhere is the move stick; attacks aim on their own.
       if (!this.stick) this.stick = { id: p.id, x: p.x, y: p.y, dx: 0, dy: 0 };
     });
     this.input.on(Phaser.Input.Events.POINTER_MOVE, (p: Phaser.Input.Pointer) => {
@@ -1077,9 +1056,15 @@ class DungeonScene extends Phaser.Scene {
       for (let y = 5; y < w; y += 6) g.fillStyle(S[2]).fillRect(l - 6, y, 6, 1).fillRect(l + door, y, 6, 1);
       g.restore();
     }
-    const rt = this.walls;
+    let rt = this.walls;
     if (rt instanceof Phaser.GameObjects.RenderTexture) {
-      if (rt.width !== W || rt.height !== H) rt.resize(W, H, false);
+      // A room of another size gets a new picture. Phaser's resize kept drawing at the old size and
+      // showed it stretched, so every door sat off its real gap and you had to walk into the wall.
+      if (rt.width !== W || rt.height !== H) {
+        rt.destroy();
+        rt = this.walls = this.add.renderTexture(0, 0, W, H).setOrigin(0).setDepth(-1);
+        this.turn();
+      }
       rt.clear().draw(g, 0, 0);
     }
   }
@@ -1283,12 +1268,11 @@ class DungeonScene extends Phaser.Scene {
 
   /** What you press this step (the bot's, on autopilot). Buttons count once. */
   private myInput(): Input {
-    const input: Input = this.bot ? botInput(this.run) : { ...this.stickInput(), ability: this.wantAbility, skill: this.wantSkill, final: this.wantFinal, dodge: this.wantDodge, lock: this.wantLock };
+    const input: Input = this.bot ? botInput(this.run) : { ...this.stickInput(), ability: this.wantAbility, skill: this.wantSkill, final: this.wantFinal, dodge: this.wantDodge };
     this.wantAbility = false;
     this.wantSkill = false;
     this.wantFinal = false;
     this.wantDodge = false;
-    this.wantLock = undefined;
     // A live run doesn't stop for your bag or menu: you just stand still.
     return this.paused ? { x: 0, y: 0, ability: false } : input;
   }
@@ -2788,14 +2772,6 @@ class DungeonScene extends Phaser.Scene {
         this.fx.strokePath();
       }
     }
-    // The monster you tapped: a ring under it, and corner ticks round it.
-    const lk = r.hero.lock === null ? undefined : r.foes.find((f) => f.id === r.hero.lock && f.alive);
-    if (lk) {
-      const [X, Y] = this.P(lk.x, lk.y),
-        q = lk.def.r + 10 + 2 * Math.sin(now / 120);
-      mk.lineStyle(2, 0xfde68a, 0.9).strokeEllipse(X, Y + lk.def.r + 4, lk.def.r * 3, lk.def.r);
-      for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) mk.lineBetween(X + sx * q, Y + sy * q, X + sx * (q - 6), Y + sy * q).lineBetween(X + sx * q, Y + sy * q, X + sx * q, Y + sy * (q - 6));
-    }
     // Monsters on fire from Embers: little flames dance on them till it goes out.
     for (const f of r.foes) {
       if (!f.alive || !f.burn || r.t >= f.burn.until) continue;
@@ -2935,6 +2911,21 @@ class DungeonScene extends Phaser.Scene {
         const [X, Y] = this.P(f.x, f.y);
         if (!blink) mk.fillStyle(f === r.boss || f === r.warden ? 0xc084fc : 0xfca5a5, a).fillRect(X - 4, Y - 6, 2, 2).fillRect(X + 2, Y - 6, 2, 2);
       }
+    // Each monster's health over its head, as a small pixel bar (the boss's is at the top of the
+    // screen). None on what can't be hit just now, on reflections (hitting those hurts you), or on
+    // what the fog still hides.
+    for (const f of r.foes) {
+      const e = this.foes.get(f.id);
+      if (!e || !f.alive || f === r.boss || f.kind === 'reflection' || f.kind === 'image' || untouchable(r, f) || now - e.born < RISE_MS) continue;
+      if (sight !== null && Math.hypot(f.x - r.hero.x, f.y - r.hero.y) > sight * 0.75) continue;
+      const [X, Y] = this.P(f.x, f.y),
+        w = Math.round(Math.min(36, Math.max(16, f.def.r * 1.6 * (f.elite ? ELITE.r : 1)))),
+        x = Math.round(X - w / 2),
+        y = Math.round(Y - e.s.displayHeight * HP_BAR.top),
+        fill = Math.ceil((w - 2) * Math.max(0, Math.min(1, f.hp / f.maxHp)));
+      mk.fillStyle(0x07080d, 0.85).fillRect(x, y, w, 4);
+      mk.fillStyle(f === r.warden ? 0xc084fc : f.elite ? 0xfbbf24 : 0xef4444).fillRect(x + 1, y + 1, fill, 2);
+    }
     // Your shots: arrows leave a short streak, orbs glow and pulse.
     for (const sh of r.shots) {
       const sp = Math.hypot(sh.vx, sh.vy) || 1,

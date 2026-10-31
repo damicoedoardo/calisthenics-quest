@@ -64,6 +64,7 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change how a floor is laid out (how many rooms, branches, shortcuts) | `LAYOUT` and `ROOM_ODDS` in `content.ts`, `makeFloor` in `engine.ts` |
 | Change the minimap | `FloorMap` in `src/components/FogRun.tsx` (it reads `Hud.map`, built by `miniMap` in `scene.ts`) |
 | Change what a door says | `doorLook` in `scene.ts` (unknown rooms show `UNKNOWN`) |
+| Change the health bar over each monster (size, color, how high) | `HP_BAR` and the bar loop in `drawFx` (`scene.ts`); none on the boss (its bar is the HUD's), on reflections, on what `untouchable` (`engine.ts`) says can't be hit now, or on what the fog hides. Elites are gold, the mid-boss violet |
 | Change crits | `CRIT` in `src/balance/stats.ts` (everyone's chance, what a crit does), `WEAPON_CRIT` and the `crit`/`critDmg` sizes in `src/balance/items.ts`; the roll is in `damage` (`engine.ts`, its own `run.critRnd`, which Evade shares), the gold number in `scene.ts` |
 | Add or change an item bonus | its id in `BonusId` and its line in `BONUSES` (`items.ts`), its size in `BONUS_SIZE` and its slots in `BONUS_POOL` (`src/balance/items.ts`), its worth in `WORTH`, what it does in `applyGear`/`gearFx` (`engine.ts`), and in `powerScore` (`src/game/power.ts`) if it can be measured there |
 | Change where the bot goes on a floor | `route` in `bot.ts` |
@@ -379,8 +380,9 @@ stand upright at `P`. The stick is turned back the other way in `stickInput`. Th
 new drawing in engine points goes on a turned layer (or through `fade`), and anything that must stay
 upright goes through `P` (or `fade(..., true)`).
 
-A tap on a monster aims your attacks at it while it's in reach (`Input.lock`, `run.hero.lock`,
-`locked` in `engine.ts`); a second tap lets go. The bot never locks.
+Attacks aim on their own at the nearest monster; a touch anywhere is the move stick. Tap-to-aim
+and its gold ring were taken out of the scene (2026-10-31, Edoardo's call); the engine still reads
+`Input.lock` (`run.hero.lock`, `locked` in `engine.ts`), so an old client in a live run doesn't break.
 
 Effects are capped (`FX_CAP` in `scene.ts`: particles and faded drawings alive at once) so a
 pile-up can't stall a slow phone; real fights peak far below the caps.
@@ -390,7 +392,9 @@ What a frame costs, kept small for phones (measured with a phone-speed CPU in Ch
 - The walls and doors are some 17,000 small rects. `drawRoom` draws them on `room`, a Graphics off
   the display list, and stamps that into `walls`, a RenderTexture, once per room and again when it
   is cleared; a Graphics on screen would redraw every rect every frame. Without a renderer (a
-  fast bot run) `walls` is the Graphics itself.
+  fast bot run) `walls` is the Graphics itself. A room of another size gets a new RenderTexture
+  (then `turn` again): Phaser's `resize` kept drawing at the old size and showed it stretched, so
+  the doors were drawn up to 30 px off the gaps the engine lets you through.
 - Shadows under the hero and monsters are images from a pool (`shadowPool`, texture `shadow`), not
   Graphics ellipses, which are cut into triangles anew each frame for every monster.
 - Damage numbers are BitmapText from a digit sheet drawn once in the pixel font (`numberFonts`:

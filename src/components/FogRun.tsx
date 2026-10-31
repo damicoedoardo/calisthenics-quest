@@ -426,8 +426,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party, tutor
       {!tutorial && tip && hud && !end && hud.seconds < 6 && (
         <p className="pointer-events-none absolute inset-x-6 bottom-28 mx-auto max-w-md animate-pulse text-center text-sm text-slate-300">
           {keys
-            ? `WASD or the arrows to move; you attack on your own. Click a monster to aim at it. Space dodges shots, Q is ${ABILITIES[hud.ability?.id ?? 'charge'].name}. ${zone.bossName} waits ${hud.floors} floors down.`
-            : `Drag to move; you attack on your own. Tap a monster to aim at it. Dodge slips through shots. ${zone.bossName} waits ${hud.floors} floors down.`}
+            ? `WASD or the arrows to move; you attack the nearest monster on your own. Space dodges shots, Q is ${ABILITIES[hud.ability?.id ?? 'charge'].name}. ${zone.bossName} waits ${hud.floors} floors down.`
+            : `Drag to move; you attack the nearest monster on your own. Dodge slips through shots. ${zone.bossName} waits ${hud.floors} floors down.`}
         </p>
       )}
 
@@ -783,7 +783,6 @@ function Key({ k, corner = false }: { k: string; corner?: boolean }) {
 function KeyList() {
   const rows: [string, string][] = [
     ['WASD', 'Move (or the arrows)'],
-    ['Click', 'Aim at a monster'],
     ['Q', 'Class ability'],
     ['R F', "Your SP's move and final"],
     ['Space', 'Dodge (or E, Shift)'],
