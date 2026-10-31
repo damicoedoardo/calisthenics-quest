@@ -64,6 +64,7 @@ export default {
         loot: 'loot 1.4s cubic-bezier(.2,.8,.3,1.2) both',
         spark: 'spark 1.6s ease-out infinite',
         float: 'float 2.4s ease-in-out infinite',
+        bob: 'float .9s ease-in-out infinite',
         fall: 'fall linear forwards',
         flicker: 'flicker 1.6s ease-in-out infinite',
         shake: 'shake .4s ease-in-out',

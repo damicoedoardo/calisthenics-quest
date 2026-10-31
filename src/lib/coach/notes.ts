@@ -2,14 +2,15 @@ import { MAX_NOTES } from '@/balance';
 import type { CoachNote, CoachState } from './types';
 
 /* Coach notes: the flexible part of the coach's memory. Short, typed, dated, and few: past
-   MAX_NOTES the oldest goes first, but a note about pain stays until you or the coach remove it. */
+   MAX_NOTES the oldest goes first, but a note about pain or a rule of yours stays until you or the
+   coach remove it. */
 
 export function addNote(coach: CoachState, note: Pick<CoachNote, 'type' | 'text' | 'by'> & { until?: string }, now: Date, id: () => string): CoachState {
   const text = note.text.trim().slice(0, 200);
   if (!text) return coach;
   let notes = [...coach.notes, { ...note, text, id: id(), at: now.toISOString() }];
   while (notes.length > MAX_NOTES) {
-    const drop = notes.findIndex((n) => n.type !== 'pain');
+    const drop = notes.findIndex((n) => n.type !== 'pain' && n.type !== 'rule');
     notes = notes.filter((_, i) => i !== (drop === -1 ? 0 : drop));
   }
   return { ...coach, notes };

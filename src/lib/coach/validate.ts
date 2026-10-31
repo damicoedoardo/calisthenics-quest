@@ -1,12 +1,17 @@
-import { MAX_SETS, MAX_SETS_PER_FAMILY, SET_SECONDS } from '@/balance';
+import { LAWS, MAX_SETS, MAX_SETS_PER_FAMILY, TIME_SLACK } from '@/balance';
+import type { Session } from '../game';
+import { comingBack, longestRun } from './laws';
 import type { LibraryExercise } from '@/exercises/library';
 import { spares, usable } from './options';
+import { BLOCKS, inOrder } from './craft';
+import { minutesOf } from './time';
 import type { CoachPlan, CoachProfile, PlanItem } from './types';
 
-/* The guardrails every workout passes, whoever built it (the built-in coach or an LLM): a warm-up
-   first and a stretch last, only real exercises you have the gear for, nothing on a sore spot's
-   list, no family hammered, and about the minutes you said. What it can fix it fixes, and says so;
-   `problems` tells an LLM what to do better. */
+/* The guardrails every workout passes, whoever built it (the built-in coach or an LLM): the
+   workout laws (laws.ts: a warm-up first, nothing on a sore spot, no family hammered, a gentle
+   comeback, no sudden long run, about your minutes) and only real exercises you have the gear for.
+   What it can fix it fixes, and says so. The craft's defaults (block order, a cool-down; craft.ts)
+   are only noted: the player may want it otherwise. `problems` tells an LLM what to do better. */
 
 export interface Checked {
   plan: CoachPlan;
@@ -16,11 +21,9 @@ export interface Checked {
 /** Warm-ups and stretches that need no library entry. */
 const BUILT_IN = new Set(['circles', 'toe-touch', 'quad-stretch', 'child-pose']);
 
-export function minutesOf(items: PlanItem[]): number {
-  return Math.round(items.filter((i) => !i.skipped).reduce((a, i) => a + (i.role === 'warmup' || i.role === 'stretch' || i.run ? i.low * i.sets : i.sets * SET_SECONDS), 0) / 60);
-}
+export { minutesOf };
 
-export function validate(plan: CoachPlan, ctx: { all: LibraryExercise[]; profile: CoachProfile }): Checked {
+export function validate(plan: CoachPlan, ctx: { all: LibraryExercise[]; profile: CoachProfile; sessions?: Session[]; now?: Date }): Checked {
   const problems: string[] = [];
   const byId = new Map(ctx.all.map((x) => [x.id, x]));
   const spare = spares(ctx.profile);
@@ -36,11 +39,19 @@ export function validate(plan: CoachPlan, ctx: { all: LibraryExercise[]; profile
   const warm = items.filter((i) => i.role === 'warmup'),
     stretch = items.filter((i) => i.role === 'stretch'),
     work = items.filter((i) => i.role !== 'warmup' && i.role !== 'stretch');
-  if (!warm.length) problems.push('no warm-up: added one');
-  if (!stretch.length) problems.push('no stretch: added one');
+  // Defaults, only noted: the craft's order, and a cool-down.
+  if (inOrder(work).some((it, k) => it !== work[k])) problems.push(`note: the usual order is ${BLOCKS.slice(1, 4).join(', ')} (a default; fine if they asked)`);
+  if (!stretch.length) problems.push('note: no cool-down (a default; fine if they asked)');
   if (!work.length) problems.push('no real work in the workout');
-  const first = warm.length ? warm : [{ id: 'circles', name: 'Joint circles', demo: 'circles', cue: 'Start with small circles, get bigger.', family: 'mobility', role: 'warmup', unit: 'sec', sets: 1, low: 90, high: 90, easier: [], swaps: [] } satisfies PlanItem];
-  const last = stretch.length ? stretch : [{ id: 'toe-touch', name: 'Toe touch stretch', demo: 'toe-touch', cue: 'Soft knees, let the head hang.', family: 'stretch', role: 'stretch', unit: 'sec', sets: 1, low: 60, high: 60, easier: [], swaps: [] } satisfies PlanItem];
+  // Law 1: a warm-up first, long enough.
+  let first: PlanItem[] = warm.length ? warm : [{ id: 'circles', name: 'Joint circles', demo: 'circles', cue: 'Start with small circles, get bigger.', family: 'mobility', role: 'warmup', unit: 'sec', sets: 1, low: LAWS.warmupSec, high: LAWS.warmupSec, easier: [], swaps: [] } satisfies PlanItem];
+  if (!warm.length) problems.push('no warm-up: added one (law 1)');
+  const warmSec = first.reduce((a, i) => a + i.low * i.sets, 0);
+  if (warmSec < LAWS.warmupSec) {
+    problems.push(`warm-up ${warmSec}s, at least ${LAWS.warmupSec}s: made longer (law 1)`);
+    first = first.map((it, k) => (k === first.length - 1 ? { ...it, low: it.low + LAWS.warmupSec - warmSec, high: it.low + LAWS.warmupSec - warmSec } : it));
+  }
+  const last = stretch;
 
   // No family past its cap; no workout past the total.
   const perFamily = new Map<string, number>();
@@ -57,15 +68,48 @@ export function validate(plan: CoachPlan, ctx: { all: LibraryExercise[]; profile
     while (hard > MAX_SETS && capped[k].sets > 1 && !capped[k].run) (capped[k] = { ...capped[k], sets: capped[k].sets - 1 }), hard--;
   }
 
-  // About the minutes you said: a quarter over at most, trimming a set at a time from the end.
+  // Law 7: back from a break, a third of the sets go. Law 8: no run much longer than lately.
+  const now = ctx.now ?? new Date(plan.at);
+  if (ctx.sessions && comingBack(ctx.sessions, now)) {
+    let cut = false;
+    for (let k = 0; k < capped.length; k++) {
+      const it = capped[k];
+      const sets = Math.max(1, Math.round(it.sets * (1 - LAWS.comebackCut)));
+      if (!it.run && sets < it.sets) (capped[k] = { ...it, sets }), (cut = true);
+    }
+    if (cut) problems.push('coming back after a break: a third of the sets dropped (law 7)');
+  }
+  const longest = ctx.sessions ? longestRun(ctx.sessions, now) : 0;
+  for (let k = 0; k < capped.length; k++) {
+    const it = capped[k];
+    const max = Math.round(longest * (1 + LAWS.runSpike));
+    if (!it.run || !longest || it.low <= max) continue;
+    const f = max / it.low;
+    const run = it.run.map((st) => ({ ...st, sec: Math.max(30, Math.round((st.sec * f) / 10) * 10) }));
+    const sec = run.reduce((a, st) => a + st.sec, 0);
+    capped[k] = { ...it, run, low: sec, high: sec };
+    problems.push(`${it.name}: ${Math.round(it.low / 60)} min is far past the longest run lately (${Math.round(longest / 60)} min): cut to ${Math.round(sec / 60)} (law 8)`);
+  }
+
+  // About the minutes you said: a little over at most. Like a trainer short on time: accessories
+  // and core down to two sets, then the accessories go, then core, then a set of the main moves
+  // from the last. The warm-up and the cool-down stay.
   let all = [...first, ...capped, ...last];
-  const limit = ctx.profile.minutes * 1.25;
+  const limit = ctx.profile.minutes * (1 + TIME_SLACK);
   if (minutesOf(all) > limit) {
     problems.push(`about ${minutesOf(all)} min, more than your ${ctx.profile.minutes}: trimmed`);
-    for (let guard = 0; minutesOf(all) > limit && guard < 50; guard++) {
-      const k = all.findLastIndex((i) => i.role !== 'warmup' && i.role !== 'stretch' && !i.run && i.sets > 2);
-      if (k === -1) break;
-      all = all.map((it, j) => (j === k ? { ...it, sets: it.sets - 1 } : it));
+    const steps = [(i: PlanItem) => i.role === 'accessory' && i.sets > 2, (i: PlanItem) => i.role === 'core' && i.sets > 2, 'accessory', 'core', (i: PlanItem) => i.role === 'main' && !i.run && i.sets > 2] as const;
+    for (let guard = 0; minutesOf(all) > limit && guard < 60; guard++) {
+      let changed = false;
+      for (const step of steps) {
+        const drop = typeof step === 'string';
+        const k = drop ? all.findLastIndex((i) => i.role === step) : all.findLastIndex(step);
+        if (k === -1) continue;
+        all = drop ? all.filter((_, j) => j !== k) : all.map((it, j) => (j === k ? { ...it, sets: it.sets - 1 } : it));
+        changed = true;
+        break;
+      }
+      if (!changed) break;
     }
   }
   return { plan: { ...plan, items: all }, problems };
