@@ -1,5 +1,5 @@
 import { finishSession, initialState, levelInfo, todaysQuest, totalXp, type Checkin, type GameState, type Letter, type Rir } from '@/lib/game';
-import { recordRun, zoneStatus, ZONES } from '@/lib/fog';
+import { recordRun, zoneDue, zoneStatus, ZONES } from '@/lib/fog';
 import { giveSp, SP_FLOOR, spAfterRun } from '@/lib/sp';
 import { dayKey, daysApart, isRestDay } from '@/lib/days';
 import { seeded } from '@/lib/random';
@@ -217,7 +217,9 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
       if (state.sp) state = spAfterRun(state, { floor: SP_FLOOR });
       return;
     }
-    const zone = ZONES.find((z) => zoneStatus(state, z).state === 'open');
+    // A model player meets each zone at the workout it is built for (zoneDue), though a strong one
+    // can go in sooner.
+    const zone = ZONES.find((z) => zoneStatus(state, z).state === 'open' && zoneDue(state, z));
     if (!zone) return;
     tries[zone.id] = (tries[zone.id] ?? 0) + 1;
     const won = tries[zone.id] >= kind.bossOnTry;
@@ -234,7 +236,7 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
     chapter: storyState(state),
     stage: flameStage(state.sessions.length).id,
     level: levelInfo(totalXp(state)).level,
-    open: ZONES.filter((z) => zoneStatus(state, z).state === 'open').map((z) => z.id),
+    open: ZONES.filter((z) => zoneStatus(state, z).state === 'open' && zoneDue(state, z)).map((z) => z.id),
   });
 
   /** Stat points go where this kind of player puts them. */
@@ -284,6 +286,13 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
       note('zone', `Fog zone opens: ${ZONES[id].name}`);
       openedAt[id] = state.sessions.length;
       snapshots.push({ label: `zone${id}-open`, state });
+    }
+    // SIM_EVERY=1 also keeps the player after every workout of the first two zones (zone0-w03...),
+    // to see how win rates climb between a zone opening and its "later" point.
+    if (trains && process.env.SIM_EVERY && state.sessions.length <= 26) {
+      const at = Math.max(...Object.keys(openedAt).map(Number));
+      const w = String(state.sessions.length).padStart(2, '0');
+      if (!snapshots.some((x) => x.label === `zone${at}-w${w}`)) snapshots.push({ label: `zone${at}-w${w}`, state });
     }
     for (const [id, n] of Object.entries(openedAt)) {
       if (state.sessions.length >= n + laterBy(Number(id)) && !snapshots.some((x) => x.label === `zone${id}-later`)) snapshots.push({ label: `zone${id}-later`, state });

@@ -182,7 +182,7 @@ if (!isMainThread) {
     for (const snap of snaps) {
       const per = await measure(snap, scales[snap.zone] ?? 1);
       table.push({ snap, rates: per.map((p) => rate(p.res)) });
-      for (const p of per) raw.push({ snap: snap.label, cls: p.cls, runs: p.res.map((r) => ({ won: r.won, seconds: r.seconds, hits: r.hits ?? 0 })) });
+      for (const p of per) raw.push({ snap: snap.label, cls: p.cls, runs: p.res.map((r) => ({ won: r.won, seconds: r.seconds, hits: r.hits ?? 0, floor: r.floor, room: r.room, bossAt: r.bossAt })) });
       const all = per.flatMap((p) => p.res);
       const reached = all.filter((r) => r.bossAt !== null).length / all.length;
       const lost = all.filter((r) => !r.won).map((r) => r.floor);

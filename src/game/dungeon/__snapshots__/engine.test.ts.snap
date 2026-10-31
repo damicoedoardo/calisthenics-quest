@@ -3,7 +3,7 @@
 exports[`replays > every zone plays the same run as before 1`] = `
 [
   {
-    "bossAt": 665,
+    "bossAt": 638,
     "floor": 10,
     "gear": {
       "bag": [
@@ -11,21 +11,120 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "base": [
             {
               "id": "damage",
-              "v": 0.06452138313009682,
+              "v": 0.071346794219414,
             },
             {
               "id": "crit",
-              "v": 0.03729592883260921,
+              "v": 0.046497010995517486,
             },
             {
               "id": "critDmg",
-              "v": 0.18647964416304605,
+              "v": 0.23248505497758742,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "slayer",
+              "v": 0.08812267891742523,
+            },
+            {
+              "id": "power",
+              "v": 0.091601945750881,
+            },
+          ],
+          "cls": "warrior",
+          "id": "91yhyzsdhe0s",
+          "level": 5,
+          "name": "Dusk Song",
+          "need": {
+            "n": 4,
+            "stat": "damage",
+          },
+          "needLevel": 2,
+          "rarity": "rare",
+          "slot": "weapon",
+        },
+        {
+          "base": [
+            {
+              "id": "health",
+              "v": 10.885502575712744,
+            },
+            {
+              "id": "armor",
+              "v": 0.019813224462568762,
             },
           ],
           "bonuses": [],
           "cls": "warrior",
-          "id": "1ss7ed6pclbwp",
+          "id": "hp0v313hfo42",
+          "level": 5,
+          "name": "Ashen plate",
+          "need": null,
+          "needLevel": 1,
+          "rarity": "common",
+          "slot": "armor",
+        },
+        {
+          "base": [
+            {
+              "id": "damage",
+              "v": 0.07817613718963111,
+            },
+            {
+              "id": "crit",
+              "v": 0.04066421395982616,
+            },
+            {
+              "id": "critDmg",
+              "v": 0.20332106979913078,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "slayer",
+              "v": 0.09180639597403352,
+            },
+            {
+              "id": "power",
+              "v": 0.0977170328426524,
+            },
+            {
+              "id": "speed",
+              "v": 0.05192439734105137,
+            },
+          ],
+          "cls": "warrior",
+          "id": "qee2zn1rnpx82",
           "level": 7,
+          "name": "Grave Heart",
+          "need": {
+            "n": 6,
+            "stat": "damage",
+          },
+          "needLevel": 2,
+          "rarity": "rare",
+          "slot": "weapon",
+        },
+        {
+          "base": [
+            {
+              "id": "damage",
+              "v": 0.059096409885138264,
+            },
+            {
+              "id": "crit",
+              "v": 0.035891190755646674,
+            },
+            {
+              "id": "critDmg",
+              "v": 0.1794559537782334,
+            },
+          ],
+          "bonuses": [],
+          "cls": "warrior",
+          "id": "1du7rhp1ebw03e",
+          "level": 8,
           "name": "Ashen sword",
           "need": {
             "n": 4,
@@ -36,130 +135,28 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "slot": "weapon",
         },
         {
-          "base": [],
-          "bonuses": [
-            {
-              "id": "armor",
-              "v": 0.012886067770917714,
-            },
-            {
-              "id": "critDmg",
-              "v": 0.13698609149046242,
-            },
-          ],
-          "cls": null,
-          "id": "h9387e16mjjft",
-          "level": 4,
-          "name": "Ashen amulet of Stone",
-          "need": null,
-          "needLevel": 1,
-          "rarity": "magic",
-          "slot": "charm",
-        },
-        {
-          "base": [
-            {
-              "id": "health",
-              "v": 11.629152066372335,
-            },
-            {
-              "id": "armor",
-              "v": 0.0220167695312798,
-            },
-          ],
-          "bonuses": [],
-          "cls": "warrior",
-          "id": "1a10oc13so689",
-          "level": 8,
-          "name": "Ashen plate",
-          "need": null,
-          "needLevel": 2,
-          "rarity": "common",
-          "slot": "armor",
-        },
-        {
-          "base": [
-            {
-              "id": "health",
-              "v": 11.848425389004406,
-            },
-            {
-              "id": "armor",
-              "v": 0.022570473001652956,
-            },
-          ],
-          "bonuses": [
-            {
-              "id": "move",
-              "v": 0.04225721736796936,
-            },
-          ],
-          "cls": "warrior",
-          "id": "1ka3l891kw4k0b",
-          "level": 7,
-          "name": "Ashen plate of Wind",
-          "need": null,
-          "needLevel": 2,
-          "rarity": "magic",
-          "slot": "armor",
-        },
-        {
-          "base": [
-            {
-              "id": "health",
-              "v": 13.190667758183555,
-            },
-            {
-              "id": "armor",
-              "v": 0.02636124517120421,
-            },
-          ],
-          "bonuses": [
-            {
-              "id": "heal",
-              "v": 0.8350651239990257,
-            },
-            {
-              "id": "cooldown",
-              "v": 0.06331106541204498,
-            },
-            {
-              "id": "evade",
-              "v": 0.01671253645428107,
-            },
-          ],
-          "cls": "warrior",
-          "id": "zcfzuejd3bgi",
-          "level": 8,
-          "name": "Dusk Heart",
-          "need": null,
-          "needLevel": 2,
-          "rarity": "rare",
-          "slot": "armor",
-        },
-        {
           "base": [
             {
               "id": "damage",
-              "v": 0.07587580395783372,
+              "v": 0.06296085312324967,
             },
             {
               "id": "crit",
-              "v": 0.04283448368194513,
+              "v": 0.03569274852867239,
             },
             {
               "id": "critDmg",
-              "v": 0.21417241840972567,
+              "v": 0.17846374264336196,
             },
           ],
           "bonuses": [
             {
               "id": "slayer",
-              "v": 0.08542195589210094,
+              "v": 0.07907129345574976,
             },
           ],
           "cls": "warrior",
-          "id": "15mj52i5gs59r",
+          "id": "1cianda1r6vbq6",
           "level": 8,
           "name": "Ashen sword of the Hunt",
           "need": {
@@ -174,25 +171,53 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "base": [
             {
               "id": "damage",
-              "v": 0.06606895993978511,
+              "v": 0.06548688071370497,
             },
             {
               "id": "crit",
-              "v": 0.034646173396380625,
+              "v": 0.030244986168108882,
             },
             {
               "id": "critDmg",
-              "v": 0.17323086698190313,
+              "v": 0.15122493084054442,
+            },
+          ],
+          "bonuses": [],
+          "cls": "warrior",
+          "id": "1d74l3s1had835",
+          "level": 9,
+          "name": "Ashen sword",
+          "need": {
+            "n": 4,
+            "stat": "damage",
+          },
+          "needLevel": 2,
+          "rarity": "common",
+          "slot": "weapon",
+        },
+        {
+          "base": [
+            {
+              "id": "damage",
+              "v": 0.08207423771372913,
+            },
+            {
+              "id": "crit",
+              "v": 0.04087451133411378,
+            },
+            {
+              "id": "critDmg",
+              "v": 0.2043725566705689,
             },
           ],
           "bonuses": [
             {
               "id": "power",
-              "v": 0.09791839174135868,
+              "v": 0.08941551696696784,
             },
           ],
           "cls": "warrior",
-          "id": "1ol6lbh1i7ltli",
+          "id": "y85v1evgkoza",
           "level": 9,
           "name": "Ashen sword of Will",
           "need": {
@@ -206,35 +231,28 @@ exports[`replays > every zone plays the same run as before 1`] = `
         {
           "base": [
             {
-              "id": "damage",
-              "v": 0.06539739606839726,
+              "id": "health",
+              "v": 14.987104958135868,
             },
             {
-              "id": "crit",
-              "v": 0.03713494370179251,
-            },
-            {
-              "id": "critDmg",
-              "v": 0.18567471850896256,
+              "id": "armor",
+              "v": 0.02148624506520778,
             },
           ],
           "bonuses": [
             {
-              "id": "speed",
-              "v": 0.04525923833154934,
+              "id": "evade",
+              "v": 0.01564023502146802,
             },
           ],
           "cls": "warrior",
-          "id": "19b6n5oqapa8f",
+          "id": "1dt20xljwxn44",
           "level": 9,
-          "name": "Ashen sword of Haste",
-          "need": {
-            "n": 4,
-            "stat": "damage",
-          },
+          "name": "Ashen plate of Mist",
+          "need": null,
           "needLevel": 2,
           "rarity": "magic",
-          "slot": "weapon",
+          "slot": "armor",
         },
       ],
       "worn": {
@@ -242,37 +260,37 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "base": [
             {
               "id": "health",
-              "v": 18.584196280002594,
+              "v": 12.708670918777585,
             },
             {
               "id": "armor",
-              "v": 0.033795466435718534,
+              "v": 0.02721866912064851,
             },
           ],
           "bonuses": [
             {
-              "id": "heal",
-              "v": 1.1306601584199072,
-            },
-            {
               "id": "move",
-              "v": 0.05355760302377343,
+              "v": 0.05579468121528625,
             },
             {
-              "id": "cooldown",
-              "v": 0.0828542796686232,
+              "id": "heal",
+              "v": 0.8641618062114714,
             },
             {
               "id": "evade",
-              "v": 0.02419053697407693,
+              "v": 0.020243901230549814,
+            },
+            {
+              "id": "cooldown",
+              "v": 0.0747137182103902,
             },
           ],
           "cls": "warrior",
-          "id": "1vzk5th47yiu2",
-          "level": 8,
+          "id": "163d1f99gktoy",
+          "level": 4,
           "name": "First Light plate",
           "need": null,
-          "needLevel": 4,
+          "needLevel": 2,
           "rarity": "legendary",
           "slot": "armor",
         },
@@ -280,136 +298,93 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "base": [],
           "bonuses": [
             {
-              "id": "damage",
-              "v": 0.04532109745516302,
+              "id": "move",
+              "v": 0.04116249862447497,
+            },
+            {
+              "id": "slayer",
+              "v": 0.08366882506610128,
             },
             {
               "id": "heal",
-              "v": 0.8114497430544534,
+              "v": 0.7070509168866557,
             },
           ],
           "cls": null,
-          "id": "1bspg2c1ua4w4o",
-          "level": 7,
-          "name": "Ashen band of Fury",
+          "id": "1fr0z7uhp7ydv",
+          "level": 3,
+          "name": "Wild Oath",
           "need": null,
           "needLevel": 2,
-          "rarity": "magic",
+          "rarity": "rare",
           "slot": "charm",
         },
       },
     },
     "height": null,
-    "hits": 60,
-    "hp": 479,
-    "kills": 424,
+    "hits": 42,
+    "hp": 480,
+    "kills": 417,
     "level": 16,
-    "maxHp": 584,
+    "maxHp": 498,
     "room": 6,
-    "seconds": 688,
+    "seconds": 664,
     "why": "boss",
     "won": true,
   },
   {
-    "bossAt": 550,
+    "bossAt": 461,
     "floor": 10,
     "gear": {
       "bag": [
         {
-          "base": [
-            {
-              "id": "health",
-              "v": 19.10156860394636,
-            },
-            {
-              "id": "armor",
-              "v": 0.02485061047993228,
-            },
-          ],
-          "bonuses": [],
-          "cls": "archer",
-          "id": "1tkl87yn84tys",
-          "level": 17,
-          "name": "Drowned jerkin",
-          "need": null,
-          "needLevel": 5,
-          "rarity": "common",
-          "slot": "armor",
-        },
-        {
           "base": [],
           "bonuses": [
             {
-              "id": "slayer",
-              "v": 0.09463088489156217,
+              "id": "critDmg",
+              "v": 0.23706212217798836,
+            },
+            {
+              "id": "leech",
+              "v": 0.010558950549056008,
             },
           ],
           "cls": null,
-          "id": "jlcsgis0j7m6",
-          "level": 17,
-          "name": "Drowned band",
+          "id": "1t6k97y1qm18yv",
+          "level": 16,
+          "name": "Drowned amulet of Ruin",
           "need": null,
           "needLevel": 5,
-          "rarity": "common",
+          "rarity": "magic",
           "slot": "charm",
         },
         {
           "base": [
             {
-              "id": "health",
-              "v": 20.02823255112162,
-            },
-            {
-              "id": "armor",
-              "v": 0.027310482085479888,
-            },
-          ],
-          "bonuses": [
-            {
-              "id": "cooldown",
-              "v": 0.07545791024942881,
-            },
-            {
-              "id": "move",
-              "v": 0.05054489636727842,
-            },
-          ],
-          "cls": "archer",
-          "id": "15y83weu13m37",
-          "level": 14,
-          "name": "Quiet Spark",
-          "need": null,
-          "needLevel": 5,
-          "rarity": "rare",
-          "slot": "armor",
-        },
-        {
-          "base": [
-            {
               "id": "damage",
-              "v": 0.09073698792674532,
+              "v": 0.0885809935026778,
             },
             {
               "id": "crit",
-              "v": 0.0512590869498672,
+              "v": 0.04966861879848875,
             },
             {
               "id": "critDmg",
-              "v": 0.17086362316622403,
+              "v": 0.1655620626616292,
             },
           ],
           "bonuses": [
             {
-              "id": "speed",
-              "v": 0.051695152318356564,
+              "id": "leech",
+              "v": 0.012354667096704618,
             },
           ],
           "cls": "archer",
-          "id": "182vdq1lj5ssy",
-          "level": 17,
-          "name": "Drowned bow of Haste",
+          "id": "z4i93f1p3f5l9",
+          "level": 16,
+          "name": "Drowned bow of Thirst",
           "need": {
-            "n": 13,
+            "n": 11,
             "stat": "speed",
           },
           "needLevel": 5,
@@ -420,63 +395,103 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "base": [],
           "bonuses": [
             {
-              "id": "critDmg",
-              "v": 0.2540585287500546,
+              "id": "evade",
+              "v": 0.016165862158032507,
+            },
+            {
+              "id": "heal",
+              "v": 0.902146428220058,
             },
           ],
           "cls": null,
-          "id": "1kghmfl9cv1qh",
-          "level": 18,
-          "name": "Drowned ring",
+          "id": "k3847t9a6u1a",
+          "level": 14,
+          "name": "Drowned ring of Mist",
           "need": null,
           "needLevel": 5,
-          "rarity": "common",
+          "rarity": "magic",
+          "slot": "charm",
+        },
+        {
+          "base": [],
+          "bonuses": [
+            {
+              "id": "power",
+              "v": 0.10258243104636111,
+            },
+            {
+              "id": "crit",
+              "v": 0.051745866556752194,
+            },
+          ],
+          "cls": null,
+          "id": "in6a1z1q2ekqr",
+          "level": 17,
+          "name": "Drowned token of Will",
+          "need": null,
+          "needLevel": 5,
+          "rarity": "magic",
           "slot": "charm",
         },
         {
           "base": [
             {
-              "id": "health",
-              "v": 20.59849146645167,
+              "id": "damage",
+              "v": 0.10984344537648372,
             },
             {
-              "id": "armor",
-              "v": 0.03158894339798615,
+              "id": "crit",
+              "v": 0.05820500450354302,
+            },
+            {
+              "id": "critDmg",
+              "v": 0.19401668167847674,
             },
           ],
           "bonuses": [
             {
-              "id": "heal",
-              "v": 0.9477189470358566,
+              "id": "slayer",
+              "v": 0.1516555075562792,
+            },
+            {
+              "id": "speed",
+              "v": 0.07527272833575263,
+            },
+            {
+              "id": "leech",
+              "v": 0.014718901230886115,
             },
           ],
           "cls": "archer",
-          "id": "1pplfrj1yglb4a",
-          "level": 19,
-          "name": "Drowned jerkin of Embers",
-          "need": null,
-          "needLevel": 5,
-          "rarity": "magic",
-          "slot": "armor",
+          "id": "poingunh2569",
+          "level": 18,
+          "name": "Bright Oath",
+          "need": {
+            "n": 15,
+            "stat": "speed",
+          },
+          "needLevel": 7,
+          "rarity": "rare",
+          "slot": "weapon",
         },
         {
           "base": [
             {
               "id": "damage",
-              "v": 0.1030405019859709,
+              "v": 0.09132418086153735,
             },
             {
               "id": "crit",
-              "v": 0.04891922990558669,
+              "v": 0.052830510931089515,
             },
             {
               "id": "critDmg",
-              "v": 0.16306409968528898,
+              "v": 0.17610170310363174,
             },
           ],
           "bonuses": [],
           "cls": "archer",
-          "id": "1fhdyy71bmc7je",
+          "id": "1tvncd1ne02tx",
           "level": 19,
           "name": "Drowned bow",
           "need": {
@@ -488,44 +503,52 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "slot": "weapon",
         },
         {
+          "base": [],
+          "bonuses": [
+            {
+              "id": "critDmg",
+              "v": 0.26970926989856736,
+            },
+            {
+              "id": "heal",
+              "v": 1.2494750301310233,
+            },
+          ],
+          "cls": null,
+          "id": "1hl5zu9pkeybc",
+          "level": 19,
+          "name": "Drowned amulet of Ruin",
+          "need": null,
+          "needLevel": 5,
+          "rarity": "magic",
+          "slot": "charm",
+        },
+        {
           "base": [
             {
               "id": "damage",
-              "v": 0.10395873301677871,
+              "v": 0.10308215417464357,
             },
             {
               "id": "crit",
-              "v": 0.07493863220588537,
+              "v": 0.04583956022397615,
             },
             {
               "id": "critDmg",
-              "v": 0.24979544068628456,
+              "v": 0.1527985340799205,
             },
           ],
-          "bonuses": [
-            {
-              "id": "leech",
-              "v": 0.014744547747628529,
-            },
-            {
-              "id": "cooldown",
-              "v": 0.0903672770876158,
-            },
-            {
-              "id": "power",
-              "v": 0.14137087277291577,
-            },
-          ],
+          "bonuses": [],
           "cls": "archer",
-          "id": "1dumcbviqx98f",
+          "id": "1h9oa85ituwiq",
           "level": 19,
-          "name": "Ember Heart",
+          "name": "Drowned bow",
           "need": {
-            "n": 15,
+            "n": 13,
             "stat": "speed",
           },
-          "needLevel": 7,
-          "rarity": "rare",
+          "needLevel": 5,
+          "rarity": "common",
           "slot": "weapon",
         },
       ],
@@ -534,140 +557,109 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "base": [
             {
               "id": "health",
-              "v": 21.264751171547687,
+              "v": 23.216939488939943,
             },
             {
               "id": "armor",
-              "v": 0.033954003465659924,
+              "v": 0.03453830183632672,
             },
           ],
           "bonuses": [
             {
-              "id": "cooldown",
-              "v": 0.08468971582137978,
+              "id": "move",
+              "v": 0.06632607948169111,
             },
             {
-              "id": "heal",
-              "v": 1.0154145651720463,
+              "id": "cooldown",
+              "v": 0.09120371423207221,
             },
             {
               "id": "evade",
-              "v": 0.02343172693213506,
+              "v": 0.02506775493487716,
+            },
+            {
+              "id": "heal",
+              "v": 1.0589842893294992,
             },
           ],
           "cls": "archer",
-          "id": "ruz98o13dr46t",
-          "level": 17,
-          "name": "Grave Mark",
+          "id": "qumfzxyvieuw",
+          "level": 10,
+          "name": "Still Water jerkin",
           "need": null,
-          "needLevel": 7,
-          "rarity": "rare",
+          "needLevel": 5,
+          "rarity": "legendary",
           "slot": "armor",
         },
         "charm": {
           "base": [],
           "bonuses": [
             {
-              "id": "damage",
-              "v": 0.060684329787748875,
+              "id": "speed",
+              "v": 0.08286244124333562,
             },
             {
-              "id": "move",
-              "v": 0.0434963215009885,
+              "id": "slayer",
+              "v": 0.16370777022416894,
+            },
+            {
+              "id": "heal",
+              "v": 1.3618581640720369,
+            },
+            {
+              "id": "health",
+              "v": 24.30266748797447,
+            },
+            {
+              "id": "evade",
+              "v": 0.025405339181495457,
             },
           ],
           "cls": null,
-          "id": "ldmjyf11af3wc",
-          "level": 14,
-          "name": "Drowned band of Fury",
+          "id": "ebjbhg1dcm235",
+          "level": 17,
+          "name": "Lia's Shard",
           "need": null,
-          "needLevel": 5,
-          "rarity": "magic",
+          "needLevel": 8,
+          "rarity": "legendary",
           "slot": "charm",
         },
       },
     },
     "height": null,
-    "hits": 24,
-    "hp": 347,
-    "kills": 419,
+    "hits": 34,
+    "hp": 414,
+    "kills": 385,
     "level": 16,
-    "maxHp": 427,
+    "maxHp": 512,
     "room": 5,
-    "seconds": 558,
+    "seconds": 469,
     "why": "boss",
     "won": true,
   },
   {
-    "bossAt": 586,
+    "bossAt": 634,
     "floor": 10,
     "gear": {
       "bag": [
         {
           "base": [
             {
-              "id": "health",
-              "v": 23.573698826618493,
-            },
-            {
-              "id": "armor",
-              "v": 0.030918105905180616,
-            },
-          ],
-          "bonuses": [
-            {
-              "id": "move",
-              "v": 0.05923466061334982,
-            },
-          ],
-          "cls": "mage",
-          "id": "3ku1jl12s19wz",
-          "level": 24,
-          "name": "Builder's robe of Wind",
-          "need": null,
-          "needLevel": 9,
-          "rarity": "magic",
-          "slot": "armor",
-        },
-        {
-          "base": [],
-          "bonuses": [
-            {
-              "id": "heal",
-              "v": 1.2550593998551371,
-            },
-            {
               "id": "damage",
-              "v": 0.07930609062920978,
-            },
-          ],
-          "cls": null,
-          "id": "tc5y8dadgj29",
-          "level": 26,
-          "name": "Builder's token of Embers",
-          "need": null,
-          "needLevel": 9,
-          "rarity": "magic",
-          "slot": "charm",
-        },
-        {
-          "base": [
-            {
-              "id": "damage",
-              "v": 0.1282629148685932,
+              "v": 0.10298618173635006,
             },
             {
               "id": "crit",
-              "v": 0.04461832194938325,
+              "v": 0.042037526224157774,
             },
             {
               "id": "critDmg",
-              "v": 0.22309160974691622,
+              "v": 0.21018763112078886,
             },
           ],
           "bonuses": [],
           "cls": "mage",
-          "id": "16275sv1ct5cor",
+          "id": "wux4om1utrmwy",
           "level": 26,
           "name": "Builder's wand",
           "need": {
@@ -679,116 +671,193 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "slot": "weapon",
         },
         {
-          "base": [],
-          "bonuses": [
-            {
-              "id": "leech",
-              "v": 0.01827729095041752,
-            },
+          "base": [
             {
               "id": "health",
-              "v": 25.927737503356767,
-            },
-            {
-              "id": "damage",
-              "v": 0.0976839720850694,
-            },
-          ],
-          "cls": null,
-          "id": "1a6ypnk1azxh5i",
-          "level": 27,
-          "name": "Quiet Spark",
-          "need": null,
-          "needLevel": 11,
-          "rarity": "rare",
-          "slot": "charm",
-        },
-        {
-          "base": [],
-          "bonuses": [
-            {
-              "id": "cooldown",
-              "v": 0.11359865916291866,
-            },
-            {
-              "id": "move",
-              "v": 0.06374610553972722,
-            },
-          ],
-          "cls": null,
-          "id": "hma1qjy51svr",
-          "level": 28,
-          "name": "Builder's token of Focus",
-          "need": null,
-          "needLevel": 10,
-          "rarity": "magic",
-          "slot": "charm",
-        },
-        {
-          "base": [],
-          "bonuses": [
-            {
-              "id": "health",
-              "v": 20.2981811619876,
-            },
-            {
-              "id": "damage",
-              "v": 0.08041411393875629,
-            },
-          ],
-          "cls": null,
-          "id": "1o4680b18vlu5e",
-          "level": 28,
-          "name": "Builder's amulet of Life",
-          "need": null,
-          "needLevel": 10,
-          "rarity": "magic",
-          "slot": "charm",
-        },
-        {
-          "base": [],
-          "bonuses": [
-            {
-              "id": "move",
-              "v": 0.06042107761567393,
+              "v": 24.564721260652878,
             },
             {
               "id": "armor",
-              "v": 0.025173635042105943,
+              "v": 0.033849490675119685,
             },
           ],
-          "cls": null,
-          "id": "1xmfb2zco9mo",
-          "level": 29,
-          "name": "Builder's band of Wind",
+          "bonuses": [],
+          "cls": "mage",
+          "id": "19abc4q18hgh73",
+          "level": 26,
+          "name": "Builder's robe",
+          "need": null,
+          "needLevel": 9,
+          "rarity": "common",
+          "slot": "armor",
+        },
+        {
+          "base": [
+            {
+              "id": "health",
+              "v": 28.704230540560097,
+            },
+            {
+              "id": "armor",
+              "v": 0.03683292642390132,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "evade",
+              "v": 0.02311711914489353,
+            },
+          ],
+          "cls": "mage",
+          "id": "15wjaemvu2qu2",
+          "level": 27,
+          "name": "Builder's robe of Mist",
           "need": null,
           "needLevel": 10,
           "rarity": "magic",
-          "slot": "charm",
+          "slot": "armor",
+        },
+        {
+          "base": [
+            {
+              "id": "damage",
+              "v": 0.11603287622668512,
+            },
+            {
+              "id": "crit",
+              "v": 0.04817012935149251,
+            },
+            {
+              "id": "critDmg",
+              "v": 0.24085064675746254,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "leech",
+              "v": 0.016090198977857923,
+            },
+          ],
+          "cls": "mage",
+          "id": "1xqvc022jfpse",
+          "level": 27,
+          "name": "Builder's wand of Thirst",
+          "need": {
+            "n": 22,
+            "stat": "speed",
+          },
+          "needLevel": 10,
+          "rarity": "magic",
+          "slot": "weapon",
+        },
+        {
+          "base": [
+            {
+              "id": "damage",
+              "v": 0.11883896321841991,
+            },
+            {
+              "id": "crit",
+              "v": 0.05273314661113546,
+            },
+            {
+              "id": "critDmg",
+              "v": 0.2636657330556773,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "power",
+              "v": 0.13539807958354524,
+            },
+          ],
+          "cls": "mage",
+          "id": "dyn7y0mar5u0",
+          "level": 27,
+          "name": "Builder's wand of Will",
+          "need": {
+            "n": 22,
+            "stat": "speed",
+          },
+          "needLevel": 10,
+          "rarity": "magic",
+          "slot": "weapon",
+        },
+        {
+          "base": [
+            {
+              "id": "health",
+              "v": 27.894361036386343,
+            },
+            {
+              "id": "armor",
+              "v": 0.0373417160522176,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "move",
+              "v": 0.05278927854095847,
+            },
+          ],
+          "cls": "mage",
+          "id": "1u5u38c6805cd",
+          "level": 28,
+          "name": "Builder's robe of Wind",
+          "need": null,
+          "needLevel": 10,
+          "rarity": "magic",
+          "slot": "armor",
+        },
+        {
+          "base": [
+            {
+              "id": "health",
+              "v": 26.021929528936745,
+            },
+            {
+              "id": "armor",
+              "v": 0.03985764785539359,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "heal",
+              "v": 1.2541897929258412,
+            },
+            {
+              "id": "evade",
+              "v": 0.028781667832568057,
+            },
+          ],
+          "cls": "mage",
+          "id": "nte72v18fmj6r",
+          "level": 24,
+          "name": "Quiet Vow",
+          "need": null,
+          "needLevel": 10,
+          "rarity": "rare",
+          "slot": "armor",
         },
         {
           "base": [],
           "bonuses": [
             {
-              "id": "damage",
-              "v": 0.10137073187171482,
+              "id": "power",
+              "v": 0.147854956528198,
             },
             {
-              "id": "crit",
-              "v": 0.07822947754396009,
-            },
-            {
-              "id": "health",
-              "v": 23.219997987026584,
+              "id": "evade",
+              "v": 0.027871424108525642,
             },
           ],
           "cls": null,
-          "id": "k2e6lqg98gw5",
+          "id": "j170mnfkbf5j",
           "level": 29,
-          "name": "Bright Fang",
+          "name": "Builder's ring of Will",
           "need": null,
-          "needLevel": 11,
-          "rarity": "rare",
+          "needLevel": 10,
+          "rarity": "magic",
           "slot": "charm",
         },
       ],
@@ -797,193 +866,324 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "base": [
             {
               "id": "health",
-              "v": 26.67085482064728,
+              "v": 47.85581835594401,
             },
             {
               "id": "armor",
-              "v": 0.03273768069894053,
+              "v": 0.04409604084250331,
             },
           ],
           "bonuses": [
             {
+              "id": "heal",
+              "v": 1.9855768427538867,
+            },
+            {
+              "id": "evade",
+              "v": 0.03212010750093385,
+            },
+            {
+              "id": "move",
+              "v": 0.08382643622389734,
+            },
+            {
               "id": "cooldown",
-              "v": 0.08526377371592446,
+              "v": 0.14189869883907436,
             },
           ],
           "cls": "mage",
-          "id": "18ljom74pe8bu",
-          "level": 25,
-          "name": "Builder's robe of Focus",
+          "id": "1tt8uny6rgf91",
+          "level": 29,
+          "name": "Blueprint robe",
           "need": null,
-          "needLevel": 9,
-          "rarity": "magic",
+          "needLevel": 12,
+          "rarity": "legendary",
           "slot": "armor",
         },
         "charm": {
           "base": [],
           "bonuses": [
             {
-              "id": "health",
-              "v": 27.852548366457228,
+              "id": "evade",
+              "v": 0.026347031772618646,
             },
             {
-              "id": "slayer",
-              "v": 0.18392065800257024,
+              "id": "crit",
+              "v": 0.06308894050872302,
             },
             {
-              "id": "damage",
-              "v": 0.09610669321469216,
+              "id": "heal",
+              "v": 1.5058946277697103,
             },
             {
-              "id": "cooldown",
-              "v": 0.11781498983616828,
-            },
-            {
-              "id": "leech",
-              "v": 0.01914663862154335,
+              "id": "critDmg",
+              "v": 0.3473074750685132,
             },
           ],
           "cls": null,
-          "id": "1dv6jzt1pqppqi",
+          "id": "ihwe1u1jfqr9j",
           "level": 23,
-          "name": "Sol's Nail",
+          "name": "Dusk Vow",
           "need": null,
-          "needLevel": 11,
-          "rarity": "legendary",
+          "needLevel": 10,
+          "rarity": "rare",
           "slot": "charm",
         },
       },
     },
     "height": null,
-    "hits": 21,
-    "hp": 437,
-    "kills": 428,
+    "hits": 38,
+    "hp": 360,
+    "kills": 463,
     "level": 16,
-    "maxHp": 461,
+    "maxHp": 493,
     "room": 4,
-    "seconds": 611,
+    "seconds": 660,
     "why": "boss",
     "won": true,
   },
   {
-    "bossAt": null,
-    "floor": 4,
+    "bossAt": 805,
+    "floor": 10,
     "gear": {
       "bag": [
         {
           "base": [
             {
+              "id": "health",
+              "v": 38.52468404806859,
+            },
+            {
+              "id": "armor",
+              "v": 0.04139510569556616,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "move",
+              "v": 0.08430422754782718,
+            },
+            {
+              "id": "evade",
+              "v": 0.03007929731123149,
+            },
+            {
+              "id": "heal",
+              "v": 2.134807572240941,
+            },
+          ],
+          "cls": "monk",
+          "id": "1dx32eat6cou6",
+          "level": 37,
+          "name": "Storm Mark",
+          "need": null,
+          "needLevel": 16,
+          "rarity": "rare",
+          "slot": "armor",
+        },
+        {
+          "base": [
+            {
               "id": "damage",
-              "v": 0.13968014668699352,
+              "v": 0.1682305752526883,
             },
             {
               "id": "crit",
-              "v": 0.02797718285297742,
+              "v": 0.025982240533281586,
             },
             {
               "id": "critDmg",
-              "v": 0.1398859142648871,
+              "v": 0.12991120266640793,
             },
           ],
           "bonuses": [
             {
               "id": "slayer",
-              "v": 0.16001358793918044,
+              "v": 0.18841016207844388,
             },
           ],
           "cls": "monk",
-          "id": "istb4s1m1ey10",
-          "level": 30,
+          "id": "2s9nnv1jjruye",
+          "level": 38,
           "name": "Sunworn staff of the Hunt",
           "need": {
-            "n": 28,
+            "n": 31,
             "stat": "health",
           },
-          "needLevel": 13,
+          "needLevel": 15,
           "rarity": "magic",
           "slot": "weapon",
         },
         {
-          "base": [
+          "base": [],
+          "bonuses": [
             {
-              "id": "damage",
-              "v": 0.1430388304333677,
-            },
-            {
-              "id": "crit",
-              "v": 0.027209157928009518,
+              "id": "leech",
+              "v": 0.01758868943184614,
             },
             {
               "id": "critDmg",
-              "v": 0.13604578964004757,
+              "v": 0.38441966191364446,
             },
           ],
-          "bonuses": [],
+          "cls": null,
+          "id": "82bky1c769lh",
+          "level": 38,
+          "name": "Sunworn band of Thirst",
+          "need": null,
+          "needLevel": 15,
+          "rarity": "magic",
+          "slot": "charm",
+        },
+        {
+          "base": [
+            {
+              "id": "health",
+              "v": 36.94162238792237,
+            },
+            {
+              "id": "armor",
+              "v": 0.0404900363352092,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "cooldown",
+              "v": 0.1055252819562575,
+            },
+          ],
           "cls": "monk",
-          "id": "1m6yjksjgwsna",
-          "level": 31,
-          "name": "Sunworn staff",
-          "need": {
-            "n": 28,
-            "stat": "health",
-          },
-          "needLevel": 13,
-          "rarity": "common",
-          "slot": "weapon",
+          "id": "1pvjgsfogsatb",
+          "level": 38,
+          "name": "Sunworn wraps of Focus",
+          "need": null,
+          "needLevel": 15,
+          "rarity": "magic",
+          "slot": "armor",
+        },
+        {
+          "base": [],
+          "bonuses": [
+            {
+              "id": "health",
+              "v": 30.072925637745396,
+            },
+            {
+              "id": "armor",
+              "v": 0.03178893822115534,
+            },
+          ],
+          "cls": null,
+          "id": "17d0k958f6g2a",
+          "level": 39,
+          "name": "Sunworn amulet of Life",
+          "need": null,
+          "needLevel": 15,
+          "rarity": "magic",
+          "slot": "charm",
         },
         {
           "base": [
             {
               "id": "damage",
-              "v": 0.1425211093238281,
+              "v": 0.17287877840974833,
             },
             {
               "id": "crit",
-              "v": 0.02920920298952842,
+              "v": 0.032378072203573534,
             },
             {
               "id": "critDmg",
-              "v": 0.1460460149476421,
+              "v": 0.1618903610178677,
             },
           ],
           "bonuses": [
             {
               "id": "leech",
-              "v": 0.016418222309881075,
+              "v": 0.02050545918113203,
+            },
+            {
+              "id": "cooldown",
+              "v": 0.1513480294217169,
+            },
+            {
+              "id": "speed",
+              "v": 0.09872059106383238,
             },
           ],
           "cls": "monk",
-          "id": "1nhgypopsgcj3",
-          "level": 32,
-          "name": "Sunworn staff of Thirst",
+          "id": "xxb701ys77e0",
+          "level": 39,
+          "name": "Quiet Song",
           "need": {
-            "n": 28,
+            "n": 33,
             "stat": "health",
           },
-          "needLevel": 13,
-          "rarity": "magic",
+          "needLevel": 16,
+          "rarity": "rare",
           "slot": "weapon",
         },
         {
           "base": [
             {
               "id": "health",
-              "v": 27.929222814738747,
+              "v": 41.44036092760506,
             },
             {
               "id": "armor",
-              "v": 0.032607926875267174,
+              "v": 0.053519240524917834,
+            },
+          ],
+          "bonuses": [
+            {
+              "id": "evade",
+              "v": 0.036981020036115655,
+            },
+            {
+              "id": "cooldown",
+              "v": 0.15097389936760067,
+            },
+            {
+              "id": "move",
+              "v": 0.07173427487433653,
+            },
+          ],
+          "cls": "monk",
+          "id": "13goyb11dywb43",
+          "level": 39,
+          "name": "Wild Heart",
+          "need": null,
+          "needLevel": 16,
+          "rarity": "rare",
+          "slot": "armor",
+        },
+        {
+          "base": [
+            {
+              "id": "damage",
+              "v": 0.16210373527764155,
+            },
+            {
+              "id": "crit",
+              "v": 0.027050100626656786,
+            },
+            {
+              "id": "critDmg",
+              "v": 0.13525050313328393,
             },
           ],
           "bonuses": [],
           "cls": "monk",
-          "id": "1pblrweyru9xy",
-          "level": 33,
-          "name": "Sunworn wraps",
-          "need": null,
-          "needLevel": 14,
+          "id": "1i0sfc5zduajp",
+          "level": 39,
+          "name": "Sunworn staff",
+          "need": {
+            "n": 31,
+            "stat": "health",
+          },
+          "needLevel": 15,
           "rarity": "common",
-          "slot": "armor",
+          "slot": "weapon",
         },
       ],
       "worn": {
@@ -991,44 +1191,89 @@ exports[`replays > every zone plays the same run as before 1`] = `
           "base": [
             {
               "id": "health",
-              "v": 34.10964357135049,
+              "v": 52.95664920525625,
             },
             {
               "id": "armor",
-              "v": 0.03127132101627142,
+              "v": 0.06117884814970493,
             },
           ],
           "bonuses": [
             {
+              "id": "evade",
+              "v": 0.0480502941746816,
+            },
+            {
+              "id": "heal",
+              "v": 2.492689243987799,
+            },
+            {
+              "id": "move",
+              "v": 0.11295400618521721,
+            },
+            {
               "id": "cooldown",
-              "v": 0.11237351216910481,
+              "v": 0.15565274552457334,
             },
           ],
           "cls": "monk",
-          "id": "14w4afz4s43x9",
-          "level": 31,
-          "name": "Sunworn wraps of Focus",
+          "id": "d6bg3o1tcc0yd",
+          "level": 37,
+          "name": "Slow Fire wraps",
           "need": null,
-          "needLevel": 13,
-          "rarity": "magic",
+          "needLevel": 17,
+          "rarity": "legendary",
           "slot": "armor",
+        },
+        "charm": {
+          "base": [],
+          "bonuses": [
+            {
+              "id": "cooldown",
+              "v": 0.17533947324095964,
+            },
+            {
+              "id": "leech",
+              "v": 0.023464071580441295,
+            },
+            {
+              "id": "move",
+              "v": 0.08603923314312995,
+            },
+            {
+              "id": "critDmg",
+              "v": 0.5886543950424492,
+            },
+            {
+              "id": "damage",
+              "v": 0.12745018131928146,
+            },
+          ],
+          "cls": null,
+          "id": "nvktjteth4cb",
+          "level": 37,
+          "name": "Vela's Seal",
+          "need": null,
+          "needLevel": 17,
+          "rarity": "legendary",
+          "slot": "charm",
         },
       },
     },
     "height": null,
-    "hits": 35,
-    "hp": 0,
-    "kills": 159,
-    "level": 9,
-    "maxHp": 438,
+    "hits": 98,
+    "hp": 483,
+    "kills": 482,
+    "level": 16,
+    "maxHp": 483,
     "room": 4,
-    "seconds": 282,
-    "why": "hp",
-    "won": false,
+    "seconds": 823,
+    "why": "boss",
+    "won": true,
   },
   {
     "bossAt": null,
-    "floor": 1,
+    "floor": 2,
     "gear": {
       "bag": [
         {
@@ -1063,13 +1308,13 @@ exports[`replays > every zone plays the same run as before 1`] = `
       "worn": {},
     },
     "height": null,
-    "hits": 5,
+    "hits": 9,
     "hp": 0,
-    "kills": 21,
-    "level": 3,
+    "kills": 36,
+    "level": 5,
     "maxHp": 280,
-    "room": 4,
-    "seconds": 51,
+    "room": 2,
+    "seconds": 93,
     "why": "hp",
     "won": false,
   },
@@ -1083,11 +1328,11 @@ exports[`replays > every zone plays the same run as before 1`] = `
     "height": null,
     "hits": 5,
     "hp": 0,
-    "kills": 27,
-    "level": 4,
+    "kills": 18,
+    "level": 3,
     "maxHp": 334,
-    "room": 4,
-    "seconds": 67,
+    "room": 3,
+    "seconds": 47,
     "why": "hp",
     "won": false,
   },

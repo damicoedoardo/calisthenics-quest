@@ -47,9 +47,9 @@ Each class with the same model (and how far above or below the four's average). 
 
 | Workouts | Warrior | Archer | Monk | Mage |
 | --- | --- | --- | --- | --- |
-| 0 | 112 (-2%) | 140 (+23%) | 107 (-7%) | 98 (-14%) |
-| 24 | 185 (-2%) | 235 (+24%) | 175 (-8%) | 163 (-14%) |
-| 64 | 343 (-2%) | 434 (+24%) | 324 (-7%) | 300 (-14%) |
+| 0 | 112 (+0%) | 140 (+26%) | 91 (-19%) | 103 (-7%) |
+| 24 | 185 (+0%) | 235 (+27%) | 149 (-20%) | 172 (-7%) |
+| 64 | 343 (+0%) | 434 (+27%) | 274 (-20%) | 316 (-7%) |
 
 ## Training over time
 
@@ -122,7 +122,7 @@ Co-op materials: the chance each source drops one, for each hero in a party (sol
 | boss | 50.0% | 10.0% | 8.0% | - |
 | clear | - | - | - | 3.3% |
 
-Found by one hero in a co-op run of zone 1 (two bots, 3 runs, on average): 2.3 ember thread, 1 warden coal.
+Found by one hero in a co-op run of zone 1 (two bots, 3 runs, on average): 2 ember thread.
 
 ## Weapons
 

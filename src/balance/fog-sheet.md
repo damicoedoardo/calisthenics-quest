@@ -8,8 +8,8 @@ Each class's win rate, averaged over the zones, against the four's average (fair
 
 | When | archer | mage | warrior | monk | All four |  |
 | --- | --- | --- | --- | --- | --- | --- |
-| The day a zone opens | 25% | 21% | 17% | 22% | 21% | fair |
-| Six workouts later | 70% | 64% | 60% | 65% | 65% | fair |
+| The day a zone opens | 27% | 23% | 21% | 21% | 23% | fair |
+| Six workouts later | 72% | 65% | 70% | 64% | 68% | fair |
 
 ## Zones
 
@@ -17,15 +17,15 @@ Win rate by zone and class, against `ZONE_WINS`: 33% the day a zone opens, 67% l
 
 | Zone | When | archer | mage | warrior | monk | All four |  |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 | opens (the first run, 0 workouts: at most 5%) | 4% | 0% | 2% | 0% | 2% | on target |
-| 1 | +6 workouts | 79% | 67% | 73% | 56% | 69% | on target |
-| 2 | opens | 38% | 33% | 21% | 15% | 27% | on target |
-| 2 | +6 workouts | 63% | 65% | 56% | 42% | 56% | on target |
-| 3 | opens | 27% | 17% | 13% | 19% | 19% | on target |
-| 3 | +6 workouts | 63% | 63% | 56% | 75% | 64% | on target |
-| 4 | opens | 40% | 38% | 38% | 42% | 39% | on target |
-| 4 | +6 workouts | 60% | 52% | 44% | 52% | 52% | on target |
-| 5 | opens | 29% | 27% | 10% | 35% | 26% | on target |
-| 5 | +18 workouts | 79% | 69% | 54% | 85% | 72% | on target |
-| 6 | opens | 15% | 10% | 17% | 21% | 16% | **off** |
-| 6 | +18 workouts | 77% | 69% | 77% | 77% | 75% | on target |
+| 1 | opens (the first run, 0 workouts: at most 5%) | 0% | 0% | 0% | 2% | 1% | on target |
+| 1 | +6 workouts | 65% | 48% | 69% | 56% | 59% | on target |
+| 2 | opens | 35% | 44% | 23% | 13% | 29% | on target |
+| 2 | +6 workouts | 73% | 75% | 85% | 56% | 72% | on target |
+| 3 | opens | 33% | 25% | 33% | 23% | 29% | on target |
+| 3 | +6 workouts | 83% | 65% | 75% | 79% | 76% | on target |
+| 4 | opens | 46% | 40% | 42% | 40% | 42% | on target |
+| 4 | +6 workouts | 63% | 58% | 54% | 52% | 57% | on target |
+| 5 | opens | 33% | 21% | 10% | 31% | 24% | on target |
+| 5 | +18 workouts | 71% | 75% | 48% | 75% | 67% | on target |
+| 6 | opens | 15% | 8% | 19% | 19% | 15% | **off** |
+| 6 | +18 workouts | 75% | 71% | 88% | 63% | 74% | on target |

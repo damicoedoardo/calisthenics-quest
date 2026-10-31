@@ -3,7 +3,7 @@ type: conceptual
 title: The Fog (the game between workouts)
 description: The rules around a Fog run in src/lib/fog.ts — zones from the story's chapters, when a zone opens, power from real training, run skills, records — and how a run is loaded and drawn.
 tags: [game, fog, rules]
-timestamp: 2026-10-29
+timestamp: 2026-10-31
 ---
 
 # The Fog
@@ -18,8 +18,11 @@ level or story.
 
 - **Zones**: `ZONES` is built from each story chapter's `fog` (written in `src/story/chapters/`),
   one zone per chapter, each with its boss (`BOSS_NAME`).
-- **Opening**: `zoneStatus` opens a zone when its chapter has started and the zone before it is
-  cleared.
+- **Opening**: `zoneStatus` opens a zone as soon as the zone before it is cleared (Edoardo,
+  2026-10-29: win a zone and you move on). Each zone is still built for the start of its chapter
+  (`zone.workouts`, `zoneDue`): its monsters are tuned for a player at that point
+  (`ZONE_WINS.open`), so a strong player can go in early and win sooner, and anyone else finds it
+  hard until they have trained more. The season simulator meets each zone when it is due.
 - **Power from training**: `powerOf(state, now)` turns the save into a run's power. The stat
   points the player put into the champion give Health, Armor, Damage, Haste (attack speed), Speed
   (walk speed), see `statPower` in `src/lib/stats.ts` (crit comes from what you wear) and

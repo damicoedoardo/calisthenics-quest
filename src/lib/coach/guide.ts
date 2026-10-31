@@ -243,7 +243,7 @@ export const GUIDE: GuideTopic[] = [
     text: (s) => {
       const open = ZONES.filter((_, i) => zoneOpen(s, i)).length;
       return [
-        `Each zone is a dungeon of ten floors: rooms to clear down to the stairs, a mid-boss on floor ${MID_FLOOR}, and the zone's boss at the bottom. A zone opens when the boss before it falls and its story chapter has begun. The player has ${plural(open, 'zone')} open.`,
+        `Each zone is a dungeon of ten floors: rooms to clear down to the stairs, a mid-boss on floor ${MID_FLOOR}, and the zone's boss at the bottom. A zone opens as soon as the boss before it falls; each is built for the start of its story chapter, so going in early is hard until you have trained more. The player has ${plural(open, 'zone')} open.`,
         'Your hero attacks on its own in the class style; you move, dodge and use the ability. The phone is held sideways for a run; on a computer it plays with keys.',
         `In a run, monsters drop light; each level-up there offers three skills to pick, and they last only that run. A card's color says what the skill is about: red hits harder, purple is magic on a timer, green keeps you standing, blue is the rest. The skills: ${UPGRADES.map((u) => `${u.name.replace('{flame}', s.profile.flame?.trim() || 'Ember')} (${u.text(1)} Up to ${u.max} levels.)`).join(' ')}`,
         `Workouts call the flame's fires to circle you (at ${FLAME_AT.join(', ')} workouts). Training in the last two days starts a run with a free skill; resting (a day off, or a minute by the fire) gives one more.`,

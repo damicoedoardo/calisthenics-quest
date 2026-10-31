@@ -56,6 +56,12 @@ export const HUMAN = {
   busy: 0.01,
   /** Chance lost per walk-speed (150) a shot flies faster than 0.8 of your walk. */
   fast: 0.7,
+  /** Chance lost for a shot fired right next to you, fading to none at `nearBy` px. Up close a
+      shot has about 0.3 s to land and your hero and the monsters cover it on a phone screen: this
+      is where people lose fights the bot used to win, so without it the bot rated the close-up
+      classes (warrior, monk) higher than people find them (Edoardo, 2026-10-29). */
+  near: 0.4,
+  nearBy: 100,
   /** The chance never drops below this. */
   floor: 0.35,
   /** Seconds between decisions: the bot holds its stick in between (about 10 a second). */

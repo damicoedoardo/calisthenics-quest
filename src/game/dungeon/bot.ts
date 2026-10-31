@@ -32,11 +32,12 @@ const DODGE_SEE = 0.18;
 const hash = (a: number, b: number) => ((Math.imul(Math.imul(a, 2654435761) ^ Math.imul(b + 1, 2246822519), 3266489917) >>> 0) % 10007) / 10007;
 
 /** Whether the bot has seen this shot by now: after the shot's own reaction time, and only if it
-    caught its eye (less likely in a busy room, or for a shot faster than you walk). */
-function noticed(id: number, age: number, speed: number, busy: number): boolean {
+    caught its eye (less likely in a busy room, for a shot faster than you walk, or one close by:
+    `dist`, as up close shots get lost under the hero and the monsters). */
+function noticed(id: number, age: number, speed: number, busy: number, dist: number): boolean {
   const [lo, hi] = HUMAN.reaction;
   if (age < lo + hash(id, 1) * (hi - lo)) return false;
-  const chance = clamp(HUMAN.notice - HUMAN.busy * Math.max(0, busy - HUMAN.calm) - HUMAN.fast * Math.max(0, speed / HERO_SPEED - 0.8), HUMAN.floor, 1);
+  const chance = clamp(HUMAN.notice - HUMAN.busy * Math.max(0, busy - HUMAN.calm) - HUMAN.fast * Math.max(0, speed / HERO_SPEED - 0.8) - HUMAN.near * Math.max(0, 1 - dist / HUMAN.nearBy), HUMAN.floor, 1);
   return hash(id, 2) < chance;
 }
 
@@ -133,7 +134,7 @@ function decide(run: Run, h: Hero): Input {
       ry = h.y - b.y,
       v2 = b.vx * b.vx + b.vy * b.vy;
     if (rx * rx + ry * ry > see * see || !v2) continue;
-    if (!noticed(b.id, now - b.born, Math.sqrt(v2), busy)) continue;
+    if (!noticed(b.id, now - b.born, Math.sqrt(v2), busy, Math.sqrt(rx * rx + ry * ry))) continue;
     const tc = (rx * b.vx + ry * b.vy) / v2;
     if (tc < 0 || tc > SEE) continue;
     const cx = b.x + b.vx * tc - h.x,

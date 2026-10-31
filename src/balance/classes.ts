@@ -14,14 +14,21 @@ export const ATTACK = {
   wave: { cd: 1.3, dmg: 11 },
 } as const;
 
+/** The close-up classes' guard, one rule for both: a warrior's swing and a monk's strike knock the
+    monsters' shots out of the air, in front of them (radians either side of where they strike; a
+    swing's reach), and a swing cuts monsters this wide too. Up close a shot has no time to be
+    dodged, so this is what lets a fighter stand there. The ranged classes keep their distance
+    instead. */
+export const MELEE_GUARD = 1.3;
+
 /** Each class against the others: HP, armor, damage (orbs and waves hit crowds, so less each),
     move speed and attack speed. Up close you have to walk in and back out, so the sword and open
     hands are quicker on their feet and swing faster. */
 export const CLASS_BODY = {
   slash: { hp: 1.0, armor: 0.04, dmg: 0.85, move: 1.2, haste: 1.1 },
-  wave: { hp: 1.25, armor: 0.12, dmg: 1.03, move: 1.15, haste: 1.1 },
+  wave: { hp: 1.15, armor: 0.08, dmg: 0.85, move: 1.15, haste: 1.1 },
   arrow: { hp: 1.12, armor: 0.03, dmg: 1.22, move: 1, haste: 1 },
-  orb: { hp: 0.9, armor: 0, dmg: 0.67, move: 1, haste: 1 },
+  orb: { hp: 1.0, armor: 0, dmg: 0.67, move: 1, haste: 1 },
 } as const;
 
 /** Each class ability: its clock (s) and its size. Damage is times the class's base attack. */
@@ -188,7 +195,7 @@ export const SP_WEAPON: Record<string, SpWeaponNumbers> = {
   bellstaff: { cd: 1, dmg: 0.7, heal: 0.0005 },
   hexblade: { cd: 0.7, dmg: 1.9, arc: 1.6, reach: 85, cut: 1.6 },
   // monk: fast fists, faster claws, a staff that spins all round, ki blasts from far
-  gauntlets: { cd: 0.5, dmg: 0.45, arc: 0.9, reach: 70, cut: 0.45 },
+  gauntlets: { cd: 0.5, dmg: 0.7, arc: 0.9, reach: 70, cut: 1 },
   claws: { cd: 0.4, dmg: 0.26, arc: 1.3, reach: 70, cut: 0.35 },
   bo: { cd: 1, dmg: 0.95 },
   kipalms: { cd: 0.9, dmg: 0.45 },

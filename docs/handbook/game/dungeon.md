@@ -3,7 +3,7 @@ type: reference
 title: The Fog's dungeon (engine, content, scene)
 description: How a Fog run is built — data in content.ts, a pure seeded engine, a bot, and a Phaser scene — and which file to edit for each kind of change.
 tags: [game, fog, dungeon, phaser]
-timestamp: 2026-10-29
+timestamp: 2026-10-31
 ---
 # The Fog's dungeon
 
@@ -23,7 +23,7 @@ content.ts          what a dungeon is made of, as data: ground, rooms, chest ite
 engine.ts           plays it: a pure step function (60 a second, seeded), no Phaser
 bot.ts              a player for balance tests (scripts/fog-sim.mjs) and the autopilot; it plays
                     like a person on a phone (HUMAN in src/balance/dungeon.ts: its own reaction
-                    per shot, fewer shots seen when busy or fast, 10 decisions a second, a thumb
+                    per shot, fewer shots seen when busy, fast or close by, 10 decisions a second, a thumb
                     a little off, a missed dodge now and then; it walks every room of a
                     floor before the stairs, as people do looking for gear)
 scene.ts            draws a run with Phaser and turns events into sound and sparks; a monster
@@ -181,6 +181,13 @@ cuts all round, a lance reaches far, daggers and claws are quick, a cannon's sho
 boomerang comes back, the bell staff heals a little on each hit. A swing knocks shots out of the air
 only within `cut`. Shots carry their weapon (`Shot.look`) and the attack event its `weapon` and
 `arc`, so the scene draws each its own way. The bot fights by its weapon, close or far, and uses each SP move when it helps (`SP_USE` in `bot.ts`: attacks when something is in reach, guards just before a hit, heals when hurt, finals in a crowd or on the boss). For a close fighter, cutting shots out of the air is what keeps it alive: with `cut` 0 the warrior SPs win 2 to 9% where they win about 55%.
+
+The two close-up classes share one guard (`MELEE_GUARD` in `src/balance/classes.ts`): the
+warrior's swing and the monk's strike (its wave, aimed at the monster it strikes) both knock shots
+out of the air in front of them, as wide either side and as far as a swing (`cutShots` in
+`engine.ts`). Up close a shot has no time to be dodged; the archer and the mage keep their distance
+instead. What sets the warrior and the monk apart is the rest: the warrior's single swing and
+charge, the monk's rings that hit a crowd and its Stillness heal.
 
 The class ability is ready on a clock (`abilityAt`), except the monk's Stillness: it fills `calm`
 from hits the monk lands and takes (`calmer`, numbers in `CALM`, `src/balance/classes.ts`), so
