@@ -38,6 +38,7 @@ import { drawLancer } from './characters/lancer';
 import { drawClock } from './characters/clock';
 import { drawImp, drawJar, drawJarPop } from './characters/jar';
 import { drawLanternMid } from './characters/lanternMid';
+import * as zoneFoes from './characters/zoneFoes';
 import { drawForemanMid } from './characters/foremanMid';
 import { drawSandGolemMid } from './characters/sandGolemMid';
 import { drawWhisperMid } from './characters/whisperMid';
@@ -231,6 +232,33 @@ export const SPRITES = {
   bellMid: creature('The Silent Bell', drawBellMid, 'lunge'),
   loner: zoned('Loner', drawLoner),
   tollMid: creature('The Tollkeeper', drawTollMid, 'lunge'),
+  // The story worlds' own monsters, five each (zoneFoes.ts): drawn in their own world's colors, and
+  // dressed for another world when they turn up there.
+  lakeEcho: zoned('Lake Echo', zoneFoes.drawLakeEcho),
+  swan: zoned('Glass Swan', zoneFoes.drawSwan),
+  measure: zoned('Measure', zoneFoes.drawMeasure),
+  squire: zoned('Scrap Squire', zoneFoes.drawSquire),
+  mole: zoned('Dune Mole', zoneFoes.drawMole),
+  devil: zoned('Dust Devil', zoneFoes.drawDevil),
+  maybe: zoned('Maybe', zoneFoes.drawMaybe),
+  undertow: zoned('Undertow', zoneFoes.drawUndertow),
+  hawk: zoned('Ridge Hawk', zoneFoes.drawHawk),
+  cairn: zoned('Cairn', zoneFoes.drawCairn),
+  frog: zoned('Puddle Frog', zoneFoes.drawFrog),
+  eel: zoned('Glass Eel', zoneFoes.drawEel),
+  lily: zoned('Lily', zoneFoes.drawLily),
+  rat: zoned('Soot Rat', zoneFoes.drawRat),
+  bat: zoned('Cinder Bat', zoneFoes.drawBat),
+  kiln: zoned('Kiln', zoneFoes.drawKiln),
+  scarab: zoned('Scarab', zoneFoes.drawScarab),
+  cactus: zoned('Cactus', zoneFoes.drawCactus),
+  lizard: zoned('Sun Lizard', zoneFoes.drawLizard),
+  moth: zoned('Lamp Moth', zoneFoes.drawMoth),
+  hound: zoned('Pale Hound', zoneFoes.drawHound),
+  shroom: zoned('Fog Shroom', zoneFoes.drawShroom),
+  yeti: zoned('Yeti Cub', zoneFoes.drawYeti),
+  frost: zoned('Frost Sprite', zoneFoes.drawFrost),
+  boulder: zoned('Boulder', zoneFoes.drawBoulder),
   // The dungeon bosses. The Mirror is you in glass (pass the player's look and gear, like the hero).
   // app icons, hand-drawn at 16x16 (keepsakes) and 12x12 (Book of Days)
   keepsake: icon<KeepsakeOpts>((o) => `Keepsake ${o.zone + 1}`, { zone: 0 }, (o) => KEEPSAKE_ICONS[o.zone] ?? KEEPSAKE_ICONS[0]),

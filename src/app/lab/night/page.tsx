@@ -364,6 +364,11 @@ export default function NightLab() {
         })}
         <Row icon={<Swords size={16} />} label="The Play tab" note="Story: all six worlds open, the ready strip under them" onClick={() => open(veteran(78, 6), 'tab=play')} />
         <Row icon={<Swords size={16} />} label="The Fog, sideways" note="Hold the phone across: rooms run left to right, tap a monster to aim at it" onClick={() => open(veteran(14, 1), 'run=0')} />
+        <Row icon={<Swords size={16} />} label="New monsters: Mirror Lake" note="Puddle Frogs, Lake Echoes (your mirror image), Glass Eels, Glass Swans, Lilies; Next floor in the dev menu brings the rest" onClick={() => open(veteran(78, 6), 'run=1')} />
+        <Row icon={<Swords size={16} />} label="New monsters: The Cold Forges" note="Soot Rats, Scrap Squires (stand on the pile), Cinder Bats, Measures (find the gap), Kilns; Next floor in the dev menu brings the rest" onClick={() => open(veteran(78, 6), 'run=2')} />
+        <Row icon={<Swords size={16} />} label="New monsters: The Plateau" note="Scarabs, Dust Devils, Dune Moles (step off the mound), Sun Lizards, Cacti; Next floor in the dev menu brings the rest" onClick={() => open(veteran(78, 6), 'run=3')} />
+        <Row icon={<Swords size={16} />} label="New monsters: The Fog" note="Lamp Moths, Maybes (shots that hang), Pale Hounds, Undertows (they pull), Fog Shrooms; Next floor in the dev menu brings the rest" onClick={() => open(veteran(78, 6), 'run=4')} />
+        <Row icon={<Swords size={16} />} label="New monsters: The Summit" note="Frost Sprites, Ridge Hawks (they swoop), Yeti Cubs, Cairns (icicles), Boulders; Next floor in the dev menu brings the rest" onClick={() => open(veteran(78, 6), 'run=5')} />
         <Row icon={<Swords size={16} />} label="The Ember Road, before setting out" note="Friends tab: the road card; tap Set out and its first scene plays" onClick={() => open(geared(), 'tab=friends')} />
         <Row icon={<Swords size={16} />} label="The Ember Road, chapter 2" note="The Lull beaten, 10 workouts in: The Quiet Miles open, the road card shows what's next" onClick={() => open(onRoad(1, 10), 'tab=friends')} />
         <Row icon={<Swords size={16} />} label="An Ember Road run: The Lull" note="Chapter 1's party run (practice), with Ana and Ben; win it and Tamsin speaks" onClick={() => open(onRoad(0, 2), 'run=road1&party')} />

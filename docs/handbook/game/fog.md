@@ -138,7 +138,8 @@ minimap in the corner fills in as you go), played by a pure engine and drawn by 
 shared between the hero and the engine (speed, HP, attacks) and the sprite sheet names;
 `src/game/sheets.ts` builds the sheets a run needs (after the story's finale the hero's are drawn
 on fire, `heroVariant` in `src/story/flame.ts`; the regular monsters, `DressedKey`, in the zone's dress,
-standing and firing; only the run's own boss, `bossJobs`); `src/game/calm.ts` drops shake and flashes for
+standing and firing, except a story world's own monsters at home, which are drawn as they are
+(`NATIVE` in `src/game/rules.ts`); only the run's own boss, `bossJobs`); `src/game/calm.ts` drops shake and flashes for
 `prefers-reduced-motion`.
 
 `src/components/FogRun.tsx` loads `src/game/dungeon/scene.ts` with `import()` only when a run

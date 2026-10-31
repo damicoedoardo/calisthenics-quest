@@ -3,7 +3,7 @@ type: reference
 title: Sprites and animation
 description: All pixel art is code in src/sprites — the 64x64 figure engine, manga head, text-row art, clips, the registry, PNG sheets, fingerprint tests, and where to edit what.
 tags: [game, sprites, pixel-art]
-timestamp: 2026-10-29
+timestamp: 2026-10-31
 ---
 # Sprites
 
@@ -71,6 +71,13 @@ engine/skeleton.ts    the jointed skeleton both use: IK elbows and knees, props 
                       weights, cables and bands, and how the figure is drawn
 characters/worlds.ts  the Play tab's world picker: the big padlock on a shut world (`worldLock`) and the
                       bank of fog that drifts over it (`fogBank`)
+characters/zoneFoes.ts the story worlds' own monsters, five per world (zones 2-6), painted by pose
+                      like lancer.ts: Mirror Lake's lakeEcho, swan, frog, eel, lily; the Cold
+                      Forges' measure, squire, rat, bat, kiln; the Plateau's mole, devil, scarab,
+                      cactus, lizard; the Fog's maybe, undertow, moth, hound, shroom; the Summit's
+                      hawk, cairn, yeti, frost, boulder. Drawn in their own world's colors; dressed
+                      (zoned.ts) only when they turn up in another world (`NATIVE` in
+                      `src/game/rules.ts`)
 characters/install.ts the install guide's pictures (`installStep`, opts { step }): a small phone with
                       the button to tap ringed in gold, drawn on a character grid
 characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-6, a world }): recolored onto the
@@ -125,6 +132,7 @@ characters/longbridge.ts  the third: the Loner (`loner`, behind a round shield),
 | Change Vela's far tower on the Plateau, or how its lamp flashes | `FAR_TOWER` rows in `places.ts`; a place with it is drawn lit and unlit, and the `beacon` animation in `tailwind.config.ts` flashes the lit copy |
 | Change the looks a player starts with (boy, girl) | `STARTER_LOOKS` in `characters/hero.ts`; the editor's options are in `src/components/LookEditor.tsx`. A saved look goes through `normalizeLook` before it is drawn (here, in the Fog's sheets and on friends' cards), so an unknown or missing hair, skin, eye color or mark falls back to the starter look's |
 | Redraw a dungeon monster | the `ROWS` text art in its file (`smoke.ts`, `seeker.ts`, `shade.ts`, `ashGolem.ts`; `lancer.ts`, `clock.ts`, `jar.ts` are painted by pose); which sprite a monster wears is its `FOE_FX` entry in `src/game/dungeon/foeFx.ts`. The old `ram.ts` and `splitter.ts` art stays in the registry for /lab only |
+| Redraw one of the story worlds' own monsters (zones 2-6) | its `draw...` function in `characters/zoneFoes.ts` |
 | Change which sprite a dungeon monster uses, or its size | its `look` in `FOE_FX` (`src/game/dungeon/foeFx.ts`; a new sheet also needs a `SheetKey` in `src/game/rules.ts` and its sheet in `src/game/sheets.ts`) |
 | Redraw the dungeon's pillars, barrels, chests, shrine, stairs, torches | the text rows in `src/game/dungeon/props.ts` (floor, walls, door, water and spikes are drawn in `scene.ts`) |
 | Fix an exercise demo's form (depth, lean, where the hands go) | its case in `poseFor` (`characters/exercise.ts`); a new exercise in the plan (`src/lib/program.ts`) needs one too (a test checks every plan exercise has a demo) |

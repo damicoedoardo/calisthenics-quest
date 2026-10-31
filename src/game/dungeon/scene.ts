@@ -2206,6 +2206,20 @@ class DungeonScene extends Phaser.Scene {
         break;
       case 'boom': {
         const { x, y, r: R } = e;
+        // A Cairn's icicle shatters on the floor; a Dust Devil's sand ball puffs apart.
+        if (e.kind === 'cairn') {
+          this.sfx('glass', 1.4);
+          this.bits.particleTint = 0xe0f2fe;
+          this.burst(this.bits, 10, x, y);
+          this.fade(320, (g, p) => g.lineStyle(3 * (1 - p) + 1, 0x7dd3fc, 0.9 * (1 - p)).strokeCircle(x, y, R * (0.4 + 0.6 * p)));
+          break;
+        }
+        if (e.kind === 'devil') {
+          this.bits.particleTint = 0xd9b47a;
+          this.burst(this.bits, 6, x, y);
+          this.fade(260, (g, p) => g.fillStyle(0xd9b47a, 0.4 * (1 - p)).fillCircle(x, y, R * (0.5 + p)));
+          break;
+        }
         this.sfx('stomp', 1.2);
         this.cameras.main.shake(140, 0.006);
         this.bits.particleTint = 0xf97316;
@@ -2225,6 +2239,18 @@ class DungeonScene extends Phaser.Scene {
       }
       case 'wind':
         this.sfx('stomp', 1.6);
+        break;
+      // A Dune Mole digs in or bursts out; a Scrap Squire falls into a pile or stands up again.
+      case 'dig':
+        this.bits.particleTint = 0xd9b47a;
+        this.burst(this.bits, e.up ? 12 : 8, e.x, e.y);
+        this.burst(this.puffs, e.up ? 6 : 4, e.x, e.y, 6);
+        if (e.up) this.sfx('stomp', 1.4);
+        break;
+      case 'pile':
+        this.sfx('clank', e.up ? 0.9 : 1.3);
+        this.bits.particleTint = 0x7b7b86;
+        this.burst(this.bits, 8, e.x, e.y);
         break;
       case 'repair': {
         const { x, y } = e;

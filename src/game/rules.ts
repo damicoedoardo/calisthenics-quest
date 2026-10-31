@@ -9,6 +9,8 @@ import { ATTACK, RUN_SKILL } from '@/balance';
 export type SheetKey = 'hero' | 'heroAttack' | 'heroWalk' | 'ember' | 'hollow' | 'slime' | 'wisp' | 'mirror' | 'knight' | 'echo' | 'summit'
   // the dungeon's own monsters
   | 'lancer' | 'clock' | 'smoke' | 'seeker' | 'jar' | 'imp' | 'shade' | 'ashGolem' | 'grinder' | 'unsent' | 'loner'
+  // the story worlds' own monsters (zones 2-6)
+  | NativeKey
   // the regular monsters firing (played once as they shoot)
   | `${DressedKey}Attack`
   // the Excuse Jar shattering (played once), and the mid-boss
@@ -17,7 +19,17 @@ export type SheetKey = 'hero' | 'heroAttack' | 'heroWalk' | 'ember' | 'hollow' |
   | 'lanternMid' | 'foremanMid' | 'sandGolemMid' | 'sandGolemMidStone' | 'whisperMid' | 'galeMid' | 'bellowsMid' | 'bellMid' | 'tollMid'
   | BossSheetKey;
 /** The regular monsters, drawn in each zone's dress (zoned.ts). */
-export type DressedKey = 'slime' | 'wisp' | 'lancer' | 'clock' | 'smoke' | 'seeker' | 'jar' | 'imp' | 'shade' | 'ashGolem' | 'grinder' | 'unsent' | 'loner';
+export type DressedKey = 'slime' | 'wisp' | 'lancer' | 'clock' | 'smoke' | 'seeker' | 'jar' | 'imp' | 'shade' | 'ashGolem' | 'grinder' | 'unsent' | 'loner' | NativeKey;
+/** The story worlds' own monsters, by the world they belong to: drawn as they are there, and dressed
+    (zoned.ts) for any other world they turn up in. */
+export const NATIVE = {
+  ...{ lakeEcho: 1, swan: 1, frog: 1, eel: 1, lily: 1 },
+  ...{ measure: 2, squire: 2, rat: 2, bat: 2, kiln: 2 },
+  ...{ mole: 3, devil: 3, scarab: 3, cactus: 3, lizard: 3 },
+  ...{ maybe: 4, undertow: 4, moth: 4, hound: 4, shroom: 4 },
+  ...{ hawk: 5, cairn: 5, yeti: 5, frost: 5, boulder: 5 },
+} as const;
+export type NativeKey = keyof typeof NATIVE;
 /** The dungeon bosses: idle, attack (played once), stages for the Knight and the Plateau, and the
     Mirror's and the Hollow's ends (played once). A run only builds its own zone's (FogRun.tsx). */
 export type BossSheetKey =

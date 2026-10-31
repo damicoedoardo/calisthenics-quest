@@ -37,9 +37,17 @@ import {
   type Ally,
   type AllyKind,
   type CellKind,
+  BACK,
   BARREL,
   BELLOWS,
   BLINK,
+  BURST,
+  MOLE,
+  SQUIRE,
+  STALL,
+  SWOOP,
+  UNDERTOW,
+  WALL,
   BOSSES,
   BOSS_HP,
   CHARGE,
@@ -206,6 +214,14 @@ export interface Foe {
   face?: number;
   /** The Tollkeeper: when each hero (by id) last hit it. */
   hitters?: Record<number, number>;
+  /** A Dune Mole under the sand: nothing hits it, it hits nothing (MOLE). */
+  under?: boolean;
+  /** A Scrap Squire fallen into a pile: it stands up again then, unless someone stands on it
+      (SQUIRE); `rebuilt` once it has, so the next fall is for good. */
+  pileUntil?: number;
+  rebuilt?: boolean;
+  /** A Ridge Hawk's next feathers while it swoops (run seconds). */
+  dropAt?: number;
   alive: boolean;
 }
 
@@ -244,7 +260,9 @@ export interface Bullet {
   ang: number;
   spd: number;
   /** Bounces off walls left. */
-  bounce: number;  /** Who fired it, and with which of its patterns, for its look (foeFx.ts). */
+  bounce: number;
+  /** A stalling shot that has made up its mind and turned at you (STALL). */
+  turned?: boolean;  /** Who fired it, and with which of its patterns, for its look (foeFx.ts). */
   from?: FoeKind;
   pat?: number;
 }
@@ -337,9 +355,14 @@ export type GameEvent =
   | { type: 'won' }
   | { type: 'dash'; x: number; y: number; toX: number; toY: number }
   | { type: 'shout'; x: number; y: number }
-  | { type: 'boom'; x: number; y: number; r: number }
+  /** A bomb or a drop bursts; `kind` is whose (a Cairn's icicle, a Dust Devil's sand ball). */
+  | { type: 'boom'; x: number; y: number; r: number; kind?: FoeKind }
   | { type: 'blink'; x: number; y: number; toX: number; toY: number }
   | { type: 'wind'; id: number }
+  /** A Dune Mole goes under the sand (`up` false) or comes up (true). */
+  | { type: 'dig'; id: number; x: number; y: number; up: boolean }
+  /** A Scrap Squire falls into a pile, stands up again (`up`), or is stamped out for good. */
+  | { type: 'pile'; id: number; x: number; y: number; up: boolean }
   | { type: 'shrine'; x: number; y: number }
   | { type: 'chest'; x: number; y: number }
   | { type: 'relic'; id: RelicId }
@@ -508,6 +531,8 @@ export interface Hero {
   dodgeAt: number;
   /** The Gale's gust on you (px/s), added to how you walk. */
   wind: { x: number; y: number };
+  /** The Undertows' pull on you (px/s), added to how you walk (UNDERTOW). */
+  tow: { x: number; y: number };
   shove: { until: number; x: number; y: number };
   ability: AbilityId;
   abilityAt: number;
@@ -740,6 +765,7 @@ function newHero(hs: HeroSetup, id: number): Hero {
     charge: null,
     dodgeAt: 0,
     wind: { x: 0, y: 0 },
+    tow: { x: 0, y: 0 },
     shove: { until: 0, x: 0, y: 0 },
     ability: abilityOf(hs.classId),
     abilityAt: 0,
@@ -1119,6 +1145,7 @@ function enterRoom(run: Run, from: Side | null) {
     p.lock = null;
     p.charge = null;
     p.wind = { x: 0, y: 0 };
+    p.tow = { x: 0, y: 0 };
   });
   run.warden = null;
   run.dim = null;
@@ -1459,8 +1486,8 @@ function moveHero(run: Run, h: Hero, input: Input) {
   } else {
     h.charge = null;
     const wade = run.terrain.water.some((q) => inRect(q, h.x, h.y)) ? Math.min(1, WATER.hero + 0.15 * relic(h, 'boots')) : 1;
-    h.vx = x * speed * wade + h.wind.x;
-    h.vy = y * speed * wade + h.wind.y;
+    h.vx = x * speed * wade + h.wind.x + h.tow.x;
+    h.vy = y * speed * wade + h.wind.y + h.tow.y;
   }
   h.x += h.vx * STEP;
   h.y += h.vy * STEP;
@@ -2159,8 +2186,14 @@ function moveFoes(run: Run) {
     up = standing(run),
     // Someone is unseen (Vanish): the monsters going for them lose them.
     lose = run.party.some((h) => hidden(run, h));
+  undertow(run, up);
   for (const f of run.foes) {
     if (!f.alive) continue;
+    // A Scrap Squire's pile: it lies still until it stands again, or someone stamps it out.
+    if (f.pileUntil !== undefined) {
+      stepPile(run, f, up);
+      continue;
+    }
     burnTick(run, f);
     if (f.held && now >= f.held.until) pop(run, f);
     if (!f.alive) continue;
@@ -2188,8 +2221,8 @@ function moveFoes(run: Run) {
       if (p.above && f.hp <= f.maxHp * p.above) return;
       // The Hollow's light open: it turns its spiral instead (steerBoss).
       if (f === run.boss && run.setup.zone.boss === 'hollow' && f.phase === 2) return;
-      // An Unsent out of every lantern's light is only a shape.
-      if (f.kind === 'unsent' && !lit(run, f)) return;
+      // An Unsent out of every lantern's light is only a shape; a Dune Mole under the sand can't shoot.
+      if ((f.kind === 'unsent' && !lit(run, f)) || f.under) return;
       shoot(run, f, p);
     });
     // A mid-boss's second phase: a roar, and new volleys (the Warden's cross stops turning).
@@ -2199,7 +2232,7 @@ function moveFoes(run: Run) {
       emit(run, { type: 'midSay', text: midBoss(run.setup.zone).hot });
     }
     // Touch (a charging ram hits harder).
-    if (f.def.dmg > 0 && !held && !(f.kind === 'unsent' && !lit(run, f))) for (const h of up) if (dist(f, h) < f.def.r + HERO_R) hurt(run, h, f.def.dmg * (f !== run.warden && now < f.dashUntil ? 1.5 : 1), 'touch');
+    if (f.def.dmg > 0 && !held && !f.under && !(f.kind === 'unsent' && !lit(run, f))) for (const h of up) if (dist(f, h) < f.def.r + HERO_R) hurt(run, h, f.def.dmg * (f !== run.warden && now < f.dashUntil ? 1.5 : 1), 'touch');
     if (run.over) return;
   }
   // Monsters push each other apart.
@@ -2336,6 +2369,22 @@ function steer(run: Run, f: Foe) {
       emit(run, { type: 'wind', id: f.id });
       return;
     }
+    case 'mimic': {
+      // Where your mirror image would stand, across the middle of the room (left and right swapped).
+      const tx = run.area.w - h.x,
+        ty = h.y,
+        ex = tx - f.x,
+        ey = ty - f.y,
+        e = Math.hypot(ex, ey) || 1,
+        v = Math.min(f.speed, e * 3);
+      f.vx = (ex / e) * v;
+      f.vy = (ey / e) * v;
+      return;
+    }
+    case 'burrow':
+      return burrow(run, f, h, dx / d, dy / d);
+    case 'swoop':
+      return swoop(run, f, dx / d, dy / d, d);
     case 'blink':
       // Drift at its range; every few seconds, mark a spot near you, vanish, land there and fire.
       if (now < f.windUntil) {
@@ -2385,6 +2434,131 @@ function fade(run: Run, f: Foe) {
   emit(run, { type: 'blink', x: f.x, y: f.y, toX: f.x, toY: f.y });
 }
 
+/** A Dune Mole: up and walking at you for MOLE.up s, then under the sand digging after you, then the
+    mound stops (where it will come up, MOLE.mark s) and it bursts out with a ring. */
+function burrow(run: Run, f: Foe, h: Hero, ux: number, uy: number) {
+  const now = run.t;
+  if (!f.under) {
+    if (now >= f.act) {
+      f.under = true;
+      f.dashUntil = now + MOLE.under;
+      f.windUntil = 0;
+      f.vx = f.vy = 0;
+      emit(run, { type: 'dig', id: f.id, x: f.x, y: f.y, up: false });
+      return;
+    }
+    f.vx = ux * f.speed;
+    f.vy = uy * f.speed;
+    return;
+  }
+  if (now < f.dashUntil) {
+    const d = Math.hypot(h.x - f.x, h.y - f.y);
+    // Under the sand it heads for where you stand, and stops on top of you.
+    const v = Math.min(MOLE.speed, d * 4);
+    f.vx = ux * v;
+    f.vy = uy * v;
+    return;
+  }
+  f.vx = f.vy = 0;
+  if (!f.windUntil) {
+    f.windUntil = now + MOLE.mark;
+    emit(run, { type: 'wind', id: f.id });
+    return;
+  }
+  if (now < f.windUntil) return;
+  f.under = false;
+  f.windUntil = 0;
+  f.act = now + MOLE.up * (0.8 + run.rnd() * 0.4);
+  emit(run, { type: 'dig', id: f.id, x: f.x, y: f.y, up: true });
+  moved(run, f);
+}
+
+/** A Ridge Hawk: it circles at its range; every SWOOP.every s it hangs still and aims (it glows),
+    then dives in a straight line through where you stood until a wall (or SWOOP.most s), dropping
+    its feathers either side on the way. */
+function swoop(run: Run, f: Foe, ux: number, uy: number, d: number) {
+  const now = run.t;
+  if (now < f.windUntil) {
+    f.vx = f.vy = 0;
+    f.dashX = ux;
+    f.dashY = uy;
+    return;
+  }
+  if (f.windUntil && now < f.dashUntil) {
+    const { w, h: H } = run.area,
+      r = f.def.r + 2,
+      nx = f.x + f.dashX * SWOOP.speed * STEP,
+      ny = f.y + f.dashY * SWOOP.speed * STEP;
+    if (nx > ROOM.wall + r && nx < w - ROOM.wall - r && ny > ROOM.wall + r && ny < H - ROOM.wall - r) {
+      f.vx = f.dashX * SWOOP.speed;
+      f.vy = f.dashY * SWOOP.speed;
+      if (now >= (f.dropAt ?? 0)) {
+        f.dropAt = now + SWOOP.drop;
+        for (const p of f.def.shoots) if (p.on === 'dash') shoot(run, f, p);
+      }
+      return;
+    }
+  }
+  if (f.windUntil) {
+    f.windUntil = f.dashUntil = 0;
+    f.act = now + SWOOP.every * (0.8 + run.rnd() * 0.4);
+    f.vx = f.vy = 0;
+    return;
+  }
+  if (now >= f.act && d < 420) {
+    f.windUntil = now + SWOOP.wind;
+    f.dashUntil = f.windUntil + SWOOP.most;
+    f.dashX = ux;
+    f.dashY = uy;
+    emit(run, { type: 'wind', id: f.id });
+    f.vx = f.vy = 0;
+    return;
+  }
+  const range = f.def.range ?? 200,
+    pull = clamp((d - range) / 60, -1, 1);
+  f.vx = (ux * pull - uy * 0.8) * f.speed;
+  f.vy = (uy * pull + ux * 0.8) * f.speed;
+}
+
+/** The Undertows pull everyone near toward them (UNDERTOW): strongest at the edge of their reach,
+    fading to nothing up close, so they draw you in but never drag you onto them. */
+function undertow(run: Run, up: Hero[]) {
+  for (const h of up) {
+    let x = 0,
+      y = 0;
+    for (const f of run.foes) {
+      if (!f.alive || f.kind !== 'undertow' || run.t < f.bornUntil || f.held) continue;
+      const dx = f.x - h.x,
+        dy = f.y - h.y,
+        d = Math.hypot(dx, dy) || 1;
+      if (d > UNDERTOW.reach || d < UNDERTOW.close) continue;
+      const k = Math.min(1, (d - UNDERTOW.close) / 90) * UNDERTOW.pull;
+      x += (dx / d) * k;
+      y += (dy / d) * k;
+    }
+    const v = Math.hypot(x, y),
+      most = UNDERTOW.pull * UNDERTOW.most;
+    h.tow = v > most ? { x: (x / v) * most, y: (y / v) * most } : { x, y };
+  }
+}
+
+/** A Scrap Squire's pile, each step: stamped out if a hero stands on it, else it stands up again. */
+function stepPile(run: Run, f: Foe, up: Hero[]) {
+  f.vx = f.vy = 0;
+  const on = up.find((h) => Math.hypot(h.x - f.x, h.y - f.y) < SQUIRE.stamp);
+  if (on) {
+    f.pileUntil = undefined;
+    f.rebuilt = true;
+    return kill(run, f, on);
+  }
+  if (run.t < (f.pileUntil ?? 0)) return;
+  f.pileUntil = undefined;
+  f.rebuilt = true;
+  f.hp = Math.max(1, Math.round(f.maxHp * SQUIRE.back));
+  f.next = f.next.map(() => run.t + 0.8);
+  emit(run, { type: 'pile', id: f.id, x: f.x, y: f.y, up: true });
+}
+
 /** The volleys a monster fires when its charge ends or its blink lands. */
 function moved(run: Run, f: Foe) {
   for (const p of f.def.shoots) if (p.on === 'move') shoot(run, f, p);
@@ -2424,6 +2598,45 @@ function shoot(run: Run, f: Foe, p: Pattern) {
       from: f.kind,
       pat: f.def.shoots.indexOf(p),
     });
+  if (p.kind === 'rain') {
+    // Drops round you, one where you stand: each lands where its shadow is, and throws nothing.
+    for (let i = 0; i < p.n; i++) {
+      const a = run.rnd() * Math.PI * 2,
+        r = i === 0 ? run.rnd() * 14 : 45 + run.rnd() * 65,
+        x = clamp(h.x + Math.cos(a) * r, ROOM.wall + 10, run.area.w - ROOM.wall - 10),
+        y = clamp(h.y + Math.sin(a) * r, ROOM.wall + 10, run.area.h - ROOM.wall - 10),
+        late = i * 0.12;
+      run.mines.push({ id: ++run.ids, x, y, r: p.r ?? 30, dmg, lands: run.t + MINE.flight + late, at: run.t + MINE.flight + MINE.fuse + late, n: 0, speed: 0, from: f.kind });
+    }
+    emit(run, { type: 'shoot', x: f.x, y: f.y, boss, id: f.id, kind: f.kind });
+    return;
+  }
+  if (p.kind === 'wall') {
+    // A line of shots side by side, all flying at you, with two left out near the middle.
+    const px = -Math.sin(at),
+      py = Math.cos(at),
+      gap = Math.floor(p.n / 2) - 1 + Math.floor(run.rnd() * 2) + (run.rnd() < 0.5 ? -2 : 1);
+    for (let i = 0; i < p.n; i++) {
+      if (i === gap || i === gap + 1) continue;
+      const o = (i - (p.n - 1) / 2) * WALL.space,
+        x = f.x + px * o,
+        y = f.y + py * o;
+      if (x < ROOM.wall || x > run.area.w - ROOM.wall || y < ROOM.wall || y > run.area.h - ROOM.wall) continue;
+      add(at);
+      const b = run.bullets[run.bullets.length - 1];
+      b.x = x;
+      b.y = y;
+    }
+    emit(run, { type: 'shoot', x: f.x, y: f.y, boss, id: f.id, kind: f.kind });
+    return;
+  }
+  if (p.kind === 'side') {
+    // Out either side of the way it flies (a swoop's trail).
+    const a = Math.atan2(f.dashY, f.dashX);
+    add(a + Math.PI / 2);
+    add(a - Math.PI / 2);
+    return;
+  }
   if (p.kind === 'aimed') for (let i = 0; i < p.n; i++) add(at + (i - (p.n - 1) / 2) * 0.12);
   else if (p.kind === 'spread') for (let i = 0; i < p.n; i++) add(at + (p.n === 1 ? 0 : (i / (p.n - 1) - 0.5) * (p.arc ?? 0.5)));
   else if (p.kind === 'ring') {
@@ -2450,10 +2663,19 @@ function moveBullets(run: Run) {
     const b = list[i];
     if (moveBullet(run, b, now, up, w, H, m)) list[keep++] = b;
   }
+  // Shots added on the way are dropped here, as before; the ones a bursting sand ball throws are
+  // kept (hatch).
   list.length = keep;
+  if (hatch.length) {
+    for (const b of hatch) list.push(b);
+    hatch.length = 0;
+  }
   run.bullets = list;
   moveMines(run, now, up);
 }
+
+/** Shots thrown by other shots this step (a Dust Devil's sand ball bursting), added after the step. */
+const hatch: Bullet[] = [];
 
 /** One shot's step: false when it's gone (out of the room, into a pillar, a barrel, or you). */
 function moveBullet(run: Run, b: Bullet, now: number, up: Hero[], w: number, H: number, m: number): boolean {
@@ -2475,6 +2697,33 @@ function moveBullet(run: Run, b: Bullet, now: number, up: Hero[], w: number, H: 
       const a = b.ang + Math.sin(age * 7) * 0.45;
       b.vx = Math.cos(a) * b.spd;
       b.vy = Math.sin(a) * b.spd;
+    } else if (b.style === 'back') {
+      // Out, slowing to a stop, and back along the same line as fast; then gone.
+      if (age > BACK.out * 2) return false;
+      const k = Math.cos((age / BACK.out) * (Math.PI / 2));
+      b.vx = Math.cos(b.ang) * b.spd * k;
+      b.vy = Math.sin(b.ang) * b.spd * k;
+    } else if (b.style === 'burst') {
+      if (age >= BURST.at) {
+        for (let i = 0; i < BURST.n; i++) {
+          const a = b.ang + (i / BURST.n) * Math.PI * 2;
+          hatch.push({ id: ++run.ids, x: b.x, y: b.y, vx: Math.cos(a) * BURST.speed, vy: Math.sin(a) * BURST.speed, r: 5, dmg: b.dmg * 0.6, born: now, boss: false, style: 'plain', ang: a, spd: BURST.speed, bounce: 0, from: b.from, pat: -1 });
+        }
+        emit(run, { type: 'boom', x: b.x, y: b.y, r: 16, kind: b.from });
+        return false;
+      }
+    } else if (b.style === 'stall') {
+      // Out, then it hangs still, then darts at whoever is nearest.
+      if (age >= STALL.go + STALL.wait) {
+        if (!b.turned) {
+          const h = prey(run, b.x, b.y);
+          b.turned = true;
+          b.ang = Math.atan2(h.y - b.y, h.x - b.x);
+          b.spd *= STALL.fast;
+          b.vx = Math.cos(b.ang) * b.spd;
+          b.vy = Math.sin(b.ang) * b.spd;
+        }
+      } else if (age >= STALL.go) b.vx = b.vy = 0;
     }
     b.x += b.vx * STEP;
     b.y += b.vy * STEP;
@@ -2507,7 +2756,7 @@ function moveMines(run: Run, now: number, up: Hero[]) {
   run.mines = run.mines.filter((mn) => {
     if (now < mn.at) return true;
     for (const h of up) if (Math.hypot(mn.x - h.x, mn.y - h.y) < mn.r + HERO_R - 4) hurt(run, h, mn.dmg, 'shot');
-    emit(run, { type: 'boom', x: mn.x, y: mn.y, r: mn.r });
+    emit(run, { type: 'boom', x: mn.x, y: mn.y, r: mn.r, kind: mn.from });
     for (let i = 0; i < mn.n; i++) {
       const a = (i / mn.n) * Math.PI * 2 + 0.3;
       run.bullets.push({ id: ++run.ids, x: mn.x, y: mn.y, vx: Math.cos(a) * mn.speed, vy: Math.sin(a) * mn.speed, r: 5, dmg: mn.dmg * 0.6, born: now, boss: false, style: 'plain', ang: a, spd: mn.speed, bounce: 0, from: mn.from });
@@ -2804,7 +3053,7 @@ function scripted(run: Run, b: Foe, ux: number, uy: number) {
 const pow = (h: Hero, base: number) => heroDamage(base, h.power, h.ups) * (1 + DIALS.relic * 0.12 * relic(h, 'whetstone'));
 
 /** The Hollow: nothing you throw at it lands. */
-const untouchable = (run: Run, f: Foe) => (f === run.boss && run.setup.zone.boss === 'hollow' && !run.setup.tutorial) || (f.kind === 'unsent' && !lit(run, f));
+const untouchable = (run: Run, f: Foe) => (f === run.boss && run.setup.zone.boss === 'hollow' && !run.setup.tutorial) || (f.kind === 'unsent' && !lit(run, f)) || !!f.under || f.pileUntil !== undefined;
 
 /** In a lantern's light (the Quiet Miles): some hero who is up stands within LANTERN.r of it. */
 export function lit(run: Pick<Run, 'party'>, f: Pick<Foe, 'x' | 'y' | 'def'>) {
@@ -3112,6 +3361,15 @@ function leech(run: Run, h: Hero, dmg: number) {
 }
 
 function kill(run: Run, f: Foe, by: Hero) {
+  // A Scrap Squire falls into a pile the first time (SQUIRE): it isn't down yet.
+  if (f.kind === 'squire' && !f.rebuilt && f.pileUntil === undefined) {
+    f.pileUntil = run.t + SQUIRE.rebuild;
+    f.hp = 0;
+    f.burn = undefined;
+    f.held = undefined;
+    emit(run, { type: 'pile', id: f.id, x: f.x, y: f.y, up: false });
+    return;
+  }
   f.alive = false;
   by.kills++;
   emit(run, { type: 'kill', id: f.id, x: f.x, y: f.y, kind: f.kind, elite: f.elite });
