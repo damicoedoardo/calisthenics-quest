@@ -252,9 +252,9 @@ an LLM gets back to do better.
 - **Train tab** (`CoachScreen` in `CoachChat.tsx`): the flame with what it brings up or its last
   words, "Let's start", "Talk" or "Answer", and "What I know" (`CoachKnows`: profile, levels, notes,
   each note can be forgotten; to change the profile, tell the flame). Under it the week (`WeekBoard`):
-  a chip for each day, Monday to Sunday: workouts, rest days, and "–" before the plan (✓ done or kept, "next" lit) and the chosen day's workout as cards (from `todayIs`: it opens on the workout to do today, a missed one too, on the next workout once today's is done, else on today): the pixel demo, dose and rest, Easier
+  "This week" with "N of M done", then a chip for each day, Monday to Sunday: its weekday, its date and an icon (a dumbbell for a workout, a flame for a rest day, a tick once done or kept, nothing before the plan; the next workout lit gold, a dot under today), and the chosen day's workout (from `todayIs`: it opens on the workout to do today, a missed one too, on the next workout once today's is done, else on today) as `WorkoutList`, the same list Today shows (see [../app/screens.md](../app/screens.md)): warm-up and cool-down folded, still, dose and rest, Easier
   and Swap (days still to do), and Start on the next day once its day has come (`startsToday`: on its date or after it, to catch up a missed one, never ahead, and not on a day you already trained; `start` in `page.tsx` checks it too, the developer menu's Workout jump skips it); a rest day says why rest counts and, on the
-  day, offers a minute by the fire. Before the first week: only a line that says to talk to the flame. Tap a card (here or on Today) for how to
+  day, offers a minute by the fire. Before the first week: only a line that says to talk to the flame. Tap an exercise (here or on Today) for how to
   do it (`ExerciseSheet`: both demos, facts, steps, tips, mistakes). Sideways the two sit side by side.
 - **The chat** (`CoachChat`): the camp fire at the top with the flame, the talk below in the
   story's dialogue boxes, the taps it offers, and a box to type that grows with what you write (up

@@ -5,25 +5,23 @@ import { BookOfDays } from './BookOfDays';
 import { Ember, Hollow } from './Characters';
 import { SitByFire } from './SitByFire';
 import { Sprite } from './Sprite';
-import { useLook } from './Look';
+import { WorkoutList } from './WorkoutList';
 import { useLand } from './useLand';
 import {
   WEEKLY_GOAL,
   dayType,
-  gearOf,
   sessionsThisWeek,
   todaysQuest,
   weekStreak,
   type Checkin,
   type GameState,
 } from '@/lib/game';
-import { ROLE_COLOR, ROLE_LABEL } from '@/lib/program';
-import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
+import { minutesOf } from '@/lib/coach/time';
+import type { PlanItem } from '@/lib/coach/types';
 import { dayKey, daysApart, daysSinceTraining } from '@/lib/days';
 import { storyWords } from '@/story/engine';
 import { flameStage } from '@/story/flame';
 import { currentPlan, dayLabel, nextDay, nextMonday, todayIs, weekdayOf } from '@/lib/coach/week';
-import { ExerciseSheet } from './ExerciseDetail';
 import { fireLine, flameLine, flameMood, restTruth, todayPage, updateTodayPage } from '@/story/daily';
 
 interface Props {
@@ -37,21 +35,11 @@ interface Props {
   onTrain: () => void;
 }
 
-const CHECKINS: { id: Checkin; label: string; note: string; minutes: number }[] = [
-  { id: 'rough', label: 'Rough', note: 'Small still counts. Main exercise only, about 15 minutes.', minutes: 15 },
-  { id: 'normal', label: 'Normal', note: 'The full quest, about 40 minutes.', minutes: 40 },
-  { id: 'strong', label: 'Strong', note: 'Full quest. If the last set flies, add a rep.', minutes: 40 },
-];
 
 
 export function TodayTab({ state, update, onStart, onReplayOpening, openBook, onTrain }: Props) {
   const now = new Date();
   const [overlay, setOverlay] = useState<'fire' | 'book' | null>(openBook ? 'book' : null);
-  // An exercise tapped in the quest: how to do it.
-  const [howTo, setHowTo] = useState<{ id: string; demo: ExerciseId } | null>(null);
-  // The warm-up and the stretch start folded, so the main work gets the room.
-  const [unfolded, setUnfolded] = useState<Partial<Record<FoldRole, boolean>>>({});
-  const toggle = (role: FoldRole) => setUnfolded((u) => ({ ...u, [role]: !u[role] }));
   useEffect(() => {
     if (openBook) setOverlay('book');
   }, [openBook]);
@@ -73,10 +61,6 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
   const ahead = restDay && plan ? today.next : undefined;
   const aheadDay = ahead ? (dayLabel(ahead.date, now) === 'Tomorrow' ? 'tomorrow' : weekdayOf(ahead.date)) : '';
   const aheadNote = ahead ? `Today is a rest day. This is your next workout, for ${aheadDay}.` : null;
-  // You, in your gear and look, for the exercise stills in the quest list.
-  const look = useLook();
-  const hero = { gear: gearOf(state), classId: state.profile.classId, look };
-
   const land = useLand();
   const overlays = (
     <>
@@ -92,17 +76,23 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
         />
       )}
       {overlay === 'book' && <BookOfDays state={state} onClose={() => setOverlay(null)} />}
-      {howTo && <ExerciseSheet state={state} id={howTo.id} demo={howTo.demo} onClose={() => setHowTo(null)} />}
     </>
   );
   const items = inProgress ? todaysQuest(state) : quest;
   const startLabel = inProgress ? 'Continue quest' : ahead ? `Opens ${aheadDay === 'tomorrow' ? 'tomorrow' : `on ${aheadDay}`}` : 'Start quest';
   const questTitle = checkin === 'rough' && !inProgress ? 'Minimum quest' : (plan?.title ?? `Day ${day} quest`);
-  const rows = foldRows(items, unfolded);
-  const reps = (q: (typeof items)[number]) => {
-    const done = state.draft?.sets[q.id]?.length ?? 0;
-    return inProgress ? `${Math.min(done, q.sets)}/${q.sets}` : q.run ? `${Math.round(q.reps / 60)} min` : `${q.sets > 1 ? `${q.sets}×` : ''}${q.reps}${q.unit === 'sec' ? 's' : ''}`;
-  };
+  // The workout as the Train tab shows it (WorkoutList): the plan's items, with what today leaves
+  // out (a rough day) dimmed and its sets as today has them.
+  const inQuest = new Map(items.map((q) => [q.id, q]));
+  const shown: PlanItem[] = (plan?.items ?? []).map((it) => {
+    const q = inQuest.get(it.id);
+    return q ? (q.sets === it.sets ? it : { ...it, sets: q.sets }) : { ...it, skipped: true };
+  });
+  const progress = inProgress ? Object.fromEntries(Object.entries(state.draft!.sets).map(([k, v]) => [k, v.length])) : undefined;
+  const time = inProgress ? undefined : `about ${minutesOf(shown)} min`;
+  const list = (tiles?: boolean) => (
+    <WorkoutList state={state} update={update} items={shown} changeable={!inProgress} progress={progress} tiles={tiles} title={tiles ? undefined : questTitle} time={time} />
+  );
 
   if (land)
     return (
@@ -111,14 +101,11 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
         now={now}
         week={week}
         streak={streak}
-        hero={hero}
-        rows={rows}
-        onToggle={toggle}
+        list={list(true)}
+        time={time}
         instead={doneToday ? <DoneToday state={state} now={now} onTrain={onTrain} land /> : noPlan ? <NoPlan state={state} now={now} onTrain={onTrain} land /> : null}
         restDay={restDay}
         aheadNote={aheadNote}
-        onHowTo={(q) => setHowTo({ id: q.id, demo: q.demo })}
-        reps={reps}
         title={questTitle}
         checkin={checkin}
         onCheckin={inProgress ? undefined : setCheckin}
@@ -157,39 +144,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
         <>
       {aheadNote && !inProgress && <p className="text-xs text-orange-200">{aheadNote}</p>}
 
-      <section className="rounded-2xl bg-ink-800 p-4">
-        <div className="flex items-baseline justify-between">
-          <h3 className="font-pixel text-[9px] leading-relaxed text-gold-300">{questTitle}</h3>
-          {!inProgress && <p className="shrink-0 pl-2 font-mono text-[11px] text-slate-400">{CHECKINS.find((c) => c.id === checkin)!.minutes} min</p>}
-        </div>
-        <ul className="mt-3 space-y-1.5">
-          {rows.map((r) =>
-            r.kind === 'fold' ? (
-              <li key={r.role}>
-                <FoldRow role={r.role} items={r.items} open={r.open} onToggle={() => toggle(r.role)} />
-              </li>
-            ) : (
-              <li key={r.q.id}>
-                <button onClick={() => setHowTo({ id: r.q.id, demo: r.q.demo })} aria-label={`How to do ${r.q.name}`} className="flex w-full items-center gap-3 rounded-xl bg-ink-900 py-1 pl-1 pr-3 text-left active:scale-[.98]">
-                {/* A still of you doing it: the demo's first frame, at 1:1 so it stays crisp. */}
-                {(EXERCISES as string[]).includes(r.q.demo) ? (
-                  <Sprite id="exercise" opts={{ exercise: r.q.demo, ...hero }} size={48} playing={false} label={`${r.q.name}, demo`} className="shrink-0 rounded-lg bg-ink-950" />
-                ) : (
-                  <span className="h-12 w-12 shrink-0" />
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="block text-[9px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[r.q.role] }}>
-                    {ROLE_LABEL[r.q.role]}
-                  </span>
-                  <span className="mt-0.5 block text-sm leading-snug text-slate-100">{r.q.name}</span>
-                </span>
-                <span className="shrink-0 font-mono text-sm text-slate-300">{reps(r.q)}</span>
-                </button>
-              </li>
-            ),
-          )}
-        </ul>
-      </section>
+      <section className="rounded-2xl bg-ink-800 p-4">{list()}</section>
 
       <button
         onClick={() => onStart(inProgress ? state.draft!.checkin : checkin)}
@@ -331,71 +286,19 @@ function InstallHint({ land }: { land?: boolean }) {
   );
 }
 
-type Quest = ReturnType<typeof todaysQuest>;
-type FoldRole = 'warmup' | 'stretch';
-/** A row of the quest list: a folding header for the warm-up or the stretch, or one exercise. */
-type QuestRow = { kind: 'fold'; role: FoldRole; items: Quest; open: boolean } | { kind: 'item'; q: Quest[number] };
-
-/** The quest as rows: each run of warm-up or stretch moves under one header, shown only when unfolded. */
-function foldRows(items: Quest, unfolded: Partial<Record<FoldRole, boolean>>): QuestRow[] {
-  const rows: QuestRow[] = [];
-  for (let i = 0; i < items.length; ) {
-    const role = items[i].role;
-    if (role !== 'warmup' && role !== 'stretch') {
-      rows.push({ kind: 'item', q: items[i++] });
-      continue;
-    }
-    let j = i;
-    while (j < items.length && items[j].role === role) j++;
-    const group = items.slice(i, j);
-    const open = !!unfolded[role];
-    rows.push({ kind: 'fold', role, items: group, open });
-    if (open) for (const q of group) rows.push({ kind: 'item', q });
-    i = j;
-  }
-  return rows;
-}
-
-/** The warm-up or the stretch as one quiet row: its name, how many moves, and a chevron to open it. */
-function FoldRow({ role, items, open, onToggle, land }: { role: FoldRole; items: Quest; open: boolean; onToggle: () => void; land?: boolean }) {
-  return (
-    <button
-      onClick={onToggle}
-      aria-expanded={open}
-      aria-label={`${ROLE_LABEL[role]}, ${items.length} ${items.length === 1 ? 'move' : 'moves'}. ${open ? 'Hide' : 'Show'}`}
-      className={
-        land
-          ? 'flex h-full w-full flex-col items-center justify-center gap-1.5 rounded-xl bg-ink-900/60 px-1 text-center active:scale-[.98]'
-          : 'flex w-full items-center gap-3 rounded-xl bg-ink-900/60 px-3 py-2 text-left active:scale-[.98]'
-      }
-    >
-      <span className="text-[9px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[role] }}>
-        {ROLE_LABEL[role]}
-      </span>
-      <span className={`font-mono text-[11px] text-slate-500 ${land ? '' : 'flex-1'}`}>
-        {items.length} {items.length === 1 ? 'move' : 'moves'}
-      </span>
-      <Sprite id="uiIcon" opts={{ name: 'chevron' }} size={10} label="" className={`shrink-0 transition-transform motion-reduce:transition-none ${land ? (open ? 'rotate-180' : '') : open ? '-rotate-90' : 'rotate-90'}`} />
-    </button>
-  );
-}
-
 interface LandProps {
   state: GameState;
   now: Date;
   week: number;
   streak: number;
-  hero: { gear: ReturnType<typeof gearOf>; classId: GameState['profile']['classId']; look: ReturnType<typeof useLook> };
-  /** The quest's rows: the warm-up and the stretch folded unless opened. */
-  rows: QuestRow[];
-  onToggle: (role: FoldRole) => void;
-  reps: (q: ReturnType<typeof todaysQuest>[number]) => string;
+  /** The workout, as tiles side by side (WorkoutList). */
+  list: ReactNode;
+  /** About how long it takes; none while under way. */
+  time?: string;
   /** Shown in place of the quest board: today's workout done, or none planned. */
   instead: ReactNode;
   restDay: boolean;
   aheadNote: string | null;
-  /** An exercise tapped: open how to do it. */
-  onHowTo: (q: ReturnType<typeof todaysQuest>[number]) => void;
   title: string;
   checkin: Checkin;
   /** Left out while a quest is under way: the check-in is set then. */
@@ -444,36 +347,13 @@ function LandToday(p: LandProps) {
       <section className="flex min-h-0 flex-1 flex-col rounded-2xl bg-ink-800 p-3">
         <div className="flex items-baseline gap-3">
           <h3 className="shrink-0 font-pixel text-[10px] text-gold-300">{p.title}</h3>
-          {p.onCheckin && <p className="shrink-0 font-mono text-[11px] text-slate-400">{CHECKINS.find((c) => c.id === p.checkin)!.minutes} min</p>}
+          {p.time && <p className="shrink-0 font-mono text-[11px] text-slate-400">{p.time}</p>}
           {p.aheadNote && <p className="min-w-0 flex-1 truncate text-xs text-orange-200">{p.aheadNote}</p>}
         </div>
 
         <div className="mt-2 flex min-h-0 flex-1 gap-3">
           {/* The exercises side by side; the dark box takes what height there is, the figure stands on its floor. */}
-          <ul className="flex min-w-0 flex-1 gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {p.rows.map((r) =>
-              r.kind === 'fold' ? (
-                <li key={r.role} className="flex min-h-0 w-14 shrink-0">
-                  <FoldRow role={r.role} items={r.items} open={r.open} onToggle={() => p.onToggle(r.role)} land />
-                </li>
-              ) : (
-              <li key={r.q.id} className="flex min-h-0 min-w-[4rem] flex-1 basis-0">
-                <button onClick={() => p.onHowTo(r.q)} aria-label={`How to do ${r.q.name}`} className="flex min-h-0 w-full flex-col rounded-xl bg-ink-900 p-1.5 text-center active:scale-[.98]">
-                <span className="relative flex min-h-0 flex-1 items-end justify-center overflow-hidden rounded-lg bg-ink-950">
-                  {(EXERCISES as string[]).includes(r.q.demo) && (
-                    <Sprite id="exercise" opts={{ exercise: r.q.demo, ...p.hero }} size={64} playing={false} label={`${r.q.name}, demo`} className="shrink-0" />
-                  )}
-                  <span className="absolute left-1 top-1 rounded bg-ink-950/85 px-0.5 text-[9px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[r.q.role] }}>
-                    {ROLE_LABEL[r.q.role]}
-                  </span>
-                </span>
-                <span className="mt-1 line-clamp-2 shrink-0 text-xs leading-tight text-slate-100">{r.q.name}</span>
-                <span className="shrink-0 font-mono text-xs text-slate-300">{p.reps(r.q)}</span>
-                </button>
-              </li>
-              ),
-            )}
-          </ul>
+          {p.list}
 
           <div className="flex w-40 shrink-0 flex-col min-[800px]:w-44">
             <button
