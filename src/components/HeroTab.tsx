@@ -170,11 +170,14 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
 
   return (
     <div className="space-y-4">
-      <section className="flex flex-col items-center rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 pb-4 pt-5">
+      <section className="relative flex flex-col items-center rounded-2xl bg-gradient-to-b from-ink-700 to-ink-800 pb-4 pt-4">
         <p className="font-pixel text-[10px] text-slate-400">{cls ? cls.name : 'Adventurer'}</p>
-        <Hero gear={gear} classId={state.profile.classId} size={128} variant={heroVariant(state)} sp={spWorn(state)} />
-        <div className="mt-3">{changeLook}</div>
-        <div className="mt-3 w-full px-3"><LevelBar state={state} /></div>
+        <Hero gear={gear} classId={state.profile.classId} size={112} variant={heroVariant(state)} sp={spWorn(state)} />
+        {/* The look, as a small button in the stage's corner. */}
+        <button onClick={() => setEditingLook(true)} aria-label="Change look" className="absolute right-3 top-3 rounded-lg bg-ink-900/70 p-2 text-slate-300">
+          <Palette size={16} />
+        </button>
+        <div className="mt-2 w-full px-3"><LevelBar state={state} /></div>
         <div className="mt-3 w-full px-3">{purse}</div>
       </section>
 
