@@ -189,6 +189,9 @@ Creatures (Ember, the Book, the enemies) read the same frames their own way: `ho
 eight-frame float where `bob` is the breath, and `lunge` is their attack, a wind-up
 (`right: 'up'`) and then the hit (`fx: 'impact'`).
 
+`Ember` (`Characters.tsx`) always carries the `gym-hide` class, so in gym mode the flame steps out
+of the training screens ([../app/screens.md](../app/screens.md#gym-mode-a-plain-look-for-training)).
+
 ### Fog items
 
 Each item kind is one hand-drawn text-row drawing; the letters are roles, not colors (`D M L W` the

@@ -5,6 +5,7 @@ import { BookOfDays } from './BookOfDays';
 import { Ember, Hollow } from './Characters';
 import { SitByFire } from './SitByFire';
 import { Sprite } from './Sprite';
+import { UiIcon, useGymMode } from './Gym';
 import { useLook } from './Look';
 import { useLand } from './useLand';
 import {
@@ -96,8 +97,11 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
     </>
   );
   const items = inProgress ? todaysQuest(state) : quest;
-  const startLabel = inProgress ? 'Continue quest' : ahead ? `Opens ${aheadDay === 'tomorrow' ? 'tomorrow' : `on ${aheadDay}`}` : 'Start quest';
-  const questTitle = checkin === 'rough' && !inProgress ? 'Minimum quest' : (plan?.title ?? `Day ${day} quest`);
+  // Gym mode says workout, not quest.
+  const gym = useGymMode();
+  const word = gym ? 'workout' : 'quest';
+  const startLabel = inProgress ? `Continue ${word}` : ahead ? `Opens ${aheadDay === 'tomorrow' ? 'tomorrow' : `on ${aheadDay}`}` : `Start ${word}`;
+  const questTitle = checkin === 'rough' && !inProgress ? (gym ? 'Short workout' : 'Minimum quest') : (plan?.title ?? `Day ${day} ${word}`);
   const rows = foldRows(items, unfolded);
   const reps = (q: (typeof items)[number]) => {
     const done = state.draft?.sets[q.id]?.length ?? 0;
@@ -136,7 +140,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
       <InstallHint />
 
       {!state.profile.voice && (
-        <button onClick={onReplayOpening} className="flex w-full items-center gap-3 rounded-2xl bg-[#140f1f] p-4 text-left ring-1 ring-red-400/30 active:scale-[.98]">
+        <button onClick={onReplayOpening} className="gym-hide flex w-full items-center gap-3 rounded-2xl bg-[#140f1f] p-4 text-left ring-1 ring-red-400/30 active:scale-[.98]">
           <Hollow size={44} bounce={false} />
           <span className="min-w-0 flex-1">
             <span className="block font-pixel text-[10px] text-red-300">New: the opening</span>
@@ -196,7 +200,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
         disabled={!!ahead}
         className={`flex w-full items-center justify-center gap-2 rounded-2xl py-4 font-pixel text-xs transition ${ahead ? 'bg-ink-700 text-slate-400' : 'bg-gold-400 text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none'}`}
       >
-        <Sprite id="uiIcon" opts={{ name: ahead ? 'lock' : 'play' }} size={14} label="" />
+        <UiIcon name={ahead ? 'lock' : 'play'} size={14} />
         {startLabel}
       </button>
       {!inProgress && !ahead && <RoughDay checkin={checkin} onCheckin={setCheckin} />}
@@ -218,7 +222,9 @@ function FlameCard({ state, now, week, streak, land }: { state: GameState; now: 
   const big = stage.id === 'spark' ? 120 : 76;
   return (
     <section className={land ? 'flex h-full flex-col rounded-2xl bg-ink-800 p-3' : 'rounded-2xl bg-ink-800 p-4'}>
-      <div className={land ? 'flex flex-1 items-center gap-3' : 'flex items-center gap-3'}>
+      {/* In gym mode only the week shows (gym-hide), under a plain label (gym-only). */}
+      <p className="gym-only text-sm font-semibold text-slate-100">This week</p>
+      <div className={land ? 'gym-hide flex flex-1 items-center gap-3' : 'gym-hide flex items-center gap-3'}>
         <div className={land ? 'relative h-14 w-14 shrink-0' : 'relative h-20 w-20 shrink-0'}>
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
             <Ember size={land ? Math.round(big * 0.72) : big} stage={stage.id} mood={flameMood(state, now)} />
@@ -260,7 +266,7 @@ function FlameCard({ state, now, week, streak, land }: { state: GameState; now: 
           </span>
           {streak > 0 && (
             <span className="flex shrink-0 items-center gap-1 font-pixel text-[9px] text-orange-300" title={`${streak}-week streak`}>
-              <Sprite id="uiIcon" opts={{ name: 'flame' }} size={12} label="" />
+              <UiIcon name="flame" size={12} />
               {streak}W
             </span>
           )}
@@ -283,7 +289,7 @@ function RestCard({ state, now, onSit, land }: { state: GameState; now: Date; on
       ) : (
         <>
           <button onClick={onSit} className={`flex w-full items-center justify-center gap-2 rounded-xl bg-ink-800 text-orange-200 ring-1 ring-orange-300/25 active:scale-[.98] ${land ? 'mt-auto py-2 text-xs' : 'mt-3 py-3 text-sm'}`}>
-            <Sprite id="uiIcon" opts={{ name: 'flame' }} size={18} label="" /> Sit by the fire · 1 minute
+            <UiIcon name="flame" size={18} /> Sit by the fire · 1 minute
           </button>
           <p className={land ? 'mt-1.5 text-[11px] text-slate-500' : 'mt-2 text-xs text-slate-500'}>
             {fullDayOff ? 'A full day of air: your Fog runs today start Rested.' : 'It counts as rest: your Fog runs today start Rested.'}
@@ -325,7 +331,7 @@ function InstallHint({ land }: { land?: boolean }) {
         }}
         className="-m-2 p-2 text-sky-300"
       >
-        <Sprite id="uiIcon" opts={{ name: 'close' }} size={18} label="" />
+        <UiIcon name="close" size={18} />
       </button>
     </div>
   );
@@ -375,7 +381,7 @@ function FoldRow({ role, items, open, onToggle, land }: { role: FoldRole; items:
       <span className={`font-mono text-[11px] text-slate-500 ${land ? '' : 'flex-1'}`}>
         {items.length} {items.length === 1 ? 'move' : 'moves'}
       </span>
-      <Sprite id="uiIcon" opts={{ name: 'chevron' }} size={10} label="" className={`shrink-0 transition-transform motion-reduce:transition-none ${land ? (open ? 'rotate-180' : '') : open ? '-rotate-90' : 'rotate-90'}`} />
+      <UiIcon name="chevron" size={10} className={`shrink-0 transition-transform motion-reduce:transition-none ${land ? (open ? 'rotate-180' : '') : open ? '-rotate-90' : 'rotate-90'}`} />
     </button>
   );
 }
@@ -422,7 +428,7 @@ function LandToday(p: LandProps) {
       <div className="-m-1 flex h-[7.75rem] shrink-0 gap-3 [@media(max-height:370px)]:h-[7.25rem] overflow-x-auto p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <InstallHint land />
         {!state.profile.voice && (
-          <button onClick={p.onReplayOpening} className="flex h-full w-60 shrink-0 items-center gap-3 rounded-2xl bg-[#140f1f] p-3 text-left ring-1 ring-red-400/30 active:scale-[.98]">
+          <button onClick={p.onReplayOpening} className="gym-hide flex h-full w-60 shrink-0 items-center gap-3 rounded-2xl bg-[#140f1f] p-3 text-left ring-1 ring-red-400/30 active:scale-[.98]">
             <Hollow size={44} bounce={false} />
             <span className="min-w-0 flex-1">
               <span className="block font-pixel text-[9px] text-red-300">New: the opening</span>
@@ -481,7 +487,7 @@ function LandToday(p: LandProps) {
               disabled={p.locked}
               className={`flex min-h-[2.75rem] flex-1 items-center justify-center gap-2 rounded-2xl px-3 font-pixel text-[10px] leading-relaxed transition ${p.locked ? 'bg-ink-700 text-slate-400' : 'bg-gold-400 text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none'}`}
             >
-              <Sprite id="uiIcon" opts={{ name: p.locked ? 'lock' : 'play' }} size={14} label="" className="shrink-0" />
+              <UiIcon name={p.locked ? 'lock' : 'play'} size={14} className="shrink-0" />
               {p.startLabel}
             </button>
             {p.onCheckin && !p.locked && <RoughDay checkin={p.checkin} onCheckin={p.onCheckin} land />}
@@ -568,7 +574,7 @@ function DoneToday({ state, now, onTrain, land }: { state: GameState; now: Date;
       </div>
       <button onClick={onTrain} className={`mx-auto flex max-w-full items-center justify-center gap-1 text-xs text-slate-400 active:text-slate-200 ${land ? 'mt-3' : 'mt-5'}`}>
         <span className="min-w-0 truncate">{nextWords}</span>
-        <Sprite id="uiIcon" opts={{ name: 'chevron' }} size={10} label="" className="shrink-0" />
+        <UiIcon name="chevron" size={10} className="shrink-0" />
       </button>
     </section>
   );

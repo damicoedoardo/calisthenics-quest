@@ -6,6 +6,7 @@ import { SoundToggle, useMenuMusic } from './Sound';
 import { CloudSave } from './Cloud';
 import { StartOver } from './StartOver';
 import { DayQuote } from './DayQuote';
+import { setGymMode, useGymMode } from './Gym';
 import { useModal } from './useModal';
 import { Hero } from './Hero';
 import { Sprite } from './Sprite';
@@ -37,6 +38,7 @@ const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { d
 export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: Props) {
   const box = useModal<HTMLDivElement>(onClose);
   const menuMusic = useMenuMusic();
+  const gym = useGymMode();
   const statsShared = useStatsShared();
   const story = storyState(state);
   const [backupMsg, setBackupMsg] = useState('');
@@ -166,6 +168,9 @@ export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: 
             {/* Settings: one row each, a switch on the right. */}
             <section className="rounded-2xl bg-ink-800 px-4 py-2">
               <h2 className="pb-1 pt-2 font-pixel text-[10px] text-gold-300">Settings</h2>
+              <Row label="Gym mode" note="A plain, modern look for Today, Train and the workout.">
+                <Switch id="gym-mode" on={gym} set={setGymMode} />
+              </Row>
               <Row label="Sound">
                 <SoundToggle className="!text-slate-300" />
               </Row>

@@ -259,7 +259,7 @@ an LLM gets back to do better.
 - **The chat** (`CoachChat`): the camp fire at the top with the flame, the talk below in the
   story's dialogue boxes, the taps it offers, and a box to type that grows with what you write (up
   to 40% of the screen, then scrolls; a count past 800 of 1000). Enter sends on a keyboard, on a
-  phone it's a new line. While the flame works it glows and flickers, and its box (`Working`) ticks
+  phone it's a new line. In gym mode ([../app/screens.md](../app/screens.md#gym-mode-a-plain-look-for-training)) the camp picture and the flame step out and the top is a plain bar with Close. While the flame works it glows and flickers, and its box (`Working`) ticks
   off each tool it ran this turn (`STEP_LABEL` in `chat.ts`, heard through `onStep`), with the
   seconds so far; a failed turn offers "Try again". A week or day it just set shows in
   the chat as the week, a strip of demos per day.

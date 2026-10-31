@@ -68,6 +68,32 @@ Upright must look exactly as before: the upright branch keeps its markup, and si
 Try it at 844×390 and 740×360 with the `/lab/night` jumps (`?sandbox&tab=…`, with `&hero=…`, `&fog=together`
 or `you`; the "Menus" panel has one per screen) and check 390×844 is unchanged.
 
+## Gym mode: a plain look for training
+
+A switch in You > Settings (Edoardo 2026-10-31: at the gym the app should look less like a game).
+On, the training screens drop the pixel look for a plain, modern one: the header, the tab bar,
+Today, Train (with the coach's chat and the exercise library) and the workout (overview, set logger,
+rest, sheets). The Play, Friends and Hero tabs, the Fog, the scenes and the screen after a workout
+keep the game's look. It is kept on this phone only (`forma-gym-mode` in localStorage, like the
+menu music), and off by default.
+
+It is mostly CSS, so the screens keep one markup:
+
+- `src/components/Gym.tsx`: `useGymMode()` and `setGymMode()`, and `UiIcon`, a UI icon that is the
+  pixel one or, in gym mode, a lucide line icon (used by the tab bar, the header, Today and Train).
+- `page.tsx` puts a `gym` class on the header, the tab bar, `main` while on Today or Train, and
+  around `Workout`. Nothing else gets it.
+- `globals.css` (`.gym`): the `ink` and `gold` colors of `tailwind.config.ts` are CSS variables
+  (`--ink-950`…, `--gold-400`…, as R G B), and `.gym` swaps them for plain greys and white, so the
+  gold buttons turn white and the cards neutral grey. `font-pixel` and `font-mono` become Geist
+  (pixel sizes one step up), pixel bevels (`shadow-[…]`) go flat, `pixel-notch` turns round,
+  `gym-hide` hides the game's characters (every `Ember` carries it, the flame card's top, the
+  chat's camp picture) and `gym-only` shows plain words in their place ("This week").
+- A few words change in gym mode: "workout" for "quest" on Today and in the workout.
+
+The exercise demos stay: they show how to do the move. A new training screen gets the look for
+free if it uses the `ink` and `gold` colors; mark game art in it with `gym-hide`.
+
 ## On a computer: the tabs
 
 On a laptop or desktop window (the `desk:` variant in `tailwind.config.ts`: a mouse or trackpad,
@@ -102,7 +128,7 @@ upright layout inside it. Add computer changes only as `desk:` classes. The Fog'
 | `PlusGlow` | The light on an item, over a tile or card: its plus's shine (a glow from +4, in the rarity's color from +7, rising sparks from +10, light rays on a card from +13, full radiance at +15) and, for a legendary, `LegendFire`, a turning ring of red fire with sparks ([../game/forge.md](../game/forge.md)) |
 | `HeroTab` | Your character, and the only home of your gear and stats: you on a stage (class, hero, a small palette button in its corner for the look, your level and its XP bar (`LevelBar`, moved here from the top bar; sideways beside the part tabs), and the purse, `Purse`: stat points, embers, sweat coins, materials, a dot where something waits to be spent; sideways beside the part tabs), then three parts, the same upright and sideways, kept in `page.tsx` (`heroPart`, `?hero=gear|stats|class`) so the loot guide can open a part: **Gear** (`FogGearCard`: the three worn slots, the vault drawn as every space it has with the free ones empty, and the tapped item's card with Wear or Take off and **Forge**, which opens `ForgeSheet`; see [../game/forge.md](../game/forge.md)), **Stats** (`StatPoints`, `FlamePowers`: the flame's flames and fireballs or fairy), **Class** (the class card with Change class, and the SPs under it, `SpCard`: the first sealed with its trial, then each SP you own, scrolled with arrows, with its moves and the button to wear it; the part is called **Class & SP** once the first SP is given) |
 | `ForgeSheet` | Mira's forge for one item, on its own page (`Forge.tsx`, Edoardo 2026-10-31: the old forge card was messy): Mira and one line she says (after a try: held, missed, slipped), the item's tile with `+7 ▶ +8` and the plus pips (tall marks are safe), only the lines the next plus changes, then the price as chips (embers and any co-op materials, each with what you have, red when short), the chance as a bar with what each way ends in (`Chance`: Works, goes to +N; Fails, may drop a plus or stays), one **Forge +N** button, and **Reroll or melt down** folded at the bottom. **How it works** in its header (`HowItWorks`, Edoardo 2026-10-31: say that it can fail) shows five short steps, each with its part of the +1..+15 strip lit: up to +6 always works, from +6 materials, from +7 it can fail, the safe marks, better odds; it opens by itself the first time on a phone (`forma-forge-guide-seen` in localStorage). Sideways: the item on the left, the price and button on the right |
-| `YouPage` | What is about you, not the game, over the tabs: tap your hero in the header (or at the top of the rail). Kept short (Edoardo 2026-10-31): your hero and your name at the top (tap the name to change it, what friends see; the look changes on the Hero tab), two counts in pixel type (workouts, chapter), the quote of the day with Keep and the Book of Days (`DayQuote`), the letter (tap to open), your workouts (the last five, More for twelve; no XP), **Settings** one row each with a switch (sound, music in the menus, share play stats once PostHog is set up, developer mode on the developer's account, replay the opening), and **Your save**: the cloud save (`CloudSave`), a backup file and Restore, and **Start over from scratch** (`StartOver`, see [../backend/cloud-sync.md](../backend/cloud-sync.md)). `?you` opens it |
+| `YouPage` | What is about you, not the game, over the tabs: tap your hero in the header (or at the top of the rail). Kept short (Edoardo 2026-10-31): your hero and your name at the top (tap the name to change it, what friends see; the look changes on the Hero tab), two counts in pixel type (workouts, chapter), the quote of the day with Keep and the Book of Days (`DayQuote`), the letter (tap to open), your workouts (the last five, More for twelve; no XP), **Settings** one row each with a switch (gym mode, see [Gym mode](#gym-mode-a-plain-look-for-training), sound, music in the menus, share play stats once PostHog is set up, developer mode on the developer's account, replay the opening), and **Your save**: the cloud save (`CloudSave`), a backup file and Restore, and **Start over from scratch** (`StartOver`, see [../backend/cloud-sync.md](../backend/cloud-sync.md)). `?you` opens it |
 | `StorySoFar` | Every story scene reached, to watch again, over the tabs (opened from the Play tab, kept in `page.tsx` as `storyOpen`): scenes waiting first (put off with Later, or skipped; a gold mark, "Not watched yet", "Skipped" or "Your answer waits"), then the opening (replays the prologue), then each chapter, the scenes that come any time and the Ember Road; each row the scene's place and its title or first line. A scene not reached is never listed. While scenes wait, the Play tab's button has a gold dot. After Later (every time) and the first skip, `StoryNote` in `page.tsx` says where the scene waits. Rules: "Story so far" in [../game/story.md](../game/story.md) |
 | `FlamePowers` | What your flame gives you in the Fog (Hero > Stats); the keepsakes (one per Fog boss beaten) are on their cleared worlds' cards in the `WorldPicker` |
 | `ScenePlayer`, `Dialogue` | Play a story scene: lines, camera shots, the question, the answer lines |
