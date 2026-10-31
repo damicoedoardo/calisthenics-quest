@@ -26,14 +26,11 @@ export const MELT = {
   perPlus: 0.5,
 } as const;
 
-/** The vault at home. Goal: room grows with training, so keeping more is a reason to train. */
+/** The vault at home (Edoardo 2026-10-31: room for 200, sort it out by melting many at once).
+    Goal: you never lose loot for want of room; you choose what to melt. Smaller = harder. */
 export const VAULT = {
-  /** Slots to start with. */
-  start: 4,
-  /** One more slot every this many workouts... */
-  every: 5,
-  /** ...up to this many. */
-  max: 20,
+  /** Spaces in the vault, from the start. */
+  size: 200,
 } as const;
 
 /** Sweat coins (Edoardo 2026-10-28): every workout earns them, and changing who you are spends

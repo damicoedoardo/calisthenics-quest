@@ -7,6 +7,7 @@ import { addFakeWorkouts, clearNextZone, skipDueScenes, skipIntro } from '@/lib/
 import { initialState, type GameState } from '@/lib/game';
 import { ZONES } from '@/lib/fog';
 import { SANDBOX_KEY } from '@/lib/store';
+import { TabLooks } from '@/components/TabLooks';
 import { withTodayPage } from '@/story/daily';
 import { DEFAULT_FLAME_NAME } from '@/story/flame';
 import { midBoss } from '@/game/dungeon/engine';
@@ -112,6 +113,16 @@ function forged(plus: number): GameState {
       embers: { found: 3000, spent: 0 },
     },
   };
+}
+
+/** The forged save with a busy vault: 40 found items of every rarity and slot, to sort and melt many. */
+function bigVault(): GameState {
+  const s = forged(7),
+    g = s.fogGear!,
+    rnd = seeded(31),
+    rarities: Item['rarity'][] = ['common', 'common', 'common', 'magic', 'magic', 'rare'];
+  const more = Array.from({ length: 37 }, (_, i) => rollItem(rnd, { zone: 1 + (i % 3), workouts: ZONES[1].workouts, floor: 1 + (i % 8), cls: 'warrior' }, i === 20 ? 'legendary' : rarities[i % rarities.length])).map((it) => ({ ...it, need: null, needLevel: undefined }));
+  return { ...s, fogGear: { ...g, vault: [...g.vault, ...more] } };
 }
 
 /** The forged save with the vault's legendary worn as the sword, at +0 and wearable now: its fire, no shine. */
@@ -256,6 +267,10 @@ export default function NightLab() {
         Everything here opens on a sandbox save. Your real progress on this phone is untouched; the app shows a blue bar while you&apos;re in the sandbox.
       </p>
 
+      <Panel title="TAB SWITCH LOOKS" note="Four looks for the switches (Friends | Feed, Gear | Stats | Class, the vault filter). Tap them; the app uses A for now.">
+        <TabLooks />
+      </Panel>
+
       <Panel title="DEVELOPER MODE, IN TABS" note="The wrench next to FORMA opens one menu with tabs: Go (any screen, every Lab), Wallet (embers, sweat coins, co-op materials), Gear (any item, any rarity, +0 to +15), Hero (class, SPs, stat points), Story (chapter jump, scenes, days), Fog (bosses beaten, a run in any zone at any spot), Save (copy, load, wipe).">
         <Row icon={<Sparkles size={16} />} label="Open the developer menu" note="A hero 30 workouts in, the menu open on top" onClick={() => open(veteran(30, 2), 'tab=today&dev')} />
       </Panel>
@@ -320,6 +335,7 @@ export default function NightLab() {
         <Row icon={<Swords size={16} />} label="Friends" note="The Friends tab: who is online (tap to invite), your party, the Ember Road, every friend (sample friends here)" onClick={() => open(geared(), 'tab=friends')} />
         <Row icon={<Swords size={16} />} label="The Feed" note="Shared workouts with flames and comments (two sample posts). Finish a workout and tap Share with friends to add yours" onClick={() => open(geared(), 'tab=friends&feed')} />
         <Row icon={<Gem size={16} />} label="Hero > Gear" note="What you wear, the vault, and Mira's forge for the item you tap: the only place for them" onClick={() => open(forged(7), 'tab=hero&hero=gear')} />
+        <Row icon={<Gem size={16} />} label="A busy vault" note="Hero > Gear with 40 items: rarest first, filter by slot, Melt many (a rarity, or weaker than yours)" onClick={() => open(bigVault(), 'tab=hero&hero=gear')} />
         <Row icon={<Sparkles size={16} />} label="Hero > Stats" note="Your champion's points, and what your flame gives you" onClick={() => open(veteran(30, 2), 'tab=hero&hero=stats')} />
         <Row icon={<Swords size={16} />} label="Hero > Class" note="Your class and Change class" onClick={() => open(veteran(30, 2), 'tab=hero&hero=class')} />
         <Row icon={<BookOpen size={16} />} label="The You page" note="Tap your hero at the top: letter, quest log, settings (your name), backup, cloud save" onClick={() => open(veteran(30, 2), 'you')} />

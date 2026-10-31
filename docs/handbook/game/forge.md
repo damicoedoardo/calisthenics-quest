@@ -1,7 +1,7 @@
 ---
 type: conceptual
 title: Mira's forge
-description: What you do with Fog gear between runs, on the Hero tab's Gear part — embers from workouts, Mira's forge (upgrade +1..+15 with co-op materials from +6, misses from +7, safe marks, a new look every few pluses), reroll, melt down; what you wear always comes home from a fall — rules in src/lib/forge.ts and fog-gear.ts, numbers in src/balance/upgrades.ts, screens FogGearCard.tsx and Forge.tsx.
+description: What you do with Fog gear between runs, on the Hero tab's Gear part — embers from workouts, Mira's forge (upgrade +1..+15 with co-op materials from +6, misses from +7, safe marks, a new look every few pluses), reroll, melt down one item or many at once from a vault of 200; what you wear always comes home from a fall — rules in src/lib/forge.ts and fog-gear.ts, numbers in src/balance/upgrades.ts, screens FogGearCard.tsx and Forge.tsx.
 tags: [game, fog, forge, gear, co-op]
 timestamp: 2026-10-31
 ---
@@ -9,9 +9,13 @@ timestamp: 2026-10-31
 # Mira's forge
 
 Between runs your gear lives on the Hero tab's Gear part (`src/components/FogGearCard.tsx`): the
-three slots you wear, the vault, and, for the item you tap, its card with Wear and **Forge**. Forge
+three slots you wear, the vault (room for `VAULT.size` = 200, rarest first, a filter by slot, and
+**Melt many**: all common, all magic, all rare, or all weaker than what you wear, each with its
+count and embers and a second tap; `meltable` never takes what you wear or an item you forged, and
+legendaries go one at a time), and, for the item you tap, its card with Wear, **Melt** (its embers, a
+second tap) and a **Mira's forge** button (her face, "Upgrade to +N or reroll", Open). It
 opens Mira's forge for that item on its own page (`ForgeSheet` in `src/components/Forge.tsx`): what
-the next plus changes, the price, the chance as a bar with what a fail does, one button, and reroll and melt folded away. Its **How it works** page says the rules below in five short steps, and opens by itself the first time. Each vault
+the next plus changes, the price, the chance as a bar with what a fail does, one button, with Reroll as its own tab (Edoardo 2026-10-31: melting belongs outside the forge). Its **How it works** page says the rules below in five short steps, and opens by itself the first time. Each vault
 item carries a green ▲ or red ▼ against what you wear in its slot, and its card says by how much. (A walkable
 camp was tried for this and dropped: Edoardo wanted it on the normal screens.)
 
@@ -48,7 +52,8 @@ camp was tried for this and dropped: Edoardo wanted it on the normal screens.)
   plus, a red glow, red sparks and rising flames for a worn legendary). Still with reduced motion.
 - **Reroll and melt**: `reroll` rolls one bonus into a different one for `REROLL_COST`, seeded
   from the item's id and its `rerolls`. `salvage` melts an item down for `salvageValue` (rarer
-  and upgraded items give more). The starter kit can't be upgraded or melted.
+  and upgraded items give more). The starter kit can't be upgraded or melted. `salvageMany` melts many vault items at once, and `meltable(state, pick)` says which a pick
+  takes (a rarity, or `'weaker'` than what you wear; never worn, starter or forged items).
 - **Co-op materials** (`fogGear.mats`): a party run rolls them for each standing hero on kills,
   chests, the mid-boss, the boss and a clear with nobody down (`findMats` in `engine.ts`, odds
   `MAT_DROPS`); a solo run rolls none, so solo runs play exactly as before. They come home in
@@ -82,5 +87,7 @@ per step, tries, materials per co-op run) is on the balance sheet ([balance.md](
 | Change the materials' names, colors, where they come from | `MATS` in `src/balance/upgrades.ts` |
 | Change the look of each band | `BANDS` in `src/balance/upgrades.ts`; how it's drawn in `PlusGlow.tsx` and `wearLook` in `scene.ts` |
 | Change embers per workout, reroll price | `EMBERS`, `FORGE` in `src/balance/economy.ts` |
+| Change the vault's room | `VAULT.size` in `src/balance/economy.ts` |
+| Change what Melt many offers | `meltable` in `src/lib/forge.ts`, `VaultMelt` in `FogGearCard.tsx` |
 | Change what melting gives | `MELT` in `src/balance/economy.ts` (`salvageValue` in `fog-gear.ts`) |
 | Change the gear card, the forge's buttons or words | `src/components/FogGearCard.tsx` (`Forge`, `Mats`, Mira's lines in `SAID`) |

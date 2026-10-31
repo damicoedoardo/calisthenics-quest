@@ -4,7 +4,6 @@ import { getClass, CLASSES, type ClassId } from '../gear';
 import { STATS, pointsFree, type StatId } from '../stats';
 import { coins } from '../sweat';
 import { embersOf, matsOf } from '../forge';
-import { vaultSize } from '../fog-gear';
 import { EDGE, FLAME_AT, UPGRADES, ZONES, zoneStatus, MID_FLOOR } from '../fog';
 import { spOwned, spTrial } from '../sp';
 import { workoutsToLevel } from '../loot';
@@ -176,7 +175,7 @@ export const GUIDE: GuideTopic[] = [
       [
         'A fall only loses the items you found that run and still carry in the bag. What you wear, and anything you brought from home, always comes back. Points, level and story are never lost.',
         'A win, or walking out by the stairs, puts the bag in the vault at home.',
-        `The vault holds ${VAULT.start} items, one more every ${VAULT.every} workouts, up to ${VAULT.max}. What a full vault can't take is melted into embers. The player's vault now: ${vaultSize(s.sessions.length)} slots.`,
+        `The vault at home holds ${VAULT.size} items. What a full vault can't take is melted into embers. Tap an item to melt it down, or use Melt many in the vault to melt all of a rarity, or all that are weaker than what you wear (items you forged are always kept).`,
         'Runs are free: play again as often as you like.',
       ].join('\n'),
   },

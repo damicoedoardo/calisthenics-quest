@@ -1,13 +1,10 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Check, MessageCircle, Play, RotateCcw, SendHorizontal, Shuffle, TrendingDown, X } from 'lucide-react';
+import { Check, MessageCircle, Play, RotateCcw, SendHorizontal, X } from 'lucide-react';
 import type { Checkin, GameState } from '@/lib/game';
-import { ROLE_COLOR, ROLE_LABEL } from '@/lib/program';
-import { changeItem } from '@/lib/coach/plan';
-import { minutesOf, restFor } from '@/lib/coach/time';
+import { minutesOf } from '@/lib/coach/time';
 import { shownChat } from '@/lib/coach/chat';
-import type { Mode, PlanItem } from '@/lib/coach/types';
 import { dayLabel, nextDay, restKept, todayIs, weekdayOf, weekSlots } from '@/lib/coach/week';
 import { dayKey } from '@/lib/days';
 import { fireLine, updateTodayPage } from '@/story/daily';
@@ -19,8 +16,8 @@ import { flameStage } from '@/story/flame';
 import { Ember } from './Characters';
 import { PlaceBackdrop } from './Place';
 import { CoachKnows, doseOf } from './CoachPanel';
-import { Choices, MiniDemo } from './Workout';
-import { ExerciseSheet } from './ExerciseDetail';
+import { MiniDemo } from './Workout';
+import { WorkoutList } from './WorkoutList';
 import { useCoachChat } from './useCoach';
 
 /* The coach is your flame. On the Train tab: what it says (it brings things up on its own, nudge.ts)
@@ -117,22 +114,34 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
   const day = slot.day;
   return (
     <section className="rounded-2xl bg-ink-800 p-3">
-      <h2 className="font-pixel text-[10px] text-gold-300">This week</h2>
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 className="font-pixel text-[10px] text-gold-300">This week</h2>
+        <p className="font-mono text-[11px] text-slate-400">
+          {week.days.filter((d) => d.done).length} of {week.days.length} done
+        </p>
+      </div>
+      {/* A chip a day, Monday to Sunday: its date and what it is (a dumbbell to train, a flame to
+          rest, a tick once done or kept). Today has a dot under it; the next workout is lit. */}
       <ul className="mt-2 grid grid-cols-7 gap-1">
         {slots.map((s) => {
           const on = s === slot;
           const done = s.day ? !!s.day.done : !s.before && restKept(state, s.date);
-          const lit = s.day && s.day === next;
+          const lit = !!s.day && s.day === next;
+          const icon = done ? 'check' : s.day ? 'tabTrain' : s.before ? null : 'flame';
           return (
             <li key={s.date}>
               <button
                 onClick={() => setPicked(s.date)}
                 aria-pressed={on}
-                aria-label={`${weekdayOf(s.date)}: ${s.day ? s.day.plan.title : s.before ? 'before the plan' : 'rest day'}${done ? ', done' : ''}`}
-                className={`flex w-full flex-col items-center rounded-lg py-1.5 ${on ? 'bg-ink-600 ring-1 ring-gold-400' : s.day ? 'bg-ink-900' : 'bg-ink-900/50'} ${lit ? 'text-gold-300' : done ? 'text-emerald-300' : s.day ? 'text-slate-200' : s.before ? 'text-slate-600' : 'text-orange-200/70'}`}
+                aria-label={`${weekdayOf(s.date)}${s.date === today ? ', today' : ''}: ${s.day ? s.day.plan.title : s.before ? 'before the plan' : 'rest day'}${done ? ', done' : lit ? ', next' : ''}`}
+                className={`relative flex w-full flex-col items-center rounded-lg pb-2 pt-1.5 ${on ? 'ring-1 ring-gold-400' : ''} ${lit ? 'bg-gold-400/15' : s.day ? 'bg-ink-900' : s.before ? 'bg-ink-900/30' : 'bg-ink-900/60'} ${s.before ? 'text-slate-600' : lit ? 'text-gold-300' : 'text-slate-300'}`}
               >
-                <span className="font-pixel text-[8px]">{weekdayOf(s.date)}</span>
-                <span className="mt-1 text-[10px] leading-none">{done ? '✓' : lit ? 'next' : s.day ? MODE_SHORT[s.day.plan.mode] : s.before ? '–' : 'rest'}</span>
+                <span className="font-pixel text-[7px]">{weekdayOf(s.date)}</span>
+                <span className="mt-1 font-mono text-sm leading-none">{Number(s.date.slice(8))}</span>
+                <span className={`mt-1.5 grid h-3 place-items-center ${done ? '' : s.day ? '' : 'opacity-60'}`}>
+                  {icon && <Sprite id="uiIcon" opts={{ name: icon }} size={12} label="" className={done ? '' : lit ? '' : s.day ? 'opacity-70 grayscale' : ''} />}
+                </span>
+                {s.date === today && <span aria-hidden className="absolute bottom-0.5 h-1 w-1 rounded-full bg-gold-300" />}
               </button>
             </li>
           );
@@ -140,14 +149,19 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
       </ul>
       {day ? (
         <>
-          <div className="mt-2 flex items-baseline justify-between gap-2">
-            <p className="min-w-0 truncate text-sm font-semibold text-slate-100">
-              <span className="text-slate-400">{dayLabel(day.date, now)} · </span>
-              {day.plan.title}
-            </p>
-            <span className="shrink-0 text-xs text-slate-400">{day.done ? 'done' : `about ${minutesOf(day.plan.items)} min`}</span>
+          <div className="mt-3">
+            <WorkoutList
+              state={state}
+              update={update}
+              items={day.plan.items}
+              changeable={!day.done}
+              date={day.date}
+              progress={inProgress && day === next ? Object.fromEntries(Object.entries(state.draft!.sets).map(([k, v]) => [k, v.length])) : undefined}
+              when={dayLabel(day.date, now)}
+              title={day.plan.title}
+              time={day.done ? 'done' : `about ${minutesOf(day.plan.items)} min`}
+            />
           </div>
-          <WorkoutCards state={state} update={update} items={day.plan.items} date={day.done ? undefined : day.date} />
           {day === next && !canStart ? (
             <p className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-ink-900 py-3 text-xs text-slate-400">
               <Sprite id="uiIcon" opts={{ name: 'lock' }} size={12} label="" />{' '}
@@ -199,71 +213,6 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
         />
       )}
     </section>
-  );
-}
-
-const MODE_SHORT: Record<Mode, string> = { gym: 'gym', calisthenics: 'body', running: 'run' };
-
-/** The workout as cards: tap one for how to do it; easier and swap right there on days still to do. */
-export function WorkoutCards({ state, update, items, date }: { state: GameState; update: Update; items: PlanItem[]; date?: string }) {
-  const [open, setOpen] = useState<{ id: string; kind: 'easier' | 'swap' } | null>(null);
-  const [howTo, setHowTo] = useState<PlanItem | null>(null);
-  const opened = items.find((i) => i.id === open?.id);
-  return (
-    <>
-      <ul className="mt-2 grid grid-cols-2 gap-2 min-[560px]:grid-cols-3">
-        {items.map((it) => {
-          const end = it.role === 'warmup' || it.role === 'stretch';
-          return (
-            <li key={it.id} className={`flex flex-col rounded-xl bg-ink-900 p-2 ${it.skipped ? 'opacity-40' : ''}`}>
-              <button onClick={() => setHowTo(it)} aria-label={`How to do ${it.name}`} className="flex flex-col text-left active:scale-[.98]">
-                <span className="flex w-full justify-center">
-                  <MiniDemo state={state} exercise={it.demo} name={it.name} size={end ? 48 : 64} />
-                </span>
-                <span className="mt-1.5 text-[9px] font-bold uppercase tracking-wider" style={{ color: ROLE_COLOR[it.role] }}>
-                  {ROLE_LABEL[it.role]}
-                  {it.changed && <span className="ml-1 normal-case tracking-normal text-sky-300">{it.changed.how === 'easier' ? 'easier' : 'swapped'}</span>}
-                </span>
-                <span className="line-clamp-2 text-xs font-semibold leading-tight text-slate-100">{it.name}</span>
-                <span className="mt-0.5 font-mono text-[11px] text-slate-400">
-                  {doseOf(it, it.run ? undefined : state.reps[it.id])}
-                  {!end && !it.run ? ` · rest ${restFor(it)}s` : ''}
-                  {it.ramp ? ` · ${it.ramp} light first` : ''}
-                </span>
-              </button>
-              {date && !end && !it.run && (it.easier.length > 0 || it.swaps.length > 0) && (
-                <div className="mt-auto flex gap-1 pt-2">
-                  {it.easier.length > 0 && (
-                    <button onClick={() => setOpen({ id: it.id, kind: 'easier' })} className="flex flex-1 items-center justify-center gap-1 rounded-md bg-ink-700 py-1.5 text-[10px] font-semibold text-slate-200">
-                      <TrendingDown size={11} className="text-sky-300" /> Easier
-                    </button>
-                  )}
-                  {it.swaps.length > 0 && (
-                    <button onClick={() => setOpen({ id: it.id, kind: 'swap' })} className="flex flex-1 items-center justify-center gap-1 rounded-md bg-ink-700 py-1.5 text-[10px] font-semibold text-slate-200">
-                      <Shuffle size={11} className="text-gold-300" /> Swap
-                    </button>
-                  )}
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
-      {open && opened && (
-        <Choices
-          title={open.kind === 'easier' ? `Easier than ${opened.name}` : `Instead of ${opened.name}`}
-          hint={open.kind === 'easier' ? 'The same movement, a step down.' : 'Trains the same thing.'}
-          list={open.kind === 'easier' ? opened.easier : opened.swaps}
-          state={state}
-          onPick={(c) => {
-            update((s) => changeItem(s, opened.id, c, open.kind, date));
-            setOpen(null);
-          }}
-          onClose={() => setOpen(null)}
-        />
-      )}
-      {howTo && <ExerciseSheet state={state} id={howTo.id} demo={howTo.demo} onClose={() => setHowTo(null)} />}
-    </>
   );
 }
 

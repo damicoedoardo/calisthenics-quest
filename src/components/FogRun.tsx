@@ -1132,7 +1132,7 @@ function Results({ state, zone, end, broken, gear, keys, onAgain, onLeave }: { s
           'The Fog takes what you carried, not who you are. Your points, your level and your story stay.'
         )}
       </p>
-      {gear && <GearRecap out={gear} vault={vaultSize(state.sessions.length)} first={gear.first} />}
+      {gear && <GearRecap out={gear} vault={vaultSize()} first={gear.first} />}
       {end.won && (
         <div className="mt-4 w-full max-w-xs rounded-xl bg-ink-800 p-3 text-left ring-1 ring-gold-400/30">
           <p className="font-pixel text-[9px] text-gold-300">You keep: {zone.keepsake.name}</p>
@@ -1312,7 +1312,7 @@ function GearRecap({ out, vault, first }: { out: GearOutcome; vault: number; fir
       )}
       {out.left.length > 0 && (
         <p className="mt-2 text-[10px] text-slate-400">
-          No room for {out.left.length} more (the vault holds {vault}, and it grows with your workouts). Mira melted {out.left.length === 1 ? 'it' : 'them'} into {out.embers ?? 0} embers.
+          No room for {out.left.length} more (the vault holds {vault}). Mira melted {out.left.length === 1 ? 'it' : 'them'} into {out.embers ?? 0} embers.
         </p>
       )}
       {!out.kept && out.lost.length > 0 && first && (

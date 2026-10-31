@@ -2,10 +2,10 @@
 
 import { useState } from 'react';
 import type { GameState } from '@/lib/game';
-import { salvageValue } from '@/lib/fog-gear';
-import { canUpgrade, embersOf, findItem, matsOf, REROLL_COST, reroll, rested, salvage, tryUpgrade, upgradeCost, upgradeMats, upgradeOdds, type Forged } from '@/lib/forge';
+import { canUpgrade, embersOf, findItem, matsOf, REROLL_COST, reroll, rested, tryUpgrade, upgradeCost, upgradeMats, upgradeOdds, type Forged } from '@/lib/forge';
 import { bandOf, boostAt, BONUSES, MAX_PLUS, nameOf, RARITY, safeFloor } from '@/game/dungeon/items';
-import { BANDS, EMBERS, FORGE_RISK, MATS, SAFE_POINTS, type MatId } from '@/balance';
+import { BANDS, EMBERS, FORGE_RISK, MAT_IDS, MATS, SAFE_POINTS, type MatId } from '@/balance';
+import { PixelTabs } from './PixelTabs';
 import { ItemTile } from './ItemCard';
 import { Sprite } from './Sprite';
 import { useModal } from './useModal';
@@ -15,8 +15,26 @@ type Update = (fn: (s: GameState) => GameState) => void;
 /** Set once the forge's guide has been shown on this phone. */
 const SEEN = 'forma-forge-guide-seen';
 
-/* Mira's forge for one item, on its own page over the Hero tab. One question at a time: what the
-   next plus gives, what it costs, the one button. Reroll and melt wait under "More". */
+/* Mira's forge for one item, on its own page over the Hero tab. Two tabs, one job each:
+   Upgrade (what the next plus gives, what it costs, the chance, one button) and Reroll (swap one
+   bonus for a random other, showing what it was). Melting down lives on the item's card. */
+
+type Mode = 'up' | 'reroll';
+const MODES: { id: Mode; label: string }[] = [
+  { id: 'up', label: 'Upgrade' },
+  { id: 'reroll', label: 'Reroll' },
+];
+
+/** What Mira says on each tab, before anything happens. */
+const MIRA: Record<Mode, (plus: number, next: number, top: boolean) => string> = {
+  up: (plus, next, top) => (top ? 'As good as anything can be made.' : plus === 0 ? "Bring it here. Let's make it stronger." : `I can take it to +${next}.`),
+  reroll: () => "Don't like a bonus? I can turn it into another one.",
+};
+
+const BIG = 'w-full rounded-xl bg-gold-400 py-3.5 font-pixel text-[11px] text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none disabled:bg-ink-700 disabled:text-slate-500 disabled:shadow-none';
+/** The number in a bonus's line ("+12% damage" → "+12%"). */
+const num = (line: string) => line.match(/[+-]?\d[\d.,]*%?/)?.[0] ?? line;
+const ember = (size: number) => <Sprite id="uiIcon" opts={{ name: 'flame' }} size={size} label="" />;
 
 /** What Mira says after a try. */
 const SAID: Record<Forged, (plus: number) => string> = {
@@ -28,8 +46,9 @@ const SAID: Record<Forged, (plus: number) => string> = {
 export function ForgeSheet({ id, state, update, onClose }: { id: string; state: GameState; update: Update; onClose: () => void }) {
   const box = useModal<HTMLDivElement>(onClose);
   const [said, setSaid] = useState<string | null>(null);
-  const [more, setMore] = useState(false);
-  const [sure, setSure] = useState(false);
+  const [mode, setMode] = useState<Mode>('up');
+  // The last swap: which bonus, and what it was before.
+  const [rolled, setRolled] = useState<{ i: number; was: string } | null>(null);
   // The first time the forge opens it starts on how it works; after that, a button away.
   const [help, setHelp] = useState(() => {
     try {
@@ -62,16 +81,20 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
     if (r.forged) setSaid(SAID[r.forged](findItem(r.state, item.id)?.plus ?? 0));
     update((s) => tryUpgrade(s, item.id, now).state);
   };
-  const melt = () => {
-    if (!sure) return setSure(true);
-    update((s) => salvage(s, item.id));
-    onClose();
-  };
 
-  const mira = said ?? (top ? 'As good as anything can be made.' : plus === 0 ? "Bring it here. Let's make it stronger." : `I can take it to +${next}.`);
+  const pickMode = (m: Mode) => {
+    setMode(m);
+    setSaid(null);
+    setRolled(null);
+  };
+  const rollOne = (i: number) => {
+    const b = item.bonuses[i];
+    setRolled({ i, was: BONUSES[b.id].show(b.v * boostAt(plus)).toLowerCase() });
+    update((s) => reroll(s, item.id, i));
+  };
   // What changes: each line now and after the next plus, only the ones that move.
   const lines = [...item.base, ...item.bonuses]
-    .map((b) => ({ now: BONUSES[b.id].show(b.v * boostAt(plus)), next: BONUSES[b.id].show(b.v * boostAt(next)) }))
+    .map((b) => ({ name: BONUSES[b.id].name, now: num(BONUSES[b.id].show(b.v * boostAt(plus))), next: num(BONUSES[b.id].show(b.v * boostAt(next))) }))
     .filter((l) => top || l.now !== l.next);
 
   return (
@@ -92,6 +115,14 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
         {help ? (
           <HowItWorks onDone={() => setHelp(false)} />
         ) : (
+        <>
+        {/* What you have to spend here, always in sight: embers and the four co-op materials. */}
+        <div className="mb-3 flex flex-wrap gap-1.5" aria-label="What you have">
+          <Have icon={ember(14)} n={embers} label="embers" tone="text-orange-300" />
+          {MAT_IDS.map((m) => (
+            <Have key={m} icon={<span aria-hidden className="h-2.5 w-2.5 rotate-45 rounded-[1px]" style={{ background: MATS[m].color }} />} n={have[m] ?? 0} label={MATS[m].name} tone="text-slate-100" />
+          ))}
+        </div>
 
         <div className="space-y-3 land:grid land:grid-cols-2 land:gap-4 land:space-y-0">
           <div className="space-y-3">
@@ -99,11 +130,11 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
             <div className="flex items-end gap-2">
               <Sprite id="mira" size={56} label="Mira" />
               <p aria-live="polite" className="relative mb-3 flex-1 rounded-xl bg-[#f5ecd7] px-3 py-2.5 text-sm leading-snug text-[#3b2a1a]">
-                {mira}
+                {said ?? MIRA[mode](plus, next, top)}
               </p>
             </div>
 
-            {/* The item: its tile, its name, and the plus it goes to. */}
+            {/* The item: its tile, its name, and its plus (and the next one, upgrading). */}
             <section className="flex items-center gap-4 rounded-2xl bg-ink-800 p-4 pixel-border">
               <ItemTile item={item} size={64} />
               <div className="min-w-0 flex-1">
@@ -112,7 +143,7 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
                 </p>
                 <p className="mt-2 flex items-center gap-2 font-pixel text-lg">
                   <span className="text-slate-300">+{plus}</span>
-                  {!top && (
+                  {mode === 'up' && !top && (
                     <>
                       <span className="text-[10px] text-slate-500">▶</span>
                       <span className="text-gold-300">+{next}</span>
@@ -123,74 +154,93 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
               </div>
             </section>
 
-            {lines.length > 0 && (
-              <ul className="space-y-1.5 rounded-2xl bg-ink-800 p-4 text-sm">
-                {lines.map((l, i) => (
-                  <li key={i} className="flex items-center justify-between gap-2">
-                    <span className="text-slate-400">{l.now}</span>
-                    {!top && <span className="font-semibold text-emerald-300">{l.next}</span>}
-                  </li>
-                ))}
-              </ul>
-            )}
+            {/* What to do with it: two tabs, one job each. */}
+            <PixelTabs label="What to do" tabs={MODES} value={mode} onChange={pickMode} />
           </div>
 
-          <div className="space-y-3">
-            {!top && (
-              <section className="rounded-2xl bg-ink-800 p-4">
-                {/* The price: embers, and from +6 the co-op materials, each with what you have. */}
-                <div className="flex flex-wrap gap-2">
-                  <Cost icon={<Sprite id="uiIcon" opts={{ name: 'flame' }} size={14} label="" />} n={cost} have={embers} label="embers" />
-                  {need.map(([m, n]) => (
-                    <Cost key={m} icon={<span aria-hidden className="h-2.5 w-2.5 rotate-45 rounded-[1px]" style={{ background: MATS[m].color }} />} n={n} have={have[m] ?? 0} label={MATS[m].name} />
-                  ))}
-                </div>
-                {matsShort && <p className="mt-2 text-[13px] leading-snug text-slate-400">Materials only drop when you play with friends, or a friend gives them.</p>}
-
-                {embers < cost ? (
-                  <p className="mt-2 text-center text-[13px] text-slate-400">A workout gives {EMBERS.full} embers.</p>
-                ) : odds >= 1 ? (
-                  <p className="mt-2 text-center text-[13px] text-emerald-300">This step always works.</p>
-                ) : (
-                  <Chance odds={odds} plus={plus} next={next} warm={rested(state, now)} />
+          <div role="tabpanel" className="space-y-3">
+            {mode === 'up' && (
+              <>
+                {lines.length > 0 && (
+                  <ul className="space-y-1.5 rounded-2xl bg-ink-800 p-4 text-sm">
+                    {lines.map((l, i) => (
+                      <li key={i} className="flex items-center gap-2">
+                        <span className="min-w-0 flex-1 truncate text-slate-300">{l.name}</span>
+                        <span className="font-pixel text-[10px] text-slate-400">{l.now}</span>
+                        {!top && (
+                          <>
+                            <span className="text-[9px] text-slate-500">▶</span>
+                            <span className="font-pixel text-[10px] text-emerald-300">{l.next}</span>
+                          </>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
                 )}
-                <button
-                  onClick={go}
-                  disabled={!ok}
-                  className="mt-4 w-full rounded-xl bg-gold-400 py-3.5 font-pixel text-[11px] text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none disabled:bg-ink-700 disabled:text-slate-500 disabled:shadow-none"
-                >
-                  {embers < cost ? `${cost - embers} more embers` : `Forge +${next}`}
-                </button>
+                {!top && (
+                  <section className="rounded-2xl bg-ink-800 p-4">
+                    {/* The price: embers, and from +6 the co-op materials, each with what you have. */}
+                    <div className="flex flex-wrap gap-2">
+                      <Cost icon={ember(14)} n={cost} have={embers} label="embers" />
+                      {need.map(([m, n]) => (
+                        <Cost key={m} icon={<span aria-hidden className="h-2.5 w-2.5 rotate-45 rounded-[1px]" style={{ background: MATS[m].color }} />} n={n} have={have[m] ?? 0} label={MATS[m].name} />
+                      ))}
+                    </div>
+                    {matsShort && <p className="mt-2 text-[13px] leading-snug text-slate-400">Materials only drop when you play with friends, or a friend gives them.</p>}
+                    {embers < cost ? (
+                      <p className="mt-2 text-center text-[13px] text-slate-400">A workout gives {EMBERS.full} embers.</p>
+                    ) : odds >= 1 ? (
+                      <p className="mt-2 text-center text-[13px] text-emerald-300">This step always works.</p>
+                    ) : (
+                      <Chance odds={odds} plus={plus} next={next} warm={rested(state, now)} />
+                    )}
+                    <button onClick={go} disabled={!ok} className={`mt-4 ${BIG}`}>
+                      {embers < cost ? `${cost - embers} more embers` : `Forge +${next}`}
+                    </button>
+                  </section>
+                )}
+              </>
+            )}
+
+            {mode === 'reroll' && (
+              <section className="rounded-2xl bg-ink-800 p-4">
+                <p className="text-sm leading-snug text-slate-300">
+                  Pick one bonus to swap for a different, random one. The rest of the item and its plus stay the same.
+                </p>
+                {item.bonuses.length ? (
+                  <ul className="mt-3 space-y-2">
+                    {item.bonuses.map((b, i) => {
+                      const fresh = rolled?.i === i;
+                      return (
+                        <li key={i} className={`flex items-center gap-3 rounded-xl p-3 ${fresh ? 'bg-emerald-500/10 ring-1 ring-emerald-400/40' : 'bg-ink-900'}`}>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm text-slate-100">{BONUSES[b.id].show(b.v * boostAt(plus))}</p>
+                            {fresh && <p className="mt-0.5 text-xs text-emerald-300">New! It was {rolled.was}.</p>}
+                          </div>
+                          <button
+                            onClick={() => rollOne(i)}
+                            disabled={embers < REROLL_COST}
+                            className="flex shrink-0 items-center gap-1.5 rounded-lg bg-gold-400 px-3 py-2 font-pixel text-[9px] text-ink-950 shadow-[0_3px_0_#b45309] active:translate-y-0.5 active:shadow-none disabled:bg-ink-700 disabled:text-slate-500 disabled:shadow-none"
+                          >
+                            Swap {ember(12)} {REROLL_COST}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="mt-3 rounded-xl bg-ink-900 p-3 text-sm text-slate-400">This item has no bonus to swap. Magic, rare and legendary items have them.</p>
+                )}
+                {item.base.length > 0 && (
+                  <p className="mt-3 text-xs leading-snug text-slate-500">
+                    The item&apos;s base stays: {item.base.map((b) => BONUSES[b.id].show(b.v * boostAt(plus))).join(', ')}.
+                  </p>
+                )}
               </section>
             )}
-
-            {/* The rest, folded: reroll a bonus, melt it down. */}
-            <section className="rounded-2xl bg-ink-800">
-              <button onClick={() => setMore(!more)} aria-expanded={more} className="flex w-full items-center justify-between px-4 py-3.5 text-sm text-slate-300">
-                Reroll or melt down
-                <span className={`text-[10px] text-slate-500 transition ${more ? 'rotate-90' : ''}`}>▶</span>
-              </button>
-              {more && (
-                <div className="space-y-2 px-4 pb-4">
-                  {item.bonuses.map((b, i) => (
-                    <button key={i} onClick={() => update((s) => reroll(s, item.id, i))} disabled={embers < REROLL_COST} className="flex w-full items-center justify-between rounded-lg bg-ink-700 px-3 py-3 text-sm text-slate-200 disabled:opacity-40">
-                      <span>Reroll {BONUSES[b.id].name.toLowerCase()}</span>
-                      <span className="flex items-center gap-1 text-orange-300">
-                        <Sprite id="uiIcon" opts={{ name: 'flame' }} size={12} label="" /> {REROLL_COST}
-                      </span>
-                    </button>
-                  ))}
-                  <button onClick={melt} className={`flex w-full items-center justify-between rounded-lg px-3 py-3 text-sm ${sure ? 'bg-red-500 text-white' : 'bg-ink-900 text-slate-300 ring-1 ring-ink-700'}`}>
-                    <span>{sure ? "Sure? It's gone for good" : 'Melt it down'}</span>
-                    <span className="flex items-center gap-1">
-                      + <Sprite id="uiIcon" opts={{ name: 'flame' }} size={12} label="" /> {salvageValue(item)}
-                    </span>
-                  </button>
-                </div>
-              )}
-            </section>
           </div>
         </div>
+        </>
         )}
       </div>
     </div>
@@ -218,10 +268,10 @@ function Pips({ plus }: { plus: number }) {
 function Cost({ icon, n, have, label }: { icon: React.ReactNode; n: number; have: number; label: string }) {
   const short = have < n;
   return (
-    <span aria-label={`${n} ${label}, you have ${have}`} className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 ${short ? 'bg-red-500/15 ring-1 ring-red-400/50' : 'bg-ink-900'}`}>
+    <span aria-label={`You have ${have} ${label}, it needs ${n}`} className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 ${short ? 'bg-red-500/15 ring-1 ring-red-400/50' : 'bg-ink-900'}`}>
       {icon}
-      <span className={`font-pixel text-[9px] ${short ? 'text-red-300' : 'text-slate-100'}`}>{n}</span>
-      <span className="text-xs text-slate-500">/ {have}</span>
+      <span className={`font-pixel text-[9px] ${short ? 'text-red-300' : 'text-slate-100'}`}>{have}</span>
+      <span className="text-xs text-slate-500">/ {n}</span>
     </span>
   );
 }
@@ -299,5 +349,15 @@ function HowItWorks({ onDone }: { onDone: () => void }) {
         Got it
       </button>
     </div>
+  );
+}
+
+/** One thing you have, as a chip: its icon and how many (faded at none). */
+function Have({ icon, n, label, tone }: { icon: React.ReactNode; n: number; label: string; tone: string }) {
+  return (
+    <span aria-label={`${n} ${label}`} title={label} className={`flex items-center gap-1.5 rounded-lg bg-ink-800 px-2.5 py-1.5 ${n ? '' : 'opacity-40'}`}>
+      {icon}
+      <span className={`font-pixel text-[9px] ${tone}`}>{n}</span>
+    </span>
   );
 }

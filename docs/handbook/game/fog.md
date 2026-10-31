@@ -52,7 +52,7 @@ level or story.
   `MID_FLOOR` (5).
 
 - **Gear between runs** (`src/lib/fog-gear.ts`, saved as `state.fogGear`): what you wear
-  (`worn`) and the vault at home (`vault`, `vaultSize` grows with workouts). `wornFor` is what you
+  (`worn`) and the vault at home (`vault`, room for `VAULT.size` = 200 items). `wornFor` is what you
   walk in with: only what your hero level and points let you wear today (`heroLevel` in
   `src/lib/game.ts`); the rest stays home, safe.
   `settleGear` runs after `recordRun`. What you wear always comes home, so forged gear is never
