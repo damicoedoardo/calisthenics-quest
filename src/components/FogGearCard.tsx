@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { heroLevel, type GameState } from '@/lib/game';
 import { buildOf } from '@/lib/stats';
 import { NO_GEAR, takeOffToVault, vaultSize, wearFromVault } from '@/lib/fog-gear';
-import { canWear, ITEM_SLOTS, nameOf, SLOT_NAME, starterKit, type Item } from '@/game/dungeon/items';
+import { canWear, ITEM_SLOTS, MAX_PLUS, nameOf, SLOT_NAME, starterKit, type Item } from '@/game/dungeon/items';
 import { ItemCard, ItemTile } from './ItemCard';
 import { ForgeSheet } from './Forge';
 import { Sprite } from './Sprite';
@@ -30,6 +30,21 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
     worn = !!item && gear.worn[item.slot]?.id === item.id;
   const choose = (id: string) => setPick(id === pick ? null : id);
   const ring = (id: string) => (id === pick ? 'ring-2 ring-gold-300 ring-offset-2 ring-offset-ink-800' : '');
+
+  // The way into Mira's forge: her face, what she does, and the plus she can take it to.
+  const forgeButton = item && !item.starter && (
+      <button
+        onClick={() => setForging(true)}
+        className="mt-2 flex w-full items-center gap-3 rounded-xl bg-gradient-to-r from-orange-950/60 to-ink-900 p-3 text-left ring-1 ring-orange-400/40 active:scale-[0.98]"
+      >
+        <Sprite id="mira" size={44} label="" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-pixel text-[10px] text-gold-300">Mira&apos;s forge</span>
+          <span className="mt-1 block text-xs text-slate-400">{(item.plus ?? 0) >= MAX_PLUS ? 'Reroll or melt down' : `Upgrade to +${(item.plus ?? 0) + 1}, reroll or melt down`}</span>
+        </span>
+        <span className="rounded-lg bg-gold-400 px-3 py-2 font-pixel text-[9px] text-ink-950 shadow-[0_3px_0_#b45309]">Open</span>
+      </button>
+  );
 
   return (
     <section className={`rounded-2xl bg-ink-800 ${land ? 'flex h-full gap-3 p-3' : 'p-4'}`}>
@@ -76,6 +91,8 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
       </div>
 
       <div className={land ? 'min-w-0 flex-1 overflow-y-auto' : 'mt-4'}>
+        {/* Sideways the forge's button sits over the card, in sight; upright it is under it. */}
+        {land && forgeButton && <div className="mb-2 [&>button]:mt-0">{forgeButton}</div>}
         {item ? (
           <ItemCard item={item} build={build} level={level} cls={cls} than={worn ? undefined : gear.worn[item.slot] ?? 'none'}>
             {worn ? (
@@ -87,19 +104,14 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
                 Wear
               </button>
             )}
-            {!item.starter && (
-              <button onClick={() => setForging(true)} className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-gold-400 py-2.5 font-pixel text-[9px] text-ink-950 shadow-[0_3px_0_#b45309] active:translate-y-0.5 active:shadow-none">
-                <Sprite id="uiIcon" opts={{ name: 'wrench' }} size={12} label="" /> Forge
-              </button>
-            )}
           </ItemCard>
-        ) : (
-          all.length > 0 && (
+        ) : null}
+        {!land && forgeButton}
+        {!item && all.length > 0 && (
             <div className={`flex items-center gap-3 rounded-xl bg-ink-900/60 p-3 ${land ? 'h-full flex-col justify-center text-center' : ''}`}>
               <Sprite id="mira" size={48} label="Mira" />
               <p className="text-[11px] text-slate-400">Tap an item to wear it, or bring it to Mira&apos;s forge.</p>
             </div>
-          )
         )}
       </div>
 
