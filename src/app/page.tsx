@@ -426,12 +426,6 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
             state={state}
             onPlay={setRun}
             onStory={() => setStoryOpen(true)}
-            onGear={() => {
-              setHeroPart('gear');
-              setTab('hero');
-              window.scrollTo({ top: 0 });
-              main.current?.scrollTo({ top: 0 });
-            }}
           />
         ) : tab === 'friends' ? (
           <FriendsTab state={state} update={update} friends={friends} feed={feed} view={friendsView} setView={setFriendsView} />

@@ -35,8 +35,8 @@ level or story.
   chapter's hearts are gone (all its workouts done) and its boss still stands, `edgeFor` gives the
   run an `Edge`: the boss fights with `EDGE.bossHp` of its HP (the Knight with that share of his
   plates), and each workout since starts a run with one more free skill (`'past'` picks, up to
-  `EDGE.picks`). Playing well still beats it sooner. The Play tab's ready strip says how many hearts are left,
-  or what the edge gives (`BossEdge` in `PlayTab.tsx`).
+  `EDGE.picks`). Playing well still beats it sooner. The open world's card on the Play tab says how many hearts are left
+  and how many free skills a run starts with (`Edge` in `WorldPicker.tsx`).
 - The Ember Road's runs (`ROAD_ZONES`, played Together) keep a story zone's `id` (loot, records,
   toughness) with the road's own names and words, and `guide: 'Tamsin'` speaks after a win. A
   chapter with its own `world` (`Zone.world`, read through `worldOf`) fights in a dungeon of its
