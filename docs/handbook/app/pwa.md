@@ -3,7 +3,7 @@ type: reference
 title: Installable and offline
 description: How FORMA installs to the home screen and works with no signal — public/sw.js, the ServiceWorker component, the manifest, icons, and the iOS splash screens.
 tags: [app, pwa, offline, service-worker]
-timestamp: 2026-10-29
+timestamp: 2026-10-31
 ---
 
 # Installable and offline
@@ -25,12 +25,13 @@ signal.
 
 A phone that runs FORMA in a browser tab has to install it before the game goes on:
 `InstallGate` (`src/components/InstallGate.tsx`) takes the screen until FORMA is opened from the
-home screen. A computer is not asked (its browser keeps the save). For a new player it comes in the
-middle of the opening (Edoardo, 2026-10-28): the story, the first dungeon and the Wanderer play in
-the browser, then the Wanderer asks (`midway`, "Keep me close"), and the slow part (class, letter,
-look, name, sign-in) is done in the installed app, which opens on the class pick
-(`profile.opening`). A save that finished the opening without installing still gets the gate
-after it.
+home screen. A computer is not asked (its browser keeps the save). It comes right after the
+sign-in, which comes right after the opening (Edoardo, 2026-10-31: hook players first; signed in,
+they'll install): the opening plays in the browser, signed out, then the sign-in (the coach needs
+it), then "Keep your hero". Signed in, the hero is in the cloud, so on an iPhone the guide skips
+copying it: the installed app starts signed out, and "I already have a hero" brings it back.
+It never covers a workout, the screen after it or its scenes (`asking` in `page.tsx`). Saves from
+before, paused mid-opening for it (`profile.opening`), go on at the class pick in the browser.
 
 | Piece | Where |
 |---|---|

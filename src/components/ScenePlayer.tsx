@@ -3,10 +3,11 @@
 import { useRef, useState } from 'react';
 import { Dialogue } from './Dialogue';
 import { Ember } from './Characters';
+import { LetterForm } from './LetterForm';
 import { PlaceBackdrop } from './Place';
 import { PixelSnap, useSideways } from './sideways';
 import { useMusic } from './Sound';
-import { gearOf, type GameState } from '@/lib/game';
+import { gearOf, type GameState, type Letter } from '@/lib/game';
 import { flameStage, DEFAULT_FLAME_NAME } from '@/story/flame';
 import { answeredLines, asksAgain, renderLines, scenePlace, storyWords, type SceneEnd, type SceneMode } from '@/story/engine';
 import { spWorn } from '@/lib/sp';
@@ -19,6 +20,8 @@ export interface SceneResult extends SceneEnd {
   pickClass?: boolean;
   /** The Wanderer gave an SP: which one. */
   sp?: SpNo;
+  /** The letter to your future self, written. */
+  letter?: Letter;
 }
 
 interface Props {
@@ -74,7 +77,12 @@ export function ScenePlayer({ scene, state, onDone, mode = 'due' }: Props) {
     setPhase('after');
   };
 
-  if (phase === 'ask' && scene.ask && scene.ask.kind !== 'class' && scene.ask.kind !== 'sp')
+  if (phase === 'ask' && scene.ask?.kind === 'letter') {
+    const after = scene.ask.after;
+    return <SceneLetter start={state.profile.letter} music={music} onDone={(letter) => answered({ letter }, after)} />;
+  }
+
+  if (phase === 'ask' && scene.ask && scene.ask.kind !== 'class' && scene.ask.kind !== 'sp' && scene.ask.kind !== 'letter')
     return <AskCard ask={scene.ask} place={place} music={music} stage={stage} onAnswer={answered} />;
 
   return (
@@ -101,6 +109,12 @@ export function ScenePlayer({ scene, state, onDone, mode = 'due' }: Props) {
   );
 }
 
+/** The letter, written in the middle of a scene, with the scene's music still playing. */
+function SceneLetter({ start, music, onDone }: { start: Letter; music: NonNullable<Scene['music']>; onDone: (l: Letter) => void }) {
+  useMusic(music);
+  return <LetterForm start={start} onDone={onDone} />;
+}
+
 const goldButton =
   'w-full rounded-2xl bg-gold-400 py-3.5 font-pixel text-[10px] text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none disabled:opacity-40';
 
@@ -111,7 +125,7 @@ function AskCard({
   stage,
   onAnswer,
 }: {
-  ask: Exclude<Ask, { kind: 'class' } | { kind: 'sp' }>;
+  ask: Extract<Ask, { kind: 'name' } | { kind: 'choice' }>;
   place: ReturnType<typeof scenePlace>;
   music: NonNullable<Scene['music']>;
   stage: ReturnType<typeof flameStage>['id'];

@@ -176,12 +176,17 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   }, [ready]);
   // Anything that takes the screen (a scene, a run, a workout) closes the panel for good.
   const busy = !!(run || training || after || scene || picker);
-  // After the prologue, a phone in a browser tab installs FORMA before playing on. Never in the
-  // sandbox (unless ?gate= asks for the screen), never once installed or on a computer.
+  // Hook first, ask later: the opening plays in the browser, signed out. Right after it comes the
+  // sign-in, since the flame plans the first week through the coach api, then (signed in, so the
+  // hero is in the cloud) a phone in a browser tab installs FORMA before playing on (Edoardo,
+  // 2026-10-31). Never in the sandbox (unless ?gate= asks for the screen), never once installed or
+  // on a computer.
   const inst = useInstall();
-  const gated = inst.known && !inst.standalone && !inst.skipped && mustInstall(inst.platform) && (inst.forced || !inSandbox());
+  const askSignIn = !inSandbox() && signInDue(signedIn);
+  const gated = (!askSignIn || inst.forced) && inst.known && !inst.standalone && !inst.skipped && mustInstall(inst.platform) && (inst.forced || !inSandbox());
+  // Never over the workout, the screen after it or its scenes: the gates wait until they're done.
+  const asking = !busy && !sharing && (!ready || scenesToPlay(state, new Date()).length === 0);
   // The menus' music, on the tabs only: the opening, story, workouts and runs have their own.
-  const askSignIn = !gated && !inSandbox() && signInDue(signedIn);
   useMenuTrack(ready && state.profile.onboarded && !opening && !replaying && !busy && !gated && !askSignIn);
   useEffect(() => {
     if (busy) setDevOpen(false);
@@ -259,7 +264,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         update((s) => {
           const next = {
             ...endedScene(s, scene.id, sceneMode, r, now),
-            profile: r.flame ? { ...s.profile, flame: r.flame } : s.profile,
+            profile: { ...s.profile, ...(r.flame ? { flame: r.flame } : {}), ...(r.letter ? { letter: r.letter } : {}) },
             answers: r.answer ? { ...s.answers, [r.answer.id]: r.answer.value } : s.answers,
             // The first skip says where skipped scenes go.
             skipNoteSeen: s.skipNoteSeen || !!r.skipped,
@@ -321,21 +326,6 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
   if (!ready) return <div className="min-h-dvh bg-ink-950" />;
 
-  // A new player's opening pauses after the first dungeon for the install step; the installed app
-  // picks it up at the class pick.
-  if (!state.profile.onboarded && !replaying && state.profile.opening === 'class' && gated && !welcome)
-    return (
-      <InstallGate
-        state={state}
-        platform={inst.platform}
-        canPrompt={inst.canPrompt}
-        installed={inst.installed}
-        onInstall={inst.install}
-        onSkip={dev ? inst.skip : undefined}
-        midway
-      />
-    );
-
   if (!state.profile.onboarded || replaying) {
     return (
       <Prologue
@@ -348,9 +338,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         askLogin={welcome}
         onResume={() => setWelcomed(true)}
         onLook={(look) => update((s) => ({ ...s, profile: { ...s.profile, look } }))}
-        onPause={({ voice }) => update((s) => ({ ...s, profile: { ...s.profile, voice, opening: 'class' } }))}
-        onFinish={({ letter, voice, kit, name, classId }) => {
-          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, opening: undefined, letter, voice, kit: kit ?? s.profile.kit, name: name ?? s.profile.name, classId: classId ?? s.profile.classId } }));
+        onFinish={({ voice, kit, name, classId }) => {
+          update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, opening: undefined, voice, kit: kit ?? s.profile.kit, name: name ?? s.profile.name, classId: classId ?? s.profile.classId } }));
           setReplaying(false);
         }}
         // On iPhones each browser and the installed app keep their own saves: a hero copied in
@@ -360,7 +349,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     );
   }
 
-  if (gated)
+  if (gated && asking)
     return (
       <InstallGate
         state={state}
@@ -372,7 +361,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       />
     );
 
-  if (askSignIn && !opening) return <SignInGate />;
+  if (askSignIn && asking && !opening && !gated) return <SignInGate />;
 
   return (
     // Held sideways (the `land` screen), the tab bar becomes a rail down the left, the header shrinks

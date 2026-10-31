@@ -67,6 +67,11 @@ function hadPerfectWeek(state: GameState): boolean {
   return [...counts.values()].some((c) => c >= WEEKLY_GOAL);
 }
 
+/** Has the player written any line of their letter? */
+export function wroteLetter(state: GameState): boolean {
+  return Object.values(state.profile.letter).some((v) => v.trim());
+}
+
 /** Does a scene's `when` hold right now? */
 export function holds(w: When, state: GameState, st: StoryState, now: Date): boolean {
   const n = state.sessions.length;
@@ -83,6 +88,7 @@ export function holds(w: When, state: GameState, st: StoryState, now: Date): boo
     [w.perfectWeek, () => hadPerfectWeek(state) === w.perfectWeek],
     [w.better, () => state.sessions.filter((x) => x.better).length >= w.better!],
     [w.noClass, () => !state.profile.classId === w.noClass],
+    [w.noLetter, () => !wroteLetter(state) === w.noLetter],
     [w.spReady, () => spOpen(state) === w.spReady],
     [w.answer, () => gave(state, w.answer!)],
     [w.needs, () => !!words[w.needs!].trim()],
@@ -134,7 +140,7 @@ export function sceneFor(scene: Scene, state: GameState): Scene {
 }
 
 function askFor(ask: Ask | undefined, keep: (ls: Line[]) => Line[]): Ask | undefined {
-  if (ask?.kind === 'name') return { ...ask, after: keep(ask.after) };
+  if (ask?.kind === 'name' || ask?.kind === 'letter') return { ...ask, after: keep(ask.after) };
   if (ask?.kind === 'choice') return { ...ask, after: ask.after && keep(ask.after), choices: ask.choices.map((c) => ({ ...c, after: c.after && keep(c.after) })) };
   return ask;
 }
@@ -226,13 +232,14 @@ export function asksAgain(scene: Scene, state: GameState): boolean {
   const ask = scene.ask;
   if (ask?.kind === 'name') return !!state.skippedScenes?.includes(scene.id) && (state.profile.flame ?? DEFAULT_FLAME_NAME) === DEFAULT_FLAME_NAME;
   if (ask?.kind === 'choice') return state.answers?.[ask.id] === undefined;
+  if (ask?.kind === 'letter') return !wroteLetter(state);
   return false;
 }
 
 /** Watched again without its question: the lines that followed the answer the player gave. */
 export function answeredLines(scene: Scene, state: GameState): Line[] {
   const ask = scene.ask;
-  if (ask?.kind === 'name') return ask.after;
+  if (ask?.kind === 'name' || ask?.kind === 'letter') return ask.after;
   if (ask?.kind !== 'choice') return [];
   const value = state.answers?.[ask.id];
   const picked = ask.choices.find((c) => c.value === value);

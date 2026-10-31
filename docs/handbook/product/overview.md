@@ -3,7 +3,7 @@ type: conceptual
 title: Product overview
 description: FORMA is a training app played like a pixel RPG — training earns, the Fog game spends — installable, offline, one save per phone.
 tags: [product, overview]
-timestamp: 2026-10-29
+timestamp: 2026-10-31
 ---
 
 # Product overview
@@ -11,7 +11,7 @@ timestamp: 2026-10-29
 FORMA ("form" in Italian) is a training app played like a pixel-art RPG. It is built for one
 player first (Edoardo, coming back to calisthenics after two years off) and is meant to be
 super clear, super intuitive and gamified. Live at https://formaquest.app (also https://forma-nu-red.vercel.app), installable
-to the home screen (on phones it must be installed in the middle of the opening, after the first dungeon and the Wanderer, before the game goes on), works offline at the gym. Progress lives on the phone (You page: tap your hero at the top, Backup to save it; Start over from scratch wipes it and the cloud copy after a typed code). After the opening it asks once for
+to the home screen (on phones it must be installed right after the sign-in that follows the opening, before the game goes on; nothing costly is asked before the opening ends), works offline at the gym. Progress lives on the phone (You page: tap your hero at the top, Backup to save it; Start over from scratch wipes it and the cloud copy after a typed code). Right after the opening it asks once for
 an account (email), which keeps a cloud copy and is who you are to friends; the game still plays offline.
 
 ## The rule the game is built on
