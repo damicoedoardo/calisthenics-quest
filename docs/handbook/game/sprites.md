@@ -65,23 +65,30 @@ characters/spCard.ts  the SP card (sprite `spCard`, opts { classId, n, awake, ge
 characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look, kit }): you
                       doing each exercise of the program (hand-posed), one rep per loop of the
                       16-frame `rep` clip, or one of the exercise library's movements from moves.ts
-anatomy/body.ts       the anatomy demos (`ANATOMY_DEMOS`, twelve so far: push-up, back squat,
-                      squat, lunge, deadlift, bench press, overhead press, barbell row, pull-up,
-                      plank, curl, glute bridge). Not pixel art: a plain, faceless body as smooth
-                      vector shapes, with the muscle map on it and the worked muscles colored
-                      (main orange, helpers light orange). Each part a tube with four radii along
-                      its bone (`SHAPES`: front, back, out, in), each muscle a patch by length and
-                      angle around the bone (`MUSCLES`), gear drawn from the pose's props (barbell,
-                      dumbbells, bench, pull-up bar). `scene(exercise, view, t)` gives SVG paths
-                      and a fixed frame; components/AnatomyDemo.tsx plays it (about 30 fps, still
-                      under reduced motion and for holds)
+anatomy/body.ts       the anatomy demos (`ANATOMY_DEMOS`, 27 so far: push-up, squats, lunge,
+                      step-up, deadlift, RDL, good morning, bench, overhead press, lateral raise,
+                      rear delt fly, shrug, row, pull-up, pulldown, cable row, inverted row, dips,
+                      pushdown, curl, calf raise, bridge, plank, side plank, crunch, knee raise).
+                      Not pixel art: a plain, faceless body as smooth vector shapes, with the
+                      muscle map on it and the worked muscles colored (main orange, helpers light
+                      orange). Each part a tube with four radii along its bone (`SHAPES`), each
+                      muscle a patch by length and angle around the bone (`MUSCLES`), gear drawn
+                      from the pose's props (barbell, dumbbells, bench, pull-up bar or cable
+                      handle, box, cable, dip bars). `scene(exercise, view, t, { variant })` gives
+                      SVG paths and a fixed frame; the arrow stands beside the body, or above it
+                      when the move goes across. components/AnatomyDemo.tsx plays it (about 30
+                      fps, still under reduced motion and for holds)
 anatomy/skeleton.ts   its 3D skeleton in cm with real adult lengths (`L`), two-bone IK, and
                       `assemble()`, which builds a pose from the pelvis, torso line, hands and feet
-anatomy/moves.ts      one entry per anatomy demo (`DEMOS`): the pose from rep depth 0..1, the
-                      muscles it works, the camera per view ('side' level; the second view turned,
-                      named by `names`, e.g. 'Back'), the floor, the point the arrow follows (none
-                      for a hold) and its side. Add an exercise: one entry here, its id from the
-                      exercise ids in src/exercises/coaching.ts
+                      (`side` for a body on its side, `shrug` to lift the shoulders)
+anatomy/moves.ts      one entry per anatomy demo (`DEMOS`): the pose from rep depth 0..1 and a
+                      `Variant`, the muscles it works, the camera per view ('side' level; the
+                      second view named by `names`, e.g. 'Back'), the floor (none when hanging),
+                      the point the arrow follows (none for a hold) and its side. `anatomyFor(demo,
+                      name)` picks the demo for an exercise: look-alike movements (`ALIAS`), and
+                      the variant read from its name (`variantOf`: dumbbell or barbell via
+                      `swaps`, incline bench, goblet squat). Add an exercise: one entry here, its
+                      id from the exercise ids in src/exercises/coaching.ts
 characters/moves.ts   the exercise library's 81 movements (lifts, machines, core, cardio, stretches,
                       mobility) and the gear each can hold (`Kit`: barbell, dumbbell, cable, band...)
 engine/skeleton.ts    the jointed skeleton both use: IK elbows and knees, props (bench, bar, floor),

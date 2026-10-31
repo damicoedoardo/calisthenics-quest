@@ -222,6 +222,9 @@ function closed(pts: V2[]): string {
   return d + 'Z';
 }
 
+/** A closed shape with straight sides (boxes). */
+const polygon = (pts: V2[]) => pts.map((q, i) => `${i ? 'L' : 'M'}${f1(q[0])} ${f1(q[1])}`).join('') + 'Z';
+
 /** Linear lookup in a profile row. */
 function at(u: number[], w: number[], x: number): number {
   if (x <= u[0]) return w[0];
@@ -459,7 +462,7 @@ type Limbs = Record<'upper' | 'fore' | 'hand' | 'thigh' | 'shin' | 'foot', Part>
 function partsOf(pose: Pose): { right: Limbs; left: Limbs; torso: Part; neck: Part; head: Part } {
   const limbs = (s: number): Limbs => {
     const sd = s > 0 ? pose.right : pose.left;
-    const out: V3 = [0, 0, s];
+    const out: V3 = mul(pose.side, s);
     /** A limb part's front: away from the bend (sign 1) or toward it (-1); straight: the chest's way. */
     const fold = (a: V3, b: V3, c: V3, sign: number): V3 => {
       const bone = unit(sub(b, a));
@@ -476,7 +479,7 @@ function partsOf(pose: Pose): { right: Limbs; left: Limbs; torso: Part; neck: Pa
       foot: makePart('foot', sd.heel, sd.toe, sd.instep, out),
     };
   };
-  const zr: V3 = [0, 0, 1];
+  const zr: V3 = pose.side;
   // The torso, neck and head are one part each; their muscles mirror for the left side.
   return {
     right: limbs(1),
@@ -534,12 +537,48 @@ function benchBox(from: V3, to: V3): V3[] {
   return pts;
 }
 
+/** The corners of a box standing on `at`. */
+function boxCorners(at: V3, size: V3): V3[] {
+  const pts: V3[] = [];
+  for (const x of [-0.5, 0.5]) for (const y of [0, 1]) for (const z of [-0.5, 0.5]) pts.push(add(at, [x * size[0], y * size[1], z * size[2]]));
+  return pts;
+}
+
+/** Dip bars: two bars front to back, each with a post at both ends. */
+const DIP = { half: 30, out: 27 };
+function dipBars(at: V3): [V3, V3][] {
+  const out: [V3, V3][] = [];
+  for (const s of [-1, 1]) {
+    const a = add(at, [-DIP.half, 0, s * DIP.out]);
+    const b = add(at, [DIP.half, 0, s * DIP.out]);
+    out.push([a, b], [a, [a[0], 0, a[2]]], [b, [b[0], 0, b[2]]]);
+  }
+  return out;
+}
+
 /** One piece of gear as shapes. */
 function gear(cam: Camera, prop: Prop): Shape[] {
   if (prop.kind === 'barbell') return weight(cam, prop.at, BAR, 2.8);
   if (prop.kind === 'dumbbell') return weight(cam, prop.at, DUMBBELL, 2.4);
+  if (prop.kind === 'box') return [{ d: polygon(hull(boxCorners(prop.at, prop.size).map((q) => project(cam, q)))), fill: INK.plate, stroke: INK.plateRim, width: 1.2 }];
+  if (prop.kind === 'cable') {
+    const a = project(cam, prop.from);
+    return [
+      { d: line(a, project(cam, prop.to)), stroke: INK.line, width: 1 },
+      { d: closed(disc(cam, prop.from, 3.5)), fill: INK.plate, stroke: INK.plateRim, width: 1 },
+    ];
+  }
+  if (prop.kind === 'bars') {
+    // Far bar first.
+    const segs = dipBars(prop.at).sort((p, q) => dot(add(p[0], p[1]), cam.c) - dot(add(q[0], q[1]), cam.c));
+    return segs.flatMap(([a, b]) => [
+      { d: line(project(cam, a), project(cam, b)), stroke: INK.plateRim, width: 4.4, round: true },
+      { d: line(project(cam, a), project(cam, b)), stroke: INK.bar, width: 2.8, round: true },
+    ]);
+  }
   if (prop.kind === 'pullbar') {
-    const ends = [add(prop.at, [0, 0, -75]), add(prop.at, [0, 0, 75])].map((q) => project(cam, q));
+    const h = prop.half ?? 75;
+    const ends = [add(prop.at, [0, 0, -h]), add(prop.at, [0, 0, h])].map((q) => project(cam, q));
     return [
       { d: line(ends[0], ends[1]), stroke: INK.plateRim, width: 4.4, round: true },
       { d: line(ends[0], ends[1]), stroke: INK.bar, width: 2.8, round: true },
@@ -559,7 +598,10 @@ function gear(cam: Camera, prop: Prop): Shape[] {
 /** Points that bound a piece of gear (for the frame). */
 function gearPoints(cam: Camera, prop: Prop): V2[] {
   if (prop.kind === 'bench') return [...benchBox(prop.from, prop.to), [prop.from[0], 0, 0] as V3, [prop.to[0], 0, 0] as V3].map((q) => project(cam, q));
-  const o = prop.kind === 'barbell' ? BAR : prop.kind === 'dumbbell' ? DUMBBELL : { half: 75, plateAt: 0, plateR: 0 };
+  if (prop.kind === 'box') return boxCorners(prop.at, prop.size).map((q) => project(cam, q));
+  if (prop.kind === 'cable') return [project(cam, prop.from), project(cam, prop.to)];
+  if (prop.kind === 'bars') return dipBars(prop.at).flat().map((q) => project(cam, q));
+  const o = prop.kind === 'barbell' ? BAR : prop.kind === 'dumbbell' ? DUMBBELL : { half: prop.half ?? 75, plateAt: 0, plateR: 0 };
   const pts = [-1, 1].map((s) => project(cam, add(prop.at, [0, 0, s * o.half])));
   if (o.plateR) for (const s of [-1, 1]) pts.push(...disc(cam, add(prop.at, [0, 0, s * o.plateAt]), o.plateR));
   return pts;
@@ -573,8 +615,9 @@ function draw(exercise: AnatomyId, cam: Camera, depth: number, v: Variant): Shap
   const { right, left, torso, neck, head } = partsOf(pose);
 
   // Side on, the far limbs are behind, shaded; nearer the front, both sides are drawn alike.
-  const sideOn = Math.abs(cam.c[2]) > 0.3;
-  const [near, far] = cam.c[2] >= 0 ? [right, left] : [left, right];
+  const across = dot(cam.c, pose.side);
+  const sideOn = Math.abs(across) > 0.3;
+  const [near, far] = across >= 0 ? [right, left] : [left, right];
   // The near leg joins the trunk without a seam, unless its thigh comes toward you: then it needs
   // its own edge in front of the body.
   const thighAt = dot(unit(sub(near.thigh.b, near.thigh.a)), cam.c);
@@ -691,16 +734,26 @@ function frame(exercise: AnatomyId, view: View, v: Variant) {
     for (const p of [torso, neck, head, ...Object.values(right), ...Object.values(left)]) outline(p, cam).forEach(take);
     for (const p of pose.props) gearPoints(cam, p).forEach(take);
   }
-  // The arrow: beside the body, as tall as the move.
+  // The arrow: beside the body, as tall as the move; above it, as wide, when the move goes across.
   let arrowLine: [V2, V2] | null = null;
   if (demo.mover) {
     const mover = demo.mover;
-    const at = (d: number) => project(cam, mover(poseOf(exercise, d, v)))[1];
-    const ax = demo.arrow === 'right' ? x1 + 12 : x0 - 12;
-    const sign = Math.sign(at(1) - at(0)) || 1;
-    arrowLine = [[ax, at(0) - 6 * sign], [ax, at(1) + 6 * sign]];
-    x0 = Math.min(x0, ax - 8);
-    x1 = Math.max(x1, ax + 8);
+    const a = project(cam, mover(poseOf(exercise, 0, v)));
+    const b = project(cam, mover(poseOf(exercise, 1, v)));
+    if (Math.abs(b[0] - a[0]) > 1.5 * Math.abs(b[1] - a[1])) {
+      const ay = y0 - 12;
+      const sign = Math.sign(b[0] - a[0]) || 1;
+      arrowLine = [[a[0] - 6 * sign, ay], [b[0] + 6 * sign, ay]];
+      y0 = Math.min(y0, ay - 8);
+      x0 = Math.min(x0, a[0] - 14, b[0] - 14);
+      x1 = Math.max(x1, a[0] + 14, b[0] + 14);
+    } else {
+      const ax = demo.arrow === 'right' ? x1 + 12 : x0 - 12;
+      const sign = Math.sign(b[1] - a[1]) || 1;
+      arrowLine = [[ax, a[1] - 6 * sign], [ax, b[1] + 6 * sign]];
+      x0 = Math.min(x0, ax - 8);
+      x1 = Math.max(x1, ax + 8);
+    }
   }
   const pad = 6;
   const out = { x: x0 - pad, y: y0 - pad, w: x1 - x0 + pad * 2, h: y1 - y0 + pad * 2, arrow: arrowLine };

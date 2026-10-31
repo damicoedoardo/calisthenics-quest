@@ -18,7 +18,8 @@ describe('anatomy demos', () => {
 
   it('colors the muscles each move works', () => {
     for (const ex of ANATOMY_DEMOS) {
-      const fills = scene(ex, 'side', 0.5).shapes.map((p) => p.fill);
+      // In at least one view (an arm pointing at you hides its own muscles).
+      const fills = (['side', 'front'] as const).flatMap((v) => scene(ex, v, 0.5).shapes.map((p) => p.fill));
       expect(fills).toContain('#f97316');
       expect(WORKS[ex].main.length).toBeGreaterThan(0);
     }

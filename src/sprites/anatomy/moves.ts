@@ -3,7 +3,7 @@
    which point the arrow follows. The body and its drawing live in body.ts. */
 
 import type { MuscleId } from './body';
-import { L, SHOULDER_OUT, SHOULDER_UP, add, assemble, flatFoot, lean, lerp, mix, mul, rad, sub, unit, type Limb, type Pose, type Prop, type V3 } from './skeleton';
+import { L, SHOULDER_OUT, SHOULDER_UP, add, assemble, cross, flatFoot, footAt, ik, lean, lerp, mix, mul, rad, sub, unit, type Limb, type Pose, type Prop, type V3 } from './skeleton';
 
 export const ANATOMY_DEMOS = [
   'pushup',
@@ -18,6 +18,21 @@ export const ANATOMY_DEMOS = [
   'plank',
   'curl',
   'bridge',
+  'rdl',
+  'good-morning',
+  'step-up',
+  'calf-raise',
+  'lateral-raise',
+  'rear-delt-fly',
+  'shrug',
+  'triceps-pushdown',
+  'lat-pulldown',
+  'seated-row',
+  'inverted-row',
+  'dips',
+  'crunch',
+  'side-plank',
+  'knee-raise',
 ] as const;
 export type AnatomyId = (typeof ANATOMY_DEMOS)[number];
 export const hasAnatomy = (id: string): id is AnatomyId => (ANATOMY_DEMOS as readonly string[]).includes(id);
@@ -453,6 +468,470 @@ export const DEMOS: Record<AnatomyId, Demo> = {
     mover: (p) => p.pelvis,
     arrow: 'left',
   },
+
+  /** Romanian deadlift: knees soft and still, hips pushed back until the bar is at mid-shin, back
+      flat, the bar sliding down the thighs. */
+  rdl: {
+    pose: (d) => {
+      const pelvis = mix([-3, 94, 0], [-24, 88, 0], d);
+      const t = lean(lerp(3, 72, d));
+      const bar = mix([3, 76, 0], [12, 34, 0], d);
+      return assemble({
+        pelvis,
+        ...t,
+        headUp: lean(lerp(3, 72, d) * 0.75).up,
+        limb: (s) => ({
+          wrist: add(bar, [0, 4, s * 24]),
+          tip: add(bar, [4, -3, s * 24]),
+          elbowPole: [-0.3, -1, s * 0.2],
+          ...flatFoot(-2, 13, s),
+          kneePole: [1, 0, s * 0.2],
+        }),
+        props: [{ kind: 'barbell', at: bar }],
+      });
+    },
+    swaps: ['dumbbell'],
+    works: { main: ['hamstrings', 'glutes'], help: ['lowerBack', 'forearm', 'traps'] },
+    cameras: { side: SIDE, front: unit([1, 0.32, 0.5]) },
+    floor: { x: 0, r: 50 },
+    mover: barOf,
+    arrow: 'left',
+  },
+
+  /** Good morning: the bar on the upper back, knees soft, hips back until the back is nearly level. */
+  'good-morning': {
+    pose: (d) => {
+      const pelvis = mix([-3, 94, 0], [-20, 90, 0], d);
+      const deg = lerp(3, 72, d);
+      const t = lean(deg);
+      const neck = add(pelvis, mul(t.up, L.torso));
+      const bar = add(add(neck, mul(t.front, -9)), mul(t.up, -4));
+      return assemble({
+        pelvis,
+        ...t,
+        headUp: lean(deg * 0.7).up,
+        limb: (s) => ({
+          wrist: add(bar, [-1, -5, s * 27]),
+          tip: add(bar, [4, 3, s * 27]),
+          elbowPole: add(mul(t.front, -0.45), [0, -1, s * 0.25]),
+          ...flatFoot(-2, 13, s),
+          kneePole: [1, 0, s * 0.2],
+        }),
+        props: [{ kind: 'barbell', at: bar }],
+      });
+    },
+    works: { main: ['hamstrings', 'glutes', 'lowerBack'], help: ['abs'] },
+    cameras: { side: SIDE, front: unit([1, 0.32, 0.5]) },
+    floor: { x: 0, r: 50 },
+    mover: (p) => p.neck,
+    arrow: 'left',
+  },
+
+  /** Step-up: the right foot on a knee-high box, drive through it until standing on the box. */
+  'step-up': {
+    pose: (d) => {
+      const pelvis = mix([0, 92, 0], [26, 134, 0], d);
+      const t = lean(lerp(12, 2, d));
+      return assemble({
+        pelvis,
+        ...t,
+        limb: (s) => {
+          const sh = shoulderOf(pelvis, t.up, s);
+          const wrist = add(sh, [4, -54, s * 4]);
+          const arm = { wrist, tip: handOut(sh, wrist, 16), elbowPole: [-1, 0, 0] as V3 };
+          if (s > 0) return { ...arm, ...footAt([30, 48, 10], 1, 2), kneePole: [1, 0, 0.1] };
+          return { ...arm, ...footAt(mix([-8, 8, -10], [20, 54, -10], d), -1, 2), kneePole: [1, 0, -0.1] };
+        },
+        props: [{ kind: 'box', at: [38, 0, 2], size: [42, 40, 56] }],
+      });
+    },
+    swaps: ['dumbbell'],
+    works: { main: ['quads', 'glutes'], help: ['hamstrings', 'calves'] },
+    cameras: { side: SIDE, front: unit([1, 0.3, 0.55]) },
+    floor: { x: 10, r: 55 },
+    mover: (p) => p.pelvis,
+    arrow: 'left',
+  },
+
+  /** Calf raise: up onto the balls of the feet as high as you can, knees straight, then all the way down. */
+  'calf-raise': {
+    pose: (d) => {
+      const lift = 10 * d;
+      const pelvis: V3 = [lerp(-2, 1, d), 94 + lift * 1.3, 0];
+      const t = lean(1);
+      return assemble({
+        pelvis,
+        ...t,
+        limb: (s) => {
+          const sh = shoulderOf(pelvis, t.up, s);
+          const wrist = add(sh, [3, -54, s * 3]);
+          const heel: V3 = [lerp(-6, -2, d), 3.5 + lift * 1.15, s * 11];
+          const toe: V3 = [18.5, 2.5, s * 16];
+          const a = Math.atan2(heel[1] - toe[1], toe[0] - heel[0]);
+          return {
+            wrist,
+            tip: handOut(sh, wrist, 16),
+            elbowPole: [-1, 0, 0],
+            ankle: [lerp(0, 3, d), 8 + lift * 1.15, s * 12],
+            heel,
+            toe,
+            instep: [Math.sin(a), Math.cos(a), 0],
+            kneePole: [1, 0, s * 0.2],
+          };
+        },
+      });
+    },
+    swaps: ['dumbbell'],
+    works: { main: ['calves'], help: [] },
+    cameras: { side: SIDE, front: unit([-0.8, 0.2, 0.5]) },
+    names: { front: 'Back' },
+    floor: { x: 0, r: 46 },
+    mover: (p) => p.right.heel,
+    arrow: 'left',
+  },
+
+  /** Lateral raise: dumbbells from the sides out and up to shoulder height, elbows soft, leading
+      with the elbows. */
+  'lateral-raise': {
+    pose: (d) => {
+      const pelvis: V3 = [-2, 94, 0];
+      const t = lean(2);
+      const th = rad(lerp(8, 84, d));
+      const wristOf = (s: number) => add(shoulderOf(pelvis, t.up, s), mul(unit([0.12, -Math.cos(th), s * Math.sin(th)]), 53));
+      return assemble({
+        pelvis,
+        ...t,
+        limb: (s) => ({ wrist: wristOf(s), tip: handOut(shoulderOf(pelvis, t.up, s), wristOf(s), 16), elbowPole: [-1, 0.3, 0], ...flatFoot(0, 12, s), kneePole: [1, 0, s * 0.2] }),
+        props: [-1, 1].map((s) => ({ kind: 'dumbbell' as const, at: handOut(shoulderOf(pelvis, t.up, s), wristOf(s), 6) })),
+      });
+    },
+    works: { main: ['sideDelt'], help: ['frontDelt', 'traps'] },
+    cameras: { side: SIDE, front: unit([1, 0.15, 0.3]) },
+    floor: { x: 0, r: 46 },
+    mover: (p) => p.right.wrist,
+    arrow: 'right',
+  },
+
+  /** Rear delt fly: bent over with a flat back, dumbbells from hanging out to the sides,
+      squeezing the shoulder blades. */
+  'rear-delt-fly': {
+    pose: (d) => {
+      const pelvis: V3 = [-22, 82, 0];
+      const t = lean(62);
+      const th = rad(lerp(6, 80, d));
+      const wristOf = (s: number) => add(shoulderOf(pelvis, t.up, s), mul(unit([0.1, -Math.cos(th), s * Math.sin(th)]), 53));
+      return assemble({
+        pelvis,
+        ...t,
+        headUp: lean(45).up,
+        limb: (s) => ({ wrist: wristOf(s), tip: handOut(shoulderOf(pelvis, t.up, s), wristOf(s), 16), elbowPole: [-0.5, 1, 0], ...flatFoot(0, 14, s), kneePole: [1, 0, s * 0.3] }),
+        props: [-1, 1].map((s) => ({ kind: 'dumbbell' as const, at: handOut(shoulderOf(pelvis, t.up, s), wristOf(s), 6) })),
+      });
+    },
+    works: { main: ['rearDelt'], help: ['traps', 'lats'] },
+    cameras: { side: SIDE, front: unit([-0.6, 0.5, 0.6]) },
+    names: { front: 'Back' },
+    floor: { x: -6, r: 50 },
+    mover: (p) => p.right.wrist,
+    arrow: 'left',
+  },
+
+  /** Shrug: arms straight, shoulders straight up to the ears, a pause, then down. */
+  shrug: {
+    pose: (d) => {
+      const pelvis: V3 = [-2, 94, 0];
+      const t = lean(2);
+      const lift = 7 * d;
+      const bar: V3 = [8, 76 + lift, 0];
+      return assemble({
+        pelvis,
+        ...t,
+        shrug: lift,
+        limb: (s) => ({ wrist: add(bar, [0, 4, s * 23]), tip: add(bar, [4, -3, s * 23]), elbowPole: [-1, 0, 0], ...flatFoot(0, 12, s), kneePole: [1, 0, s * 0.2] }),
+        props: [{ kind: 'barbell', at: bar }],
+      });
+    },
+    swaps: ['dumbbell'],
+    works: { main: ['traps'], help: ['forearm'] },
+    cameras: { side: SIDE, front: unit([-0.8, 0.25, 0.5]) },
+    names: { front: 'Back' },
+    floor: { x: 0, r: 46 },
+    mover: (p) => p.right.shoulder,
+    arrow: 'left',
+  },
+
+  /** Triceps pushdown: facing a high cable, elbows pinned at the sides, the handle from chest
+      height down until the arms are straight. */
+  'triceps-pushdown': {
+    pose: (d) => {
+      const pelvis: V3 = [-2, 94, 0];
+      const t = lean(8);
+      const deg = lerp(28, -84, d);
+      const fdir: V3 = [Math.cos(rad(deg)), Math.sin(rad(deg)), 0];
+      const elbowOf = (s: number) => add(shoulderOf(pelvis, t.up, s), [4, -29, s * 0.5]);
+      const wristOf = (s: number) => add(elbowOf(s), mul(fdir, L.fore));
+      const handle = mix(wristOf(-1), wristOf(1), 0.5);
+      return assemble({
+        pelvis,
+        ...t,
+        limb: (s) => ({ elbow: elbowOf(s), wrist: wristOf(s), tip: add(wristOf(s), mul(fdir, 15)), ...flatFoot(0, 12, s), kneePole: [1, 0, s * 0.2] }),
+        props: [
+          { kind: 'box', at: [62, 0, 0], size: [14, 215, 32] },
+          { kind: 'cable', from: [52, 205, 0], to: handle },
+          { kind: 'pullbar', at: handle, half: 14 },
+        ],
+      });
+    },
+    works: { main: ['triceps'], help: ['forearm'] },
+    cameras: { side: SIDE, front: unit([0.6, 0.2, 0.8]) },
+    floor: { x: 15, r: 55 },
+    mover: (p) => p.right.wrist,
+    arrow: 'left',
+  },
+
+  /** Lat pulldown: seated, thighs under the pad, a wide grip; pull the bar to the top of the chest,
+      chest up, leaning back a little. */
+  'lat-pulldown': {
+    pose: (d) => {
+      const pelvis: V3 = [-4, 56, 0];
+      const t = lean(lerp(-6, -16, d));
+      const bar = mix([8, 186, 0], [16, 114, 0], d);
+      return assemble({
+        pelvis,
+        ...t,
+        limb: (s) => ({
+          wrist: add(bar, [0, -2, s * 40]),
+          tip: add(bar, [-1, 6, s * 40]),
+          elbowPole: [-0.4, -1, s * 0.6],
+          ...flatFoot(32, 13, s),
+          kneePole: [0.5, 1, s * 0.2],
+        }),
+        props: [
+          { kind: 'box', at: [-40, 0, 0], size: [14, 240, 50] },
+          { kind: 'box', at: [-6, 0, 0], size: [38, 44, 40] },
+          { kind: 'cable', from: [8, 236, 0], to: bar },
+          { kind: 'pullbar', at: bar, half: 60 },
+        ],
+      });
+    },
+    works: { main: ['lats'], help: ['biceps', 'rearDelt', 'traps'] },
+    cameras: { side: SIDE, front: unit([-1, 0.15, 0.45]) },
+    names: { front: 'Back' },
+    floor: { x: -5, r: 55 },
+    mover: (p) => p.right.wrist,
+    arrow: 'right',
+  },
+
+  /** Seated cable row: sitting tall, feet on the plate, knees soft; pull the handle to the belly,
+      elbows close and back, then let the arms go long. */
+  'seated-row': {
+    pose: (d) => {
+      const pelvis: V3 = [-22, 52, 0];
+      const t = lean(lerp(8, -4, d));
+      const handle = mix([38, 72, 0], [6, 76, 0], d);
+      return assemble({
+        pelvis,
+        ...t,
+        limb: (s) => ({
+          wrist: add(handle, [0, 0, s * 7]),
+          tip: add(handle, [5, 0, s * 7]),
+          elbowPole: [-1, -0.3, s * 0.3],
+          ankle: [32, 16, s * 13],
+          heel: [29, 7, s * 13],
+          toe: [36, 31, s * 14],
+          instep: [-0.95, 0.3, 0],
+          kneePole: [0, 1, s * 0.2],
+        }),
+        props: [
+          { kind: 'box', at: [-22, 0, 0], size: [40, 40, 40] },
+          { kind: 'box', at: [40, 0, 0], size: [6, 40, 56] },
+          { kind: 'cable', from: [46, 22, 0], to: handle },
+          { kind: 'pullbar', at: handle, half: 10 },
+        ],
+      });
+    },
+    works: { main: ['lats', 'traps'], help: ['biceps', 'rearDelt'] },
+    cameras: { side: SIDE, front: unit([-0.6, 0.4, 0.7]) },
+    names: { front: 'Back' },
+    floor: { x: 5, r: 65 },
+    mover: (p) => p.right.wrist,
+    arrow: 'right',
+  },
+
+  /** Inverted row: under a bar at hip height, heels on the floor, the body one straight line;
+      pull the chest to the bar. */
+  'inverted-row': {
+    pose: (d) => {
+      const ankle: V3 = [-112, 9, 0];
+      const shoulderY = lerp(42, 80, d);
+      const reach = L.shin + L.thigh + SHOULDER_UP;
+      const a = Math.asin((shoulderY - ankle[1]) / reach);
+      const dir: V3 = [Math.cos(a), Math.sin(a), 0];
+      const pelvis = add(ankle, mul(dir, L.shin + L.thigh));
+      const bar: V3 = [12, 96, 0];
+      return assemble({
+        pelvis,
+        up: dir,
+        front: [-Math.sin(a), Math.cos(a), 0],
+        headUp: dir,
+        limb: (s) => {
+          const an = add(ankle, [0, 0, s * 10]);
+          return {
+            wrist: add(bar, [0, -3, s * 30]),
+            tip: add(bar, [-3, 5, s * 30]),
+            elbowPole: [-0.6, -0.4, s * 0.6],
+            ankle: an,
+            heel: add(an, [-3, -6, 0]),
+            toe: add(an, [5, 12, 0]),
+            instep: [0.9, -0.4, 0],
+            knee: add(an, mul(dir, L.shin)),
+          };
+        },
+        props: [{ kind: 'pullbar', at: bar, half: 60 }],
+      });
+    },
+    works: { main: ['lats', 'traps'], help: ['biceps', 'rearDelt', 'abs'] },
+    cameras: { side: SIDE, front: unit([0.5, 0.5, 0.7]) },
+    floor: { x: -45, r: 85 },
+    mover: (p) => p.neck,
+    arrow: 'right',
+  },
+
+  /** Dips: on parallel bars, arms straight; lower until the elbows are at a right angle, leaning a
+      little forward, then press back up. */
+  dips: {
+    pose: (d) => {
+      const t = lean(lerp(8, 24, d));
+      const sh: V3 = [lerp(-1, 5, d), lerp(166, 132, d), 0];
+      const pelvis = sub(sh, mul(t.up, SHOULDER_UP));
+      return assemble({
+        pelvis,
+        ...t,
+        headUp: lean(lerp(8, 24, d) * 0.6).up,
+        limb: (s) => {
+          const ankle = add(pelvis, [-28, -74, s * 5]);
+          return {
+            wrist: [2, 113, s * 26],
+            tip: [12, 112, s * 26],
+            elbowPole: [-1, 0, s * 0.15],
+            ankle,
+            heel: add(ankle, [-4, -2, 0]),
+            toe: add(ankle, [12, -14, 0]),
+            instep: [0.75, 0.65, 0],
+            kneePole: [1, 0, 0],
+          };
+        },
+        props: [{ kind: 'bars', at: [4, 110, 0] }],
+      });
+    },
+    works: { main: ['triceps', 'chest'], help: ['frontDelt'] },
+    cameras: { side: SIDE, front: unit([1, 0.2, 0.55]) },
+    floor: { x: 0, r: 50 },
+    mover: (p) => p.neck,
+    arrow: 'left',
+  },
+
+  /** Crunch: on the back, knees bent, feet flat; curl the shoulders off the floor reaching for the
+      knees, lower back stays down. */
+  crunch: {
+    pose: (d) => {
+      const pelvis: V3 = [-10, 12, 0];
+      const a = rad(lerp(1, 32, d));
+      const up: V3 = [Math.cos(a), Math.sin(a), 0];
+      const nod = rad(lerp(1, 48, d));
+      return assemble({
+        pelvis,
+        up,
+        front: [-Math.sin(a), Math.cos(a), 0],
+        headUp: [Math.cos(nod), Math.sin(nod), 0],
+        limb: (s) => {
+          const sh = shoulderOf(pelvis, up, s);
+          const foot = flatFoot(-52, 13, s, 2);
+          const knee = ik(add(pelvis, [0, 0, s * 9]), foot.ankle, L.thigh, L.shin, [0, 1, s * 0.2]);
+          const wrist = add(sh, mul(unit(sub(add(knee, [0, -6, 0]), sh)), 52));
+          return { wrist, tip: handOut(sh, wrist, 16), elbowPole: [0, 1, s * 0.3], ...foot, knee };
+        },
+      });
+    },
+    works: { main: ['abs'], help: ['obliques'] },
+    cameras: { side: SIDE, front: unit([0.35, 0.4, 0.85]) },
+    floor: { x: -10, r: 70 },
+    mover: (p) => p.neck,
+    arrow: 'right',
+  },
+
+  /** Side plank: on one forearm, the elbow under the shoulder, feet stacked, the body one straight
+      line from heels to head, the top arm up. A hold. */
+  'side-plank': {
+    pose: () => {
+      const mid: V3 = [-103, 10, 0];
+      // The angle that puts the lower shoulder over the elbow on the floor.
+      let a = 0.3;
+      for (let i = 0; i < 8; i++) a = Math.asin((24 + SHOULDER_OUT * Math.cos(a)) / (L.shin + L.thigh + SHOULDER_UP));
+      const dir: V3 = [Math.cos(a), Math.sin(a), 0];
+      const front: V3 = [0, 0, 1];
+      const side = unit(cross(front, dir));
+      const pelvis = add(mid, mul(dir, L.shin + L.thigh));
+      return assemble({
+        pelvis,
+        up: dir,
+        front,
+        side,
+        limb: (s) => {
+          const sh = add(add(pelvis, mul(dir, SHOULDER_UP)), mul(side, s * SHOULDER_OUT));
+          const ankle = add(mid, mul(side, s * 6));
+          const feet = { ankle, heel: add(add(ankle, mul(front, -5)), mul(dir, -4)), toe: add(add(ankle, mul(front, 16)), mul(dir, -5)), instep: dir, knee: add(ankle, mul(dir, L.shin)) };
+          if (s < 0) {
+            const elbow: V3 = [sh[0], 4.5, 4];
+            return { elbow, wrist: add(elbow, [0, -1, L.fore]), tip: add(elbow, [0, -2, L.fore + 15]), ...feet };
+          }
+          const wrist = add(sh, mul(side, 55.95));
+          return { wrist, tip: add(wrist, mul(side, 16)), elbowPole: [-1, 0, 0], ...feet };
+        },
+      });
+    },
+    works: { main: ['obliques'], help: ['abs', 'glutes', 'sideDelt'] },
+    cameras: { side: SIDE, front: unit([0.3, 0.7, 0.65]) },
+    names: { front: 'Above' },
+    floor: { x: -40, r: 85 },
+    arrow: 'right',
+  },
+
+  /** Hanging knee raise: from a dead hang, bring the knees up to the chest without swinging, then
+      lower slowly. */
+  'knee-raise': {
+    pose: (d) => {
+      const pelvis: V3 = [lerp(-3, -6, d), lerp(118, 124, d), 0];
+      const t = lean(lerp(-4, 4, d));
+      const bar: V3 = [0, 226, 0];
+      const th = rad(lerp(4, 100, d));
+      return assemble({
+        pelvis,
+        ...t,
+        limb: (s) => {
+          const hip = add(pelvis, [0, 0, s * 9]);
+          const knee = add(hip, mul([Math.sin(th), -Math.cos(th), 0], L.thigh));
+          const ankle = add(knee, mul(unit([lerp(0.05, -0.1, d), -1, 0]), L.shin));
+          return {
+            wrist: [0, 222, s * 30],
+            tip: add(bar, [5, 2, s * 30]),
+            elbowPole: [0.5, -0.6, s],
+            knee,
+            ankle,
+            heel: add(ankle, [-4, -2, 0]),
+            toe: add(ankle, [12, -14, 0]),
+            instep: [0.75, 0.65, 0],
+          };
+        },
+        props: [{ kind: 'pullbar', at: bar }],
+      });
+    },
+    works: { main: ['abs'], help: ['obliques', 'forearm'] },
+    cameras: { side: SIDE, front: unit([1, 0.1, 0.5]) },
+    mover: (p) => p.right.knee,
+    arrow: 'right',
+  },
+
 };
 
 /** Other movements that look the same as a demo. */

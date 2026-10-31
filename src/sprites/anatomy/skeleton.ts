@@ -50,20 +50,27 @@ export interface Side {
   instep: V3;
 }
 
-/** Gear in the scene. A barbell runs side to side through `at`; dumbbells sit in each hand. */
+/** Gear in the scene. A barbell runs side to side through `at`; dumbbells sit in each hand; a
+    pull-up bar or cable handle runs side to side (`half` its half length); a box stands on `at`
+    (its bottom middle) with a size; a cable runs from its pulley to the handle; dip bars run front
+    to back at each side of `at`. */
 export type Prop =
   | { kind: 'barbell'; at: V3 }
   | { kind: 'dumbbell'; at: V3 }
   | { kind: 'bench'; from: V3; to: V3 }
-  | { kind: 'pullbar'; at: V3 };
+  | { kind: 'pullbar'; at: V3; half?: number }
+  | { kind: 'box'; at: V3; size: V3 }
+  | { kind: 'cable'; from: V3; to: V3 }
+  | { kind: 'bars'; at: V3 };
 
 export interface Pose {
   pelvis: V3;
   neck: V3;
   headBase: V3;
   headTop: V3;
-  /** Which way the chest faces. */
+  /** Which way the chest faces, and the body's right. */
   front: V3;
+  side: V3;
   right: Side;
   left: Side;
   props: Prop[];
@@ -87,16 +94,19 @@ export interface Limb {
 
 /** A whole pose: the pelvis, the torso's line (`up`, toward the neck) and the chest's way
     (`front`), how the head sits (`headUp`, default along the torso), and each side's limbs. */
-export function assemble(o: { pelvis: V3; up: V3; front: V3; headUp?: V3; limb: (s: number) => Limb; props?: Prop[] }): Pose {
+export function assemble(o: { pelvis: V3; up: V3; front: V3; headUp?: V3; limb: (s: number) => Limb; props?: Prop[]; side?: V3; shrug?: number }): Pose {
   const up = unit(o.up);
+  // Which way is the body's right (z unless it lies on its side), and how far the shoulders lift.
+  const right = unit(o.side ?? [0, 0, 1]);
+  const lift = mul(up, o.shrug ?? 0);
   const neck = add(o.pelvis, mul(up, L.torso));
   const headUp = unit(o.headUp ?? up);
   const headBase = add(neck, mul(headUp, L.neck));
   const headTop = add(headBase, mul(headUp, L.head));
   const side = (s: number): Side => {
     const l = o.limb(s);
-    const shoulder = add(add(o.pelvis, mul(up, SHOULDER_UP)), [0, 0, s * SHOULDER_OUT]);
-    const hip = add(o.pelvis, [0, 0, s * HIP_OUT]);
+    const shoulder = add(add(add(o.pelvis, mul(up, SHOULDER_UP)), mul(right, s * SHOULDER_OUT)), lift);
+    const hip = add(o.pelvis, mul(right, s * HIP_OUT));
     return {
       shoulder,
       hip,
@@ -110,7 +120,7 @@ export function assemble(o: { pelvis: V3; up: V3; front: V3; headUp?: V3; limb: 
       knee: l.knee ?? ik(hip, l.ankle, L.thigh, L.shin, l.kneePole ?? [1, 0, 0]),
     };
   };
-  return { pelvis: o.pelvis, neck, headBase, headTop, front: unit(o.front), right: side(1), left: side(-1), props: o.props ?? [] };
+  return { pelvis: o.pelvis, neck, headBase, headTop, front: unit(o.front), side: right, right: side(1), left: side(-1), props: o.props ?? [] };
 }
 
 /** A torso leaning `deg` forward from upright: its line and the chest's way. */
@@ -121,6 +131,11 @@ export function lean(deg: number): { up: V3; front: V3 } {
 /** Feet flat on the floor, the ankle at x, `out` from the middle, toes turned out a little. */
 export function flatFoot(x: number, out: number, s: number, turn = 4): Pick<Limb, 'ankle' | 'heel' | 'toe' | 'instep'> {
   return { ankle: [x, L.ankle, s * out], heel: [x - 6, 3.5, s * (out - 1)], toe: [x + 18.5, 2.5, s * (out + turn)], instep: [0, 1, 0] };
+}
+
+/** A flat foot around an ankle anywhere (feet in the air or on a box). */
+export function footAt(ankle: V3, s: number, turn = 4): Pick<Limb, 'ankle' | 'heel' | 'toe' | 'instep'> {
+  return { ankle, heel: add(ankle, [-6, -4.5, -s]), toe: add(ankle, [18.5, -5.5, s * turn]), instep: [0, 1, 0] };
 }
 
 /** Ease in and out. */
