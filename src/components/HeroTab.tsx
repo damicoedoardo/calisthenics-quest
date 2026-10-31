@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from 'react';
 import { Palette, Swords } from 'lucide-react';
 import { Hero } from './Hero';
+import { PixelTabs } from './PixelTabs';
 import { useLook } from './Look';
 import { LookEditor } from './LookEditor';
 import { useModal } from './useModal';
@@ -68,20 +69,7 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
   );
 
   const tabs = (
-    <div role="tablist" aria-label="Your hero" className={`grid shrink-0 grid-cols-3 gap-1 rounded-xl bg-ink-900 p-1`}>
-      {PARTS.map((t) => (
-        <button
-          key={t.id}
-          role="tab"
-          aria-selected={part === t.id}
-          onClick={() => onPart(t.id)}
-          className={`relative rounded-lg py-2 text-xs font-semibold transition active:scale-95 ${part === t.id ? 'bg-gold-400 text-ink-950' : 'text-slate-300'}`}
-        >
-          {t.label}
-          {t.dot && <span aria-hidden className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-gold-300 ring-2 ring-ink-900" />}
-        </button>
-      ))}
-    </div>
+    <PixelTabs label="Your hero" className="shrink-0" tabs={PARTS} value={part} onChange={onPart} />
   );
 
   const classCard = (
