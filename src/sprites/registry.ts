@@ -44,7 +44,6 @@ import { drawSandGolemMid } from './characters/sandGolemMid';
 import { drawWhisperMid } from './characters/whisperMid';
 import { drawGaleMid } from './characters/galeMid';
 import { drawExercise, type ExerciseOpts } from './characters/exercise';
-import { drawExerciseHd, type HdOpts } from './characters/hd';
 import { ZONE_PLACE, dress, edged } from './characters/zoned';
 import { FOG_BANK, WORLD_LOCK } from './characters/worlds';
 import { drawItem } from './characters/items';
@@ -298,13 +297,6 @@ export const SPRITES = {
     defaults: { exercise: 'pushup', gear: STARTER_GEAR },
     clips: () => ({ idle: 'rep' }),
     draw: (o, _fr, f) => drawExercise(o, f),
-  }),
-  // the same, three times finer (192x192), side on or from the front, with arrows: a trial on a couple
-  exerciseHd: drawn<HdOpts>({
-    label: (o) => `How to do it: ${o.exercise}${o.view === 'front' ? ', from the front' : ''}`,
-    defaults: { exercise: 'pushup', gear: STARTER_GEAR },
-    clips: () => ({ idle: 'rep' }),
-    draw: (o, _fr, f) => drawExerciseHd(o, f),
   }),
   mirrorBoss: drawn<HeroOpts>({
     label: () => 'The Mirror, you in glass',

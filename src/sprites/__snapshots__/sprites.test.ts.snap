@@ -300,8 +300,6 @@ exports[`sprite registry > art fingerprints 1`] = `
   "exercise windmill": "42e9f0175ac7",
   "exercise woodchop": "12ff86da2a2d",
   "exercise wrist-curl": "ae8dd21681dc",
-  "exerciseHd attack": "3bf5177b4133",
-  "exerciseHd idle": "3bf5177b4133",
   "flame bonfire bright": "2a6e4a362635",
   "flame bonfire dim": "47ce608273aa",
   "flame bonfire happy": "417d99e88bf0",

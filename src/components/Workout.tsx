@@ -11,7 +11,8 @@ import { ensurePlan } from './useCoach';
 import { doseOf } from './CoachPanel';
 import { ROLE_COLOR, ROLE_LABEL } from '@/lib/program';
 import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
-import { hasHd } from '@/sprites/characters/hd';
+import { hasAnatomy, type AnatomyId } from '@/sprites/anatomy/body';
+import { AnatomyDemo, MuscleKey } from './AnatomyDemo';
 import { useLook } from './Look';
 import { Ember } from './Characters';
 import { flameStage } from '@/story/flame';
@@ -393,7 +394,7 @@ function useWakeLock() {
 function Demo({ state, exercise, name, cue }: { state: GameState; exercise: string; name: string; cue: string }) {
   const [big, setBig] = useState(false);
   const look = useLook();
-  if (hasHd(exercise)) return <HdDemo state={state} exercise={exercise} name={name} cue={cue} />;
+  if (hasAnatomy(exercise)) return <BodyDemo exercise={exercise} name={name} cue={cue} />;
   if (!(EXERCISES as string[]).includes(exercise)) return null;
   const opts = { exercise: exercise as ExerciseId, gear: gearOf(state), classId: state.profile.classId, look };
   return (
@@ -432,30 +433,35 @@ function Demo({ state, exercise, name, cue }: { state: GameState; exercise: stri
   );
 }
 
-/** The HD demo (a trial on a couple of exercises, sprites/characters/hd.ts): side on with arrows for
-    the way you move; tap for side on and from the front together. */
-function HdDemo({ state, exercise, name, cue }: { state: GameState; exercise: 'pushup' | 'barbell-squat'; name: string; cue: string }) {
+/** The anatomy demo (a trial on a couple of exercises, sprites/anatomy/body.ts): a plain body side
+    on with the worked muscles colored in; tap for side on and from the front together, with which
+    muscles it works. */
+function BodyDemo({ exercise, name, cue }: { exercise: AnatomyId; name: string; cue: string }) {
   const [big, setBig] = useState(false);
-  const look = useLook();
-  const opts = { exercise, gear: gearOf(state), look };
   return (
     <>
-      <button onClick={() => setBig(true)} aria-label={`Show how to do ${name}`} className="mx-auto mt-3 block shrink-0 overflow-hidden rounded-xl bg-ink-950 ring-1 ring-ink-700 active:scale-95">
-        <Sprite id="exerciseHd" opts={opts} size={192} label={`${name}, demo`} className="[@media(orientation:landscape)_and_(max-height:600px)]:!h-[128px] [@media(orientation:landscape)_and_(max-height:600px)]:!w-[128px]" />
+      <button onClick={() => setBig(true)} aria-label={`Show how to do ${name}`} className="mx-auto mt-3 block shrink-0 overflow-hidden rounded-xl ring-1 ring-ink-700 active:scale-95">
+        <AnatomyDemo exercise={exercise} view="side" label={`${name}, demo`} className="block h-40 w-60 [@media(orientation:landscape)_and_(max-height:600px)]:h-28 [@media(orientation:landscape)_and_(max-height:600px)]:w-40" />
       </button>
       {big && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-y-auto bg-ink-950/95 px-6 text-center" onClick={() => setBig(false)}>
-          <p className="font-pixel text-xs text-gold-300">{name}</p>
-          <div className="mt-4 flex flex-col gap-3 [@media(orientation:landscape)_and_(max-height:600px)]:flex-row">
-            {(['side', 'front'] as const).map((view) => (
-              <figure key={view} className="overflow-hidden rounded-2xl bg-ink-950 ring-1 ring-ink-700">
-                <Sprite id="exerciseHd" opts={{ ...opts, view }} size={192} label={`${name}, ${view === 'side' ? 'from the side' : 'from the front'}`} />
-                <figcaption className="bg-ink-900 py-1 text-[11px] text-slate-400">{view === 'side' ? 'Side' : 'Front'}</figcaption>
-              </figure>
-            ))}
+        // Scrolls when it is taller than the screen; centered when it fits.
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-ink-950/95 px-6 text-center" onClick={() => setBig(false)}>
+          <div className="flex min-h-full flex-col items-center justify-center py-6">
+            <p className="font-pixel text-xs text-gold-300">{name}</p>
+            <div className="mt-4 flex w-full max-w-sm flex-col gap-3 [@media(orientation:landscape)_and_(max-height:600px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:600px)]:flex-row">
+              {(['side', 'front'] as const).map((view) => (
+                <figure key={view} className="flex-1 overflow-hidden rounded-2xl ring-1 ring-ink-700">
+                  <AnatomyDemo exercise={exercise} view={view} label={`${name}, ${view === 'side' ? 'from the side' : 'from the front'}`} className="block max-h-[36vh] w-full" />
+                  <figcaption className="bg-ink-900 py-1 text-[11px] text-slate-400">{view === 'side' ? 'Side' : 'Front'}</figcaption>
+                </figure>
+              ))}
+            </div>
+            <div className="mt-4">
+              <MuscleKey exercise={exercise} />
+            </div>
+            <p className="mt-3 max-w-xs text-sm text-slate-300">{cue}</p>
+            <p className="mt-4 text-xs text-slate-500">Tap to close</p>
           </div>
-          <p className="mt-4 max-w-xs text-sm text-slate-300">{cue}</p>
-          <p className="mt-4 text-xs text-slate-500">Tap to close</p>
         </div>
       )}
     </>

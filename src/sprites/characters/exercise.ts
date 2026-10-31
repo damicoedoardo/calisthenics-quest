@@ -230,7 +230,7 @@ function diamondFront(d: number): Pose {
   };
 }
 
-export function poseFor(id: ExerciseId, f: number, view: ExerciseOpts['view'] = 'side'): { pose: Pose; props: Props; band?: { from: P; to: P }; weight?: Weight } {
+function poseFor(id: ExerciseId, f: number, view: ExerciseOpts['view'] = 'side'): { pose: Pose; props: Props; band?: { from: P; to: P }; weight?: Weight } {
   const d = REP[f % 16],
     b = breath(f);
   switch (id) {

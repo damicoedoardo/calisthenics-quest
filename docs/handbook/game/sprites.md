@@ -65,13 +65,17 @@ characters/spCard.ts  the SP card (sprite `spCard`, opts { classId, n, awake, ge
 characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look, kit }): you
                       doing each exercise of the program (hand-posed), one rep per loop of the
                       16-frame `rep` clip, or one of the exercise library's movements from moves.ts
-characters/hd.ts      HD workout demos, a trial on two exercises (`HD_DEMOS`: the push-up and the
-                      barbell back squat; sprite `exerciseHd`, opts { exercise, gear, look, view,
-                      arrows }): the same poses (`poseFor`, `drawMove`) drawn 3.5 times finer on a
-                      192x192 grid, framed closer on the body, with a real figure (tapered limbs
-                      shaded round from the top left, face, hair, tee, shorts, trainers), `view`
-                      'side' or 'front' (the front reuses the side pose's heights), and arrows for
-                      the way the body moves, the current half of the rep lit
+anatomy/body.ts       the anatomy demos, a trial on two exercises (`ANATOMY_DEMOS`: the push-up and
+                      the barbell back squat). Not pixel art: a plain, faceless body as smooth
+                      vector shapes, with the muscle map on it and the worked muscles colored
+                      (`WORKS`: main orange, helpers light orange). A 3D skeleton in cm with real
+                      adult lengths (`L`), a pose per exercise from rep depth 0..1 (IK knees and
+                      elbows), each part a tube with four radii along its bone (`SHAPES`: front,
+                      back, out, in), each muscle a patch by length and angle around the bone
+                      (`MUSCLES`), cameras per view (`CAMERAS`: 'side' level, 'front' turned and a
+                      little from above). `scene(exercise, view, t)` gives SVG paths and a fixed
+                      frame; components/AnatomyDemo.tsx plays it (about 30 fps, still under
+                      reduced motion). Add an exercise: a pose, its `WORKS`, `CAMERAS`, `FLOOR`.
 characters/moves.ts   the exercise library's 81 movements (lifts, machines, core, cardio, stretches,
                       mobility) and the gear each can hold (`Kit`: barbell, dumbbell, cable, band...)
 engine/skeleton.ts    the jointed skeleton both use: IK elbows and knees, props (bench, bar, floor),
