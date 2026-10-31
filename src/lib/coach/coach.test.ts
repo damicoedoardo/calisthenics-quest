@@ -56,7 +56,7 @@ describe('the built-in coach', () => {
     const plan = build(s);
     expect(plan.items[0].role).toBe('warmup');
     expect(plan.items.at(-1)!.role).toBe('stretch');
-    expect(plan.items.filter((i) => i.role === 'main')).toHaveLength(4);
+    expect(plan.items.filter((i) => i.role === 'main')).toHaveLength(3);
     expect(validate(plan, { all, profile: s.coach!.profile! }).problems).toEqual([]);
     expect(minutesOf(plan.items)).toBeLessThanOrEqual(50);
     for (const it of plan.items.filter((i) => i.role === 'main')) expect(it.easier.length + it.swaps.length).toBeGreaterThan(0);
@@ -117,9 +117,10 @@ describe('changing the workout', () => {
     s = changeItem(s, main.id, to, 'easier');
     expect(s.draft!.sets[to.id]).toHaveLength(1);
     const second = currentPlan(s.coach)!.items.filter((i) => i.role === 'main')[1];
+    const firstMain = currentPlan(s.coach)!.items.findIndex((i) => i.role === 'main');
     s = moveItem(s, second.id, -1);
-    expect(currentPlan(s.coach)!.items[1].id).toBe(second.id);
-    expect(moveItem(s, currentPlan(s.coach)!.items[1].id, -1)).toBe(s); // never above the warm-up
+    expect(currentPlan(s.coach)!.items[firstMain].id).toBe(second.id);
+    expect(moveItem(s, currentPlan(s.coach)!.items[firstMain].id, -1)).toBe(s); // never above the warm-up
     const last = currentPlan(s.coach)!.items.filter((i) => i.role === 'main').at(-1)!;
     s = skipItem(s, last.id, true);
     expect(todaysQuest(s).some((q) => q.id === last.id)).toBe(false);

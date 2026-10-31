@@ -45,18 +45,23 @@ export function ensurePlan(update: Update): Promise<void> {
   return loadLibrary().then((all) => update((s) => (currentPlan(s.coach) ? s : setPlan(s, planFromQuest(s, all, new Date())))));
 }
 
-/** The chat with the coach: send a line (or nothing, for the coach to start), and whether it is
-    thinking. Tools change the save as they run; a word it can't say comes back as `error`. */
+/** The chat with the coach: send a line (or nothing, for the coach to start, or to try again), whether
+    it is thinking, and what it did so far this turn (`steps`, from `since`). Tools change the save
+    as they run; a word it can't say comes back as `error`. */
 export function useCoachChat(state: GameState, update: Update, ask: Ask = askCoach) {
   const ref = useRef(state);
   ref.current = state;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [steps, setSteps] = useState<string[]>([]);
+  const [since, setSince] = useState(0);
   const send = useCallback(
     async (text?: string) => {
       if (busy) return;
       setBusy(true);
       setError(null);
+      setSteps([]);
+      setSince(Date.now());
       try {
         const all = await loadLibrary();
         let n = 0;
@@ -69,6 +74,8 @@ export function useCoachChat(state: GameState, update: Update, ask: Ask = askCoa
             update(fn);
           },
           ask,
+          // The same step twice in a row (three searches) shows once.
+          onStep: (label) => setSteps((s) => (s[s.length - 1] === label ? s : [...s, label])),
           ctx: () => ({ all, now: new Date(), id: () => `${Date.now().toString(36)}${(n++).toString(36)}`, rng: seeded(Date.now()) }),
         });
       } catch (e) {
@@ -79,5 +86,5 @@ export function useCoachChat(state: GameState, update: Update, ask: Ask = askCoa
     },
     [busy, update, ask],
   );
-  return { send, busy, error };
+  return { send, busy, error, steps, since };
 }

@@ -93,12 +93,29 @@ the week fewer fit, so don't cram them. To change one day only, call set_workout
 the player keeps one by resting (sitting by the fire in the app). Plan them on purpose, and if \
 the player wants no rest days at all, push back.
 - Use only exercise ids from the library: find them with find_exercises.
-- Each item: id, role (warmup, main, core, stretch), sets, low and high (reps, or seconds for a \
-hold), and rest (seconds after each set: about 120-180 for heavy lifts, 60-90 for most moves, \
-45-60 for core). Runs take minutes instead.
-- The app checks every workout (gear, sore spots, a warm-up first and a stretch last, not too \
-many sets, about the minutes they have) and tells you what it fixed. If it lists problems, fix \
-them and call the tool again.
+- Each item: id, role (warmup, main, accessory, core, stretch), sets, low and high (reps, or \
+seconds for a hold), rest (seconds after each set), and ramp (light ramp-up sets before the \
+first heavy lift). Runs take minutes instead.
+- The app checks every workout and week against the laws (below) and tells you what it \
+fixed. If it lists problems, fix them and call the tool again.
+
+Laws, rules and defaults (in this order of strength):
+- Laws: a few rules that are always true, checked by the app on everything you save: a \
+warm-up first, never to failure, nothing on a sore spot, not too many sets of one movement in \
+a day or a week, never the same movement two days running, a rest day every week, a gentle \
+first week back after a break, no sudden long run, about their minutes. training_guide lists \
+them. You can't break a law, even when the player asks: say kindly which one and why, and \
+offer the closest lawful plan. A tool answering "Not saved" means a law: fix it and save again.
+- Their rules: lasting wishes the player gave ("deadlift on Mondays", "push pull legs", "no \
+burpees", "no stretching"). They are in the brief; keep every one in every plan. When the \
+player says something should always (or never) happen, save it with add_note, type rule.
+- Defaults: everything else is up to the player and you. Without a rule or a wish, plan like \
+a good coach: call training_guide once before you plan a week or rebuild a day; a warm-up \
+(easy cardio, circles, a dynamic move, ramp-up sets on the first heavy lift), the main \
+compound moves freshest first (a push with a pull, knees with hips), 1-2 accessories, one core \
+move, a short cool-down stretch; rest 120-180 s after heavy sets, 90 for body weight, 60 for \
+accessories and core; double progression. When time is short, drop accessories first. The app \
+notes where a workout leaves a default ("note: ..."): fine if the player asked for it.
 - Easier versions and swaps for every exercise are added by the app: don't list them yourself.
 - Fit the week to the levels in the brief (1 is new, 5 is very strong), to what they did lately, \
 and to their notes: hard days apart, the same muscles not two days running. Start easy with a \
@@ -126,8 +143,8 @@ better. Don't just do it.
 - Never pretend: the log in the brief is the truth about what they did.
 
 Remembering:
-- When you learn something worth keeping (likes, dislikes, pain, life, goals), call add_note \
-with one short sentence. Use days for things that pass, like a sore knee or a busy week.
+- When you learn something worth keeping (their rules, likes, dislikes, pain, life, goals), call \
+add_note with one short sentence. Use days for things that pass, like a sore knee or a busy week.
 - When a note is no longer true, call remove_note with its id from the brief.
 - When the player tells you something that changes their profile (more days, new gear, a new \
 goal, a level that is clearly wrong), call save_profile with only that change and why.
@@ -150,8 +167,8 @@ GOALS = ["health", "strength", "muscle", "endurance", "skill"]
 GEAR = ["gym", "dumbbells", "bar", "bands", "none"]
 EXPERIENCE = ["new", "on-off", "steady", "returning"]
 AREAS = ["knee", "back", "shoulder", "wrist", "other"]
-NOTE_TYPES = ["like", "dislike", "pain", "life", "goal", "other"]
-ROLES = ["warmup", "main", "core", "stretch"]
+NOTE_TYPES = ["rule", "like", "dislike", "pain", "life", "goal", "other"]
+ROLES = ["warmup", "main", "accessory", "core", "stretch"]
 # As in src/exercises/coaching.ts (Family).
 FAMILIES = [
     "squat",
@@ -208,6 +225,10 @@ _WORKOUT: dict[str, Any] = {
                 "low": {"type": "integer", "description": "Fewest reps (or seconds for a hold)."},
                 "high": {"type": "integer", "description": "Most reps or seconds."},
                 "rest": {"type": "integer", "description": "Seconds of rest after each set."},
+                "ramp": {
+                    "type": "integer",
+                    "description": "Light ramp-up sets before the work sets (first heavy lift).",
+                },
                 "minutes": {"type": "integer", "description": "Runs only."},
             },
             ["id", "role"],
@@ -325,6 +346,14 @@ TOOLS: list[dict[str, Any]] = [
         "remove_note",
         "Forget a note that is no longer true, by its id from the brief.",
         _obj({"id": {"type": "string"}}),
+    ),
+    _tool(
+        "training_guide",
+        "The coach's playbook: the laws (always true), and the defaults of a good workout and "
+        "week (warm-up, main, accessory, core, cool-down), sets, reps and rest, progression, "
+        "splits, body weight ladders, coming back after a break, fitting the minutes, running. "
+        "Empty topic: how a session is built, the topics, and the laws.",
+        _obj({"topic": {"type": "string"}}),
     ),
     _tool(
         "game_guide",

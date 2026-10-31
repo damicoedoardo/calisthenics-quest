@@ -37,3 +37,34 @@ export const NEEDS_LEVEL: Partial<Record<ExerciseId, number>> = {
 
 /** Few-rep body-weight moves: reps per level 1..5 are lower than for a push-up or a squat. */
 export const FEW_REPS: ExerciseId[] = ['pullup', 'strict-pullup', 'lsit-pullup', 'negatives', 'assisted-pullup', 'dips', 'handstand-pushup', 'archer-pushup', 'toes-to-bar'];
+
+/** The warm-up's moves, first usable one wins: easy cardio to get warm (`pulse`; machines in a
+    gym, else on the spot), joint circles for an upper or a lower day, and one dynamic move for the
+    whole body. */
+export const WARMUP_MOVES = {
+  pulse: ['Rowing_Stationary', 'Bicycling_Stationary', 'Elliptical_Trainer', 'Star_Jump', 'Fast_Skipping'],
+  upper: ['Arm_Circles', 'Shoulder_Circles', 'Elbow_Circles'],
+  lower: ['Standing_Hip_Circles', 'Knee_Circles', 'Ankle_Circles'],
+  whole: ['Worlds_Greatest_Stretch', 'Inchworm', 'Cat_Stretch'],
+} as const;
+
+/** The cool-down's stretches: plain static ones for each muscle, first usable wins. A muscle not
+    here takes the plainest static stretch the library has for it. */
+export const STRETCHES: Record<string, string[]> = {
+  quadriceps: ['All_Fours_Quad_Stretch', 'On_Your_Side_Quad_Stretch', 'Kneeling_Hip_Flexor'],
+  hamstrings: ['Hamstring_Stretch', 'Seated_Floor_Hamstring_Stretch', 'Standing_Toe_Touches'],
+  glutes: ['Lying_Glute', 'Seated_Glute', 'Knee_Across_The_Body'],
+  chest: ['Elbows_Back', 'Dynamic_Chest_Stretch'],
+  lats: ['One_Arm_Against_Wall', 'Chair_Lower_Back_Stretch', 'Childs_Pose'],
+  'middle back': ['Middle_Back_Stretch', 'Upper_Back_Stretch'],
+  'lower back': ['Childs_Pose', 'Hug_Knees_To_Chest'],
+  shoulders: ['Shoulder_Stretch', 'Upward_Stretch'],
+  triceps: ['Triceps_Stretch', 'Overhead_Triceps'],
+  biceps: ['Seated_Biceps'],
+  calves: ['Calf_Stretch_Hands_Against_Wall', 'Standing_Gastrocnemius_Calf_Stretch'],
+  adductors: ['Adductor_Groin', 'Side_Lying_Groin_Stretch'],
+  abdominals: ['Overhead_Stretch', 'Standing_Lateral_Stretch'],
+};
+
+/** Stretches that move rather than hold: for a warm-up, not a cool-down. */
+export const MOVING_STRETCH = /dynamic|iron cross|crossover|split squats|sit squats|inchworm|world|groiners|windmill/i;

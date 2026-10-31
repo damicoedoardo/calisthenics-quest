@@ -44,7 +44,9 @@ export interface CoachProfile {
   setupAt: string;
 }
 
-export type NoteType = 'like' | 'dislike' | 'pain' | 'life' | 'goal' | 'other';
+/** `rule`: something the player wants every time ("deadlift on Mondays", "no stretching"); the
+    coach keeps it unless it breaks a law (laws.ts). */
+export type NoteType = 'rule' | 'like' | 'dislike' | 'pain' | 'life' | 'goal' | 'other';
 
 export interface CoachNote {
   id: string;
@@ -88,8 +90,10 @@ export interface PlanItem {
   low: number;
   high: number;
   weighted?: boolean;
-  /** Rest after each set, seconds (the coach's call; missing: the default). */
+  /** Rest after each set, seconds (the coach's call; missing: the default, `restFor`). */
   rest?: number;
+  /** Light ramp-up sets before the first work set, not logged (a first heavy lift). */
+  ramp?: number;
   /** A run: its steps, in order. The item's `low` is their total seconds. */
   run?: RunStep[];
   /** Easier moves of the same kind, easiest last. */

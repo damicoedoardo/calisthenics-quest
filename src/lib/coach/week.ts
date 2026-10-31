@@ -3,6 +3,7 @@ import type { LibraryExercise } from '@/exercises/library';
 import { dayKey, daysApart, isRestDay, trainedToday } from '../days';
 import type { GameState, Session } from '../game';
 import { buildWorkout } from './generate';
+import { hardFamilies } from './laws';
 import type { CoachDay, CoachPlan, CoachState, CoachWeek, Mode } from './types';
 
 /* The week: a calendar week, Monday to Sunday. The coach plans the workout days; every other day is a
@@ -120,7 +121,10 @@ export function buildWeek(input: { all: LibraryExercise[]; coach: CoachState; se
   const after: Mode[] = [];
   const days: CoachDay[] = [];
   for (const date of weekDates(input.now, profile.days)) {
-    const plan = buildWorkout({ ...input, after: [...after] });
+    // The day after a workout trains other families (law 6).
+    const prev = days[days.length - 1];
+    const rested = prev && daysApart(new Date(`${prev.date}T12:00:00`), new Date(`${date}T12:00:00`)) === 1 ? hardFamilies(prev.plan) : [];
+    const plan = buildWorkout({ ...input, after: [...after], rested });
     if (!plan) return null;
     after.push(plan.mode);
     days.push({ date, plan });

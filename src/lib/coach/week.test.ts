@@ -240,12 +240,19 @@ describe('the coach plans the week', () => {
     expect(run(done, 'move_workout', { from: 'wed', to: 'thu' }).result).toMatch(/done already/);
   });
 
-  it('a heads-up when the same muscles land on days in a row', () => {
+  it('the same family two days running is against the law: not saved, and why', () => {
     const s = withWeek();
     const push = { mode: 'gym', title: 'Push', items: [{ id: 'Pushups', role: 'main' }] };
     const r = run(s, 'set_week', { days: [{ day: 'wed', ...push }, { day: 'thu', ...push }] });
+    expect(r.result).toMatch(/^Not saved[\s\S]*both train push-horizontal \(law 6\)/);
+    expect(r.state).toBe(s);
+    expect(run(s, 'set_week', { days: [{ day: 'wed', ...push }, { day: 'fri', ...push }] }).result).not.toMatch(/Not saved|Heads-up/);
+  });
+
+  it('the same pattern on days in a row, other families: allowed, with a heads-up', () => {
+    const s = withWeek();
+    const r = run(s, 'set_week', { days: [{ day: 'wed', mode: 'gym', title: 'Push', items: [{ id: 'Pushups', role: 'main' }] }, { day: 'thu', mode: 'gym', title: 'Press', items: [{ id: 'Bench_Dips', role: 'main' }] }] });
     expect(r.result).toMatch(/Heads-up.*Wed and Thu are back to back and both train push/);
-    expect(run(s, 'set_week', { days: [{ day: 'wed', ...push }, { day: 'fri', ...push }] }).result).not.toMatch(/Heads-up/);
   });
 
   it('rest_day takes a workout off, and set_workout on a rest day adds one', () => {
@@ -253,7 +260,7 @@ describe('the coach plans the week', () => {
     const r = run(s, 'rest_day', { day: 'fri' });
     expect(r.state.coach!.week!.days.map((d) => d.date)).toEqual(['2026-10-28', '2026-11-01']);
     expect(r.result).toMatch(/2 workouts this week, fewer than their 3/);
-    const added = run(s, 'set_workout', { day: 'sat', title: 'Extra', items: [{ id: 'Pushups', role: 'main' }] });
+    const added = run(s, 'set_workout', { day: 'sat', title: 'Extra', items: [{ id: 'Plank', role: 'core' }] });
     expect(added.state.coach!.week!.days.map((d) => d.date)).toEqual(['2026-10-28', '2026-10-30', '2026-10-31', '2026-11-01']);
     expect(added.state.coach!.week!.days[0]).toEqual(s.coach!.week!.days[0]);
   });

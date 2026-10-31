@@ -8,8 +8,9 @@ import type { ExerciseId } from '@/sprites/characters/exercise';
 
 export type Kit = 'gym' | 'home';
 export type DayType = 'A' | 'B';
-/** Warm-up and stretch are one tap; main and core sets are logged with reps left in the tank. */
-export type SlotRole = 'warmup' | 'main' | 'core' | 'stretch';
+/** Warm-up and stretch are one tap; main, accessory and core sets are logged with reps left in
+    the tank. A workout runs in this order (src/lib/coach/craft.ts). */
+export type SlotRole = 'warmup' | 'main' | 'accessory' | 'core' | 'stretch';
 
 export interface Slot {
   /** The built-in plan's moves use their demo id; a coach's workout uses library ids. */
@@ -94,5 +95,5 @@ export function planExercises(): Slot[] {
 }
 
 /** How each part of a workout is named and colored on screen. */
-export const ROLE_LABEL: Record<SlotRole, string> = { warmup: 'Warm-up', main: 'Main', core: 'Core', stretch: 'Stretch' };
-export const ROLE_COLOR: Record<SlotRole, string> = { warmup: '#fbbf24', main: '#fb923c', core: '#38bdf8', stretch: '#34d399' };
+export const ROLE_LABEL: Record<SlotRole, string> = { warmup: 'Warm-up', main: 'Main', accessory: 'Accessory', core: 'Core', stretch: 'Cool-down' };
+export const ROLE_COLOR: Record<SlotRole, string> = { warmup: '#fbbf24', main: '#fb923c', accessory: '#c084fc', core: '#38bdf8', stretch: '#34d399' };

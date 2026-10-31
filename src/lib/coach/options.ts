@@ -59,7 +59,7 @@ export function toChoice(x: LibraryExercise): Choice {
 export const plainness = (x: LibraryExercise) => x.name.split(/[\s_-]+/).length + (x.steps.length ? 0 : 3) - (isStaple(x.id) ? 6 : 0);
 
 /** The hand-made ladders of the bodyweight moves: these easier demos come first, in this order. */
-const LADDER: Partial<Record<ExerciseId, ExerciseId[]>> = {
+export const LADDER: Partial<Record<ExerciseId, ExerciseId[]>> = {
   'strict-pullup': ['pullup', 'negatives', 'assisted-pullup', 'inverted-row'],
   pullup: ['negatives', 'assisted-pullup', 'inverted-row', 'lat-pulldown'],
   'lsit-pullup': ['strict-pullup', 'pullup', 'negatives'],

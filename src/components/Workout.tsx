@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ListOrdered, Minus, Plus, Shuffle, TrendingDown, Undo2, X } from 'lucide-react';
 import { REST_SECONDS, gearOf, isTap, todaysQuest, type GameState, type QuestExercise, type Rir } from '@/lib/game';
-import { REST } from '@/balance';
 import { canMove, changeItem, moveItem, skipItem } from '@/lib/coach/plan';
 import { currentPlan } from '@/lib/coach/week';
-import { minutesOf } from '@/lib/coach/validate';
+import { minutesOf, restFor } from '@/lib/coach/time';
 import type { Choice, RunStep } from '@/lib/coach/types';
 import { ensurePlan } from './useCoach';
 import { doseOf } from './CoachPanel';
@@ -278,6 +277,11 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
               Target {q.reps}
               {unit} · stop with 2 left
             </p>
+            {q.item?.ramp && logged.length === 0 ? (
+              <p className="mx-auto mt-2 max-w-xs rounded-lg bg-ink-800 px-3 py-2 text-center text-xs text-gold-200">
+                First {q.item.ramp} light warm-up sets: half the weight, a few easy reps. Don&apos;t log them.
+              </p>
+            ) : null}
 
             <p className="mt-6 text-center text-sm font-semibold text-slate-200 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">{unit ? 'Seconds' : 'Reps'} left in the tank?</p>
             <div className="mt-3 grid grid-cols-3 gap-2 [@media(orientation:landscape)_and_(max-height:600px)]:mt-2">
@@ -331,9 +335,9 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   );
 }
 
-/** The rest after a set: the coach's, else by role. */
+/** The rest after a set: the coach's, else by role (the same rule the time estimate uses). */
 function restOf(q: QuestExercise): number {
-  return q.item?.rest ?? (q.role === 'core' ? REST.core : REST_SECONDS);
+  return restFor({ role: q.role, rest: q.item?.rest, weighted: q.item?.weighted ?? q.slot.weighted });
 }
 
 /** Leaving mid-workout: it won't count, and it starts over next time. */
