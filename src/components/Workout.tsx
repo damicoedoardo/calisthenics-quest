@@ -15,6 +15,7 @@ import { useLook } from './Look';
 import { Ember } from './Characters';
 import { flameStage } from '@/story/flame';
 import { Sprite } from './Sprite';
+import { useGymMode } from './Gym';
 
 interface Props {
   state: GameState;
@@ -57,6 +58,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   const [overview, setOverview] = useState(() => Object.values(sets).every((l) => l.length === 0));
   const [choices, setChoices] = useState<'easier' | 'swap' | null>(null);
   const hasPlan = !!currentPlan(state.coach);
+  const gym = useGymMode();
   useEffect(() => {
     // The built-in plan becomes a plan with choices, so it can be changed too.
     if (!hasPlan) ensurePlan(update);
@@ -310,7 +312,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
       <footer className="safe-bottom land-safe-x mx-auto w-full max-w-md px-4 pt-2 [@media(orientation:landscape)_and_(max-height:600px)]:max-w-4xl [@media(orientation:landscape)_and_(max-height:600px)]:pt-1">
         {allDone ? (
           <button onClick={onFinish} className="w-full rounded-2xl bg-gold-400 py-4 [@media(orientation:landscape)_and_(max-height:600px)]:py-3 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
-            Complete quest
+            {gym ? 'Finish workout' : 'Complete quest'}
           </button>
         ) : (
           <button onClick={onFinish} disabled={totalLogged === 0} className="w-full py-3 [@media(orientation:landscape)_and_(max-height:600px)]:py-2 text-sm text-slate-400 disabled:opacity-30">
@@ -480,6 +482,7 @@ function Overview({ state, update, quest, onClose, onStart }: { state: GameState
   const items = plan?.items ?? [];
   const opened = items.find((i) => i.id === open?.id);
   const rough = state.draft?.checkin === 'rough';
+  const gym = useGymMode();
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-ink-950">
       <header className="safe-top land-safe-x flex items-center justify-between gap-3 px-4 pb-2">
@@ -487,7 +490,7 @@ function Overview({ state, update, quest, onClose, onStart }: { state: GameState
           <X size={18} />
         </button>
         <div className="min-w-0 flex-1 text-center">
-          <p className="truncate font-pixel text-[10px] text-gold-300">{rough ? 'Minimum quest' : (plan?.title ?? "Today's workout")}</p>
+          <p className="truncate font-pixel text-[10px] text-gold-300">{rough ? (gym ? 'Short workout' : 'Minimum quest') : (plan?.title ?? "Today's workout")}</p>
           {plan && <p className="mt-1 text-xs text-slate-400">About {minutesOf(items.filter((i) => quest.some((q) => q.id === i.id)))} min</p>}
         </div>
         <span className="w-10 shrink-0" />
