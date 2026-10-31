@@ -3,7 +3,7 @@ type: conceptual
 title: Friends
 description: Friend codes, asks and accepts, who is online, training, in the Fog or trained today, cheers mid-workout, the workout feed, and parties (invite, lobby, ready, start, practice run) — the tables, the /me, /friends and /party routes, and the screens.
 tags: [backend, friends, social, co-op, voice, livekit, cheers, feed]
-timestamp: 2026-10-29
+timestamp: 2026-10-31
 ---
 
 # Friends
@@ -21,7 +21,7 @@ run (`playing`, the zone's name) or in a workout (`training`, the plan's name, `
 
 - **Training now: <workout>** while they work out, **In the Fog: <world>** while their run is
   going, **Online** while the app is open, else **Seen 2 h ago**. Over the hero a small bubble
-  says it at a glance: a dumbbell while training, swords in the Fog, nothing otherwise (`Doing`
+  says it at a glance in pixel icons: a dumbbell while training, swords in the Fog, nothing otherwise (`Doing`
   in `Friends.tsx`).
 - A flame and **trained today** when their last workout was on this phone's today. This is the
   part that nudges friends to train.
@@ -102,8 +102,8 @@ With the mic on, the iPhone may play the game's sound lower.
 
 ## Cheers
 
-A friend who is working out can be cheered on. Their hero shows **Cheer** (in **Online** on the
-Friends tab, and instead of Party on their row in the Friends card); it opens a page (`CheerPage`
+A friend who is working out can be cheered on. Their row in the Friends card shows **Cheer**
+instead of Party; it opens a page (`CheerPage`
 in `Friends.tsx`) with a box for your own words and quick lines with their name in ("Push, Ben!")
 that only fill the box. **Send** stores it on the server; their phone looks for cheers every 8 s
 during a workout and every minute otherwise (`useCheers` in `Cheers.tsx`, in `page.tsx`) and
