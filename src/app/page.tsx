@@ -25,6 +25,7 @@ import { changeClass, classCost, coins } from '@/lib/sweat';
 import { ClassPicker } from '@/components/ClassPicker';
 import { DevButton, DevPanel, type DevGo } from '@/components/DevPanel';
 import { Sprite } from '@/components/Sprite';
+import { useGymMode } from '@/components/Gym';
 import { LookProvider } from '@/components/Look';
 import { useCloudSync } from '@/components/Cloud';
 import { onlineCount, useFriends, useFriendsBeat } from '@/components/Friends';
@@ -84,6 +85,7 @@ export default function Home() {
 
 function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const [tab, setTab] = useState<Tab>('today');
+  const gym = useGymMode();
   // The Hero tab's open part, kept here so the Fog's ready strip can open Hero > Gear.
   const [heroPart, setHeroPart] = useState<HeroPart>('gear');
   // The You page, opened by tapping your hero at the top.
@@ -518,8 +520,13 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           <PartyLobby state={state} />
         </>
       )}
-      {training && <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />}
-      <CheerToast cheer={cheers.cheer} friends={friends.list?.friends ?? []} onDone={cheers.next} />
+      {/* Gym mode (You > Settings): the workout in a plain, modern look (Gym.tsx). */}
+      {training && (
+        <div className={gym ? 'gym' : undefined}>
+          <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />
+        </div>
+      )}
+      <CheerToast cheer={cheers.cheer} friends={friends.list?.friends ?? []} onDone={cheers.next} plain={gym && training} />
       {after && (
         <AfterSession
           result={after.result}

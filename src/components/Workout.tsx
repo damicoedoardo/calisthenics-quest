@@ -11,10 +11,13 @@ import { ensurePlan } from './useCoach';
 import { doseOf } from './CoachPanel';
 import { ROLE_COLOR, ROLE_LABEL } from '@/lib/program';
 import { EXERCISES, type ExerciseId } from '@/sprites/characters/exercise';
+import { anatomyFor, viewName, type AnatomyId, type Variant } from '@/sprites/anatomy/body';
+import { AnatomyDemo, MuscleKey } from './AnatomyDemo';
 import { useLook } from './Look';
 import { Ember } from './Characters';
 import { flameStage } from '@/story/flame';
 import { Sprite } from './Sprite';
+import { useGymMode } from './Gym';
 
 interface Props {
   state: GameState;
@@ -57,6 +60,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   const [overview, setOverview] = useState(() => Object.values(sets).every((l) => l.length === 0));
   const [choices, setChoices] = useState<'easier' | 'swap' | null>(null);
   const hasPlan = !!currentPlan(state.coach);
+  const gym = useGymMode();
   useEffect(() => {
     // The built-in plan becomes a plan with choices, so it can be changed too.
     if (!hasPlan) ensurePlan(update);
@@ -310,7 +314,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
       <footer className="safe-bottom land-safe-x mx-auto w-full max-w-md px-4 pt-2 [@media(orientation:landscape)_and_(max-height:600px)]:max-w-4xl [@media(orientation:landscape)_and_(max-height:600px)]:pt-1">
         {allDone ? (
           <button onClick={onFinish} className="w-full rounded-2xl bg-gold-400 py-4 [@media(orientation:landscape)_and_(max-height:600px)]:py-3 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
-            Complete quest
+            {gym ? 'Finish workout' : 'Complete quest'}
           </button>
         ) : (
           <button onClick={onFinish} disabled={totalLogged === 0} className="w-full py-3 [@media(orientation:landscape)_and_(max-height:600px)]:py-2 text-sm text-slate-400 disabled:opacity-30">
@@ -329,7 +333,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
           onClose={() => setChoices(null)}
         />
       )}
-      {restUntil && <Rest stage={flameStage(state.sessions.length).id} until={restUntil} total={restLen} next={exerciseDone ? null : `Set ${logged.length + 1} of ${q.name}`} onDone={() => setRestUntil(null)} />}
+      {restUntil && <Rest gym={gym} stage={flameStage(state.sessions.length).id} until={restUntil} total={restLen} next={exerciseDone ? null : `Set ${logged.length + 1} of ${q.name}`} onDone={() => setRestUntil(null)} />}
       {leaveSheet}
     </div>
   );
@@ -390,6 +394,8 @@ function useWakeLock() {
 function Demo({ state, exercise, name, cue }: { state: GameState; exercise: string; name: string; cue: string }) {
   const [big, setBig] = useState(false);
   const look = useLook();
+  const body = anatomyFor(exercise, name);
+  if (body) return <BodyDemo exercise={body.id} variant={body.variant} name={name} cue={cue} />;
   if (!(EXERCISES as string[]).includes(exercise)) return null;
   const opts = { exercise: exercise as ExerciseId, gear: gearOf(state), classId: state.profile.classId, look };
   return (
@@ -428,10 +434,45 @@ function Demo({ state, exercise, name, cue }: { state: GameState; exercise: stri
   );
 }
 
+/** The anatomy demo (sprites/anatomy/, the first moves): a plain body side
+    on with the worked muscles colored in; tap for side on and a second view together, with which
+    muscles it works. */
+function BodyDemo({ exercise, variant, name, cue }: { exercise: AnatomyId; variant: Variant; name: string; cue: string }) {
+  const [big, setBig] = useState(false);
+  return (
+    <>
+      <button onClick={() => setBig(true)} aria-label={`Show how to do ${name}`} className="mx-auto mt-3 block shrink-0 overflow-hidden rounded-xl ring-1 ring-ink-700 active:scale-95">
+        <AnatomyDemo exercise={exercise} variant={variant} view="side" label={`${name}, demo`} className="block h-40 w-60 [@media(orientation:landscape)_and_(max-height:600px)]:h-28 [@media(orientation:landscape)_and_(max-height:600px)]:w-40" />
+      </button>
+      {big && (
+        // Scrolls when it is taller than the screen; centered when it fits.
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-ink-950/95 px-6 text-center" onClick={() => setBig(false)}>
+          <div className="flex min-h-full flex-col items-center justify-center py-6">
+            <p className="font-pixel text-xs text-gold-300">{name}</p>
+            <div className="mt-4 flex w-full max-w-sm flex-col gap-3 [@media(orientation:landscape)_and_(max-height:600px)]:max-w-3xl [@media(orientation:landscape)_and_(max-height:600px)]:flex-row">
+              {(['side', 'front'] as const).map((view) => (
+                <figure key={view} className="flex-1 overflow-hidden rounded-2xl ring-1 ring-ink-700">
+                  <AnatomyDemo exercise={exercise} variant={variant} view={view} label={`${name}, ${viewName(exercise, view, variant).toLowerCase()} view`} className="block max-h-[36vh] w-full" />
+                  <figcaption className="bg-ink-900 py-1 text-[11px] text-slate-400">{viewName(exercise, view, variant)}</figcaption>
+                </figure>
+              ))}
+            </div>
+            <div className="mt-4">
+              <MuscleKey exercise={exercise} />
+            </div>
+            <p className="mt-3 max-w-xs text-sm text-slate-300">{cue}</p>
+            <p className="mt-4 text-xs text-slate-500">Tap to close</p>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 /** The rest bar's cells: one lights every few seconds. */
 const REST_CELLS = 10;
 
-function Rest({ stage, until, total, next, onDone }: { stage: ReturnType<typeof flameStage>['id']; until: number; total: number; next: string | null; onDone: () => void }) {
+function Rest({ gym, stage, until, total, next, onDone }: { gym: boolean; stage: ReturnType<typeof flameStage>['id']; until: number; total: number; next: string | null; onDone: () => void }) {
   const [now, setNow] = useState(Date.now());
   const left = Math.max(0, Math.ceil((until - now) / 1000));
 
@@ -448,6 +489,25 @@ function Rest({ stage, until, total, next, onDone }: { stage: ReturnType<typeof 
   }, [left, onDone]);
 
   const pct = 1 - left / Math.max(total, left, 1);
+  const clock = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+  // Gym mode: one ring that fills as the rest runs out, the clock in its middle, and nothing else.
+  if (gym)
+    return (
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ink-950 px-6 text-center" onClick={onDone}>
+        <div className="relative h-64 w-64 [@media(orientation:landscape)_and_(max-height:600px)]:h-48 [@media(orientation:landscape)_and_(max-height:600px)]:w-48">
+          <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90" aria-hidden>
+            <circle cx="50" cy="50" r="46" fill="none" strokeWidth="3" className="stroke-ink-700" />
+            <circle cx="50" cy="50" r="46" fill="none" strokeWidth="3" strokeLinecap="round" pathLength={100} strokeDasharray={`${pct * 100} 100`} className="stroke-gold-400 transition-[stroke-dasharray] duration-300 motion-reduce:transition-none" />
+          </svg>
+          <div className="absolute inset-0 flex flex-col items-center justify-center">
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-slate-500">Rest</p>
+            <p className="mt-1 text-6xl font-semibold tabular-nums tracking-tight text-slate-50 [@media(orientation:landscape)_and_(max-height:600px)]:text-5xl">{clock}</p>
+          </div>
+        </div>
+        <p className="mt-8 text-sm text-slate-400 [@media(orientation:landscape)_and_(max-height:600px)]:mt-4">{next ? `Next: ${next}` : 'Next exercise is ready.'}</p>
+        <button className="mt-6 rounded-full bg-ink-800 px-6 py-3 text-sm font-medium text-slate-200 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">Skip rest</button>
+      </div>
+    );
   return (
     // Held sideways: the flame on the left, the clock on the right.
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-ink-950/95 px-6 text-center [@media(orientation:landscape)_and_(max-height:600px)]:flex-row [@media(orientation:landscape)_and_(max-height:600px)]:gap-12" onClick={onDone}>
@@ -458,7 +518,7 @@ function Rest({ stage, until, total, next, onDone }: { stage: ReturnType<typeof 
       </div>
       <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:flex-col [@media(orientation:landscape)_and_(max-height:600px)]:items-center">
       <p className="mt-3 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0 font-mono text-7xl font-bold text-slate-50">
-        {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
+        {clock}
       </p>
       <div className="mt-5 flex w-64 gap-1.5" aria-hidden>
         {Array.from({ length: REST_CELLS }).map((_, i) => (
@@ -480,6 +540,7 @@ function Overview({ state, update, quest, onClose, onStart }: { state: GameState
   const items = plan?.items ?? [];
   const opened = items.find((i) => i.id === open?.id);
   const rough = state.draft?.checkin === 'rough';
+  const gym = useGymMode();
   return (
     <div className="fixed inset-0 z-40 flex flex-col bg-ink-950">
       <header className="safe-top land-safe-x flex items-center justify-between gap-3 px-4 pb-2">
@@ -487,7 +548,7 @@ function Overview({ state, update, quest, onClose, onStart }: { state: GameState
           <X size={18} />
         </button>
         <div className="min-w-0 flex-1 text-center">
-          <p className="truncate font-pixel text-[10px] text-gold-300">{rough ? 'Minimum quest' : (plan?.title ?? "Today's workout")}</p>
+          <p className="truncate font-pixel text-[10px] text-gold-300">{rough ? (gym ? 'Short workout' : 'Minimum quest') : (plan?.title ?? "Today's workout")}</p>
           {plan && <p className="mt-1 text-xs text-slate-400">About {minutesOf(items.filter((i) => quest.some((q) => q.id === i.id)))} min</p>}
         </div>
         <span className="w-10 shrink-0" />

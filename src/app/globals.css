@@ -4,6 +4,15 @@
 
 :root {
   color-scheme: dark;
+  /* The ink and gold of tailwind.config.ts, as R G B, so .gym can swap them. */
+  --ink-950: 11 13 20;
+  --ink-900: 17 20 31;
+  --ink-800: 24 28 43;
+  --ink-700: 35 40 64;
+  --ink-600: 48 55 90;
+  --gold-300: 253 230 138;
+  --gold-400: 251 191 36;
+  --gold-500: 245 158 11;
 }
 
 html,
@@ -118,3 +127,83 @@ main::-webkit-scrollbar {
   }
 }
 /* ---- end landscape overlays ---- */
+
+/* ---- Gym mode (src/components/Gym.tsx) ----
+   Only around the workout, once it starts: plain greys for the ink, white for the gold, one clean
+   font, round edges, no pixel bevels. Nothing else gets the class, so it keeps its look. */
+.gym {
+  --ink-950: 10 10 11;
+  --ink-900: 20 20 22;
+  --ink-800: 28 28 31;
+  --ink-700: 44 44 48;
+  --ink-600: 64 64 70;
+  --gold-300: 236 236 240;
+  --gold-400: 250 250 250;
+  --gold-500: 212 212 216;
+}
+.gym.bg-ink-950,
+.gym .bg-ink-950 {
+  background-color: rgb(var(--ink-950));
+}
+.gym .font-pixel,
+.gym.font-pixel {
+  font-family: Geist, system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+/* The pixel font reads bigger than its size: one step up in plain type. */
+.gym .font-pixel.text-\[7px\],
+.gym .font-pixel.text-\[8px\] {
+  font-size: 11px;
+}
+.gym .font-pixel.text-\[9px\] {
+  font-size: 12px;
+}
+.gym .font-pixel.text-\[10px\] {
+  font-size: 14px;
+}
+.gym .font-pixel.text-\[11px\],
+.gym .font-pixel.text-xs {
+  font-size: 15px;
+}
+.gym .font-pixel.text-sm {
+  font-size: 17px;
+}
+/* No pixel bevels or 3D buttons: flat, round, and the one outlined box stays outlined. */
+.gym [class*='shadow-['] {
+  box-shadow: none !important;
+}
+.gym [class*='shadow-[inset_0_0_0_3px'] {
+  box-shadow: inset 0 0 0 2px rgb(var(--gold-400)) !important;
+}
+.gym .pixel-notch {
+  clip-path: none;
+  border-radius: 9999px;
+}
+.gym .pixel-notch.h-5 {
+  height: 6px;
+}
+/* Numbers in the clean font too, each digit the same width so a clock doesn't jump. */
+.gym .font-mono {
+  font-family: Geist, system-ui, sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+.gym .pixel-border {
+  box-shadow: 0 0 0 1px rgb(var(--ink-700));
+}
+.gym [class*='active:translate-y-']:active {
+  transform: scale(0.98);
+}
+/* Full-screen layers (the big demo, the rest) on a solid ground, not see-through. */
+.gym .bg-ink-950\/95 {
+  background-color: rgb(var(--ink-950));
+}
+/* The game's characters (the flame) step out. */
+.gym .gym-hide {
+  display: none !important;
+}
+:focus-visible {
+  outline-color: rgb(var(--gold-400));
+}
+/* ---- end gym mode ---- */

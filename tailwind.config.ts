@@ -17,8 +17,9 @@ export default {
         pixel: ['"Press Start 2P"', 'monospace'],
       },
       colors: {
-        ink: { 950: '#0b0d14', 900: '#11141f', 800: '#181c2b', 700: '#232840', 600: '#30375a' },
-        gold: { 300: '#fde68a', 400: '#fbbf24', 500: '#f59e0b' },
+        // Read from CSS variables (globals.css), so gym mode can swap them for its plain look.
+        ink: { 950: 'rgb(var(--ink-950) / <alpha-value>)', 900: 'rgb(var(--ink-900) / <alpha-value>)', 800: 'rgb(var(--ink-800) / <alpha-value>)', 700: 'rgb(var(--ink-700) / <alpha-value>)', 600: 'rgb(var(--ink-600) / <alpha-value>)' },
+        gold: { 300: 'rgb(var(--gold-300) / <alpha-value>)', 400: 'rgb(var(--gold-400) / <alpha-value>)', 500: 'rgb(var(--gold-500) / <alpha-value>)' },
         // Tailwind's slate-500 reads at under 4:1 on the ink cards; this one keeps it the quiet
         // grey under slate-400 but clears 4.5:1 on ink-950 to ink-700.
         slate: { 500: '#8291a7' },

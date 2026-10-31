@@ -20,7 +20,7 @@ interface EmberProps {
 
 /** Your flame: it grows with your workouts and shows how it feels. */
 export function Ember({ size = 48, dim = false, stage = 'candle', mood = 'happy' }: EmberProps) {
-  return <Sprite id="ember" size={size} opts={{ stage, mood }} className={`animate-flicker ${dim ? 'opacity-50' : ''}`} />;
+  return <Sprite id="ember" size={size} opts={{ stage, mood }} className={`gym-hide animate-flicker ${dim ? 'opacity-50' : ''}`} />;
 }
 
 /** The flame's true form: a kid made of fire, with the player's hair as flame. */
