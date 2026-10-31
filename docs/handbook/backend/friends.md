@@ -3,7 +3,7 @@ type: conceptual
 title: Friends
 description: Friend codes, asks and accepts, who is online, training, in the Fog or trained today, cheers mid-workout, the workout feed, and parties (invite, lobby, ready, start, practice run) — the tables, the /me, /friends and /party routes, and the screens.
 tags: [backend, friends, social, co-op, voice, livekit, cheers, feed]
-timestamp: 2026-10-29
+timestamp: 2026-10-31
 ---
 
 # Friends
@@ -102,8 +102,8 @@ With the mic on, the iPhone may play the game's sound lower.
 
 ## Cheers
 
-A friend who is working out can be cheered on. Their hero shows **Cheer** (in **Online** on the
-Friends tab, and instead of Party on their row in the Friends card); it opens a page (`CheerPage`
+A friend who is working out can be cheered on. Their row in the Friends card shows **Cheer**
+instead of Party; it opens a page (`CheerPage`
 in `Friends.tsx`) with a box for your own words and quick lines with their name in ("Push, Ben!")
 that only fill the box. **Send** stores it on the server; their phone looks for cheers every 8 s
 during a workout and every minute otherwise (`useCheers` in `Cheers.tsx`, in `page.tsx`) and

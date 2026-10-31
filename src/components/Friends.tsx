@@ -326,15 +326,31 @@ export function FriendsCard({ state, update, friends }: { state: GameState; upda
   const [cheering, setCheering] = useState<string | null>(null);
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
+  // Your code and adding a friend fold away once you have friends: the list is what you come for.
+  const [adding, setAdding] = useState(false);
   const { list, now, msg, setMsg, refresh, add, signedIn } = friends;
 
   if (!friends.shown) return null;
+  const online = list ? list.friends.filter((f) => f.online || f.playing).length : 0;
+  const showAdd = adding || (!!list && list.friends.length === 0);
 
   return (
     <section className="rounded-2xl bg-ink-800 p-4">
-      <h2 className="flex items-center gap-2 font-pixel text-[10px] text-gold-300">
-        <Users size={14} /> Friends
-      </h2>
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 font-pixel text-[10px] text-gold-300">
+          <Users size={14} /> Friends
+          {online > 0 && (
+            <span className="flex items-center gap-1 text-emerald-300">
+              <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden /> {online} online
+            </span>
+          )}
+        </h2>
+        {signedIn && list && list.friends.length > 0 && (
+          <button onClick={() => setAdding(!adding)} aria-expanded={adding} className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${adding ? 'bg-ink-600 text-slate-100' : 'bg-ink-700 text-slate-300'}`}>
+            {adding ? <X size={14} /> : <UserPlus size={14} />} {adding ? 'Close' : 'Add'}
+          </button>
+        )}
+      </div>
       {!signedIn ? (
         <p className="mt-2 text-xs text-slate-400">Sign in (tap your hero at the top, then Settings) to add friends and see when they train and play.</p>
       ) : !list ? (
@@ -375,6 +391,8 @@ export function FriendsCard({ state, update, friends }: { state: GameState; upda
             </form>
           )}
 
+          {showAdd && (
+            <div className="space-y-3">
           <div className="flex items-center justify-between gap-2 rounded-xl bg-ink-900/60 p-3">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-slate-500">Your friend code</p>
@@ -420,6 +438,8 @@ export function FriendsCard({ state, update, friends }: { state: GameState; upda
               <UserPlus size={15} /> Add
             </button>
           </form>
+            </div>
+          )}
           {msg && <p className="text-xs text-sky-300">{msg}</p>}
 
           {list.asks_in.length > 0 && (
