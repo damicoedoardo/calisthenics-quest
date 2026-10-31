@@ -288,7 +288,7 @@ export const DEMOS: Record<AnatomyId, Demo> = {
     swaps: ['dumbbell'],
     works: { main: ['chest', 'triceps', 'frontDelt'], help: [] },
     cameras: { side: SIDE, front: unit([1, 0.5, 0.3]) },
-    camerasFor: (v) => (v.incline ? { front: unit([0.9, 0.35, 0.65]) } : {}),
+    camerasFor: (v) => (v.incline ? { front: unit([0.45, 0.4, 0.8]) } : {}),
     names: { front: 'Head end' },
     floor: { x: -15, r: 85 },
     mover: barOf,
@@ -787,11 +787,16 @@ export const DEMOS: Record<AnatomyId, Demo> = {
             knee: add(an, mul(dir, L.shin)),
           };
         },
-        props: [{ kind: 'pullbar', at: bar, half: 60 }],
+        props: [
+          { kind: 'box', at: [bar[0], 0, -62], size: [5, bar[1], 5] },
+          { kind: 'box', at: [bar[0], 0, 62], size: [5, bar[1], 5] },
+          { kind: 'pullbar', at: bar, half: 62 },
+        ],
       });
     },
     works: { main: ['lats', 'traps'], help: ['biceps', 'rearDelt', 'abs'] },
-    cameras: { side: SIDE, front: unit([0.5, 0.5, 0.7]) },
+    cameras: { side: SIDE, front: unit([0.35, 0.3, 0.9]) },
+    names: { front: 'Above' },
     floor: { x: -45, r: 85 },
     mover: (p) => p.neck,
     arrow: 'right',
@@ -940,6 +945,7 @@ const ALIAS: Record<string, AnatomyId> = {
   'assisted-pullup': 'pullup',
   negatives: 'pullup',
   'push-press': 'shoulder-press',
+  'diamond-pushup': 'pushup',
 };
 
 /** How an exercise's name changes its demo ("Dumbbell Bench Press", "Incline...", "Goblet Squat"). */
