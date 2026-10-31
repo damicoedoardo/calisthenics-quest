@@ -537,6 +537,16 @@ function benchBox(from: V3, to: V3): V3[] {
   return pts;
 }
 
+/** A kettlebell: a round bell hanging under its handle. */
+const KETTLEBELL = { r: 9, drop: 11 };
+
+/** A circle on the picture (a ball looks round from anywhere). */
+function ring2(c: V2, r: number): V2[] {
+  const pts: V2[] = [];
+  for (let i = 0; i < 16; i++) pts.push([c[0] + Math.cos((i / 16) * Math.PI * 2) * r, c[1] + Math.sin((i / 16) * Math.PI * 2) * r]);
+  return pts;
+}
+
 /** The corners of a box standing on `at`. */
 function boxCorners(at: V3, size: V3): V3[] {
   const pts: V3[] = [];
@@ -560,6 +570,14 @@ function dipBars(at: V3): [V3, V3][] {
 function gear(cam: Camera, prop: Prop): Shape[] {
   if (prop.kind === 'barbell') return weight(cam, prop.at, BAR, 2.8);
   if (prop.kind === 'dumbbell') return weight(cam, prop.at, DUMBBELL, 2.4);
+  if (prop.kind === 'kettlebell') {
+    const ball = project(cam, add(prop.at, [0, -KETTLEBELL.drop, 0]));
+    const handle = project(cam, prop.at);
+    return [
+      { d: closed(ring2(handle, 5)), stroke: INK.plateRim, width: 2.6 },
+      { d: closed(ring2(ball, KETTLEBELL.r)), fill: INK.plate, stroke: INK.plateRim, width: 1.2 },
+    ];
+  }
   if (prop.kind === 'box') return [{ d: polygon(hull(boxCorners(prop.at, prop.size).map((q) => project(cam, q)))), fill: INK.plate, stroke: INK.plateRim, width: 1.2 }];
   if (prop.kind === 'cable') {
     const a = project(cam, prop.from);
@@ -585,7 +603,7 @@ function gear(cam: Camera, prop: Prop): Shape[] {
     ];
   }
   const out: Shape[] = [];
-  for (const k of [0.12, 0.88]) {
+  for (const k of prop.noLegs ? [] : [0.12, 0.88]) {
     const top = add(prop.from, mul(sub(prop.to, prop.from), k));
     for (const z of [-BENCH.half + 4, BENCH.half - 4]) {
       out.push({ d: line(project(cam, add(top, [0, -BENCH.thick, z])), project(cam, [top[0], 0, z])), stroke: INK.plate, width: 2.6, round: true });
@@ -597,8 +615,12 @@ function gear(cam: Camera, prop: Prop): Shape[] {
 
 /** Points that bound a piece of gear (for the frame). */
 function gearPoints(cam: Camera, prop: Prop): V2[] {
-  if (prop.kind === 'bench') return [...benchBox(prop.from, prop.to), [prop.from[0], 0, 0] as V3, [prop.to[0], 0, 0] as V3].map((q) => project(cam, q));
+  if (prop.kind === 'bench') return [...benchBox(prop.from, prop.to), ...(prop.noLegs ? [] : [[prop.from[0], 0, 0] as V3, [prop.to[0], 0, 0] as V3])].map((q) => project(cam, q));
   if (prop.kind === 'box') return boxCorners(prop.at, prop.size).map((q) => project(cam, q));
+  if (prop.kind === 'kettlebell') {
+    const c = project(cam, add(prop.at, [0, -KETTLEBELL.drop, 0]));
+    return [project(cam, add(prop.at, [0, 5, 0])), [c[0] - KETTLEBELL.r, c[1] + KETTLEBELL.r], [c[0] + KETTLEBELL.r, c[1] - KETTLEBELL.r]];
+  }
   if (prop.kind === 'cable') return [project(cam, prop.from), project(cam, prop.to)];
   if (prop.kind === 'bars') return dipBars(prop.at).flat().map((q) => project(cam, q));
   const o = prop.kind === 'barbell' ? BAR : prop.kind === 'dumbbell' ? DUMBBELL : { half: prop.half ?? 75, plateAt: 0, plateR: 0 };

@@ -50,14 +50,16 @@ export interface Side {
   instep: V3;
 }
 
-/** Gear in the scene. A barbell runs side to side through `at`; dumbbells sit in each hand; a
+/** Gear in the scene. A barbell runs side to side through `at`; dumbbells sit in each hand; a kettlebell hangs from its handle at `at`; a
+    bench pad stands on legs unless `noLegs`; a
     pull-up bar or cable handle runs side to side (`half` its half length); a box stands on `at`
     (its bottom middle) with a size; a cable runs from its pulley to the handle; dip bars run front
     to back at each side of `at`. */
 export type Prop =
   | { kind: 'barbell'; at: V3 }
   | { kind: 'dumbbell'; at: V3 }
-  | { kind: 'bench'; from: V3; to: V3 }
+  | { kind: 'kettlebell'; at: V3 }
+  | { kind: 'bench'; from: V3; to: V3; noLegs?: boolean }
   | { kind: 'pullbar'; at: V3; half?: number }
   | { kind: 'box'; at: V3; size: V3 }
   | { kind: 'cable'; from: V3; to: V3 }
