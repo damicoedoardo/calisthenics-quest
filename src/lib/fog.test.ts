@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { initialState, type GameState, type Session } from './game';
-import { EDGE, NO_EDGE, UPGRADES, ZONES, edgeFor, powerOf, recordRun, recordsBroken, rollUpgrades, xpToNext, zoneStatus } from './fog';
+import { EDGE, NO_EDGE, UPGRADES, ZONES, edgeFor, powerOf, recordRun, recordsBroken, rollUpgrades, xpToNext, zoneDue, zoneStatus } from './fog';
 
 const day = (d: number) => new Date(2026, 9, d, 18);
 
@@ -16,17 +16,17 @@ const sessions = (n: number, lastDay = 25): Session[] =>
   }));
 
 describe('the Fog', () => {
-  it('has a zone for every chapter, opening with it once the boss before falls', () => {
+  it('has a zone for every chapter, opening as soon as the boss before falls', () => {
     expect(ZONES.map((z) => z.boss)).toEqual(['tomorrow', 'mirror', 'knight', 'plateau', 'hollow', 'summit']);
     const s = initialState();
     expect(zoneStatus(s, ZONES[0]).state).toBe('open');
     expect(zoneStatus(s, ZONES[1])).toEqual({ state: 'locked', why: 'Beat the boss of The Ashen Edge first' });
-    const cleared: GameState = { ...s, fog: { cleared: 1, runs: 3, best: {} } };
+    const cleared: GameState = { ...s, sessions: sessions(1), fog: { cleared: 1, runs: 3, best: {} } };
     expect(zoneStatus(cleared, ZONES[0]).state).toBe('cleared');
-    expect(zoneStatus(cleared, ZONES[1])).toEqual({ state: 'locked', why: 'Opens with chapter 2: 12 workouts to go' });
-    expect(zoneStatus({ ...cleared, sessions: sessions(12) }, ZONES[1]).state).toBe('open');
-    const two: GameState = { ...s, sessions: sessions(23), fog: { cleared: 2, runs: 5, best: {} } };
-    expect(zoneStatus(two, ZONES[2])).toEqual({ state: 'locked', why: 'Opens with chapter 3: 1 workout to go' });
+    // Open after one workout, though it is built for chapter 2 (12 workouts).
+    expect(zoneStatus(cleared, ZONES[1]).state).toBe('open');
+    expect(zoneDue(cleared, ZONES[1])).toBe(false);
+    expect(zoneDue({ ...cleared, sessions: sessions(12) }, ZONES[1])).toBe(true);
   });
 
   it("weakens a boss once its chapter's hearts are gone, and adds a free skill per workout after", () => {

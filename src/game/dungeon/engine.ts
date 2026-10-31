@@ -94,7 +94,7 @@ import {
   zoneDungeon,
 } from './content';
 import { seeded } from '@/lib/random';
-import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS, LEECH_CAP, MAX_EVADE, SP_FINAL, SP_PASSIVE, SP_SKILL, SP_WEAPON, SURGE, type SpMoveNumbers } from '@/balance';
+import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS, LEECH_CAP, MAX_EVADE, SP_FINAL, SP_PASSIVE, SP_SKILL, SP_WEAPON, SURGE, MELEE_GUARD, type SpMoveNumbers } from '@/balance';
 import type { Build } from '@/lib/stats';
 import { canWear, ITEM_SLOTS, itemScore, itemTotals, otherClass, rollItem, rollRarity, shortOf, starterKit, type Item, type ItemSlot } from './items';
 
@@ -3237,7 +3237,7 @@ function throwBack(run: Run, by: Hero, angle: number, reach: number, speed: numb
 export const attackKind = (h: Pick<Hero, 'classId' | 'sp'>): AttackKind => (h.sp ? SP_WEAPONS[h.sp.weapon].attack : attackOf(h.classId));
 
 /** How wide a swing cuts when the weapon doesn't say (radians each side). */
-const SWING_ARC = 1.3;
+const SWING_ARC = MELEE_GUARD;
 /** An arrow's and an orb's speed (px/s). */
 const SHOT_SPEED = { arrow: 430, orb: 250 };
 /** A wave's first ring (px). */
@@ -3288,6 +3288,9 @@ function attack(run: Run, h: Hero) {
       emit(run, { type: 'passive', id: 'splitstar', x: h.x, y: h.y });
     }
   } else if (kind === 'wave') {
+    // Up close, the palms guard as the warrior's sword does: the shots coming from where the monk
+    // strikes are knocked away, as wide and as far as a swing (MELEE_GUARD).
+    if (!w) cutShots(run, h, angle, SLASH_REACH - 10, MELEE_GUARD);
     for (let i = 0; i < n; i++) later(run, i * 0.18, () => burst(run, h, h.x, h.y, WAVE_R + i * 20, dmg, 'wave'));
   } else {
     for (let i = 0; i < n; i++) slash(run, h, angle + (i * Math.PI * 2) / n, dmg, swing, arc, w?.heal ?? 0, w ? (w.cut ?? 0) : arc);
@@ -3321,6 +3324,11 @@ function slash(run: Run, h: Hero, angle: number, dmg: number, R: number, arc: nu
     if (Math.abs(Math.atan2(Math.sin(diff), Math.cos(diff))) < arc) blowUp(run, br, h);
   }
   // A swing also knocks shots out of the air.
+  cutShots(run, h, angle, R, cut);
+}
+
+/** Knocks the shots within `R` (+10) and `cut` radians either side of `angle` out of the air. */
+function cutShots(run: Run, h: Hero, angle: number, R: number, cut: number) {
   if (cut <= 0) return;
   run.bullets = run.bullets.filter((b) => {
     const d = Math.hypot(b.x - h.x, b.y - h.y);

@@ -20,9 +20,10 @@ import type { Item, ItemSlot } from '@/game/dungeon/items';
 
 export interface Zone extends FogZone {
   id: number;
-  /** The chapter it belongs to: the zone opens when that chapter starts (and the zone before is cleared). */
+  /** The chapter it belongs to. The zone opens as soon as the zone before is cleared; its
+      monsters are built for the start of this chapter (`workouts`). */
   chapter: number;
-  /** Workouts done when that chapter starts. */
+  /** Workouts done when that chapter starts: the point the zone is tuned for (ZONE_WINS.open). */
   workouts: number;
   bossName: string;
   /** An Ember Road run (src/story/road.ts): its chapter. */
@@ -133,12 +134,15 @@ export function zoneStatus(state: GameState, zone: Zone): ZoneStatus {
   const fog = state.fog ?? NO_FOG;
   if (zone.id < fog.cleared) return { state: 'cleared' };
   if (zone.id > fog.cleared) return { state: 'locked', why: `Beat the boss of ${ZONES[zone.id - 1].name} first` };
-  const story = storyState(state);
-  if (!story.finished && story.index + 1 < zone.chapter) {
-    const left = zone.workouts - state.sessions.length;
-    return { state: 'locked', why: `Opens with chapter ${zone.chapter}: ${left} workout${left === 1 ? '' : 's'} to go` };
-  }
+  // Beat a boss and the next zone opens: Edoardo, 2026-10-29: "if people win the first, they won".
+  // It is built for its chapter's start (zoneDue), so going in early is hard until you train more.
   return { state: 'open' };
+}
+
+/** Whether the story has reached the chapter a zone is built for (its `workouts`). */
+export function zoneDue(state: GameState, zone: Zone): boolean {
+  const story = storyState(state);
+  return story.finished || story.index + 1 >= zone.chapter;
 }
 
 // ---------- a boss with no hearts left ----------
