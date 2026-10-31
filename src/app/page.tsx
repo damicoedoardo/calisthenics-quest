@@ -176,12 +176,17 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   }, [ready]);
   // Anything that takes the screen (a scene, a run, a workout) closes the panel for good.
   const busy = !!(run || training || after || scene || picker);
-  // After the prologue, a phone in a browser tab installs FORMA before playing on. Never in the
-  // sandbox (unless ?gate= asks for the screen), never once installed or on a computer.
+  // Hook first, ask later: the opening and the first workout (with the letter after it) play in
+  // the browser, signed out. Once they're done, a phone in a browser tab installs FORMA, then signs
+  // in, before playing on. Never in the sandbox (unless ?gate= asks for the screen), never once
+  // installed or on a computer.
   const inst = useInstall();
-  const gated = inst.known && !inst.standalone && !inst.skipped && mustInstall(inst.platform) && (inst.forced || !inSandbox());
+  const kept = state.sessions.length > 0 || inst.forced;
+  const gated = kept && inst.known && !inst.standalone && !inst.skipped && mustInstall(inst.platform) && (inst.forced || !inSandbox());
+  const askSignIn = kept && !gated && !inSandbox() && signInDue(signedIn);
+  // Never over the workout, the screen after it or its scenes: the gates wait until they're done.
+  const asking = !busy && !sharing && (!ready || scenesToPlay(state, new Date()).length === 0);
   // The menus' music, on the tabs only: the opening, story, workouts and runs have their own.
-  const askSignIn = !gated && !inSandbox() && signInDue(signedIn);
   useMenuTrack(ready && state.profile.onboarded && !opening && !replaying && !busy && !gated && !askSignIn);
   useEffect(() => {
     if (busy) setDevOpen(false);
@@ -320,21 +325,6 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
 
   if (!ready) return <div className="min-h-dvh bg-ink-950" />;
 
-  // A new player's opening pauses after the first dungeon for the install step; the installed app
-  // picks it up at the class pick.
-  if (!state.profile.onboarded && !replaying && state.profile.opening === 'class' && gated && !welcome)
-    return (
-      <InstallGate
-        state={state}
-        platform={inst.platform}
-        canPrompt={inst.canPrompt}
-        installed={inst.installed}
-        onInstall={inst.install}
-        onSkip={dev ? inst.skip : undefined}
-        midway
-      />
-    );
-
   if (!state.profile.onboarded || replaying) {
     return (
       <Prologue
@@ -347,7 +337,6 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         askLogin={welcome}
         onResume={() => setWelcomed(true)}
         onLook={(look) => update((s) => ({ ...s, profile: { ...s.profile, look } }))}
-        onPause={({ voice }) => update((s) => ({ ...s, profile: { ...s.profile, voice, opening: 'class' } }))}
         onFinish={({ voice, kit, name, classId }) => {
           update((s) => ({ ...s, profile: { ...s.profile, onboarded: true, opening: undefined, voice, kit: kit ?? s.profile.kit, name: name ?? s.profile.name, classId: classId ?? s.profile.classId } }));
           setReplaying(false);
@@ -359,7 +348,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     );
   }
 
-  if (gated)
+  if (gated && asking)
     return (
       <InstallGate
         state={state}
@@ -371,7 +360,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       />
     );
 
-  if (askSignIn && !opening) return <SignInGate />;
+  if (askSignIn && asking && !opening) return <SignInGate />;
 
   return (
     // Held sideways (the `land` screen), the tab bar becomes a rail down the left, the header shrinks

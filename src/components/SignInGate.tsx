@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Ember } from './Characters';
 import { cloudConfigured, googleSignIn, maybeSignedIn, signInWithEmail, signInWithGoogle, verifyEmailCode } from '@/lib/cloud-client';
 
-/* After the opening and the install step, FORMA needs an account: there is no playing on without
+/* After the first workout and the install step, FORMA needs an account: there is no playing on without
    one. It backs the hero up from day one, it's who you are to your friends, and your coach talks to
    you through it. Once signed in, the game still plays offline.
    On an installed iPhone app the email's link opens Safari, not the app, so the code in the email

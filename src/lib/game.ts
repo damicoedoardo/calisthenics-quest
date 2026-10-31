@@ -116,8 +116,8 @@ export interface Profile {
   /** The hero's name, asked once after the look (or on the Friends card for older saves); it's
       what friends see. */
   name?: string;
-  /** A new player's opening, paused after the first dungeon and the Wanderer to install FORMA:
-      the installed app picks it up at the class pick. */
+  /** Old saves only: a new player's opening used to pause after the Wanderer to install FORMA,
+      and picks up at the class pick. The install step now comes after the first workout. */
   opening?: 'class';
 }
 

@@ -11,17 +11,20 @@ timestamp: 2026-10-31
 The whole app is one page, `src/app/page.tsx`. It holds the save (`useGameState`) and a few
 pieces of screen state, and decides what is on screen:
 
-1. **Not onboarded** (or replaying the opening): `Prologue` takes the whole screen. A new
-   player's opening pauses after the first dungeon and the Wanderer (`profile.opening`, `'class'`)
-   for the install step on a phone in a browser (`InstallGate` with `midway`); the installed app
-   opens the `Prologue` again at the class pick (it is keyed by `profile.opening`).
+1. **Not onboarded** (or replaying the opening): `Prologue` takes the whole screen. It plays in
+   the browser, signed out, with nothing to install: hook first, ask later (Edoardo, 2026-10-31).
+   An old save paused for the install step (`profile.opening`, `'class'`) opens it again at the
+   class pick (it is keyed by `profile.opening`).
    Otherwise, once per app open (`openingDue`, a `sessionStorage` flag; never in the sandbox),
    `Opening` plays over everything for about three seconds, and story scenes wait for it.
    If the workout was left open (`draft.open`, today's), the app opens straight back on `Workout`
    instead, with no `Opening`: a phone that closed the app while locked lands where you were.
-2. **Onboarded, on a phone, in a browser tab** (not installed): `InstallGate` takes the whole
-   screen until FORMA is opened from the home screen, see [pwa.md](pwa.md#install-before-playing).
-3. **Onboarded, not signed in** (and the backend set up, not in the sandbox): `SignInGate` takes
+2. **One workout done, on a phone, in a browser tab** (not installed): `InstallGate` takes the
+   whole screen until FORMA is opened from the home screen, see [pwa.md](pwa.md#install-before-playing).
+   Like the sign-in below, it waits until the workout, the screen after it, its scenes (the
+   letter) and the share card are done (`asking` in `page.tsx`); before the first workout neither
+   gate shows.
+3. **One workout done, not signed in** (and the backend set up, not in the sandbox): `SignInGate` takes
    the whole screen until you sign in: no playing on without an account (Edoardo, 2026-10-28), not
    offline and not in developer mode. Email, then the code from the email or its link; Google when
    switched on. See
@@ -78,8 +81,8 @@ upright layout inside it. Add computer changes only as `desk:` classes. The Fog'
 | Component | Job |
 |---|---|
 | `Opening` | The splash when the app opens: the small flame (always the spark) catches, FORMA lands one letter per note of the `opening` sting, "Day N · the fire's lit" (`dayNumber`). Sound starts by itself where the browser allows it; where it needs a tap first (iPhones, even installed), the flame waits on a blinking "Tap to start" and that tap plays the jingle with the letters. A tap while it plays skips. Muted means no sound at all; reduced motion shows it still |
-| `Prologue` | First run, on every open while not signed in, wherever the opening was left (backend set up, not in the sandbox; `askLogin`, set in `page.tsx`): **New game** (or **Continue**, back to where it was left, the class pick after the install step) or **I already have a hero** (`SignInGate` with `welcome`: email, code, and the cloud hero replaces the empty save, so the opening ends; an account with no hero yet goes on to a new game). Then boy or girl pick (on iPhones with "Bring your hero" under it, `BringHero`), the story opens, the voice pick, then the first dungeon (`FogRun` with `tutorial`, three small floors you can't fall on, see [../game/fog.md](../game/fog.md)) and at its bottom the Hollow, who strikes you down; the Hollow talks over you, `RiseUp` (hold to stand), the Wanderer ("I'll help you"), then, for a hero with no class yet, the install step (`onPause` saves `profile.opening`; on a phone in a browser `page.tsx` shows `InstallGate`) and the class (`ClassPicker`, "Don't worry, you can change it later", free), then the letter, gym or home, the `LookEditor`, and the hero's name (`NameIt`, kept in `profile.name`, what friends see) |
-| `InstallGate`, `BringHero` | In the opening after the Wanderer (`midway`: the Wanderer asks, "Keep me close"), or after it for older saves, the guide to put FORMA on the home screen; and on an installed iPhone app's first screen, pasting in the hero copied in Safari. See [pwa.md](pwa.md#install-before-playing) |
+| `Prologue` | First run. A brand-new hero starts on the boy or girl pick; while not signed in (backend set up, not in the sandbox; `askLogin`, set in `page.tsx`) it has a small **I already have a hero** under it (`SignInGate` with `welcome`: email, code, and the cloud hero replaces the empty save, so the opening ends; an account with no hero yet goes on to a new game). An opening left half way asks **Continue** or **I already have a hero** first, on every open while signed out. Then (on iPhones with "Bring your hero" under the pick, `BringHero`) the story opens, the voice pick, then the first dungeon (`FogRun` with `tutorial`, three small floors you can't fall on, see [../game/fog.md](../game/fog.md)) and at its bottom the Hollow, who strikes you down; the Hollow talks over you, `RiseUp` (hold to stand), the Wanderer ("I'll help you"), then three quick picks: the class (`ClassPicker`, "Don't worry, you can change it later", free) for a hero with none, the spark's hello and the first quest, gym or home, and the hero's name (`NameIt`, kept in `profile.name`, what friends see). The look editor is on the Hero tab, and the letter comes after the first workout (`LetterForm`, the scene `first-letter`) |
+| `InstallGate`, `BringHero` | After the first workout (and the letter), "Keep your hero": the guide to put FORMA on the home screen; and on an installed iPhone app's first screen, pasting in the hero copied in Safari. See [pwa.md](pwa.md#install-before-playing) |
 | `SignInGate` | After the install step, an account, always (no skip); also the opening's "I already have a hero" (`welcome`, `back`): email, then the code from the email (the way in on an installed iPhone app, where the link opens Safari) |
 | `PartyInviteCard`, `PartyButton`, `PartyLobby` | A friend's invite (join or not now), the button back to your party's lobby, and the lobby: who's in and ready, the zone (the leader picks), Into the Fog, invite more, leave. See [../backend/friends.md](../backend/friends.md#parties) |
 | `TodayTab` | Upright and sideways it keeps words few (pixel, minimal): the chapter's boss in one row (enemy, chapter, hearts), the flame card and its line with the week as pips and the streak as a flame, the quote with two icons (keep it, the Book of Days with its page count), "I feel" as one switch (its minutes go in the quest's header), today's quest list with exercise stills (tap one for how to do it, `ExerciseSheet`), the rest-day card and `SitByFire`, the quote of the day, the Book of Days, the install nudge, above Start what the workout gives as pixel chips (`NextLoot`; tap for the loot guide), and at the end the keepsakes (`Keepsakes`) as a reminder of the story so far; once today's workout is done no quest at all but `DoneToday` ("Done for today", you earned it, workouts in all and this week, one quiet line on the next workout that opens the Train tab, where it shows in full), no quest without a planned workout (`NoPlan`: talk to the flame, or the week's workouts are all done), and before the next workout's day (a planned rest day) the rest card and that workout marked as ahead, its Start locked ("Opens on Sat"). Which of these shows comes from `todayIs` (`src/lib/coach/week.ts`), the same answer the Train tab reads, so the two never disagree |
@@ -132,7 +135,8 @@ edges clear of the notch, which is on the left or the right then.
 | `AfterSession` | The battle as in portrait, a bit tighter; the loot card is wide, what you earned on the left, the level, gear, the flame's word and Continue on the right |
 | `Dialogue` | Whoever is on screen on the left, the words beside them; narration with nothing to show stays centered. The backdrop is drawn wide for the screen at a whole-number scale (sky, horizon and ground all show) and the shade at the bottom is shorter |
 | `ScenePlayer` | The question card puts the question beside its answers; naming the flame puts the flame beside the name box |
-| `Prologue` | Title and boy or girl side by side; the voice pick with the Hollow on the left and the answers in two columns; the letter (two columns of prompts), the gym or home pick and the look editor with who speaks and the button on the left |
+| `Prologue` | Title and boy or girl side by side; the voice pick with the Hollow on the left and the answers in two columns; the gym or home pick with who speaks and the button on the left |
+| `LetterForm` | The letter after the first workout: the Wanderer and the button on the left, the prompts in two columns |
 | `RiseUp`, `SitByFire` | The figures on the left, the words and the button on the right; `SitByFire`'s camp is drawn wide like `Dialogue`'s |
 | `ClassPicker` | The hero you'd be on the left, the four classes and the button on the right |
 | `BookOfDays`, `ExerciseLibrary` | Wider, the pages and the list in two columns; the library's search and filters on one line, an exercise's demos and facts beside its how-to |
