@@ -1,13 +1,11 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import { ChevronRight, Dumbbell, Flame, Gamepad2, Lock, Play, Sun, UserRound, Users, X, type LucideIcon } from 'lucide-react';
-import { Sprite } from './Sprite';
 
-/* Gym mode (You > Settings): the training screens (the header, the tab bar, Today, Train and the
-   workout) drop the pixel look for a plain, modern one, so the game stays out of the way at the gym.
-   The look is CSS: a `gym` class on those screens swaps the colors, the font and the pixel edges
-   (globals.css). Kept on this phone only, like the music setting. */
+/* Gym mode (You > Settings): once a workout starts, it drops the pixel look for a plain, modern
+   one, so the game stays out of the way at the gym. The rest of the app keeps its look. The look is
+   CSS: page.tsx wraps the workout in a `gym` class that swaps the colors, the font and the pixel
+   edges (globals.css). Kept on this phone only, like the music setting. */
 
 const KEY = 'forma-gym-mode';
 const listeners = new Set<() => void>();
@@ -37,27 +35,4 @@ export function useGymMode(): boolean {
     read,
     () => false,
   );
-}
-
-type IconName = 'play' | 'lock' | 'chevron' | 'close' | 'flame' | 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabFriends' | 'tabHero';
-
-const PLAIN: Record<IconName, LucideIcon> = {
-  play: Play,
-  lock: Lock,
-  chevron: ChevronRight,
-  close: X,
-  flame: Flame,
-  tabToday: Sun,
-  tabTrain: Dumbbell,
-  tabPlay: Gamepad2,
-  tabFriends: Users,
-  tabHero: UserRound,
-};
-
-/** A UI icon: the pixel one, or in gym mode a plain line icon of the same size. */
-export function UiIcon({ name, size, className = '' }: { name: IconName; size: number; className?: string }) {
-  const gym = useGymMode();
-  if (!gym) return <Sprite id="uiIcon" opts={{ name }} size={size} label="" className={className} />;
-  const Icon = PLAIN[name];
-  return <Icon size={size} strokeWidth={2} aria-hidden className={className.replace(/\bgrayscale\b/, '')} />;
 }

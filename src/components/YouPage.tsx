@@ -168,7 +168,7 @@ export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: 
             {/* Settings: one row each, a switch on the right. */}
             <section className="rounded-2xl bg-ink-800 px-4 py-2">
               <h2 className="pb-1 pt-2 font-pixel text-[10px] text-gold-300">Settings</h2>
-              <Row label="Gym mode" note="A plain, modern look for Today, Train and the workout.">
+              <Row label="Gym mode" note="A plain, modern look once a workout starts.">
                 <Switch id="gym-mode" on={gym} set={setGymMode} />
               </Row>
               <Row label="Sound">

@@ -129,9 +129,8 @@ main::-webkit-scrollbar {
 /* ---- end landscape overlays ---- */
 
 /* ---- Gym mode (src/components/Gym.tsx) ----
-   On the training screens only (the header, the tab bar, Today, Train, the workout): plain greys
-   for the ink, white for the gold, one clean font, round edges, no pixel bevels. The game tabs
-   never get the class, so they keep their look. */
+   Only around the workout, once it starts: plain greys for the ink, white for the gold, one clean
+   font, round edges, no pixel bevels. Nothing else gets the class, so it keeps its look. */
 .gym {
   --ink-950: 10 10 11;
   --ink-900: 20 20 22;
@@ -196,18 +195,13 @@ main::-webkit-scrollbar {
 .gym [class*='active:translate-y-']:active {
   transform: scale(0.98);
 }
-/* The game's characters (the flame, the camp) step out; plain words step in. */
+/* Full-screen layers (the big demo, the rest) on a solid ground, not see-through. */
+.gym .bg-ink-950\/95 {
+  background-color: rgb(var(--ink-950));
+}
+/* The game's characters (the flame) step out. */
 .gym .gym-hide {
   display: none !important;
-}
-.gym .gym-short {
-  height: calc(env(safe-area-inset-top) + 3.5rem);
-}
-.gym-only {
-  display: none;
-}
-.gym .gym-only {
-  display: revert;
 }
 :focus-visible {
   outline-color: rgb(var(--gold-400));

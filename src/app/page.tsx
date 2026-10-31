@@ -24,8 +24,8 @@ import { giveSp, spAfterRun, spWorn } from '@/lib/sp';
 import { changeClass, classCost, coins } from '@/lib/sweat';
 import { ClassPicker } from '@/components/ClassPicker';
 import { DevButton, DevPanel, type DevGo } from '@/components/DevPanel';
-import { UiIcon, useGymMode } from '@/components/Gym';
-import { UserRound } from 'lucide-react';
+import { Sprite } from '@/components/Sprite';
+import { useGymMode } from '@/components/Gym';
 import { LookProvider } from '@/components/Look';
 import { useCloudSync } from '@/components/Cloud';
 import { onlineCount, useFriends, useFriendsBeat } from '@/components/Friends';
@@ -85,7 +85,6 @@ export default function Home() {
 
 function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   const [tab, setTab] = useState<Tab>('today');
-  // Gym mode: the header, the tab bar, Today, Train and the workout in a plain look (Gym.tsx).
   const gym = useGymMode();
   // The Hero tab's open part, kept here so the Fog's ready strip can open Hero > Gear.
   const [heroPart, setHeroPart] = useState<HeroPart>('gear');
@@ -372,7 +371,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     // its own then, see useLand). On a computer (`desk`) the rail is wider, with the tab names beside
     // their icons, and the column sits in the middle of the rest.
     <div ref={root} className="mx-auto flex min-h-dvh max-w-md flex-col land:ml-[calc(4.5rem+env(safe-area-inset-left))] land:mr-0 land:h-dvh land:min-h-0 land:max-w-none land:pr-[env(safe-area-inset-right)] desk:ml-56 desk:mr-0 desk:max-w-none">
-      <header className={`${gym ? 'gym ' : ''}safe-top sticky top-0 z-20 bg-ink-950/90 px-4 pb-3 backdrop-blur land:flex land:items-center land:gap-3 land:!pt-2 land:pb-2 desk:mx-auto desk:w-full desk:max-w-2xl desk:px-6 desk:pt-5`}>
+      <header className="safe-top sticky top-0 z-20 bg-ink-950/90 px-4 pb-3 backdrop-blur land:flex land:items-center land:gap-3 land:!pt-2 land:pb-2 desk:mx-auto desk:w-full desk:max-w-2xl desk:px-6 desk:pt-5">
         {sandbox && (
           // Sideways it is a small tag at the end of the header line.
           <div className="mb-2 flex items-center justify-between gap-2 rounded-lg border border-dashed border-sky-400/60 px-3 py-1.5 text-[11px] text-sky-300 land:order-last land:mb-0 land:shrink-0 land:px-2 land:py-1">
@@ -395,7 +394,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         )}
         <div className="flex items-center gap-3 land:min-w-0 land:flex-1">
           <button onClick={() => setYou(true)} aria-label="You: your letter, quest log and settings" className="grid h-12 w-12 place-items-center rounded-xl bg-ink-800 active:scale-95 land:hidden desk:hidden">
-            {gym ? <UserRound size={22} className="text-slate-300" /> : <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />}
+            <Hero gear={gear} classId={state.profile.classId} size={42} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
           </button>
           {/* One line: FORMA, and how many workouts you've done in all (your level small beside it). */}
           <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
@@ -408,7 +407,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
             <div className="flex shrink-0 items-center gap-3">
               <span className="text-[11px] text-slate-500">Lv {lvl.level}</span>
               <span className="flex items-center gap-1.5" role="img" aria-label={`${workouts} ${workouts === 1 ? 'workout' : 'workouts'} done`}>
-                <UiIcon name="tabTrain" size={18} />
+                <Sprite id="uiIcon" opts={{ name: 'tabTrain' }} size={18} label="" />
                 <span className="font-pixel text-xs text-gold-300">{workouts}</span>
                 <span className="text-[11px] text-slate-400">{workouts === 1 ? 'workout' : 'workouts'}</span>
               </span>
@@ -417,7 +416,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         </div>
       </header>
 
-      <main ref={main} className={`${gym && (tab === 'today' || tab === 'train') ? 'gym ' : ''}flex-1 px-4 pb-28 pt-2 land:min-h-0 land:overflow-y-auto land:pb-3 desk:mx-auto desk:w-full desk:max-w-2xl desk:px-6 desk:pb-12`}>
+      <main ref={main} className="flex-1 px-4 pb-28 pt-2 land:min-h-0 land:overflow-y-auto land:pb-3 desk:mx-auto desk:w-full desk:max-w-2xl desk:px-6 desk:pb-12">
         {tab === 'today' ? (
           <TodayTab state={state} update={update} onStart={start} onReplayOpening={() => setReplaying(true)} openBook={openBook}
             onTrain={() => setTab('train')}
@@ -437,7 +436,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
         )}
       </main>
 
-      <nav className={`${gym ? 'gym ' : ''}safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-ink-700 bg-ink-900/95 backdrop-blur land:right-auto land:top-0 land:flex land:w-[calc(4.5rem+env(safe-area-inset-left))] land:flex-col land:items-center land:justify-center land:gap-2 land:border-r land:border-t-0 land:pl-[env(safe-area-inset-left)] desk:right-auto desk:top-0 desk:flex desk:w-56 desk:flex-col desk:gap-6 desk:border-r desk:border-t-0 desk:px-3 desk:py-6`}>
+      <nav className="safe-bottom fixed inset-x-0 bottom-0 z-20 border-t border-ink-700 bg-ink-900/95 backdrop-blur land:right-auto land:top-0 land:flex land:w-[calc(4.5rem+env(safe-area-inset-left))] land:flex-col land:items-center land:justify-center land:gap-2 land:border-r land:border-t-0 land:pl-[env(safe-area-inset-left)] desk:right-auto desk:top-0 desk:flex desk:w-56 desk:flex-col desk:gap-6 desk:border-r desk:border-t-0 desk:px-3 desk:py-6">
         {/* Sideways, the hero from the header sits at the top of the rail; on a computer, bigger. */}
         <button onClick={() => setYou(true)} aria-label="You: your letter, quest log and settings" className="hidden h-10 w-10 place-items-center rounded-xl bg-ink-800 active:scale-95 land:grid desk:mx-auto desk:grid desk:h-28 desk:w-28">
           <span className="desk:hidden">
@@ -461,7 +460,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
             >
               {/* Full color on the open tab; faded and grey on the others. */}
               <span className="relative grid h-[22px] place-items-center">
-                <UiIcon name={icon} size={22} className={tab === id ? '' : 'opacity-70 grayscale'} />
+                <Sprite id="uiIcon" opts={{ name: icon }} size={22} label="" className={tab === id ? '' : 'opacity-70 grayscale'} />
                 {/* The flame has something to say. */}
                 {id === 'train' && tab !== 'train' && state && freshNudge(state, new Date()) && <span aria-label="New from your flame" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-gold-300 ring-2 ring-ink-900" />}
                 {/* Story scenes put off or skipped wait in Story so far. */}
@@ -521,6 +520,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           <PartyLobby state={state} />
         </>
       )}
+      {/* Gym mode (You > Settings): the workout in a plain, modern look (Gym.tsx). */}
       {training && (
         <div className={gym ? 'gym' : undefined}>
           <Workout state={state} update={update} onClose={() => setTraining(false)} onFinish={finish} />

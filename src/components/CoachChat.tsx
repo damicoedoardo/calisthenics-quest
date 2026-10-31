@@ -12,7 +12,7 @@ import { dayLabel, nextDay, restKept, todayIs, weekdayOf, weekSlots } from '@/li
 import { dayKey } from '@/lib/days';
 import { fireLine, updateTodayPage } from '@/story/daily';
 import { SitByFire } from './SitByFire';
-import { UiIcon } from './Gym';
+import { Sprite } from './Sprite';
 import { freshNudge, hearNudge, type Nudge } from '@/lib/coach/nudge';
 import { cloudConfigured, maybeSignedIn, supabase, useCloudStatus } from '@/lib/cloud-client';
 import { flameStage } from '@/story/flame';
@@ -56,7 +56,7 @@ export function CoachScreen({ state, update, onStart }: { state: GameState; upda
     <div className="space-y-4 land:grid land:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] land:items-start land:gap-3 land:space-y-0">
       <section className="rounded-2xl bg-ink-800 p-3 pixel-border">
         <div className="flex items-end gap-3">
-          <div className="gym-hide grid h-20 w-16 shrink-0 place-items-end justify-center">
+          <div className="grid h-20 w-16 shrink-0 place-items-end justify-center">
             <Ember size={64} stage={stage} mood={nudge ? 'bright' : 'happy'} />
           </div>
           <div className="min-w-0 flex-1">
@@ -150,7 +150,7 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
           <WorkoutCards state={state} update={update} items={day.plan.items} date={day.done ? undefined : day.date} />
           {day === next && !canStart ? (
             <p className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-ink-900 py-3 text-xs text-slate-400">
-              <UiIcon name="lock" size={12} />{' '}
+              <Sprite id="uiIcon" opts={{ name: 'lock' }} size={12} label="" />{' '}
               {day.date > today
                 ? `Opens ${dayLabel(day.date, now) === 'Tomorrow' ? 'tomorrow' : `on ${weekdayOf(day.date)}`}. ${todays.kind === 'done' ? 'Today is done.' : 'Today, rest.'}`
                 : 'Opens tomorrow. Today is done.'}
@@ -180,7 +180,7 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
             <p className="mt-2 text-xs text-emerald-300">Kept ✓</p>
           ) : slot.date === today ? (
             <button onClick={() => setFire(true)} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-ink-800 py-3 text-sm text-orange-200 ring-1 ring-orange-300/25 active:scale-[.98]">
-              <UiIcon name="flame" size={18} /> Sit by the fire · 1 minute
+              <Sprite id="uiIcon" opts={{ name: 'flame' }} size={18} label="" /> Sit by the fire · 1 minute
             </button>
           ) : slot.date < today ? (
             <p className="mt-2 text-xs text-slate-500">Not kept.</p>
@@ -327,11 +327,10 @@ function CoachChat({ state, update, onClose }: { state: GameState; update: Updat
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-ink-950" role="dialog" aria-modal="true" aria-label={`Talk with ${name}`}>
-      {/* In gym mode the camp picture steps out and this is only a bar with Close (gym-short). */}
-      <div className="gym-short relative h-[30%] shrink-0 overflow-hidden land:h-[34%]">
-        <PlaceBackdrop id="ashlands-camp" className="gym-hide absolute inset-0 h-full w-full" />
-        <div className="gym-hide absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-ink-950 to-transparent" />
-        <div className="gym-hide absolute inset-x-0 bottom-1 flex justify-center">
+      <div className="relative h-[30%] shrink-0 overflow-hidden land:h-[34%]">
+        <PlaceBackdrop id="ashlands-camp" className="absolute inset-0 h-full w-full" />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-ink-950 to-transparent" />
+        <div className="absolute inset-x-0 bottom-1 flex justify-center">
           {busy && <div aria-hidden className="absolute bottom-0 h-24 w-40 rounded-full bg-orange-400/25 blur-2xl motion-safe:animate-pulse" />}
           <div className={busy ? 'motion-safe:animate-flicker' : ''}>
             <Ember size={96} stage={stage} mood={busy ? 'bright' : 'happy'} />

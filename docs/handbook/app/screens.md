@@ -71,27 +71,26 @@ or `you`; the "Menus" panel has one per screen) and check 390×844 is unchanged.
 ## Gym mode: a plain look for training
 
 A switch in You > Settings (Edoardo 2026-10-31: at the gym the app should look less like a game).
-On, the training screens drop the pixel look for a plain, modern one: the header, the tab bar,
-Today, Train (with the coach's chat and the exercise library) and the workout (overview, set logger,
-rest, sheets). The Play, Friends and Hero tabs, the Fog, the scenes and the screen after a workout
-keep the game's look. It is kept on this phone only (`forma-gym-mode` in localStorage, like the
-menu music), and off by default.
+On, the workout drops the pixel look for a plain, modern one, but only once it is open: the
+overview, the set logger, the big demo, the rest, the run and their sheets. Everything else (Today,
+Train, the tabs, the screen after a workout) keeps the game's look (Edoardo: "just when you
+actually start the workout"). It is kept on this phone only (`forma-gym-mode` in localStorage, like
+the menu music), and off by default.
 
-It is mostly CSS, so the screens keep one markup:
+It is mostly CSS, so the workout keeps one markup:
 
-- `src/components/Gym.tsx`: `useGymMode()` and `setGymMode()`, and `UiIcon`, a UI icon that is the
-  pixel one or, in gym mode, a lucide line icon (used by the tab bar, the header, Today and Train).
-- `page.tsx` puts a `gym` class on the header, the tab bar, `main` while on Today or Train, and
-  around `Workout`. Nothing else gets it.
+- `src/components/Gym.tsx`: `useGymMode()` and `setGymMode()`.
+- `page.tsx` wraps `Workout` in a `gym` class when it is on. Nothing else gets it.
 - `globals.css` (`.gym`): the `ink` and `gold` colors of `tailwind.config.ts` are CSS variables
   (`--ink-950`…, `--gold-400`…, as R G B), and `.gym` swaps them for plain greys and white, so the
   gold buttons turn white and the cards neutral grey. `font-pixel` and `font-mono` become Geist
-  (pixel sizes one step up), pixel bevels (`shadow-[…]`) go flat, `pixel-notch` turns round,
-  `gym-hide` hides the game's characters (every `Ember` carries it, the flame card's top, the
-  chat's camp picture) and `gym-only` shows plain words in their place ("This week").
-- A few words change in gym mode: "workout" for "quest" on Today and in the workout.
+  (pixel sizes one step up), pixel bevels (`shadow-[…]`) go flat, `pixel-notch` turns round (the
+  set boxes are circles), full-screen layers are solid, and `gym-hide` hides the game's characters
+  (every `Ember` carries it).
+- In `Workout.tsx`: the rest is one ring that fills as it runs out, the clock in its middle
+  (`Rest`, `gym`), and "Finish workout" / "Short workout" for "Complete quest" / "Minimum quest".
 
-The exercise demos stay: they show how to do the move. A new training screen gets the look for
+The exercise demos stay: they show how to do the move. A new piece of the workout gets the look for
 free if it uses the `ink` and `gold` colors; mark game art in it with `gym-hide`.
 
 ## On a computer: the tabs

@@ -190,7 +190,7 @@ eight-frame float where `bob` is the breath, and `lunge` is their attack, a wind
 (`right: 'up'`) and then the hit (`fx: 'impact'`).
 
 `Ember` (`Characters.tsx`) always carries the `gym-hide` class, so in gym mode the flame steps out
-of the training screens ([../app/screens.md](../app/screens.md#gym-mode-a-plain-look-for-training)).
+of the workout ([../app/screens.md](../app/screens.md#gym-mode-a-plain-look-for-training)).
 
 ### Fog items
 
