@@ -21,10 +21,10 @@ pieces of screen state, and decides what is on screen:
    instead, with no `Opening`: a phone that closed the app while locked lands where you were.
 2. **One workout done, on a phone, in a browser tab** (not installed): `InstallGate` takes the
    whole screen until FORMA is opened from the home screen, see [pwa.md](pwa.md#install-before-playing).
-   Like the sign-in below, it waits until the workout, the screen after it, its scenes (the
-   letter) and the share card are done (`asking` in `page.tsx`); before the first workout neither
-   gate shows.
-3. **One workout done, not signed in** (and the backend set up, not in the sandbox): `SignInGate` takes
+   It waits until the workout, the screen after it, its scenes (the letter) and the share card are
+   done (`asking` in `page.tsx`); before the first workout it doesn't show.
+3. **Onboarded, not signed in** (and the backend set up, not in the sandbox): right after the
+   opening, since the flame plans the first week through the coach api, `SignInGate` takes
    the whole screen until you sign in: no playing on without an account (Edoardo, 2026-10-28), not
    offline and not in developer mode. Email, then the code from the email or its link; Google when
    switched on. See

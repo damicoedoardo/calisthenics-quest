@@ -176,14 +176,15 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   }, [ready]);
   // Anything that takes the screen (a scene, a run, a workout) closes the panel for good.
   const busy = !!(run || training || after || scene || picker);
-  // Hook first, ask later: the opening and the first workout (with the letter after it) play in
-  // the browser, signed out. Once they're done, a phone in a browser tab installs FORMA, then signs
-  // in, before playing on. Never in the sandbox (unless ?gate= asks for the screen), never once
+  // Hook first, ask later: the opening plays in the browser, signed out. Right after it comes the
+  // sign-in, since the flame plans the first week through the coach api (Edoardo, 2026-10-31).
+  // Once the first workout (with the letter after it) is done, a phone in a browser tab installs
+  // FORMA before playing on. Never in the sandbox (unless ?gate= asks for the screen), never once
   // installed or on a computer.
   const inst = useInstall();
   const kept = state.sessions.length > 0 || inst.forced;
   const gated = kept && inst.known && !inst.standalone && !inst.skipped && mustInstall(inst.platform) && (inst.forced || !inSandbox());
-  const askSignIn = kept && !gated && !inSandbox() && signInDue(signedIn);
+  const askSignIn = !gated && !inSandbox() && signInDue(signedIn);
   // Never over the workout, the screen after it or its scenes: the gates wait until they're done.
   const asking = !busy && !sharing && (!ready || scenesToPlay(state, new Date()).length === 0);
   // The menus' music, on the tabs only: the opening, story, workouts and runs have their own.

@@ -27,8 +27,9 @@ A phone that runs FORMA in a browser tab has to install it before the game goes 
 `InstallGate` (`src/components/InstallGate.tsx`) takes the screen until FORMA is opened from the
 home screen. A computer is not asked (its browser keeps the save). It comes after the first
 workout and the letter (Edoardo, 2026-10-31: hook players before any costly step): the opening and
-the first workout play in the browser, then "Keep your hero" asks, and the sign-in follows in the
-installed app. It never covers the workout, the screen after it or its scenes (`asking` in
+the first workout play in the browser (signed in right after the opening, for the coach), then
+"Keep your hero" asks. On iPhones the installed app starts signed out too: "I already have a hero",
+or "Paste my hero". It never covers the workout, the screen after it or its scenes (`asking` in
 `page.tsx`). Saves from before, paused mid-opening for it (`profile.opening`), go on at the class
 pick in the browser.
 
