@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { INK, MUSCLE_NAME, WORKS, scene, type AnatomyId, type View } from '@/sprites/anatomy/body';
+import { INK, MUSCLE_NAME, WORKS, scene, type AnatomyId, type Variant, type View } from '@/sprites/anatomy/body';
 
 /** One rep, in seconds. */
 const REP = 3.2;
 
 /** The anatomy demo (sprites/anatomy/body.ts): the body doing one rep on a loop, the worked
     muscles colored in, an arrow lit for the way it moves. Still under reduced motion and for holds. */
-export function AnatomyDemo({ exercise, view, label, className }: { exercise: AnatomyId; view: View; label: string; className?: string }) {
+export function AnatomyDemo({ exercise, variant, view, label, className }: { exercise: AnatomyId; variant?: Variant; view: View; label: string; className?: string }) {
   const [t, setT] = useState(0);
   const [still, setStill] = useState(false);
 
@@ -33,7 +33,7 @@ export function AnatomyDemo({ exercise, view, label, className }: { exercise: An
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  const s = scene(exercise, view, t, { still });
+  const s = scene(exercise, view, t, { still, variant });
   return (
     <svg viewBox={s.viewBox} role="img" aria-label={label} className={className} style={{ background: INK.ground }}>
       {s.shapes.map((p, i) => (

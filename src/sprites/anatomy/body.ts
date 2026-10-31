@@ -15,10 +15,10 @@
      it (angle: 0 = front, 90 = outside, 180 = back, -90 = inside). Every muscle gets a faint line, so
      the body reads as anatomy; the worked ones are filled. */
 
-import { DEMOS, type AnatomyId, type View } from './moves';
+import { DEMOS, cameraOf, poseOf, type AnatomyId, type Variant, type View } from './moves';
 import { add, cross, dot, len, lerp, mul, phase, rad, sub, unit, type Pose, type Prop, type V2, type V3 } from './skeleton';
 
-export { ANATOMY_DEMOS, hasAnatomy, viewName, type AnatomyId, type View } from './moves';
+export { ANATOMY_DEMOS, anatomyFor, hasAnatomy, viewName, type AnatomyId, type Variant, type View } from './moves';
 export { phase } from './skeleton';
 
 /* ---------- Colors ---------- */
@@ -46,7 +46,7 @@ export const INK = {
 
 /** The floor as seen: a line side on, an oval from above. */
 function floorShape(exercise: AnatomyId, cam: Camera): V2[] {
-  const { x, r } = DEMOS[exercise].floor;
+  const { x, r } = DEMOS[exercise].floor ?? { x: 0, r: 0 };
   const pts: V2[] = [];
   for (let i = 0; i < 24; i++) {
     const t = (i / 24) * Math.PI * 2;
@@ -488,16 +488,17 @@ function partsOf(pose: Pose): { right: Limbs; left: Limbs; torso: Part; neck: Pa
 }
 
 /** Everything to draw for one moment of a rep. */
-export function scene(exercise: AnatomyId, view: View, t: number, opts: { still?: boolean } = {}): Scene {
+export function scene(exercise: AnatomyId, view: View, t: number, opts: { still?: boolean; variant?: Variant } = {}): Scene {
+  const v = opts.variant ?? {};
   const demo = DEMOS[exercise];
   const { depth, dir } = opts.still || !demo.mover ? { depth: 1, dir: null } : phase(t);
-  const cam = camera(demo.cameras[view]);
-  const box = frame(exercise, view);
+  const cam = camera(cameraOf(exercise, view, v));
+  const box = frame(exercise, view, v);
   const level = Math.abs(cam.c[1]) < 0.01;
-  const shapes: Shape[] = [
-    level ? { d: `M${f1(box.x)} 0.6H${f1(box.x + box.w)}`, stroke: INK.floor, width: 1.2 } : { d: closed(floorShape(exercise, cam)), fill: INK.shadow },
-  ];
-  shapes.push(...draw(exercise, cam, depth));
+  const shapes: Shape[] = [];
+  // Hanging moves have no floor in the picture.
+  if (demo.floor) shapes.push(level ? { d: `M${f1(box.x)} 0.6H${f1(box.x + box.w)}`, stroke: INK.floor, width: 1.2 } : { d: closed(floorShape(exercise, cam)), fill: INK.shadow });
+  shapes.push(...draw(exercise, cam, depth, v));
   const lit = opts.still ? 'both' : dir === 'down' ? 'to' : dir === 'up' ? 'from' : null;
   if (box.arrow) shapes.push(...arrow(box.arrow[0], box.arrow[1], lit));
   return { viewBox: `${f1(box.x)} ${f1(box.y)} ${f1(box.w)} ${f1(box.h)}`, shapes };
@@ -565,8 +566,8 @@ function gearPoints(cam: Camera, prop: Prop): V2[] {
 }
 
 /** The body and its gear for one depth. */
-function draw(exercise: AnatomyId, cam: Camera, depth: number): Shape[] {
-  const pose = DEMOS[exercise].pose(depth);
+function draw(exercise: AnatomyId, cam: Camera, depth: number, v: Variant): Shape[] {
+  const pose = poseOf(exercise, depth, v);
   const work = WORKS[exercise];
   const shapes: Shape[] = [];
   const { right, left, torso, neck, head } = partsOf(pose);
@@ -657,31 +658,35 @@ function draw(exercise: AnatomyId, cam: Camera, depth: number): Shape[] {
     nearArm(near);
   }
   bells.filter(nearSide).forEach((b) => shapes.push(...gear(cam, b)));
+  // A pull-up bar seen end on is a dot in the fist: draw it over the hands.
+  for (const p of pose.props) {
+    if (p.kind === 'pullbar' && Math.abs(cam.c[2]) > 0.9) shapes.push({ d: closed(disc(cam, p.at, 3.2)), fill: INK.bar, stroke: INK.plateRim, width: 1.2 });
+  }
   return shapes;
 }
 
 /** The frame of each exercise and view, the same for the whole rep, and where its arrow goes. */
 const frames = new Map<string, { x: number; y: number; w: number; h: number; arrow: [V2, V2] | null }>();
 
-function frame(exercise: AnatomyId, view: View) {
-  const key = `${exercise}/${view}`;
+function frame(exercise: AnatomyId, view: View, v: Variant) {
+  const key = `${exercise}/${view}/${JSON.stringify(v)}`;
   const hit = frames.get(key);
   if (hit) return hit;
   const demo = DEMOS[exercise];
-  const cam = camera(demo.cameras[view]);
+  const cam = camera(cameraOf(exercise, view, v));
   let x0 = Infinity;
   let x1 = -Infinity;
   let y0 = Infinity;
-  let y1 = 0;
+  let y1 = demo.floor ? 0 : -Infinity;
   const take = (q: V2) => {
     x0 = Math.min(x0, q[0]);
     x1 = Math.max(x1, q[0]);
     y0 = Math.min(y0, q[1]);
     y1 = Math.max(y1, q[1]);
   };
-  if (Math.abs(cam.c[1]) >= 0.01) floorShape(exercise, cam).forEach(take);
+  if (demo.floor && Math.abs(cam.c[1]) >= 0.01) floorShape(exercise, cam).forEach(take);
   for (const d of [0, 0.25, 0.5, 0.75, 1]) {
-    const pose = demo.pose(d);
+    const pose = poseOf(exercise, d, v);
     const { right, left, torso, neck, head } = partsOf(pose);
     for (const p of [torso, neck, head, ...Object.values(right), ...Object.values(left)]) outline(p, cam).forEach(take);
     for (const p of pose.props) gearPoints(cam, p).forEach(take);
@@ -690,7 +695,7 @@ function frame(exercise: AnatomyId, view: View) {
   let arrowLine: [V2, V2] | null = null;
   if (demo.mover) {
     const mover = demo.mover;
-    const at = (d: number) => project(cam, mover(demo.pose(d)))[1];
+    const at = (d: number) => project(cam, mover(poseOf(exercise, d, v)))[1];
     const ax = demo.arrow === 'right' ? x1 + 12 : x0 - 12;
     const sign = Math.sign(at(1) - at(0)) || 1;
     arrowLine = [[ax, at(0) - 6 * sign], [ax, at(1) + 6 * sign]];

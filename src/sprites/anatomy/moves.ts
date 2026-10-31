@@ -3,7 +3,7 @@
    which point the arrow follows. The body and its drawing live in body.ts. */
 
 import type { MuscleId } from './body';
-import { L, SHOULDER_OUT, SHOULDER_UP, add, assemble, flatFoot, lean, lerp, mix, mul, rad, sub, unit, type Limb, type Pose, type V3 } from './skeleton';
+import { L, SHOULDER_OUT, SHOULDER_UP, add, assemble, flatFoot, lean, lerp, mix, mul, rad, sub, unit, type Limb, type Pose, type Prop, type V3 } from './skeleton';
 
 export const ANATOMY_DEMOS = [
   'pushup',
@@ -24,16 +24,30 @@ export const hasAnatomy = (id: string): id is AnatomyId => (ANATOMY_DEMOS as rea
 
 export type View = 'side' | 'front';
 
+/** How an exercise differs from its demo's plain version, read from its name. */
+export interface Variant {
+  /** Dumbbells instead of a barbell, or the other way round. */
+  gear?: 'barbell' | 'dumbbell';
+  /** A bench raised at the head end. */
+  incline?: boolean;
+  /** One weight held at the chest (goblet squat). */
+  goblet?: boolean;
+}
+
 export interface Demo {
-  pose: (d: number) => Pose;
+  pose: (d: number, v: Variant) => Pose;
+  /** Which gear it can swap to. */
+  swaps?: ('barbell' | 'dumbbell')[];
   /** The main movers, then the helpers. */
   works: { main: MuscleId[]; help: MuscleId[] };
   /** Where each view looks from (toward the camera). */
   cameras: Record<View, V3>;
+  /** A variant's own cameras, when the plain ones don't suit it. */
+  camerasFor?: (v: Variant) => Partial<Record<View, V3>>;
   /** What to call the second view when it is not the front. */
   names?: Partial<Record<View, string>>;
-  /** The floor under it: its middle and how far it reaches. */
-  floor: { x: number; r: number };
+  /** The floor under it: its middle and how far it reaches; none for a hanging move. */
+  floor?: { x: number; r: number };
   /** The point the arrow follows; none for a hold. */
   mover?: (p: Pose) => V3;
   /** Which side of the body the arrow stands on. */
@@ -62,10 +76,11 @@ function plankLine(ankle: V3, deg: number) {
 
 const SIDE: V3 = [0, 0, 1];
 
-/** Where the barbell is. */
+/** Where the weight is: the barbell, or between the dumbbells. */
 const barOf = (p: Pose): V3 => {
   for (const g of p.props) if (g.kind === 'barbell') return g.at;
-  return p.pelvis;
+  const bells = p.props.flatMap((g) => (g.kind === 'dumbbell' ? [g.at] : []));
+  return bells.length ? mix(bells[0], bells[bells.length - 1], 0.5) : p.pelvis;
 };
 
 export const DEMOS: Record<AnatomyId, Demo> = {
@@ -129,7 +144,7 @@ export const DEMOS: Record<AnatomyId, Demo> = {
 
   /** Bodyweight squat: arms forward for balance, hips back and down to level thighs. */
   squat: {
-    pose: (d) => {
+    pose: (d, v) => {
       const pelvis: V3 = [lerp(-2, -18, d), lerp(94, 48, d), 0];
       const t = lean(lerp(4, 34, d));
       return assemble({
@@ -138,11 +153,25 @@ export const DEMOS: Record<AnatomyId, Demo> = {
         headUp: lean(lerp(4, 34, d) * 0.4).up,
         limb: (s) => {
           const sh = shoulderOf(pelvis, t.up, s);
+          const legs = { ...flatFoot(0, 13, s), kneePole: [1, 0.1, s * 0.45] as V3 };
+          // Goblet: one weight held at the chest, elbows down. Dumbbells: arms hang at the sides.
+          if (v.goblet) {
+            const wrist = add(add(sh, mul(t.front, 22)), [0, -16, -s * 12]);
+            return { wrist, tip: add(wrist, [0, 9, -s * 4]), elbowPole: [0.3, -1, s * 0.6], ...legs };
+          }
+          if (v.gear === 'dumbbell') {
+            const wrist = add(sh, [3, -54, s * 3]);
+            return { wrist, tip: handOut(sh, wrist, 16), elbowPole: [-1, 0, 0], ...legs };
+          }
           const wrist = add(sh, [lerp(24, 52, d), lerp(-48, -6, d), -s * 5]);
-          return { wrist, tip: handOut(sh, wrist), elbowPole: [0, -1, s * 0.3], ...flatFoot(0, 13, s), kneePole: [1, 0.1, s * 0.45] };
+          return { wrist, tip: handOut(sh, wrist), elbowPole: [0, -1, s * 0.3], ...legs };
         },
+        props: v.goblet
+          ? [{ kind: 'dumbbell', at: add(add(shoulderOf(pelvis, t.up, 0), mul(t.front, 24)), [0, -10, 0]) }]
+          : [],
       });
     },
+    swaps: ['dumbbell'],
     works: { main: ['quads', 'glutes'], help: ['adductors', 'hamstrings', 'lowerBack'] },
     cameras: { side: SIDE, front: unit([1, 0.32, 0.4]) },
     floor: { x: 0, r: 46 },
@@ -168,6 +197,7 @@ export const DEMOS: Record<AnatomyId, Demo> = {
         },
       });
     },
+    swaps: ['dumbbell'],
     works: { main: ['quads', 'glutes'], help: ['hamstrings', 'adductors', 'calves'] },
     cameras: { side: SIDE, front: unit([1, 0.3, 0.55]) },
     floor: { x: -8, r: 60 },
@@ -196,6 +226,7 @@ export const DEMOS: Record<AnatomyId, Demo> = {
         props: [{ kind: 'barbell', at: bar }],
       });
     },
+    swaps: ['dumbbell'],
     works: { main: ['glutes', 'hamstrings', 'lowerBack'], help: ['quads', 'traps', 'lats', 'forearm'] },
     cameras: { side: SIDE, front: unit([1, 0.32, 0.5]) },
     floor: { x: 0, r: 50 },
@@ -206,14 +237,21 @@ export const DEMOS: Record<AnatomyId, Demo> = {
   /** Lying on a bench, feet flat on the floor: the bar from straight arms over the shoulders down
       to the lower chest, elbows tucked a little. */
   'bench-press': {
-    pose: (d) => {
+    pose: (d, v) => {
       const pelvis: V3 = [-22, 54, 0];
-      const bar = mix([24, 111, 0], [16, 71, 0], d);
+      // Flat, or the back raised about 35 degrees on an incline bench.
+      const tilt = rad(v.incline ? 35 : 3.4);
+      const up: V3 = [Math.cos(tilt), Math.sin(tilt), 0];
+      const front: V3 = [-Math.sin(tilt), Math.cos(tilt), 0];
+      const over = add(shoulderOf(pelvis, up, 0), mul(front, 6));
+      // The press goes straight up over the shoulders.
+      const bar = mix(add(over, [0, 52, 0]), add(over, mul(front, 14)), d);
+      const back = add(pelvis, mul(up, 6));
       return assemble({
         pelvis,
-        up: [1, 0.06, 0],
-        front: [-0.06, 1, 0],
-        headUp: [1, -0.12, 0],
+        up,
+        front,
+        headUp: unit(add(up, [0, -0.12, 0])),
         limb: (s) => ({
           wrist: add(bar, [0, -2, s * 38]),
           tip: add(bar, [1, 5, s * 38]),
@@ -222,13 +260,20 @@ export const DEMOS: Record<AnatomyId, Demo> = {
           kneePole: [0, 1, s * 0.3],
         }),
         props: [
-          { kind: 'bench', from: [-40, 44, 0], to: [62, 44, 0] },
+          ...(v.incline
+            ? [
+                { kind: 'bench' as const, from: [-40, 44, 0] as V3, to: [-14, 44, 0] as V3 },
+                { kind: 'bench' as const, from: add(back, [0, -10, 0]), to: add(add(back, mul(up, 66)), [0, -10, 0]) },
+              ]
+            : [{ kind: 'bench' as const, from: [-40, 44, 0] as V3, to: [62, 44, 0] as V3 }]),
           { kind: 'barbell', at: bar },
         ],
       });
     },
+    swaps: ['dumbbell'],
     works: { main: ['chest', 'triceps', 'frontDelt'], help: [] },
     cameras: { side: SIDE, front: unit([1, 0.5, 0.3]) },
+    camerasFor: (v) => (v.incline ? { front: unit([0.9, 0.35, 0.65]) } : {}),
     names: { front: 'Head end' },
     floor: { x: -15, r: 85 },
     mover: barOf,
@@ -256,6 +301,7 @@ export const DEMOS: Record<AnatomyId, Demo> = {
         props: [{ kind: 'barbell', at: bar }],
       });
     },
+    swaps: ['dumbbell'],
     works: { main: ['frontDelt', 'sideDelt', 'triceps'], help: ['traps', 'abs', 'chest'] },
     cameras: { side: SIDE, front: unit([1, 0.15, 0.45]) },
     floor: { x: 0, r: 46 },
@@ -284,6 +330,7 @@ export const DEMOS: Record<AnatomyId, Demo> = {
         props: [{ kind: 'barbell', at: bar }],
       });
     },
+    swaps: ['dumbbell'],
     works: { main: ['lats', 'rearDelt', 'traps'], help: ['biceps', 'lowerBack', 'hamstrings', 'forearm'] },
     cameras: { side: SIDE, front: unit([-0.6, 0.5, 0.6]) },
     names: { front: 'Back' },
@@ -322,7 +369,6 @@ export const DEMOS: Record<AnatomyId, Demo> = {
     works: { main: ['lats', 'biceps'], help: ['rearDelt', 'traps', 'forearm', 'abs'] },
     cameras: { side: SIDE, front: unit([-1, 0.05, 0.45]) },
     names: { front: 'Back' },
-    floor: { x: -5, r: 40 },
     mover: (p) => p.neck,
     arrow: 'right',
   },
@@ -370,6 +416,7 @@ export const DEMOS: Record<AnatomyId, Demo> = {
         props: [-1, 1].map((s) => ({ kind: 'dumbbell' as const, at: add(wristOf(s), mul(fdir, 6)) })),
       });
     },
+    swaps: ['barbell'],
     works: { main: ['biceps'], help: ['forearm', 'frontDelt'] },
     cameras: { side: SIDE, front: unit([1, 0.15, 0.4]) },
     floor: { x: 0, r: 46 },
@@ -400,12 +447,63 @@ export const DEMOS: Record<AnatomyId, Demo> = {
       });
     },
     works: { main: ['glutes'], help: ['hamstrings', 'lowerBack'] },
-    cameras: { side: SIDE, front: unit([0.35, 0.4, 0.85]) },
+    cameras: { side: SIDE, front: unit([-0.45, 0.12, 0.9]) },
+    names: { front: 'Side, low' },
     floor: { x: -5, r: 75 },
     mover: (p) => p.pelvis,
     arrow: 'left',
   },
 };
 
+/** Other movements that look the same as a demo. */
+const ALIAS: Record<string, AnatomyId> = {
+  'strict-pullup': 'pullup',
+  'assisted-pullup': 'pullup',
+  negatives: 'pullup',
+  'push-press': 'shoulder-press',
+};
+
+/** How an exercise's name changes its demo ("Dumbbell Bench Press", "Incline...", "Goblet Squat"). */
+export function variantOf(name: string): Variant {
+  const n = name.toLowerCase();
+  if (/goblet/.test(n)) return { goblet: true };
+  const gear = /dumbbell/.test(n) ? 'dumbbell' : /barbell|ez.?bar|ez curl/.test(n) ? 'barbell' : undefined;
+  return { ...(gear ? { gear } : {}), ...(/incline/.test(n) ? { incline: true } : {}) };
+}
+
+/** The anatomy demo for an exercise: its movement (`demo`) and its name, or null when there is none. */
+export function anatomyFor(demo: string, name: string): { id: AnatomyId; variant: Variant } | null {
+  const base = ALIAS[demo] ?? demo;
+  if (!hasAnatomy(base)) return null;
+  const v = variantOf(name);
+  // A back squat done with dumbbells or a goblet is the free squat holding them.
+  const id: AnatomyId = base === 'barbell-squat' && (v.gear === 'dumbbell' || v.goblet) ? 'squat' : base;
+  const variant: Variant = {};
+  if (v.gear && DEMOS[id].swaps?.includes(v.gear)) variant.gear = v.gear;
+  if (v.incline && id === 'bench-press') variant.incline = true;
+  if (v.goblet && id === 'squat') variant.goblet = true;
+  return { id, variant };
+}
+
+/** A demo's pose for a depth and variant, with its gear swapped when the variant asks. */
+export function poseOf(id: AnatomyId, d: number, v: Variant = {}): Pose {
+  const pose = DEMOS[id].pose(d, v);
+  if (!v.gear || !DEMOS[id].swaps?.includes(v.gear)) return pose;
+  const kept = pose.props.filter((p) => p.kind !== 'barbell' && p.kind !== 'dumbbell');
+  const grip = (s: number) => {
+    const side = s > 0 ? pose.right : pose.left;
+    return mix(side.wrist, side.tip, 0.4);
+  };
+  const weights: Prop[] =
+    v.gear === 'dumbbell'
+      ? [-1, 1].map((s) => ({ kind: 'dumbbell' as const, at: grip(s) }))
+      : [{ kind: 'barbell', at: mix(grip(-1), grip(1), 0.5) }];
+  return { ...pose, props: [...kept, ...weights] };
+}
+
 /** What a view is called for an exercise ("Side", "Front", "Back", "Above"). */
-export const viewName = (id: AnatomyId, view: View): string => DEMOS[id].names?.[view] ?? (view === 'side' ? 'Side' : 'Front');
+export const viewName = (id: AnatomyId, view: View, v: Variant = {}): string =>
+  (DEMOS[id].camerasFor?.(v)[view] ? null : DEMOS[id].names?.[view]) ?? (view === 'side' ? 'Side' : 'Front');
+
+/** Where a view looks from, for a variant. */
+export const cameraOf = (id: AnatomyId, view: View, v: Variant = {}): V3 => DEMOS[id].camerasFor?.(v)[view] ?? DEMOS[id].cameras[view];
