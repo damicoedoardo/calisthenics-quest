@@ -1,21 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { Check, ChevronDown, Download, Film, Mail, Upload, X } from 'lucide-react';
+import { Check, ChevronDown, Download, Film, Mail, Pencil, Upload } from 'lucide-react';
 import { SoundToggle, useMenuMusic } from './Sound';
 import { CloudSave } from './Cloud';
 import { StartOver } from './StartOver';
 import { DayQuote } from './DayQuote';
 import { useModal } from './useModal';
+import { Hero } from './Hero';
+import { Sprite } from './Sprite';
 import { music } from '@/lib/music';
 import { setStatsShared, statsConfigured, useStatsShared } from '@/lib/analytics-client';
-import type { GameState } from '@/lib/game';
+import { gearOf, type GameState } from '@/lib/game';
+import { heroVariant } from '@/story/flame';
+import { spWorn } from '@/lib/sp';
 import { planExercises } from '@/lib/program';
 import { exportState, offRecord, parseImport } from '@/lib/store';
 import { storyState } from '@/story/engine';
 
 /* The You page: what is about you, not the game. Opened by tapping your hero at the top of the
-   screen: your letter, your record and quest log, then settings, backup and the cloud save. */
+   screen: your hero and name, two counts, the quote, your letter, your workouts, then settings
+   (one row each) and your save (cloud, backup file, start over). */
 
 interface Props {
   state: GameState;
@@ -67,30 +72,58 @@ export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: 
   return (
     <div ref={box} role="dialog" aria-modal="true" aria-label="You" className="safe-top safe-bottom fixed inset-0 z-40 overflow-y-auto bg-ink-950 outline-none land-safe-x">
       <div className="mx-auto max-w-md px-4 pb-8 pt-3 land:max-w-4xl land:pb-4">
-        <div className="mb-4 flex items-center justify-between land:mb-2">
-          <h2 className="font-pixel text-xs text-gold-300">{state.profile.name || 'You'}</h2>
-          <button onClick={onClose} aria-label="Close" className="rounded-lg bg-ink-800 p-2 text-slate-300">
-            <X size={18} />
+        {/* You: your hero, your name (tap to change it, it is what friends see), close. */}
+        <div className="mb-4 flex items-center gap-3 land:mb-2">
+          <Hero gear={gearOf(state)} classId={state.profile.classId} size={48} bounce={false} variant={heroVariant(state)} sp={spWorn(state)} />
+          <form
+            className="flex min-w-0 flex-1 items-center gap-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (renamed) update((s) => ({ ...s, profile: { ...s.profile, name: name.trim() } }));
+              (document.activeElement as HTMLElement | null)?.blur();
+            }}
+          >
+            <label htmlFor="hero-name" className="sr-only">
+              Your name
+            </label>
+            <input
+              id="hero-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              maxLength={24}
+              placeholder="Your name"
+              className="min-w-0 flex-1 rounded-lg bg-transparent px-1 py-1 font-pixel text-xs text-gold-300 placeholder:text-slate-500 focus:bg-ink-900 focus:outline-none"
+            />
+            {renamed ? (
+              <button type="submit" aria-label="Save the name" className="rounded-lg bg-gold-400 p-2 text-ink-950">
+                <Check size={16} />
+              </button>
+            ) : (
+              <Pencil size={13} className="shrink-0 text-slate-500" aria-hidden />
+            )}
+          </form>
+          <button onClick={onClose} aria-label="Close" className="rounded-lg bg-ink-800 p-2.5">
+            <Sprite id="uiIcon" opts={{ name: 'close' }} size={14} label="" />
           </button>
         </div>
 
         <div className="space-y-4 land:grid land:grid-cols-2 land:gap-4 land:space-y-0">
           <div className="space-y-4">
-            <section className="grid grid-cols-3 gap-2">
-              <Stat label="Quests" value={state.sessions.length} />
-              <Stat label="Better" value={state.sessions.filter((s) => s.better).length} />
+            <section className="grid grid-cols-2 gap-2">
+              <Stat label="Workouts" value={state.sessions.length} />
               <Stat label="Chapter" value={story.finished ? 'Done' : story.index + 1} />
             </section>
 
             <DayQuote state={state} update={update} />
 
             {hasLetter && (
-              <section className="rounded-2xl bg-ink-800 p-4">
-                <button onClick={() => setLetterOpen(!letterOpen)} className="flex w-full items-center gap-2 font-pixel text-[10px] text-gold-300">
-                  <Mail size={14} /> <span className="flex-1 text-left">Your letter</span> <ChevronDown size={14} className={`transition ${letterOpen ? 'rotate-180' : ''}`} />
+              <section className="rounded-2xl bg-ink-800">
+                <button onClick={() => setLetterOpen(!letterOpen)} aria-expanded={letterOpen} className="flex w-full items-center gap-2 px-4 py-3.5 text-left">
+                  <Mail size={15} className="text-gold-300" /> <span className="flex-1 font-pixel text-[10px] text-gold-300">Your letter</span>
+                  <ChevronDown size={15} className={`text-slate-500 transition ${letterOpen ? 'rotate-180' : ''}`} />
                 </button>
                 {letterOpen && (
-                  <div className="mt-3 space-y-2 rounded-xl bg-[#f5ecd7] p-4 text-sm text-[#3b2a1a]">
+                  <div className="mx-4 mb-4 space-y-2 rounded-xl bg-[#f5ecd7] p-4 text-sm text-[#3b2a1a]">
                     {letter.why && <p>Dear future me, I&apos;m starting again because {letter.why}</p>}
                     {letter.want && <p>One day I want to be able to {letter.want}</p>}
                     {letter.forWho && <p>I&apos;m doing this for {letter.forWho}</p>}
@@ -101,125 +134,116 @@ export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: 
             )}
 
             <section className="rounded-2xl bg-ink-800 p-4">
-              <h2 className="font-pixel text-[10px] text-gold-300">Quest log</h2>
+              <h2 className="font-pixel text-[10px] text-gold-300">Your workouts</h2>
               {state.sessions.length ? (
                 <ul className="mt-3 divide-y divide-ink-700 text-sm">
                   {[...state.sessions]
                     .reverse()
                     .slice(0, allLog ? 12 : 5)
                     .map((s) => (
-                      <li key={s.id} className="py-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-slate-300">
-                            {fmtDate(s.date)} · {s.kind === 'full' ? `Day ${s.day}` : 'Minimum'}
-                          </span>
-                          <span className="font-mono font-semibold text-gold-300">+{s.xp}</span>
+                      <li key={s.id} className="py-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-slate-200">{s.kind === 'full' ? `Day ${s.day}` : 'Minimum'}</span>
+                          <span className="text-xs text-slate-500">{fmtDate(s.date)}</span>
                         </div>
-                        {s.better && <p className="text-xs text-emerald-400">Better than last time</p>}
-                        {!!s.heavier?.length && <p className="text-xs text-sky-300">Next time a little heavier: {s.heavier.map((id) => s.entries.find((e) => e.exerciseId === id)?.name ?? exerciseName(id)).join(', ')}</p>}
+                        {s.better && <p className="mt-0.5 text-xs text-emerald-400">Better than last time</p>}
+                        {!!s.heavier?.length && <p className="mt-0.5 text-xs text-sky-300">Next time a little heavier: {s.heavier.map((id) => s.entries.find((e) => e.exerciseId === id)?.name ?? exerciseName(id)).join(', ')}</p>}
                       </li>
                     ))}
                 </ul>
               ) : (
-                <p className="mt-2 text-xs text-slate-500">Your quests land here.</p>
+                <p className="mt-2 text-sm text-slate-500">Your workouts land here.</p>
               )}
               {!allLog && state.sessions.length > 5 && (
-                <button onClick={() => setAllLog(true)} className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg bg-ink-900 py-2 text-xs text-slate-400">
+                <button onClick={() => setAllLog(true)} className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg bg-ink-900 py-2.5 text-sm text-slate-400">
                   More <ChevronDown size={14} />
                 </button>
               )}
             </section>
           </div>
 
-          <section className="self-start rounded-2xl bg-ink-800 p-4">
-            <div className="flex items-center justify-between">
-              <h2 className="font-pixel text-[10px] text-gold-300">Settings</h2>
-              <span className="flex items-center gap-1 text-xs text-slate-400">
-                Music <SoundToggle />
-              </span>
-            </div>
-            <label className="mt-1 flex min-h-[44px] items-center justify-between text-sm text-slate-300">
-              Music in the menus
-              <input type="checkbox" checked={menuMusic} onChange={(e) => music.setMenuMusic(e.target.checked)} className="h-5 w-5 accent-gold-400" />
-            </label>
-            {/* The hero's name, what friends see; the look changes on the Hero tab. */}
-            <form
-              className="flex min-h-[44px] items-center gap-2 text-sm text-slate-300"
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (renamed) update((s) => ({ ...s, profile: { ...s.profile, name: name.trim() } }));
-              }}
-            >
-              <label htmlFor="hero-name" className="shrink-0">
-                Your name
-              </label>
-              <input
-                id="hero-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                maxLength={24}
-                placeholder="Your name"
-                className="min-w-0 flex-1 rounded-lg bg-ink-900 px-3 py-2 text-right text-slate-100 placeholder:text-slate-500"
-              />
-              {renamed && (
-                <button type="submit" aria-label="Save the name" className="rounded-lg bg-gold-400 p-2 text-ink-950">
-                  <Check size={16} />
-                </button>
+          <div className="space-y-4 self-start">
+            {/* Settings: one row each, a switch on the right. */}
+            <section className="rounded-2xl bg-ink-800 px-4 py-2">
+              <h2 className="pb-1 pt-2 font-pixel text-[10px] text-gold-300">Settings</h2>
+              <Row label="Sound">
+                <SoundToggle className="!text-slate-300" />
+              </Row>
+              <Row label="Music in the menus">
+                <Switch id="menu-music" on={menuMusic} set={(v) => music.setMenuMusic(v)} />
+              </Row>
+              {statsConfigured && (
+                <Row label="Share play stats" note="How far you get, never your words.">
+                  <Switch id="share-stats" on={statsShared} set={setStatsShared} />
+                </Row>
               )}
-            </form>
-            {statsConfigured && (
-              <label className="flex min-h-[44px] items-center justify-between text-sm text-slate-300">
-                <span>
-                  Share play stats
-                  <span className="block text-xs text-slate-500">How far you get, never your words. Helps make the game fair.</span>
-                </span>
-                <input type="checkbox" checked={statsShared} onChange={(e) => setStatsShared(e.target.checked)} className="h-5 w-5 accent-gold-400" />
-              </label>
-            )}
-            {devSwitch && (
-              <label className="flex min-h-[44px] items-center justify-between text-sm text-sky-300">
-                <span>
-                  Developer mode
-                  <span className="block text-xs text-slate-500">{devSwitch.on ? 'On: a separate developer save. Off takes you back to your hero as you left it.' : 'Only on your account. On, it plays a copy of your hero; your hero is never touched.'}</span>
-                </span>
-                <input type="checkbox" checked={devSwitch.on} onChange={(e) => devSwitch.set(e.target.checked)} className="h-5 w-5 accent-sky-400" />
-              </label>
-            )}
-            <button
-              onClick={() => {
-                onClose();
-                onReplayOpening();
-              }}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold"
-            >
-              <Film size={16} /> Replay the opening
-            </button>
-            <p className="mt-4 text-xs text-slate-400">Your progress lives on this phone. Back it up now and then.</p>
-            <div className="mt-2 grid grid-cols-2 gap-2">
-              <button onClick={download} className="flex items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold">
-                <Download size={16} /> Backup
+              {devSwitch && (
+                <Row label="Developer mode" note={devSwitch.on ? 'On: a separate developer save.' : 'Plays a copy of your hero.'}>
+                  <Switch id="dev-mode" on={devSwitch.on} set={devSwitch.set} />
+                </Row>
+              )}
+              <button
+                onClick={() => {
+                  onClose();
+                  onReplayOpening();
+                }}
+                className="flex min-h-[48px] w-full items-center justify-between border-t border-ink-700 text-sm text-slate-200"
+              >
+                Replay the opening <Film size={16} className="text-slate-500" />
               </button>
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-ink-600 py-3 text-sm font-semibold">
-                <Upload size={16} /> Restore
-                <input
-                  type="file"
-                  accept=".json,application/json"
-                  className="hidden"
-                  onChange={(e) => {
-                    restore(e.target.files?.[0]);
-                    // Lets the same file be picked again.
-                    e.target.value = '';
-                  }}
-                />
-              </label>
-            </div>
-            {backupMsg && <p className="mt-2 text-center text-xs text-gold-300">{backupMsg}</p>}
-            <CloudSave sandbox={offRecord()} />
-            <StartOver />
-          </section>
+            </section>
+
+            {/* Your save: the cloud, a file backup, and starting over. */}
+            <section className="rounded-2xl bg-ink-800 p-4">
+              <h2 className="font-pixel text-[10px] text-gold-300">Your save</h2>
+              <CloudSave sandbox={offRecord()} />
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button onClick={download} className="flex items-center justify-center gap-2 rounded-xl bg-ink-700 py-2.5 text-sm">
+                  <Download size={15} /> Backup file
+                </button>
+                <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl bg-ink-700 py-2.5 text-sm">
+                  <Upload size={15} /> Restore
+                  <input
+                    type="file"
+                    accept=".json,application/json"
+                    className="hidden"
+                    onChange={(e) => {
+                      restore(e.target.files?.[0]);
+                      // Lets the same file be picked again.
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              </div>
+              {backupMsg && <p className="mt-2 text-center text-xs text-gold-300">{backupMsg}</p>}
+              <StartOver />
+            </section>
+          </div>
         </div>
       </div>
     </div>
+  );
+}
+
+/** One settings row: what it is (and a short note), its control on the right. */
+function Row({ label, note, children }: { label: string; note?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex min-h-[48px] items-center justify-between gap-3 border-t border-ink-700 py-1.5 first-of-type:border-t-0">
+      <div className="min-w-0">
+        <p className="text-sm text-slate-200">{label}</p>
+        {note && <p className="text-xs text-slate-500">{note}</p>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+/** An on/off switch, square like the game's pixels. */
+function Switch({ id, on, set }: { id: string; on: boolean; set: (on: boolean) => void }) {
+  return (
+    <button id={id} role="switch" aria-checked={on} onClick={() => set(!on)} className={`relative h-6 w-11 shrink-0 rounded-md transition ${on ? 'bg-gold-400' : 'bg-ink-600'}`}>
+      <span className={`absolute top-1 h-4 w-4 rounded-sm bg-ink-950 transition-all motion-reduce:transition-none ${on ? 'left-6' : 'left-1'}`} />
+    </button>
   );
 }
 
