@@ -267,7 +267,7 @@ export default function NightLab() {
 
       <Panel title="DESIGN PASS" note="Pixel, minimal, fewer words: one screen at a time.">
         <Row icon={<Swords size={16} />} label="The Friends tab" note="Its own tab: who is online now (tap to invite), your party, the Ember Road, every friend. Sample friends in the sandbox" onClick={() => open(geared(), 'tab=friends')} />
-        <Row icon={<Dumbbell size={16} />} label="Today, with a week planned" note="The chapter's boss, your flame, today's quest and Start" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=today')} />
+        <Row icon={<Dumbbell size={16} />} label="Today, with a week planned" note="Your flame, today's quest and Start" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=today')} />
         <Row icon={<Dumbbell size={16} />} label="Today, after the workout" note="Today's workout done: you did it, your counts, and what's next (Train shows it)" onClick={async () => open(await doneToday(veteran(30, 3)), 'tab=today')} />
       </Panel>
 
@@ -323,7 +323,7 @@ export default function NightLab() {
         <Row icon={<Swords size={16} />} label="Hero > Class" note="Your class and Change class" onClick={() => open(veteran(30, 2), 'tab=hero&hero=class')} />
         <Row icon={<BookOpen size={16} />} label="The You page" note="Tap your hero at the top: letter, quest log, settings (your name), backup, cloud save" onClick={() => open(veteran(30, 2), 'you')} />
         <Row icon={<Play size={16} />} label="Start over from scratch" note="You page > Settings, at the bottom: asked once, then a code to type; here it wipes only the sandbox save and the opening plays" onClick={() => open(veteran(30, 2), 'you')} />
-        <Row icon={<Gem size={16} />} label="Today with keepsakes" note="Three keepsakes won, at the end of Today" onClick={() => open(veteran(40, 3), 'tab=today')} />
+        <Row icon={<Gem size={16} />} label="Play with keepsakes" note="Three keepsakes won, at the end of the Play tab" onClick={() => open(veteran(40, 3), 'tab=play')} />
       </Panel>
 
       <Panel title="INSTALL THE APP" note="After the first workout (and the letter), a phone in a browser tab has to put FORMA on its home screen before playing on. Each guide is shown here whatever phone you hold.">
@@ -435,7 +435,7 @@ export default function NightLab() {
         <Row icon={<Sparkles size={16} />} label="Stat points" note="Hero tab: 30 workouts of points to put into Health, Armor, Damage, Haste, Speed, Crit" onClick={() => open(veteran(30, 2), 'tab=hero&hero=stats')} />
         <Row icon={<Dumbbell size={16} />} label="Exercise demos" note="Your hero doing each exercise on the set logger; tap it to enlarge" onClick={() => open(veteran(14, 1), 'workout')} />
         <Row icon={<BookOpen size={16} />} label="Book of Days" note="Two weeks of pages, day icons and margin notes" onClick={() => open(veteran(30, 2), 'book')} />
-        <Row icon={<Gem size={16} />} label="Keepsakes" note="Today, at the end: three won, the rest still in the fog" onClick={() => open(veteran(40, 3), 'tab=today')} />
+        <Row icon={<Gem size={16} />} label="Keepsakes" note="Play tab, at the end: three won, the rest still in the fog" onClick={() => open(veteran(40, 3), 'tab=play')} />
         <Row icon={<Music size={16} />} label="Music Lab" note="Every zone's theme, the Warden's, and the stings" href="/lab/music" />
       </Panel>
 

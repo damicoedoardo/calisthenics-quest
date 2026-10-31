@@ -42,7 +42,7 @@ characters/*.ts       one file per character: hero, wanderer, mira, ember, book,
                       stage 0-2), monolith.ts (plateauBoss, stage 0-2), hollowBoss.ts (hollowBoss
                       and hollowBossFade), summitSpirit.ts (summitBoss)
 characters/pixel.ts   text-row art: paintRows (one character per pixel) and shifted
-characters/icons.ts   app icons as text rows: the six keepsakes (end of the Today tab, sprite `keepsake`) and
+characters/icons.ts   app icons as text rows: the six keepsakes (end of the Play tab, sprite `keepsake`) and
                       what a day held in the Book of Days (sprite `dayIcon`), the dungeon's
                       relics (`relicIcon`), the ability and Dodge buttons (`abilityIcon`), the four elements' marks (`elementIcon`, `ELEMENT_ICONS`), the SP's moves and finals (`spIcon`, `SP_ICONS`: a drawing of its own in `SP_ROWS`, else its kind of move in `SHAPED`, in the colors of its SP's element, `ELEMENT`), the run's
                       level-up skills (`skillIcon`), the floor track's Warden and boss (`markIcon`), and the screens' small marks with the tab bar's five (`uiIcon`, `UI_ICONS`: Today, Train, Play, Friends, Hero) and the loot icons (`xp`, `point`, `coin`, `mat`, with `flame` for embers)

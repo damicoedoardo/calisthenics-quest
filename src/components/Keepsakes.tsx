@@ -5,8 +5,8 @@ import { Gem, Lock } from 'lucide-react';
 import { Sprite } from './Sprite';
 import { ZONES } from '@/lib/fog';
 
-/** What you won in the Fog's story: one keepsake per boss. At the end of the Today tab, a reminder
-    of the road so far. `land`: Today held sideways, a small card at the end of its top strip. */
+/** What you won in the Fog's story: one keepsake per boss. At the end of the Play tab, a reminder
+    of the road so far. `land`: a small card. */
 export function Keepsakes({ cleared, land }: { cleared: number; land?: boolean }) {
   if (land)
     return (

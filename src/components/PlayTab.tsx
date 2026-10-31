@@ -11,6 +11,7 @@ import { chapterStart, waitingCount } from '@/story/engine';
 import { ItemTile } from './ItemCard';
 import { Sprite } from './Sprite';
 import { WorldPicker } from './WorldPicker';
+import { Keepsakes } from './Keepsakes';
 import { useLand } from './useLand';
 
 interface Props {
@@ -73,6 +74,8 @@ export function PlayTab({ state, onPlay, onGear, onStory }: Props) {
       <StoryRow state={state} onStory={onStory} />
       <WorldPicker state={state} onPlay={onPlay} />
       <Ready state={state} onGear={onGear} />
+      {/* One keepsake per Fog boss beaten: the story so far, as things you won. */}
+      <Keepsakes cleared={state.fog?.cleared ?? 0} />
     </div>
   );
 }
