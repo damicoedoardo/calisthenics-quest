@@ -3,7 +3,7 @@ type: reference
 title: Story (scenes, chapters, daily lines)
 description: The six-month story as data in src/story — scene format, when scenes play, the daily flame lines and Book of Days, rules for the words, and where to edit what.
 tags: [game, story, content]
-timestamp: 2026-10-29
+timestamp: 2026-10-31
 ---
 # Story
 
@@ -156,7 +156,7 @@ leaves fires and notes. The data is `road.ts`; the rules are `src/lib/road.ts`.
 | Change a portrait's size or name color | its entry in `cast.ts` |
 | Add or repaint a place | `places.ts` (sky colors, kind of land, props, weather) |
 | Change chapter length | `workouts` in the chapter file (they add up to the story's length: `STORY_MONTHS` in `src/balance/training.ts` is the goal, five to six months; `pnpm balance` checks it) |
-| Change a Fog boss's words, keepsake or toughness | the chapter's `fog` (toughness: `hp` and `dmg`, set with `pnpm fog:tune` and checked by `pnpm fog:sheet`; last retuned 2026-10-28 for the human bot in kept gear, see [balance.md](balance.md)) |
+| Change a Fog boss's words, keepsake or toughness | the chapter's `fog` (toughness: `hp` and `dmg`, set with `pnpm fog:tune` and checked by `pnpm fog:sheet`; last retuned 2026-10-31, after the bot learned to lose close shots and zones began opening when the boss before falls, see [balance.md](balance.md)) |
 | Change how a Fog boss fights | its entry in `BOSSES` (`src/game/dungeon/content.ts`) and its branch in `steerBoss` (`engine.ts`) |
 | Change when the flame grows, or what it gives | `flame.ts` (its art: `src/sprites/characters/ember.ts`) |
 | Add daily lines or quotes | `daily/flame-lines.ts`, `daily/quotes.ts` (keep quote authors real) |
