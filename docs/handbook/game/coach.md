@@ -3,7 +3,7 @@ type: reference
 title: The coach (workout planner)
 description: The coach in src/lib/coach — your flame as an LLM coach you chat with (the week it plans, the one place every workout lives; the chat loop, its tools run on the phone, the fuzzy exercise search, the server relay), the three-layer memory (profile, training log, notes), the flame speaking first (nudges), the built-in coach that builds workouts for gym, calisthenics, running or a mix, easier and swap choices, the guardrails every workout passes, and the screens that play it.
 tags: [game, training, coach, planner, memory, llm]
-timestamp: 2026-10-29
+timestamp: 2026-10-31
 ---
 
 # The coach
@@ -36,6 +36,13 @@ coach all read it; every change is written to a day (`setDay`, `setPlan` for the
   the week fewer fit, one every other day, `weekDates`), each day's
   workout built knowing the days before it (modes and A/B days take turns). `useCoachPlan` plans a
   new one once the coach is set up and the week is over (`weekOver`: its Sunday is past, so on Monday). The coach replaces it with `set_week` or one day with `set_workout`.
+- **What today is** (`todayIs(state, now)`): the one answer every screen reads, so Today and
+  Train never disagree. `workout`: the next workout's day has come (a missed one is caught up);
+  `done`: you trained today, and the next waits for another day (one workout a day); `rest`:
+  nothing to start today (`next` is the workout ahead); `none`: no week yet. Today's quest, rest
+  card and lock, the Train tab's opening day and Start, `start` in `page.tsx` (`startsToday`) and
+  the flame's rest lines (`isRestToday`; before any week, the day or two after a workout) all come
+  from it.
 - **Done**: `finishSession` marks the next day done (`markDone`) and moves levels.
 - **Old saves** had one `coach.plan`; `migrate` turns it into a week of one day (`fromLegacy`).
 
@@ -181,8 +188,8 @@ an LLM gets back to do better.
 - **Train tab** (`CoachScreen` in `CoachChat.tsx`): the flame with what it brings up or its last
   words, "Let's start", "Talk" or "Answer", and "What I know" (`CoachKnows`: profile, levels, notes,
   each note can be forgotten; to change the profile, tell the flame). Under it the week (`WeekBoard`):
-  a chip for each day, Monday to Sunday: workouts, rest days, and "–" before the plan (✓ done or kept, "next" lit) and the chosen day's workout as cards (it opens on today, or on the next workout once today's is done): the pixel demo, dose and rest, Easier
-  and Swap (days still to do), and Start on the next day once its day has come (`startsToday`: on its date or after it, to catch up a missed one, never ahead; `start` in `page.tsx` checks it too, the developer menu's Workout jump skips it); a rest day says why rest counts and, on the
+  a chip for each day, Monday to Sunday: workouts, rest days, and "–" before the plan (✓ done or kept, "next" lit) and the chosen day's workout as cards (from `todayIs`: it opens on the workout to do today, a missed one too, on the next workout once today's is done, else on today): the pixel demo, dose and rest, Easier
+  and Swap (days still to do), and Start on the next day once its day has come (`startsToday`: on its date or after it, to catch up a missed one, never ahead, and not on a day you already trained; `start` in `page.tsx` checks it too, the developer menu's Workout jump skips it); a rest day says why rest counts and, on the
   day, offers a minute by the fire. Before the first week: only a line that says to talk to the flame. Tap a card (here or on Today) for how to
   do it (`ExerciseSheet`: both demos, facts, steps, tips, mistakes). Sideways the two sit side by side.
 - **The chat** (`CoachChat`): the camp fire at the top with the flame, the talk below in the

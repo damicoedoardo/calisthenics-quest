@@ -280,7 +280,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   // the developer menu's jump straight into a workout.
   const start = (checkin: Checkin, force = false) => {
     const going = !!state.draft && Object.values(state.draft.sets).some((l) => l.length > 0);
-    if (!going && !force && !startsToday(state.coach, new Date())) return;
+    if (!going && !force && !startsToday(state, new Date())) return;
     update((s) => {
       const hasSets = !!s.draft && Object.values(s.draft.sets).some((l) => l.length > 0);
       if (hasSets) return s;

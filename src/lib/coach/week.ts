@@ -1,6 +1,6 @@
 import { WEEK_SPREAD } from '@/balance';
 import type { LibraryExercise } from '@/exercises/library';
-import { dayKey, daysApart } from '../days';
+import { dayKey, daysApart, isRestDay, trainedToday } from '../days';
 import type { GameState, Session } from '../game';
 import { buildWorkout } from './generate';
 import type { CoachDay, CoachPlan, CoachState, CoachWeek, Mode } from './types';
@@ -69,20 +69,47 @@ export function weekSlots(week: CoachWeek): { date: string; day?: CoachDay; befo
 /** A rest day kept: you sat by the fire that day. */
 export const restKept = (state: Pick<GameState, 'days'>, date: string) => !!state.days?.find((d) => d.day === date)?.fire;
 
-/** The next workout can start today: its day has come (a missed day can still be caught up),
-    never ahead of it. With no week yet the built-in plan starts any day. */
-export function startsToday(coach: CoachState | undefined, now: Date): boolean {
-  if (!coach?.week) return true;
-  const next = nextDay(coach.week);
-  return !!next && next.date <= dayKey(now);
+/** What today is, the one answer Today, Train, the start button and the flame's lines all read, so
+    they never disagree:
+    - `workout`: the next workout can start today (its day has come; a missed one is caught up).
+    - `done`: you trained today. One workout a day: the next waits for its own day.
+    - `rest`: nothing to start today. `next` is the workout still ahead, if there is one.
+    - `none`: no week planned yet. */
+export type TodayKind = 'workout' | 'done' | 'rest' | 'none';
+export interface TodayIs {
+  kind: TodayKind;
+  /** The next workout: today's to start, or the one ahead. */
+  next?: CoachDay;
 }
 
-/** Today is one of the week's rest days. */
+export function todayIs(state: Pick<GameState, 'coach' | 'sessions'>, now: Date): TodayIs {
+  const week = state.coach?.week;
+  const next = nextDay(week);
+  if (trainedToday(state, now)) return { kind: 'done', next };
+  if (!week) return { kind: 'none' };
+  if (next && next.date <= dayKey(now)) return { kind: 'workout', next };
+  return { kind: 'rest', next };
+}
+
+/** The next workout can start today: `todayIs` says so. With no week yet the built-in plan starts
+    any day. */
+export function startsToday(state: Pick<GameState, 'coach' | 'sessions'>, now: Date): boolean {
+  const t = todayIs(state, now).kind;
+  return t === 'workout' || t === 'none';
+}
+
+/** Today is one of the week's rest days: a day with no workout in the week (not one before it). */
 export function restToday(coach: CoachState | undefined, now: Date): boolean {
   const week = coach?.week;
   if (!week || weekOver(week, now)) return false;
   const today = dayKey(now);
   return weekSlots(week).some((s) => s.date === today && !s.day && !s.before);
+}
+
+/** A rest day, for the flame's lines and the story: with a week, `todayIs` says rest; before any
+    week, the day or two after a workout. */
+export function isRestToday(state: GameState, now: Date): boolean {
+  return state.coach?.week ? todayIs(state, now).kind === 'rest' : isRestDay(state, now);
 }
 
 /** A week of built-in workouts from today. Each day knows the days planned before it, so modes and

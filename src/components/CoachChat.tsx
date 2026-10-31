@@ -8,7 +8,7 @@ import { changeItem } from '@/lib/coach/plan';
 import { minutesOf } from '@/lib/coach/validate';
 import { shownChat } from '@/lib/coach/chat';
 import type { Mode, PlanItem } from '@/lib/coach/types';
-import { dayLabel, nextDay, restKept, weekdayOf, weekSlots } from '@/lib/coach/week';
+import { dayLabel, nextDay, restKept, todayIs, weekdayOf, weekSlots } from '@/lib/coach/week';
 import { dayKey } from '@/lib/days';
 import { fireLine, updateTodayPage } from '@/story/daily';
 import { SitByFire } from './SitByFire';
@@ -106,10 +106,14 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
   const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
   if (!week) return <p className="rounded-2xl bg-ink-800 p-3 text-sm text-slate-400">Getting your week ready…</p>;
   const slots = weekSlots(week);
-  // Opens on today; once today's workout is done, on the next one, so you see what's coming.
+  // What today is comes from `todayIs`, the same Today reads. It opens on the workout to do today
+  // (a missed one too); once today's is done, on the next one, so you see what's coming; on a rest
+  // day, on today.
+  const todays = todayIs(state, now);
   const todaySlot = slots.find((s) => s.date === today);
-  const ahead = todaySlot?.day?.done && next ? slots.find((s) => s.day === next) : undefined;
+  const ahead = todays.kind !== 'rest' && next ? slots.find((s) => s.day === next) : undefined;
   const slot = slots.find((s) => s.date === picked) ?? ahead ?? todaySlot ?? slots[0];
+  const canStart = inProgress || todays.kind === 'workout';
   const day = slot.day;
   return (
     <section className="rounded-2xl bg-ink-800 p-3">
@@ -144,9 +148,12 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
             <span className="shrink-0 text-xs text-slate-400">{day.done ? 'done' : `about ${minutesOf(day.plan.items)} min`}</span>
           </div>
           <WorkoutCards state={state} update={update} items={day.plan.items} date={day.done ? undefined : day.date} />
-          {day === next && !inProgress && day.date > today ? (
+          {day === next && !canStart ? (
             <p className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-ink-900 py-3 text-xs text-slate-400">
-              <Sprite id="uiIcon" opts={{ name: 'lock' }} size={12} label="" /> Opens {dayLabel(day.date, now) === 'Tomorrow' ? 'tomorrow' : `on ${weekdayOf(day.date)}`}. Today, rest.
+              <Sprite id="uiIcon" opts={{ name: 'lock' }} size={12} label="" />{' '}
+              {day.date > today
+                ? `Opens ${dayLabel(day.date, now) === 'Tomorrow' ? 'tomorrow' : `on ${weekdayOf(day.date)}`}. ${todays.kind === 'done' ? 'Today is done.' : 'Today, rest.'}`
+                : 'Opens tomorrow. Today is done.'}
             </p>
           ) : day === next ? (
             <button

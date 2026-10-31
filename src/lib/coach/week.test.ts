@@ -4,7 +4,7 @@ import { seeded } from '@/lib/random';
 import { finishSession, initialState, migrate, todaysQuest, type GameState } from '@/lib/game';
 import { applySetup, type SetupAnswers } from './setup';
 import { runTool, resolveDay, type ToolContext } from './tools';
-import { buildWeek, currentPlan, dayLabel, fromLegacy, markDone, nextDay, restKept, restToday, setDay, startsToday, weekDates, weekOver, weekSlots, weekText } from './week';
+import { buildWeek, currentPlan, dayLabel, fromLegacy, markDone, nextDay, isRestToday, restKept, restToday, setDay, startsToday, todayIs, weekDates, weekOver, weekSlots, weekText } from './week';
 import { coachNudge, freshNudge, hearNudge } from './nudge';
 import { coachBrief } from './brief';
 import { changeItem } from './plan';
@@ -88,12 +88,42 @@ describe('the week', () => {
     const s = withWeek();
     // Planned Wed, Fri, Sun; Wednesday done, so Friday is next.
     const c = markDone(s.coach!, NOW.toISOString());
-    expect(startsToday(s.coach, NOW)).toBe(true);
-    expect(startsToday(c, NOW)).toBe(false);
-    expect(startsToday(c, new Date(2026, 9, 29, 12))).toBe(false);
-    expect(startsToday(c, new Date(2026, 9, 30, 12))).toBe(true);
-    expect(startsToday(c, new Date(2026, 9, 31, 12))).toBe(true);
-    expect(startsToday(undefined, NOW)).toBe(true);
+    const at = (coach: typeof c) => ({ coach, sessions: [] });
+    expect(startsToday(at(s.coach!), NOW)).toBe(true);
+    expect(startsToday(at(c), NOW)).toBe(false);
+    expect(startsToday(at(c), new Date(2026, 9, 29, 12))).toBe(false);
+    expect(startsToday(at(c), new Date(2026, 9, 30, 12))).toBe(true);
+    expect(startsToday(at(c), new Date(2026, 9, 31, 12))).toBe(true);
+    expect(startsToday({ coach: undefined, sessions: [] }, NOW)).toBe(true);
+  });
+
+  it('Today and Train read one answer for what today is', () => {
+    const s = withWeek();
+    const thu = new Date(2026, 9, 29, 12);
+    const fri = new Date(2026, 9, 30, 12);
+    // Wednesday: a workout day.
+    expect(todayIs(s, NOW)).toMatchObject({ kind: 'workout', next: { date: '2026-10-28' } });
+    // Done on Wednesday: done for the day, Friday next, and nothing more starts today.
+    const done = trainAll(s, NOW);
+    expect(todayIs(done, NOW)).toMatchObject({ kind: 'done', next: { date: '2026-10-30' } });
+    expect(startsToday(done, NOW)).toBe(false);
+    // Thursday: a rest day, Friday ahead; never a workout to start.
+    expect(todayIs(done, thu)).toMatchObject({ kind: 'rest', next: { date: '2026-10-30' } });
+    expect(isRestToday(done, thu)).toBe(true);
+    // The bug: a day or two after a workout used to count as rest even with a workout planned.
+    // Friday has a workout, so it is a workout day, not a rest day.
+    expect(todayIs(done, fri).kind).toBe('workout');
+    expect(isRestToday(done, fri)).toBe(false);
+    // A missed day is caught up: Wednesday skipped, Thursday it is still the workout to do.
+    expect(todayIs(s, thu)).toMatchObject({ kind: 'workout', next: { date: '2026-10-28' } });
+    // Caught up on Friday, Friday's own workout is next and dated today, but today is done:
+    // Train locks it just like Today (one workout a day), and Saturday it opens.
+    const late = trainAll(s, fri);
+    expect(todayIs(late, fri)).toMatchObject({ kind: 'done', next: { date: '2026-10-30' } });
+    expect(startsToday(late, fri)).toBe(false);
+    expect(todayIs(late, new Date(2026, 9, 31, 12)).kind).toBe('workout');
+    // No week yet: nothing planned.
+    expect(todayIs({ coach: undefined, sessions: [] }, NOW).kind).toBe('none');
   });
 
   it('every other day of the week is a rest day, kept by sitting by the fire', () => {

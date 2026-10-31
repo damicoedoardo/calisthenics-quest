@@ -21,12 +21,12 @@ export function daysApart(a: Date, b: Date): number {
 }
 
 /** Calendar days since the last workout: 0 means today, null means none yet. */
-export function daysSinceTraining(state: GameState, now: Date): number | null {
+export function daysSinceTraining(state: Pick<GameState, 'sessions'>, now: Date): number | null {
   const last = state.sessions[state.sessions.length - 1];
   return last ? daysApart(new Date(last.date), now) : null;
 }
 
-export function trainedToday(state: GameState, now: Date): boolean {
+export function trainedToday(state: Pick<GameState, 'sessions'>, now: Date): boolean {
   return daysSinceTraining(state, now) === 0;
 }
 
