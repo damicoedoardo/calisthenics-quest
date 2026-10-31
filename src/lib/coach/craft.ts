@@ -2,9 +2,10 @@ import { ACCESSORY_DOSE, ACCESSORY_MOVES, BODY_REPS, COOLDOWN, DOSE, FEW_REPS_RA
 import type { SlotRole } from '../program';
 import { LADDER } from './options';
 
-/* The craft of a workout: how a good session is built, as a trainer would build it. Two parts:
+/* The craft of a workout: how a good session is built, as a trainer would build it. These are
+   defaults, not laws (laws.ts): the player and the coach may change any of them. Two parts:
    - The blocks, in order (`BLOCKS`): warm-up, main, accessory, core, cool-down. The built-in coach
-     builds every workout this way and `validate` puts any workout back in this order.
+     builds every workout this way; `validate` notes a workout that doesn't, never forces it.
    - The playbook (`PLAYBOOK`): the trainer's know-how as short topics (the session, the warm-up,
      the main lifts, accessories, core, the cool-down, sets and reps, progression, the week, body
      weight ladders, coming back after a break, time, running). The LLM coach reads it through the
@@ -41,7 +42,7 @@ export const PLAYBOOK: Craft[] = [
     words: ['session', 'structure', 'build', 'order', 'workout', 'plan', 'block', 'template'],
     text: () =>
       [
-        'Every strength workout has five blocks, in this order (roles in set_workout):',
+        'By default a strength workout has five blocks, in this order (roles in set_workout). Only the warm-up is a law; the player may want the rest otherwise:',
         `1. warmup: about ${min(WARMUP_SEC.pulse + 3 * WARMUP_SEC.move)} min. Easy cardio to get warm, then joint circles and dynamic moves for what the day trains.`,
         '2. main: the big compound moves (squat, hinge, push, pull) or the hard skill, freshest first: the heaviest or most technical move opens the work.',
         '3. accessory: lighter moves that round the day out (arms, shoulders, a leg isolation, a lunge), higher reps.',
@@ -107,6 +108,7 @@ export const PLAYBOOK: Craft[] = [
       [
         `- ${COOLDOWN.stretches[30]}-${COOLDOWN.stretches[60]} static stretches for the muscles trained most, about ${COOLDOWN.sec} s each, slow breathing. Role stretch, low = seconds.`,
         '- Gentle: a pull, never pain. Find them with find_exercises (family stretch: "quad stretch", "chest stretch", "hamstring").',
+        '- Optional by the evidence: it feels good and helps the habit, but lifting through a full range builds mobility too. Skip it if the player prefers.',
       ].join('\n'),
   },
   {

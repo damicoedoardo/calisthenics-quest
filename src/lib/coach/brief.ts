@@ -41,7 +41,14 @@ export function coachBrief(state: GameState, now: Date, checkin: Checkin = 'norm
     if (p.avoid.length) lines.push(`Spare: ${p.avoid.map((a) => a.text ?? a.area).join(', ')}.`);
   } else lines.push('No setup yet.');
 
-  const notes = liveNotes(state.coach, now);
+  const live = liveNotes(state.coach, now);
+  const rules = live.filter((n) => n.type === 'rule'),
+    notes = live.filter((n) => n.type !== 'rule');
+  if (rules.length) {
+    // The player's own rules: kept in every plan, unless one breaks a law (then say so).
+    lines.push('', 'Their rules (keep every one in every plan; a law beats a rule):');
+    for (const n of rules) lines.push(`- [${n.id}] ${n.text}`);
+  }
   if (notes.length) {
     lines.push('', 'Notes:');
     for (const n of notes) lines.push(`- [${n.id}] ${n.type}: ${n.text} (${day(n.at)}, ${n.by})`);

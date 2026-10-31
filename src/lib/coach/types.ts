@@ -44,7 +44,9 @@ export interface CoachProfile {
   setupAt: string;
 }
 
-export type NoteType = 'like' | 'dislike' | 'pain' | 'life' | 'goal' | 'other';
+/** `rule`: something the player wants every time ("deadlift on Mondays", "no stretching"); the
+    coach keeps it unless it breaks a law (laws.ts). */
+export type NoteType = 'rule' | 'like' | 'dislike' | 'pain' | 'life' | 'goal' | 'other';
 
 export interface CoachNote {
   id: string;

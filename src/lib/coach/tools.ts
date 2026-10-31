@@ -14,6 +14,7 @@ import { askTraining } from './craft';
 import { minutesOf, restFor } from './time';
 import { answersOf, profileFrom } from './setup';
 import { validate } from './validate';
+import { LAW_LIST, weekBreaks } from './laws';
 import { PATTERNS, type Area, type CoachDay, type CoachPlan, type CoachProfile, type CoachState, type CoachWeek, type Experience, type Gear, type Goal, type Level, type Minutes, type Mode, type PlanItem, type RunStep } from './types';
 
 /* The coach's tools, run here on the phone: the model asks, the app does it and says what happened
@@ -44,7 +45,7 @@ const EXPERIENCE: Experience[] = ['new', 'on-off', 'steady', 'returning'];
 const AREAS: Area[] = ['knee', 'back', 'shoulder', 'wrist', 'other'];
 const MINUTES: Minutes[] = [20, 30, 40, 60];
 const ROLES: SlotRole[] = ['warmup', 'main', 'accessory', 'core', 'stretch'];
-const NOTE_TYPES = ['like', 'dislike', 'pain', 'life', 'goal', 'other'] as const;
+const NOTE_TYPES = ['rule', 'like', 'dislike', 'pain', 'life', 'goal', 'other'] as const;
 const RUN_IDS = ['forma:easy-run', 'forma:run-walk', 'forma:interval-run', 'forma:long-run'];
 
 const str = (v: unknown, max = 200) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
@@ -103,7 +104,7 @@ function runSteps(id: string, min: number, level: Level): RunStep[] {
 }
 
 /** A workout from the model's items: real library exercises only, dosed and checked. */
-function workoutFrom(input: Input, profile: CoachProfile, ctx: ToolContext): { plan: CoachPlan; problems: string[] } {
+function workoutFrom(input: Input, profile: CoachProfile, ctx: ToolContext, sessions: GameState['sessions'] = []): { plan: CoachPlan; problems: string[] } {
   const byId = new Map(ctx.all.map((x) => [x.id, x]));
   const mode = one(input.mode, MODES) ?? profile.modes[0] ?? 'gym';
   const skipped: string[] = [];
@@ -144,7 +145,7 @@ function workoutFrom(input: Input, profile: CoachProfile, ctx: ToolContext): { p
     items.push({ ...base, sets: int(r.sets, 1, 8) ?? base.sets, low, high: Math.max(low, int(r.high, 1, hold ? 300 : 50) ?? base.high), ...(isWeighted(x) ? { weighted: true } : {}), ...(rest ? { rest } : {}), ...(ramp ? { ramp } : {}) });
   }
   const title = str(input.title, 80) || 'From your coach';
-  const checked = validate({ mode, items, by: 'coach', at: ctx.now.toISOString(), title }, { all: ctx.all, profile });
+  const checked = validate({ mode, items, by: 'coach', at: ctx.now.toISOString(), title }, { all: ctx.all, profile, sessions, now: ctx.now });
   return { plan: checked.plan, problems: [...skipped, ...checked.problems] };
 }
 
@@ -169,8 +170,10 @@ function setWorkout(state: GameState, input: Input, ctx: ToolContext): ToolRun {
   if (!profile) return { state, result: 'No profile yet: call save_profile first.' };
   const date = resolveDay(input.day, ctx.now);
   if (date && state.coach?.week?.days.some((d) => d.date === date && d.done)) return { state, result: `${date}'s workout is done already: nothing changed.` };
-  const { plan, problems } = workoutFrom(input, profile, ctx);
+  const { plan, problems } = workoutFrom(input, profile, ctx, state.sessions);
   const next = setDay(state, date, plan, ctx.now);
+  const broke = lawBreaks(state, next);
+  if (broke) return { state, result: broke };
   return { state: next, result: `Saved on ${date ?? 'the next workout day'} and shown to the player (easier and swap added):\n${planText(plan)}${fixed(problems)}${headsUp(next)}` };
 }
 
@@ -196,7 +199,7 @@ function setWeek(state: GameState, input: Input, ctx: ToolContext): ToolRun {
       notes.push(`${date} twice or already done: left out`);
       continue;
     }
-    const { plan, problems } = workoutFrom(raw as Input, profile, ctx);
+    const { plan, problems } = workoutFrom(raw as Input, profile, ctx, state.sessions);
     days.push({ date, plan });
     notes.push(...problems.map((p) => `${date}: ${p}`));
   }
@@ -204,6 +207,8 @@ function setWeek(state: GameState, input: Input, ctx: ToolContext): ToolRun {
   days.sort((a, b) => a.date.localeCompare(b.date));
   const week: CoachWeek = { start: same?.start ?? dayKey(ctx.now), days, by: 'coach' };
   const next = { ...state, coach: { ...coach, week } };
+  const broke = lawBreaks(state, next);
+  if (broke) return { state, result: broke };
   return { state: next, result: `The week is saved and shown to the player:\n${weekText(week, ctx.now).join('\n')}${fixed(notes)}${headsUp(next)}` };
 }
 
@@ -228,6 +233,13 @@ export function weekWarnings(state: GameState): string[] {
   return out;
 }
 
+/** A change that breaks a week law the week didn't break before: not saved, and why. */
+function lawBreaks(before: GameState, after: GameState): string | null {
+  const had = new Set(weekBreaks(before.coach?.week));
+  const now = weekBreaks(after.coach?.week).filter((b) => !had.has(b));
+  return now.length ? `Not saved: it breaks a law (laws always win, even over the player's rules; tell them which and why, and offer a lawful way):\n- ${now.join('\n- ')}` : null;
+}
+
 const headsUp = (state: GameState) => {
   const w = weekWarnings(state);
   return w.length ? `\nHeads-up (tell the player, and agree on it): ${w.join('; ')}.` : '';
@@ -239,6 +251,8 @@ function moveWorkout(state: GameState, input: Input, ctx: ToolContext): ToolRun 
   if (!to) return { state, result: `"${str(input.to, 20)}" is not between today and Sunday: nothing changed.` };
   const next = moveDay(state, from, to, ctx.now);
   if (typeof next === 'string') return { state, result: `${next} Nothing changed.` };
+  const broke = lawBreaks(state, next);
+  if (broke) return { state, result: broke };
   return { state: next, result: `Moved. The week now:\n${weekText(next.coach?.week, ctx.now).join('\n')}${headsUp(next)}` };
 }
 
@@ -332,8 +346,12 @@ export function runTool(state: GameState, name: string, args: string, ctx: ToolC
       if (!coach.notes.some((n) => n.id === id)) return { state, result: `No note ${id}.` };
       return { state: withCoach(state, removeNote(coach, id)), result: 'Forgotten.' };
     }
-    case 'training_guide':
-      return { state, result: askTraining(str(input.topic, 200)) };
+    case 'training_guide': {
+      const topic = str(input.topic, 200);
+      // The laws come with every answer: they are what the coach may never bend.
+      const laws = `## The laws (always true; they beat the player's rules)\n${LAW_LIST.map((l) => `${l.n}. ${l.title}: ${l.text}`).join('\n')}`;
+      return { state, result: /\blaws?\b|rules?\b/i.test(topic) ? laws : `${askTraining(topic)}\n\n${laws}` };
+    }
     case 'game_guide':
       return { state, result: askGuide(state, str(input.question, 200), ctx.now) };
     case 'suggest_replies': {

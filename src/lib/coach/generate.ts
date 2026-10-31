@@ -24,6 +24,8 @@ export interface BuildInput {
   mode?: Mode;
   /** Workouts planned before this one but not done yet (earlier days of the week), by mode. */
   after?: Mode[];
+  /** Families trained hard the day before: not again today (law 6). */
+  rested?: Family[];
 }
 
 /** Each day's movement families, per mode: the main moves (the first few that fit the minutes,
@@ -35,9 +37,12 @@ const DAYS: Record<Exclude<Mode, 'running'>, [Day, Day]> = {
   ],
   calisthenics: [
     { main: ['pull-vertical', 'push-horizontal', 'squat', 'push-vertical'], accessory: ['hinge', 'lunge'] },
-    { main: ['push-horizontal', 'pull-vertical', 'lunge', 'pull-horizontal'], accessory: ['push-vertical', 'hinge'] },
+    { main: ['push-vertical', 'pull-horizontal', 'lunge', 'hinge'], accessory: ['push-horizontal', 'squat'] },
   ],
 };
+
+/** Every main family, to fill a day whose own are rested (trained the day before, law 6). */
+const FILL: Family[] = ['squat', 'hinge', 'lunge', 'push-horizontal', 'push-vertical', 'pull-horizontal', 'pull-vertical'];
 
 interface Day {
   main: Family[];
@@ -63,16 +68,17 @@ export function buildWorkout(input: BuildInput): CoachPlan | null {
   const notes = liveNotes(input.coach, input.now);
   const avoid = excluded(profile, notes);
   const plan = mode === 'running' ? running(input, profile, avoid) : strength(input, profile, mode, avoid);
-  return validate(plan, { all: input.all, profile }).plan;
+  return validate(plan, { all: input.all, profile, sessions: input.sessions, now: input.now }).plan;
 }
 
 export function excluded(profile: CoachProfile, notes: CoachNote[]): (x: LibraryExercise) => boolean {
   const spare = spares(profile);
-  // "No burpees", "hate lunges": the words of a dislike note keep matching exercises out.
+  // "Hate lunges", or a rule "no burpees, ever": the words of a dislike note, or of a rule that
+  // says no, keep matching exercises out.
   const words = notes
-    .filter((n) => n.type === 'dislike')
+    .filter((n) => n.type === 'dislike' || (n.type === 'rule' && /^\s*(no|never|without|skip)\b/i.test(n.text)))
     .flatMap((n) => n.text.toLowerCase().match(/[a-z-]{4,}/g) ?? [])
-    .filter((w) => !['hate', 'hates', 'dislike', 'dislikes', 'like', 'please', 'more', 'less', 'with', 'them', 'they', 'doing', 'never'].includes(w))
+    .filter((w) => !['hate', 'hates', 'dislike', 'dislikes', 'like', 'please', 'more', 'less', 'with', 'them', 'they', 'doing', 'never', 'ever', 'always', 'without', 'skip'].includes(w))
     .map((w) => w.replace(/s$/, ''));
   return (x) => spare.some((f) => f(x)) || words.some((w) => x.name.toLowerCase().includes(w));
 }
@@ -87,8 +93,10 @@ function strength(input: BuildInput, profile: CoachProfile, mode: Exclude<Mode, 
   const plan = DAYS[mode][day];
   // No bar: a pull-up day pulls with a table row instead.
   const noBar = (f: Family): Family => (f === 'pull-vertical' && !hasBar(gear) ? 'pull-horizontal' : f);
-  const families = [...new Set(plan.main.map(noBar))].slice(0, MAIN_MOVES[profile.minutes]);
-  const extras = [...new Set(plan.accessory.map(noBar))].filter((f) => !families.includes(f)).slice(0, ACCESSORY_MOVES[profile.minutes]);
+  const rested = new Set(input.rested ?? []);
+  const fresh = (fs: Family[]) => [...new Set(fs.map(noBar))].filter((f) => !rested.has(f));
+  const families = fresh([...plan.main, ...(rested.size ? FILL : [])]).slice(0, MAIN_MOVES[profile.minutes]);
+  const extras = fresh(plan.accessory).filter((f) => !families.includes(f)).slice(0, ACCESSORY_MOVES[profile.minutes]);
 
   const picked: LibraryExercise[] = [];
   const pick = (family: Family, role: 'main' | 'accessory' | 'core') => {

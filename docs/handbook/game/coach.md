@@ -1,7 +1,7 @@
 ---
 type: reference
 title: The coach (workout planner)
-description: The coach in src/lib/coach — your flame as an LLM coach you chat with (the week it plans, the one place every workout lives; the chat loop, its tools run on the phone, the fuzzy exercise search, the server relay), the craft of a workout (warm-up, main, accessory, core, cool-down; the training playbook the coach reads; the time estimate), the three-layer memory (profile, training log, notes), the flame speaking first (nudges), the built-in coach that builds workouts for gym, calisthenics, running or a mix, easier and swap choices, the guardrails every workout passes, and the screens that play it.
+description: The coach in src/lib/coach — your flame as an LLM coach you chat with (the week it plans, the one place every workout lives; the chat loop, its tools run on the phone, the fuzzy exercise search, the server relay), the laws (the nine rules always true, laws.ts) and the player's own rules, the craft of a workout as defaults (warm-up, main, accessory, core, cool-down; the training playbook the coach reads; the time estimate), the three-layer memory (profile, training log, notes), the flame speaking first (nudges), the built-in coach that builds workouts for gym, calisthenics, running or a mix, easier and swap choices, the guardrails every workout passes, and the screens that play it.
 tags: [game, training, coach, planner, memory, llm]
 timestamp: 2026-10-31
 ---
@@ -16,9 +16,10 @@ the server, [../backend/api.md](../backend/api.md)) that works through tools her
 it may only pick exercises from the library, and every workout it makes passes the same checks as
 the **built-in coach**, the plain-rules builder that runs offline, before setup and as its
 starting draft. The rule for both: **the coach chooses, the code keeps the facts and the
-numbers.** XP, stat points and story never depend on what the coach planned.
+numbers.** Three strengths of rule: the **laws** (a few, in code, always true), **your rules**
+(what you asked for every week), and **defaults** (everything else, a good trainer's habits). XP, stat points and story never depend on what the coach planned.
 
-Code: `src/lib/coach/` (pure, tested in `coach.test.ts`, `chat.test.ts`, `craft.test.ts` and `week.test.ts`). Numbers:
+Code: `src/lib/coach/` (pure, tested in `coach.test.ts`, `chat.test.ts`, `craft.test.ts`, `laws.test.ts` and `week.test.ts`). Numbers:
 `src/balance/coach.ts`. Screens: `CoachChat.tsx` (the Train tab's coach and the chat),
 the workout's overview and choices in `Workout.tsx`, `useCoach.ts`
 (keeps a week ready, runs the chat). How to do each exercise: `ExerciseDetail.tsx`.
@@ -61,22 +62,52 @@ Each item may carry `rest` (seconds after a set), set by the coach in the chat (
 `REST.heavy`, another main move `REST.main`, an accessory `REST.accessory`, core `REST.core`. The
 rest screen counts that down, and the time estimate uses the same rule.
 
+## Laws, your rules, defaults (`laws.ts`)
+
+Ember may plan anything you ask except what breaks a law. Why so few: the research behind this
+(design doc "FORMA coach: few laws, everything else yours") found that products keep training
+rules in code, rules only in a prompt get broken (most by cheap models), and only a few training
+rules are both well supported and about safety; the rest are habits, kept as defaults.
+
+- **The nine laws** (`LAW_LIST`, numbers in `LAWS` and `MAX_SETS_PER_FAMILY`, `TIME_SLACK`):
+  1 a warm-up first (`warmupSec`), 2 never to failure (by design: no target asks for it), 3
+  nothing on a sore spot, 4 at most `MAX_SETS_PER_FAMILY` hard sets of a family in a workout, 5 at
+  most `weekSets` in a week, 6 no family (main or accessory work; core may be daily) two days
+  running and at most `maxDays` workout days, 7 a comeback (`comingBack`: `comebackDays` off) drops
+  `comebackCut` of the sets for `comebackWeek` days, 8 no run more than `runSpike` longer than the
+  longest of `runWindowDays` (`longestRun`), 9 about your minutes.
+- **Workout laws** (1, 3, 4, 7, 8, 9) are fixed by `validate` on every workout, and said.
+  **Week laws** (5, 6: `weekBreaks`) are checked before `set_week`, `set_workout` or
+  `move_workout` saves: a change that adds a break is **not saved**, and the coach reads the
+  breaks with their fixes ("Not saved: … (law 6)"), tells you which law and why, and offers a
+  lawful plan. The built-in week keeps them too: the day after a workout trains other families
+  (`rested` in `buildWorkout`, filled from `FILL`).
+- **Your rules**: a note of type `rule` ("deadlift on Mondays", "push pull legs", "no stretching"),
+  saved by the coach with `add_note` when you say something should always or never happen. They
+  come first in the brief ("Their rules"), are never dropped for room, can be forgotten in "What I
+  know", and a rule that starts with no/never/without/skip keeps matching exercises out (like a
+  dislike, `excluded`). A law beats a rule.
+- **Defaults**: everything else, below. `validate` only notes where a workout leaves one ("note:
+  the usual order…", "note: no cool-down"), fine if you asked.
+
 ## The craft of a workout (`craft.ts`)
 
-How a trainer builds a session, as data, so the built-in coach and the LLM build alike.
+How a trainer builds a session, as data, so the built-in coach and the LLM build alike. These are
+defaults: only the warm-up is a law.
 
 - **Five blocks, in order** (`BLOCKS`; roles in `SlotRole`): `warmup` (about 5 minutes: easy
   cardio, circles for the day's joints, a dynamic whole-body move), `main` (the compound moves or
   the hard skill, freshest first), `accessory` (lighter moves the main work left out, 10-15 reps),
   `core` (one move), `stretch` (the cool-down: static stretches for what was trained most; shown
-  as "Cool-down"). `validate` puts any workout back in this order (`inOrder`) and says so.
+  as "Cool-down"; optional by the evidence). `validate` notes a different order, never forces it.
 - **Ramp-up sets** (`ramp` on an item): light sets before the first weighted lift, not logged; the
   workout screen says so on its first set, the cards show "2 light first".
 - **The playbook** (`PLAYBOOK`, `askTraining`): the trainer's know-how in short topics (the
   session, warm-up, main work, accessories, core, cool-down, progression, splits, body weight
   ladders, coming back after a break, fitting the minutes, running), numbers read from
-  `src/balance`. The LLM reads it with the `training_guide` tool before it plans; the rules on the
-  server tell it the same blueprint in short.
+  `src/balance`. The LLM reads it with the `training_guide` tool before it plans, and every answer
+  ends with the laws (a topic "laws" gives only them); the rules on the server say the same in
+  short.
 
 ## The time a workout takes (`time.ts`)
 
@@ -154,7 +185,7 @@ All of it lives in the save (`state.coach`, optional: saves without it play the 
 |---|---|---|
 | **Profile**: modes, goal, days, minutes, gear, experience, a level 1-5 per pattern (push, pull, squat, hinge, core, run), what to spare, and `history` of every change | `coach.profile` (`CoachProfile` in `types.ts`) | setup (the chat or the taps); levels move with your workouts (`levels.ts`); the coach changes a named field with a reason (`save_profile`) |
 | **Training log**: sessions with sets (reps or seconds, reps in the tank, optional kg and km), each entry's name and family, the mode, who planned it, what you skipped or changed, how it felt | `state.sessions` | only the app |
-| **Notes**: short typed sentences (`like`, `dislike`, `pain`, `life`, `goal`, `other`), dated, optionally until a date, at most `MAX_NOTES` (a pain note is never dropped for room) | `coach.notes` (`notes.ts`) | you at setup; the coach in the chat |
+| **Notes**: short typed sentences (`rule`, `like`, `dislike`, `pain`, `life`, `goal`, `other`), dated, optionally until a date, at most `MAX_NOTES` (a pain note or a rule is never dropped for room) | `coach.notes` (`notes.ts`) | you at setup; the coach in the chat |
 
 Plus `coach.week`: the planned week (above). Today's quest (`todaysQuest` in `game.ts`) plays its
 next day when there is one, else the built-in plan. `finishSession` writes the plan's mode, changes
@@ -208,9 +239,10 @@ too when a workout opens (`planFromQuest`), so it can be changed the same way.
 ## The guardrails (`validate.ts`)
 
 Every workout, whoever built it: only library exercises (or the built-in warm-ups and stretches),
-only your gear, nothing a sore spot spares, the blocks in order, a warm-up first and a stretch last
-(added if missing), at most `MAX_SETS_PER_FAMILY` sets of a family and `MAX_SETS` in all, and about
-your minutes (`TIME_SLACK` over at most, by `minutesOf`). Short on time it trims like a trainer:
+only your gear, and the workout laws above: a warm-up first of at least `LAWS.warmupSec` (added or
+lengthened), nothing a sore spot spares, at most `MAX_SETS_PER_FAMILY` sets of a family and
+`MAX_SETS` in all, a comeback's lighter sets, no sudden long run, and about your minutes
+(`TIME_SLACK` over at most, by `minutesOf`). The order of the blocks and a cool-down are only noted. Short on time it trims like a trainer:
 accessory and core sets down to two, then the accessories go, then core, then a set of the main
 moves from the last; the warm-up and cool-down stay. It returns the fixed plan and the `problems`, which
 an LLM gets back to do better.
@@ -246,6 +278,7 @@ an LLM gets back to do better.
 | Change sets, reps, run minutes, caps, which days of the week train, rests | `src/balance/coach.ts` |
 | Change how long a workout says it takes | `TIME`, `REST` in `src/balance/coach.ts`; the rule in `time.ts` |
 | Change the warm-up or the cool-down | `WARMUP_SEC`, `COOLDOWN` in `src/balance/coach.ts`; `WARMUP_MOVES`, `STRETCHES` in `staples.ts` |
+| Change a law, or add one | `LAWS` in `src/balance/coach.ts`; the check in `laws.ts` (`LAW_LIST`, `weekBreaks`) or `validate.ts`; a persona in `laws.test.ts` |
 | Teach the coach more about training | a topic in `PLAYBOOK` (`craft.ts`), and the short blueprint in `SYSTEM` (`backend/app/coach.py`) |
 | Add something the flame brings up | `coachNudge` in `src/lib/coach/nudge.ts`, with a test |
 | Change which families a day trains (main and accessory) | `DAYS` in `src/lib/coach/generate.ts` |

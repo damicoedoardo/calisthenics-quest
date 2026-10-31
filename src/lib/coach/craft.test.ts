@@ -67,15 +67,18 @@ describe('a built-in workout is built like a trainer would', () => {
   });
 });
 
-describe('the guardrails keep the order', () => {
-  it("puts a coach's jumbled workout back in block order, and says so", () => {
+describe('defaults are noted, not forced', () => {
+  it("keeps a coach's own order and no cool-down, and notes both", () => {
     const s = setup();
     const x = (id: string) => all.find((e) => e.id === id)!;
     const it_ = (id: string, role: Parameters<typeof item>[5]) => item(id, x(id).name, x(id).demo, '', x(id).family, role, role === 'warmup' || role === 'stretch' ? 1 : 3, role === 'warmup' || role === 'stretch' ? 60 : 8, role === 'warmup' || role === 'stretch' ? 60 : 12);
     const plan: CoachPlan = { mode: 'gym', by: 'coach', at: NOW.toISOString(), title: 't', items: [it_('Plank', 'core'), it_('Arm_Circles', 'warmup'), it_('Dumbbell_Bicep_Curl', 'accessory'), it_('Barbell_Squat', 'main'), it_('Hamstring_Stretch', 'stretch')] };
     const out = validate(plan, { all, profile: s.coach!.profile! });
-    expect(out.plan.items.map((i) => i.role)).toEqual(['warmup', 'main', 'accessory', 'core', 'stretch']);
-    expect(out.problems.join()).toMatch(/order/);
+    expect(out.plan.items.map((i) => i.role)).toEqual(['warmup', 'core', 'accessory', 'main', 'stretch']);
+    expect(out.problems.join()).toMatch(/note: the usual order/);
+    const bare = validate({ ...plan, items: plan.items.filter((i) => i.role !== 'stretch') }, { all, profile: s.coach!.profile! });
+    expect(bare.plan.items.some((i) => i.role === 'stretch')).toBe(false);
+    expect(bare.problems.join()).toMatch(/note: no cool-down/);
   });
 
   it('short on time: accessories go before a main set is cut', () => {

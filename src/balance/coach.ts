@@ -59,8 +59,9 @@ export const TIME = { rep: 3, weightedRep: 4, setup: 20, setupWeighted: 45, chan
     turns into an hour. */
 export const TIME_SLACK = 0.1;
 
-/** The most sets of one movement family in a workout. Goal: no part of you gets hammered. */
-export const MAX_SETS_PER_FAMILY = 8;
+/** The most hard sets of one movement family in a workout (law 4). Goal: no part of you gets
+    hammered; past about 10 sets a session the gains flatten. */
+export const MAX_SETS_PER_FAMILY = 10;
 
 /** The most hard sets in a workout. Goal: even a long day stays under about 24 hard sets. */
 export const MAX_SETS = 24;
@@ -106,3 +107,12 @@ export const WEEK_SPREAD: Record<number, number[]> = {
     other main move (`main`, as `REST_SECONDS`), an accessory, core; and the range a coach may set
     per exercise. Goal: heavy sets get time to breathe, light ones keep moving. */
 export const REST = { heavy: 120, main: 90, accessory: 60, core: 60, min: 30, max: 240 } as const;
+
+/** The coach's laws (src/lib/coach/laws.ts): the few rules always true, whatever the player or
+    the coach asks. `warmupSec`: the least warm-up (law 1). `weekSets`: the most hard sets of one
+    movement family in a week (law 5). `maxDays`: the most workout days in a week, so one is rest
+    (law 6). `comebackDays`: days off that make the next week a comeback, `comebackWeek` its length
+    in days, `comebackCut` the share of sets it drops (law 7). `runSpike`: how much longer than
+    the longest run of the last `runWindowDays` a run may be (law 8). Goal: safe and sound for
+    anyone, never in the way of what the player wants. */
+export const LAWS = { warmupSec: 180, weekSets: 20, maxDays: 6, comebackDays: 14, comebackWeek: 7, comebackCut: 1 / 3, runSpike: 0.1, runWindowDays: 30 } as const;
