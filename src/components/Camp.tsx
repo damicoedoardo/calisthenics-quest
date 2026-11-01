@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { ChevronRight } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { gearOf } from '@/lib/game';
 import { getClass } from '@/lib/gear';
@@ -12,6 +13,7 @@ import { Hero } from './Hero';
 import { PlaceBackdrop } from './Place';
 import { Sprite } from './Sprite';
 import { CheerPage, Doing, FriendHero, type Friends } from './Friends';
+import { ProfilePage } from './Profile';
 
 /* The camp at the top of the Friends tab: a night camp with its fire. Friends who are online stand
    at the back (a bubble says if they train or fight; tap one to cheer them on or ask them into your
@@ -28,6 +30,7 @@ export function Camp({ state, friends }: { state: GameState; friends: Friends })
   const online = (friends.list?.friends ?? []).filter((f) => f.online || f.playing).slice(0, AT_CAMP);
   const [picked, setPicked] = useState<FriendCard | null>(null);
   const [cheering, setCheering] = useState<FriendCard | null>(null);
+  const [viewing, setViewing] = useState<FriendCard | null>(null);
   const members = party?.members ?? [];
   const spots = Array.from({ length: 4 }, (_, i) => (party ? members[i] ?? null : i === 0 ? 'me' : null));
 
@@ -102,12 +105,22 @@ export function Camp({ state, friends }: { state: GameState; friends: Friends })
       {/* A friend tapped: what you can do with them. */}
       {picked && (
         <div className="absolute inset-x-3 top-12 z-10 flex items-center gap-2 rounded-xl bg-ink-900/95 p-2 pixel-border">
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-pixel text-[9px] text-gold-300">{picked.name || 'A hero'}</p>
+          {/* Their name opens their profile. */}
+          <button
+            onClick={() => {
+              setViewing(picked);
+              setPicked(null);
+            }}
+            aria-label={`${picked.name || 'A hero'}'s profile`}
+            className="min-w-0 flex-1 text-left"
+          >
+            <p className="flex items-center gap-1 truncate font-pixel text-[9px] text-gold-300">
+              {picked.name || 'A hero'} <ChevronRight size={12} className="shrink-0 text-slate-400" aria-hidden />
+            </p>
             <p className="mt-1 truncate text-[11px] text-slate-400">
               {getClass(picked.class_id ?? undefined)?.name ?? 'Hero'} · Lv {picked.level} · {statusOf(picked, friends.now)}
             </p>
-          </div>
+          </button>
           {picked.training ? (
             <button
               onClick={() => {
@@ -131,6 +144,8 @@ export function Camp({ state, friends }: { state: GameState; friends: Friends })
           </button>
         </div>
       )}
+
+      {viewing && <ProfilePage f={viewing} now={friends.now} onClose={() => setViewing(null)} />}
 
       {cheering && (
         <CheerPage
