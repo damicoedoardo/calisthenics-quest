@@ -1,6 +1,6 @@
-import { HUMAN } from '@/balance';
+import { HUMAN, TRAITS } from '@/balance';
 import { clamp, HERO_SPEED, RANGE } from '../rules';
-import { abilityReady, attackKind, canOpen, onStairs, outSide, finalReady, skillReady, BARREL, CHARGE, ROLL, SWOOP, UNDERTOW, createRun, GALE, LANTERN, LIGHT, LONER, LULL, ROOM, lit as inLantern, PLATE_R, wayFor, type Foe, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup, type SpMoveId } from './engine';
+import { abilityReady, attackKind, canOpen, onStairs, outSide, finalReady, skillReady, BARREL, CHARGE, ROLL, SWOOP, UNDERTOW, createRun, GALE, LANTERN, LIGHT, LONER, LULL, ROOM, lit as inLantern, ALTAR_R, PLATE_R, wayFor, type Foe, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup, type SpMoveId } from './engine';
 
 /* The bot: a steady, careful player on a phone, not a great one (how human: HUMAN in
    src/balance/dungeon.ts). It notices a shot only after a reaction of its own, misses more of them
@@ -194,6 +194,27 @@ function decide(run: Run, h: Hero): Input {
     if (d > 30) continue;
     x += (dx / d) * ((30 - d) / 30);
     y += (dy / d) * ((30 - d) / 30);
+  }
+  // A dark altar's bargain: the bot never takes it (so the zone win rates don't count on it).
+  if (T.altar && !T.altar.used) {
+    const dx = h.x - T.altar.x,
+      dy = h.y - T.altar.y,
+      d = Math.hypot(dx, dy) || 1;
+    if (d < ALTAR_R + 34) {
+      x += (dx / d) * 3;
+      y += (dy / d) * 3;
+    }
+  }
+  // Fire on the floor from a burning elite: out of it.
+  for (const b of run.burns ?? []) {
+    const dx = h.x - b.x,
+      dy = h.y - b.y,
+      d = Math.hypot(dx, dy) || 1,
+      keep = TRAITS.burning.r + 22;
+    if (d > keep) continue;
+    x += (dx / d) * 2.5;
+    y += (dy / d) * 2.5;
+    danger += 1;
   }
   // Arrow plates: step round them, as you would.
   for (const p of T.plates ?? []) {

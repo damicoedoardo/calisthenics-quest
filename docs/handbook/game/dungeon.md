@@ -66,6 +66,7 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change what the run shows is at risk if you fall | `atRisk` in `src/lib/fog-gear.ts`; `RiskLine` in `src/components/FogRun.tsx` |
 | Change how often a room has walls inside it, or which shapes | `ROOM_SHAPES` in `src/balance/dungeon.ts`; a shape itself is a case in `buildShape` (`shapes.ts`, keep the door lanes and stairs spots open: `shapes.test.ts` checks every shape) |
 | Change the traps (arrow plates, dark rooms) | `TRAPS` in `src/balance/dungeon.ts`; the plates are placed in `buildTerrain` and fire in `stepPlates` (`engine.ts`), drawn in the ground pass of `scene.ts` (the plate, the slots glowing, the line) with the arrow `shot-trap` (`foeFx.ts`); a dark room sets `run.dim` in `enterRoom` and lights up in `checkRoom` |
+| Change challenge rooms, dark altars, elite traits or statue turrets | `TRIALS`, `BARGAIN`, `TRAITS`, `STATUES` in `src/balance/dungeon.ts`; in `engine.ts`: `startTrial`/`stepTrial` (and the hold in `checkRoom`), the altar in `buildTerrain` and the touch next to the shrine's (`run.curse`, `cursed`: fire rate where volleys are timed, drops in `kill`), the trait roll in `addFoe` (`TRAIT_NAME`), `stepBurns`, the split in `kill`, `placeStatues` (the statue is the monster `statue` in `content.ts`, drawn from `STATUE` in `props.ts`); on screen: `TRAIT_COLOR` and the ring by the health bars, the fire and altar in the ground pass, the HUD's "Hold on" bar and BARGAIN line (`FogRun.tsx`, `Hud.trial`, `Hud.cursed`) |
 | Change how monsters and the bot get round walls | `aroundWalls` (`engine.ts`, after `steer`) and `wayFor` in `bot.ts` (the goal and the way out), both over `wayTo` (`shapes.ts`) |
 | Change how a floor is laid out (how many rooms, branches, shortcuts) | `LAYOUT` and `ROOM_ODDS` in `content.ts`, `makeFloor` in `engine.ts` |
 | Change the minimap | `FloorMap` in `src/components/FogRun.tsx` (it reads `Hud.map`, built by `miniMap` in `scene.ts`) |
@@ -336,6 +337,29 @@ arrows (`Bullet.trap`, drawn as `shot-trap`) fly across the room, then it rearms
 room is clear. Developer jumps: `?run=<zone>&at=shape-<id>` or `at=dark` (`skipToShape`: a room on
 floor 3 with that shape and plates), from the `/lab/night` "Dungeon rooms with walls" panel, or
 `/lab/night?go=walls` and `?go=dark`.
+
+## Challenge rooms, bargains, elite traits, statues
+
+- **Challenge rooms** (`TRIALS`): a plain fight room past the floor's first, from floor 2, now and
+  then seals: `startTrial` drops the room's waves and `stepTrial` sends a third of a room every
+  `every` s for `secs` s (`run.trial`); `checkRoom` holds the room shut until time is up, then what
+  stands crumbles (`crumble`: no light, no drops) and a chest comes up. The HUD shows "Hold on" with
+  the seconds left (`Hud.trial`).
+- **Dark altars** (`BARGAIN`): in some rest rooms, beside the shrine (`Terrain.altar`). Touching it
+  sets `run.curse` to this floor: monsters fire `fire` times as often and drop `loot` times as often,
+  `luck` rarer. The HUD says BARGAIN (`Hud.cursed`). The bot keeps off it, so the simulators don't
+  count on it.
+- **Elite traits** (`TRAITS`, `Foe.trait`): every elite rolls one in `addFoe`, and the first of each
+  in a run is said (`TRAIT_NAME`, `run.traitsMet`). Swift moves faster; burning drops fire
+  (`run.burns`, `stepBurns`) that hurts on touch; splits falls into plain copies (`addFoe(..., plain)`
+  in `kill`). On screen a pip by the health bar and a ring in the trait's color (`TRAIT_COLOR`).
+- **Statue turrets** (`STATUES`): the monster `statue` (still, rings of shots, no touch damage),
+  placed by the side walls at a room's start (`placeStatues`, plain, never elite). They don't hold
+  the room shut and crumble when it clears; they can be broken. Their art is the prop `STATUE`
+  with a one-frame animation made in `makeTextures`.
+
+Developer jumps: `?run=<zone>&at=trial|elite|statues|altar` (`skipToShape` with `RoomForce`), or
+`/lab/night?go=trial`, `go=elite`, `go=statues`, `go=altar`.
 
 ## Items and the bag
 

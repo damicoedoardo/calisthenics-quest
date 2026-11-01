@@ -102,7 +102,7 @@ import {
   zoneDungeon,
 } from './content';
 import { seeded } from '@/lib/random';
-import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS, LEECH_CAP, MAX_EVADE, SP_FINAL, SP_PASSIVE, SP_SKILL, SP_WEAPON, SURGE, MELEE_GUARD, TRAPS, type SpMoveNumbers } from '@/balance';
+import { ABILITY, BAG, BARGAIN, CALM, CRIT_HIT, DROP_LUCK, DROPS, LEECH_CAP, MAX_EVADE, SP_FINAL, SP_PASSIVE, SP_SKILL, SP_WEAPON, STATUES, SURGE, MELEE_GUARD, TRAITS, TRAPS, TRIALS, type SpMoveNumbers } from '@/balance';
 import { allJoined, buildShape, clearLine, inBlock, outOfBlocks, pickShape, wayTo, type ShapeId } from './shapes';
 import type { Build } from '@/lib/stats';
 import { canWear, ITEM_SLOTS, itemScore, itemTotals, otherClass, rollItem, rollRarity, shortOf, starterKit, type Item, type ItemSlot } from './items';
@@ -152,7 +152,18 @@ export interface Terrain {
   plates?: Plate[];
   /** Dark until the room is clear (TRAPS.dark). */
   dark?: boolean;
+  /** A rest room's dark altar (BARGAIN): touch it for more loot and faster monsters on this floor. */
+  altar?: { x: number; y: number; used: boolean };
 }
+
+/** An elite's trait (TRAITS). */
+export type Trait = keyof typeof TRAITS;
+export const TRAIT_NAME: Record<Trait, { name: string; text: string }> = {
+  swift: { name: 'Swift', text: 'a swift elite is fast: keep moving' },
+  burning: { name: 'Burning', text: 'a burning elite leaves fire where it walks: keep off its trail' },
+  split: { name: 'Splits', text: 'this elite splits in two when it falls' },
+};
+export const ALTAR_R = 16;
 
 /** An arrow plate in the floor: step on it and arrows fly from the wall across its line. `axis`
     is the way they fly (x: along the room's width), `from` the wall they come from (-1: the low
@@ -227,6 +238,9 @@ export interface Foe {
   act: number;
   /** Bigger, tougher, worth more (elite rooms). */
   elite: boolean;
+  /** An elite's trait (TRAITS), and when a burning one next drops fire. */
+  trait?: Trait;
+  burnAt?: number;
   /** 2 once a two-phase foe (the Warden) is past half its HP. */
   phase: number;
   /** When you last hit it (run seconds). */
@@ -396,6 +410,10 @@ export type GameEvent =
   | { type: 'pile'; id: number; x: number; y: number; up: boolean }
   | { type: 'shrine'; x: number; y: number }
   /** An arrow plate set off: arrows fly from the wall in TRAPS.arrows.tell s. */
+  /** A challenge room's doors seal (`on`), or its time is up. */
+  | { type: 'trial'; on: boolean }
+  /** A dark altar's bargain taken. */
+  | { type: 'altar'; x: number; y: number }
   | { type: 'trap'; x: number; y: number }
   | { type: 'chest'; x: number; y: number }
   | { type: 'relic'; id: RelicId }
@@ -692,6 +710,14 @@ export interface Run {
   events: GameEvent[];
   over: RunEnd | null;
   paused: boolean;
+  /** A challenge room (TRIALS): when it ends, when the next wave comes, and whether it's over. */
+  trial?: { until: number; next: number; done: boolean } | null;
+  /** The floor a dark altar's bargain holds for (BARGAIN), or null. */
+  curse?: number | null;
+  /** Fire on the floor from a burning elite (TRAITS.burning). */
+  burns?: { x: number; y: number; until: number }[];
+  /** Elite traits already told about this run. */
+  traitsMet?: Set<Trait>;
 }
 
 
@@ -1114,6 +1140,7 @@ function buildTerrain(run: Run, force?: RoomForce): Terrain {
     for (const b of t.barrels) if (Math.hypot(b.x - x, b.y - y) < BARREL.r + r + 30) return false;
     for (const q of rects()) if (inRect(q, x, y, r + 14)) return false;
     if (t.shrine && Math.hypot(t.shrine.x - x, t.shrine.y - y) < SHRINE.r + r + 40) return false;
+    if (t.altar && Math.hypot(t.altar.x - x, t.altar.y - y) < ALTAR_R + r + 40) return false;
     return true;
   };
   const rectClear = (q: Rect) => {
@@ -1123,8 +1150,11 @@ function buildTerrain(run: Run, force?: RoomForce): Terrain {
   const tries = (n: number, place: () => boolean) => {
     for (let i = 0; i < 30 && n > 0; i++) if (place()) n--;
   };
-  // A rest room's shrine, in the middle of the room.
-  if (run.kind === 'rest') t.shrine = { x: w / 2, y: h * 0.5, used: false };
+  // A rest room's shrine, in the middle of the room, and now and then a dark altar beside it.
+  if (run.kind === 'rest') {
+    t.shrine = { x: w / 2, y: h * 0.5, used: false };
+    if (!run.setup.tutorial && (force?.altar || rnd() < BARGAIN.chance)) t.altar = { x: w / 2, y: h * 0.3, used: false };
+  }
   // Pillars, in pairs mirrored across the room.
   tries(boss ? 2 : amt(1 + Math.floor(rnd() * 2.5), more.pillars), () => {
     const r = 16 + Math.round(rnd() * 8),
@@ -1254,6 +1284,8 @@ function enterRoom(run: Run, from: Side | null) {
     p.tow = { x: 0, y: 0 };
   });
   run.warden = null;
+  run.trial = null;
+  run.burns = [];
   run.dim = run.terrain.dark && !c.cleared ? TRAPS.dark.sight : null;
   run.waves = [];
   if (c.cleared) {
@@ -1288,6 +1320,82 @@ function enterRoom(run: Run, from: Side | null) {
   if (run.terrain.dark) emit(run, { type: 'say', text: 'The torches are out. They light again when the room is clear.' });
   run.waves = run.kind === 'rest' ? [] : fillRoom(run);
   if (run.waves.length) later(run, 0.6, () => nextWave(run));
+  if (run.kind !== 'rest' && !run.setup.tutorial && cellOf(run).dist > 0) {
+    placeStatues(run);
+    // A challenge room: the doors seal, waves come on a clock in place of the room's own.
+    if (run.kind === 'fight' && floorOf10(run) >= TRIALS.from && run.rnd() < TRIALS.chance) startTrial(run);
+  }
+  if (run.terrain.altar && !run.terrain.altar.used) emit(run, { type: 'say', text: 'A dark altar: touch it, and monsters on this floor drop more, and better, but shoot faster.' });
+}
+
+/** Statue turrets along the long sides of the room (STATUES), a little in from the walls so a
+    phone held sideways shows them, out of the doors' way and off the inside walls. */
+function placeStatues(run: Run, n = floorOf10(run) >= STATUES.from && run.rnd() < STATUES.chance ? 1 + Math.floor(run.rnd() * STATUES.most) : 0) {
+  const { w, h } = run.area;
+  for (let k = 0, tries = 0; k < n && tries < 30; tries++) {
+    const x = run.rnd() < 0.5 ? w * 0.22 : w * 0.78,
+      y = 200 + run.rnd() * (h - 400);
+    if (Math.abs(y - h / 2) < 100 || inPillar(run, x, y, 30) || run.foes.some((f) => f.kind === 'statue' && Math.abs(f.y - y) < 120)) continue;
+    addFoe(run, 'statue', x, y, true);
+    k++;
+  }
+}
+
+/** A challenge room begins (TRIALS). */
+function startTrial(run: Run) {
+  run.waves = [];
+  run.timers = [];
+  run.trial = { until: run.t + 0.6 + TRIALS.secs, next: run.t + 0.6, done: false };
+  emit(run, { type: 'trial', on: true });
+  emit(run, { type: 'say', text: `Challenge room: the doors are sealed. Last ${TRIALS.secs} seconds for a chest.` });
+}
+
+/** A challenge room's clock: a wave every TRIALS.every s; at the end, the rest crumble. */
+function stepTrial(run: Run) {
+  const tr = run.trial;
+  if (!tr || tr.done) return;
+  if (run.t >= tr.until) {
+    tr.done = true;
+    crumble(run, (f) => f !== run.boss && f !== run.warden);
+    emit(run, { type: 'trial', on: false });
+    emit(run, { type: 'say', text: 'You held. The doors open.' });
+    return;
+  }
+  if (run.t >= tr.next) {
+    tr.next = run.t + TRIALS.every;
+    for (const k of fillRoom(run)[1]) addFoe(run, k, ...spawnPoint(run));
+  }
+}
+
+/** Monsters that go without a fight (no light, no drops): a challenge's time up, statues at a clear. */
+function crumble(run: Run, which: (f: Foe) => boolean) {
+  for (const f of run.foes)
+    if (f.alive && which(f)) {
+      f.alive = false;
+      emit(run, { type: 'kill', id: f.id, x: f.x, y: f.y, kind: f.kind, elite: f.elite });
+    }
+}
+
+/** Whether this floor is under a dark altar's bargain. */
+const cursed = (run: Run) => run.curse === run.floor;
+
+/** Fire from burning elites: dropped as they walk, it burns whoever stands in it, then goes out. */
+function stepBurns(run: Run) {
+  const B = TRAITS.burning,
+    now = run.t;
+  for (const f of run.foes)
+    if (f.alive && f.trait === 'burning' && now >= (f.burnAt ?? 0) && now >= f.bornUntil) {
+      f.burnAt = now + B.every;
+      (run.burns ??= []).push({ x: f.x, y: f.y, until: now + B.last });
+    }
+  if (!run.burns?.length) return;
+  run.burns = run.burns.filter((b) => b.until > now);
+  for (const h of standing(run))
+    for (const b of run.burns)
+      if (closer(h.x - b.x, h.y - b.y, B.r + HERO_R - 4)) {
+        hurt(run, h, B.dmg * run.setup.zone.dmg, 'touch');
+        break;
+      }
 }
 
 /** Whether a body of radius r at x, y would sit inside a pillar. */
@@ -1319,11 +1427,11 @@ function nextWave(run: Run) {
 /** How much tougher a party makes the dungeon (PARTY.more): 1 alone, more for each friend. */
 const partyMore = (run: Run, k: keyof typeof PARTY.more) => 1 + PARTY.more[k] * (run.setup.friends?.length ?? 0);
 
-export function addFoe(run: Run, kind: MonsterKind, x: number, y: number): Foe {
+export function addFoe(run: Run, kind: MonsterKind, x: number, y: number, plain = false): Foe {
   const def = MONSTERS[kind],
     { zone } = run.setup;
   // Deeper is tougher: three times the HP on the boss's floor.
-  const elite = run.kind === 'elite' && def.xp > 0;
+  const elite = !plain && run.kind === 'elite' && def.xp > 0 && kind !== 'statue';
   // On the Summit, each ledge climbed is tougher.
   const up = 1 + CLIMB.tougher * (run.climb ?? 0),
     hp = Math.round(def.hp * zone.hp * DIALS.hp * (1 + DIALS.deep * depth(run)) * (elite ? ELITE.hp : 1) * up * partyMore(run, 'hp')),
@@ -1354,6 +1462,19 @@ export function addFoe(run: Run, kind: MonsterKind, x: number, y: number): Foe {
     hitAt: -99,
     alive: true,
   };
+  // An elite rolls a trait, and the first of each kind in a run is told about.
+  if (elite) {
+    const all = Object.keys(TRAITS) as Trait[],
+      t = all[Math.floor(run.rnd() * all.length)];
+    f.trait = t;
+    if (t === 'swift') f.speed *= TRAITS.swift.speed;
+    run.traitsMet ??= new Set();
+    if (!run.traitsMet.has(t)) {
+      run.traitsMet.add(t);
+      const said = TRAIT_NAME[t].text;
+      emit(run, { type: 'say', text: `${TRAIT_NAME[t].name}: ${said}.` });
+    }
+  }
   run.foes.push(f);
   emit(run, { type: 'spawn', x: f.x, y: f.y, kind });
   if (!run.met.has(kind)) {
@@ -1514,6 +1635,8 @@ export function stepRun(run: Run, input: Input | Input[]) {
   stepFields(run);
   moveFoes(run);
   stepPlates(run);
+  stepBurns(run);
+  stepTrial(run);
   moveBullets(run);
   if (run.over) return;
   for (const h of standing(run)) {
@@ -1641,6 +1764,13 @@ function moveHero(run: Run, h: Hero, input: Input) {
   if (c && canOpen(run, h) && Math.hypot(c.x - h.x, c.y - h.y) < 22 + HERO_R) openChest(run, h);
   // The ground under you.
   for (const q of run.terrain.spikes) if (inRect(q, h.x, h.y, HERO_R - 4) && spikeState(q, now) === 'up') hurt(run, h, SPIKES.dmg * run.setup.zone.dmg, 'touch');
+  const al = run.terrain.altar;
+  if (al && !al.used && Math.hypot(al.x - h.x, al.y - h.y) < ALTAR_R + HERO_R) {
+    al.used = true;
+    run.curse = run.floor;
+    emit(run, { type: 'altar', x: al.x, y: al.y });
+    emit(run, { type: 'say', text: 'The bargain holds for this floor: more and better drops, faster shots.' });
+  }
   const sh = run.terrain.shrine;
   if (sh && !sh.used && Math.hypot(sh.x - h.x, sh.y - h.y) < SHRINE.r + HERO_R) {
     sh.used = true;
@@ -2340,7 +2470,7 @@ function moveFoes(run: Run) {
     // Volleys.
     f.def.shoots.forEach((p, i) => {
       if (p.on || now < f.next[i]) return;
-      f.next[i] = now + p.every / (f === run.boss || f === run.warden ? 1 : DIALS.fire);
+      f.next[i] = now + p.every / (f === run.boss || f === run.warden ? 1 : DIALS.fire * (cursed(run) ? BARGAIN.fire : 1));
       if (held || lost) return;
       if (p.below && f.hp > f.maxHp * p.below) return;
       if (p.above && f.hp <= f.maxHp * p.above) return;
@@ -3520,7 +3650,16 @@ function kill(run: Run, f: Foe, by: Hero) {
     emit(run, { type: 'passive', id: 'harvest', x: by.x, y: by.y });
   }
   // Now and then a monster drops something to wear: elites and golems far more often.
-  if (f !== run.boss && f !== run.warden && f.def.xp > 0 && !run.setup.tutorial && run.rnd() < (f.elite ? DROPS.elite : f.kind === 'golem' ? DROPS.golem : DROPS.plain)) dropEach(run, f.x, f.y, f.elite || f.kind === 'golem' ? DROP_LUCK.elite : 0);
+  // A dark altar's bargain: more drops, and rarer, for the rest of the floor.
+  const deal = cursed(run);
+  if (f !== run.boss && f !== run.warden && f.def.xp > 0 && !run.setup.tutorial && run.rnd() < (f.elite ? DROPS.elite : f.kind === 'golem' ? DROPS.golem : DROPS.plain) * (deal ? BARGAIN.loot : 1))
+    dropEach(run, f.x, f.y, (f.elite || f.kind === 'golem' ? DROP_LUCK.elite : 0) + (deal ? BARGAIN.luck : 0));
+  // An elite that splits falls into plain copies of itself.
+  if (f.trait === 'split')
+    for (let i = 0; i < TRAITS.split.n; i++) {
+      const a = (i / TRAITS.split.n) * Math.PI * 2 + run.rnd();
+      addFoe(run, f.kind as MonsterKind, f.x + Math.cos(a) * 22, f.y + Math.sin(a) * 22, true).bornUntil = run.t + 0.3;
+    }
   if (f === run.warden) dropEach(run, f.x, f.y + 30, DROP_LUCK.midBoss);
   if (f.def.xp > 0 || f === run.boss || f === run.warden) findMats(run, f === run.boss ? 'boss' : f === run.warden ? 'warden' : f.elite || f.kind === 'golem' ? 'elite' : 'plain', f.x, f.y);
   if (f.kind === 'splitter')
@@ -3958,7 +4097,10 @@ function pullGems(run: Run) {
 
 function checkRoom(run: Run) {
   if (run.cleared || (isBossRoom(run) && !climbing(run))) return;
-  const alive = run.foes.filter((f) => f.alive).length;
+  // A challenge room holds until its time is up.
+  if (run.trial && !run.trial.done) return;
+  // Statues don't hold a room shut.
+  const alive = run.foes.filter((f) => f.alive && f.kind !== 'statue').length;
   if (run.waves.length && alive <= 2 && !run.timers.length) later(run, 0.8, () => nextWave(run));
   if (!run.waves.length && alive === 0) {
     run.cleared = true;
@@ -3966,11 +4108,13 @@ function checkRoom(run: Run) {
     run.doorOpen = true;
     run.bullets = [];
     run.mines = [];
-    // A dark room: the torches light once it's clear.
+    // A dark room: the torches light once it's clear. Statues crumble, fire goes out.
     if (run.terrain.dark) run.dim = null;
+    crumble(run, (f) => f.kind === 'statue');
+    run.burns = [];
     openDoors(run);
     // Treasure and elite rooms leave a chest, and the Warden always does.
-    if (run.kind === 'treasure' || run.kind === 'elite' || isWardenRoom(run)) {
+    if (run.kind === 'treasure' || run.kind === 'elite' || run.trial || isWardenRoom(run)) {
       const [x, y] = freeSpot(run, run.area.w / 2, run.area.h * 0.45, 30);
       run.chest = { x, y, opened: false };
     }
@@ -4298,9 +4442,14 @@ export function skipToWarden(run: Run) {
 
 /** What a developer jump asks of a room (skipToShape). */
 export interface RoomForce {
-  shape: ShapeId;
+  shape: ShapeId | null;
   plates: boolean;
   dark: boolean;
+  /** The room's kind (an elite room, a rest room), a challenge, statues, a dark altar. */
+  kind?: RoomKind;
+  trial?: boolean;
+  statues?: number;
+  altar?: boolean;
 }
 
 /** Developer mode: a room on floor 3 with this shape, arrow plates, and dark if asked. */
@@ -4309,10 +4458,15 @@ export function skipToShape(run: Run, force: RoomForce) {
   run.timers = [];
   newFloor(run, Math.min(2, run.layout.floors - 2));
   run.timers = [];
+  for (const f of run.foes) f.alive = false;
+  run.foes = [];
+  if (force.kind) run.kind = force.kind;
   run.terrain = buildTerrain(run, force);
   run.dim = force.dark ? TRAPS.dark.sight : null;
-  run.waves = fillRoom(run);
-  later(run, 0.6, () => nextWave(run));
+  run.waves = run.kind === 'rest' ? [] : fillRoom(run);
+  if (run.waves.length) later(run, 0.6, () => nextWave(run));
+  if (force.statues) placeStatues(run, force.statues);
+  if (force.trial) startTrial(run);
 }
 
 /** Developer mode: straight to the boss's room. */

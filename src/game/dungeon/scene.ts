@@ -10,10 +10,10 @@ import { R } from '@/sprites/palette';
 import { botInput } from './bot';
 import { drawItem } from '@/sprites/characters/items';
 import type { Build } from '@/lib/stats';
-import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STAIRS, type Prop } from './props';
+import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STAIRS, STATUE, type Prop } from './props';
 import { THEMES, themeFor, type Theme } from './themes';
 import { bandOf, glowOf } from './items';
-import { BANDS, MATS, PARTY, SURGE, TRAPS } from '@/balance';
+import { BANDS, MATS, PARTY, SURGE, TRAITS, TRAPS } from '@/balance';
 import { spLook } from '@/sprites/characters/spLooks';
 import { WEAPON_FX, attackFx, drawFields, shotTexture, spFx, star, type Aura, type SpEvent } from './spFx';
 import { BOSS_ART, BOSS_LOOKS, FOE_FX, SHOT_ART, bossStage, drawMine, mirrorBreaks, shotOf, soon, type FoeCtx, type FoeKit, type Look } from './foeFx';
@@ -91,6 +91,8 @@ import {
   type RunEnd as EngineEnd,
   byOf,
   PLATE_R,
+  ALTAR_R,
+  type Trait,
 } from './engine';
 import { runFromStart, type Up } from '../net/wire';
 import { Follower } from '../net/follow';
@@ -232,6 +234,10 @@ export interface Hud {
   /** The dodge: 1 when ready. */
   dodge: number;
   cleared: boolean;
+  /** A challenge room: seconds left to hold, or null. */
+  trial: number | null;
+  /** This floor is under a dark altar's bargain. */
+  cursed: boolean;
   relics: Partial<Record<RelicId, number>>;
   /** Ledges climbed on the Summit, or null. */
   climb: number | null;
@@ -302,6 +308,8 @@ const HEAL = '#86efac';
 const RISE_MS = 280;
 /** Where a monster's health bar sits: this share of its picture's height above its middle. */
 const HP_BAR = { top: 0.42 };
+/** An elite trait's color: swift cyan, burning orange, splits violet. */
+const TRAIT_COLOR: Record<Trait, number> = { swift: 0x22d3ee, burning: 0xf97316, split: 0xa855f7 };
 /** The sounds that come in crowds (blows, hits, kills, light); others always play. */
 const CROWD: ReadonlySet<SfxId> = new Set(['slash', 'arrow', 'orb', 'wave', 'hit', 'bossHit', 'kill', 'gem', 'dash']);
 const SFX_PER_FRAME = 2;
@@ -877,7 +885,10 @@ class DungeonScene extends Phaser.Scene {
     prop('sconce', SCONCE);
     prop('stairs', STAIRS);
     prop('hitspark', HIT_SPARK);
+    prop('statue', STATUE, () => g.fillStyle(0x000000, 0.3).fillEllipse(20, 50, 36, 8));
     g.destroy();
+    // A statue turret is a monster with one still frame.
+    if (!this.anims.exists('statue')) this.anims.create({ key: 'statue', frames: [{ key: 'statue' }] });
     this.themeTextures();
   }
 
@@ -1525,6 +1536,8 @@ class DungeonScene extends Phaser.Scene {
       sp: r.hero.sp ? { skill: r.hero.sp.skill, skillReady: hundredths(skillReady(r, r.hero)), final: r.hero.sp.final, finalReady: hundredths(finalReady(r.hero)), finals: this.finals } : null,
       dodge: hundredths(Math.min(1, 1 - (r.hero.dodgeAt - r.t) / DODGE.cd)),
       cleared: r.cleared,
+      trial: r.trial && !r.trial.done ? Math.max(0, Math.ceil(r.trial.until - r.t)) : null,
+      cursed: r.curse === r.floor,
       relics: { ...r.hero.relics },
       map: this.miniMap(),
       gear: { worn: { ...r.hero.gear.worn }, bag: [...r.hero.gear.bag] },
@@ -2354,6 +2367,19 @@ class DungeonScene extends Phaser.Scene {
         this.sfx('clank', 1.3);
         break;
       }
+      case 'trial': {
+        // The doors slam shut, or open again.
+        this.sfx(e.on ? 'crash' : 'chime', e.on ? 0.7 : 1.2);
+        if (e.on) this.shake(250, 0.006);
+        this.drawRoom();
+        break;
+      }
+      case 'altar': {
+        const { x, y } = e;
+        this.sfx('dim', 0.7);
+        this.fade(800, (g, p) => g.lineStyle(4, 0xef4444, 0.8 * (1 - p)).strokeCircle(x, y, 16 + 90 * p));
+        break;
+      }
       case 'shrine': {
         const { x, y } = e;
         this.sfx('nova', 1.4);
@@ -2949,6 +2975,13 @@ class DungeonScene extends Phaser.Scene {
         fill = Math.ceil((w - 2) * Math.max(0, Math.min(1, f.hp / f.maxHp)));
       mk.fillStyle(0x07080d, 0.85).fillRect(x, y, w, 4);
       mk.fillStyle(f === r.warden ? 0xc084fc : f.elite ? 0xfbbf24 : 0xef4444).fillRect(x + 1, y + 1, fill, 2);
+      // An elite's trait: a pip by its bar and a ring at its feet in the trait's color.
+      if (f.trait) {
+        const c = TRAIT_COLOR[f.trait];
+        mk.fillStyle(0x07080d, 0.85).fillRect(x - 7, y - 1, 6, 6);
+        mk.fillStyle(c).fillRect(x - 6, y, 4, 4);
+        this.fx.lineStyle(2, c, 0.35 + 0.25 * Math.sin(now / 120 + f.id)).strokeCircle(f.x, f.y, f.def.r + 5);
+      }
     }
     // Your shots: arrows leave a short streak, orbs glow and pulse.
     for (const sh of r.shots) {
@@ -3037,6 +3070,26 @@ class DungeonScene extends Phaser.Scene {
             } else if (st === 'warn') t.fillStyle(iron[2]).fillRect(sx, base - 4, 1, 3).fillRect(sx - 1, base - 2, 3, 1);
             else t.fillStyle(iron[1]).fillRect(sx, base - 1, 1, 1);
           }
+    }
+    // Fire left by a burning elite: flickering tongues that die down as it goes out.
+    for (const b of r.burns ?? []) {
+      const left = Math.min(1, (b.until - r.t) / 1),
+        k = Math.floor(now / 90 + b.x) % 3;
+      g.fillStyle(0x7c2d12, 0.45 * left).fillCircle(b.x, b.y, TRAITS.burning.r);
+      g.fillStyle(0xf97316, 0.7 * left).fillCircle(b.x + (k - 1) * 2, b.y, TRAITS.burning.r * 0.6);
+      g.fillStyle(0xfde68a, 0.8 * left).fillCircle(b.x, b.y + (k - 1), TRAITS.burning.r * 0.25);
+    }
+    // A dark altar: a black stone with a red flame, cold once its bargain is taken.
+    const al = r.terrain.altar;
+    if (al) {
+      g.fillStyle(0x000000, 0.35).fillEllipse(al.x + 4, al.y, ALTAR_R * 2.4, ALTAR_R * 1.6);
+      g.fillStyle(S[0]).fillRect(al.x - ALTAR_R, al.y - ALTAR_R, ALTAR_R * 2, ALTAR_R * 2);
+      g.fillStyle(al.used ? S[2] : 0x3b0764).fillRect(al.x - ALTAR_R + 3, al.y - ALTAR_R + 3, ALTAR_R * 2 - 6, ALTAR_R * 2 - 6);
+      if (!al.used) {
+        g.fillStyle(0xef4444, 0.25 + 0.2 * pulse).fillCircle(al.x, al.y, ALTAR_R + 8);
+        g.fillStyle(0xef4444).fillCircle(al.x, al.y, 4 + pulse * 1.5);
+        g.fillStyle(0xfecaca).fillCircle(al.x, al.y, 2);
+      }
     }
     // Arrow plates: a pressure plate with an arrow on it pointing the way its arrows fly. Set off,
     // it glows red and the slots in the wall it shoots from light up along its line.

@@ -13,7 +13,7 @@ import { friendSheets, runSheets } from '@/game/sheets';
 import type { FriendCard } from '@/lib/friends';
 import type { ClassId } from '@/lib/gear';
 import { buildOf } from '@/lib/stats';
-import { MATS, ROOM_SHAPES, type MatId } from '@/balance';
+import { MATS, ROOM_SHAPES, TRIALS, type MatId } from '@/balance';
 import type { ShapeId } from '@/game/dungeon/shapes';
 import { spWorn } from '@/lib/sp';
 import { atRisk, settleGear, vaultSize, wornFor, type GearOutcome } from '@/lib/fog-gear';
@@ -47,9 +47,9 @@ interface Props {
   tutorial?: { voice: string; onDone: () => void };
 }
 
-export type RunStart = 'mid' | 'boss' | 'win' | 'sp' | 'skills' | `shape-${ShapeId}` | 'dark';
+export type RunStart = 'mid' | 'boss' | 'win' | 'sp' | 'skills' | `shape-${ShapeId}` | 'dark' | 'trial' | 'elite' | 'statues' | 'altar';
 /** The developer jumps to a room with walls inside it: `shape-halls` and so on, `dark` a dark one. */
-export const SHAPE_STARTS: RunStart[] = [...(Object.keys(ROOM_SHAPES.weights) as ShapeId[]).map((s): RunStart => `shape-${s}`), 'dark'];
+export const SHAPE_STARTS: RunStart[] = [...(Object.keys(ROOM_SHAPES.weights) as ShapeId[]).map((s): RunStart => `shape-${s}`), 'dark', 'trial', 'elite', 'statues', 'altar'];
 
 
 /* Every zone is a dungeon (src/game/dungeon), each with its own boss and ground. */
@@ -249,6 +249,10 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party, tutor
           else if (startAt === 'boss') h?.skipToBoss();
           else if (startAt === 'skills') h?.levelNow(5);
           else if (startAt === 'dark') h?.skipToShape({ shape: 'lanes', plates: true, dark: true });
+          else if (startAt === 'trial') h?.skipToShape({ shape: 'block', plates: false, dark: false, kind: 'fight', trial: true });
+          else if (startAt === 'elite') h?.skipToShape({ shape: 'corners', plates: false, dark: false, kind: 'elite' });
+          else if (startAt === 'statues') h?.skipToShape({ shape: 'halls', plates: false, dark: false, kind: 'fight', statues: 2 });
+          else if (startAt === 'altar') h?.skipToShape({ shape: null, plates: false, dark: false, kind: 'rest', altar: true });
           else if (startAt.startsWith('shape-')) h?.skipToShape({ shape: startAt.slice(6) as ShapeId, plates: true, dark: false });
           else {
             // The recap: let the bot play a little first, so it has something to show.
@@ -390,6 +394,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party, tutor
               />
             )}
             {hud.warden && <BossBar name={midName(zone)} hp={hud.warden.hp} max={hud.warden.max} ember={hud.warden.phase === 2 ? 'hot' : 'warm'} />}
+            {hud.trial != null && <BossBar name={`Hold on · ${hud.trial}s`} hp={hud.trial} max={TRIALS.secs} />}
+            {hud.cursed && <p className="font-pixel text-[8px] text-red-400">BARGAIN · FASTER SHOTS, BETTER DROPS</p>}
           </div>
           <div className="flex w-[11.5rem] shrink-0 flex-col items-end gap-1.5">
             <div className="flex items-center gap-1.5">

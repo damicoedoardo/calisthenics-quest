@@ -170,3 +170,33 @@ export const TRAPS = {
   arrows: { from: 1, chance: 0.4, most: 2, tell: 0.5, n: 3, gap: 30, speed: 200, dmg: 8, every: 2.5 },
   dark: { from: 2, chance: 0.15, sight: 240 },
 };
+
+/** Challenge rooms: now and then a plain fight room (past the floor's first, from floor `from`)
+    seals its doors and sends a wave every `every` s for `secs` s, each wave the size of a third of
+    a room; what still stands when time is up crumbles, and a chest comes up (chest luck).
+    Goal: a short, loud survival test about once a floor (`chance` per plain fight room), paid for
+    with a chest; harder = longer, more often or bigger waves. */
+export const TRIALS = { from: 1, chance: 0.2, secs: 30, every: 6 };
+
+/** Shrine bargains: in `chance` of rest rooms, a dark altar beside the healing shrine. Touch it
+    and, for the rest of this floor, monsters fire `fire` times as often, but drop items `loot`
+    times as often and `luck` rarer (DROP_LUCK). Goal: a risk you choose, worth it when you are
+    healthy; the bot never takes it, so it doesn't move the zone win rates. */
+export const BARGAIN = { chance: 0.6, fire: 1.35, loot: 2, luck: 0.5 };
+
+/** Elites with a trait: each elite rolls one. Swift: `speed` times as fast. Burning: drops a patch
+    of fire every `every` s that lasts `last` s, `r` px wide, hitting `dmg` (times the zone's damage)
+    on touch. Splits: falls into `n` plain copies of itself. Goal: an elite room reads differently
+    each time, and each trait asks for its own answer (keep moving, keep off its trail, save a
+    blast for the end). */
+export const TRAITS = {
+  swift: { speed: 1.5 },
+  burning: { every: 0.4, last: 3, r: 16, dmg: 7 },
+  split: { n: 2 },
+};
+
+/** Statue turrets: stone statues against the walls of a plain room (from floor `from`, in
+    `chance` of rooms, up to `most`) that fire rings of shots. They don't need to fall for the room
+    to clear (they crumble when it does), but can be broken. Their HP and shots are the monster
+    `statue` in content.ts. Goal: RotMG-style patterns to dodge while you fight; harder = more. */
+export const STATUES = { from: 2, chance: 0.3, most: 2 };

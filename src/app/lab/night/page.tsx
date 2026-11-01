@@ -212,6 +212,10 @@ const GO: Record<string, () => void> = {
   feed: () => open(geared(), 'tab=friends&feed'),
   walls: () => open(veteran(14, 1), 'run=0&at=shape-corners'),
   dark: () => open(veteran(14, 1), 'run=0&at=dark'),
+  trial: () => open(veteran(14, 1), 'run=0&at=trial'),
+  elite: () => open(veteran(14, 1), 'run=0&at=elite'),
+  statues: () => open(veteran(14, 1), 'run=0&at=statues'),
+  altar: () => open(veteran(14, 1), 'run=0&at=altar'),
 };
 
 const MOMENTS: [string, string][] = [
@@ -322,6 +326,10 @@ export default function NightLab() {
         <Row icon={<Swords size={16} />} label="Winding hall" note="Two walls from either side, staggered" onClick={() => open(veteran(14, 1), 'run=0&at=shape-halls')} />
         <Row icon={<Swords size={16} />} label="Three lanes" note="Two long walls down the room" onClick={() => open(veteran(14, 1), 'run=0&at=shape-lanes')} />
         <Row icon={<Swords size={16} />} label="A dark room with arrow plates" note="You see a little way round you until it's clear" onClick={() => open(veteran(14, 1), 'run=0&at=dark')} />
+        <Row icon={<Swords size={16} />} label="A challenge room" note="The doors seal: hold on 30 seconds of waves for a chest" onClick={GO.trial} />
+        <Row icon={<Swords size={16} />} label="Elites with traits" note="Swift (cyan), burning (orange, fire trail), splits (violet)" onClick={GO.elite} />
+        <Row icon={<Swords size={16} />} label="Statue turrets" note="Statues on the walls fire rings; break them or dodge, they crumble when the room is clear" onClick={GO.statues} />
+        <Row icon={<Swords size={16} />} label="A dark altar's bargain" note="A rest room with a dark altar: touch it for more and better drops on this floor, and faster shots" onClick={GO.altar} />
       </Panel>
 
       <Panel title="CLASSES, SP AND SWEAT COINS" note="Your class at the start, weapons that belong to one class, the first SP with its trial, and sweat coins to change class or start your points over.">

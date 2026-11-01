@@ -1096,6 +1096,15 @@ export const FOE_FX: Record<MonsterKind, FoeFx> = {
     shot: 'shot-tear',
     death: (k, e, R) => glass(k, e, R, 8, 220, 1.4),
   },
+  // A statue turret (STATUES): its own texture, drawn as a prop (props.ts STATUE), one frame.
+  statue: {
+    look: { tex: 'statue' as SheetKey, scale: 0.95, bits: [0x4a4158, 0x6b6478, 0xef4444] },
+    killPitch: 0.6,
+    death: (k, e, R) => {
+      k.sfx('crack', 0.8);
+      puff(k, e, R, 0x6b6478, 12);
+    },
+  },
   lily: {
     look: { tex: 'lily', scale: 0.6, bits: [0xec4899, 0x22804a, 0xfbcfe8] },
     shot: 'shot-petal',
