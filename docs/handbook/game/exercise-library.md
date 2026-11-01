@@ -1,9 +1,9 @@
 ---
 type: reference
 title: Exercise library
-description: The 887-exercise library (free-exercise-db plus FORMA's own) as a searchable database for a coach — fields, kinds and movement families, findExercises, the JSON export, pixel demos, tips and common mistakes, and where to edit what.
+description: The 887-exercise library (free-exercise-db plus FORMA's own) as a searchable database for a coach — fields, kinds and movement families, findExercises, the JSON export, pixel demos, tips and common mistakes, YouTube how-to videos, and where to edit what.
 tags: [game, exercises, library, coach, data]
-timestamp: 2026-10-28
+timestamp: 2026-11-01
 ---
 
 # Exercise library
@@ -11,7 +11,7 @@ timestamp: 2026-10-28
 Code: `src/exercises/`. Shown in the app from the Train tab ("Exercise library",
 `src/components/ExerciseLibrary.tsx`): search, filters for equipment, kind (stretch, mobility...)
 and movement, and per exercise the boy and girl demo, how-to steps, "Do it well" tips and common
-mistakes. Held sideways, the search and filters share one line, the list has two columns, and an
+mistakes, and a how-to video (below). Held sideways, the search and filters share one line, the list has two columns, and an
 exercise shows its demos and facts beside the how-to.
 The exercise page is `ExerciseDetail.tsx`; tapping any workout card on Today or the Train tab
 opens it too (`ExerciseSheet`: the card's exercise by id, else the plainest one with its demo).
@@ -29,6 +29,7 @@ together.
 | `src/exercises/classify.ts` | Which pixel demo and gear show each catalog exercise (name rules, then overrides) |
 | `src/exercises/coaching.ts` | Per movement: family, region, kind, form tips, common mistakes |
 | `src/exercises/library.ts` | `loadLibrary()` joins it all; `findExercises()` and `exerciseById()` search it |
+| `src/exercises/videos.ts` | `VIDEOS`: a hand-picked YouTube how-to video per exercise id; `videoOf`, `videoSearchUrl` |
 | `src/exercises/export.ts` | The JSON export; `pnpm exercises:db` writes `public/data/exercises.json` |
 
 In the app, the same file is served at `/data/exercises.json`.
@@ -65,6 +66,22 @@ findExercises(all, { family: 'hinge', equipment: ['body only', 'dumbbell'], maxL
 findExercises(all, { kind: 'stretch', muscles: ['hamstrings'] });
 ```
 
+## How-to videos
+
+The exercise page shows "Watch how to do it" when the exercise has a pick in `VIDEOS`
+(`src/exercises/videos.ts`). Nothing loads from YouTube until it is tapped; then the player
+plays in the page from `youtube-nocookie.com`, with an "Open on YouTube" link under it. An
+exercise without a pick shows "Find a how-to video on YouTube", a YouTube search for its name.
+
+The picks cover every exercise the coach plans with (the `STAPLES`, warm-up moves and cool-down
+stretches in `src/lib/coach/staples.ts`, and FORMA's own moves): 145 of 146. The one gap is
+`All_Fours_Quad_Stretch`. The other ~745 catalog variants get the search. Each pick was chosen by
+hand from web search results for that move (a short plain tutorial, not a Short); the cloud
+machine can't reach YouTube, so titles were not re-checked against the live video. A removed
+video shows YouTube's own "unavailable" box, and the YouTube link still works.
+`src/exercises/videos.test.ts` checks each pick is a real library id with a well-formed video id,
+and that every planned exercise has one.
+
 ## How to change things
 
 | I want to... | Edit |
@@ -73,6 +90,7 @@ findExercises(all, { kind: 'stretch', muscles: ['hamstrings'] });
 | Change which demo or gear an exercise shows | a rule in `RULES` or an entry in `OVERRIDES` (`src/exercises/classify.ts`); program moves are in `PROGRAM` |
 | Change a movement's tips, mistakes, family, region or kind | its entry in `COACHING` (`src/exercises/coaching.ts`) |
 | Add a movement (a new pixel demo) | `MOVES` and `frame` in `src/sprites/characters/moves.ts`, its `COACHING` entry, then a rule in `classify.ts` |
+| Add or change an exercise's how-to video | its entry in `VIDEOS` (`src/exercises/videos.ts`): library id, the `v=` id from the watch link, the title |
 | Add an exercise the catalog lacks | `OWN` in `src/exercises/library.ts` |
 | Add a field to the database | `LibraryExercise` (`library.ts`), `exportLibrary` (`export.ts`), the table above |
 
