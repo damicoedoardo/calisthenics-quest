@@ -102,7 +102,8 @@ import {
   zoneDungeon,
 } from './content';
 import { seeded } from '@/lib/random';
-import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS, LEECH_CAP, MAX_EVADE, SP_FINAL, SP_PASSIVE, SP_SKILL, SP_WEAPON, SURGE, MELEE_GUARD, type SpMoveNumbers } from '@/balance';
+import { ABILITY, BAG, CALM, CRIT_HIT, DROP_LUCK, DROPS, LEECH_CAP, MAX_EVADE, SP_FINAL, SP_PASSIVE, SP_SKILL, SP_WEAPON, SURGE, MELEE_GUARD, TRAPS, type SpMoveNumbers } from '@/balance';
+import { allJoined, buildShape, clearLine, inBlock, outOfBlocks, pickShape, wayTo, type ShapeId } from './shapes';
 import type { Build } from '@/lib/stats';
 import { canWear, ITEM_SLOTS, itemScore, itemTotals, otherClass, rollItem, rollRarity, shortOf, starterKit, type Item, type ItemSlot } from './items';
 
@@ -143,7 +144,35 @@ export interface Terrain {
   spikes: (Rect & { phase: number })[];
   barrels: { id: number; x: number; y: number; alive: boolean }[];
   shrine: { x: number; y: number; used: boolean } | null;
+  /** Walls inside the room (shapes.ts): block you, monsters, and every shot, like pillars. Optional:
+      a run from an older game server has none. */
+  blocks?: Rect[];
+  shape?: ShapeId;
+  /** Arrow plates (TRAPS.arrows). */
+  plates?: Plate[];
+  /** Dark until the room is clear (TRAPS.dark). */
+  dark?: boolean;
 }
+
+/** An arrow plate in the floor: step on it and arrows fly from the wall across its line. `axis`
+    is the way they fly (x: along the room's width), `from` the wall they come from (-1: the low
+    side). `at` is when they fly (-1: not set off), `ready` when it can be set off again. */
+export interface Plate {
+  x: number;
+  y: number;
+  axis: 'x' | 'y';
+  from: -1 | 1;
+  at: number;
+  ready: number;
+}
+export const PLATE_R = 14;
+const NO_BLOCKS: Rect[] = [];
+/** The room's inside walls (none in an older run). */
+export const blocksOf = (run: Run): Rect[] => run.terrain.blocks ?? NO_BLOCKS;
+/** Which way to walk from x, y toward tx, ty round the room's inside walls; null when straight. */
+export const wayFor = (run: Run, x: number, y: number, tx: number, ty: number, r?: number) => wayTo(blocksOf(run), run.area.w, run.area.h, ROOM.wall, x, y, tx, ty, r);
+/** Whether nothing stands between two points but open floor (pillars aside). */
+export const inSight = (run: Run, x1: number, y1: number, x2: number, y2: number, pad = 0) => clearLine(blocksOf(run), x1, y1, x2, y2, pad);
 
 export const inRect = (r: Rect, x: number, y: number, pad = 0) => x > r.x - pad && x < r.x + r.w + pad && y > r.y - pad && y < r.y + r.h + pad;
 
@@ -265,6 +294,8 @@ export interface Bullet {
   turned?: boolean;  /** Who fired it, and with which of its patterns, for its look (foeFx.ts). */
   from?: FoeKind;
   pat?: number;
+  /** An arrow from a plate in the floor (drawn as an arrow). */
+  trap?: boolean;
 }
 
 /** A lobbed bomb: lands, then bursts at `at`. */
@@ -364,6 +395,8 @@ export type GameEvent =
   /** A Scrap Squire falls into a pile, stands up again (`up`), or is stamped out for good. */
   | { type: 'pile'; id: number; x: number; y: number; up: boolean }
   | { type: 'shrine'; x: number; y: number }
+  /** An arrow plate set off: arrows fly from the wall in TRAPS.arrows.tell s. */
+  | { type: 'trap'; x: number; y: number }
   | { type: 'chest'; x: number; y: number }
   | { type: 'relic'; id: RelicId }
   | { type: 'ward'; x: number; y: number }
@@ -1047,7 +1080,7 @@ function roomSize(run: Run) {
 
 /** The room's floor: pillars in mirrored pairs, pools of water, spikes and barrels deeper down, and
     a shrine in a rest room. Kept off the lanes in from each wall's door, where you walk in. */
-function buildTerrain(run: Run): Terrain {
+function buildTerrain(run: Run, force?: RoomForce): Terrain {
   const { w, h } = run.area,
     rnd = run.rnd,
     fl = floorOf10(run),
@@ -1055,11 +1088,25 @@ function buildTerrain(run: Run): Terrain {
     m = ROOM.wall,
     more = zoneDungeon(run.setup.zone).ground;
   const t: Terrain = { water: [], pillars: [], spikes: [], barrels: [], shrine: null };
+  // Walls inside the room: a shape (shapes.ts), in plain rooms past the floor's first (you walk in
+  // to an open hall), and never one that shuts a pocket off.
+  if (force || (!boss && !climbing(run) && !run.setup.tutorial && run.kind !== 'rest' && cellOf(run).dist > 0)) {
+    const id = force ? force.shape : pickShape(fl, rnd);
+    if (id) {
+      const blocks = buildShape(id, w, h, m, rnd);
+      if (allJoined(blocks, w, h, m, w / 2, h - 70)) {
+        t.blocks = blocks;
+        t.shape = id;
+      }
+    }
+  }
+  const blocks = t.blocks ?? NO_BLOCKS;
   // The zone's share of each thing on the ground (the first zone's, exactly, at 1).
   const amt = (n: number, k: number) => (k === 1 ? n : Math.floor(n * k) + (rnd() < (n * k) % 1 ? 1 : 0));
   const rects = () => [...t.water, ...t.spikes];
   const clear = (x: number, y: number, r: number) => {
     if (x < m + r + 24 || x > w - m - r - 24 || y < m + r + 24 || y > h - m - r - 24) return false;
+    if (inBlock(blocks, x, y, r + 30)) return false;
     const lane = ROOM.door / 2 + 26 + r;
     if (Math.abs(x - w / 2) < lane && (y < 170 + r || y > h - 170 - r)) return false;
     if (Math.abs(y - h / 2) < lane && (x < 120 + r || x > w - 120 - r)) return false;
@@ -1110,7 +1157,66 @@ function buildTerrain(run: Run): Terrain {
       t.barrels.push({ id: ++run.ids, x, y, alive: true });
       return true;
     });
+  // Arrow plates: each on open floor, its arrows crossing the room along its row or column.
+  const A = TRAPS.arrows;
+  if (force ? force.plates : fl >= A.from && !run.setup.tutorial && rnd() < A.chance) {
+    t.plates = [];
+    tries(1 + Math.floor(rnd() * A.most), () => {
+      const x = m + 60 + rnd() * (w - 2 * m - 120),
+        y = 200 + rnd() * (h - 400);
+      if (!clear(x, y, PLATE_R + 10)) return false;
+      if (t.plates!.some((p) => Math.hypot(p.x - x, p.y - y) < 120)) return false;
+      t.plates!.push({ x, y, axis: rnd() < 0.5 ? 'x' : 'y', from: rnd() < 0.5 ? -1 : 1, at: -1, ready: 0 });
+      return true;
+    });
+  }
+  const D = TRAPS.dark;
+  if (force ? force.dark : fl >= D.from && !run.setup.tutorial && run.kind !== 'rest' && rnd() < D.chance) t.dark = true;
   return t;
+}
+
+/** A spot for something to sit (a chest, the stairs): (x, y), or the nearest open floor to it. */
+function freeSpot(run: Run, x: number, y: number, r: number): [number, number] {
+  if (!inPillar(run, x, y, r)) return [x, y];
+  for (let d = 30; d < 600; d += 30)
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2,
+        px = clamp(x + Math.cos(a) * d, ROOM.wall + r, run.area.w - ROOM.wall - r),
+        py = clamp(y + Math.sin(a) * d, ROOM.wall + r, run.area.h - ROOM.wall - r);
+      if (!inPillar(run, px, py, r)) return [px, py];
+    }
+  return [x, y];
+}
+
+/** Arrow plates: set off by a hero standing on one; the arrows fly when the tell is up. */
+function stepPlates(run: Run) {
+  const ps = run.terrain.plates;
+  if (!ps) return;
+  const A = TRAPS.arrows,
+    now = run.t,
+    { w, h } = run.area,
+    m = ROOM.wall;
+  for (const p of ps) {
+    if (p.at < 0) {
+      if (now < p.ready) continue;
+      for (const o of standing(run))
+        if (closer(o.x - p.x, o.y - p.y, PLATE_R + HERO_R)) {
+          p.at = now + A.tell;
+          emit(run, { type: 'trap', x: p.x, y: p.y });
+          break;
+        }
+      continue;
+    }
+    if (now < p.at) continue;
+    p.at = -1;
+    p.ready = now + A.every;
+    for (let i = 0; i < A.n; i++) {
+      const off = (i - (A.n - 1) / 2) * A.gap,
+        [x, y] = p.axis === 'x' ? [p.from < 0 ? m + 4 : w - m - 4, p.y + off] : [p.x + off, p.from < 0 ? m + 4 : h - m - 4],
+        a = p.axis === 'x' ? (p.from < 0 ? 0 : Math.PI) : p.from < 0 ? Math.PI / 2 : -Math.PI / 2;
+      run.bullets.push({ id: ++run.ids, x, y, vx: Math.cos(a) * A.speed, vy: Math.sin(a) * A.speed, r: 5, dmg: A.dmg * run.setup.zone.dmg, born: now, boss: false, style: 'plain', ang: a, spd: A.speed, bounce: 0, trap: true });
+    }
+  }
 }
 
 /** Into the map's room `map.at`, through its door on side `from` (null: the floor's first room).
@@ -1148,7 +1254,7 @@ function enterRoom(run: Run, from: Side | null) {
     p.tow = { x: 0, y: 0 };
   });
   run.warden = null;
-  run.dim = null;
+  run.dim = run.terrain.dark && !c.cleared ? TRAPS.dark.sight : null;
   run.waves = [];
   if (c.cleared) {
     run.cleared = run.doorOpen = true;
@@ -1179,6 +1285,7 @@ function enterRoom(run: Run, from: Side | null) {
     return;
   }
   if (run.kind !== 'fight') emit(run, { type: 'say', text: `${ROOM_KINDS[run.kind].name} room. ${ROOM_KINDS[run.kind].text}` });
+  if (run.terrain.dark) emit(run, { type: 'say', text: 'The torches are out. They light again when the room is clear.' });
   run.waves = run.kind === 'rest' ? [] : fillRoom(run);
   if (run.waves.length) later(run, 0.6, () => nextWave(run));
 }
@@ -1187,7 +1294,8 @@ function enterRoom(run: Run, from: Side | null) {
 function inPillar(run: Run, x: number, y: number, r: number) {
   const ps = run.terrain.pillars;
   for (let i = 0; i < ps.length; i++) if (closer(ps[i].x - x, ps[i].y - y, ps[i].r + r)) return true;
-  return false;
+  const bs = run.terrain.blocks;
+  return !!bs && inBlock(bs, x, y, r);
 }
 
 /** A point in the room for a monster: away from you and out of the pillars. */
@@ -1405,6 +1513,7 @@ export function stepRun(run: Run, input: Input | Input[]) {
   if (run.party.length > 1) revive(run);
   stepFields(run);
   moveFoes(run);
+  stepPlates(run);
   moveBullets(run);
   if (run.over) return;
   for (const h of standing(run)) {
@@ -2154,6 +2263,17 @@ function useAbility(run: Run, h: Hero, input: Input) {
   }
 }
 
+/** A monster that can't see who it hunts past the room's inside walls walks round to them. */
+function aroundWalls(run: Run, f: Foe) {
+  const bs = run.terrain.blocks;
+  if (!bs || (!f.vx && !f.vy) || run.t < f.dashUntil || run.t < f.windUntil) return;
+  const h = prey(run, f.x, f.y),
+    way = wayTo(bs, run.area.w, run.area.h, ROOM.wall, f.x, f.y, h.x, h.y, Math.min(f.def.r, 18));
+  if (!way) return;
+  f.vx = way[0] * f.speed;
+  f.vy = way[1] * f.speed;
+}
+
 /** Pushes a body out of any pillar it walked into, so it slides around it. */
 function outOfPillars(run: Run, o: { x: number; y: number }, r: number) {
   for (const p of run.terrain.pillars) {
@@ -2166,6 +2286,8 @@ function outOfPillars(run: Run, o: { x: number; y: number }, r: number) {
     o.x = p.x + (dx / d) * min;
     o.y = p.y + (dy / d) * min;
   }
+  const bs = run.terrain.blocks;
+  if (bs) outOfBlocks(bs, o, r, run.area.w, run.area.h, ROOM.wall);
 }
 
 function clearBullets(run: Run, x: number, y: number, r: number) {
@@ -2204,7 +2326,10 @@ function moveFoes(run: Run) {
     else if (now >= f.knockUntil) {
       if (f === run.boss) steerBoss(run, f);
       else if (lost) f.vx = f.vy = 0;
-      else steer(run, f);
+      else {
+        steer(run, f);
+        aroundWalls(run, f);
+      }
     }
     if (f === run.warden) stepMid(run, f);
     const wade = (f !== run.boss && run.terrain.water.some((q) => inRect(q, f.x, f.y)) ? WATER.foe : 1) * (f.slow && now < f.slow.until ? 1 - f.slow.k : 1);
@@ -3255,7 +3380,9 @@ function nearest(run: Run, x: number, y: number, skip?: Set<Foe>, within = Infin
     const r = (f.x - x) ** 2 + (f.y - y) ** 2;
     if (r >= within * within) continue;
     // A Loner showing you its shield is a poor mark: another as close, or a little further, first.
-    const d = r * (shielded(f, x, y) ? 4 : 1);
+    let d = r * (shielded(f, x, y) ? 4 : 1);
+    // One behind a wall is a poor mark too: shots stop at walls.
+    if (run.terrain.blocks && d < bd && !clearLine(run.terrain.blocks, x, y, f.x, f.y)) d *= 9;
     if (d < bd) {
       bd = d;
       best = f;
@@ -3839,14 +3966,13 @@ function checkRoom(run: Run) {
     run.doorOpen = true;
     run.bullets = [];
     run.mines = [];
+    // A dark room: the torches light once it's clear.
+    if (run.terrain.dark) run.dim = null;
     openDoors(run);
     // Treasure and elite rooms leave a chest, and the Warden always does.
     if (run.kind === 'treasure' || run.kind === 'elite' || isWardenRoom(run)) {
-      let x = run.area.w / 2,
-        y = run.area.h * 0.45;
-      for (let i = 0; i < 8 && inPillar(run, x, y, 30); i++) y += 40;
+      const [x, y] = freeSpot(run, run.area.w / 2, run.area.h * 0.45, 30);
       run.chest = { x, y, opened: false };
-      x = 0;
     }
     emit(run, { type: 'clear' });
   }
@@ -3863,7 +3989,10 @@ function openDoors(run: Run) {
     return;
   }
   run.doors = (Object.entries(c.links) as [Side, number][]).map(([side, to]) => ({ side, x: spot[side][0], y: spot[side][1], to, kind: run.map.cells[to].kind, been: run.map.cells[to].visited }));
-  if (c.kind === 'stairs' || c.kind === 'warden') run.stairs = { x: w / 2, y: 110 };
+  if (c.kind === 'stairs' || c.kind === 'warden') {
+    const [x, y] = freeSpot(run, w / 2, 110, 24);
+    run.stairs = { x, y };
+  }
 }
 
 /** Open the chest: three chest items to pick from, maybe an item. In a party, the first hero to
@@ -4165,6 +4294,25 @@ export function skipToWarden(run: Run) {
   if (run.boss || f < 0) return;
   run.timers = [];
   newFloor(run, f, true);
+}
+
+/** What a developer jump asks of a room (skipToShape). */
+export interface RoomForce {
+  shape: ShapeId;
+  plates: boolean;
+  dark: boolean;
+}
+
+/** Developer mode: a room on floor 4 with this shape, arrow plates, and dark if asked. */
+export function skipToShape(run: Run, force: RoomForce) {
+  if (run.boss) return;
+  run.timers = [];
+  newFloor(run, Math.min(3, run.layout.floors - 2));
+  run.timers = [];
+  run.terrain = buildTerrain(run, force);
+  run.dim = force.dark ? TRAPS.dark.sight : null;
+  run.waves = fillRoom(run);
+  later(run, 0.6, () => nextWave(run));
 }
 
 /** Developer mode: straight to the boss's room. */

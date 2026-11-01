@@ -13,7 +13,8 @@ import { friendSheets, runSheets } from '@/game/sheets';
 import type { FriendCard } from '@/lib/friends';
 import type { ClassId } from '@/lib/gear';
 import { buildOf } from '@/lib/stats';
-import { MATS, type MatId } from '@/balance';
+import { MATS, ROOM_SHAPES, type MatId } from '@/balance';
+import type { ShapeId } from '@/game/dungeon/shapes';
 import { spWorn } from '@/lib/sp';
 import { atRisk, settleGear, vaultSize, wornFor, type GearOutcome } from '@/lib/fog-gear';
 import { canWear, ITEM_SLOTS, nameOf, otherClass, RARITY, SLOT_NAME, type Item, type ItemSlot } from '@/game/dungeon/items';
@@ -46,7 +47,9 @@ interface Props {
   tutorial?: { voice: string; onDone: () => void };
 }
 
-export type RunStart = 'mid' | 'boss' | 'win' | 'sp' | 'skills';
+export type RunStart = 'mid' | 'boss' | 'win' | 'sp' | 'skills' | `shape-${ShapeId}` | 'dark';
+/** The developer jumps to a room with walls inside it: `shape-halls` and so on, `dark` a dark one. */
+export const SHAPE_STARTS: RunStart[] = [...(Object.keys(ROOM_SHAPES.weights) as ShapeId[]).map((s): RunStart => `shape-${s}`), 'dark'];
 
 
 /* Every zone is a dungeon (src/game/dungeon), each with its own boss and ground. */
@@ -245,6 +248,8 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party, tutor
           }
           else if (startAt === 'boss') h?.skipToBoss();
           else if (startAt === 'skills') h?.levelNow(5);
+          else if (startAt === 'dark') h?.skipToShape({ shape: 'lanes', plates: true, dark: true });
+          else if (startAt.startsWith('shape-')) h?.skipToShape({ shape: startAt.slice(6) as ShapeId, plates: true, dark: false });
           else {
             // The recap: let the bot play a little first, so it has something to show.
             h?.autopilot(true);

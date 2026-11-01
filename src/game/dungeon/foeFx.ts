@@ -413,6 +413,18 @@ export const SHOT_ART: Record<string, ShotArt> = {
       g.fillStyle(0xffffff).fillRect(4, 4, 2, 2);
     },
   },
+  // An arrow from a trap in the wall (an arrow plate): iron head, dark shaft, red glow.
+  'shot-trap': {
+    w: 8,
+    h: 22,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0xef4444, 0.3).fillEllipse(4, 11, 8, 22);
+      g.fillStyle(0xd6d3d1).fillTriangle(4, 0, 1, 6, 7, 6);
+      g.fillStyle(0x57534e).fillRect(3, 6, 2, 12);
+      g.fillStyle(0xfca5a5).fillRect(1, 16, 2, 5).fillRect(5, 16, 2, 5);
+    },
+  },
   // A Ridge Hawk's quills.
   'shot-quill': {
     w: 10,
