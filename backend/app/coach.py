@@ -82,13 +82,17 @@ and anything that hurts.
 - Then call save_profile with everything, and plan their first week.
 
 Planning the week:
-- You plan a whole week at a time: the player sees every day of it, and today's workout is its \
-first day not done. The brief shows the week. show_week gives the next workout in full.
-- To plan or rethink the week, start from draft_week (the app's own week from their profile and \
-log) or build your own, then call set_week with every workout day (weekday names like "mon" or \
-dates). Weeks run Monday to Sunday: you plan from today to Sunday, and on Monday the next week \
-is planned. As many days as they train a week, with rest days between where it fits; late in \
-the week fewer fit, so don't cram them. To change one day only, call set_workout with that day.
+- The plan holds two weeks, this one and next one, and the player sees every day of both; \
+today's workout is the first day not done. The brief shows both weeks. show_week gives the next \
+workout in full. Weeks run Monday to Sunday; on Monday next week becomes this week and the app \
+drafts a new next week behind it.
+- To plan or rethink a week, start from draft_week (the app's own week from their profile and \
+log; week "next" for next week) or build your own, then call set_week with every workout day \
+(weekday names like "mon" or dates) and week "this" (today to Sunday) or "next". Next week can \
+be planned any time: never tell the player to wait for it. As many days as they train a week, \
+with rest days between where it fits; late in the week fewer fit, so don't cram them. Mind the \
+join: Sunday and the Monday after are days running. To change one day only, call set_workout \
+with that day ("next mon" is next week's Monday).
 - Every day you don't plan a workout on is a rest day. Rest days are part of the plan and count: \
 the player keeps one by resting (sitting by the fire in the app). Plan them on purpose, and if \
 the player wants no rest days at all, push back.
@@ -126,7 +130,7 @@ shows the workouts themselves as cards.
 Changing the plan together:
 - The plan is flexible and the player can change anything by talking to you: move a workout to \
 another day (move_workout), swap two days (move_workout onto a workout day), make a day a rest \
-day (rest_day), change a day's workout (set_workout), or rethink the rest of the week (set_week).
+day (rest_day), change a day's workout (set_workout), or rethink the rest of this week or next week (set_week).
 - Before a change, check it against the brief: what they did lately and how it felt, days since \
 each muscle was trained, rest days, notes (pain, a busy week), and their level. If it is fine, \
 do it. If it isn't wise (the same muscles two days running, a hard day right after a very hard \
@@ -255,26 +259,28 @@ TOOLS: list[dict[str, Any]] = [
     ),
     _tool(
         "draft_week",
-        "The app's own plan for the player's coming week, built from their profile and log. A "
-        "good start to change and save with set_week.",
-        _obj({}),
+        "The app's own plan for this week (from today) or next week, built from their profile and "
+        "log. A good start to change and save with set_week.",
+        _obj({"week": {"type": "string", "enum": ["this", "next"]}}),
     ),
     _tool(
         "show_week",
-        "The week as it is now, and the next workout in full (ids and doses).",
+        "Both weeks as they are now, and the next workout in full (ids and doses).",
         _obj({}),
     ),
     _tool(
         "set_week",
-        "Plan the whole week from today: every workout day with its workout. Days already done "
-        "this week stay. The app checks each workout and returns the week.",
+        "Plan one whole week: this week from today (week 'this', the default) or next week "
+        "(week 'next'), every workout day with its workout. Days already done stay, and so does "
+        "the other week. The app checks each workout and returns the week.",
         _obj(
             {
+                "week": {"type": "string", "enum": ["this", "next"]},
                 "days": {
                     "type": "array",
                     "items": _obj(
                         {
-                            "day": {"type": "string", "description": "'mon'..'sun' or a date."},
+                            "day": {"type": "string", "description": "'mon'..'sun' or a date, in that week."},
                             **_WORKOUT,
                         }
                     ),
@@ -288,7 +294,7 @@ TOOLS: list[dict[str, Any]] = [
         "what it fixed.",
         _obj(
             {
-                "day": {"type": "string", "description": "'mon'..'sun', 'today' or a date."},
+                "day": {"type": "string", "description": "'mon'..'sun', 'next mon'..'next sun', 'today' or a date."},
                 **_WORKOUT,
             },
             ["mode", "title", "items"],
@@ -296,20 +302,20 @@ TOOLS: list[dict[str, Any]] = [
     ),
     _tool(
         "move_workout",
-        "Move a day's workout to another day this week (today to Sunday). Onto a rest day it "
+        "Move a day's workout to another day, today to next week's Sunday. Onto a rest day it "
         "moves; onto a workout day the two swap. Returns the week and anything a trainer would "
         "flag (the same muscles on days in a row, three days in a row).",
         _obj(
             {
-                "from": {"type": "string", "description": "'mon'..'sun', 'today' or a date."},
-                "to": {"type": "string", "description": "'mon'..'sun', 'tomorrow' or a date."},
+                "from": {"type": "string", "description": "'mon'..'sun', 'next mon'..'next sun', 'today' or a date."},
+                "to": {"type": "string", "description": "'mon'..'sun', 'next mon'..'next sun', 'tomorrow' or a date."},
             }
         ),
     ),
     _tool(
         "rest_day",
         "Make a day a rest day: its workout (not done yet) comes off the week.",
-        _obj({"day": {"type": "string", "description": "'mon'..'sun', 'today' or a date."}}),
+        _obj({"day": {"type": "string", "description": "'mon'..'sun', 'next mon'..'next sun', 'today' or a date."}}),
     ),
     _tool(
         "save_profile",

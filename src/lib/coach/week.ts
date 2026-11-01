@@ -12,8 +12,10 @@ import type { CoachDay, CoachPlan, CoachState, CoachWeek, Mode } from './types';
    workout (`currentPlan`) is the first workout day not done yet, whatever its date: a missed day
    moves along rather than being lost. Today's quest, the workout screen and the coach all read it
    from here, and every change is written to its day (`setPlan`, `setDay`). A week planned mid-week
-   starts that day (`start`): the days before it aren't part of the plan. It ends on Sunday; on
-   Monday a new one is planned. */
+   starts that day (`start`): the days before it aren't part of the plan. The plan always holds
+   two weeks, this one and the next (`ahead`), so at the end of a week the next is already there
+   to see and change. On Monday the next week becomes this week (`planAhead`), and a new next week
+   is planned behind it. */
 
 const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const dateOf = (key: string) => new Date(`${key}T12:00:00`);
@@ -51,16 +53,25 @@ export function nextDay(week: CoachWeek | null | undefined): CoachDay | undefine
 /** The Monday after the week: when the next one starts. */
 export const nextMonday = (week: CoachWeek) => addDays(mondayOf(dateOf(week.start)), 7);
 
+/** The plan's last day: next week's Sunday. */
+export const lastDay = (week: CoachWeek) => dayKey(addDays(mondayOf(dateOf(week.start)), 13));
+
+/** Which of the plan's two weeks a date is in: 0 this week, 1 next week. */
+export const weekOf = (week: CoachWeek, date: string): 0 | 1 => (date >= dayKey(nextMonday(week)) ? 1 : 0);
+
+/** The days of one of the plan's weeks: 0 this week, 1 next week. */
+export const daysIn = (week: CoachWeek, which: 0 | 1) => week.days.filter((d) => weekOf(week, d.date) === which);
+
 /** The week is over: its Sunday is past (its rest days count too, so it runs its course even with
     every workout done). */
 export function weekOver(week: CoachWeek | null | undefined, now: Date): boolean {
   return !week || daysApart(nextMonday(week), now) >= 0;
 }
 
-/** The week's seven days, Monday to Sunday: a workout day, a rest day (no `day`), or before the
-    week was planned (`before`). */
-export function weekSlots(week: CoachWeek): { date: string; day?: CoachDay; before?: boolean }[] {
-  const monday = mondayOf(dateOf(week.start));
+/** A week's seven days, Monday to Sunday (`which`: 0 this week, 1 next week): a workout day, a
+    rest day (no `day`), or before the week was planned (`before`). */
+export function weekSlots(week: CoachWeek, which: 0 | 1 = 0): { date: string; day?: CoachDay; before?: boolean }[] {
+  const monday = addDays(mondayOf(dateOf(week.start)), 7 * which);
   return Array.from({ length: 7 }, (_, i) => {
     const date = dayKey(addDays(monday, i));
     return { date, day: week.days.find((d) => d.date === date), ...(date < week.start ? { before: true } : {}) };
@@ -115,21 +126,59 @@ export function isRestToday(state: GameState, now: Date): boolean {
 
 /** A week of built-in workouts from today. Each day knows the days planned before it, so modes and
     A/B days take turns across the week. */
-export function buildWeek(input: { all: LibraryExercise[]; coach: CoachState; sessions: Session[]; now: Date; rng: () => number }): CoachWeek | null {
-  const profile = input.coach.profile;
-  if (!profile) return null;
-  const after: Mode[] = [];
+type BuildInput = { all: LibraryExercise[]; coach: CoachState; sessions: Session[]; now: Date; rng: () => number };
+
+/** Built-in workouts on `dates`, after the days planned `before` them. */
+function buildDays(input: BuildInput, dates: string[], before: CoachDay[]): CoachDay[] | null {
+  const after: Mode[] = before.filter((d) => !d.done).map((d) => d.plan.mode);
   const days: CoachDay[] = [];
-  for (const date of weekDates(input.now, profile.days)) {
+  for (const date of dates) {
     // The day after a workout trains other families (law 6).
-    const prev = days[days.length - 1];
+    const prev = days[days.length - 1] ?? before[before.length - 1];
     const rested = prev && daysApart(new Date(`${prev.date}T12:00:00`), new Date(`${date}T12:00:00`)) === 1 ? hardFamilies(prev.plan) : [];
     const plan = buildWorkout({ ...input, after: [...after], rested });
     if (!plan) return null;
     after.push(plan.mode);
     days.push({ date, plan });
   }
-  return { start: dayKey(input.now), days, by: 'built-in' };
+  return days;
+}
+
+export function buildWeek(input: BuildInput): CoachWeek | null {
+  const profile = input.coach.profile;
+  if (!profile) return null;
+  const days = buildDays(input, weekDates(input.now, profile.days), []);
+  return days && { start: dayKey(input.now), days, by: 'built-in' };
+}
+
+/** Next week's built-in days, after this week's. */
+export function buildNextWeek(input: BuildInput, week: CoachWeek): CoachDay[] | null {
+  const profile = input.coach.profile;
+  if (!profile) return null;
+  return buildDays(input, weekDates(nextMonday(week), profile.days), [...week.days].sort((a, b) => a.date.localeCompare(b.date)));
+}
+
+/** The plan needs work: no week yet, this week is over, or next week isn't planned. */
+export const needsPlan = (week: CoachWeek | null | undefined, now: Date) => !week || weekOver(week, now) || !week.ahead;
+
+/** Keep two weeks ready (call it when `needsPlan`). On a new Monday, last week's "next week"
+    becomes this week as it was planned; only an untouched built-in draft is built again, so it
+    knows how last week went. Then next week is planned behind it. Null: nothing to change. */
+export function planAhead(input: BuildInput): CoachWeek | null {
+  if (!input.coach.profile) return null;
+  let week = input.coach.week ?? null;
+  if (week && weekOver(week, input.now)) {
+    const monday = dayKey(mondayOf(input.now));
+    const kept = week.ahead && dayKey(nextMonday(week)) === monday ? week.days.filter((d) => d.date >= monday) : [];
+    const draft = kept.every((d) => !d.done && d.plan.by === 'built-in' && !d.plan.items.some((i) => i.changed));
+    week = draft ? null : { start: monday, days: kept, by: kept.some((d) => d.plan.by === 'coach') ? 'coach' : 'built-in' };
+  }
+  week = week ?? buildWeek(input);
+  if (!week) return null;
+  if (week.ahead) return week;
+  if (daysIn(week, 1).length) return { ...week, ahead: true };
+  const next = buildNextWeek(input, week);
+  return next && { ...week, days: [...week.days.filter((d) => weekOf(week!, d.date) === 0), ...next], ahead: true };
 }
 
 /** The next workout: the week's first day not done. */
@@ -148,9 +197,9 @@ export function dayOf(week: CoachWeek | null | undefined, date?: string): CoachD
   return (date && week?.days.find((d) => d.date === date && !d.done)) || nextDay(week);
 }
 
-/** A date the week can still plan: in its Monday-to-Sunday, from today on. */
+/** A date the plan can still take: from today (and the day it was planned) to next week's Sunday. */
 export function openDate(week: CoachWeek, date: string, now: Date): boolean {
-  return date >= dayKey(now) && weekSlots(week).some((s) => s.date === date && !s.before);
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) && date >= dayKey(now) && date >= week.start && date <= lastDay(week);
 }
 
 const sorted = (days: CoachDay[]) => [...days].sort((a, b) => a.date.localeCompare(b.date));
@@ -179,7 +228,7 @@ export function moveDay(state: GameState, from: string, to: string, now: Date): 
   if (!a) return `${from} has no workout to move.`;
   if (a.done) return `${from}'s workout is done already.`;
   if (from === to) return 'That is the same day.';
-  if (!openDate(week, to, now)) return `${to} is not between today and Sunday of this week.`;
+  if (!openDate(week, to, now)) return `${to} is not between today and next week's Sunday.`;
   const b = week.days.find((d) => d.date === to);
   if (b?.done) return `${to}'s workout is done already.`;
   const days = week.days.map((d) => (d === a ? { ...d, date: to } : d === b ? { ...d, date: from } : d));
@@ -212,10 +261,12 @@ export function fromLegacy(coach: (CoachState & { plan?: CoachPlan | null }) | u
   return { ...rest, week: { start: day, days: [{ date: day, plan }], by: plan.by } };
 }
 
-/** The week as plain lines, for the coach brief: every day, workouts and rest days. */
-export function weekText(week: CoachWeek | null | undefined, now: Date, kept: (date: string) => boolean = () => false): string[] {
+/** A week as plain lines, for the coach brief: every day, workouts and rest days (`which`: 0 this
+    week, 1 next week). */
+export function weekText(week: CoachWeek | null | undefined, now: Date, kept: (date: string) => boolean = () => false, which: 0 | 1 = 0): string[] {
   if (!week) return ['No week planned yet.'];
-  return weekSlots(week).map(({ date, day: d, before }) => {
+  if (which === 1 && !week.ahead) return ['Not planned yet.'];
+  return weekSlots(week, which).map(({ date, day: d, before }) => {
     const head = `- ${weekdayOf(date)} ${date} (${dayLabel(date, now)})`;
     if (before) return `${head}: before this plan`;
     if (!d) return `${head}: rest day${kept(date) ? ', KEPT' : ''}`;

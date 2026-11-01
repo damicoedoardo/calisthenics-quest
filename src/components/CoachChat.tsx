@@ -5,7 +5,7 @@ import { Check, MessageCircle, Play, RotateCcw, SendHorizontal, X } from 'lucide
 import type { Checkin, GameState } from '@/lib/game';
 import { minutesOf } from '@/lib/coach/time';
 import { shownChat } from '@/lib/coach/chat';
-import { dayLabel, nextDay, restKept, todayIs, weekdayOf, weekSlots } from '@/lib/coach/week';
+import { dayLabel, daysIn, nextDay, restKept, todayIs, weekdayOf, weekOf, weekSlots } from '@/lib/coach/week';
 import { dayKey } from '@/lib/days';
 import { fireLine, updateTodayPage } from '@/story/daily';
 import { SitByFire } from './SitByFire';
@@ -91,33 +91,55 @@ export function CoachScreen({ state, update, onStart }: { state: GameState; upda
   );
 }
 
-/** The week: a chip for each of its seven days (workouts and rest days; done and kept ticked, the
-    next workout lit), and the chosen day: its workout as cards, or the rest day to keep. */
+/** The plan's two weeks, this one and next: a switch between them, a chip for each of the week's
+    seven days (workouts and rest days; done and kept ticked, the next workout lit), and the chosen
+    day: its workout as cards, or the rest day to keep. */
 function WeekBoard({ state, update, onStart }: { state: GameState; update: Update; onStart: (c: Checkin) => void }) {
   const now = new Date();
   const today = dayKey(now);
   const week = state.coach?.week;
   const next = nextDay(week);
   const [picked, setPicked] = useState<string | null>(null);
+  const [shown, setShown] = useState<0 | 1 | null>(null);
   const [fire, setFire] = useState(false);
   const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
   if (!week) return <p className="rounded-2xl bg-ink-800 p-3 text-sm text-slate-400">Getting your week ready…</p>;
-  const slots = weekSlots(week);
   // What today is comes from `todayIs`, the same Today reads. It opens on the workout to do today
-  // (a missed one too); once today's is done, on the next one, so you see what's coming; on a rest
-  // day, on today.
+  // (a missed one too); once today's is done, on the next one, so you see what's coming (next
+  // week's, when this week's are all done); on a rest day, on today.
   const todays = todayIs(state, now);
+  const ahead = todays.kind !== 'rest' && next ? next : undefined;
+  const which: 0 | 1 = shown ?? (picked ? weekOf(week, picked) : ahead ? weekOf(week, ahead.date) : 0);
+  const slots = weekSlots(week, which);
   const todaySlot = slots.find((s) => s.date === today);
-  const ahead = todays.kind !== 'rest' && next ? slots.find((s) => s.day === next) : undefined;
-  const slot = slots.find((s) => s.date === picked) ?? ahead ?? todaySlot ?? slots[0];
+  const aheadSlot = ahead ? slots.find((s) => s.day === ahead) : undefined;
+  const slot = slots.find((s) => s.date === picked) ?? aheadSlot ?? todaySlot ?? slots.find((s) => s.day && !s.day.done) ?? slots[0];
   const canStart = inProgress || todays.kind === 'workout';
   const day = slot.day;
+  const shownDays = daysIn(week, which);
+  const show = (w: 0 | 1) => {
+    setShown(w);
+    setPicked(null);
+  };
   return (
     <section className="rounded-2xl bg-ink-800 p-3">
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 className="font-pixel text-[10px] text-gold-300">This week</h2>
+      <div className="flex items-center justify-between gap-2">
+        {/* This week or next: the plan always holds both, so next week can be seen and changed early. */}
+        <div role="tablist" aria-label="Week" className="flex gap-1 rounded-lg bg-ink-900 p-0.5">
+          {(['This week', 'Next week'] as const).map((label, i) => (
+            <button
+              key={label}
+              role="tab"
+              aria-selected={which === i}
+              onClick={() => show(i as 0 | 1)}
+              className={`rounded-md px-2 py-1 font-pixel text-[8px] ${which === i ? 'bg-ink-800 text-gold-300' : 'text-slate-500 active:text-slate-300'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <p className="font-mono text-[11px] text-slate-400">
-          {week.days.filter((d) => d.done).length} of {week.days.length} done
+          {which === 1 && !week.ahead ? 'planning…' : `${shownDays.filter((d) => d.done).length} of ${shownDays.length} done`}
         </p>
       </div>
       {/* A chip a day, Monday to Sunday: its date and what it is (a dumbbell to train, a flame to

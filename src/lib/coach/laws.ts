@@ -1,7 +1,7 @@
 import { LAWS, MAX_SETS_PER_FAMILY, TIME_SLACK } from '@/balance';
 import type { Family } from '@/exercises/coaching';
 import type { Session } from '../game';
-import { daysApart } from '../days';
+import { dayKey, daysApart } from '../days';
 import type { CoachPlan, CoachWeek, PlanItem } from './types';
 
 /* The coach's laws: the few rules that are always true, whatever the player or the coach asks
@@ -61,12 +61,12 @@ export function hardFamilies(plan: CoachPlan): Family[] {
   return [...new Set(plan.items.filter((it) => hard(it) && it.role !== 'core').map((it) => it.family))];
 }
 
-/** What in this week breaks a week law (5, 6), each with its fix. Empty: the week is lawful. */
+/** What in the plan breaks a week law (5, 6), each with its fix. Empty: the plan is lawful. Days
+    running are checked across both weeks (Sunday to Monday too); the counts go by calendar week. */
 export function weekBreaks(week: CoachWeek | null | undefined): string[] {
   if (!week) return [];
   const days = [...week.days].sort((a, b) => a.date.localeCompare(b.date));
   const out: string[] = [];
-  if (days.length > LAWS.maxDays) out.push(`${days.length} workout days: at most ${LAWS.maxDays}, so one day rests (law 6). Make one a rest day.`);
   for (let i = 1; i < days.length; i++) {
     const a = days[i - 1],
       b = days[i];
@@ -74,8 +74,17 @@ export function weekBreaks(week: CoachWeek | null | undefined): string[] {
     const shared = hardFamilies(a.plan).filter((f) => hardFamilies(b.plan).includes(f));
     if (shared.length) out.push(`${a.date} and ${b.date} are days running and both train ${shared.join(', ')} (law 6). Move one day, or train other families on one of them.`);
   }
-  const sets = new Map<string, number>();
-  for (const d of days) for (const it of d.plan.items) if (hard(it)) sets.set(it.family, (sets.get(it.family) ?? 0) + it.sets);
-  for (const [f, n] of sets) if (n > LAWS.weekSets) out.push(`${f}: ${n} hard sets this week, at most ${LAWS.weekSets} (law 5). Take ${n - LAWS.weekSets} off.`);
+  // Next week starts the Monday after the week's start.
+  const s0 = new Date(`${week.start}T12:00:00`);
+  const split = dayKey(new Date(s0.getFullYear(), s0.getMonth(), s0.getDate() - ((s0.getDay() + 6) % 7) + 7, 12));
+  for (const [label, group] of [
+    ['this week', days.filter((d) => d.date < split)],
+    ['next week', days.filter((d) => d.date >= split)],
+  ] as const) {
+    if (group.length > LAWS.maxDays) out.push(`${group.length} workout days ${label}: at most ${LAWS.maxDays}, so one day rests (law 6). Make one a rest day.`);
+    const sets = new Map<string, number>();
+    for (const d of group) for (const it of d.plan.items) if (hard(it)) sets.set(it.family, (sets.get(it.family) ?? 0) + it.sets);
+    for (const [f, n] of sets) if (n > LAWS.weekSets) out.push(`${f}: ${n} hard sets ${label}, at most ${LAWS.weekSets} (law 5). Take ${n - LAWS.weekSets} off.`);
+  }
   return out;
 }

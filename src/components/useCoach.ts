@@ -5,7 +5,7 @@ import { loadLibrary } from '@/exercises/library';
 import type { GameState } from '@/lib/game';
 import { seeded } from '@/lib/random';
 import { planFromQuest } from '@/lib/coach/plan';
-import { buildWeek, currentPlan, setPlan, weekOver } from '@/lib/coach/week';
+import { currentPlan, needsPlan, planAhead, setPlan } from '@/lib/coach/week';
 import { coachTurn, type Ask } from '@/lib/coach/chat';
 import { CoachError, askCoach } from '@/lib/coach-client';
 
@@ -15,11 +15,12 @@ const busy = (s: GameState) => !!s.draft && Object.values(s.draft.sets).some((l)
 /** Same save, same workout: the seed is the workouts done and the day of setup. */
 const seedOf = (s: GameState) => s.sessions.length * 7919 + new Date(s.coach?.profile?.setupAt ?? 0).getTime() / 1000;
 
-/** Keeps a week ready once the coach is set up: after setup, and when the week is done or over.
-    The built-in coach plans it; ask the flame to change any of it. */
+/** Keeps two weeks ready once the coach is set up: this week and the next. After setup, on a new
+    Monday, and when next week isn't planned yet. The built-in coach plans it; ask the flame to
+    change any of it. */
 export function useCoachPlan(state: GameState, update: Update) {
   const coach = state.coach;
-  const want = !!coach?.profile && !busy(state) && weekOver(coach.week, new Date());
+  const want = !!coach?.profile && !busy(state) && needsPlan(coach.week, new Date());
   useEffect(() => {
     if (!want) return;
     let gone = false;
@@ -29,8 +30,8 @@ export function useCoachPlan(state: GameState, update: Update) {
         const c = s.coach;
         if (!c?.profile || busy(s)) return s;
         const now = new Date();
-        if (!weekOver(c.week, now)) return s;
-        const week = buildWeek({ all, coach: c, sessions: s.sessions, now, rng: seeded(seedOf(s)) });
+        if (!needsPlan(c.week, now)) return s;
+        const week = planAhead({ all, coach: c, sessions: s.sessions, now, rng: seeded(seedOf(s)) });
         return week ? { ...s, coach: { ...c, week } } : s;
       });
     });

@@ -3,7 +3,7 @@ type: reference
 title: The coach (workout planner)
 description: The coach in src/lib/coach — your flame as an LLM coach you chat with (the week it plans, the one place every workout lives; the chat loop, its tools run on the phone, the fuzzy exercise search, the server relay), the laws (the nine rules always true, laws.ts) and the player's own rules, the craft of a workout as defaults (warm-up, main, accessory, core, cool-down; the training playbook the coach reads; the time estimate), the three-layer memory (profile, training log, notes), the flame speaking first (nudges), the built-in coach that builds workouts for gym, calisthenics, running or a mix, easier and swap choices, the guardrails every workout passes, and the screens that play it.
 tags: [game, training, coach, planner, memory, llm]
-timestamp: 2026-10-31
+timestamp: 2026-11-01
 ---
 
 # The coach
@@ -26,17 +26,28 @@ the workout's overview and choices in `Workout.tsx`, `useCoach.ts`
 
 ## The week: the one place a workout lives (`week.ts`)
 
-`coach.week` (`CoachWeek`): a calendar week, Monday to Sunday. `start` is the day it was planned
-(days before it aren't part of the plan), `by` (built-in or coach), and its workout days
-(`CoachDay`: a date, a `CoachPlan`, `done` once trained). **Every reader goes through it**:
-`currentPlan(coach)` is the week's first day not done, whatever its date (a missed day moves
-along, it isn't lost). Today's quest (`todaysQuest`), the workout screen, the Train tab and the
-coach all read it; every change is written to a day (`setDay`, `setPlan` for the next one).
+`coach.week` (`CoachWeek`): **two calendar weeks**, this one and the next, Monday to Sunday.
+`start` is the day it was planned (days before it aren't part of the plan), `by` (built-in or
+coach), its workout days of both weeks (`CoachDay`: a date, a `CoachPlan`, `done` once trained),
+and `ahead` once next week's days are planned. Why two (Edoardo 2026-11-01): at the end of a week
+you should already see, and plan, the next one. `weekOf(week, date)` says which week a day is in
+(0 or 1), `daysIn(week, which)` its days, `weekSlots(week, which)` its seven slots, `lastDay` next
+week's Sunday. **Every reader goes through it**: `currentPlan(coach)` is the first day not done,
+whatever its date and week (a missed day moves along, it isn't lost; with this week all done it
+is next week's first). Today's quest (`todaysQuest`), the workout screen, the Train tab and the
+coach all read it; every change is written to a day (`setDay`, `setPlan` for the next one), any
+day from today to next week's Sunday (`openDate`).
 
 - **Planned**: `buildWeek` spreads your days a week from today to Sunday (`WEEK_SPREAD`; late in
   the week fewer fit, one every other day, `weekDates`), each day's
-  workout built knowing the days before it (modes and A/B days take turns). `useCoachPlan` plans a
-  new one once the coach is set up and the week is over (`weekOver`: its Sunday is past, so on Monday). The coach replaces it with `set_week` or one day with `set_workout`.
+  workout built knowing the days before it (modes and A/B days take turns); `buildNextWeek` does
+  the same for next week, after this week's days. `useCoachPlan` calls `planAhead` whenever
+  `needsPlan` (no week, the week is over, or next week isn't planned yet; an old save without
+  `ahead` gets its next week on load). On a new Monday (`weekOver`), last week's next week becomes
+  this week as it was planned (`start` is that Monday), unless it is an untouched built-in draft
+  (all built-in, no Easier/Swap): that is built again, so it knows how last week went. Then a new
+  next week is planned behind it. The coach replaces a week with `set_week` (`week` "this" or
+  "next") or one day with `set_workout`.
 - **What today is** (`todayIs(state, now)`): the one answer every screen reads, so Today and
   Train never disagree. `workout`: the next workout's day has come (a missed one is caught up);
   `done`: you trained today, and the next waits for another day (one workout a day); `rest`:
@@ -126,10 +137,11 @@ ramp-up sets; a warm-up or stretch part is its seconds plus `TIME.change`. Skipp
   something you said). Older talk lives on as notes and the log.
 - **Tools** (the list and the rules are on the server, `backend/app/coach.py`; they run here):
   `find_exercises` (the fuzzy search below, only what your gear and sore spots allow),
-  `draft_week` (the built-in coach's week, a start to change), `training_guide` (the playbook, above), `show_week` (the week, and the next
-  workout in full), `set_week` (every workout day: a weekday, today/tomorrow or a date from today to
-  Sunday, `resolveDay`; workouts done this week stay), `move_workout` (a day's workout to another
-  day; onto a workout day the two swap, `moveDay`), `rest_day` (a day's workout off the week,
+  `draft_week` (the built-in coach's week, this or `week` "next", a start to change), `training_guide` (the playbook, above), `show_week` (both weeks, and the next
+  workout in full), `set_week` (one week, `week` "this" from today or "next": every workout day, a weekday,
+  today/tomorrow or a date; workouts done and the other week stay), days anywhere from today to next
+  week's Sunday (`resolveDay`: a weekday is the first one coming, "next tue" is next week's), `move_workout` (a day's workout to another
+  day, across the two weeks too; onto a workout day the two swap, `moveDay`), `rest_day` (a day's workout off the week,
   `restDay`), `set_workout` (one day, a rest day to come gets a workout, else the next; ids, roles,
   sets, reps or seconds, rest, run minutes; the app fills names, demos, easier and swap, builds run
   steps, and runs `validate`, then says what it fixed), `save_profile` (setup, or one change with `why`,

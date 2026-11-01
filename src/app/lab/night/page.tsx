@@ -18,7 +18,7 @@ import { spendEvenly } from '@/lib/stats';
 import type { ClassId } from '@/lib/gear';
 import { loadLibrary } from '@/exercises/library';
 import { applySetup } from '@/lib/coach/setup';
-import { buildWeek, markDone } from '@/lib/coach/week';
+import { markDone, planAhead } from '@/lib/coach/week';
 import { dayKey } from '@/lib/days';
 
 /* What's new tonight: one tap to try each change. Everything that opens the app does it on a
@@ -164,12 +164,12 @@ function otherBow(): GameState {
   return { ...s, fogGear: { ...s.fogGear!, vault: [{ ...bow, need: null }, ...s.fogGear!.vault] } };
 }
 
-/** `s` with the coach set up and this week planned, so Today shows a quest to start. */
+/** `s` with the coach set up and this week and next planned, so Today shows a quest to start. */
 async function withWeek(s: GameState): Promise<GameState> {
   let n = 0;
   const now = new Date();
   const coach = applySetup(s.coach, { modes: ['gym'], goal: 'muscle', days: 3, minutes: 40, gear: ['gym'], experience: 'returning', pushups: 2, pullups: 1, lifts: 1, run: 1, avoid: [] }, now, () => `n${++n}`);
-  const week = buildWeek({ all: await loadLibrary(), coach, sessions: s.sessions, now, rng: seeded(1) });
+  const week = planAhead({ all: await loadLibrary(), coach, sessions: s.sessions, now, rng: seeded(1) });
   return { ...s, coach: { ...coach, week } };
 }
 
@@ -284,6 +284,7 @@ export default function NightLab() {
         <Row icon={<Swords size={16} />} label="The Friends tab" note="Its own tab: who is online now (tap to invite), your party, the Ember Road, every friend. Sample friends in the sandbox" onClick={() => open(geared(), 'tab=friends')} />
         <Row icon={<Dumbbell size={16} />} label="Today, with a week planned" note="Your flame, today's quest and Start" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=today')} />
         <Row icon={<Dumbbell size={16} />} label="Today, after the workout" note="Today's workout done: you did it, your counts, and what's next (Train shows it)" onClick={async () => open(await doneToday(veteran(30, 3)), 'tab=today')} />
+        <Row icon={<Dumbbell size={16} />} label="Next week, planned early" note="Train tab after today's workout: This week / Next week, next week's days already there" onClick={async () => open(await doneToday(veteran(30, 3)), 'tab=train')} />
       </Panel>
 
       <Panel title="YOUR COACH: THE FLAME" note="Your flame plans your training now. Train tab: its last words and today's workout as cards with demos, easier and swap on each. Tap Let's start and it chats with you at the camp fire. Talking needs a sign-in (Hero > Settings) on the real save.">
