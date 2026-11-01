@@ -255,6 +255,16 @@ export const THE_FOG: Chapter = {
       ],
     },
     {
+      // The Fog boss fell in a Story run. It can fall long before the month's workouts are done.
+      id: 'ch5-fog-won',
+      when: { fogWon: 5, chapter: 5 },
+      lines: [
+        { who: 'narrator', show: 'hollow', text: "In the Fog, you stand in the Hollow's light and take its hand. For a moment, it goes quiet." },
+        { who: 'hollow', text: '...It will start talking again. It always does.' },
+        { who: 'flame', mood: 'soft', text: "Then you'll walk anyway. You just did." },
+      ],
+    },
+    {
       id: 'ch5-victory',
       when: { beaten: 5 },
       music: 'memory',

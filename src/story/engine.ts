@@ -81,6 +81,7 @@ export function holds(w: When, state: GameState, st: StoryState, now: Date): boo
     [w.workouts, () => n >= w.workouts!],
     [w.chapter, () => current >= w.chapter!],
     [w.beaten, () => st.index >= w.beaten!],
+    [w.fogWon, () => (state.fog?.cleared ?? 0) >= w.fogWon!],
     [w.inChapter, () => current === w.inChapter],
     [w.restDay, () => isRestToday(state, now) === w.restDay],
     [w.shortSession, () => (state.sessions[n - 1]?.kind === 'mini') === w.shortSession],
@@ -120,7 +121,7 @@ export function savedId(scene: Scene, state: GameState): string {
 }
 
 /** `when` fields that wait for something to happen (a rest day, a class...), not for a workout count. */
-const WAITS_FOR: (keyof When)[] = ['restDay', 'shortSession', 'roughRun', 'daysInRow', 'perfectWeek', 'better', 'noClass', 'spReady', 'away', 'beaten', 'finished', 'road'];
+const WAITS_FOR: (keyof When)[] = ['restDay', 'shortSession', 'roughRun', 'daysInRow', 'perfectWeek', 'better', 'noClass', 'spReady', 'away', 'beaten', 'fogWon', 'finished', 'road'];
 
 /**
  * A story beat tied to a workout plays then, or a few workouts later while a chapter catches up.
@@ -147,8 +148,8 @@ function askFor(ask: Ask | undefined, keep: (ls: Line[]) => Line[]): Ask | undef
 
 /**
  * Scenes whose moment has come and that the player has not seen yet, in story order. Once a
- * chapter is behind you, its leftover scenes are skipped (except the one that ends it, and the
- * finale), and so are
+ * chapter is behind you, its leftover scenes are skipped (except the one that ends it, its Fog
+ * boss falling, and the finale), and so are
  * scenes tied to a workout long past, so nobody is buried in old scenes.
  */
 export function pendingScenes(state: GameState, now: Date): Scene[] {
@@ -158,7 +159,7 @@ export function pendingScenes(state: GameState, now: Date): Scene[] {
   const current = st.index + 1;
   const due = ALL_SCENES.filter(({ scene, chapter }) => {
     if (seen.has(savedId(scene, state))) return false;
-    if (chapter > 0 && chapter < current && scene.when.beaten !== chapter && !scene.when.finished) return false;
+    if (chapter > 0 && chapter < current && scene.when.beaten !== chapter && scene.when.fogWon !== chapter && !scene.when.finished) return false;
     if (longGone(scene.when, state)) return false;
     return holds(scene.when, state, st, now);
   }).map(({ scene }) => sceneFor(scene.when.away ? { ...scene, id: savedId(scene, state) } : scene, state));

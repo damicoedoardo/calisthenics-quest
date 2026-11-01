@@ -3,7 +3,7 @@ type: reference
 title: Story (scenes, chapters, daily lines)
 description: The six-month story as data in src/story — scene format, when scenes play, the daily flame lines and Book of Days, rules for the words, and where to edit what.
 tags: [game, story, content]
-timestamp: 2026-10-31
+timestamp: 2026-11-01
 ---
 # Story
 
@@ -87,6 +87,11 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
 ## When scenes play
 
 - A scene plays once, when its `when` holds; scenes due together play in file order.
+- A chapter ends two ways, each with its own scene. `beaten: N` is the month's end: all its
+  workouts done (the long ending scene, then the next chapter's intro). `fogWon: N` is its Fog boss
+  falling in a Story run (`fog.cleared`), which can happen weeks earlier since a win opens the next
+  zone at once: a short scene (`chN-fog-won`) plays when the player is back from the run. From
+  chapter 2 on it also has `chapter: N`, so a boss beaten early waits for its month and spoils nothing.
 - Give every workout-tied scene of a later month `chapter: N` too, so it never plays before its
   month starts. `better: N` waits for N workouts where a set beat last time (see
   [training.md](training.md)); there are no max tests and no skill tree to wait for any more.

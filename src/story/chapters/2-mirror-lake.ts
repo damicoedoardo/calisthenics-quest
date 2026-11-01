@@ -245,6 +245,16 @@ export const MIRROR_LAKE: Chapter = {
       ],
     },
     {
+      // The Fog boss fell in a Story run. It can fall long before the month's workouts are done.
+      id: 'ch2-fog-won',
+      when: { fogWon: 2, chapter: 2 },
+      lines: [
+        { who: 'narrator', show: 'mirror', text: 'In the Fog, the Mirror cracks down the middle. Both halves keep showing you.', shot: { shake: 'small' } },
+        { who: 'mirror', text: 'One crack. The lake still has plenty of me.' },
+        { who: 'wanderer', text: 'It does. Keep walking past it, one day at a time.' },
+      ],
+    },
+    {
       id: 'ch2-victory',
       when: { beaten: 2 },
       lines: [

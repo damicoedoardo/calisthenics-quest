@@ -95,8 +95,11 @@ export interface When {
   workouts?: number;
   /** This chapter has started (or a later one). */
   chapter?: number;
-  /** This chapter's enemy is beaten. */
+  /** This chapter's enemy is beaten: its month's workouts are all done. */
   beaten?: number;
+  /** This chapter's Fog boss fell in a Story run (the zone is cleared). It can fall weeks before
+      the month ends, so this is its own moment. */
+  fogWon?: number;
   /** Only while this chapter is the current one. */
   inChapter?: number;
   /** Today is a rest day. */

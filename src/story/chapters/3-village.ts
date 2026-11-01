@@ -235,6 +235,16 @@ export const VILLAGE: Chapter = {
       ],
     },
     {
+      // The Fog boss fell in a Story run. It can fall long before the month's workouts are done.
+      id: 'ch3-fog-won',
+      when: { fogWon: 3, chapter: 3 },
+      lines: [
+        { who: 'narrator', show: 'knight-cracked', text: "In the Fog, the Knight's plates fall one by one. Not one of your hits was perfect.", shot: { shake: 'small' } },
+        { who: 'knight', text: 'Messy. All of it. ...And still I fell.' },
+        { who: 'flame', mood: 'happy', text: 'Messy counts! Messy is my favorite.' },
+      ],
+    },
+    {
       id: 'ch3-knight-kneels',
       when: { beaten: 3 },
       music: 'memory',

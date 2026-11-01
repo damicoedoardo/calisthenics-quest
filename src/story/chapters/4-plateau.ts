@@ -269,6 +269,16 @@ export const PLATEAU: Chapter = {
       ],
     },
     {
+      // The Fog boss fell in a Story run. It can fall long before the month's workouts are done.
+      id: 'ch4-fog-won',
+      when: { fogWon: 4, chapter: 4 },
+      lines: [
+        { who: 'narrator', show: 'plateau-cracked', text: 'In the Fog, the Plateau breaks. Out here on the road, it still looks flat.', shot: { shake: 'small' } },
+        { who: 'plateau', text: '...Same. ...As. ...Ever.' },
+        { who: 'flame', mood: 'soft', text: "It isn't. Under the road it's cracking too. Keep walking on it." },
+      ],
+    },
+    {
       id: 'ch4-victory',
       when: { beaten: 4 },
       lines: [

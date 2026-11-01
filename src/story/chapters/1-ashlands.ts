@@ -280,6 +280,17 @@ export const ASHLANDS: Chapter = {
       ],
     },
     {
+      // The Fog boss fell in a Story run. It can fall long before the month's workouts are done.
+      id: 'ch1-fog-won',
+      when: { fogWon: 1 },
+      lines: [
+        { who: 'narrator', show: 'tomorrow', text: 'Deep in the Fog, Tomorrow pops like a soap bubble.', shot: { shake: 'small' } },
+        { who: 'tomorrow', text: "Mmh... that was only the me in the Fog. The real me lives in your days." },
+        { who: 'flame', mood: 'happy', text: 'Then we beat that one too. One workout at a time.' },
+        { who: 'flame', mood: 'bright', text: "I'll keep the stones. You keep showing up." },
+      ],
+    },
+    {
       id: 'ch1-victory',
       when: { beaten: 1 },
       lines: [

@@ -411,6 +411,21 @@ describe('the flame on the last Fog run', () => {
     expect(runLine(s, day(6))).toBeUndefined();
   });
 
+  it("plays a scene when a zone's boss first falls, long before its month ends", () => {
+    const seen = (s: GameState) => ({ ...s, seenScenes: pendingScenes(s, at).map((x) => x.id).filter((id) => !id.endsWith('fog-won')) });
+    let s = seen(base());
+    expect(pendingScenes(s, at).map((x) => x.id)).not.toContain('ch1-fog-won');
+    s = run(s, false, 10);
+    expect(pendingScenes(s, at).map((x) => x.id)).not.toContain('ch1-fog-won');
+    s = run(s, true, 10);
+    expect(pendingScenes(s, at).map((x) => x.id)).toEqual(['ch1-fog-won']);
+    // The month's own ending still waits for its workouts.
+    expect(pendingScenes(s, at).map((x) => x.id)).not.toContain('ch1-victory');
+    // Zone 2's boss beaten early waits for its chapter, so nothing is spoiled.
+    s = run(sawScene(s, 'ch1-fog-won', at), true, 10, 1);
+    expect(pendingScenes(s, at).map((x) => x.id)).toEqual([]);
+  });
+
   it('nudges toward training, gently, when a workout is due', () => {
     const later = day(7);
     const s = recordRun(base(), { zone: 0, won: false, seconds: 100, kills: 20, level: 3, floor: 2, room: 1 }, later);

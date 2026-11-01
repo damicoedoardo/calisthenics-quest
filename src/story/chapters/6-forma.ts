@@ -195,6 +195,15 @@ export const FORMA: Chapter = {
       ],
     },
     {
+      // The Fog boss fell in a Story run. It can fall long before the month's workouts are done.
+      id: 'ch6-fog-won',
+      when: { fogWon: 6, chapter: 6 },
+      lines: [
+        { who: 'narrator', show: 'summit', text: 'In the Fog, you climb higher than ever. There is still no top.' },
+        { who: 'flame', mood: 'happy', text: "Higher than yesterday. That's the only kind of top there is." },
+      ],
+    },
+    {
       id: 'finale',
       when: { finished: true },
       music: 'memory',
