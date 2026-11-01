@@ -34,6 +34,8 @@ describe('anatomy demos', () => {
     expect(anatomyFor('snatch', 'Snatch Balance')?.id).toBe('overhead-squat');
     expect(anatomyFor('run', 'Stairmaster')?.id).toBe('step-up');
     expect(anatomyFor('jump', 'Front Box Jump')?.id).toBe('box-jump');
+    expect(anatomyFor('windmill', 'Kettlebell Turkish Get-Up (Lunge style)')?.id).toBe('get-up');
+    expect(anatomyFor('foam-roll', 'Iliotibial Tract-SMR')?.id).toBe('roll-it-band');
     expect(anatomyFor('chest-fly', 'Dumbbell Flyes')?.id).toBe('chest-fly');
     expect(anatomyFor('front-squat', 'Goblet Squat')).toEqual({ id: 'squat', variant: { goblet: true } });
     expect(anatomyFor('leg-press', 'Hack Squat')?.id).toBe('barbell-squat');

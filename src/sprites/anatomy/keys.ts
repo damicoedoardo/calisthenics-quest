@@ -118,3 +118,21 @@ export function mirror(p: Pose): Pose {
     props: p.props.map((q) => moveProp(q, f)),
   };
 }
+
+/** A pose turned half round where it stands (facing the other way along x). */
+export function turn(p: Pose): Pose {
+  const f = (v: V3): V3 => [-v[0], v[1], -v[2]];
+  const turnSide = (s: Side): Side => ({ ...moveSide(s, f), instep: f(s.instep) });
+  return {
+    ...p,
+    pelvis: f(p.pelvis),
+    neck: f(p.neck),
+    headBase: f(p.headBase),
+    headTop: f(p.headTop),
+    front: f(p.front),
+    side: f(p.side),
+    right: turnSide(p.right),
+    left: turnSide(p.left),
+    props: p.props.map((q) => moveProp(q, f)),
+  };
+}
