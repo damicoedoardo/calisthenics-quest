@@ -50,7 +50,7 @@ export const FORMA: Chapter = {
     },
     {
       id: 'ch6-summit-speaks',
-      when: { workouts: 66, chapter: 6 },
+      when: { workouts: 2, chapter: 6 },
       shots: [{ pan: 'up', seconds: 2 }],
       lines: [
         { who: 'narrator', show: 'summit', text: 'The peak is not a peak. Every time you climb a ridge, there is another one above it.' },
@@ -63,7 +63,7 @@ export const FORMA: Chapter = {
     },
     {
       id: 'ch6-kid',
-      when: { workouts: 68, chapter: 6 },
+      when: { workouts: 4, chapter: 6 },
       lines: [
         { who: 'narrator', show: 'kid', text: 'Someone is running up the path behind you, out of breath and laughing. The kid from the Knight\'s armor.', shot: { enter: 'below' } },
         { who: 'kid', text: 'Wait up! I had to tell you. I told the whole village what you said. "{heart3}" Mira carved it over the forge door.', needs: 'heart3' },
@@ -77,7 +77,7 @@ export const FORMA: Chapter = {
     },
     {
       id: 'ch6-remembering',
-      when: { workouts: 70, chapter: 6 },
+      when: { workouts: 6, chapter: 6 },
       music: 'memory',
       lines: [
         { who: 'narrator', show: 'flame', text: '{flame} flies ahead, then circles back, then flies ahead again, too excited to stay put.' },
@@ -94,7 +94,7 @@ export const FORMA: Chapter = {
     },
     {
       id: 'ch6-book',
-      when: { workouts: 72, chapter: 6 },
+      when: { workouts: 8, chapter: 6 },
       place: 'mountain-camp',
       music: 'camp',
       lines: [
@@ -112,7 +112,7 @@ export const FORMA: Chapter = {
       // The fall near the top: the voice comes back as your own, nobody helps, and you climb back
       // alone. It proves the belief is yours before the flame fuses with you.
       id: 'ch6-fall',
-      when: { workouts: 73, chapter: 6 },
+      when: { workouts: 9, chapter: 6 },
       music: 'hollow',
       shots: [{ shake: 'big' }],
       lines: [
@@ -133,7 +133,7 @@ export const FORMA: Chapter = {
     },
     {
       id: 'ch6-heart',
-      when: { workouts: 74, chapter: 6 },
+      when: { workouts: 10, chapter: 6 },
       music: 'memory',
       lines: [
         { who: 'narrator', show: 'flame', text: 'Night, high up. The stars are so close {flame} keeps trying to eat one.' },
@@ -159,7 +159,7 @@ export const FORMA: Chapter = {
     },
     {
       id: 'ch6-short',
-      when: { workouts: 65, shortSession: true, inChapter: 6 },
+      when: { workouts: 1, shortSession: true, inChapter: 6 },
       lines: [
         { who: 'summit', text: 'So little. You will never reach the top like that.' },
         { who: 'wanderer', text: "Steep days call for short steps. That's how anyone climbs anything." },
@@ -178,7 +178,7 @@ export const FORMA: Chapter = {
     },
     {
       id: 'ch6-last-camp',
-      when: { workouts: 76, chapter: 6 },
+      when: { workouts: 12, chapter: 6 },
       music: 'camp',
       shots: [{ pan: 'down', seconds: 2.4 }],
       lines: [

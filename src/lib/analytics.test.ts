@@ -37,7 +37,8 @@ describe('play stats', () => {
   it('logs onboarding, class, scenes and a cleared zone', () => {
     const a = { ...initialState(), seenScenes: ['a'] };
     const b: GameState = { ...a, profile: { ...a.profile, onboarded: true, classId: 'mage' }, seenScenes: ['a', 'b'], fog: { cleared: 1, runs: 3, best: {} } };
-    expect(names(a, b)).toEqual(['onboarded', 'class_picked', 'scene_seen', 'zone_cleared']);
+    // A cleared zone ends its story chapter too.
+    expect(names(a, b)).toEqual(['onboarded', 'class_picked', 'scene_seen', 'chapter_started', 'zone_cleared']);
   });
 
   it('sends nothing for an unchanged save', () => {
