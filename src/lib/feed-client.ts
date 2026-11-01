@@ -1,7 +1,7 @@
 'use client';
 
 import { api } from './cloud-client';
-import { FEED_LIMIT, fromFrontCamera, type Post, type WorkoutCard } from './feed';
+import { FEED_LIMIT, type Post, type WorkoutCard } from './feed';
 
 /* The talking side of the feed (rules and types in feed.ts). Every call needs sign-in. */
 
@@ -83,12 +83,10 @@ function encode(canvas: HTMLCanvasElement, bytes: number): { base64: string; pre
 /** A photo from the phone, made small enough to send: at most `edge` (FEED_LIMIT.photoEdge) on
     its long side, as a JPEG under `bytes` (FEED_LIMIT.photoBytes). `square` crops the middle square
     first (a profile photo). A selfie is turned to look the way you saw yourself in the camera while
-    taking it: `selfie` when it came from the front camera the app opened (iPhone writes no lens name
-    then), else when its EXIF lens name says front camera (`fromFrontCamera`, a photo from the camera
-    roll). Returns base64 (no "data:" head) and a preview link. */
-export async function shrinkPhoto(file: File, { edge = FEED_LIMIT.photoEdge, bytes = FEED_LIMIT.photoBytes, square = false, selfie: taken = false }: { edge?: number; bytes?: number; square?: boolean; selfie?: boolean } = {}): Promise<{ base64: string; preview: string }> {
+    taking it: `selfie` when it came from the front camera the app opened. A photo from the camera
+    roll is shown just as it is saved. Returns base64 (no "data:" head) and a preview link. */
+export async function shrinkPhoto(file: File, { edge = FEED_LIMIT.photoEdge, bytes = FEED_LIMIT.photoBytes, square = false, selfie = false }: { edge?: number; bytes?: number; square?: boolean; selfie?: boolean } = {}): Promise<{ base64: string; preview: string }> {
   const img = await upright(file);
-  const selfie = taken || fromFrontCamera(new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer()));
   const w = img.naturalWidth,
     h = img.naturalHeight;
   const side = Math.min(w, h);
