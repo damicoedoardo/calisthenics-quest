@@ -222,9 +222,9 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         {/* Small tools under the demo: an icon and one word each. */}
         {!exerciseDone && (
           <div className="mt-2 flex justify-center gap-5">
-            <Tool icon={<BookOpen size={16} className="text-emerald-300" />} label="How to" onClick={() => setHowTo(true)} />
-            {!tap && q.item && q.item.easier.length > 0 && <Tool icon={<TrendingDown size={16} className="text-sky-300" />} label="Easier" onClick={() => setChoices('easier')} />}
-            {!tap && q.item && q.item.swaps.length > 0 && <Tool icon={<Shuffle size={16} className="text-gold-300" />} label="Swap" onClick={() => setChoices('swap')} />}
+            <Tool icon={<BookOpen size={16} />} label="How to" onClick={() => setHowTo(true)} />
+            {!tap && q.item && q.item.easier.length > 0 && <Tool icon={<TrendingDown size={16} />} label="Easier" onClick={() => setChoices('easier')} />}
+            {!tap && q.item && q.item.swaps.length > 0 && <Tool icon={<Shuffle size={16} />} label="Swap" onClick={() => setChoices('swap')} />}
           </div>
         )}
         </div>
@@ -303,29 +303,29 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         ) : (
           <>
             {/* The number starts at the target; − and + set what you really did. */}
-            <p className={`mt-5 text-center font-pixel text-[9px] [@media(orientation:landscape)_and_(max-height:600px)]:mt-1 ${reps === q.reps ? 'text-gold-300' : 'text-slate-400'}`}>
+            <p className={`mt-5 text-center font-pixel text-[9px] uppercase tracking-[0.2em] [@media(orientation:landscape)_and_(max-height:600px)]:mt-1 ${reps === q.reps ? 'text-gold-300' : 'text-slate-400'}`}>
               {reps === q.reps ? 'Target' : 'You did'}
             </p>
             <div className="mt-1 flex items-center justify-center gap-5">
-              <button onClick={() => setReps(Math.max(1, reps - (unit ? 2 : 1)))} aria-label="Fewer" className="grid h-14 w-14 place-items-center rounded-xl bg-ink-800 active:scale-95 [@media(orientation:landscape)_and_(max-height:600px)]:h-12 [@media(orientation:landscape)_and_(max-height:600px)]:w-12">
+              <button onClick={() => setReps(Math.max(1, reps - (unit ? 2 : 1)))} aria-label="Fewer" className="pixel-notch grid h-14 w-14 place-items-center bg-ink-800 active:scale-95 [@media(orientation:landscape)_and_(max-height:600px)]:h-12 [@media(orientation:landscape)_and_(max-height:600px)]:w-12">
                 <Minus />
               </button>
               <p className="w-28 text-center">
                 <span className={`font-mono text-6xl font-bold [@media(orientation:landscape)_and_(max-height:600px)]:text-5xl ${reps === q.reps ? 'text-slate-50' : 'text-sky-200'}`}>{reps}</span>
                 <span className="ml-1 text-lg text-slate-400">{unit}</span>
               </p>
-              <button onClick={() => setReps(reps + (unit ? 2 : 1))} aria-label="More" className="grid h-14 w-14 place-items-center rounded-xl bg-ink-800 active:scale-95 [@media(orientation:landscape)_and_(max-height:600px)]:h-12 [@media(orientation:landscape)_and_(max-height:600px)]:w-12">
+              <button onClick={() => setReps(reps + (unit ? 2 : 1))} aria-label="More" className="pixel-notch grid h-14 w-14 place-items-center bg-ink-800 active:scale-95 [@media(orientation:landscape)_and_(max-height:600px)]:h-12 [@media(orientation:landscape)_and_(max-height:600px)]:w-12">
                 <Plus />
               </button>
             </div>
             <p className="mt-1 text-center text-xs text-slate-500">
-              {reps === q.reps ? 'Did more or less? Use − +' : `Target ${q.reps}${unit}`}
-              {q.item?.ramp && logged.length === 0 ? <span className="text-gold-200"> · {q.item.ramp} light sets first</span> : null}
+              {reps === q.reps ? '\u00a0' : `Target ${q.reps}${unit}`}
+              {q.item?.ramp && logged.length === 0 ? <span className="text-gold-200">{reps === q.reps ? '' : ' · '}{q.item.ramp} light sets first</span> : null}
             </p>
 
             {/* One Done saves the set; how it felt is set to just right, a tap away if not. */}
-            <div className="mt-6 flex items-center justify-center gap-1 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3" role="radiogroup" aria-label="How it felt">
-              <span className="mr-1 text-xs text-slate-500">Felt</span>
+            <p className="mt-6 text-center font-pixel text-[9px] uppercase tracking-[0.2em] text-slate-500 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">How did it feel?</p>
+            <div className="mt-1.5 flex items-center justify-center gap-1" role="radiogroup" aria-label="How did it feel?">
               {RIR_BUTTONS.map((b) => (
                 <button
                   key={b.rir}
@@ -389,7 +389,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
 function Tool({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-1 text-[10px] text-slate-400 active:scale-95">
-      <span className="grid h-9 w-9 place-items-center rounded-full bg-ink-800">{icon}</span>
+      <span className="grid h-9 w-9 place-items-center rounded-full bg-ink-800 text-slate-200">{icon}</span>
       {label}
     </button>
   );
