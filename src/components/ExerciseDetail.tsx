@@ -9,8 +9,6 @@ import { loadLibrary, type LibraryExercise } from '@/exercises/library';
 import type { Family, Kind } from '@/exercises/coaching';
 import { videoEmbedUrl, videoOf, videoSearchUrl, videoWatchUrl } from '@/exercises/videos';
 import type { ExerciseId } from '@/sprites/characters/exercise';
-import { STARTER_LOOKS } from '@/sprites/characters/hero';
-import type { Look } from '@/sprites/engine/figure';
 
 /* How to do one exercise: its demo, facts, steps, tips and mistakes. The library opens it, and so
    does a tap on any workout card (Today, Train, the workout itself). */
@@ -33,12 +31,11 @@ export function ExerciseSheet({ state, id, demo, onClose }: { state: GameState; 
   return <ExerciseDetail state={state} x={x} onBack={onClose} back="Back" />;
 }
 
-/** One exercise, made to be read at a glance: the video first, then your demo beside what it works,
-    then how to do it well and what to avoid, with the long catalog steps folded at the end. */
+/** One exercise, made to be read at a glance (Edoardo 2026-11-01: just the video and the do's and
+    don'ts): the video, or your pixel demo when it has none, then how to do it well and what to
+    avoid, with the long catalog steps folded at the end. */
 export function ExerciseDetail({ state, x, onBack, back = 'Back to the library' }: { state: GameState; x: LibraryExercise; onBack: () => void; back?: string }) {
   const mine = useLook();
-  const [other, setOther] = useState(false);
-  const look: Look = other ? STARTER_LOOKS[mine.sex === 'm' ? 'f' : 'm'] : mine;
   const side = '[@media(orientation:landscape)_and_(max-height:600px)]';
   return (
     <div className="land-safe-x fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-ink-950 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
@@ -48,51 +45,15 @@ export function ExerciseDetail({ state, x, onBack, back = 'Back to the library' 
         </button>
         <h1 className="font-pixel text-xs leading-relaxed text-gold-300">{x.name}</h1>
       </header>
-      {/* Held sideways: the video and the demo on the left, how to do it on the right. */}
+      {/* Held sideways: the video on the left, how to do it on the right. */}
       <div className={`contents ${side}:grid ${side}:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] ${side}:items-start ${side}:gap-x-6`}>
         <div className={`contents ${side}:block`}>
           <ExerciseVideo key={x.id} id={x.id} name={x.name} />
-          <div className="mt-3 flex gap-3">
-            <button
-              onClick={() => setOther((o) => !o)}
-              className="shrink-0 rounded-2xl bg-ink-900 p-1 ring-1 ring-ink-700"
-              aria-label={other ? 'Show it on your hero' : `Show it on a ${mine.sex === 'm' ? 'girl' : 'boy'}`}
-            >
-              <Sprite id="exercise" opts={{ exercise: x.demo, kit: x.kit, gear: gearOf(state), classId: state.profile.classId, look }} size={104} label={x.name} />
-              <span className="block pb-0.5 text-center text-[10px] text-slate-500">{other ? (mine.sex === 'm' ? 'Girl' : 'Boy') : 'You'} · tap</span>
-            </button>
-            <dl className="min-w-0 flex-1 space-y-2 text-xs">
-              <div>
-                <dt className="sr-only">Works</dt>
-                <dd className="flex flex-wrap gap-1">
-                  {x.primary.map((m) => (
-                    <span key={m} className="rounded-full bg-gold-400/15 px-2 py-0.5 text-gold-200">{cap(m)}</span>
-                  ))}
-                  {x.secondary.map((m) => (
-                    <span key={m} className="rounded-full bg-ink-800 px-2 py-0.5 text-slate-400">{cap(m)}</span>
-                  ))}
-                </dd>
-              </div>
-              <div className="flex items-center gap-2 text-slate-300">
-                <dt className="sr-only">Equipment</dt>
-                <dd>{cap(x.equipment)}</dd>
-                <span className="text-ink-600" aria-hidden>·</span>
-                <dt className="sr-only">Level</dt>
-                <dd className="flex items-center gap-1.5">
-                  <span className="flex items-end gap-0.5" aria-hidden>
-                    {[0, 1, 2].map((i) => (
-                      <span key={i} className={`w-1.5 ${['h-2', 'h-3', 'h-4'][i]} ${i < LEVEL_BARS[x.level] ? 'bg-gold-400' : 'bg-ink-600'}`} />
-                    ))}
-                  </span>
-                  {cap(x.level)}
-                </dd>
-              </div>
-              <div className="text-slate-500">
-                <dt className="sr-only">Movement</dt>
-                <dd>{FAMILY_LABEL[x.family]}</dd>
-              </div>
-            </dl>
-          </div>
+          {!videoOf(x.id) && (
+            <div className="mt-3 rounded-2xl bg-ink-900 p-1 ring-1 ring-ink-700">
+              <Sprite id="exercise" opts={{ exercise: x.demo, kit: x.kit, gear: gearOf(state), classId: state.profile.classId, look: mine }} size={160} label={x.name} className="mx-auto max-w-full" />
+            </div>
+          )}
         </div>
         <div className={`contents ${side}:block`}>
           <Cues title="Do it well" tone="text-emerald-300" mark="✓" markTone="text-emerald-400" lines={x.tips} />
@@ -119,7 +80,6 @@ export function ExerciseDetail({ state, x, onBack, back = 'Back to the library' 
   );
 }
 
-const LEVEL_BARS: Record<string, number> = { beginner: 1, intermediate: 2, expert: 3 };
 
 function Cues({ title, tone, mark, markTone, lines }: { title: string; tone: string; mark: string; markTone: string; lines: string[] }) {
   if (lines.length === 0) return null;
