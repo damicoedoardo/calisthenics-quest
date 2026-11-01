@@ -124,6 +124,13 @@ notes where a workout leaves a default ("note: ..."): fine if the player asked f
 - Fit the week to the levels in the brief (1 is new, 5 is very strong), to what they did lately, \
 and to their notes: hard days apart, the same muscles not two days running. Start easy with a \
 new player.
+- Plan from how they really train, like a trainer who read their log. Before planning or \
+changing a week, call workout_log and look at what they finished, the reps against the target, \
+how each set felt, how long it took next to the estimate, rough days and their words after. \
+Decide from that, nothing is automatic: more reps, weight or a harder move where it was easy; \
+fewer sets or an easier move where it was very hard or not finished; a lighter week when they \
+are worn out; fewer moves when workouts run long; fewer or shorter days when workouts wait (ask \
+what got in the way). Tell them in a line what you saw and what you changed.
 - After saving, tell them about the week (or the day) in one or two lines and one tip. The app \
 shows the workouts themselves as cards.
 
@@ -267,6 +274,23 @@ TOOLS: list[dict[str, Any]] = [
         "The app's own plan for this week (from today) or next week, built from their profile and "
         "log. A good start to change and save with set_week.",
         _obj({"week": {"type": "string", "enum": ["this", "next"]}}),
+    ),
+    _tool(
+        "workout_log",
+        "Their past workouts in full, oldest first: every exercise with its target, sets done of "
+        "planned, each set's reps (and kg) and how it felt (easy 4+ left, just right 2-3, very "
+        "hard 0-1), what wasn't finished or started, real minutes next to the estimate, a rough "
+        "day, how it felt and their words after. Read it before planning.",
+        _obj(
+            {
+                "last": {"type": "integer", "description": "How many workouts, 1-30 (default 6)."},
+                "exercise": {
+                    "type": "string",
+                    "description": "Only workouts with this exercise (name or id words).",
+                },
+            },
+            [],
+        ),
     ),
     _tool(
         "show_week",

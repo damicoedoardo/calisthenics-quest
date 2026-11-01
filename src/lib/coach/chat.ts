@@ -42,6 +42,7 @@ export const STEP_LABEL: Record<string, string> = {
   find_exercises: 'Looked through the exercises',
   draft_week: 'Sketched a week',
   show_week: 'Read your week',
+  workout_log: 'Read your workouts',
   set_week: 'Wrote your week',
   set_workout: 'Built the workout',
   move_workout: 'Moved a workout',
