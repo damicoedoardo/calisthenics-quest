@@ -15,6 +15,7 @@ import { minutesOf, restFor } from './time';
 import { answersOf, profileFrom } from './setup';
 import { validate } from './validate';
 import { LAW_LIST, weekBreaks } from './laws';
+import { workoutLog } from './feedback';
 import { PATTERNS, type Area, type CoachDay, type CoachPlan, type CoachProfile, type CoachState, type CoachWeek, type Experience, type Gear, type Goal, type Level, type Minutes, type Mode, type PlanItem, type RunStep } from './types';
 
 /* The coach's tools, run here on the phone: the model asks, the app does it and says what happened
@@ -340,6 +341,8 @@ export function runTool(state: GameState, name: string, args: string, ctx: ToolC
       const days = nextWeek ? coach.week && buildNextWeek(build, coach.week) : buildWeek(build)?.days;
       return { state, result: days ? `${days.map((d) => `${weekdayOf(d.date)} ${d.date}\n${planText(d.plan)}`).join('\n')}\n(Not saved: call set_week${nextWeek ? ' with week "next"' : ''} to make it the week, as is or changed.)` : 'Could not build one.' };
     }
+    case 'workout_log':
+      return { state, result: workoutLog(state, { last: typeof input.last === 'number' ? input.last : undefined, exercise: str(input.exercise) || undefined }) };
     case 'show_week':
       return { state, result: bothWeeks(state, ctx.now) + (currentPlan(state.coach) ? `\nNext workout in full:\n${planText(currentPlan(state.coach)!)}` : '') };
     case 'set_week':

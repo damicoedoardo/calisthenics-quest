@@ -3,6 +3,7 @@ import type { Checkin, GameState } from '../game';
 import { liveNotes } from './notes';
 import { restKept, weekText } from './week';
 import { coachNudge } from './nudge';
+import { goingLines } from './feedback';
 import { storyState } from '@/story/engine';
 import { CHAPTERS } from '@/story/chapters';
 import { FLAME_STAGES, flameStage, fused } from '@/story/flame';
@@ -14,6 +15,7 @@ import { PATTERNS } from './types';
    this; it never reads or writes the save itself. Kept to about 2k tokens. */
 
 const day = (iso: string) => iso.slice(0, 10);
+const FEEL = { '4+': 'e', '2-3': 'r', '0-1': 'h' } as const;
 const ago = (iso: string, now: Date) => Math.floor((now.getTime() - new Date(iso).getTime()) / 86_400_000);
 
 export function coachBrief(state: GameState, now: Date, checkin: Checkin = 'normal'): string {
@@ -59,10 +61,19 @@ export function coachBrief(state: GameState, now: Date, checkin: Checkin = 'norm
 
   const recent = state.sessions.slice(-10);
   if (recent.length) {
-    lines.push('', 'Last workouts (oldest first):');
+    lines.push('', 'Last workouts (oldest first; each set is reps and how it felt: e easy 4+ left, r just right 2-3, h very hard 0-1; "of N" the target):');
     for (const s of recent) {
-      const moves = s.entries.map((e) => `${e.name ?? e.exerciseId} ${e.sets.map((x) => `${x.reps}${x.kg ? `@${x.kg}kg` : ''}`).join('/')}`).join('; ');
-      const extra = [s.felt && `felt ${s.felt}`, s.comment && `"${s.comment}"`, s.skipped?.length && `skipped ${s.skipped.length}`, s.changed?.length && `changed ${s.changed.map((c) => `${c.from}->${c.to} (${c.how})`).join(', ')}`].filter(Boolean);
+      // Each set as reps and how it felt (e easy 4+ left, r just right 2-3, h very hard 0-1), then the target.
+      const moves = s.entries.map((e) => `${e.name ?? e.exerciseId} ${e.sets.map((x) => `${x.reps}${x.kg ? `@${x.kg}kg` : ''}${FEEL[x.rir]}`).join('/')} of ${e.target}${e.of && e.sets.length < e.of ? ` (${e.sets.length} of ${e.of} sets)` : ''}`).join('; ');
+      const extra = [
+        s.felt && `felt ${s.felt}`,
+        s.checkin === 'rough' && 'a rough day',
+        s.minutes && `${s.minutes} min${s.planned ? ` (planned ${s.planned})` : ''}`,
+        s.comment && `"${s.comment}"`,
+        s.skipped?.length && `skipped ${s.skipped.length}`,
+        s.changed?.length && `changed ${s.changed.map((c) => `${c.from}->${c.to} (${c.how})`).join(', ')}`,
+        s.left?.length && `not started: ${s.left.join(', ')}`,
+      ].filter(Boolean);
       lines.push(`- ${day(s.date)} ${s.mode ?? 'gym'} ${s.kind}: ${moves}${extra.length ? `. ${extra.join(', ')}` : ''}`);
     }
   }
@@ -74,6 +85,8 @@ export function coachBrief(state: GameState, now: Date, checkin: Checkin = 'norm
     since.push(`${pattern} ${last ? `${ago(last.date, now)}d ago` : 'never'}`);
   }
   lines.push('', `Last trained: ${since.join(', ')}.`);
+  const going = goingLines(state, now);
+  if (going.length) lines.push('', 'How training is going (facts; you decide what they mean for the plan):', ...going);
   const week = state.sessions.filter((s) => ago(s.date, now) < 7);
   lines.push(`This week: ${week.length} workouts.`);
   return lines.join('\n');

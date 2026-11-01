@@ -192,6 +192,26 @@ export function planAhead(input: BuildInput): CoachWeek | null {
   return next && { ...week, days: [...week.days.filter((d) => weekOf(week!, d.date) === 0), ...next], ahead: true };
 }
 
+/** A week the coach (the LLM) should plan on its own, from the log, or null. The built-in coach
+    drafts every week at once (offline, plain rules); the coach then rewrites it from how training
+    really went (Edoardo 2026-11-01): next week the moment this week's last workout is done, or
+    this week when it starts fresh and untouched (a new Monday after a week with workouts missed).
+    Only a week still all the built-in coach's, none of it done, and once (`coach.autoPlan`). */
+export function aiPlanDue(coach: CoachState | undefined, now: Date): { id: string; which: 'this' | 'next' } | null {
+  const week = coach?.week;
+  if (!coach?.profile || !week?.ahead || weekOver(week, now)) return null;
+  const untouched = (days: CoachDay[]) => days.length > 0 && days.every((d) => !d.done && d.plan.by === 'built-in');
+  const mine = daysIn(week, 0),
+    next = daysIn(week, 1);
+  const due =
+    mine.length && mine.every((d) => d.done) && untouched(next)
+      ? { id: `ai:${dayKey(nextMonday(week))}`, which: 'next' as const }
+      : week.start === dayKey(now) && untouched(mine)
+        ? { id: `ai:${week.start}`, which: 'this' as const }
+        : null;
+  return due && due.id !== coach.autoPlan ? due : null;
+}
+
 /** The next workout: the week's first day not done. */
 export function currentPlan(coach: CoachState | undefined): CoachPlan | undefined {
   return nextDay(coach?.week)?.plan;

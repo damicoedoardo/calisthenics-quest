@@ -155,6 +155,11 @@ function Loot({ result, onClose, onFelt, onShare }: { result: FinishResult; onCl
             </span>
           ))}
         </div>
+        {!!session.minutes && (
+          <p className="mt-2 font-mono text-xs text-slate-300">
+            Time {session.minutes} min{session.planned ? ` · planned about ${session.planned}` : ''}
+          </p>
+        )}
         {session.better && <p className="mt-1 text-xs text-emerald-300">Better than last time.</p>}
         {!!session.heavier?.length && <p className="mt-1 text-xs text-sky-300">Next time, a little heavier: {session.heavier.map(nameOf).join(', ')}.</p>}
         </div>

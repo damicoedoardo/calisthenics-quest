@@ -14,6 +14,12 @@ export const MAX_ROUNDS = 6;
 /** What the chat starts with when the coach speaks first; never shown. */
 export const OPENER = '(The player opened the coach chat.)';
 
+/** What the app asks the coach when a week is due for planning on its own (`aiPlanDue`). Said in
+    the chat as the player's turn, never shown; the coach's answer is. */
+export const planAsk = (which: 'this' | 'next') =>
+  `(The app: ${which === 'next' ? "this week's last workout is done" : 'a new week starts and nothing of it is done yet'}. The week the player sees for ${which} week is the app's plain draft. Read workout_log, plan ${which} week yourself from how training really went, and save it with set_week week "${which}". Then tell the player in two short lines what you saw and what you changed. No questions this time; they can answer if they want.)`;
+const hidden = (text: string) => text === OPENER || text.startsWith('(The app: ');
+
 export interface Answer {
   message: Extract<ChatMessage, { role: 'assistant' }>;
   finish_reason: string;
@@ -42,6 +48,7 @@ export const STEP_LABEL: Record<string, string> = {
   find_exercises: 'Looked through the exercises',
   draft_week: 'Sketched a week',
   show_week: 'Read your week',
+  workout_log: 'Read your workouts',
   set_week: 'Wrote your week',
   set_workout: 'Built the workout',
   move_workout: 'Moved a workout',
@@ -92,7 +99,7 @@ const SHOWN_TOOLS = new Set(['set_workout', 'set_week', 'move_workout', 'rest_da
 export function shownChat(chat: ChatMessage[] | undefined): Shown[] {
   const out: Shown[] = [];
   (chat ?? []).forEach((m, i) => {
-    if (m.role === 'user' && m.content !== OPENER) out.push({ who: 'you', text: m.content, key: `u${i}` });
+    if (m.role === 'user' && !hidden(m.content)) out.push({ who: 'you', text: m.content, key: `u${i}` });
     else if (m.role === 'assistant') {
       if (m.content.trim()) out.push({ who: 'coach', text: m.content.trim(), key: `a${i}` });
       if ((m.tool_calls ?? []).some((c: ToolCall) => SHOWN_TOOLS.has(c.function.name))) out.push({ who: 'workout', key: `w${i}` });

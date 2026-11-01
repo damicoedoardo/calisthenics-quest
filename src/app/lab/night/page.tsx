@@ -306,6 +306,7 @@ export default function NightLab() {
 
       <Panel title="YOUR COACH: THE FLAME" note="Your flame plans your training now. Train tab: its last words and today's workout as cards with demos, easier and swap on each. Tap Let's start and it chats with you at the camp fire. Talking needs a sign-in (Hero > Settings) on the real save.">
         <Row icon={<Sparkles size={16} />} label="Meet your coach" note="Train tab, no coach set up yet: Pip says hello" onClick={() => open(veteran(6, 0), 'tab=train')} />
+        <Row icon={<Dumbbell size={16} />} label="The workout clock" note="A workout under way: its clock under the bars, from Start to Finish, saved with the workout" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=today&workout')} />
         <Row icon={<Dumbbell size={16} />} label="A week built like a trainer's" note="Train tab, gym 40 min: warm-up, main lifts (ramp-up on the first), core, cool-down stretches, rests and an honest time" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=train')} />
       </Panel>
 
