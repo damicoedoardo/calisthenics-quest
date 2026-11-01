@@ -6,7 +6,7 @@ import { CAST } from './cast';
 import { recordRun } from '@/lib/fog';
 import { FIRST_CLEAR, RUN_LINES } from './daily/fog-lines';
 import { CHAPTERS } from './chapters';
-import { ALL_SCENES, MAX_SCENES_AT_ONCE, VILLAGERS, answeredLines, asksAgain, chapterStart, endedScene, fill, pendingScenes, putOff, renderLines, sawScene, scenesToPlay, storySoFar, storyState, storyWords, waitingCount } from './engine';
+import { ALL_SCENES, MAX_SCENES_AT_ONCE, VILLAGERS, answeredLines, asksAgain, chapterStart, endedScene, fill, pendingScenes, putOff, renderLines, sawScene, sceneMoment, scenesToPlay, storySoFar, storyState, storyWords, waitingCount } from './engine';
 import { FLAME_STAGES } from './flame';
 import { PLACES } from './places';
 import { CALLBACKS, FLAME_LINES } from './daily/flame-lines';
@@ -412,6 +412,13 @@ describe('chapters end on Fog bosses', () => {
     // The ending, then the heart moment the chapter had not reached yet, then the next chapter.
     expect(ids(s)).toEqual(['ch1-victory', 'ch1-night-camp', 'ch2-intro']);
     // A leftover scene that asks nothing (ch1-proof) is skipped.
+  });
+
+  it('plays the ending at once, even after two scenes already played at this workout today', () => {
+    const s = caughtUp(trained(4));
+    const full = { ...s, sceneMark: { at: sceneMoment(s, at), count: MAX_SCENES_AT_ONCE } };
+    expect(scenesToPlay(full, at)).toEqual([]);
+    expect(scenesToPlay(won(full), at).map((x) => x.id)).toEqual(['ch1-victory', 'ch1-night-camp']);
   });
 
   it("counts a chapter's scenes from when it began, and never ends one on workouts", () => {

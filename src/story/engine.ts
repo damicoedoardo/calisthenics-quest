@@ -190,9 +190,10 @@ export function pendingScenes(state: GameState, now: Date): Scene[] {
 /** At most this many scenes play at one moment; the rest wait for the next one. */
 export const MAX_SCENES_AT_ONCE = 2;
 
-/** One story moment: today, after this many workouts. A new workout starts a new one. */
+/** One story moment: today, after this many workouts and Fog bosses. A new workout starts a new
+    one, and so does a boss falling (it ends a chapter, so its ending plays at once). */
 export function sceneMoment(state: GameState, now: Date): string {
-  return `${dayKey(now)}|${state.sessions.length}`;
+  return `${dayKey(now)}|${state.sessions.length}|${state.fog?.cleared ?? 0}`;
 }
 
 /**

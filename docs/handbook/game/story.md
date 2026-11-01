@@ -97,6 +97,8 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
   then whatever the chapter still had to ask (its leftover questions, and scenes with `keep: true`,
   like `first-quest`), then the next chapter's intro. Its other leftover scenes are skipped. Order
   is in `pendingScenes`; `MAX_SCENES_AT_ONCE` still holds, so the rest come at the next moment.
+  A boss falling is a moment of its own (`sceneMoment` counts bosses too), so its ending plays at
+  once even when two scenes already played after today's workout.
 - In a chapter's file, `workouts: N` counts from when that chapter began (`workoutsFor`,
   `chapterBegan`), so its scenes keep their spacing however early or late its boss fell, and a
   chapter's scenes never play before it begins. In `anytime.ts` it counts every workout. The
