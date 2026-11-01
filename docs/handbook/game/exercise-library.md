@@ -88,7 +88,7 @@ the exercise's main words. Run it with `node scripts/find-videos.mjs` on a machi
 YouTube (the cloud machine can't); it keeps what it found before and only looks up the rest. `scripts/find-videos-channels.mjs` is the quick way when YouTube throttles the search: with a
 YouTube Data API key (`YOUTUBE_API_KEY` in the environment or the git-ignored `.env.local`, never
 committed) it reads every upload of the Bodybuilding.com and OPEX channels (1 quota unit per 50
-videos) and matches names locally; a match needs the name's words in the title and the title's
+videos), or with yt-dlp when there is no key, and matches names locally; a match needs the name's words in the title and the title's
 words in the name. An exercise it missed still gets the search. Each pick was chosen by
 hand from web search results for that move. Prefer a short, clean demo with no talk: about half
 are the Bodybuilding.com clips (the catalog came from that site, so names match) or the OPEX and

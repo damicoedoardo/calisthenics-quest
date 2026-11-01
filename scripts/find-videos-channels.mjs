@@ -4,8 +4,10 @@
 // 50 videos, so this needs no searching and is never throttled. Writes src/exercises/videos.found.json
 // (keeps what is there; hand picks in videos.ts always win). Run it where YouTube is reachable.
 // The key comes from YOUTUBE_API_KEY in the environment or in .env.local (git-ignored); never commit it.
+// No key? It reads the same lists with yt-dlp (`brew install yt-dlp`), a few requests per channel.
 // Usage: node scripts/find-videos-channels.mjs [--channel @handle|UC...]... [--dry]
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 
 const OUT = new URL('../src/exercises/videos.found.json', import.meta.url);
 const API = 'https://www.googleapis.com/youtube/v3';
@@ -17,7 +19,7 @@ function apiKey() {
     const m = readFileSync(file, 'utf8').match(/^YOUTUBE_API_KEY=["']?([^"'\s]+)/m);
     if (m) return m[1];
   }
-  throw new Error('No YOUTUBE_API_KEY (set it in the environment or in .env.local)');
+  return null;
 }
 const KEY = apiKey();
 
@@ -33,8 +35,19 @@ const args = process.argv.slice(2);
 const channels = args.flatMap((a, i) => (a === '--channel' ? [args[i + 1]] : []));
 if (channels.length === 0) channels.push('@bodybuildingcom', '@OPEXFitness');
 
+/** Every upload of a channel with yt-dlp: one flat listing, no key. */
+function uploadsByYtDlp(channel) {
+  const url = channel.startsWith('UC') ? `https://www.youtube.com/channel/${channel}/videos` : `https://www.youtube.com/${channel}/videos`;
+  const json = execFileSync('yt-dlp', ['--flat-playlist', '-J', '--sleep-requests', '1', url], { maxBuffer: 1 << 28, encoding: 'utf8' });
+  const list = JSON.parse(json);
+  const out = (list.entries ?? []).filter((e) => e.id && e.title).map((e) => ({ id: e.id, title: e.title }));
+  console.log(`${list.channel ?? channel}: ${out.length} videos`);
+  return out;
+}
+
 /** Every upload of a channel (by @handle or UC id): id and title. */
 async function uploads(channel) {
+  if (!KEY) return uploadsByYtDlp(channel);
   const by = channel.startsWith('UC') ? { id: channel } : { forHandle: channel };
   const ch = await get('channels', { part: 'contentDetails,snippet', ...by });
   const item = ch.items?.[0];
