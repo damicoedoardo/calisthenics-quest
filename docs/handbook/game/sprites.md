@@ -65,7 +65,7 @@ characters/spCard.ts  the SP card (sprite `spCard`, opts { classId, n, awake, ge
 characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look, kit }): you
                       doing each exercise of the program (hand-posed), one rep per loop of the
                       16-frame `rep` clip, or one of the exercise library's movements from moves.ts
-anatomy/body.ts       the anatomy demos (`ANATOMY_DEMOS`, 131 so far: push-ups (plain, incline,
+anatomy/body.ts       the anatomy demos (`ANATOMY_DEMOS`, 147 so far: push-ups (plain, incline,
                       archer, handstand),
                       squats (back, free, front, overhead), lunge, step-up, deadlift, RDL, good
                       morning, kettlebell swing, leg press, leg curl, leg extension, back
@@ -89,7 +89,11 @@ anatomy/body.ts       the anatomy demos (`ANATOMY_DEMOS`, 131 so far: push-ups (
                       bicycle crunch, flutter kicks, V-up, superman, kettlebell windmill, toes
                       to bar, L-sit, tuck L-sit, external rotation); more stretches (butterfly,
                       straddle, figure four, spinal twist, lying hamstring, lying quad,
-                      overhead reach, upper back, neck nod, inchworm)).
+                      overhead reach, upper back, neck nod, inchworm); and the odd ones: foam
+                      rolls on the side (outer thigh, lats), shins and foot, ankle and wrist
+                      circles, forearm stretch, wrist pull, wrist roller, ball throw, balance
+                      board, leg-up stretch, body-up, Turkish get-up, pelvic tilt, reverse
+                      hyper).
                       Not pixel art: a plain, faceless body as smooth vector shapes, with the
                       muscle map on it and the worked muscles colored (main orange, helpers light
                       orange). Each part a tube with four radii along its bone (`SHAPES`), each
@@ -108,7 +112,8 @@ anatomy/skeleton.ts   its 3D skeleton in cm with real adult lengths (`L`), two-b
 anatomy/keys.ts       moves too big for one formula (a clean, a box jump) as key poses in a row:
                       `keyed(keys, d)` eases between evenly spaced poses, `blend` keeps the bone
                       lengths (torso rebuilt, elbows and knees solved again), `shift` moves a
-                      pose, `mirror` swaps left and right (a split jump)
+                      pose, `mirror` swaps left and right (a split jump), `turn` faces it the
+                      other way (a get-up stands up facing its feet)
 anatomy/moves.ts      one entry per anatomy demo (`DEMOS`): the pose from rep depth 0..1 and a
                       `Variant`, the muscles it works, the camera per view ('side' level; the
                       second view named by `names`, e.g. 'Back'), the floor (none when hanging),
@@ -120,9 +125,8 @@ anatomy/moves.ts      one entry per anatomy demo (`DEMOS`): the pose from rep de
                       there always shows, `fits` is only for the movement's own demo), and
                       the variant read from its name (`variantOf`: dumbbell, barbell or
                       kettlebell via `swaps`, incline bench, goblet squat, also from a front
-                      squat). About 96% of the library has a demo; the rest (wrist and grip
-                      drills, some foam rolls, Turkish get-ups, a few odd ones) keep the pixel
-                      demo. Add an
+                      squat). 879 of 891 exercises (99%) have a demo; the last 12 (a few odd
+                      stretches, a vacuum, suspension flyes) keep the pixel demo. Add an
                       exercise: one entry here, its id from the exercise ids in
                       src/exercises/coaching.ts
 characters/moves.ts   the exercise library's 81 movements (lifts, machines, core, cardio, stretches,
