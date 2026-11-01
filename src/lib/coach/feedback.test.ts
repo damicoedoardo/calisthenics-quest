@@ -3,11 +3,11 @@ import { loadLibrary, type LibraryExercise } from '@/exercises/library';
 import { seeded } from '@/lib/random';
 import { finishSession, initialState, todaysQuest, type GameState, type Rir, type Session } from '@/lib/game';
 import { applySetup, type SetupAnswers } from './setup';
-import { nextDay, planAhead } from './week';
+import { aiPlanDue, daysIn, nextDay, planAhead } from './week';
 import { goingLines, heavy, paceOf, waiting, workoutLog } from './feedback';
 import { coachBrief } from './brief';
 import { runTool } from './tools';
-import { STEP_LABEL } from './chat';
+import { STEP_LABEL, coachTurn, planAsk, shownChat, type Ask } from './chat';
 
 let all: LibraryExercise[];
 beforeAll(async () => {
@@ -102,5 +102,61 @@ describe('the workout log', () => {
     const later = new Date(2026, 9, 31, 12);
     expect(waiting(s.coach, later).length).toBeGreaterThan(0);
     expect(goingLines({ ...s, sessions: [session({})] }, later).join('\n')).toContain('not done on');
+  });
+});
+
+describe('the coach plans a week on its own', () => {
+  /** Train every workout of this week, each on its own day. */
+  const finishWeek = (s: GameState) => {
+    for (const d of daysIn(s.coach!.week!, 0)) s = train(s, new Date(`${d.date}T18:00:00`), '2-3').state;
+    return s;
+  };
+
+  it('next week falls due the moment this week is done, once, while it is still the draft', () => {
+    let s = withWeek();
+    expect(aiPlanDue(s.coach, new Date(2026, 9, 28, 13))?.which).toBe('this');
+    s = { ...s, coach: { ...s.coach!, autoPlan: aiPlanDue(s.coach, NOW)!.id } };
+    expect(aiPlanDue(s.coach, new Date(2026, 9, 28, 13))).toBeNull();
+    s = finishWeek(s);
+    const due = aiPlanDue(s.coach, new Date(2026, 10, 1, 19))!;
+    expect(due.which).toBe('next');
+    expect(aiPlanDue({ ...s.coach!, autoPlan: due.id }, new Date(2026, 10, 1, 19))).toBeNull();
+    // A week the coach already wrote is never redone behind its back.
+    const byCoach = { ...s.coach!, week: { ...s.coach!.week!, days: s.coach!.week!.days.map((d) => ({ ...d, plan: { ...d.plan, by: 'coach' as const } })) } };
+    expect(aiPlanDue(byCoach, new Date(2026, 10, 1, 19))).toBeNull();
+  });
+
+  it('the coach reads the log, writes next week, and only its words show', async () => {
+    let s = finishWeek(withWeek());
+    const now = new Date(2026, 10, 1, 19);
+    const next = daysIn(s.coach!.week!, 1);
+    const tools: string[] = [];
+    let round = 0;
+    const ask: Ask = async (brief, messages) => {
+      round++;
+      if (round === 1) {
+        expect(messages.at(-1)).toMatchObject({ role: 'user', content: planAsk('next') });
+        return { message: { role: 'assistant', content: '', tool_calls: [{ id: 'c1', type: 'function', function: { name: 'workout_log', arguments: '{"last":3}' } }] }, finish_reason: 'tool_calls' };
+      }
+      if (round === 2) {
+        const days = next.map((d) => ({ day: d.date, title: 'Lighter', mode: 'gym', items: d.plan.items.filter((i) => i.role !== 'warmup' && i.role !== 'stretch').map((i) => ({ id: i.id, role: i.role, sets: 2, reps: i.low })) }));
+        return { message: { role: 'assistant', content: '', tool_calls: [{ id: 'c2', type: 'function', function: { name: 'set_week', arguments: JSON.stringify({ week: 'next', days }) } }] }, finish_reason: 'tool_calls' };
+      }
+      return { message: { role: 'assistant', content: 'Saw three heavy days. Next week is a little lighter.' }, finish_reason: 'stop' };
+    };
+    await coachTurn({
+      text: planAsk('next'),
+      get: () => s,
+      set: (fn) => (s = fn(s)),
+      ask,
+      ctx: () => ({ all, now, id: ids(), rng: seeded(1) }),
+      onStep: (l) => tools.push(l),
+    });
+    expect(tools).toContain(STEP_LABEL.workout_log);
+    expect(daysIn(s.coach!.week!, 1).every((d) => d.plan.by === 'coach')).toBe(true);
+    expect(aiPlanDue(s.coach, now)).toBeNull();
+    const shown = shownChat(s.coach!.chat);
+    expect(shown.some((m) => m.who === 'you')).toBe(false);
+    expect(shown.some((m) => m.who === 'coach' && m.text.includes('lighter'))).toBe(true);
   });
 });

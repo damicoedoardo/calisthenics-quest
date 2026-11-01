@@ -84,8 +84,14 @@ nothing changes a plan on its own.
   easy, less or an easier move where it was very hard or not finished, a lighter week when worn
   out, fewer moves when workouts run long, fewer days when workouts wait, and to say in a line
   what it saw and changed.
-- The built-in coach's next-week draft doesn't read it (plain rules); talking to the flame, or
-  Change it on the Week done card, has the coach redo it from the log.
+- **The coach plans the week on its own** (`aiPlanDue` in `week.ts`, `useCoachAutoPlan` in
+  `useCoach.ts`): the built-in coach drafts each week at once (offline, plain rules), then the
+  moment this week's last workout is done the app asks the coach (`planAsk`, a "(The app: ...)"
+  turn never shown in the chat) to read the log and rewrite next week with `set_week`. It does
+  the same for a week that starts fresh and untouched (a new Monday after missed workouts). Only a
+  week still all the built-in coach's and none of it done, once per week (`coach.autoPlan`), signed
+  in and on the real save; offline the draft stays and it is tried again next time. Its two lines
+  land in the chat and on the flame's card.
 
 ## Rest days
 

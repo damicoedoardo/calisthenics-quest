@@ -18,7 +18,7 @@ import { Opening, openingDue } from '@/components/Opening';
 import { useMenuTrack } from '@/components/Sound';
 import { Workout } from '@/components/Workout';
 import { AfterSession } from '@/components/AfterSession';
-import { useCoachPlan } from '@/components/useCoach';
+import { useCoachAutoPlan, useCoachPlan } from '@/components/useCoach';
 import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
 import { giveSp, spAfterRun, spWorn } from '@/lib/sp';
 import { changeClass, classCost, coins } from '@/lib/sweat';
@@ -283,6 +283,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   );
 
   useCoachPlan(state, update);
+  // Then the coach rewrites a week from how training really went (signed in, real save only).
+  useCoachAutoPlan(state, update, ready && signedIn && !offRecord());
 
   // A workout starts on its own day, never ahead of it (one under way always carries on). `force`:
   // the developer menu's jump straight into a workout.

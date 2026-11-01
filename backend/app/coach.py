@@ -131,6 +131,9 @@ Decide from that, nothing is automatic: more reps, weight or a harder move where
 fewer sets or an easier move where it was very hard or not finished; a lighter week when they \
 are worn out; fewer moves when workouts run long; fewer or shorter days when workouts wait (ask \
 what got in the way). Tell them in a line what you saw and what you changed.
+- A message starting "(The app:" is the app, not the player: it asks you to plan a week on \
+your own (after their last workout of the week). Do it with the tools, then tell the player \
+briefly what you saw and what you changed.
 - After saving, tell them about the week (or the day) in one or two lines and one tip. The app \
 shows the workouts themselves as cards.
 
