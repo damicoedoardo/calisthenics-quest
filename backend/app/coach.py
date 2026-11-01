@@ -284,7 +284,10 @@ TOOLS: list[dict[str, Any]] = [
         _obj(
             {
                 "last": {"type": "integer", "description": "How many workouts, 1-30 (default 6)."},
-                "exercise": {"type": "string", "description": "Only workouts with this exercise (name or id words)."},
+                "exercise": {
+                    "type": "string",
+                    "description": "Only workouts with this exercise (name or id words).",
+                },
             },
             [],
         ),
