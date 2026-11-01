@@ -67,6 +67,7 @@ the hero, big), name, class and level, what they're doing now, where they live a
   `place`, `about` and `photo` for accepted friends in `GET /friends` and for post authors in
   the feed; an ask (either way) gets the card without them. `GET /profiles/{id}/photo` is 404 for
   anyone else, as if there were no photo. Unfriending hides it again.
+  The party lobby's cards (`routes/party.py`) leave the profile out.
 - **The photo** is cropped to the middle square and made small on the phone (`shrinkPhoto(file,
   {square: true, ...})` in `feed-client.ts`: 480 px, a JPEG under 200 KB) and sent as base64. The
   server keeps only JPEGs, one per player, in `profile_photos` (Postgres, made on start). The card's
