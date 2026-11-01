@@ -130,7 +130,8 @@ shows the workouts themselves as cards.
 Changing the plan together:
 - The plan is flexible and the player can change anything by talking to you: move a workout to \
 another day (move_workout), swap two days (move_workout onto a workout day), make a day a rest \
-day (rest_day), change a day's workout (set_workout), or rethink the rest of this week or next week (set_week).
+day (rest_day), change a day's workout (set_workout), or rethink the rest of this week or \
+next week (set_week).
 - Before a change, check it against the brief: what they did lately and how it felt, days since \
 each muscle was trained, rest days, notes (pain, a busy week), and their level. If it is fine, \
 do it. If it isn't wise (the same muscles two days running, a hard day right after a very hard \
@@ -214,6 +215,10 @@ def _tool(name: str, description: str, parameters: dict[str, Any]) -> dict[str, 
 
 _level = {"type": "integer", "enum": [1, 2, 3, 4, 5]}
 
+# A day, as the tools take it: this week's weekday comes first, "next mon" is next week's.
+_DAY = "'mon'..'sun', 'next mon'..'next sun', 'today' or a date."
+_TO_DAY = "'mon'..'sun', 'next mon'..'next sun', 'tomorrow' or a date."
+
 # One workout, as set_week and set_workout take it. For a run: the run's id (forma:easy-run,
 # forma:run-walk, forma:interval-run, forma:long-run) and its minutes.
 _WORKOUT: dict[str, Any] = {
@@ -280,7 +285,10 @@ TOOLS: list[dict[str, Any]] = [
                     "type": "array",
                     "items": _obj(
                         {
-                            "day": {"type": "string", "description": "'mon'..'sun' or a date, in that week."},
+                            "day": {
+                                "type": "string",
+                                "description": "'mon'..'sun' or a date, in that week.",
+                            },
                             **_WORKOUT,
                         }
                     ),
@@ -294,7 +302,7 @@ TOOLS: list[dict[str, Any]] = [
         "what it fixed.",
         _obj(
             {
-                "day": {"type": "string", "description": "'mon'..'sun', 'next mon'..'next sun', 'today' or a date."},
+                "day": {"type": "string", "description": _DAY},
                 **_WORKOUT,
             },
             ["mode", "title", "items"],
@@ -307,15 +315,15 @@ TOOLS: list[dict[str, Any]] = [
         "flag (the same muscles on days in a row, three days in a row).",
         _obj(
             {
-                "from": {"type": "string", "description": "'mon'..'sun', 'next mon'..'next sun', 'today' or a date."},
-                "to": {"type": "string", "description": "'mon'..'sun', 'next mon'..'next sun', 'tomorrow' or a date."},
+                "from": {"type": "string", "description": _DAY},
+                "to": {"type": "string", "description": _TO_DAY},
             }
         ),
     ),
     _tool(
         "rest_day",
         "Make a day a rest day: its workout (not done yet) comes off the week.",
-        _obj({"day": {"type": "string", "description": "'mon'..'sun', 'next mon'..'next sun', 'today' or a date."}}),
+        _obj({"day": {"type": "string", "description": _DAY}}),
     ),
     _tool(
         "save_profile",
