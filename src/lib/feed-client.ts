@@ -1,7 +1,7 @@
 'use client';
 
 import { api } from './cloud-client';
-import { FEED_LIMIT, type Post, type WorkoutCard } from './feed';
+import { FEED_LIMIT, fromFrontCamera, type Post, type WorkoutCard } from './feed';
 
 /* The talking side of the feed (rules and types in feed.ts). Every call needs sign-in. */
 
@@ -80,25 +80,13 @@ function encode(canvas: HTMLCanvasElement, bytes: number): { base64: string; pre
   throw new Error('That photo is too big. Try another one.');
 }
 
-/** A photo already picked, turned left to right (a selfie looks the other way round from how the
-    camera showed it while taking it). `url` is its preview or blob link. */
-export async function flipPhoto(url: string, bytes: number = FEED_LIMIT.photoBytes): Promise<{ base64: string; preview: string }> {
-  const img = await load(url);
-  const canvas = document.createElement('canvas');
-  canvas.width = img.naturalWidth;
-  canvas.height = img.naturalHeight;
-  const ctx = canvas.getContext('2d');
-  ctx?.translate(canvas.width, 0);
-  ctx?.scale(-1, 1);
-  ctx?.drawImage(img, 0, 0);
-  return encode(canvas, bytes);
-}
-
 /** A photo from the phone, made small enough to send: at most `edge` (FEED_LIMIT.photoEdge) on
     its long side, as a JPEG under `bytes` (FEED_LIMIT.photoBytes). `square` crops the middle square
-    first (a profile photo). Returns base64 (no "data:" head) and a preview link. */
+    first (a profile photo). A selfie (`fromFrontCamera`) is mirrored, so it looks as it did in the
+    camera while taking it. Returns base64 (no "data:" head) and a preview link. */
 export async function shrinkPhoto(file: File, { edge = FEED_LIMIT.photoEdge, bytes = FEED_LIMIT.photoBytes, square = false }: { edge?: number; bytes?: number; square?: boolean } = {}): Promise<{ base64: string; preview: string }> {
   const img = await upright(file);
+  const selfie = fromFrontCamera(new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer()));
   const w = img.naturalWidth,
     h = img.naturalHeight;
   const side = Math.min(w, h);
@@ -107,6 +95,11 @@ export async function shrinkPhoto(file: File, { edge = FEED_LIMIT.photoEdge, byt
   const canvas = document.createElement('canvas');
   canvas.width = Math.round(sw * scale);
   canvas.height = Math.round(sh * scale);
-  canvas.getContext('2d')?.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  const ctx = canvas.getContext('2d');
+  if (selfie) {
+    ctx?.translate(canvas.width, 0);
+    ctx?.scale(-1, 1);
+  }
+  ctx?.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
   return encode(canvas, bytes);
 }

@@ -1,14 +1,14 @@
 'use client';
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { Camera, FlipVertical2, MapPin, Trash2, X } from 'lucide-react';
+import { Camera, MapPin, Trash2, X } from 'lucide-react';
 import { getClass } from '@/lib/gear';
 import { friendTrainedToday, PROFILE_LIMIT, statsNow, statusOf, type FriendCard, type Profile } from '@/lib/friends';
 import { WEEKLY_GOAL, type GameState } from '@/lib/game';
 import { inviteToParty, setLobbyOpen } from '@/lib/party-client';
 import { profilePhotoUrl, saveProfile, savePhoto } from '@/lib/friends-client';
 import { cleanLine } from '@/lib/feed';
-import { flipPhoto, shrinkPhoto } from '@/lib/feed-client';
+import { shrinkPhoto } from '@/lib/feed-client';
 import { CheerPage, Doing, FriendHero, GiveMats, type Friends } from './Friends';
 import { PostCard, type Feed } from './Feed';
 import { Sprite } from './Sprite';
@@ -279,18 +279,6 @@ export function ProfileEdit({ friends }: { friends: Friends }) {
     }, 'Photo saved.');
   };
 
-  const flip = () => {
-    const now = has.photo;
-    if (!now) return;
-    void run(async () => {
-      const src = now.startsWith('data:') ? now : await profilePhotoUrl(me?.id ?? 'me', now);
-      const { base64, preview } = await flipPhoto(src, PROFILE_LIMIT.photoBytes);
-      if (friends.demo) return { ...has, photo: preview };
-      const p = await savePhoto(base64);
-      return { ...p, photo: p.photo ? preview : null };
-    }, 'Photo flipped.');
-  };
-
   const words = () =>
     run(async () => {
       const next = { place: cleanLine(place, PROFILE_LIMIT.place), about: cleanLine(about, PROFILE_LIMIT.about) };
@@ -327,15 +315,9 @@ export function ProfileEdit({ friends }: { friends: Friends }) {
         <div className="flex flex-col gap-1.5 text-sm">
           <span className="text-slate-300">{has.photo ? 'Tap the photo to change it.' : 'Add a photo'}</span>
           {has.photo && (
-            <span className="flex items-center gap-4">
-              {/* A selfie comes out the other way round from the camera's view: one tap turns it. */}
-              <button disabled={busy} onClick={flip} className="flex items-center gap-1.5 text-xs text-slate-300">
-                <FlipVertical2 size={13} /> Flip
-              </button>
-              <button disabled={busy} onClick={() => void run(async () => (friends.demo ? { ...has, photo: null } : savePhoto(null)), 'Photo removed.')} className="flex items-center gap-1.5 text-xs text-slate-500">
-                <Trash2 size={13} /> Remove
-              </button>
-            </span>
+            <button disabled={busy} onClick={() => void run(async () => (friends.demo ? { ...has, photo: null } : savePhoto(null)), 'Photo removed.')} className="flex items-center gap-1.5 self-start text-xs text-slate-500">
+              <Trash2 size={13} /> Remove
+            </button>
           )}
         </div>
       </div>
