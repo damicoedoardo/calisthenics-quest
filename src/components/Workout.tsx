@@ -182,13 +182,10 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
               />
             ))}
           </div>
-          <p className="mt-1 text-center text-[11px] text-slate-500">
-            {index + 1} of {quest.length}
-          </p>
         </div>
         <div className="flex gap-2">
-          <button onClick={() => setAsking(true)} aria-label="Ask your flame" className="flex h-10 items-center gap-1.5 rounded-lg bg-ink-800 px-3 text-xs font-semibold text-gold-300">
-            <MessageCircle size={16} /> Ask
+          <button onClick={() => setAsking(true)} aria-label="Ask your flame" className="grid h-10 w-10 place-items-center rounded-lg bg-ink-800 text-gold-300">
+            <MessageCircle size={18} />
           </button>
           <button onClick={() => setOverview(true)} aria-label="The whole workout" className="grid h-10 w-10 place-items-center rounded-lg bg-ink-800 text-slate-300">
             <ListOrdered size={18} />
@@ -218,24 +215,14 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
             <ChevronRight />
           </button>
         </div>
-        <p className="mt-1 text-center text-sm text-slate-400">{q.cue}</p>
 
         <Demo state={state} exercise={q.demo} name={q.name} cue={q.cue} />
+        {/* Small tools under the demo: an icon and one word each. */}
         {!exerciseDone && (
-          <div className="mt-3 flex flex-wrap justify-center gap-2">
-            <button onClick={() => setHowTo(true)} className="flex items-center gap-1.5 rounded-lg bg-ink-800 px-3 py-2 text-xs font-semibold text-slate-200 active:scale-95">
-              <BookOpen size={14} className="text-emerald-300" /> How to do it
-            </button>
-            {!tap && q.item && q.item.easier.length > 0 && (
-              <button onClick={() => setChoices('easier')} className="flex items-center gap-1.5 rounded-lg bg-ink-800 px-3 py-2 text-xs font-semibold text-slate-200 active:scale-95">
-                <TrendingDown size={14} className="text-sky-300" /> Easier
-              </button>
-            )}
-            {!tap && q.item && q.item.swaps.length > 0 && (
-              <button onClick={() => setChoices('swap')} className="flex items-center gap-1.5 rounded-lg bg-ink-800 px-3 py-2 text-xs font-semibold text-slate-200 active:scale-95">
-                <Shuffle size={14} className="text-gold-300" /> Swap
-              </button>
-            )}
+          <div className="mt-2 flex justify-center gap-5">
+            <Tool icon={<BookOpen size={16} className="text-emerald-300" />} label="How to" onClick={() => setHowTo(true)} />
+            {!tap && q.item && q.item.easier.length > 0 && <Tool icon={<TrendingDown size={16} className="text-sky-300" />} label="Easier" onClick={() => setChoices('easier')} />}
+            {!tap && q.item && q.item.swaps.length > 0 && <Tool icon={<Shuffle size={16} className="text-gold-300" />} label="Swap" onClick={() => setChoices('swap')} />}
           </div>
         )}
         </div>
@@ -286,7 +273,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
             <p className={`font-mono text-5xl font-bold ${tapOver ? 'text-emerald-400' : 'text-slate-50'}`}>
               {tapLeft >= 60 ? `${Math.floor(tapLeft / 60)}:${String(tapLeft % 60).padStart(2, '0')}` : `${tapLeft}s`}
             </p>
-            <p className="mt-2 text-sm text-slate-400">{tapOver ? 'Time. Tap Done for the next one.' : q.role === 'warmup' ? 'Easy and slow: get everything moving before the work.' : 'Breathe out and let it go a little further. Never into pain.'}</p>
+            {tapOver && <p className="mt-1 text-sm text-emerald-400">Time</p>}
             {tapEnd ? (
               <button
                 onClick={() => log('4+')}
@@ -303,20 +290,17 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
                   }}
                   className="mt-6 w-full rounded-2xl bg-gold-400 py-4 font-pixel [@media(orientation:landscape)_and_(max-height:600px)]:mt-4 text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
                 >
-                  Start the timer
+                  Start
                 </button>
                 <button onClick={() => log('4+')} className="mt-2 w-full py-2 text-sm text-slate-400">
-                  Already done
+                  Skip the timer
                 </button>
               </>
             )}
           </div>
         ) : (
           <>
-            <p className="mt-6 text-center font-pixel text-[10px] text-slate-400 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">
-              Set {logged.length + 1} of {q.sets}
-            </p>
-            <div className="mt-3 flex items-center justify-center gap-5 [@media(orientation:landscape)_and_(max-height:600px)]:mt-1">
+            <div className="mt-5 flex items-center justify-center gap-5 [@media(orientation:landscape)_and_(max-height:600px)]:mt-1">
               <button onClick={() => setReps(Math.max(1, reps - (unit ? 2 : 1)))} aria-label="Fewer" className="grid h-14 w-14 place-items-center rounded-xl bg-ink-800 active:scale-95 [@media(orientation:landscape)_and_(max-height:600px)]:h-12 [@media(orientation:landscape)_and_(max-height:600px)]:w-12">
                 <Minus />
               </button>
@@ -329,17 +313,12 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
               </button>
             </div>
             <p className="mt-1 text-center text-xs text-slate-500">
-              Target {q.reps}
-              {unit} · stop with 2 left
+              Goal {q.reps}
+              {unit}
+              {q.item?.ramp && logged.length === 0 ? <span className="text-gold-200"> · {q.item.ramp} light sets first</span> : null}
             </p>
-            {q.item?.ramp && logged.length === 0 ? (
-              <p className="mx-auto mt-2 max-w-xs rounded-lg bg-ink-800 px-3 py-2 text-center text-xs text-gold-200">
-                First {q.item.ramp} light warm-up sets: half the weight, a few easy reps. Don&apos;t log them.
-              </p>
-            ) : null}
 
-            <p className="mt-6 text-center text-sm font-semibold text-slate-200 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">Set done? How did it feel?</p>
-            <p className="mt-0.5 text-center text-xs text-slate-500">Tap one to save the set. Aim for just right.</p>
+            <p className="mt-6 text-center text-xs text-slate-400 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">Save the set: how was it?</p>
             <div className="mt-3 grid grid-cols-3 gap-2 [@media(orientation:landscape)_and_(max-height:600px)]:mt-2">
               {RIR_BUTTONS.map((b) => (
                 <button
@@ -368,9 +347,9 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
           <button onClick={onFinish} className="w-full rounded-2xl bg-gold-400 py-4 [@media(orientation:landscape)_and_(max-height:600px)]:py-3 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
             {gym ? 'Finish workout' : 'Complete quest'}
           </button>
-        ) : (
-          <button onClick={onFinish} disabled={totalLogged === 0} className="w-full py-3 [@media(orientation:landscape)_and_(max-height:600px)]:py-2 text-sm text-slate-400 disabled:opacity-30">
-            {totalLogged === 0 ? 'Finish a set to end here' : 'End here (what you did still counts)'}
+        ) : totalLogged === 0 ? null : (
+          <button onClick={onFinish} className="w-full py-3 [@media(orientation:landscape)_and_(max-height:600px)]:py-2 text-sm text-slate-400 disabled:opacity-30">
+            End here (it still counts)
           </button>
         )}
       </footer>
@@ -390,6 +369,16 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
       {asking && <CoachChat state={state} update={update} onClose={() => setAsking(false)} start={`About ${q.name}: `} />}
       {leaveSheet}
     </div>
+  );
+}
+
+/** A small tool under the demo: its icon over one word. */
+function Tool({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="flex flex-col items-center gap-1 text-[10px] text-slate-400 active:scale-95">
+      <span className="grid h-9 w-9 place-items-center rounded-full bg-ink-800">{icon}</span>
+      {label}
+    </button>
   );
 }
 
