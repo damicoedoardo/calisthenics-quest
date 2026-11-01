@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ListOrdered, Minus, Plus, Shuffle, TrendingDown, Undo2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, BookOpen, ChevronLeft, ChevronRight, ListOrdered, MessageCircle, Minus, Plus, Shuffle, TrendingDown, Undo2, X } from 'lucide-react';
 import { REST_SECONDS, gearOf, isTap, todaysQuest, type GameState, type QuestExercise, type Rir } from '@/lib/game';
 import { canMove, changeItem, moveItem, skipItem } from '@/lib/coach/plan';
 import { currentPlan } from '@/lib/coach/week';
@@ -18,6 +18,8 @@ import { Ember } from './Characters';
 import { flameStage } from '@/story/flame';
 import { Sprite } from './Sprite';
 import { useGymMode } from './Gym';
+import { ExerciseSheet } from './ExerciseDetail';
+import { CoachChat } from './CoachChat';
 
 interface Props {
   state: GameState;
@@ -26,10 +28,11 @@ interface Props {
   onFinish: () => void;
 }
 
-const RIR_BUTTONS: { rir: Rir; label: string; hint: string }[] = [
-  { rir: '4+', label: '4+', hint: 'Easy' },
-  { rir: '2-3', label: '2-3', hint: 'Just right' },
-  { rir: '0-1', label: '0-1', hint: 'Very hard' },
+/** How a set felt, which also saves it: the feeling first, how many more you could have done under it. */
+const RIR_BUTTONS: { rir: Rir; label: string }[] = [
+  { rir: '4+', label: 'Easy' },
+  { rir: '2-3', label: 'Just right' },
+  { rir: '0-1', label: 'Very hard' },
 ];
 
 /** Full-screen set logger: one exercise at a time, one tap per set, rest timer between sets. */
@@ -59,6 +62,9 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   // Before the first set: the whole workout, to reorder, make easier, swap or skip.
   const [overview, setOverview] = useState(() => Object.values(sets).every((l) => l.length === 0));
   const [choices, setChoices] = useState<'easier' | 'swap' | null>(null);
+  // The how-to page for the exercise on screen, and the chat with the flame.
+  const [howTo, setHowTo] = useState(false);
+  const [asking, setAsking] = useState(false);
   const hasPlan = !!currentPlan(state.coach);
   const gym = useGymMode();
   useEffect(() => {
@@ -73,6 +79,20 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   useEffect(() => {
     setReps(q.reps);
   }, [q.id, q.reps]);
+  // A warm-up or stretch counts down once started (Done works any time).
+  const [tapEnd, setTapEnd] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => setTapEnd(null), [q.id]);
+  useEffect(() => {
+    if (!tapEnd) return;
+    const t = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(t);
+  }, [tapEnd]);
+  const tapLeft = tapEnd ? Math.max(0, Math.ceil((tapEnd - now) / 1000)) : q.reps;
+  const tapOver = !!tapEnd && tapLeft === 0;
+  useEffect(() => {
+    if (tapOver) navigator.vibrate?.([60, 60, 60]);
+  }, [tapOver]);
 
   // Marked open, so if the phone closes the app the workout is where it opens again.
   useEffect(() => {
@@ -150,19 +170,30 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         <button onClick={close} aria-label="Back to Today" className="grid h-10 w-10 place-items-center rounded-lg bg-ink-800">
           <X size={18} />
         </button>
-        <div className="flex gap-1.5">
-          {quest.map((e, i) => (
-            <button
-              key={e.id}
-              onClick={() => setIndex(i)}
-              aria-label={e.name}
-              className={`h-2.5 w-8 rounded-sm ${i === index ? 'bg-gold-400' : (sets[e.id]?.length ?? 0) >= e.sets ? 'bg-emerald-500' : 'bg-ink-600'}`}
-            />
-          ))}
+        {/* Where you are: one bar a move (green done, gold now), and the count under it. */}
+        <div className="mx-3 min-w-0 flex-1">
+          <div className="flex gap-1">
+            {quest.map((e, i) => (
+              <button
+                key={e.id}
+                onClick={() => setIndex(i)}
+                aria-label={e.name}
+                className={`h-2.5 min-w-0 flex-1 rounded-sm ${i === index ? 'bg-gold-400' : (sets[e.id]?.length ?? 0) >= e.sets ? 'bg-emerald-500' : 'bg-ink-600'}`}
+              />
+            ))}
+          </div>
+          <p className="mt-1 text-center text-[11px] text-slate-500">
+            {index + 1} of {quest.length}
+          </p>
         </div>
-        <button onClick={() => setOverview(true)} aria-label="The whole workout" className="grid h-10 w-10 place-items-center rounded-lg bg-ink-800 text-slate-300">
-          <ListOrdered size={18} />
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setAsking(true)} aria-label="Ask your flame" className="flex h-10 items-center gap-1.5 rounded-lg bg-ink-800 px-3 text-xs font-semibold text-gold-300">
+            <MessageCircle size={16} /> Ask
+          </button>
+          <button onClick={() => setOverview(true)} aria-label="The whole workout" className="grid h-10 w-10 place-items-center rounded-lg bg-ink-800 text-slate-300">
+            <ListOrdered size={18} />
+          </button>
+        </div>
       </header>
 
       {/* Held sideways: the exercise on the left, its log on the right. */}
@@ -190,14 +221,17 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         <p className="mt-1 text-center text-sm text-slate-400">{q.cue}</p>
 
         <Demo state={state} exercise={q.demo} name={q.name} cue={q.cue} />
-        {!tap && !exerciseDone && q.item && (q.item.easier.length > 0 || q.item.swaps.length > 0) && (
-          <div className="mt-3 flex justify-center gap-2">
-            {q.item.easier.length > 0 && (
+        {!exerciseDone && (
+          <div className="mt-3 flex flex-wrap justify-center gap-2">
+            <button onClick={() => setHowTo(true)} className="flex items-center gap-1.5 rounded-lg bg-ink-800 px-3 py-2 text-xs font-semibold text-slate-200 active:scale-95">
+              <BookOpen size={14} className="text-emerald-300" /> How to do it
+            </button>
+            {!tap && q.item && q.item.easier.length > 0 && (
               <button onClick={() => setChoices('easier')} className="flex items-center gap-1.5 rounded-lg bg-ink-800 px-3 py-2 text-xs font-semibold text-slate-200 active:scale-95">
                 <TrendingDown size={14} className="text-sky-300" /> Easier
               </button>
             )}
-            {q.item.swaps.length > 0 && (
+            {!tap && q.item && q.item.swaps.length > 0 && (
               <button onClick={() => setChoices('swap')} className="flex items-center gap-1.5 rounded-lg bg-ink-800 px-3 py-2 text-xs font-semibold text-slate-200 active:scale-95">
                 <Shuffle size={14} className="text-gold-300" /> Swap
               </button>
@@ -249,16 +283,33 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
           />
         ) : tap ? (
           <div className="mt-6 text-center [@media(orientation:landscape)_and_(max-height:600px)]:mt-0">
-            <p className="font-mono text-5xl font-bold text-slate-50">
-              {q.reps >= 60 ? `${Math.floor(q.reps / 60)}:${String(q.reps % 60).padStart(2, '0')}` : `${q.reps}s`}
+            <p className={`font-mono text-5xl font-bold ${tapOver ? 'text-emerald-400' : 'text-slate-50'}`}>
+              {tapLeft >= 60 ? `${Math.floor(tapLeft / 60)}:${String(tapLeft % 60).padStart(2, '0')}` : `${tapLeft}s`}
             </p>
-            <p className="mt-2 text-sm text-slate-400">{q.role === 'warmup' ? 'Easy and slow: get everything moving before the work.' : 'Breathe out and let it go a little further. Never into pain.'}</p>
-            <button
-              onClick={() => log('4+')}
-              className="mt-6 w-full rounded-2xl bg-gold-400 py-4 font-pixel [@media(orientation:landscape)_and_(max-height:600px)]:mt-4 text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
-            >
-              Done
-            </button>
+            <p className="mt-2 text-sm text-slate-400">{tapOver ? 'Time. Tap Done for the next one.' : q.role === 'warmup' ? 'Easy and slow: get everything moving before the work.' : 'Breathe out and let it go a little further. Never into pain.'}</p>
+            {tapEnd ? (
+              <button
+                onClick={() => log('4+')}
+                className="mt-6 w-full rounded-2xl bg-gold-400 py-4 font-pixel [@media(orientation:landscape)_and_(max-height:600px)]:mt-4 text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
+              >
+                Done
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => {
+                    setNow(Date.now());
+                    setTapEnd(Date.now() + q.reps * 1000);
+                  }}
+                  className="mt-6 w-full rounded-2xl bg-gold-400 py-4 font-pixel [@media(orientation:landscape)_and_(max-height:600px)]:mt-4 text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
+                >
+                  Start the timer
+                </button>
+                <button onClick={() => log('4+')} className="mt-2 w-full py-2 text-sm text-slate-400">
+                  Already done
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <>
@@ -287,7 +338,8 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
               </p>
             ) : null}
 
-            <p className="mt-6 text-center text-sm font-semibold text-slate-200 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">{unit ? 'Seconds' : 'Reps'} left in the tank?</p>
+            <p className="mt-6 text-center text-sm font-semibold text-slate-200 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">Set done? How did it feel?</p>
+            <p className="mt-0.5 text-center text-xs text-slate-500">Tap one to save the set. Aim for just right.</p>
             <div className="mt-3 grid grid-cols-3 gap-2 [@media(orientation:landscape)_and_(max-height:600px)]:mt-2">
               {RIR_BUTTONS.map((b) => (
                 <button
@@ -295,8 +347,8 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
                   onClick={() => log(b.rir)}
                   className={`rounded-xl py-4 transition [@media(orientation:landscape)_and_(max-height:600px)]:py-2.5 active:scale-95 ${b.rir === '2-3' ? 'bg-gold-400 text-ink-950' : 'bg-ink-800 text-slate-100'}`}
                 >
-                  <span className="block font-mono text-xl font-bold">{b.label}</span>
-                  <span className="block text-[11px] opacity-80">{b.hint}</span>
+                  <span className="block text-base font-bold">{b.label}</span>
+                  <span className="block text-[11px] opacity-80">{b.rir} {unit ? 'sec' : 'reps'} left</span>
                 </button>
               ))}
             </div>
@@ -318,7 +370,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
           </button>
         ) : (
           <button onClick={onFinish} disabled={totalLogged === 0} className="w-full py-3 [@media(orientation:landscape)_and_(max-height:600px)]:py-2 text-sm text-slate-400 disabled:opacity-30">
-            {totalLogged === 0 ? 'Log a set to begin' : 'End here (what you did still counts)'}
+            {totalLogged === 0 ? 'Finish a set to end here' : 'End here (what you did still counts)'}
           </button>
         )}
       </footer>
@@ -334,6 +386,8 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         />
       )}
       {restUntil && <Rest gym={gym} stage={flameStage(state.sessions.length).id} until={restUntil} total={restLen} next={exerciseDone ? null : `Set ${logged.length + 1} of ${q.name}`} onDone={() => setRestUntil(null)} />}
+      {howTo && <ExerciseSheet state={state} id={q.id} demo={q.demo} onClose={() => setHowTo(false)} />}
+      {asking && <CoachChat state={state} update={update} onClose={() => setAsking(false)} start={`About ${q.name}: `} />}
       {leaveSheet}
     </div>
   );
