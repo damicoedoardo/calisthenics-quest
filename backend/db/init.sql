@@ -26,7 +26,15 @@ CREATE TABLE IF NOT EXISTS profiles (
     trained_at  timestamptz,
     playing     text,
     seen_at     timestamptz NOT NULL DEFAULT now(),
-    training    text
+    training    text,
+    -- The profile, all optional, seen only by friends: where they live, a line, the photo's time.
+    place       text NOT NULL DEFAULT '',
+    about       text NOT NULL DEFAULT '',
+    photo_at    timestamptz
+);
+CREATE TABLE IF NOT EXISTS profile_photos (
+    user_id     uuid PRIMARY KEY,
+    data        bytea NOT NULL
 );
 CREATE TABLE IF NOT EXISTS friends (
     a           uuid NOT NULL,

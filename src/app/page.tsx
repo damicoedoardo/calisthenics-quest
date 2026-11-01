@@ -577,7 +577,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           onCancel={() => setPicker(null)}
         />
       )}
-      {you && !busy && <YouPage state={state} update={update} onReplayOpening={() => setReplaying(true)} onClose={() => setYou(false)} devSwitch={devAllowed ? { on: devOn, set: setDevOn } : undefined} />}
+      {you && !busy && <YouPage state={state} update={update} onReplayOpening={() => setReplaying(true)} onClose={() => setYou(false)} friends={friends} devSwitch={devAllowed ? { on: devOn, set: setDevOn } : undefined} />}
       {opening && <Opening state={state} onDone={() => setOpening(false)} />}
     </div>
   );

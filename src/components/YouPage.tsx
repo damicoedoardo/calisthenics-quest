@@ -6,6 +6,8 @@ import { SoundToggle, useMenuMusic } from './Sound';
 import { CloudSave } from './Cloud';
 import { StartOver } from './StartOver';
 import { DayQuote } from './DayQuote';
+import { ProfileEdit } from './Profile';
+import type { Friends } from './Friends';
 import { setGymMode, useGymMode } from './Gym';
 import { useModal } from './useModal';
 import { Hero } from './Hero';
@@ -20,7 +22,7 @@ import { exportState, offRecord, parseImport } from '@/lib/store';
 import { storyState } from '@/story/engine';
 
 /* The You page: what is about you, not the game. Opened by tapping your hero at the top of the
-   screen: your hero and name, two counts, the quote, your letter, your workouts, then settings
+   screen: your hero and name, two counts, your profile for friends, the quote, your letter, your workouts, then settings
    (one row each) and your save (cloud, backup file, start over). */
 
 interface Props {
@@ -28,6 +30,8 @@ interface Props {
   update: (fn: (s: GameState) => GameState) => void;
   onReplayOpening: () => void;
   onClose: () => void;
+  /** Your friends, for your profile (photo, where you live, a line). */
+  friends: Friends;
   /** Developer mode's switch: only on the developer's account. On, the app plays a separate developer save. */
   devSwitch?: { on: boolean; set: (on: boolean) => void };
 }
@@ -35,7 +39,7 @@ interface Props {
 const exerciseName = (id: string) => planExercises().find((x) => x.id === id)?.name ?? id;
 const fmtDate = (iso: string) => new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
 
-export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: Props) {
+export function YouPage({ state, update, onReplayOpening, onClose, friends, devSwitch }: Props) {
   const box = useModal<HTMLDivElement>(onClose);
   const menuMusic = useMenuMusic();
   const gym = useGymMode();
@@ -115,6 +119,8 @@ export function YouPage({ state, update, onReplayOpening, onClose, devSwitch }: 
               <Stat label="Workouts" value={state.sessions.length} />
               <Stat label="Chapter" value={story.finished ? 'Done' : story.index + 1} />
             </section>
+
+            <ProfileEdit friends={friends} />
 
             <DayQuote state={state} update={update} />
 

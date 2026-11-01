@@ -234,10 +234,11 @@ function useSignedIn(): boolean {
 }
 
 /** The chat, at the camp fire: the flame above, its words and yours in dialogue boxes below. */
-function CoachChat({ state, update, onClose }: { state: GameState; update: Update; onClose: () => void }) {
+export function CoachChat({ state, update, onClose, start = '' }: { state: GameState; update: Update; onClose: () => void; start?: string }) {
   const { send, busy, error, steps, since } = useCoachChat(state, update);
   const canTalk = useSignedIn();
-  const [text, setText] = useState('');
+  // `start`: words already in the box (the workout's Ask puts the exercise there).
+  const [text, setText] = useState(start);
   // The box grows with what you write, up to a good part of the screen, then scrolls.
   const box = useRef<HTMLTextAreaElement>(null);
   useLayoutEffect(() => {

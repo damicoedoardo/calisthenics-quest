@@ -100,7 +100,9 @@ async def _out(posts: list[Post], me: str, friends: FriendStore) -> list[dict[st
         out.append(
             {
                 "id": p.id,
-                "author": card_json(card, now) if card else {"id": p.author, "name": ""},
+                "author": card_json(card, now, friend=True)
+                if card
+                else {"id": p.author, "name": ""},
                 "at": p.created_at.isoformat(),
                 "workout": p.workout,
                 "text": p.text,
