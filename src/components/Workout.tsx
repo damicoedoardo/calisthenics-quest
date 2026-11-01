@@ -28,11 +28,11 @@ interface Props {
   onFinish: () => void;
 }
 
-/** How a set felt (reps left in reserve), picked over Done; just right unless you say. */
+/** How a set felt, with the reps left in reserve under it; picked over Done, just right unless you say. */
 const RIR_BUTTONS: { rir: Rir; label: string }[] = [
   { rir: '4+', label: 'Easy' },
   { rir: '2-3', label: 'Just right' },
-  { rir: '0-1', label: 'Hard' },
+  { rir: '0-1', label: 'Very hard' },
 ];
 
 /** Full-screen set logger: one exercise at a time, one tap per set, rest timer between sets. */
@@ -304,7 +304,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
           <>
             {/* The number starts at the target; − and + set what you really did. */}
             <p className={`mt-5 text-center font-pixel text-[9px] uppercase tracking-[0.2em] [@media(orientation:landscape)_and_(max-height:600px)]:mt-1 ${reps === q.reps ? 'text-gold-300' : 'text-slate-400'}`}>
-              {reps === q.reps ? 'Target' : 'You did'}
+              {reps === q.reps ? `Target ${unit ? 'seconds' : 'reps'}` : `You did · target ${q.reps}`}
             </p>
             <div className="mt-1 flex items-center justify-center gap-5">
               <button onClick={() => setReps(Math.max(1, reps - (unit ? 2 : 1)))} aria-label="Fewer" className="pixel-notch grid h-14 w-14 place-items-center bg-ink-800 active:scale-95 [@media(orientation:landscape)_and_(max-height:600px)]:h-12 [@media(orientation:landscape)_and_(max-height:600px)]:w-12">
@@ -318,23 +318,20 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
                 <Plus />
               </button>
             </div>
-            <p className="mt-1 text-center text-xs text-slate-500">
-              {reps === q.reps ? '\u00a0' : `Target ${q.reps}${unit}`}
-              {q.item?.ramp && logged.length === 0 ? <span className="text-gold-200">{reps === q.reps ? '' : ' · '}{q.item.ramp} light sets first</span> : null}
-            </p>
 
             {/* One Done saves the set; how it felt is set to just right, a tap away if not. */}
             <p className="mt-6 text-center font-pixel text-[9px] uppercase tracking-[0.2em] text-slate-500 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">How did it feel?</p>
-            <div className="mt-1.5 flex items-center justify-center gap-1" role="radiogroup" aria-label="How did it feel?">
+            <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="How did it feel?">
               {RIR_BUTTONS.map((b) => (
                 <button
                   key={b.rir}
                   role="radio"
                   aria-checked={feel === b.rir}
                   onClick={() => setFeel(b.rir)}
-                  className={`rounded-full px-3 py-1.5 text-xs ${feel === b.rir ? 'bg-ink-600 font-semibold text-slate-50 ring-1 ring-gold-400/70' : 'text-slate-400'}`}
+                  className={`rounded-xl py-2.5 transition active:scale-95 [@media(orientation:landscape)_and_(max-height:600px)]:py-1.5 ${feel === b.rir ? 'bg-ink-600 text-slate-50 ring-2 ring-gold-400' : 'bg-ink-800 text-slate-400'}`}
                 >
-                  {b.label}
+                  <span className="block text-sm font-semibold">{b.label}</span>
+                  <span className="block font-mono text-xs opacity-80">{b.rir}</span>
                 </button>
               ))}
             </div>
