@@ -33,6 +33,11 @@ describe('anatomy demos', () => {
     expect(anatomyFor('chest-fly', 'Dumbbell Flyes')?.id).toBe('chest-fly');
     expect(anatomyFor('front-squat', 'Goblet Squat')).toEqual({ id: 'squat', variant: { goblet: true } });
     expect(anatomyFor('leg-press', 'Hack Squat')).toBeNull();
+    expect(anatomyFor('calf-stretch', 'Calf Stretch Hands Against Wall')?.id).toBe('wall-calf-stretch');
+    expect(anatomyFor('arm-stretch', 'Iron Crosses (stretch)')).toBeNull();
+    expect(anatomyFor('foam-roll', 'Quadriceps-SMR')?.id).toBe('roll-quads');
+    expect(anatomyFor('cat-cow', 'Cat Stretch')?.id).toBe('cat-cow');
+    expect(anatomyFor('cat-cow', 'Stomach Vacuum')).toBeNull();
     for (const [mv, name] of [['bench-press', 'Incline Dumbbell Bench Press'], ['barbell-squat', 'Goblet Squat'], ['curl', 'Barbell Curl'], ['barbell-row', 'Dumbbell Row']]) {
       const a = anatomyFor(mv, name)!;
       for (const view of ['side', 'front'] as const) {

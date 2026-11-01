@@ -256,6 +256,14 @@ interface Part {
   /** Front and outside directions, at right angles to the bone. */
   f: V3;
   o: V3;
+  /** How far its middle bows off the straight line (a bent spine). */
+  bow?: V3;
+}
+
+/** The middle of a part's cross-section at u, on its bowed line. */
+function centerOf(p: Part, u: number): V3 {
+  const c = add(p.a, mul(sub(p.b, p.a), u));
+  return p.bow ? add(c, mul(p.bow, Math.max(0, 4 * u * (1 - u)))) : c;
 }
 
 function makePart(id: PartId, a: V3, b: V3, front: V3, out: V3): Part {
@@ -276,7 +284,7 @@ function surface(p: Part, u: number, deg: number): V3 {
   const s = Math.sin(t);
   const rf = at(pr.u, c >= 0 ? pr.front : pr.back, u);
   const ro = at(pr.u, s >= 0 ? pr.out : pr.in, u);
-  const center = add(p.a, mul(sub(p.b, p.a), u));
+  const center = centerOf(p, u);
   return add(center, add(mul(p.f, c * rf), mul(p.o, s * ro)));
 }
 
@@ -420,7 +428,7 @@ function shade(p: Part, cam: Camera): { soft: V2[] | null; deep: V2[] | null; li
 
 /** A point just inside the surface, so muscle lines sit inside the outline. */
 function inset(p: Part, u: number, deg: number, k = 0.94): V3 {
-  const center = add(p.a, mul(sub(p.b, p.a), u));
+  const center = centerOf(p, u);
   return add(center, mul(sub(surface(p, u, deg), center), k));
 }
 
@@ -484,7 +492,7 @@ function partsOf(pose: Pose): { right: Limbs; left: Limbs; torso: Part; neck: Pa
   return {
     right: limbs(1),
     left: limbs(-1),
-    torso: makePart('torso', pose.pelvis, pose.neck, pose.front, zr),
+    torso: { ...makePart('torso', pose.pelvis, pose.neck, pose.front, zr), bow: mul(pose.front, pose.arch) },
     neck: makePart('neck', pose.neck, pose.headBase, pose.front, zr),
     head: makePart('head', pose.headBase, pose.headTop, pose.front, zr),
   };
@@ -494,7 +502,8 @@ function partsOf(pose: Pose): { right: Limbs; left: Limbs; torso: Part; neck: Pa
 export function scene(exercise: AnatomyId, view: View, t: number, opts: { still?: boolean; variant?: Variant } = {}): Scene {
   const v = opts.variant ?? {};
   const demo = DEMOS[exercise];
-  const { depth, dir } = opts.still || !demo.mover ? { depth: 1, dir: null } : phase(t);
+  // A loop (circles) runs round once per rep; a hold stands still.
+  const { depth, dir } = demo.loop ? { depth: opts.still ? 0 : ((t % 1) + 1) % 1, dir: null } : opts.still || !demo.mover ? { depth: 1, dir: null } : phase(t);
   const cam = camera(cameraOf(exercise, view, v));
   const box = frame(exercise, view, v);
   const level = Math.abs(cam.c[1]) < 0.01;
@@ -539,6 +548,8 @@ function benchBox(from: V3, to: V3): V3[] {
 
 /** A kettlebell: a round bell hanging under its handle. */
 const KETTLEBELL = { r: 9, drop: 11 };
+/** A foam roller: its radius and half its length. */
+const ROLLER = { r: 7.5, half: 30 };
 
 /** A circle on the picture (a ball looks round from anywhere). */
 function ring2(c: V2, r: number): V2[] {
@@ -579,6 +590,15 @@ function gear(cam: Camera, prop: Prop): Shape[] {
     ];
   }
   if (prop.kind === 'box') return [{ d: polygon(hull(boxCorners(prop.at, prop.size).map((q) => project(cam, q)))), fill: INK.plate, stroke: INK.plateRim, width: 1.2 }];
+  if (prop.kind === 'roller') {
+    // A cylinder: its side as the hull of both ends, then the end you see.
+    const ends = [-1, 1].map((s) => disc(cam, add(prop.at, [0, 0, s * ROLLER.half]), ROLLER.r));
+    const near = cam.c[2] >= 0 ? ends[1] : ends[0];
+    return [
+      { d: polygon(hull([...ends[0], ...ends[1]])), fill: INK.plate, stroke: INK.plateRim, width: 1.2 },
+      { d: closed(near), fill: INK.plate, stroke: INK.plateRim, width: 1 },
+    ];
+  }
   if (prop.kind === 'cable') {
     const a = project(cam, prop.from);
     return [
@@ -617,6 +637,7 @@ function gear(cam: Camera, prop: Prop): Shape[] {
 function gearPoints(cam: Camera, prop: Prop): V2[] {
   if (prop.kind === 'bench') return [...benchBox(prop.from, prop.to), ...(prop.noLegs ? [] : [[prop.from[0], 0, 0] as V3, [prop.to[0], 0, 0] as V3])].map((q) => project(cam, q));
   if (prop.kind === 'box') return boxCorners(prop.at, prop.size).map((q) => project(cam, q));
+  if (prop.kind === 'roller') return [-1, 1].flatMap((s) => disc(cam, add(prop.at, [0, 0, s * ROLLER.half]), ROLLER.r));
   if (prop.kind === 'kettlebell') {
     const c = project(cam, add(prop.at, [0, -KETTLEBELL.drop, 0]));
     return [project(cam, add(prop.at, [0, 5, 0])), [c[0] - KETTLEBELL.r, c[1] + KETTLEBELL.r], [c[0] + KETTLEBELL.r, c[1] - KETTLEBELL.r]];

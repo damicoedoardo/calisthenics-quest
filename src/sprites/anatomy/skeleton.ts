@@ -54,7 +54,7 @@ export interface Side {
     bench pad stands on legs unless `noLegs`; a
     pull-up bar or cable handle runs side to side (`half` its half length); a box stands on `at`
     (its bottom middle) with a size; a cable runs from its pulley to the handle; dip bars run front
-    to back at each side of `at`. */
+    to back at each side of `at`; a foam roller lies side to side on the floor, centered on `at`. */
 export type Prop =
   | { kind: 'barbell'; at: V3 }
   | { kind: 'dumbbell'; at: V3 }
@@ -63,7 +63,8 @@ export type Prop =
   | { kind: 'pullbar'; at: V3; half?: number }
   | { kind: 'box'; at: V3; size: V3 }
   | { kind: 'cable'; from: V3; to: V3 }
-  | { kind: 'bars'; at: V3 };
+  | { kind: 'bars'; at: V3 }
+  | { kind: 'roller'; at: V3 };
 
 export interface Pose {
   pelvis: V3;
@@ -73,6 +74,8 @@ export interface Pose {
   /** Which way the chest faces, and the body's right. */
   front: V3;
   side: V3;
+  /** How far the spine bows toward the chest (+, an arched back) or away (-, a rounded back), cm. */
+  arch: number;
   right: Side;
   left: Side;
   props: Prop[];
@@ -96,7 +99,7 @@ export interface Limb {
 
 /** A whole pose: the pelvis, the torso's line (`up`, toward the neck) and the chest's way
     (`front`), how the head sits (`headUp`, default along the torso), and each side's limbs. */
-export function assemble(o: { pelvis: V3; up: V3; front: V3; headUp?: V3; limb: (s: number) => Limb; props?: Prop[]; side?: V3; shrug?: number }): Pose {
+export function assemble(o: { pelvis: V3; up: V3; front: V3; headUp?: V3; limb: (s: number) => Limb; props?: Prop[]; side?: V3; shrug?: number; arch?: number }): Pose {
   const up = unit(o.up);
   // Which way is the body's right (z unless it lies on its side), and how far the shoulders lift.
   const right = unit(o.side ?? [0, 0, 1]);
@@ -122,7 +125,7 @@ export function assemble(o: { pelvis: V3; up: V3; front: V3; headUp?: V3; limb: 
       knee: l.knee ?? ik(hip, l.ankle, L.thigh, L.shin, l.kneePole ?? [1, 0, 0]),
     };
   };
-  return { pelvis: o.pelvis, neck, headBase, headTop, front: unit(o.front), side: right, right: side(1), left: side(-1), props: o.props ?? [] };
+  return { pelvis: o.pelvis, neck, headBase, headTop, front: unit(o.front), side: right, arch: o.arch ?? 0, right: side(1), left: side(-1), props: o.props ?? [] };
 }
 
 /** A torso leaning `deg` forward from upright: its line and the chest's way. */
