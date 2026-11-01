@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { Camera, MapPin, Trash2, X } from 'lucide-react';
+import { Camera, Image as ImageIcon, MapPin, Trash2, X } from 'lucide-react';
 import { getClass } from '@/lib/gear';
 import { friendTrainedToday, PROFILE_LIMIT, statsNow, statusOf, type FriendCard, type Profile } from '@/lib/friends';
 import { WEEKLY_GOAL, type GameState } from '@/lib/game';
@@ -268,10 +268,10 @@ export function ProfileEdit({ friends }: { friends: Friends }) {
     }
   };
 
-  const pick = (file: File | undefined) => {
+  const pick = (file: File | undefined, selfie: boolean) => {
     if (!file) return;
     void run(async () => {
-      const { base64, preview } = await shrinkPhoto(file, { edge: PROFILE_LIMIT.photoEdge, bytes: PROFILE_LIMIT.photoBytes, square: true });
+      const { base64, preview } = await shrinkPhoto(file, { edge: PROFILE_LIMIT.photoEdge, bytes: PROFILE_LIMIT.photoBytes, square: true, selfie });
       if (friends.demo) return { ...has, photo: preview };
       const p = await savePhoto(base64);
       // Show the picked photo at once; the server's copy is the same picture.
@@ -293,7 +293,8 @@ export function ProfileEdit({ friends }: { friends: Friends }) {
       <h2 className="font-pixel text-[10px] text-gold-300">Your profile</h2>
       <p className="mt-1 text-xs text-slate-500">Only your friends see it. Leave out anything you like.</p>
       <div className="mt-3 flex items-center gap-3">
-        <label className="relative cursor-pointer" aria-label={has.photo ? 'Change your photo' : 'Add a photo'}>
+        {/* The photo opens the front camera (a selfie, shown as you saw yourself); the camera roll is the line beside it. */}
+        <label className="relative cursor-pointer" aria-label="Take a selfie">
           {has.photo ? (
             <ProfilePhoto id={me?.id ?? 'me'} version={has.photo} size={72} />
           ) : (
@@ -304,16 +305,30 @@ export function ProfileEdit({ friends }: { friends: Friends }) {
           <input
             type="file"
             accept="image/*"
+            capture="user"
             className="hidden"
             disabled={busy}
             onChange={(e) => {
-              pick(e.target.files?.[0]);
+              pick(e.target.files?.[0], true);
               e.target.value = '';
             }}
           />
         </label>
         <div className="flex flex-col gap-1.5 text-sm">
-          <span className="text-slate-300">{has.photo ? 'Tap the photo to change it.' : 'Add a photo'}</span>
+          <span className="text-slate-300">{has.photo ? 'Tap it for a new selfie.' : 'Tap for a selfie'}</span>
+          <label className="flex cursor-pointer items-center gap-1.5 self-start text-xs text-slate-300">
+            <ImageIcon size={13} /> From your photos
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={busy}
+              onChange={(e) => {
+                pick(e.target.files?.[0], false);
+                e.target.value = '';
+              }}
+            />
+          </label>
           {has.photo && (
             <button disabled={busy} onClick={() => void run(async () => (friends.demo ? { ...has, photo: null } : savePhoto(null)), 'Photo removed.')} className="flex items-center gap-1.5 self-start text-xs text-slate-500">
               <Trash2 size={13} /> Remove

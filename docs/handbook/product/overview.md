@@ -3,7 +3,7 @@ type: conceptual
 title: Product overview
 description: FORMA is a training app played like a pixel RPG — training earns, the Fog game spends — installable, offline, one save per phone.
 tags: [product, overview]
-timestamp: 2026-10-31
+timestamp: 2026-11-01
 ---
 
 # Product overview
@@ -38,8 +38,9 @@ loot, story scenes, the class picker. See [../app/screens.md](../app/screens.md)
 
 Six chapters, about one a month, each with a moral and a Fog zone with its boss. The enemy is
 the Hollow, the player's inner critic in their own words. The flame (Ember by default, named by
-the player) grows from a spark to a fire fairy as they keep showing up. Sessions move the story,
-never strength. See [../game/story.md](../game/story.md).
+the player) grows from a spark to a fire fairy as they keep showing up. A chapter ends when its boss falls in
+the Fog; every workout takes a heart off that boss, so training always gets you there and playing
+well gets you there sooner. See [../game/story.md](../game/story.md).
 
 ## Direction
 

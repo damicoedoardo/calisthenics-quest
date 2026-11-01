@@ -5,7 +5,7 @@ import { buildOf, pointsFree, statPower } from './stats';
 import { CHAPTERS } from '@/story/chapters';
 import { FIRST_FOG } from '@/story/opening';
 import { ROAD_CHAPTERS } from '@/story/road';
-import { chapterStart, storyState } from '@/story/engine';
+import { chapterStart } from '@/story/engine';
 import { isRested } from '@/story/daily';
 import { flameStage, stageIndex } from '@/story/flame';
 import type { FogBoss, FogZone } from '@/story/types';
@@ -82,6 +82,8 @@ export interface RunBest {
 export interface FogProgress {
   /** Zones whose boss has fallen, in order. */
   cleared: number;
+  /** Workouts done when each zone's boss first fell (its chapter ended and the next began). */
+  clearedAt?: number[];
   runs: number;
   best: Record<number, RunBest>;
   /** A dungeon zone's records, each kept on its own: deepest, most monsters, fastest win. */
@@ -135,14 +137,15 @@ export function zoneStatus(state: GameState, zone: Zone): ZoneStatus {
   if (zone.id < fog.cleared) return { state: 'cleared' };
   if (zone.id > fog.cleared) return { state: 'locked', why: `Beat the boss of ${ZONES[zone.id - 1].name} first` };
   // Beat a boss and the next zone opens: Edoardo, 2026-10-29: "if people win the first, they won".
-  // It is built for its chapter's start (zoneDue), so going in early is hard until you train more.
+  // It is built for its chapter's planned start (`workouts`, zoneDue), so going in early is hard
+  // until you train more. Beating its boss ends that story chapter.
   return { state: 'open' };
 }
 
-/** Whether the story has reached the chapter a zone is built for (its `workouts`). */
+/** Whether the player has trained as much as a zone is built for (its `workouts`): when a model
+    player in the simulators goes in. */
 export function zoneDue(state: GameState, zone: Zone): boolean {
-  const story = storyState(state);
-  return story.finished || story.index + 1 >= zone.chapter;
+  return state.sessions.length >= zone.workouts;
 }
 
 // ---------- a boss with no hearts left ----------
@@ -322,7 +325,8 @@ export function recordRun(state: GameState, r: RunResult, now: Date = new Date()
   return {
     ...state,
     fog: {
-      cleared: r.won && r.zone === fog.cleared ? fog.cleared + 1 : fog.cleared,
+      cleared: last.firstClear ? fog.cleared + 1 : fog.cleared,
+      ...(last.firstClear ? { clearedAt: [...(fog.clearedAt ?? []).slice(0, fog.cleared), state.sessions.length] } : fog.clearedAt ? { clearedAt: fog.clearedAt } : {}),
       runs: fog.runs + 1,
       best: better ? { ...fog.best, [r.zone]: { seconds: r.seconds, kills: r.kills, level: r.level, won: r.won } } : fog.best,
       ...(r.floor ? { records: { ...fog.records, [r.zone]: mergeRecord(fog.records?.[r.zone], r) } } : fog.records ? { records: fog.records } : {}),

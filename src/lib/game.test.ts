@@ -191,10 +191,20 @@ describe('gear and classes', () => {
 });
 
 describe('story', () => {
-  it('opens chapters with workouts', () => {
-    expect(storyState({ ...initialState(), sessions: fakeSessions(11) }).index).toBe(0);
-    expect(storyState({ ...initialState(), sessions: fakeSessions(12) }).index).toBe(1);
-    expect(storyState({ ...initialState(), sessions: fakeSessions(24) }).index).toBe(2);
+  it('opens chapters with Fog bosses beaten, not with workouts', () => {
+    const fog = (cleared: number) => ({ cleared, runs: cleared, best: {}, clearedAt: Array.from({ length: cleared }, () => 3) });
+    expect(storyState({ ...initialState(), sessions: fakeSessions(40) }).index).toBe(0);
+    expect(storyState({ ...initialState(), sessions: fakeSessions(3), fog: fog(1) }).index).toBe(1);
+    expect(storyState({ ...initialState(), sessions: fakeSessions(3), fog: fog(2) }).index).toBe(2);
+    expect(storyState({ ...initialState(), sessions: fakeSessions(3), fog: fog(6) }).finished).toBe(true);
+    // Workouts still take the boss's hearts: they run out at the workout its zone is built for.
+    expect(storyState({ ...initialState(), sessions: fakeSessions(3), fog: fog(1) })).toMatchObject({ hearts: 21, heartsLeft: 21 });
+    expect(storyState({ ...initialState(), sessions: fakeSessions(30), fog: fog(1) }).heartsLeft).toBe(0);
+  });
+
+  it('keeps when each boss fell for saves from before, so their chapters stay put', () => {
+    const old = { ...initialState(), sessions: fakeSessions(4), fog: { cleared: 1, runs: 5, best: {} } };
+    expect(migrate(JSON.parse(JSON.stringify(old))).fog?.clearedAt).toEqual([4]);
   });
 
   it('asks for the flame name first, then the class after the third session', () => {
@@ -237,7 +247,7 @@ describe('story', () => {
   });
 
   it('makes the Hollow the enemy of chapter 5', () => {
-    const state = { ...initialState(), sessions: fakeSessions(50) };
+    const state = { ...initialState(), sessions: fakeSessions(50), fog: { cleared: 4, runs: 4, best: {} } };
     expect(storyState(state).index).toBe(4);
     expect(storyState(state).chapter?.enemySprite).toBe('hollow');
   });

@@ -334,7 +334,8 @@ Traps (`TRAPS`): arrow plates (`Terrain.plates`, from floor 2): standing on one 
 arrows (`Bullet.trap`, drawn as `shot-trap`) fly across the room, then it rearms. Dark rooms
 (`Terrain.dark`, from floor 3) set `run.dim` (the Fog's dark, now made in every world) until the
 room is clear. Developer jumps: `?run=<zone>&at=shape-<id>` or `at=dark` (`skipToShape`: a room on
-floor 4 with that shape and plates), from the `/lab/night` "Dungeon rooms with walls" panel.
+floor 3 with that shape and plates), from the `/lab/night` "Dungeon rooms with walls" panel, or
+`/lab/night?go=walls` and `?go=dark`.
 
 ## Items and the bag
 

@@ -3,7 +3,7 @@ type: conceptual
 title: The Fog (the game between workouts)
 description: The rules around a Fog run in src/lib/fog.ts — zones from the story's chapters, when a zone opens, power from real training, run skills, records — and how a run is loaded and drawn.
 tags: [game, fog, rules]
-timestamp: 2026-10-31
+timestamp: 2026-11-01
 ---
 
 # The Fog
@@ -22,7 +22,9 @@ level or story.
   2026-10-29: win a zone and you move on). Each zone is still built for the start of its chapter
   (`zone.workouts`, `zoneDue`): its monsters are tuned for a player at that point
   (`ZONE_WINS.open`), so a strong player can go in early and win sooner, and anyone else finds it
-  hard until they have trained more. The season simulator meets each zone when it is due.
+  hard until they have trained more. Beating a zone's boss in a Story run ends its story chapter
+  (see [story.md](story.md)). The season simulator goes for each boss once it is out of hearts
+  (the story's planned pace), and its `early` player as soon as the zone is due.
 - **Power from training**: `powerOf(state, now)` turns the save into a run's power. The stat
   points the player put into the champion give Health, Armor, Damage, Haste (attack speed), Speed
   (walk speed), see `statPower` in `src/lib/stats.ts` (crit comes from what you wear) and
@@ -32,7 +34,7 @@ level or story.
   skill, resting (a day off or a minute by the fire) one more. `nextGrowth` writes the "train to
   grow" hint (points waiting to be spent, or that workouts earn them).
 - **A boss with no hearts left**: every workout takes a heart off the chapter's enemy; once the
-  chapter's hearts are gone (all its workouts done) and its boss still stands, `edgeFor` gives the
+  chapter's hearts are gone (the workouts its chapter is planned for) and its boss still stands, `edgeFor` gives the
   run an `Edge`: the boss fights with `EDGE.bossHp` of its HP (the Knight with that share of his
   plates), and each workout since starts a run with one more free skill (`'past'` picks, up to
   `EDGE.picks`). Playing well still beats it sooner. The open world's card on the Play tab says how many hearts are left

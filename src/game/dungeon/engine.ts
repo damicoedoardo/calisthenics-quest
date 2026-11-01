@@ -4303,11 +4303,11 @@ export interface RoomForce {
   dark: boolean;
 }
 
-/** Developer mode: a room on floor 4 with this shape, arrow plates, and dark if asked. */
+/** Developer mode: a room on floor 3 with this shape, arrow plates, and dark if asked. */
 export function skipToShape(run: Run, force: RoomForce) {
   if (run.boss) return;
   run.timers = [];
-  newFloor(run, Math.min(3, run.layout.floors - 2));
+  newFloor(run, Math.min(2, run.layout.floors - 2));
   run.timers = [];
   run.terrain = buildTerrain(run, force);
   run.dim = force.dark ? TRAPS.dark.sight : null;

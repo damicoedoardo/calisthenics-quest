@@ -3,7 +3,7 @@ type: reference
 title: Game state (the save)
 description: GameState in src/lib/game.ts is the one save; useGameState persists it to localStorage, migrate() upgrades old saves, Backup/Restore exports JSON, ?sandbox uses a separate key.
 tags: [architecture, state, storage]
-timestamp: 2026-10-31
+timestamp: 2026-11-01
 ---
 
 # Game state (the save)
@@ -16,7 +16,7 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 | `version` | 3. Older saves go through `migrate()`; version 3 dropped the calisthenics skill tree and max tests (a v2 save keeps its sessions, story, Fog and Book of Days) |
 | `profile` | `onboarded`, the `letter` (why, want, forWho, remind), the Hollow's `voice`, `classId`, `look`, the flame's name, `kit` (gym or home), the hero's `name` (asked after the look; what friends see), `opening` (old saves only: `'class'` while a new player's opening waited for the install step, which now comes after the first workout; cleared when it ends), the `letter` is written after the first workout (scene `first-letter`) |
 | `reps` | Current per-set target by exercise id |
-| `sessions` | Every finished workout: entries (with name and family), sets with reps in reserve (optional kg, km), XP breakdown, raises, `heavier`, `better`; from a coach workout also `mode`, `plannedBy`, `skipped`, `changed`, and `felt` and `comment` |
+| `sessions` | Every finished workout: entries (with name and family), sets with reps in reserve (optional kg, km), XP breakdown, raises, `heavier`, `better`; from a coach workout also `mode`, `plannedBy`, `skipped`, `changed`, and `felt` and `comment`; `minutes` (real) and `planned` (the estimate), `checkin` on a rough or strong day, `left` (exercises not started); an entry's `of` is its sets planned |
 | `build` | Stat points spent on the champion, per stat (earned points are counted from `sessions`) |
 | `devPoints` | Optional. Stat points given in developer mode's Hero tab, counted on top of the earned ones (`pointsEarned`) |
 | `buildAt`, `sweat` | Optional. Points as they stood at the last workout (what the free take-back is measured from), and sweat coins spent plus class changes made (`src/lib/sweat.ts`, see [../game/training.md](../game/training.md)) |
@@ -27,7 +27,7 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 | `laterScenes`, `skippedScenes`, `skipNoteSeen` | Story scenes put off with Later (not played yet), and scenes whose words or question were skipped: both wait in Story so far ([../game/story.md](../game/story.md)); whether the note on where skipped scenes go was shown. All optional |
 | `answers` | What the player chose in the story (heart moments, villager stories, the Ember Road's three questions `road1`-`road3`) |
 | `road` | Optional. The Ember Road, the story walked with friends: `from` (workouts done when you set out) and `beaten` (its bosses your party beat) (`src/lib/road.ts`, see [../game/story.md](../game/story.md)) |
-| `fog` | Zones cleared, runs, best records per zone, the last run |
+| `fog` | Zones cleared (each boss beaten in a Story run ends its story chapter), `clearedAt` (the workout count each boss fell at; `migrate()` gives older saves "now"), runs, best records per zone, the last run |
 | `days` | The Book of Days: one page per day the app was opened (`dayNumber` in `src/lib/days.ts` counts them, today included) |
 | `coach` | Optional. The coach's memory: `profile` (setup answers, levels, history), `notes`, `week` (the planned week: days with their workout and `done`; the next workout is its first day not done; old saves' single `plan` migrates to a one-day week), `heard` (the last thing the flame brought up), `chat` (the recent chat, as the LLM reads it) and `replies` (taps it offered) ([../game/coach.md](../game/coach.md)) |
 

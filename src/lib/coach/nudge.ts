@@ -33,7 +33,7 @@ export function coachNudge(state: GameState, now: Date): Nudge | undefined {
   if (restToday(coach, now) && !restKept(state, today) && !doneToday)
     return { id: `rest:${today}`, text: "Today is a rest day, and resting is part of the plan. Come sit by the fire with me for a minute. I don't bite. Much. That's how the day counts." };
   const story = storyState(state);
-  if (doneToday && story.chapter && story.heartsLeft === 1) return { id: `enemy:${story.chapter.n}`, text: `One more workout and ${story.chapter.enemy} is beaten. I can hear it getting weaker. It knows you're coming.` };
+  if (doneToday && story.chapter && story.heartsLeft === 1) return { id: `enemy:${story.chapter.n}`, text: `One more workout and ${story.chapter.enemy} is out of hearts. It will fight weaker in the Fog. It knows you're coming.` };
   if (doneToday) return { id: `done:${today}`, text: next ? `Hm. I knew you had that in you. Rest well. Next: ${dayLabel(next.date, now) === 'Tomorrow' ? 'tomorrow' : weekdayOf(next.date)}, ${next.plan.title}.` : "That was the week's last workout. I knew you'd finish it. Now keep your rest days: they count too." };
   if (next && next.date === today) return { id: `today:${today}`, text: `Today: ${next.plan.title}, about ${minutesOf(next.plan.items)} minutes. I'll be watching. Tap any card to see how it's done.` };
   return undefined;

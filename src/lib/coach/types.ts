@@ -159,6 +159,8 @@ export interface CoachState {
   chat?: ChatMessage[];
   /** Replies the coach offered to tap, for its last message. */
   replies?: string[];
+  /** The last week the coach (the LLM) planned on its own from the log (`aiPlanDue`), so once. */
+  autoPlan?: string;
   /** The last thing the flame brought up on its own (a nudge id, nudge.ts), so it is said once. */
   heard?: string;
 }
