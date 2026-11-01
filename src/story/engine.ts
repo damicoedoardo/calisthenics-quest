@@ -187,9 +187,6 @@ export function pendingScenes(state: GameState, now: Date): Scene[] {
     .map(({ scene }) => sceneFor(scene.when.away ? { ...scene, id: savedId(scene, state) } : scene, state));
 }
 
-/** At most this many scenes play at one moment; the rest wait for the next one. */
-export const MAX_SCENES_AT_ONCE = 2;
-
 /** One story moment: today, after this many workouts and Fog bosses. A new workout starts a new
     one, and so does a boss falling (it ends a chapter, so its ending plays at once). */
 export function sceneMoment(state: GameState, now: Date): string {
@@ -197,20 +194,17 @@ export function sceneMoment(state: GameState, now: Date): string {
 }
 
 /**
- * The scenes to play now: the due ones, but never more than MAX_SCENES_AT_ONCE at one moment.
- * Extras wait for the next workout or day.
+ * The scenes to play now: every due one, one after another. Nothing plays at a moment where the
+ * player said Later; the rest wait for the next workout, day or boss.
  */
 export function scenesToPlay(state: GameState, now: Date): Scene[] {
-  const at = sceneMoment(state, now);
-  const played = state.sceneMark?.at === at ? state.sceneMark.count : 0;
-  return pendingScenes(state, now).slice(0, Math.max(0, MAX_SCENES_AT_ONCE - played));
+  if (state.sceneMark?.off && state.sceneMark.at === sceneMoment(state, now)) return [];
+  return pendingScenes(state, now);
 }
 
-/** Mark a scene played, and count it against this moment. */
-export function sawScene(state: GameState, id: string, now: Date): GameState {
-  const at = sceneMoment(state, now);
-  const count = (state.sceneMark?.at === at ? state.sceneMark.count : 0) + 1;
-  return { ...state, seenScenes: state.seenScenes.includes(id) ? state.seenScenes : [...state.seenScenes, id], sceneMark: { at, count } };
+/** Mark a scene played. */
+export function sawScene(state: GameState, id: string): GameState {
+  return { ...state, seenScenes: state.seenScenes.includes(id) ? state.seenScenes : [...state.seenScenes, id] };
 }
 
 /** How a scene was opened: when its moment came, from the scenes put off, or watched again. */
@@ -227,17 +221,17 @@ const withId = (ids: string[] | undefined, id: string) => (ids?.includes(id) ? i
 
 /** Put the scenes due now off with Later. Nothing else plays this moment: the player said not now. */
 export function putOff(state: GameState, ids: string[], now: Date): GameState {
-  return { ...state, laterScenes: ids.reduce(withId, state.laterScenes), sceneMark: { at: sceneMoment(state, now), count: MAX_SCENES_AT_ONCE } };
+  return { ...state, laterScenes: ids.reduce(withId, state.laterScenes), sceneMark: { at: sceneMoment(state, now), off: true } };
 }
 
 /**
- * The save's story lists after a scene ends. A due scene is seen (and counts against the moment);
+ * The save's story lists after a scene ends. A due scene is seen;
  * one from the put-off list is seen and leaves it; one watched again stays seen. A skip marks it
  * in Story so far, and watching it to the end clears the mark.
  */
 export function endedScene(state: GameState, id: string, mode: SceneMode, end: SceneEnd, now: Date): GameState {
   if (end.later && mode !== 'again') return putOff(state, [id], now);
-  const seen = mode === 'due' ? sawScene(state, id, now) : { ...state, seenScenes: withId(state.seenScenes, id) };
+  const seen = mode === 'due' ? sawScene(state, id) : { ...state, seenScenes: withId(state.seenScenes, id) };
   const next = { ...seen, laterScenes: without(state.laterScenes, id) };
   return { ...next, skippedScenes: end.skipped ? withId(state.skippedScenes, id) : without(state.skippedScenes, id) };
 }

@@ -3,7 +3,7 @@ import { recordRun, zoneDue, zoneStatus, ZONES } from '@/lib/fog';
 import { giveSp, SP_FLOOR, spAfterRun } from '@/lib/sp';
 import { dayKey, daysApart, isRestDay } from '@/lib/days';
 import { seeded } from '@/lib/random';
-import { chapterStart, MAX_SCENES_AT_ONCE, sawScene, sceneMoment, scenesToPlay, renderLines, speakerName, storyState, storyWords } from '@/story/engine';
+import { chapterStart, sawScene, scenesToPlay, renderLines, speakerName, storyState, storyWords } from '@/story/engine';
 import { CALLBACKS } from '@/story/daily/flame-lines';
 import { runKind, runLine, afterWorkoutLine, canSitByFire, fireLine, marginNote, restTruth, todayMoment, todayPage, updateTodayPage, withTodayPage } from '@/story/daily';
 import { DEFAULT_FLAME_NAME, flameStage } from '@/story/flame';
@@ -138,8 +138,6 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
     }
   };
 
-  /** Scenes played at each story moment, to check none ever gets more than the cap. */
-  const perMoment = new Map<string, number>();
   /** Plays every scene that's due, like the app does when you're back on the main screen. */
   const playScenes = (when: string) => {
     let count = 0;
@@ -147,14 +145,11 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
       const scene = scenesToPlay(state, now)[0];
       if (!scene) break;
       count++;
-      const moment = sceneMoment(state, now);
-      perMoment.set(moment, (perMoment.get(moment) ?? 0) + 1);
-      if (perMoment.get(moment)! > MAX_SCENES_AT_ONCE) note('problem', `more than ${MAX_SCENES_AT_ONCE} scenes at one moment (${scene.id})`);
       played.push(scene.id);
       checkLines(scene, scene.lines);
       note('scene', `${scene.id} (${when})`);
-      const seen = sawScene(state, scene.id, now).seenScenes;
-      const mark = sawScene(state, scene.id, now).sceneMark;
+      const seen = sawScene(state, scene.id).seenScenes;
+      const mark = sawScene(state, scene.id).sceneMark;
       const ask = scene.ask;
       if (ask?.kind === 'name') {
         const name = kind.flame || DEFAULT_FLAME_NAME;
@@ -187,8 +182,8 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
         state = { ...state, sceneMark: mark, seenScenes: seen };
       }
     }
-    // A chapter's ending and the next one's start make two; more than three is a pile-up.
-    if (count > 3) note('problem', `${count} scenes in a row ${when}`);
+    // Every due scene plays (no cap), so a long row is fine; the timeline still shows it.
+    if (count > 3) note('scene', `${count} scenes in a row ${when}`);
   };
 
   /** Today's page, line and quote, like opening the app. */

@@ -165,8 +165,8 @@ export interface GameState {
   draft: Draft | null;
   /** Story scenes already played. */
   seenScenes: string[];
-  /** How many scenes played at the last story moment (a day and a workout count). */
-  sceneMark?: { at: string; count: number };
+  /** The story moment the player said Later at (off): nothing else plays then. `count` is from old saves. */
+  sceneMark?: { at: string; off?: boolean; count?: number };
   /** Story scenes put off with Later: not played yet, they wait in Story so far (src/story/engine.ts). */
   laterScenes?: string[];
   /** Story scenes skipped (the words or the question): played, but marked in Story so far until watched. */
