@@ -3,7 +3,7 @@ type: conceptual
 title: Balance (design for balance)
 description: The rule every feature follows so FORMA stays tunable — every balance number named in src/balance/ with its goal, the balance sheet (pnpm balance) that shows what they add up to, the map of numbers not moved yet, and the balance changelog.
 tags: [game, balance, rules, changelog]
-timestamp: 2026-10-31
+timestamp: 2026-11-01
 ---
 
 # Balance
@@ -138,6 +138,8 @@ before and after.
 
 | Date | Change | Why | Before → after | PR |
 |---|---|---|---|---|
+| 2026-11-01 | New: `ROOM_SHAPES` (walls inside about half the plain rooms past each floor's first: chance 0.55, five shapes) and `TRAPS` (arrow plates from floor 2: 3 arrows, 8 damage times the zone's, speed 200, 0.5 s tell, rearm 2.5 s; dark rooms from floor 3, 1 in 7, sight 240) | Edoardo: make the Fog's dungeons more dynamic, real dungeon rooms and traps (step 1 toward one open map) | `fog:sim steady` before (24 runs) 27/74%, after (48 runs) 25/71% (archer/mage/warrior/monk 32/28/19/19 and 75/70/68/69), all fair, no zone retuned; no runs stuck past 25 min | this thread's PR |
+| 2026-11-01 | New: `TRIALS` (challenge rooms from floor 1, 1 in 5 fights: doors seal, 30 s, a wave every 6 s, chest at the end), `BARGAIN` (altar in 3 of 5 rest rooms: touch it for monster shots 1.35x faster, 2x loot chance, +0.5 luck, for the floor), `TRAITS` (elites roll swift 1.5x speed, burning fire trail 7 damage, or split into 2 plain copies), `STATUES` (from floor 3, 3 in 10 rooms, up to 2 wall statues: ring of 8 shots every 2.8 s, 70 health, crumble when the room is cleared) | Edoardo picked four more Fog dynamics (challenge rooms, shrine bargains, elite traits, statue turrets) | `fog:sim steady` (48 runs) 25/71% before, 30/73% after (archer/mage/warrior/monk 38/36/24/22 and 78/74/66/74), all fair, runs about 1 min longer, no zone retuned; no runs stuck | this thread's PR |
 | 2026-10-31 | `VAULT` is one number, `size` 200 (was 4, one more every 5 workouts, up to 20); melting many at once (`meltable`, `salvageMany` in `forge.ts`) uses the same `MELT` values | Edoardo: room for 200 items, and a way to melt all of a rarity at once | Sheet: the "Vault slots" column is gone (it would read 200 everywhere); power, embers and every goal row unchanged | #123 |
 | 2026-10-31 | Zones 2-6 get their own monsters, five each (`ZONE_DUNGEONS`, `MONSTERS` in `content.ts`; numbers for their tricks `BACK`, `BURST`, `STALL`, `WALL`, `SQUIRE`, `MOLE`, `UNDERTOW` 220/40, `SWOOP`), and keep one or two of the Ashlands'. Zones 3-5 hp/dmg retuned (`fog:tune`): 2.8/2.91 → 2.49/2.58, 3.11/4.15 → 2.66/3.55, 3.44/6.84 → 3.12/6.2 | Edoardo: every zone had the same monsters; each place should bring new monsters and attacks | `fog:tune` with the new rosters before the retune: zone 2 31/71%, zone 3 13/53%, zone 4 18/33%, zone 5 16/55%, zone 6 23/80%. `fog:sheet` after: 25/69% (archer/mage/warrior/monk 32/28/21/18 and 77/68/67/64), all fair, every zone on target (zone 6's opening day too, 15% → 25%). Left as is: in zone 5 the close-up classes lose more at the Hollow (warrior 17/31%, as before 10/48%) | this thread's PR |
 | 2026-10-31 | Coach laws (`LAWS`: warm-up 180 s, 20 sets a family a week, 6 days at most, comeback after 14 days drops a third for 7 days, runs at most 10% past the longest of 30 days) and `MAX_SETS_PER_FAMILY` 8→10 (law 4) | A customizable coach with a few rules always true, from the research (ACSM 2026, Frandsen 2025) | Sheet unchanged (not on the power scale) | #112 |

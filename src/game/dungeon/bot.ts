@@ -1,6 +1,6 @@
-import { HUMAN } from '@/balance';
+import { HUMAN, TRAITS } from '@/balance';
 import { clamp, HERO_SPEED, RANGE } from '../rules';
-import { abilityReady, attackKind, canOpen, onStairs, outSide, finalReady, skillReady, BARREL, CHARGE, ROLL, SWOOP, UNDERTOW, createRun, GALE, LANTERN, LIGHT, LONER, LULL, ROOM, lit as inLantern, type Foe, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup, type SpMoveId } from './engine';
+import { abilityReady, attackKind, canOpen, onStairs, outSide, finalReady, skillReady, BARREL, CHARGE, ROLL, SWOOP, UNDERTOW, createRun, GALE, LANTERN, LIGHT, LONER, LULL, ROOM, lit as inLantern, ALTAR_R, PLATE_R, wayFor, type Foe, zoneDungeon, inRect, mine, spikeState, stepRun, TOMORROW_REACH, type CellKind, type Door, type Hero, type Input, type Rect, type Run, type RunEnd, type RunSetup, type SpMoveId } from './engine';
 
 /* The bot: a steady, careful player on a phone, not a great one (how human: HUMAN in
    src/balance/dungeon.ts). It notices a shot only after a reaction of its own, misses more of them
@@ -183,6 +183,48 @@ function decide(run: Run, h: Hero): Input {
     if (stuck && target) round = 1.4 * (-(dy / d) * (target.x - h.x) + (dx / d) * (target.y - h.y) >= 0 ? 1 : -1);
     x += ((dx / d) * (stuck ? 0.5 : 1) - (dy / d) * round) * w;
     y += ((dy / d) * (stuck ? 0.5 : 1) + (dx / d) * round) * w;
+  }
+  // Walls inside the room: off their faces, so it never pins itself to one.
+  for (const q of T.blocks ?? []) {
+    const cx = clamp(h.x, q.x, q.x + q.w),
+      cy = clamp(h.y, q.y, q.y + q.h),
+      dx = h.x - cx,
+      dy = h.y - cy,
+      d = Math.hypot(dx, dy) || 1;
+    if (d > 30) continue;
+    x += (dx / d) * ((30 - d) / 30);
+    y += (dy / d) * ((30 - d) / 30);
+  }
+  // A dark altar's bargain: the bot never takes it (so the zone win rates don't count on it).
+  if (T.altar && !T.altar.used) {
+    const dx = h.x - T.altar.x,
+      dy = h.y - T.altar.y,
+      d = Math.hypot(dx, dy) || 1;
+    if (d < ALTAR_R + 34) {
+      x += (dx / d) * 3;
+      y += (dy / d) * 3;
+    }
+  }
+  // Fire on the floor from a burning elite: out of it.
+  for (const b of run.burns ?? []) {
+    const dx = h.x - b.x,
+      dy = h.y - b.y,
+      d = Math.hypot(dx, dy) || 1,
+      keep = TRAITS.burning.r + 22;
+    if (d > keep) continue;
+    x += (dx / d) * 2.5;
+    y += (dy / d) * 2.5;
+    danger += 1;
+  }
+  // Arrow plates: step round them, as you would.
+  for (const p of T.plates ?? []) {
+    const dx = h.x - p.x,
+      dy = h.y - p.y,
+      d = Math.hypot(dx, dy) || 1,
+      keep = PLATE_R + 26;
+    if (d > keep || (linger && p.at < 0)) continue;
+    x += (dx / d) * 2;
+    y += (dy / d) * 2;
   }
   for (const q of T.water)
     if (inRect(q, h.x, h.y, 6)) {
@@ -367,10 +409,17 @@ function decide(run: Run, h: Hero): Input {
       dy = goal.y - h.y,
       d = Math.hypot(dx, dy) || 1,
       // The Hollow's light is the whole fight: stay in it even with shots around.
-      pull = lit ? clamp((d - want) / 30, -1, 1) * 1.6 : clamp((d - want) / 80, -1, 1) * (danger > 1 ? 0.3 : 1);
-    // Close in or back off, and circle a little so shots aimed at you miss.
-    x += (dx / d) * pull - (dy / d) * 0.35;
-    y += (dy / d) * pull + (dx / d) * 0.35;
+      pull = lit ? clamp((d - want) / 30, -1, 1) * 1.6 : clamp((d - want) / 80, -1, 1) * (danger > 1 ? 0.3 : 1),
+      // Behind a wall: round it, to where it can be hit.
+      way = wayFor(run, h.x, h.y, goal.x, goal.y, 12);
+    if (way) {
+      x += way[0] * 1.4;
+      y += way[1] * 1.4;
+    } else {
+      // Close in or back off, and circle a little so shots aimed at you miss.
+      x += (dx / d) * pull - (dy / d) * 0.35;
+      y += (dy / d) * pull + (dx / d) * 0.35;
+    }
   } else if (run.cleared) {
     // Gems come on their own: pick up what dropped, open the chest, then on to where the map says.
     // In a party: a friend down comes first (stand by them to get them up), then the door or
@@ -381,8 +430,9 @@ function decide(run: Run, h: Hero): Input {
       c = down ?? run.loot.find((l) => !l.full && mine(l, h)) ?? (canOpen(run, h) ? run.chest : null),
       door = c ? null : leadOut ? (run.doors.find((d) => d.side === leadOut) ?? null) : lead && onStairs(run, lead) ? null : run.climb !== null ? (run.doors[0] ?? null) : route(run),
       [gx, gy] = c ? [c.x, c.y] : door ? beyond(run, door) : run.stairs ? [run.stairs.x, run.stairs.y] : [h.x, h.y],
-      dx = gx - h.x,
-      dy = gy - h.y,
+      way = wayFor(run, h.x, h.y, clamp(gx, ROOM.wall, run.area.w - ROOM.wall), clamp(gy, ROOM.wall, run.area.h - ROOM.wall), 12),
+      dx = way ? way[0] : gx - h.x,
+      dy = way ? way[1] : gy - h.y,
       d = Math.hypot(dx, dy) || 1;
     x += (dx / d) * 1.5;
     y += (dy / d) * 1.5;

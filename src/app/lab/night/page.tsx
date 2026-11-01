@@ -210,6 +210,12 @@ const GO: Record<string, () => void> = {
   you: () => open(veteran(30, 2), 'you'),
   friends: () => open(geared(), 'tab=friends'),
   feed: () => open(geared(), 'tab=friends&feed'),
+  walls: () => open(veteran(14, 1), 'run=0&at=shape-corners'),
+  dark: () => open(veteran(14, 1), 'run=0&at=dark'),
+  trial: () => open(veteran(14, 1), 'run=0&at=trial'),
+  elite: () => open(veteran(14, 1), 'run=0&at=elite'),
+  statues: () => open(veteran(14, 1), 'run=0&at=statues'),
+  altar: () => open(veteran(14, 1), 'run=0&at=altar'),
 };
 
 const MOMENTS: [string, string][] = [
@@ -311,6 +317,19 @@ export default function NightLab() {
         <Row icon={<Sparkles size={16} />} label="Meet your coach" note="Train tab, no coach set up yet: Pip says hello" onClick={() => open(veteran(6, 0), 'tab=train')} />
         <Row icon={<Dumbbell size={16} />} label="The workout clock" note="A workout under way: its clock under the bars, from Start to Finish, saved with the workout" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=today&workout')} />
         <Row icon={<Dumbbell size={16} />} label="A week built like a trainer's" note="Train tab, gym 40 min: warm-up, main lifts (ramp-up on the first), core, cool-down stretches, rests and an honest time" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=train')} />
+      </Panel>
+
+      <Panel title="DUNGEON ROOMS WITH WALLS" note="Rooms now have walls inside them: corners, a block in the middle, winding halls, side lanes. Walls stop every shot, yours too. Arrow plates in the floor shoot across the room when stepped on; some rooms are dark until cleared. Each jump opens a room on floor 3 of the Ashlands.">
+        <Row icon={<Swords size={16} />} label="Plus: four corners cut" note="Fight in a cross, monsters come round the corners" onClick={() => open(veteran(14, 1), 'run=0&at=shape-corners')} />
+        <Row icon={<Swords size={16} />} label="L or Z: big corners gone" note="One or two big corners walled off" onClick={() => open(veteran(14, 1), 'run=0&at=shape-notch')} />
+        <Row icon={<Swords size={16} />} label="A block in the middle" note="Circle it; ranged monsters hide behind" onClick={() => open(veteran(14, 1), 'run=0&at=shape-block')} />
+        <Row icon={<Swords size={16} />} label="Winding hall" note="Two walls from either side, staggered" onClick={() => open(veteran(14, 1), 'run=0&at=shape-halls')} />
+        <Row icon={<Swords size={16} />} label="Three lanes" note="Two long walls down the room" onClick={() => open(veteran(14, 1), 'run=0&at=shape-lanes')} />
+        <Row icon={<Swords size={16} />} label="A dark room with arrow plates" note="You see a little way round you until it's clear" onClick={() => open(veteran(14, 1), 'run=0&at=dark')} />
+        <Row icon={<Swords size={16} />} label="A challenge room" note="The doors seal: hold on 30 seconds of waves for a chest" onClick={GO.trial} />
+        <Row icon={<Swords size={16} />} label="Elites with traits" note="Swift (cyan), burning (orange, fire trail), splits (violet)" onClick={GO.elite} />
+        <Row icon={<Swords size={16} />} label="Statue turrets" note="Statues on the walls fire rings; break them or dodge, they crumble when the room is clear" onClick={GO.statues} />
+        <Row icon={<Swords size={16} />} label="A dark altar's bargain" note="A rest room with a dark altar: touch it for more and better drops on this floor, and faster shots" onClick={GO.altar} />
       </Panel>
 
       <Panel title="CLASSES, SP AND SWEAT COINS" note="Your class at the start, weapons that belong to one class, the first SP with its trial, and sweat coins to change class or start your points over.">

@@ -11,7 +11,7 @@ import { SharePage, useFeed } from '@/components/Feed';
 import { workoutCard, type WorkoutCard } from '@/lib/feed';
 import { YouPage } from '@/components/YouPage';
 import { StorySoFar } from '@/components/StorySoFar';
-import { FogRun, type RunStart } from '@/components/FogRun';
+import { FogRun, SHAPE_STARTS, type RunStart } from '@/components/FogRun';
 import { Hero } from '@/components/Hero';
 import { Prologue } from '@/components/Prologue';
 import { Opening, openingDue } from '@/components/Opening';
@@ -152,7 +152,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     const zone = ZONES.find((z) => String(z.id) === q.get('run')) ?? ROAD_ZONES.find((z) => `road${z.road}` === q.get('run'));
     if (zone) {
       const at = q.get('at');
-      setRunStart(at === 'mid' || at === 'boss' || at === 'win' || at === 'sp' || at === 'skills' ? at : undefined);
+      setRunStart(at === 'mid' || at === 'boss' || at === 'win' || at === 'sp' || at === 'skills' || SHAPE_STARTS.includes(at as RunStart) ? (at as RunStart) : undefined);
       // ?party: a practice party run with two made-up friends, to see it without a backend.
       if (q.has('party')) setPartyRun({ seed: 7, friends: LAB_FRIENDS });
       setRun(zone);
