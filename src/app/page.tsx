@@ -242,7 +242,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       setScene(next);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, state.profile.onboarded, state.sessions.length, state.road, opening, replaying, training, after, scene, picker, run]);
+  }, [ready, state.profile.onboarded, state.sessions.length, state.road, state.fog?.cleared, opening, replaying, training, after, scene, picker, run]);
 
   // A page in the Book of Days for every day the app is opened (and today's line follows the day).
   const today = new Date().toDateString();

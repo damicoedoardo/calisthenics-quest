@@ -1,9 +1,10 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, Dumbbell, Film, Gem, Music, Play, Smartphone, Sparkles, Swords } from 'lucide-react';
 import { addFakeWorkouts, clearNextZone, skipDueScenes, skipIntro } from '@/lib/dev';
+import { chapterStart } from '@/story/engine';
 import { initialState, type GameState } from '@/lib/game';
 import { ZONES } from '@/lib/fog';
 import { SANDBOX_KEY } from '@/lib/store';
@@ -52,7 +53,8 @@ function veteran(workouts: number, cleared: number): GameState {
   return s;
 }
 
-/** A player `n` workouts in, one every other day, who watched every scene as it came. */
+/** A player `n` workouts in, one every other day, who watched every scene as it came and beat each
+    Fog boss once it was out of hearts (the story's planned pace). */
 function storyWalk(n: number): GameState {
   const now = Date.now();
   let s = skipIntro(initialState(), new Date(now - (n * 2 + 2) * DAY));
@@ -60,6 +62,7 @@ function storyWalk(n: number): GameState {
   for (let i = 0; i < n; i++) {
     const day = new Date(now - (n - i) * 2 * DAY);
     s = addFakeWorkouts(s, 1, day, true);
+    if (s.sessions.length === chapterStart((s.fog?.cleared ?? 0) + 2)) s = clearNextZone(s);
     for (let k = 0; k < 4; k++) s = skipDueScenes(s, day);
   }
   return s;
@@ -196,6 +199,16 @@ function open(state: GameState, query: string) {
   window.location.href = `/?sandbox&${query}`;
 }
 
+/** Tomorrow just beaten in the Fog, 11 workouts in: its ending plays, then chapter 2 opens. */
+function bossEndsChapter(): GameState {
+  return clearNextZone(addFakeWorkouts(storyWalk(10), 1, new Date(), false));
+}
+
+/** Jumps a preview link can open with no taps: /lab/night?go=<name>. */
+const GO: Record<string, () => void> = {
+  'boss-ends-chapter': () => open(bossEndsChapter(), 'tab=today'),
+};
+
 const MOMENTS: [string, string][] = [
   ['first-letter', 'The letter, after the first workout'],
   ['flame-name', 'The flame gets its name'],
@@ -252,6 +265,10 @@ function Row({ icon, label, note, onClick, href }: { icon: ReactNode; label: str
 }
 
 export default function NightLab() {
+  // ?go=<name> opens that jump straight away, so a preview link lands on the feature.
+  useEffect(() => {
+    GO[new URLSearchParams(window.location.search).get('go') ?? '']?.();
+  }, []);
   return (
     <main className="safe-top mx-auto min-h-dvh max-w-md space-y-4 px-4 pb-16">
       <header className="flex items-center gap-3">
@@ -276,7 +293,7 @@ export default function NightLab() {
       </Panel>
 
       <Panel title="STORY SO FAR" note="Play tab, at the top: every scene you reached, to watch again. Later (beside Skip) puts a scene off; skipped and put-off scenes wait there with a gold mark, and a question you skipped (like the flame's name) can be answered there.">
-        <Row icon={<Film size={16} />} label="A scene after a workout: try Later or Skip" note="Opens on Today with chapter 2's first scene due" onClick={() => open(addFakeWorkouts(storyWalk(11), 1, new Date(), false), 'tab=today')} />
+        <Row icon={<Film size={16} />} label="A scene after a workout: try Later or Skip" note="Opens on Today with chapter 1's ending due (Tomorrow just beaten), then chapter 2's first scene" onClick={GO['boss-ends-chapter']} />
         <Row icon={<BookOpen size={16} />} label="Story so far, two scenes waiting" note="The flame's name skipped and the last scene put off" onClick={() => open(storyWaiting(), 'tab=play')} />
       </Panel>
 

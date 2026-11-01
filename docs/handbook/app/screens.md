@@ -38,7 +38,7 @@ pieces of screen state, and decides what is on screen:
 5. While a layer is open the tabs underneath are made `inert` (no focus, hidden from screen
    readers). Overlays opened from inside a tab use `useModal` for the same thing.
 5. On the tabs (nothing over them) the menus' music plays, unless turned off in Settings (see [../game/sound.md](../game/sound.md)).
-6. Back on the tabs, the next due scene from `scenesToPlay` (`src/story/engine.ts`) plays.
+6. Back on the tabs, the next due scene from `scenesToPlay` (`src/story/engine.ts`) plays: it is checked again after a workout, a Fog run that clears a zone (`fog.cleared`: the boss ends its story chapter) and a step on the Ember Road.
 
 ## Held sideways: the tabs
 

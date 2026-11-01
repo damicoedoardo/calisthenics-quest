@@ -1,7 +1,7 @@
 import type { DayPage, GameState } from '@/lib/game';
 import { dayKey, daySeed, daysApart, daysInRow, daysSinceTraining } from '@/lib/days';
 import { isRestToday } from '@/lib/coach/week';
-import { ALL_SCENES, fill, storyState, storyWords } from '../engine';
+import { ALL_SCENES, fill, storyState, storyWords, workoutsFor } from '../engine';
 import type { DailyLine, FlameMood, Moment, Quote } from '../types';
 import { CALLBACKS, FLAME_LINES, MOMENT_MOOD } from './flame-lines';
 import { QUOTES } from './quotes';
@@ -112,11 +112,11 @@ export function callbackLine(state: GameState, now: Date): string | undefined {
   const key = dayKey(now);
   const said = new Set((state.days ?? []).filter((d) => d.day !== key).map((d) => d.line));
   const seen = new Set(state.seenScenes);
-  const n = state.sessions.length;
   const due = CALLBACKS.find((c) => {
-    // Exact id: sceneById would also match `ch4-vela` for `ch4-vela-down`.
-    const at = ALL_SCENES.find((p) => p.scene.id === c.after)?.scene.when.workouts ?? 0;
-    return seen.has(c.after) && !said.has(c.text) && n <= at + c.within && (!c.restDay || isRestToday(state, now));
+    // Exact id: sceneById would also match `ch4-vela` for `ch4-vela-down`. Counted like the scene's own.
+    const placed = ALL_SCENES.find((p) => p.scene.id === c.after);
+    const at = placed?.scene.when.workouts ?? 0;
+    return seen.has(c.after) && !said.has(c.text) && workoutsFor(state, placed?.chapter ?? 0) <= at + c.within && (!c.restDay || isRestToday(state, now));
   });
   return due?.text;
 }
@@ -163,7 +163,9 @@ export function dayQuote(state: GameState, now: Date): { text: string; by: strin
   const chapter = storyState(state).chapter?.n ?? 6;
   const fits = (q: Quote) => q.fits === 'any' || q.fits === chapter || (q.fits === 'rest' && isRestToday(state, now)) || (typeof q.fits === 'number' && q.fits < chapter);
   const seen = new Set(recentPages(state, now).map((d) => d.quote.text));
-  const pool = QUOTES.filter(fits);
+  // A Fog boss can fall before the flame has its name: its own words wait for the name.
+  const named = (q: Quote) => !!state.profile.flame || !`${q.text}${q.by}`.includes('{flame}');
+  const pool = QUOTES.filter((q) => fits(q) && named(q));
   const fresh = pool.filter((q) => !seen.has(q.text));
   const q = pick(fresh.length ? fresh : pool, daySeed(now), 2) ?? QUOTES[0];
   return { text: q.text, by: fill(q.by, words) };

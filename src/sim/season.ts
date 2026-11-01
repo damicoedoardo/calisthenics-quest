@@ -3,7 +3,7 @@ import { recordRun, zoneDue, zoneStatus, ZONES } from '@/lib/fog';
 import { giveSp, SP_FLOOR, spAfterRun } from '@/lib/sp';
 import { dayKey, daysApart, isRestDay } from '@/lib/days';
 import { seeded } from '@/lib/random';
-import { MAX_SCENES_AT_ONCE, sawScene, sceneMoment, scenesToPlay, renderLines, speakerName, storyState, storyWords } from '@/story/engine';
+import { chapterStart, MAX_SCENES_AT_ONCE, sawScene, sceneMoment, scenesToPlay, renderLines, speakerName, storyState, storyWords } from '@/story/engine';
 import { CALLBACKS } from '@/story/daily/flame-lines';
 import { runKind, runLine, afterWorkoutLine, canSitByFire, fireLine, marginNote, restTruth, todayMoment, todayPage, updateTodayPage, withTodayPage } from '@/story/daily';
 import { DEFAULT_FLAME_NAME, flameStage } from '@/story/flame';
@@ -35,6 +35,9 @@ export interface PlayerKind {
   sitsByFire?: boolean;
   /** Plays the Fog, and beats each boss on this try (0 never plays). */
   bossOnTry?: number;
+  /** Goes for each boss as soon as its zone is built for (a strong player, who ends chapters
+      early). Others wait until the boss is out of hearts: the planned pace of the story. */
+  early?: boolean;
   /** How they spend stat points after each workout: spread over the four (the default), all on Damage, or never. */
   spends?: 'even' | 'damage' | 'never';
   /** Names the flame (empty skips and keeps the default). */
@@ -221,9 +224,10 @@ export function playSeason(kind: PlayerKind, days = 200, start = new Date(2026, 
       if (state.sp) state = spAfterRun(state, { floor: SP_FLOOR });
       return;
     }
-    // A model player meets each zone at the workout it is built for (zoneDue), though a strong one
-    // can go in sooner.
-    const zone = ZONES.find((z) => zoneStatus(state, z).state === 'open' && zoneDue(state, z));
+    // A model player goes for a boss once it is out of hearts (the planned pace, so each chapter
+    // plays out); an early one as soon as its zone is built for (zoneDue). A boss ends its chapter.
+    const ready = (z: (typeof ZONES)[number]) => (kind.early ? zoneDue(state, z) : state.sessions.length >= chapterStart(z.chapter + 1));
+    const zone = ZONES.find((z) => zoneStatus(state, z).state === 'open' && ready(z));
     if (!zone) return;
     tries[zone.id] = (tries[zone.id] ?? 0) + 1;
     const won = tries[zone.id] >= kind.bossOnTry;

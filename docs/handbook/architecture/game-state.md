@@ -27,7 +27,7 @@ it, every screen gets it as a prop, and nothing else is saved anywhere.
 | `laterScenes`, `skippedScenes`, `skipNoteSeen` | Story scenes put off with Later (not played yet), and scenes whose words or question were skipped: both wait in Story so far ([../game/story.md](../game/story.md)); whether the note on where skipped scenes go was shown. All optional |
 | `answers` | What the player chose in the story (heart moments, villager stories, the Ember Road's three questions `road1`-`road3`) |
 | `road` | Optional. The Ember Road, the story walked with friends: `from` (workouts done when you set out) and `beaten` (its bosses your party beat) (`src/lib/road.ts`, see [../game/story.md](../game/story.md)) |
-| `fog` | Zones cleared, runs, best records per zone, the last run |
+| `fog` | Zones cleared (each boss beaten in a Story run ends its story chapter), `clearedAt` (the workout count each boss fell at; `migrate()` gives older saves "now"), runs, best records per zone, the last run |
 | `days` | The Book of Days: one page per day the app was opened (`dayNumber` in `src/lib/days.ts` counts them, today included) |
 | `coach` | Optional. The coach's memory: `profile` (setup answers, levels, history), `notes`, `week` (the planned week: days with their workout and `done`; the next workout is its first day not done; old saves' single `plan` migrates to a one-day week), `heard` (the last thing the flame brought up), `chat` (the recent chat, as the LLM reads it) and `replies` (taps it offered) ([../game/coach.md](../game/coach.md)) |
 

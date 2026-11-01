@@ -9,6 +9,7 @@ import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
 import { Weather } from '@/components/Weather';
 import { addFakeWorkouts } from '@/lib/dev';
 import { initialState, type GameState } from '@/lib/game';
+import { NO_FOG } from '@/lib/fog';
 import { useGameState } from '@/lib/store';
 import { CHAPTERS } from '@/story/chapters';
 import { ANYTIME } from '@/story/anytime';
@@ -66,6 +67,7 @@ function Chips<T extends string>({ label, options, value, onChange, name = (v) =
 function describe(w: When): string {
   const parts: string[] = [];
   if (w.workouts !== undefined) parts.push(`${w.workouts} workout${w.workouts === 1 ? '' : 's'}`);
+  if (w.grown) parts.push(`flame grown to ${w.grown}`);
   if (w.chapter) parts.push(`chapter ${w.chapter} started`);
   if (w.inChapter) parts.push(`in chapter ${w.inChapter}`);
   if (w.beaten) parts.push(`chapter ${w.beaten} beaten`);
@@ -87,10 +89,15 @@ function describe(w: When): string {
     hero from this phone's save: your class and the gear you wear now, so scenes show you as you are. */
 function stateFor(scene: Scene, chapter: number, flame: string, letter: boolean, answers: Partial<Record<AnswerId, string>>, now: Date, mine: GameState): GameState {
   const base = initialState();
-  const reach = scene.when.beaten ? chapterStart(scene.when.beaten + 1) : chapter > 0 ? chapterStart(chapter) : 0;
-  const workouts = Math.max(scene.when.workouts ?? 0, reach);
+  // The bosses before the scene's chapter beaten (and its own, for its ending), each at its planned
+  // workout; a chapter's `workouts` count from its start, a flame's growth from the very first.
+  const beaten = scene.when.beaten ?? Math.max(0, chapter - 1);
+  const reach = chapterStart(beaten + 1);
+  const grown = scene.when.grown ? FLAME_STAGES.find((f) => f.id === scene.when.grown)!.at : 0;
+  const workouts = Math.max(grown, reach + (chapter > 0 && !scene.when.beaten ? (scene.when.workouts ?? 0) : 0), chapter === 0 ? (scene.when.workouts ?? 0) : 0);
   const state: GameState = {
     ...base,
+    fog: { ...NO_FOG, cleared: beaten, clearedAt: Array.from({ length: beaten }, (_, i) => chapterStart(i + 2)) },
     // The naming scene plays with a flame that has no name yet.
     fogGear: mine.fogGear,
     profile: { ...base.profile, classId: mine.profile.classId, onboarded: true, flame: scene.ask?.kind === 'name' ? undefined : flame, voice: letter ? 'You always quit.' : '', letter: letter ? LETTER : NO_LETTER },

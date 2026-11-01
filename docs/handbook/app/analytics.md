@@ -3,7 +3,7 @@ type: reference
 title: Play stats (PostHog)
 description: What the app sends to PostHog for balancing and retention, how events are read off save changes (eventsBetween), what is never sent, the env vars that turn it on, and how to add an event.
 tags: [app, analytics, posthog, balance, retention]
-timestamp: 2026-10-28
+timestamp: 2026-11-01
 ---
 
 # Play stats (PostHog)
@@ -57,7 +57,7 @@ Every event carries the hero context: `workouts`, `hero_level`, `chapter`, `stor
 | `workout_done` | a workout is saved | `n`, `kind`, `day`, `mode`, `planned_by`, `xp`, `sets`, `skipped`, `changed`, `raised`, `better`, `gap_days` |
 | `workout_felt` | the after-workout question | `felt` |
 | `save_jumped` | a restore, cloud copy or dev jump changes the workout count | `from`, `to` |
-| `scene_seen`, `chapter_started`, `story_finished` | story moves | `scene`, `chapter` |
+| `scene_seen`, `chapter_started`, `story_finished` | story moves (a chapter starts when the boss before it falls, so it comes with `zone_cleared`) | `scene`, `chapter` |
 | `fog_run_start` | a run starts (each try) | `zone` (from 1), `party`, `bot`, `start_at`, build |
 | `fog_run_end` | a run ends | `won`, `why` (`boss`, `hp`, `limit`, `left`), `floor`, `room`, `kills`, `run_level`, `seconds`, `first_clear`, `bag`, build |
 | `zone_cleared` | a zone's boss falls for the first time | `zone`, `runs` |
