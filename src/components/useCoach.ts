@@ -5,8 +5,8 @@ import { loadLibrary } from '@/exercises/library';
 import type { GameState } from '@/lib/game';
 import { seeded } from '@/lib/random';
 import { planFromQuest } from '@/lib/coach/plan';
-import { currentPlan, needsPlan, planAhead, setPlan } from '@/lib/coach/week';
-import { coachTurn, type Ask } from '@/lib/coach/chat';
+import { aiPlanDue, currentPlan, needsPlan, planAhead, setPlan } from '@/lib/coach/week';
+import { coachTurn, planAsk, type Ask } from '@/lib/coach/chat';
 import { CoachError, askCoach } from '@/lib/coach-client';
 
 type Update = (fn: (s: GameState) => GameState) => void;
@@ -39,6 +39,41 @@ export function useCoachPlan(state: GameState, update: Update) {
       gone = true;
     };
   }, [want, update]);
+}
+
+/** The coach plans a week on its own, from the log, when one is due (`aiPlanDue`): next week as
+    soon as this week's last workout is done. In the background, once per week; its words land in
+    the chat and on the flame's card. `on`: signed in, on the real save. A failed try is tried
+    again the next time the app opens. */
+export function useCoachAutoPlan(state: GameState, update: Update, on: boolean, ask: Ask = askCoach) {
+  const ref = useRef(state);
+  ref.current = state;
+  const tried = useRef<string | null>(null);
+  const due = on && !busy(state) ? aiPlanDue(state.coach, new Date()) : null;
+  useEffect(() => {
+    if (!due || tried.current === due.id) return;
+    tried.current = due.id;
+    let n = 0;
+    loadLibrary()
+      .then((all) =>
+        coachTurn({
+          text: planAsk(due.which),
+          get: () => ref.current,
+          set: (fn) => {
+            ref.current = fn(ref.current);
+            update(fn);
+          },
+          ask,
+          ctx: () => ({ all, now: new Date(), id: () => `${Date.now().toString(36)}${(n++).toString(36)}`, rng: seeded(Date.now()) }),
+        }),
+      )
+      .then(() => update((s) => (s.coach ? { ...s, coach: { ...s.coach, autoPlan: due.id } } : s)))
+      .catch(() => {
+        // Offline or the server said no: the draft stays, and it is tried again next time.
+      });
+    // Runs when a new week falls due, not on every save change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [due?.id, update, ask]);
 }
 
 /** Before changing the built-in plan's workout: turn it into a plan with choices. */
