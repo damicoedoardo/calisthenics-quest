@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { ago, codeInUrl, friendTrainedToday, inviteLink, myCard, showCode, statusOf, type FriendCard } from './friends';
-import { initialState } from './game';
+import { ago, codeInUrl, friendTrainedToday, inviteLink, myCard, showCode, statsNow, statusOf, trainingStats, type FriendCard } from './friends';
+import { initialState, type GameState, type Session } from './game';
 import { canStart, startToJoin, type Party, type PartyMember } from './party';
 
 const card = (p: Partial<FriendCard> = {}): FriendCard => ({
@@ -72,5 +72,36 @@ describe('parties', () => {
     expect(canStart(party())).toBe(false);
     expect(canStart(party({ members: [member('a', { leader: true }), member('b', { ready: true })] }))).toBe(true);
     expect(canStart(party({ members: [member('a', { leader: true })] }))).toBe(false);
+  });
+});
+
+describe('training stats', () => {
+  const now = new Date(2026, 10, 4, 12); // a Wednesday
+  const day = (d: number, names: [string, number][]): Session => ({
+    id: `s${d}`,
+    date: new Date(2026, 10, d, 9).toISOString(),
+    kind: 'full',
+    day: 'A',
+    xp: 10,
+    breakdown: [],
+    entries: names.map(([name, n]) => ({ exerciseId: name.toLowerCase(), name, target: 8, sets: Array.from({ length: n }, () => ({ reps: 8, rir: '2-3' as const })) })),
+  }) as Session;
+  const state = (sessions: Session[]): GameState => ({ ...initialState(), sessions });
+
+  it('counts this week and the exercises done most, not warm-ups', () => {
+    const s = trainingStats(state([day(2, [['Squat', 3], ['Arm circles', 1]]), day(3, [['Squat', 3], ['Pull-up', 4]]), day(4, [['Pull-up', 3]])]), now);
+    expect(s.workouts).toBe(3);
+    expect(s.week).toBe(3);
+    expect(s.top).toEqual(['Squat', 'Pull-up']);
+  });
+
+  it('lets a stale week and a broken streak go', () => {
+    const s = { workouts: 9, week: 3, week_of: '2026-10-19', streak: 4, top: [] };
+    // Sent the week before last: this week is 0 and the streak is gone.
+    expect(statsNow(s, now)).toMatchObject({ week: 0, streak: 0 });
+    // Sent last week with the goal hit: the streak still stands, this week starts at 0.
+    expect(statsNow({ ...s, week_of: '2026-10-26' }, now)).toMatchObject({ week: 0, streak: 4 });
+    // Sent this week: as it is.
+    expect(statsNow({ ...s, week_of: '2026-11-02', week: 1 }, now)).toMatchObject({ week: 1, streak: 4 });
   });
 });

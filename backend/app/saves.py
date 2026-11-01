@@ -60,14 +60,21 @@ class PgStore:
                 " VALUES ($1, $2::jsonb, $3, $4)"
                 " ON CONFLICT (user_id) DO NOTHING"
                 " RETURNING rev, version, workouts, updated_at, data",
-                user_id, body, version, workouts,
+                user_id,
+                body,
+                version,
+                workouts,
             )
         else:
             r = await get_pool().fetchrow(
                 "UPDATE saves SET data = $2::jsonb, version = $3, workouts = $4, rev = rev + 1,"
                 " updated_at = now() WHERE user_id = $1 AND rev = $5"
                 " RETURNING rev, version, workouts, updated_at, data",
-                user_id, body, version, workouts, base_rev,
+                user_id,
+                body,
+                version,
+                workouts,
+                base_rev,
             )
         if r:
             return True, _row(r)

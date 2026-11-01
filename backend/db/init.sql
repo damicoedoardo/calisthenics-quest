@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS profiles (
     -- The profile, all optional, seen only by friends: where they live, a line, the photo's time.
     place       text NOT NULL DEFAULT '',
     about       text NOT NULL DEFAULT '',
-    photo_at    timestamptz
+    photo_at    timestamptz,
+    stats       jsonb
 );
 CREATE TABLE IF NOT EXISTS profile_photos (
     user_id     uuid PRIMARY KEY,

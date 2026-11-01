@@ -35,6 +35,7 @@ ALTER TABLE profiles ADD COLUMN IF NOT EXISTS training text;
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS place text NOT NULL DEFAULT '';
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS about text NOT NULL DEFAULT '';
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS photo_at timestamptz;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS stats jsonb;
 CREATE TABLE IF NOT EXISTS profile_photos (
     user_id     uuid PRIMARY KEY,
     data        bytea NOT NULL
@@ -77,6 +78,7 @@ class Profile:
     place: str = ""
     about: str = ""
     photo_at: datetime | None = None
+    stats: dict[str, Any] | None = None
 
 
 @dataclass(frozen=True)
@@ -89,7 +91,9 @@ class Link:
 
 
 # The fields a phone may set on its own card.
-CARD_FIELDS = ("name", "class_id", "level", "look", "trained_at", "playing", "training")
+CARD_FIELDS = ("name", "class_id", "level", "look", "trained_at", "playing", "training", "stats")
+# The card fields kept as JSON.
+_JSON = ("look", "stats")
 
 
 class FriendStore(Protocol):
@@ -128,6 +132,10 @@ class FriendStore(Protocol):
     async def photo(self, user_id: str) -> bytes | None: ...
 
 
+def _json(v: Any) -> Any:
+    return json.loads(v) if isinstance(v, str) else v
+
+
 def _profile(r: Any) -> Profile:
     look = r["look"]
     return Profile(
@@ -144,12 +152,13 @@ def _profile(r: Any) -> Profile:
         place=r["place"],
         about=r["about"],
         photo_at=r["photo_at"],
+        stats=_json(r["stats"]),
     )
 
 
 _COLS = (
     "user_id, code, name, class_id, level, look, trained_at, playing, seen_at, training,"
-    " place, about, photo_at"
+    " place, about, photo_at, stats"
 )
 
 
@@ -173,8 +182,8 @@ class PgStore:
         for k in CARD_FIELDS:
             if k in card:
                 v = card[k]
-                args.append(json.dumps(v) if k == "look" and v is not None else v)
-                sets.append(f"{k} = ${len(args)}" + ("::jsonb" if k == "look" else ""))
+                args.append(json.dumps(v) if k in _JSON and v is not None else v)
+                sets.append(f"{k} = ${len(args)}" + ("::jsonb" if k in _JSON else ""))
         r = await pool.fetchrow(
             f"UPDATE profiles SET {', '.join(sets)} WHERE user_id = $1 RETURNING {_COLS}", *args
         )

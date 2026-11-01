@@ -10,7 +10,7 @@ with their code, which they share themselves.
 import base64
 import binascii
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -36,6 +36,16 @@ def get_friend_store() -> FriendStore:
     return _store
 
 
+class Stats(BaseModel):
+    """How a player trains, from their save (`trainingStats` in src/lib/friends.ts)."""
+
+    workouts: int = Field(ge=0, le=100_000)
+    week: int = Field(ge=0, le=50)
+    week_of: str = Field(max_length=10)
+    streak: int = Field(ge=0, le=10_000)
+    top: list[Annotated[str, Field(max_length=40)]] = Field(default=[], max_length=3)
+
+
 class Card(BaseModel):
     name: str | None = Field(default=None, max_length=24)
     class_id: str | None = Field(default=None, max_length=16)
@@ -44,6 +54,7 @@ class Card(BaseModel):
     trained_at: datetime | None = None
     playing: str | None = Field(default=None, max_length=40)
     training: str | None = Field(default=None, max_length=40)
+    stats: Stats | None = None
 
 
 class AddFriend(BaseModel):
@@ -71,6 +82,7 @@ def profile_json(p: Profile) -> dict[str, Any]:
         "place": p.place,
         "about": p.about,
         "photo": p.photo_at.isoformat() if p.photo_at else None,
+        "stats": p.stats,
     }
 
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Check, Gift as GiftIcon, Send, Share2, UserPlus, X } from 'lucide-react';
-import type { GameState } from '@/lib/game';
+import { weekKey, type GameState } from '@/lib/game';
 import { getClass, makeGear, type GearSlot } from '@/lib/gear';
 import { codeInUrl, friendTrainedToday, inviteLink, myCard, showCode, statusOf, type FriendCard, type FriendsList } from '@/lib/friends';
 import { acceptFriend, addFriend, claimGifts, getFriends, giveGift, removeFriend, sendCard, sendCheer } from '@/lib/friends-client';
@@ -16,7 +16,7 @@ import type { Look } from '@/sprites/engine/figure';
 import { Hero } from './Hero';
 import { Sprite } from './Sprite';
 import { useModal } from './useModal';
-import { ProfilePage } from './Profile';
+import { openProfile } from './Profile';
 
 /* Friends on screen: the heartbeat that shows you online to your friends (useFriendsBeat, in
    page.tsx) and the Friends card in the Fog's Together. Rules and types in lib/friends.ts. */
@@ -54,7 +54,7 @@ export function useFriendsBeat(state: GameState, playing: string | null, trainin
   useEffect(() => {
     if (off || !cloudConfigured || !signedIn) return;
     const beat = () => {
-      if (visible()) void sendCard(myCard(latest.current, playing, training)).catch(() => {});
+      if (visible()) void sendCard(myCard(latest.current, playing, training, new Date())).catch(() => {});
     };
     beat();
     const t = window.setInterval(beat, BEAT_MS);
@@ -132,7 +132,7 @@ type Update = (fn: (s: GameState) => GameState) => void;
 
 /** Give a friend co-op materials for Mira's forge: pick one you have and how many (up to
     GIFTS.perDay a day each friend). */
-function GiveMats({ f, state, update, done }: { f: FriendCard; state: GameState; update: Update; done: (msg: string) => void }) {
+export function GiveMats({ f, state, update, done }: { f: FriendCard; state: GameState; update: Update; done: (msg: string) => void }) {
   const have = matsOf(state),
     mine = MAT_IDS.filter((id) => (have[id] ?? 0) > 0);
   const [mat, setMat] = useState<MatId | null>(mine[0] ?? null);
@@ -254,8 +254,8 @@ const DEMO_PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="ht
 const DEMO: FriendsList = {
   me: { code: 'DEMO42', name: 'You' },
   friends: [
-    { id: 'demo-a', name: 'Ana', class_id: 'archer', level: 12, look: { sex: 'f', gear: { weapon: 3, armor: 2, shield: 1 } }, trained_at: new Date().toISOString(), online: true, playing: 'The Ashen Edge', seen_at: new Date().toISOString(), place: 'Lisbon', about: 'Morning runs, evening pull-ups. Training for my first muscle-up.', photo: DEMO_PHOTO },
-    { id: 'demo-b', name: 'Ben', class_id: 'mage', level: 8, look: { sex: 'm', hair: 'black', gear: { weapon: 2, armor: 1, shield: 0 } }, trained_at: null, online: true, playing: null, training: 'Pull day', seen_at: new Date().toISOString(), place: 'Milan', about: '' },
+    { id: 'demo-a', name: 'Ana', class_id: 'archer', level: 12, look: { sex: 'f', gear: { weapon: 3, armor: 2, shield: 1 } }, trained_at: new Date().toISOString(), online: true, playing: 'The Ashen Edge', seen_at: new Date().toISOString(), place: 'Lisbon', about: 'Morning runs, evening pull-ups. Training for my first muscle-up.', photo: DEMO_PHOTO, stats: { workouts: 41, week: 2, week_of: weekKey(new Date()), streak: 5, top: ['Pull-up', 'Push-up', 'Plank'] } },
+    { id: 'demo-b', name: 'Ben', class_id: 'mage', level: 8, look: { sex: 'm', hair: 'black', gear: { weapon: 2, armor: 1, shield: 0 } }, trained_at: null, online: true, playing: null, training: 'Pull day', seen_at: new Date().toISOString(), place: 'Milan', about: '', stats: { workouts: 12, week: 1, week_of: weekKey(new Date()), streak: 0, top: ['Bench press', 'Lat pulldown'] } },
     { id: 'demo-c', name: 'Cleo', class_id: 'monk', level: 5, look: { sex: 'f', hair: 'black', gear: { weapon: 1, armor: 1, shield: 0 } }, trained_at: null, online: false, playing: null, seen_at: new Date(Date.now() - 3 * 3600_000).toISOString() },
   ],
   asks_in: [],
@@ -331,7 +331,6 @@ export const onlineCount = (f: Friends) => f.list?.friends.filter((x) => x.onlin
 export function FriendsCard({ state, update, friends }: { state: GameState; update: Update; friends: Friends }) {
   const [giving, setGiving] = useState<string | null>(null);
   const [cheering, setCheering] = useState<string | null>(null);
-  const [viewing, setViewing] = useState<FriendCard | null>(null);
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   // Your code and adding a friend fold away once you have friends: the list is what you come for.
@@ -473,7 +472,7 @@ export function FriendsCard({ state, update, friends }: { state: GameState; upda
               {/* Training or in the Fog first, then online, then the rest. */}
               {[...list.friends].sort((a, b) => rank(a) - rank(b)).map((f) => (
                 <li key={f.id}>
-                  <Row as="div" f={f} now={now} onOpen={() => setViewing(f)}>
+                  <Row as="div" f={f} now={now} onOpen={() => openProfile(f)}>
                     {/* Working out: a cheer, not a party invite. */}
                     {f.training ? (
                       <button
@@ -539,8 +538,6 @@ export function FriendsCard({ state, update, friends }: { state: GameState; upda
           ) : (
             <p className="text-xs text-slate-500">No friends yet. Send your code to someone you'd like to train with.</p>
           )}
-
-          {viewing && <ProfilePage f={viewing} now={now} onClose={() => setViewing(null)} />}
 
           {list.asks_out.length > 0 && (
             <p className="text-xs text-slate-500">Waiting for {list.asks_out.map((f) => f.name || 'a hero').join(', ')} to say yes.</p>
