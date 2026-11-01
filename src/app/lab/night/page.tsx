@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, Dumbbell, Film, Gem, Music, Play, Smartphone, Sparkles, Swords } from 'lucide-react';
 import { addFakeWorkouts, clearNextZone, skipDueScenes, skipIntro } from '@/lib/dev';
@@ -251,7 +251,16 @@ function Row({ icon, label, note, onClick, href }: { icon: ReactNode; label: str
   );
 }
 
+/** ?go=<name>: straight to that jump, no tap (a preview link that opens on the feature). */
+const GO: Record<string, () => void> = {
+  video: () => open(veteran(10, 1), 'tab=train&exercise=Goblet_Squat'),
+};
+
 export default function NightLab() {
+  useEffect(() => {
+    const go = new URLSearchParams(window.location.search).get('go');
+    if (go && GO[go]) GO[go]();
+  }, []);
   return (
     <main className="safe-top mx-auto min-h-dvh max-w-md space-y-4 px-4 pb-16">
       <header className="flex items-center gap-3">
@@ -432,7 +441,7 @@ export default function NightLab() {
         <Row icon={<Swords size={16} />} label="A boss with no hearts left, in a run" note="The 3 free skills at the start, then Tomorrow with less HP" onClick={() => open(veteran(15, 0), 'run=0&at=boss')} />
         <Row icon={<Swords size={16} />} label="A boss with hearts left" note="Play tab: how many workouts until Tomorrow runs out of hearts" onClick={() => open(veteran(8, 0), 'tab=play')} />
         <Row icon={<Swords size={16} />} label="Exercise library" note="Train tab, top button: 870+ exercises, pixel demos for boy and girl" onClick={() => open(veteran(10, 1), 'tab=train')} />
-        <Row icon={<Play size={16} />} label="Exercise video" note="The Goblet Squat card with its YouTube how-to playing in the card (the ?exercise= link)" onClick={() => open(veteran(10, 1), 'tab=train&exercise=Goblet_Squat')} />
+        <Row icon={<Play size={16} />} label="Exercise video" note="The Goblet Squat card with its YouTube how-to playing in the card (the ?exercise= link)" onClick={GO.video} />
       </Panel>
 
       <Panel title="STORY: THE BIG MOMENTS" note="Played in the Story Lab with a sample letter and answers; nothing is saved. It comes back here when the scene ends.">
