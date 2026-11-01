@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, ListOrdered, Minus, Plus, Shuffle, TrendingDown, Undo2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, BookOpen, Check, ChevronLeft, ChevronRight, ListOrdered, MessageCircle, Minus, Plus, Shuffle, TrendingDown, Undo2, X } from 'lucide-react';
 import { REST_SECONDS, gearOf, isTap, todaysQuest, type GameState, type QuestExercise, type Rir } from '@/lib/game';
 import { canMove, changeItem, moveItem, skipItem } from '@/lib/coach/plan';
 import { currentPlan } from '@/lib/coach/week';
@@ -18,6 +18,8 @@ import { Ember } from './Characters';
 import { flameStage } from '@/story/flame';
 import { Sprite } from './Sprite';
 import { useGymMode } from './Gym';
+import { ExerciseSheet } from './ExerciseDetail';
+import { CoachChat } from './CoachChat';
 
 interface Props {
   state: GameState;
@@ -26,10 +28,11 @@ interface Props {
   onFinish: () => void;
 }
 
-const RIR_BUTTONS: { rir: Rir; label: string; hint: string }[] = [
-  { rir: '4+', label: '4+', hint: 'Easy' },
-  { rir: '2-3', label: '2-3', hint: 'Just right' },
-  { rir: '0-1', label: '0-1', hint: 'Very hard' },
+/** How a set felt, with the reps left in reserve under it; picked over Done, just right unless you say. */
+const RIR_BUTTONS: { rir: Rir; label: string }[] = [
+  { rir: '4+', label: 'Easy' },
+  { rir: '2-3', label: 'Just right' },
+  { rir: '0-1', label: 'Very hard' },
 ];
 
 /** Full-screen set logger: one exercise at a time, one tap per set, rest timer between sets. */
@@ -59,6 +62,10 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   // Before the first set: the whole workout, to reorder, make easier, swap or skip.
   const [overview, setOverview] = useState(() => Object.values(sets).every((l) => l.length === 0));
   const [choices, setChoices] = useState<'easier' | 'swap' | null>(null);
+  // The how-to page for the exercise on screen, and the chat with the flame.
+  const [howTo, setHowTo] = useState(false);
+  const [feel, setFeel] = useState<Rir>('2-3');
+  const [asking, setAsking] = useState(false);
   const hasPlan = !!currentPlan(state.coach);
   const gym = useGymMode();
   useEffect(() => {
@@ -73,6 +80,20 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   useEffect(() => {
     setReps(q.reps);
   }, [q.id, q.reps]);
+  // A warm-up or stretch counts down once started (Done works any time).
+  const [tapEnd, setTapEnd] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => setTapEnd(null), [q.id]);
+  useEffect(() => {
+    if (!tapEnd) return;
+    const t = setInterval(() => setNow(Date.now()), 250);
+    return () => clearInterval(t);
+  }, [tapEnd]);
+  const tapLeft = tapEnd ? Math.max(0, Math.ceil((tapEnd - now) / 1000)) : q.reps;
+  const tapOver = !!tapEnd && tapLeft === 0;
+  useEffect(() => {
+    if (tapOver) navigator.vibrate?.([60, 60, 60]);
+  }, [tapOver]);
 
   // Marked open, so if the phone closes the app the workout is where it opens again.
   useEffect(() => {
@@ -103,6 +124,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
       return { ...s, draft: { ...draft, sets: { ...draft.sets, [q.id]: list } } };
     });
     setHistory((h) => [...h, q.id]);
+    setFeel('2-3');
     navigator.vibrate?.(30);
     const finishedExercise = logged.length + 1 >= q.sets;
     const lastOfAll = finishedExercise && quest.every((e) => e.id === q.id || (sets[e.id]?.length ?? 0) >= e.sets);
@@ -150,19 +172,27 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         <button onClick={close} aria-label="Back to Today" className="grid h-10 w-10 place-items-center rounded-lg bg-ink-800">
           <X size={18} />
         </button>
-        <div className="flex gap-1.5">
-          {quest.map((e, i) => (
-            <button
-              key={e.id}
-              onClick={() => setIndex(i)}
-              aria-label={e.name}
-              className={`h-2.5 w-8 rounded-sm ${i === index ? 'bg-gold-400' : (sets[e.id]?.length ?? 0) >= e.sets ? 'bg-emerald-500' : 'bg-ink-600'}`}
-            />
-          ))}
+        {/* Where you are: one bar a move (green done, gold now), and the count under it. */}
+        <div className="mx-3 min-w-0 flex-1">
+          <div className="flex gap-1">
+            {quest.map((e, i) => (
+              <button
+                key={e.id}
+                onClick={() => setIndex(i)}
+                aria-label={e.name}
+                className={`h-2.5 min-w-0 flex-1 rounded-sm ${i === index ? 'bg-gold-400' : (sets[e.id]?.length ?? 0) >= e.sets ? 'bg-emerald-500' : 'bg-ink-600'}`}
+              />
+            ))}
+          </div>
         </div>
-        <button onClick={() => setOverview(true)} aria-label="The whole workout" className="grid h-10 w-10 place-items-center rounded-lg bg-ink-800 text-slate-300">
-          <ListOrdered size={18} />
-        </button>
+        <div className="flex gap-2">
+          <button onClick={() => setAsking(true)} aria-label="Ask your flame" className="grid h-10 w-10 place-items-center rounded-lg bg-ink-800 text-gold-300">
+            <MessageCircle size={18} />
+          </button>
+          <button onClick={() => setOverview(true)} aria-label="The whole workout" className="grid h-10 w-10 place-items-center rounded-lg bg-ink-800 text-slate-300">
+            <ListOrdered size={18} />
+          </button>
+        </div>
       </header>
 
       {/* Held sideways: the exercise on the left, its log on the right. */}
@@ -187,27 +217,26 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
             <ChevronRight />
           </button>
         </div>
-        <p className="mt-1 text-center text-sm text-slate-400">{q.cue}</p>
 
-        <Demo state={state} exercise={q.demo} name={q.name} cue={q.cue} />
-        {!tap && !exerciseDone && q.item && (q.item.easier.length > 0 || q.item.swaps.length > 0) && (
-          <div className="mt-3 flex justify-center gap-2">
-            {q.item.easier.length > 0 && (
-              <button onClick={() => setChoices('easier')} className="flex items-center gap-1.5 rounded-lg bg-ink-800 px-3 py-2 text-xs font-semibold text-slate-200 active:scale-95">
-                <TrendingDown size={14} className="text-sky-300" /> Easier
-              </button>
-            )}
-            {q.item.swaps.length > 0 && (
-              <button onClick={() => setChoices('swap')} className="flex items-center gap-1.5 rounded-lg bg-ink-800 px-3 py-2 text-xs font-semibold text-slate-200 active:scale-95">
-                <Shuffle size={14} className="text-gold-300" /> Swap
-              </button>
-            )}
-          </div>
-        )}
+        {/* The demo in the middle, its small tools in a column on its right: an icon and one word each. */}
+        <div className="relative">
+          <Demo state={state} exercise={q.demo} name={q.name} cue={q.cue} />
+          {!exerciseDone && (
+            <div className="absolute right-0 top-1/2 flex -translate-y-1/2 flex-col gap-2">
+              <Tool icon={<BookOpen size={16} />} label="How to" onClick={() => setHowTo(true)} />
+              {!tap && q.item && q.item.easier.length > 0 && <Tool icon={<TrendingDown size={16} />} label="Easier" onClick={() => setChoices('easier')} />}
+              {!tap && q.item && q.item.swaps.length > 0 && <Tool icon={<Shuffle size={16} />} label="Swap" onClick={() => setChoices('swap')} />}
+            </div>
+          )}
+        </div>
         </div>
 
         <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:flex-col [@media(orientation:landscape)_and_(max-height:600px)]:justify-center">
-        <div className={`mt-5 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0 flex justify-center gap-2 ${tap || q.run ? 'hidden' : ''}`}>
+        {/* The rounds: which one you're on, then a box each (its reps once done). */}
+        <p className={`mt-5 text-center font-pixel text-[9px] uppercase tracking-[0.2em] text-slate-400 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0 ${tap || q.run ? 'hidden' : ''}`}>
+          {exerciseDone ? `${q.sets} rounds` : `Round ${logged.length + 1} of ${q.sets}`}
+        </p>
+        <div className={`mt-2 flex justify-center gap-2 ${tap || q.run ? 'hidden' : ''}`}>
           {Array.from({ length: q.sets }).map((_, i) => (
             <div
               key={i}
@@ -249,57 +278,75 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
           />
         ) : tap ? (
           <div className="mt-6 text-center [@media(orientation:landscape)_and_(max-height:600px)]:mt-0">
-            <p className="font-mono text-5xl font-bold text-slate-50">
-              {q.reps >= 60 ? `${Math.floor(q.reps / 60)}:${String(q.reps % 60).padStart(2, '0')}` : `${q.reps}s`}
+            <p className={`font-mono text-5xl font-bold ${tapOver ? 'text-emerald-400' : 'text-slate-50'}`}>
+              {tapLeft >= 60 ? `${Math.floor(tapLeft / 60)}:${String(tapLeft % 60).padStart(2, '0')}` : `${tapLeft}s`}
             </p>
-            <p className="mt-2 text-sm text-slate-400">{q.role === 'warmup' ? 'Easy and slow: get everything moving before the work.' : 'Breathe out and let it go a little further. Never into pain.'}</p>
-            <button
-              onClick={() => log('4+')}
-              className="mt-6 w-full rounded-2xl bg-gold-400 py-4 font-pixel [@media(orientation:landscape)_and_(max-height:600px)]:mt-4 text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
-            >
-              Done
-            </button>
+            {tapOver && <p className="mt-1 text-sm text-emerald-400">Time</p>}
+            {tapEnd ? (
+              <button
+                onClick={() => log('4+')}
+                className="mt-6 w-full rounded-2xl bg-gold-400 py-4 font-pixel [@media(orientation:landscape)_and_(max-height:600px)]:mt-4 text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
+              >
+                Done
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => {
+                    setNow(Date.now());
+                    setTapEnd(Date.now() + q.reps * 1000);
+                  }}
+                  className="mt-6 w-full rounded-2xl bg-gold-400 py-4 font-pixel [@media(orientation:landscape)_and_(max-height:600px)]:mt-4 text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none"
+                >
+                  Start
+                </button>
+                <button onClick={() => log('4+')} className="mt-2 w-full py-2 text-sm text-slate-400">
+                  Skip the timer
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <>
-            <p className="mt-6 text-center font-pixel text-[10px] text-slate-400 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">
-              Set {logged.length + 1} of {q.sets}
+            {/* The number starts at the target; − and + set what you really did. */}
+            <p className={`mt-5 text-center font-pixel text-[9px] uppercase tracking-[0.2em] [@media(orientation:landscape)_and_(max-height:600px)]:mt-1 ${reps === q.reps ? 'text-gold-300' : 'text-slate-400'}`}>
+              {reps === q.reps ? `Target ${unit ? 'seconds' : 'reps'}` : `You did · target ${q.reps}`}
             </p>
-            <div className="mt-3 flex items-center justify-center gap-5 [@media(orientation:landscape)_and_(max-height:600px)]:mt-1">
-              <button onClick={() => setReps(Math.max(1, reps - (unit ? 2 : 1)))} aria-label="Fewer" className="grid h-14 w-14 place-items-center rounded-xl bg-ink-800 active:scale-95 [@media(orientation:landscape)_and_(max-height:600px)]:h-12 [@media(orientation:landscape)_and_(max-height:600px)]:w-12">
+            <div className="mt-1 flex items-center justify-center gap-5">
+              <button onClick={() => setReps(Math.max(1, reps - (unit ? 2 : 1)))} aria-label="Fewer" className="pixel-notch grid h-14 w-14 place-items-center bg-ink-800 active:scale-95 [@media(orientation:landscape)_and_(max-height:600px)]:h-12 [@media(orientation:landscape)_and_(max-height:600px)]:w-12">
                 <Minus />
               </button>
               <p className="w-28 text-center">
-                <span className="font-mono text-6xl font-bold text-slate-50 [@media(orientation:landscape)_and_(max-height:600px)]:text-5xl">{reps}</span>
+                <span className={`font-mono text-6xl font-bold [@media(orientation:landscape)_and_(max-height:600px)]:text-5xl ${reps === q.reps ? 'text-slate-50' : 'text-sky-200'}`}>{reps}</span>
                 <span className="ml-1 text-lg text-slate-400">{unit}</span>
               </p>
-              <button onClick={() => setReps(reps + (unit ? 2 : 1))} aria-label="More" className="grid h-14 w-14 place-items-center rounded-xl bg-ink-800 active:scale-95 [@media(orientation:landscape)_and_(max-height:600px)]:h-12 [@media(orientation:landscape)_and_(max-height:600px)]:w-12">
+              <button onClick={() => setReps(reps + (unit ? 2 : 1))} aria-label="More" className="pixel-notch grid h-14 w-14 place-items-center bg-ink-800 active:scale-95 [@media(orientation:landscape)_and_(max-height:600px)]:h-12 [@media(orientation:landscape)_and_(max-height:600px)]:w-12">
                 <Plus />
               </button>
             </div>
-            <p className="mt-1 text-center text-xs text-slate-500">
-              Target {q.reps}
-              {unit} · stop with 2 left
-            </p>
-            {q.item?.ramp && logged.length === 0 ? (
-              <p className="mx-auto mt-2 max-w-xs rounded-lg bg-ink-800 px-3 py-2 text-center text-xs text-gold-200">
-                First {q.item.ramp} light warm-up sets: half the weight, a few easy reps. Don&apos;t log them.
-              </p>
-            ) : null}
 
-            <p className="mt-6 text-center text-sm font-semibold text-slate-200 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">{unit ? 'Seconds' : 'Reps'} left in the tank?</p>
-            <div className="mt-3 grid grid-cols-3 gap-2 [@media(orientation:landscape)_and_(max-height:600px)]:mt-2">
+            {/* One Done saves the set; how it felt is set to just right, a tap away if not. */}
+            <p className="mt-6 text-center font-pixel text-[9px] uppercase tracking-[0.2em] text-slate-500 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">How did it feel?</p>
+            <div className="mt-2 grid grid-cols-3 gap-2" role="radiogroup" aria-label="How did it feel?">
               {RIR_BUTTONS.map((b) => (
                 <button
                   key={b.rir}
-                  onClick={() => log(b.rir)}
-                  className={`rounded-xl py-4 transition [@media(orientation:landscape)_and_(max-height:600px)]:py-2.5 active:scale-95 ${b.rir === '2-3' ? 'bg-gold-400 text-ink-950' : 'bg-ink-800 text-slate-100'}`}
+                  role="radio"
+                  aria-checked={feel === b.rir}
+                  onClick={() => setFeel(b.rir)}
+                  className={`rounded-xl py-2.5 transition active:scale-95 [@media(orientation:landscape)_and_(max-height:600px)]:py-1.5 ${feel === b.rir ? 'bg-ink-600 text-slate-50 ring-2 ring-gold-400' : 'bg-ink-800 text-slate-400'}`}
                 >
-                  <span className="block font-mono text-xl font-bold">{b.label}</span>
-                  <span className="block text-[11px] opacity-80">{b.hint}</span>
+                  <span className="block text-sm font-semibold">{b.label}</span>
+                  <span className="block font-mono text-xs opacity-80">{b.rir}</span>
                 </button>
               ))}
             </div>
+            <button
+              onClick={() => log(feel)}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none [@media(orientation:landscape)_and_(max-height:600px)]:py-3"
+            >
+              <Check size={18} strokeWidth={3} /> Done
+            </button>
           </>
         )}
 
@@ -316,9 +363,9 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
           <button onClick={onFinish} className="w-full rounded-2xl bg-gold-400 py-4 [@media(orientation:landscape)_and_(max-height:600px)]:py-3 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none">
             {gym ? 'Finish workout' : 'Complete quest'}
           </button>
-        ) : (
-          <button onClick={onFinish} disabled={totalLogged === 0} className="w-full py-3 [@media(orientation:landscape)_and_(max-height:600px)]:py-2 text-sm text-slate-400 disabled:opacity-30">
-            {totalLogged === 0 ? 'Log a set to begin' : 'End here (what you did still counts)'}
+        ) : totalLogged === 0 ? null : (
+          <button onClick={onFinish} className="w-full py-3 [@media(orientation:landscape)_and_(max-height:600px)]:py-2 text-sm text-slate-400 disabled:opacity-30">
+            End here (it still counts)
           </button>
         )}
       </footer>
@@ -334,8 +381,20 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
         />
       )}
       {restUntil && <Rest gym={gym} stage={flameStage(state.sessions.length).id} until={restUntil} total={restLen} next={exerciseDone ? null : `Set ${logged.length + 1} of ${q.name}`} onDone={() => setRestUntil(null)} />}
+      {howTo && <ExerciseSheet state={state} id={q.id} demo={q.demo} onClose={() => setHowTo(false)} />}
+      {asking && <CoachChat state={state} update={update} onClose={() => setAsking(false)} start={`About ${q.name}: `} />}
       {leaveSheet}
     </div>
+  );
+}
+
+/** A small tool beside the demo: its icon over one word. */
+function Tool({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
+  return (
+    <button onClick={onClick} className="flex flex-col items-center gap-1 text-[10px] text-slate-400 active:scale-95">
+      <span className="grid h-9 w-9 place-items-center rounded-full bg-ink-800 text-slate-200">{icon}</span>
+      {label}
+    </button>
   );
 }
 
