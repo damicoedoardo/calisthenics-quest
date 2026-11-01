@@ -6,7 +6,7 @@ import { CAST } from './cast';
 import { recordRun } from '@/lib/fog';
 import { FIRST_CLEAR, RUN_LINES } from './daily/fog-lines';
 import { CHAPTERS } from './chapters';
-import { ALL_SCENES, MAX_SCENES_AT_ONCE, VILLAGERS, answeredLines, asksAgain, chapterStart, endedScene, fill, pendingScenes, putOff, renderLines, sawScene, sceneMoment, scenesToPlay, storySoFar, storyState, storyWords, waitingCount } from './engine';
+import { ALL_SCENES, VILLAGERS, answeredLines, asksAgain, chapterStart, endedScene, fill, pendingScenes, putOff, renderLines, sawScene, sceneMoment, scenesToPlay, storySoFar, storyState, storyWords, waitingCount } from './engine';
 import { FLAME_STAGES } from './flame';
 import { PLACES } from './places';
 import { CALLBACKS, FLAME_LINES } from './daily/flame-lines';
@@ -306,14 +306,21 @@ describe('the daily follow-ups', () => {
 
 describe('scenes at one moment', () => {
   const day = (i: number) => new Date(2026, 0, 1 + i, 18);
-  it(`never plays more than ${MAX_SCENES_AT_ONCE} at once, and the rest wait for the next workout`, () => {
+  it('plays every due scene, one after another, with no cap', () => {
     let state: GameState = { ...initialState(), sessions: Array.from({ length: 10 }, (_, i) => workout(day(i))) };
     const now = day(9);
-    expect(pendingScenes(state, now).length).toBeGreaterThan(MAX_SCENES_AT_ONCE);
-    for (let i = 0; i < MAX_SCENES_AT_ONCE; i++) state = sawScene(state, scenesToPlay(state, now)[0].id, now);
+    const due = pendingScenes(state, now);
+    expect(due.length).toBeGreaterThan(2);
+    expect(scenesToPlay(state, now)).toEqual(due);
+    for (let i = 0; i < due.length; i++) state = sawScene(state, scenesToPlay(state, now)[0].id);
     expect(scenesToPlay(state, now)).toEqual([]);
-    const later = { ...state, sessions: [...state.sessions, workout(day(10))] };
-    expect(scenesToPlay(later, day(10)).length).toBeGreaterThan(0);
+  });
+
+  it('plays the scenes old saves held back at once', () => {
+    const state: GameState = { ...initialState(), sessions: Array.from({ length: 10 }, (_, i) => workout(day(i))) };
+    const now = day(9);
+    const old = { ...state, sceneMark: { at: sceneMoment(state, now), count: 2 } };
+    expect(scenesToPlay(old, now).length).toBeGreaterThan(0);
   });
 });
 
@@ -414,11 +421,11 @@ describe('chapters end on Fog bosses', () => {
     // A leftover scene that asks nothing (ch1-proof) is skipped.
   });
 
-  it('plays the ending at once, even after two scenes already played at this workout today', () => {
+  it('plays the ending at once, even after Later at this workout today', () => {
     const s = caughtUp(trained(4));
-    const full = { ...s, sceneMark: { at: sceneMoment(s, at), count: MAX_SCENES_AT_ONCE } };
-    expect(scenesToPlay(full, at)).toEqual([]);
-    expect(scenesToPlay(won(full), at).map((x) => x.id)).toEqual(['ch1-victory', 'ch1-night-camp']);
+    const off = putOff(s, [], at);
+    expect(scenesToPlay(off, at)).toEqual([]);
+    expect(scenesToPlay(won(off), at).map((x) => x.id).slice(0, 2)).toEqual(['ch1-victory', 'ch1-night-camp']);
   });
 
   it("counts a chapter's scenes from when it began, and never ends one on workouts", () => {
