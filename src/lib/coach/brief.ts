@@ -64,7 +64,7 @@ export function coachBrief(state: GameState, now: Date, checkin: Checkin = 'norm
     lines.push('', 'Last workouts (oldest first; each set is reps and how it felt: e easy 4+ left, r just right 2-3, h very hard 0-1; "of N" the target):');
     for (const s of recent) {
       // Each set as reps and how it felt (e easy 4+ left, r just right 2-3, h very hard 0-1), then the target.
-      const moves = s.entries.map((e) => `${e.name ?? e.exerciseId} ${e.sets.map((x) => `${x.reps}${x.kg ? `@${x.kg}kg` : ''}${FEEL[x.rir]}`).join('/')} of ${e.target}`).join('; ');
+      const moves = s.entries.map((e) => `${e.name ?? e.exerciseId} ${e.sets.map((x) => `${x.reps}${x.kg ? `@${x.kg}kg` : ''}${FEEL[x.rir]}`).join('/')} of ${e.target}${e.of && e.sets.length < e.of ? ` (${e.sets.length} of ${e.of} sets)` : ''}`).join('; ');
       const extra = [
         s.felt && `felt ${s.felt}`,
         s.checkin === 'rough' && 'a rough day',
@@ -72,7 +72,7 @@ export function coachBrief(state: GameState, now: Date, checkin: Checkin = 'norm
         s.comment && `"${s.comment}"`,
         s.skipped?.length && `skipped ${s.skipped.length}`,
         s.changed?.length && `changed ${s.changed.map((c) => `${c.from}->${c.to} (${c.how})`).join(', ')}`,
-        s.eased?.length && `target eased: ${s.eased.length}`,
+        s.left?.length && `not started: ${s.left.join(', ')}`,
       ].filter(Boolean);
       lines.push(`- ${day(s.date)} ${s.mode ?? 'gym'} ${s.kind}: ${moves}${extra.length ? `. ${extra.join(', ')}` : ''}`);
     }
@@ -86,7 +86,7 @@ export function coachBrief(state: GameState, now: Date, checkin: Checkin = 'norm
   }
   lines.push('', `Last trained: ${since.join(', ')}.`);
   const going = goingLines(state, now);
-  if (going.length) lines.push('', 'How training is going (plan with it):', ...going);
+  if (going.length) lines.push('', 'How training is going (facts; you decide what they mean for the plan):', ...going);
   const week = state.sessions.filter((s) => ago(s.date, now) < 7);
   lines.push(`This week: ${week.length} workouts.`);
   return lines.join('\n');

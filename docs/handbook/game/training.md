@@ -55,11 +55,9 @@ The app shows no built-in plan any more: before the coach has planned a week the
   workout also writes its mode, who planned it, what was skipped or changed, then clears the plan
   and moves levels ([coach.md](coach.md)). It also saves the workout's real `minutes` (from the
   clock, `clockStart`: `draft.clockAt`, set by Start on the overview, else `startedAt`) next to the
-  `planned` estimate, and a rough day (`checkin`). How it felt is added after, from the
-  after-workout card (`feltSession`); both may make the next workouts lighter
-  ([coach.md](coach.md#following-how-it-goes-feedbackts)).
-- An exercise whose sets were mostly very hard (0-1) or short of the target steps its target back
-  one (holds by 5 seconds), not below `low`, and is listed in `session.eased`.
+  `planned` estimate, the sets planned per exercise (`of`), exercises not started (`left`) and a
+  rough day (`checkin`), for the coach ([coach.md](coach.md#following-how-it-goes-feedbackts)).
+  How it felt is added after, from the after-workout card.
 - Every set at target with reps to spare raises that exercise's target by one rep (holds by 5
   seconds, every other time), at most `MAX_RAISES_PER_WEEK` times a week, up to `high`. A
   `weighted` exercise done cleanly at `high` goes back to `low` and is listed in

@@ -4,7 +4,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Check, MessageCircle, Play, RotateCcw, SendHorizontal, X } from 'lucide-react';
 import type { Checkin, GameState } from '@/lib/game';
 import { minutesOf } from '@/lib/coach/time';
-import { paceOf } from '@/lib/coach/feedback';
 import { shownChat } from '@/lib/coach/chat';
 import { dayLabel, daysIn, nextDay, restKept, shownWeek, todayIs, weekDoneId, weekdayOf, weekOf, weekSlots } from '@/lib/coach/week';
 import { dayKey } from '@/lib/days';
@@ -194,8 +193,7 @@ function WeekBoard({ state, update, onStart, onTalk }: { state: GameState; updat
               progress={inProgress && day === next ? Object.fromEntries(Object.entries(state.draft!.sets).map(([k, v]) => [k, v.length])) : undefined}
               when={label(day.date)}
               title={day.plan.title}
-              time={day.done ? 'done' : `about ${minutesOf(day.plan.items, paceOf(state.sessions))} min`}
-              why={day.done ? undefined : day.plan.why}
+              time={day.done ? 'done' : `about ${minutesOf(day.plan.items)} min`}
             />
           </div>
           {day === next && !canStart ? (

@@ -17,7 +17,6 @@ import {
   type GameState,
 } from '@/lib/game';
 import { minutesOf } from '@/lib/coach/time';
-import { paceOf } from '@/lib/coach/feedback';
 import type { PlanItem } from '@/lib/coach/types';
 import { dayKey, daysApart, daysSinceTraining } from '@/lib/days';
 import { storyWords } from '@/story/engine';
@@ -90,9 +89,9 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
     return q ? (q.sets === it.sets ? it : { ...it, sets: q.sets }) : { ...it, skipped: true };
   });
   const progress = inProgress ? Object.fromEntries(Object.entries(state.draft!.sets).map(([k, v]) => [k, v.length])) : undefined;
-  const time = inProgress ? undefined : `about ${minutesOf(shown, paceOf(state.sessions))} min`;
+  const time = inProgress ? undefined : `about ${minutesOf(shown)} min`;
   const list = (tiles?: boolean) => (
-    <WorkoutList state={state} update={update} items={shown} changeable={!inProgress} progress={progress} tiles={tiles} title={tiles ? undefined : questTitle} time={time} why={inProgress ? undefined : plan?.why} />
+    <WorkoutList state={state} update={update} items={shown} changeable={!inProgress} progress={progress} tiles={tiles} title={tiles ? undefined : questTitle} time={time} />
   );
 
   if (land)

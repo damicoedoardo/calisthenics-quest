@@ -93,19 +93,6 @@ export const MAX_NOTES = 30;
     (0-1 left) on most sets. Goal: a wrong guess at setup fixes itself in about two weeks. */
 export const LEVEL_SHIFT = { window: 3, need: 2 } as const;
 
-/** How the coach follows how training goes (src/lib/coach/feedback.ts). A workout is heavy when it
-    felt hard, was a rough day, or most of its sets were very hard (0-1 left). `heavyRun` heavy
-    workouts in a row make the next `lightDays` workouts lighter by `lightCut` sets per move (never
-    below `minSets`). Goal: tired weeks ease off before they turn into skipped ones, and one bad
-    day alone changes nothing. */
-export const FEEDBACK = { heavyRun: 2, lightDays: 2, lightCut: 1, minSets: 2 } as const;
-
-/** Your own pace: how long your workouts really take next to the estimate, from the last `window`
-    timed workouts once there are `need` of them, kept between `min` and `max`. A workout longer
-    than `maxMinutes` was left open, so it doesn't count. Goal: "about 40 min" means 40 minutes for
-    you, and a slow trainer's workouts are trimmed to fit, not overrun. */
-export const PACE = { window: 5, need: 3, min: 0.8, max: 1.5, maxMinutes: 180 } as const;
-
 /** Which days of the coming week hold a workout, by workouts a week: days after the week's first
     day. Goal: a rest day between workouts where the week has room, never more than two in a row. */
 export const WEEK_SPREAD: Record<number, number[]> = {

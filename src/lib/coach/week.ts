@@ -282,6 +282,6 @@ export function weekText(week: CoachWeek | null | undefined, now: Date, kept: (d
     if (before) return `${head}: before this plan`;
     if (!d) return `${head}: rest day${kept(date) ? ', KEPT' : ''}`;
     const items = d.plan.items.filter((i) => i.role !== 'warmup' && i.role !== 'stretch').map((i) => i.name);
-    return `${head}${d.done ? ' DONE' : ''}: ${d.plan.mode}, ${d.plan.title}${items.length ? ` [${items.join(', ')}]` : ''}${d.plan.why && !d.done ? ` (${d.plan.why})` : ''}`;
+    return `${head}${d.done ? ' DONE' : ''}: ${d.plan.mode}, ${d.plan.title}${items.length ? ` [${items.join(', ')}]` : ''}`;
   });
 }

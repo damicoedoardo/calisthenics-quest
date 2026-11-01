@@ -158,7 +158,6 @@ function Loot({ result, onClose, onFelt, onShare }: { result: FinishResult; onCl
         )}
         {session.better && <p className="mt-1 text-xs text-emerald-300">Better than last time.</p>}
         {!!session.heavier?.length && <p className="mt-1 text-xs text-sky-300">Next time, a little heavier: {session.heavier.map(nameOf).join(', ')}.</p>}
-        {!!session.eased?.length && <p className="mt-1 text-xs text-slate-300">That was a lot. Next time, a rep less on: {session.eased.map(nameOf).join(', ')}.</p>}
         </div>
         <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:block">
         {leveled && (

@@ -59,8 +59,8 @@ Played by the season simulator (`src/sim/players.ts`): `steady` trains 3 times a
 | --- | --- | --- | --- | --- | --- | --- |
 | steady | 7 | 3 | 1 | 18 | +16% / +7 HP | 30 |
 | steady | 30 | 13 | 4 | 64 | +26% / +22 HP | 130 |
-| steady | 91 | 39 | 14 | 186 | +49% / +59 HP | 390 |
-| steady | 182 | 78 | 28 | 367 | +79% / +104 HP | 780 |
+| steady | 91 | 39 | 14 | 185 | +49% / +57 HP | 390 |
+| steady | 182 | 78 | 28 | 366 | +79% / +104 HP | 780 |
 | twice-a-week | 7 | 2 | 1 | 12 | +14% / +5 HP | 20 |
 | twice-a-week | 30 | 9 | 2 | 40 | +23% / +14 HP | 90 |
 | twice-a-week | 91 | 26 | 6 | 108 | +37% / +36 HP | 260 |
@@ -68,7 +68,7 @@ Played by the season simulator (`src/sim/players.ts`): `steady` trains 3 times a
 | eager | 7 | 5 | 2 | 26 | +43% / +0 HP | 50 |
 | eager | 30 | 22 | 7 | 99 | +100% / +0 HP | 220 |
 | eager | 91 | 65 | 21 | 289 | +195% / +0 HP | 650 |
-| eager | 182 | 130 | 43 | 574 | +279% / +0 HP | 1300 |
+| eager | 182 | 130 | 43 | 573 | +279% / +0 HP | 1300 |
 
 ## What stat points give
 

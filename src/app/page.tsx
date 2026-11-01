@@ -38,7 +38,7 @@ import { partyMe, setLobbyOpen, usePartyView } from '@/lib/party-client';
 import type { FriendCard } from '@/lib/friends';
 import { cloudConfigured, maybeSignedIn, useCloudStatus } from '@/lib/cloud-client';
 import { BringHero, InstallGate } from '@/components/InstallGate';
-import { closeStaleDraft, feltSession, finishSession, gearOf, isTap, todaysQuest, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
+import { closeStaleDraft, finishSession, gearOf, isTap, todaysQuest, levelInfo, totalXp, type Checkin, type FinishResult } from '@/lib/game';
 import { endedScene, putOff, scenesToPlay, storyState, waitingCount, type SceneMode, type StoryState } from '@/story/engine';
 import { withTodayPage } from '@/story/daily';
 import { heroVariant } from '@/story/flame';
@@ -534,7 +534,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
           after={after.after}
           onClose={() => setAfter(null)}
           onShare={feed.shown && feed.signedIn ? () => setSharing(after.card) : undefined}
-          onFelt={(felt, comment) => update((s) => feltSession(s, after.result.session.id, felt, comment))}
+          onFelt={(felt, comment) => update((s) => ({ ...s, sessions: s.sessions.map((x) => (x.id === after.result.session.id ? { ...x, felt, ...(comment ? { comment } : {}) } : x)) }))}
         />
       )}
       {sharing && (

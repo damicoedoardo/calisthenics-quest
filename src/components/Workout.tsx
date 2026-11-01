@@ -6,7 +6,6 @@ import { REST_SECONDS, clockStart, gearOf, isTap, todaysQuest, type GameState, t
 import { canMove, changeItem, moveItem, skipItem } from '@/lib/coach/plan';
 import { currentPlan } from '@/lib/coach/week';
 import { minutesOf, restFor } from '@/lib/coach/time';
-import { paceOf } from '@/lib/coach/feedback';
 import type { Choice, RunStep } from '@/lib/coach/types';
 import { ensurePlan } from './useCoach';
 import { doseOf } from './CoachPanel';
@@ -644,7 +643,7 @@ function Overview({ state, update, quest, onClose, onStart }: { state: GameState
         </button>
         <div className="min-w-0 flex-1 text-center">
           <p className="truncate font-pixel text-[10px] text-gold-300">{rough ? (gym ? 'Short workout' : 'Minimum quest') : (plan?.title ?? "Today's workout")}</p>
-          {plan && <p className="mt-1 text-xs text-slate-400">About {minutesOf(items.filter((i) => quest.some((q) => q.id === i.id)), paceOf(state.sessions))} min</p>}
+          {plan && <p className="mt-1 text-xs text-slate-400">About {minutesOf(items.filter((i) => quest.some((q) => q.id === i.id)))} min</p>}
         </div>
         <span className="w-10 shrink-0" />
       </header>
