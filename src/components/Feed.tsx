@@ -1,12 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Camera, Flame, ImagePlus, MessageCircle, Megaphone, Send, Trash2, X } from 'lucide-react';
+import { Camera, FlipVertical2, Flame, ImagePlus, MessageCircle, Megaphone, Send, Trash2, X } from 'lucide-react';
 import type { GameState } from '@/lib/game';
 import { gearOf } from '@/lib/game';
 import { ago, myCard, type FriendCard } from '@/lib/friends';
 import { FEED_LIMIT, cleanLine, newPosts, workoutLine, type Post, type WorkoutCard } from '@/lib/feed';
-import { commentPost, deleteComment, deletePost, flamePost, getFeed, photoUrl, sharePost, shrinkPhoto } from '@/lib/feed-client';
+import { commentPost, deleteComment, deletePost, flamePost, flipPhoto, getFeed, photoUrl, sharePost, shrinkPhoto } from '@/lib/feed-client';
 import { cloudConfigured, useCloudStatus } from '@/lib/cloud-client';
 import { spWorn } from '@/lib/sp';
 import { heroVariant } from '@/story/flame';
@@ -423,6 +423,19 @@ export function SharePage({ state, card, feed, onClose, onShared }: { state: Gam
             <img src={photo.preview} alt="Your photo" className="max-h-80 w-full object-cover" />
             <button aria-label="Remove the photo" onClick={() => setPhoto(null)} className="absolute right-2 top-2 rounded-lg bg-ink-950/80 p-2">
               <X size={16} />
+            </button>
+            {/* A selfie comes out the other way round from the camera's view: one tap turns it. */}
+            <button
+              onClick={async () => {
+                try {
+                  setPhoto(await flipPhoto(photo.preview));
+                } catch (e) {
+                  setError(e instanceof Error ? e.message : "Couldn't turn that photo.");
+                }
+              }}
+              className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-lg bg-ink-950/80 px-2.5 py-2 text-xs text-slate-100"
+            >
+              <FlipVertical2 size={15} /> Flip
             </button>
           </div>
         ) : (
