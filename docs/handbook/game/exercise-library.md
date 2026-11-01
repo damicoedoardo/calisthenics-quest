@@ -89,7 +89,7 @@ YouTube (the cloud machine can't); it keeps what it found before and only looks 
 YouTube Data API key (`YOUTUBE_API_KEY` in the environment or the git-ignored `.env.local`, never
 committed) it reads every upload of the Bodybuilding.com and OPEX channels (1 quota unit per 50
 videos), or with yt-dlp when there is no key, and matches names locally; a match needs the name's words in the title and the title's
-words in the name. An exercise it missed still gets the search. Each pick was chosen by
+words in the name. The first full run (2026-11-01) found 718 of the 746, about two thirds of them Bodybuilding.com clips; 22 wrong matches were removed by hand. An exercise it missed still gets the search. Each pick was chosen by
 hand from web search results for that move. Prefer a short, clean demo with no talk: about half
 are the Bodybuilding.com clips (the catalog came from that site, so names match) or the OPEX and
 "(Exercise Library)" demos; the rest (machines, bands, cardio, warm-up circles, stretches) are
