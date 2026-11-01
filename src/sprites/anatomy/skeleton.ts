@@ -54,7 +54,8 @@ export interface Side {
     bench pad stands on legs unless `noLegs`; a
     pull-up bar or cable handle runs side to side (`half` its half length); a box stands on `at`
     (its bottom middle) with a size; a cable runs from its pulley to the handle; dip bars run front
-    to back at each side of `at`; a foam roller lies side to side on the floor, centered on `at`. */
+    to back at each side of `at`; a foam roller lies side to side on the floor, centered on `at`;
+    a ball (medicine ball) is centered on `at`; a tube is a piece of a machine's frame, any way round. */
 export type Prop =
   | { kind: 'barbell'; at: V3 }
   | { kind: 'dumbbell'; at: V3 }
@@ -64,7 +65,9 @@ export type Prop =
   | { kind: 'box'; at: V3; size: V3 }
   | { kind: 'cable'; from: V3; to: V3 }
   | { kind: 'bars'; at: V3 }
-  | { kind: 'roller'; at: V3 };
+  | { kind: 'roller'; at: V3 }
+  | { kind: 'ball'; at: V3; r?: number }
+  | { kind: 'tube'; from: V3; to: V3; width?: number };
 
 export interface Pose {
   pelvis: V3;
