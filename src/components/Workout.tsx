@@ -28,11 +28,11 @@ interface Props {
   onFinish: () => void;
 }
 
-/** How a set felt, which also saves it: the feeling first, how many more you could have done under it. */
+/** How a set felt (reps left in reserve), picked over Done; just right unless you say. */
 const RIR_BUTTONS: { rir: Rir; label: string }[] = [
   { rir: '4+', label: 'Easy' },
   { rir: '2-3', label: 'Just right' },
-  { rir: '0-1', label: 'Very hard' },
+  { rir: '0-1', label: 'Hard' },
 ];
 
 /** Full-screen set logger: one exercise at a time, one tap per set, rest timer between sets. */
@@ -64,6 +64,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   const [choices, setChoices] = useState<'easier' | 'swap' | null>(null);
   // The how-to page for the exercise on screen, and the chat with the flame.
   const [howTo, setHowTo] = useState(false);
+  const [feel, setFeel] = useState<Rir>('2-3');
   const [asking, setAsking] = useState(false);
   const hasPlan = !!currentPlan(state.coach);
   const gym = useGymMode();
@@ -123,6 +124,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
       return { ...s, draft: { ...draft, sets: { ...draft.sets, [q.id]: list } } };
     });
     setHistory((h) => [...h, q.id]);
+    setFeel('2-3');
     navigator.vibrate?.(30);
     const finishedExercise = logged.length + 1 >= q.sets;
     const lastOfAll = finishedExercise && quest.every((e) => e.id === q.id || (sets[e.id]?.length ?? 0) >= e.sets);
@@ -321,23 +323,27 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
               {q.item?.ramp && logged.length === 0 ? <span className="text-gold-200"> · {q.item.ramp} light sets first</span> : null}
             </p>
 
-            <p className="mt-6 flex items-center justify-center gap-1.5 text-sm font-semibold text-slate-200 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">
-              <Check size={16} className="text-emerald-400" /> Set done? Tap how it felt
-            </p>
-            <div className="mt-3 grid grid-cols-3 gap-2 [@media(orientation:landscape)_and_(max-height:600px)]:mt-2">
+            {/* One Done saves the set; how it felt is set to just right, a tap away if not. */}
+            <div className="mt-6 flex items-center justify-center gap-1 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3" role="radiogroup" aria-label="How it felt">
+              <span className="mr-1 text-xs text-slate-500">Felt</span>
               {RIR_BUTTONS.map((b) => (
                 <button
                   key={b.rir}
-                  onClick={() => log(b.rir)}
-                  className={`rounded-xl py-4 transition [@media(orientation:landscape)_and_(max-height:600px)]:py-2.5 active:scale-95 ${b.rir === '2-3' ? 'bg-gold-400 text-ink-950' : 'bg-ink-800 text-slate-100'}`}
+                  role="radio"
+                  aria-checked={feel === b.rir}
+                  onClick={() => setFeel(b.rir)}
+                  className={`rounded-full px-3 py-1.5 text-xs ${feel === b.rir ? 'bg-ink-600 font-semibold text-slate-50 ring-1 ring-gold-400/70' : 'text-slate-400'}`}
                 >
-                  <span className="flex items-center justify-center gap-1 text-base font-bold">
-                    <Check size={14} strokeWidth={3} aria-hidden /> {b.label}
-                  </span>
-                  <span className="block text-[11px] opacity-80">{b.rir} {unit ? 'sec' : 'reps'} left</span>
+                  {b.label}
                 </button>
               ))}
             </div>
+            <button
+              onClick={() => log(feel)}
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-2xl bg-gold-400 py-4 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309] active:translate-y-1 active:shadow-none [@media(orientation:landscape)_and_(max-height:600px)]:py-3"
+            >
+              <Check size={18} strokeWidth={3} /> Done
+            </button>
           </>
         )}
 
