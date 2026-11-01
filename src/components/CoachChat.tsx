@@ -5,7 +5,7 @@ import { Check, MessageCircle, Play, RotateCcw, SendHorizontal, X } from 'lucide
 import type { Checkin, GameState } from '@/lib/game';
 import { minutesOf } from '@/lib/coach/time';
 import { shownChat } from '@/lib/coach/chat';
-import { dayLabel, daysIn, nextDay, restKept, todayIs, weekdayOf, weekOf, weekSlots } from '@/lib/coach/week';
+import { dayLabel, daysIn, nextDay, restKept, shownWeek, todayIs, weekDoneId, weekdayOf, weekOf, weekSlots } from '@/lib/coach/week';
 import { dayKey } from '@/lib/days';
 import { fireLine, updateTodayPage } from '@/story/daily';
 import { SitByFire } from './SitByFire';
@@ -82,7 +82,7 @@ export function CoachScreen({ state, update, onStart }: { state: GameState; upda
       </section>
 
       {state.coach?.profile ? (
-        <WeekBoard state={state} update={update} onStart={onStart} />
+        <WeekBoard state={state} update={update} onStart={onStart} onTalk={open} />
       ) : (
         <p className="rounded-2xl border border-dashed border-ink-600 p-4 text-center text-sm text-slate-400">Your week shows here once we&apos;ve planned it together. Tap &quot;Let&apos;s start&quot; and tell {nameOf(state)} where you&apos;re at.</p>
       )}
@@ -91,10 +91,11 @@ export function CoachScreen({ state, update, onStart }: { state: GameState; upda
   );
 }
 
-/** The plan's two weeks as a small calendar: this week on top, next week under it, Mon to Sun in
-    columns (workouts and rest days; done and kept ticked, the next workout lit). On Monday the rows
-    move up. Below, the chosen day: its workout as cards, or the rest day to keep. */
-function WeekBoard({ state, update, onStart }: { state: GameState; update: Update; onStart: (c: Checkin) => void }) {
+/** The week: a chip for each of its seven days (workouts and rest days; done and kept ticked, the
+    next workout lit), and the chosen day: its workout as cards, or the rest day to keep. Next week
+    is drafted ahead: once this week's last workout is done it shows here right away, with a "Week
+    done" step (looks good, or change it with the flame). */
+function WeekBoard({ state, update, onStart, onTalk }: { state: GameState; update: Update; onStart: (c: Checkin) => void; onTalk: () => void }) {
   const now = new Date();
   const today = dayKey(now);
   const week = state.coach?.week;
@@ -103,8 +104,8 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
   const [fire, setFire] = useState(false);
   const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
   if (!week) return <p className="rounded-2xl bg-ink-800 p-3 text-sm text-slate-400">Getting your week ready…</p>;
-  const rows = [weekSlots(week, 0), weekSlots(week, 1)];
-  const slots = rows.flat();
+  const which = shownWeek(week, now);
+  const slots = weekSlots(week, which);
   // What today is comes from `todayIs`, the same Today reads. It opens on the workout to do today
   // (a missed one too); once today's is done, on the next one, so you see what's coming (next
   // week's, when this week's are all done); on a rest day, on today.
@@ -114,7 +115,9 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
   const slot = slots.find((s) => s.date === picked) ?? ahead ?? todaySlot ?? slots[0];
   const canStart = inProgress || todays.kind === 'workout';
   const day = slot.day;
-  const thisWeek = daysIn(week, 0);
+  const shown = daysIn(week, which);
+  const doneStep = which === 1 && state.coach?.heard !== weekDoneId(week);
+  const seen = () => update((s) => (s.coach ? { ...s, coach: { ...s.coach, heard: weekDoneId(week) } } : s));
   // Next week's days say so ("Next Mon"), so they never read as this week's.
   const label = (date: string) => {
     const l = dayLabel(date, now);
@@ -122,45 +125,62 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
   };
   return (
     <section className="rounded-2xl bg-ink-800 p-3">
+      {doneStep && (
+        <div className="mb-3 rounded-xl bg-emerald-400/10 p-3 ring-1 ring-emerald-300/30">
+          <p className="font-pixel text-[10px] text-emerald-300">Week done ✓</p>
+          <p className="mt-1 text-sm text-slate-200">Your next week is ready: {shown.length} workouts, from Monday. Have a look below.</p>
+          <div className="mt-3 flex gap-2">
+            <button onClick={seen} className="flex-1 rounded-xl bg-emerald-400 py-2.5 font-pixel text-[9px] text-ink-950 shadow-[0_3px_0_#047857] active:translate-y-0.5 active:shadow-none">
+              Looks good
+            </button>
+            <button
+              onClick={() => {
+                seen();
+                onTalk();
+              }}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-ink-700 py-2.5 text-xs font-semibold text-slate-200"
+            >
+              <MessageCircle size={13} /> Change it
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="font-pixel text-[10px] text-gold-300">Your plan</h2>
+        <h2 className="font-pixel text-[10px] text-gold-300">{which ? 'Next week' : 'This week'}</h2>
         <p className="font-mono text-[11px] text-slate-400">
-          this week {thisWeek.filter((d) => d.done).length} of {thisWeek.length} done
+          {shown.filter((d) => d.done).length} of {shown.length} done
         </p>
       </div>
       {/* Two rows, this week and next: a chip a day with its date and what it is (a dumbbell to
           train, a flame to rest, a tick once done or kept). Today has a dot under it; the next
           workout is lit. */}
-      {rows.map((row, i) => (
-        <div key={i} className="mt-2">
-          <p className="mb-1 text-[10px] text-slate-500">{i ? (week.ahead ? 'Next week' : 'Next week · planning…') : 'This week'}</p>
-          <ul className="grid grid-cols-7 gap-1">
-            {row.map((s) => {
-              const on = s === slot;
-              const done = s.day ? !!s.day.done : !s.before && restKept(state, s.date);
-              const lit = !!s.day && s.day === next;
-              const icon = done ? 'check' : s.day ? 'tabTrain' : s.before ? null : 'flame';
-              return (
-                <li key={s.date}>
-                  <button
-                    onClick={() => setPicked(s.date)}
-                    aria-pressed={on}
-                    aria-label={`${weekdayOf(s.date)} ${Number(s.date.slice(8))}${s.date === today ? ', today' : ''}: ${s.day ? s.day.plan.title : s.before ? 'before the plan' : 'rest day'}${done ? ', done' : lit ? ', next' : ''}`}
-                    className={`relative flex w-full flex-col items-center rounded-lg pb-2 pt-1.5 ${on ? 'ring-1 ring-gold-400' : ''} ${lit ? 'bg-gold-400/15' : s.day ? 'bg-ink-900' : s.before ? 'bg-ink-900/30' : 'bg-ink-900/60'} ${s.before ? 'text-slate-600' : lit ? 'text-gold-300' : 'text-slate-300'}`}
-                  >
-                    {i === 0 && <span className="font-pixel text-[7px]">{weekdayOf(s.date)}</span>}
-                    <span className={`${i === 0 ? 'mt-1' : ''} font-mono text-sm leading-none`}>{Number(s.date.slice(8))}</span>
-                    <span className={`mt-1.5 grid h-3 place-items-center ${done ? '' : s.day ? '' : 'opacity-60'}`}>
-                      {icon && <Sprite id="uiIcon" opts={{ name: icon }} size={12} label="" className={done ? '' : lit ? '' : s.day ? 'opacity-70 grayscale' : ''} />}
-                    </span>
-                    {s.date === today && <span aria-hidden className="absolute bottom-0.5 h-1 w-1 rounded-full bg-gold-300" />}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
+      {/* A chip a day, Monday to Sunday: its date and what it is (a dumbbell to train, a flame to
+          rest, a tick once done or kept). Today has a dot under it; the next workout is lit. */}
+      <ul className="mt-2 grid grid-cols-7 gap-1">
+        {slots.map((s) => {
+          const on = s === slot;
+          const done = s.day ? !!s.day.done : !s.before && restKept(state, s.date);
+          const lit = !!s.day && s.day === next;
+          const icon = done ? 'check' : s.day ? 'tabTrain' : s.before ? null : 'flame';
+          return (
+            <li key={s.date}>
+              <button
+                onClick={() => setPicked(s.date)}
+                aria-pressed={on}
+                aria-label={`${weekdayOf(s.date)} ${Number(s.date.slice(8))}${s.date === today ? ', today' : ''}: ${s.day ? s.day.plan.title : s.before ? 'before the plan' : 'rest day'}${done ? ', done' : lit ? ', next' : ''}`}
+                className={`relative flex w-full flex-col items-center rounded-lg pb-2 pt-1.5 ${on ? 'ring-1 ring-gold-400' : ''} ${lit ? 'bg-gold-400/15' : s.day ? 'bg-ink-900' : s.before ? 'bg-ink-900/30' : 'bg-ink-900/60'} ${s.before ? 'text-slate-600' : lit ? 'text-gold-300' : 'text-slate-300'}`}
+              >
+                <span className="font-pixel text-[7px]">{weekdayOf(s.date)}</span>
+                <span className="mt-1 font-mono text-sm leading-none">{Number(s.date.slice(8))}</span>
+                <span className={`mt-1.5 grid h-3 place-items-center ${done ? '' : s.day ? '' : 'opacity-60'}`}>
+                  {icon && <Sprite id="uiIcon" opts={{ name: icon }} size={12} label="" className={done ? '' : lit ? '' : s.day ? 'opacity-70 grayscale' : ''} />}
+                </span>
+                {s.date === today && <span aria-hidden className="absolute bottom-0.5 h-1 w-1 rounded-full bg-gold-300" />}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
       {day ? (
         <>
           <div className="mt-3">

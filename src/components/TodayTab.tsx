@@ -21,7 +21,7 @@ import type { PlanItem } from '@/lib/coach/types';
 import { dayKey, daysApart, daysSinceTraining } from '@/lib/days';
 import { storyWords } from '@/story/engine';
 import { flameStage } from '@/story/flame';
-import { currentPlan, dayLabel, nextDay, nextMonday, todayIs, weekdayOf } from '@/lib/coach/week';
+import { currentPlan, dayLabel, nextDay, nextMonday, shownWeek, todayIs, weekdayOf } from '@/lib/coach/week';
 import { fireLine, flameLine, flameMood, restTruth, todayPage, updateTodayPage } from '@/story/daily';
 
 interface Props {
@@ -429,11 +429,14 @@ function DoneToday({ state, now, onTrain, land }: { state: GameState; now: Date;
     { n: String(total), label: total === 1 ? 'workout' : 'workouts' },
     { n: `${Math.min(week, WEEKLY_GOAL)}/${WEEKLY_GOAL}`, label: 'this week' },
   ];
-  const nextWords = next
-    ? `Next: ${dayLabel(next.date, now)} · ${next.plan.title}`
-    : coachWeek && ends
-      ? `Next week starts ${daysApart(now, ends) <= 1 ? 'tomorrow' : weekdayOf(dayKey(ends))}`
-      : `Plan your next week with ${storyWords(state).flame}`;
+  const nextWords =
+    coachWeek && shownWeek(coachWeek, now) === 1
+      ? 'Week done · your next week is ready'
+      : next
+        ? `Next: ${dayLabel(next.date, now)} · ${next.plan.title}`
+        : coachWeek && ends
+          ? `Next week starts ${daysApart(now, ends) <= 1 ? 'tomorrow' : weekdayOf(dayKey(ends))}`
+          : `Plan your next week with ${storyWords(state).flame}`;
   return (
     <section className={`rounded-2xl bg-ink-800 text-center ${land ? 'flex min-h-0 flex-1 flex-col items-center justify-center p-3' : 'px-5 py-6'}`}>
       <p className={`font-pixel text-emerald-300 ${land ? 'text-[11px]' : 'text-sm'}`}>Done for today</p>

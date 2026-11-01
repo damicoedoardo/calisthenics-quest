@@ -2,7 +2,7 @@ import { dayKey } from '../days';
 import type { GameState } from '../game';
 import { storyState } from '@/story/engine';
 import { minutesOf } from './validate';
-import { dayLabel, nextDay, restKept, restToday, weekdayOf } from './week';
+import { daysIn, dayLabel, nextDay, restKept, restToday, shownWeek, weekDoneId, weekdayOf } from './week';
 
 /* The flame speaks first: one thing worth saying now (a missed day, a new week, a rest day to keep, a workout done, the
    chapter's enemy nearly beaten, today's workout), picked by code from the save. It shows on the
@@ -25,8 +25,11 @@ export function coachNudge(state: GameState, now: Date): Nudge | undefined {
   const doneToday = week?.days.find((d) => d.done && dayKey(new Date(d.done)) === today);
   if (next && next.date < today)
     return { id: `missed:${next.date}`, text: `${weekdayOf(next.date)}'s workout is still waiting for you. It's patient. So am I: I've waited longer for less. Do it today, or tell me and I'll move the week around.` };
-  if (week && next && week.start === today && !week.days.some((d) => d.done))
-    return { id: `week:${week.start}`, text: `I laid out a new week while you slept: workouts on ${week.days.map((d) => weekdayOf(d.date)).join(', ')}, and rest days between. The rest days count too. Want to change anything? Just tell me.` };
+  // This week's last workout done: next week is already drafted, so the flame shows it right away.
+  if (week && doneToday && shownWeek(week, now) === 1)
+    return { id: weekDoneId(week), text: `That was the week's last workout. I knew you'd finish it. Next week is ready: workouts on ${daysIn(week, 1).map((d) => weekdayOf(d.date)).join(', ')}, rest days between. Want to change anything? Just tell me.` };
+  if (week && next && week.start === today && !week.days.some((d) => d.done) && coach.heard !== `weekdone:${week.start}`)
+    return { id: `week:${week.start}`, text: `I laid out a new week while you slept: workouts on ${daysIn(week, 0).map((d) => weekdayOf(d.date)).join(', ')}, and rest days between. The rest days count too. Want to change anything? Just tell me.` };
   if (restToday(coach, now) && !restKept(state, today) && !doneToday)
     return { id: `rest:${today}`, text: "Today is a rest day, and resting is part of the plan. Come sit by the fire with me for a minute. I don't bite. Much. That's how the day counts." };
   const story = storyState(state);

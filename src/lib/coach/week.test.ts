@@ -4,7 +4,7 @@ import { seeded } from '@/lib/random';
 import { finishSession, initialState, migrate, todaysQuest, type GameState } from '@/lib/game';
 import { applySetup, type SetupAnswers } from './setup';
 import { runTool, resolveDay, type ToolContext } from './tools';
-import { buildWeek, currentPlan, daysIn, needsPlan, planAhead, dayLabel, fromLegacy, markDone, nextDay, isRestToday, restKept, restToday, setDay, startsToday, todayIs, weekDates, weekOver, weekSlots, weekText } from './week';
+import { buildWeek, currentPlan, daysIn, needsPlan, planAhead, shownWeek, weekDoneId, dayLabel, fromLegacy, markDone, nextDay, isRestToday, restKept, restToday, setDay, startsToday, todayIs, weekDates, weekOver, weekSlots, weekText } from './week';
 import { coachNudge, freshNudge, hearNudge } from './nudge';
 import { coachBrief } from './brief';
 import { changeItem } from './plan';
@@ -332,6 +332,22 @@ describe('two weeks ahead', () => {
     for (const d of [NOW, new Date(2026, 9, 30, 12), new Date(2026, 10, 1, 12)]) s = trainAll(s, d);
     expect(todayIs(s, new Date(2026, 10, 1, 20))).toMatchObject({ kind: 'done', next: { date: '2026-11-02' } });
     expect(todayIs(s, MON)).toMatchObject({ kind: 'workout', next: { date: '2026-11-02' } });
+  });
+
+  it('the moment this week\'s last workout is done, next week shows and the flame says it is ready', () => {
+    let s = ahead(withSetup());
+    for (const d of [NOW, new Date(2026, 9, 30, 12)]) s = trainAll(s, d);
+    expect(shownWeek(s.coach!.week, new Date(2026, 9, 30, 20))).toBe(0);
+    const sun = new Date(2026, 10, 1, 12);
+    s = trainAll(s, sun);
+    expect(shownWeek(s.coach!.week, sun)).toBe(1);
+    const nudge = coachNudge(s, sun)!;
+    expect(nudge.id).toBe(weekDoneId(s.coach!.week!));
+    expect(nudge.text).toMatch(/Next week is ready: workouts on Mon, Wed, Fri/);
+    // On Monday it is simply this week, and the flame doesn't say "new week" again.
+    const mon = { ...s, coach: { ...hearNudge(s, nudge, false).coach!, week: planAhead({ all, coach: s.coach!, sessions: s.sessions, now: MON, rng: seeded(1) }) } };
+    expect(shownWeek(mon.coach!.week, MON)).toBe(0);
+    expect(coachNudge(mon, MON)?.id).not.toMatch(/^week:/);
   });
 
   it('on Monday next week becomes this week as planned, and a new next week comes behind it', () => {

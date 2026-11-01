@@ -68,6 +68,17 @@ export function weekOver(week: CoachWeek | null | undefined, now: Date): boolean
   return !week || daysApart(nextMonday(week), now) >= 0;
 }
 
+/** The week to show: this week (0), or next week (1) as soon as this week's last workout is done
+    (next week is always drafted ahead, so it is there the moment you finish). */
+export function shownWeek(week: CoachWeek | null | undefined, now: Date): 0 | 1 {
+  if (!week || !week.ahead || weekOver(week, now)) return 0;
+  const mine = daysIn(week, 0);
+  return mine.length && mine.every((d) => d.done) && daysIn(week, 1).length ? 1 : 0;
+}
+
+/** The nudge id of "this week is done, next week is ready", one per week. */
+export const weekDoneId = (week: CoachWeek) => `weekdone:${dayKey(nextMonday(week))}`;
+
 /** A week's seven days, Monday to Sunday (`which`: 0 this week, 1 next week): a workout day, a
     rest day (no `day`), or before the week was planned (`before`). */
 export function weekSlots(week: CoachWeek, which: 0 | 1 = 0): { date: string; day?: CoachDay; before?: boolean }[] {

@@ -46,7 +46,12 @@ day from today to next week's Sunday (`openDate`).
   `ahead` gets its next week on load). On a new Monday (`weekOver`), last week's next week becomes
   this week exactly as it was planned and shown (`start` is that Monday; nothing is re-planned
   behind your back, and a workout missed last week isn't carried over). Then a new next week is
-  drafted behind it. After a week or more away the plan starts fresh from today. The coach replaces a week with `set_week` (`week` "this" or
+  drafted behind it. After a week or more away the plan starts fresh from today.
+- **Shown**: screens show one week (`shownWeek`): this week, or next week the moment this
+  week's last workout is done (it is already drafted, so it is there at once). The flame says so
+  (the `weekdone:<Monday>` nudge) and the Train tab puts a "Week done" card over it: Looks good, or
+  Change it (opens the chat). Today's done card says "Week done · your next week is ready". Missed
+  workouts: the week turns over on Monday as usual. The coach replaces a week with `set_week` (`week` "this" or
   "next") or one day with `set_workout`.
 - **What today is** (`todayIs(state, now)`): the one answer every screen reads, so Today and
   Train never disagree. `workout`: the next workout's day has come (a missed one is caught up);
