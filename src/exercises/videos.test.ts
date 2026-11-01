@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { loadLibrary } from './library';
-import { VIDEOS, videoSearchUrl } from './videos';
+import { FOUND_VIDEOS, VIDEOS, videoSearchUrl } from './videos';
 import { STAPLES, STRETCHES, WARMUP_MOVES } from '@/lib/coach/staples';
 
 describe('exercise videos', () => {
   it('each pick is a real library exercise with a well-formed YouTube id', async () => {
     const ids = new Set((await loadLibrary()).map((x) => x.id));
-    for (const [id, v] of Object.entries(VIDEOS)) {
+    for (const [id, v] of [...Object.entries(VIDEOS), ...Object.entries(FOUND_VIDEOS)]) {
       expect(ids.has(id), id).toBe(true);
       expect(v.id, id).toMatch(/^[A-Za-z0-9_-]{11}$/);
       expect(v.title, id).toBeTruthy();

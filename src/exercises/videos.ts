@@ -3,7 +3,10 @@
    short, clean demo of that exact move, mostly the Bodybuilding.com and OPEX exercise-library clips
    (no talk, no intro), else a short tutorial. Any other exercise gets a YouTube search instead
    (videoSearchUrl). The card shows the player itself, from youtube-nocookie.com.
-   Add one: the library id, the 11-character video id from the watch link, and its title. */
+   Add one: the library id, the 11-character video id from the watch link, and its title.
+   Every other exercise gets the one `scripts/find-videos.mjs` found (videos.found.json); a hand pick here always wins. */
+
+import FOUND from './videos.found.json';
 
 export interface Video {
   /** The YouTube video id (the v= part of a watch link). */
@@ -161,7 +164,10 @@ export const VIDEOS: Record<string, Video> = {
 };
 
 /** The hand-picked video for an exercise, if it has one. */
-export const videoOf = (exerciseId: string): Video | null => VIDEOS[exerciseId] ?? null;
+/** What the finder found for the exercises without a hand pick. */
+export const FOUND_VIDEOS: Record<string, Video> = FOUND;
+
+export const videoOf = (exerciseId: string): Video | null => VIDEOS[exerciseId] ?? FOUND_VIDEOS[exerciseId] ?? null;
 
 /** A YouTube search for how to do an exercise, for the ones without a pick. */
 export const videoSearchUrl = (name: string) => `https://www.youtube.com/results?search_query=${encodeURIComponent(`how to do ${name} exercise`)}`;

@@ -29,7 +29,8 @@ together.
 | `src/exercises/classify.ts` | Which pixel demo and gear show each catalog exercise (name rules, then overrides) |
 | `src/exercises/coaching.ts` | Per movement: family, region, kind, form tips, common mistakes |
 | `src/exercises/library.ts` | `loadLibrary()` joins it all; `findExercises()` and `exerciseById()` search it |
-| `src/exercises/videos.ts` | `VIDEOS`: a hand-picked YouTube how-to video per exercise id; `videoOf`, `videoSearchUrl` |
+| `src/exercises/videos.ts` | `VIDEOS`: a hand-picked YouTube how-to video per exercise id; `videoOf` (hand pick, else the finder's), `videoSearchUrl` |
+| `scripts/find-videos.mjs`, `src/exercises/videos.found.json` | The video finder and what it found |
 | `src/exercises/export.ts` | The JSON export; `pnpm exercises:db` writes `public/data/exercises.json` |
 
 In the app, the same file is served at `/data/exercises.json`.
@@ -79,7 +80,12 @@ passes `start` to `ExerciseLibrary`).
 
 The picks cover every exercise the coach plans with (the `STAPLES`, warm-up moves and cool-down
 stretches in `src/lib/coach/staples.ts`, and FORMA's own moves): 145 of 146. The one gap is
-`All_Fours_Quad_Stretch`. The other ~745 catalog variants get the search. Each pick was chosen by
+`All_Fours_Quad_Stretch`. The other ~745 catalog exercises get the video `scripts/find-videos.mjs`
+found (`src/exercises/videos.found.json`; a hand pick always wins): it reads YouTube's public
+search page, no key, and takes a Bodybuilding.com clip of that name first, then an OPEX /
+"(Exercise Library)" demo, then the first short plain video (under 4 minutes) whose title shares
+the exercise's main words. Run it with `node scripts/find-videos.mjs` on a machine that can reach
+YouTube (the cloud machine can't); it keeps what it found before and only looks up the rest. An exercise it missed still gets the search. Each pick was chosen by
 hand from web search results for that move. Prefer a short, clean demo with no talk: about half
 are the Bodybuilding.com clips (the catalog came from that site, so names match) or the OPEX and
 "(Exercise Library)" demos; the rest (machines, bands, cardio, warm-up circles, stretches) are
