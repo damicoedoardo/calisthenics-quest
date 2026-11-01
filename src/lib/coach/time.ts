@@ -28,7 +28,8 @@ export function secondsOf(it: Timed): number {
   return Math.round(it.sets * (work + restFor(it)) + (it.weighted ? TIME.setupWeighted : TIME.setup) + ramp);
 }
 
-/** About how many minutes the workout takes (what's skipped left out). */
-export function minutesOf(items: Timed[]): number {
-  return Math.round(items.reduce((a, it) => a + secondsOf(it), 0) / 60);
+/** About how many minutes the workout takes (what's skipped left out), at your own pace
+    (`paceOf` in feedback.ts: 1.2 when your workouts take a fifth longer than estimated). */
+export function minutesOf(items: Timed[], pace = 1): number {
+  return Math.round((items.reduce((a, it) => a + secondsOf(it), 0) * pace) / 60);
 }

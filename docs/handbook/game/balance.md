@@ -3,7 +3,7 @@ type: conceptual
 title: Balance (design for balance)
 description: The rule every feature follows so FORMA stays tunable — every balance number named in src/balance/ with its goal, the balance sheet (pnpm balance) that shows what they add up to, the map of numbers not moved yet, and the balance changelog.
 tags: [game, balance, rules, changelog]
-timestamp: 2026-10-31
+timestamp: 2026-11-01
 ---
 
 # Balance
@@ -54,7 +54,7 @@ kept there as aliases, so callers didn't change).
 | `src/balance/upgrades.ts` | Mira's forge +1 to +15 (`STEPS`: embers, materials, odds, strength), misses (`FORGE_RISK`), safe marks, co-op material drops and gifts, the look bands | `src/lib/forge.ts`, `src/lib/fog-gear.ts`, `src/game/dungeon/items.ts`, `engine.ts`, `PlusGlow.tsx` |
 | `src/balance/skills.ts` | the run skills a level-up offers (`RUN_SKILL`): each one's size per level, its timer and how many levels it has. Run-only, so measured by `fog:sheet`, not `powerScore` | `src/game/rules.ts`, `src/game/dungeon/engine.ts`, `src/lib/fog.ts` (`UPGRADES`: names, words, card kind) |
 | `src/balance/classes.ts` | the classes: base attacks (`ATTACK`), bodies (`CLASS_BODY`), abilities (`ABILITY`: clocks and sizes), the monk's calm (`CALM`), the two stats each leans to (`CLASS_LEAN`, `SECOND_LEAN`), how fair they must be (`CLASS_FAIR`), and the SPs (`SP_TRIAL`, `SP_GIFTS`, `SP_SKILL`, `SP_FINAL`, `SURGE`, `SP_PASSIVE`, and each SP weapon's basic attack `SP_WEAPON` with `cut`) | `src/game/rules.ts`, `src/game/dungeon/content.ts`, `engine.ts`, `src/lib/stats.ts`, `src/lib/sp.ts` |
-| `src/balance/coach.ts` | the coach's dose: sets and reps by goal (`DOSE`), body-weight reps and holds by level, moves per minutes, set length, caps per family and per workout, running (`RUN`), choices per exercise, notes kept, when a level moves (`LEVEL_SHIFT`). Real-world dose only: a workout's XP and points don't depend on it | `src/lib/coach/` |
+| `src/balance/coach.ts` | the coach's dose: sets and reps by goal (`DOSE`), body-weight reps and holds by level, moves per minutes, set length, caps per family and per workout, running (`RUN`), choices per exercise, notes kept, when a level moves (`LEVEL_SHIFT`), when it eases off and how it learns your pace (`FEEDBACK`, `PACE`). Real-world dose only: a workout's XP and points don't depend on it | `src/lib/coach/` |
 | `src/balance/index.ts` | exports them all | |
 
 The move is staged so it doesn't collide with work in flight. **Not moved yet** (find them here
@@ -138,6 +138,7 @@ before and after.
 
 | Date | Change | Why | Before → after | PR |
 |---|---|---|---|---|
+| 2026-11-01 | Coach follows how training goes: new `FEEDBACK` (2 heavy workouts in a row make the next 2 a set lighter per move, never below 2) and `PACE` (your own pace from the last 5 timed workouts, at least 3, 0.8-1.5x, a workout past 180 min doesn't count); a very hard exercise's target steps back one | Edoardo: the coach should plan from how sessions really went (feel, time, tiredness) | Real-world dose only, not on the power scale. Sheet: `steady` stat points at day 91 185 → 186, HP 57 → 59, day 182 366 → 367; `eager` day 182 573 → 574 (the simulated players' targets now step back after very hard sets); every goal row unchanged | this thread's PR |
 | 2026-10-31 | `VAULT` is one number, `size` 200 (was 4, one more every 5 workouts, up to 20); melting many at once (`meltable`, `salvageMany` in `forge.ts`) uses the same `MELT` values | Edoardo: room for 200 items, and a way to melt all of a rarity at once | Sheet: the "Vault slots" column is gone (it would read 200 everywhere); power, embers and every goal row unchanged | #123 |
 | 2026-10-31 | Zones 2-6 get their own monsters, five each (`ZONE_DUNGEONS`, `MONSTERS` in `content.ts`; numbers for their tricks `BACK`, `BURST`, `STALL`, `WALL`, `SQUIRE`, `MOLE`, `UNDERTOW` 220/40, `SWOOP`), and keep one or two of the Ashlands'. Zones 3-5 hp/dmg retuned (`fog:tune`): 2.8/2.91 → 2.49/2.58, 3.11/4.15 → 2.66/3.55, 3.44/6.84 → 3.12/6.2 | Edoardo: every zone had the same monsters; each place should bring new monsters and attacks | `fog:tune` with the new rosters before the retune: zone 2 31/71%, zone 3 13/53%, zone 4 18/33%, zone 5 16/55%, zone 6 23/80%. `fog:sheet` after: 25/69% (archer/mage/warrior/monk 32/28/21/18 and 77/68/67/64), all fair, every zone on target (zone 6's opening day too, 15% → 25%). Left as is: in zone 5 the close-up classes lose more at the Hollow (warrior 17/31%, as before 10/48%) | this thread's PR |
 | 2026-10-31 | Coach laws (`LAWS`: warm-up 180 s, 20 sets a family a week, 6 days at most, comeback after 14 days drops a third for 7 days, runs at most 10% past the longest of 30 days) and `MAX_SETS_PER_FAMILY` 8→10 (law 4) | A customizable coach with a few rules always true, from the research (ACSM 2026, Frandsen 2025) | Sheet unchanged (not on the power scale) | #112 |

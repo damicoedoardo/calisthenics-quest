@@ -86,7 +86,7 @@ export function planText(plan: CoachPlan): string {
         : `${it.sets}x${it.low}-${it.high}${it.unit === 'sec' ? 's' : ''}, rest ${restFor(it)}s${it.ramp ? `, ${it.ramp} ramp-up sets` : ''}`;
     return `- ${it.id} | ${it.name} | ${it.role} | ${dose}`;
   });
-  return [`${plan.mode}: ${plan.title} (about ${minutesOf(plan.items)} min)`, ...rows].join('\n');
+  return [`${plan.mode}: ${plan.title} (about ${minutesOf(plan.items)} min)${plan.why ? `. ${plan.why}` : ''}`, ...rows].join('\n');
 }
 
 /** A run of so many minutes, by kind. */

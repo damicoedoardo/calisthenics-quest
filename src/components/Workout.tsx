@@ -1,11 +1,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, BookOpen, Check, ChevronLeft, ChevronRight, ListOrdered, MessageCircle, Minus, Plus, Shuffle, TrendingDown, Undo2, X } from 'lucide-react';
-import { REST_SECONDS, gearOf, isTap, todaysQuest, type GameState, type QuestExercise, type Rir } from '@/lib/game';
+import { ArrowDown, ArrowUp, BookOpen, Check, ChevronLeft, ChevronRight, ListOrdered, MessageCircle, Minus, Plus, Shuffle, Timer, TrendingDown, Undo2, X } from 'lucide-react';
+import { REST_SECONDS, clockStart, gearOf, isTap, todaysQuest, type GameState, type QuestExercise, type Rir } from '@/lib/game';
 import { canMove, changeItem, moveItem, skipItem } from '@/lib/coach/plan';
 import { currentPlan } from '@/lib/coach/week';
 import { minutesOf, restFor } from '@/lib/coach/time';
+import { paceOf } from '@/lib/coach/feedback';
 import type { Choice, RunStep } from '@/lib/coach/types';
 import { ensurePlan } from './useCoach';
 import { doseOf } from './CoachPanel';
@@ -161,7 +162,17 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   if (overview)
     return (
       <>
-        <Overview state={state} update={update} quest={quest} onClose={close} onStart={() => setOverview(false)} />
+        <Overview
+          state={state}
+          update={update}
+          quest={quest}
+          onClose={close}
+          onStart={() => {
+            // The workout's clock starts here, once.
+            update((s) => (s.draft && !s.draft.clockAt ? { ...s, draft: { ...s.draft, clockAt: Date.now() } } : s));
+            setOverview(false);
+          }}
+        />
         {leaveSheet}
       </>
     );
@@ -184,6 +195,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
               />
             ))}
           </div>
+          {state.draft && <SessionClock from={clockStart(state.draft)} />}
         </div>
         <div className="flex gap-2">
           <button onClick={() => setAsking(true)} aria-label="Ask your flame" className="grid h-10 w-10 place-items-center rounded-lg bg-ink-800 text-gold-300">
@@ -389,6 +401,30 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
 }
 
 /** A small tool beside the demo: its icon over one word. */
+/** The workout's clock: how long since Start, ticking each second. */
+function SessionClock({ from }: { from: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <p className="mt-1.5 flex items-center justify-center gap-1 font-mono text-[11px] tabular-nums text-slate-300" aria-label="Workout time">
+      <Timer size={12} className="text-slate-500" />
+      {clock(Math.max(0, Math.floor((now - from) / 1000)))}
+    </p>
+  );
+}
+
+/** Seconds as m:ss, or h:mm:ss past an hour. */
+export function clock(sec: number): string {
+  const h = Math.floor(sec / 3600),
+    m = Math.floor((sec % 3600) / 60),
+    s = sec % 60;
+  const mm = h ? String(m).padStart(2, '0') : String(m);
+  return `${h ? `${h}:` : ''}${mm}:${String(s).padStart(2, '0')}`;
+}
+
 function Tool({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-1 text-[10px] text-slate-400 active:scale-95">
@@ -608,7 +644,7 @@ function Overview({ state, update, quest, onClose, onStart }: { state: GameState
         </button>
         <div className="min-w-0 flex-1 text-center">
           <p className="truncate font-pixel text-[10px] text-gold-300">{rough ? (gym ? 'Short workout' : 'Minimum quest') : (plan?.title ?? "Today's workout")}</p>
-          {plan && <p className="mt-1 text-xs text-slate-400">About {minutesOf(items.filter((i) => quest.some((q) => q.id === i.id)))} min</p>}
+          {plan && <p className="mt-1 text-xs text-slate-400">About {minutesOf(items.filter((i) => quest.some((q) => q.id === i.id)), paceOf(state.sessions))} min</p>}
         </div>
         <span className="w-10 shrink-0" />
       </header>

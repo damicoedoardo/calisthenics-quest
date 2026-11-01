@@ -19,6 +19,7 @@ import type { ClassId } from '@/lib/gear';
 import { loadLibrary } from '@/exercises/library';
 import { applySetup } from '@/lib/coach/setup';
 import { markDone, planAhead } from '@/lib/coach/week';
+import { adaptAhead } from '@/lib/coach/feedback';
 import { dayKey } from '@/lib/days';
 
 /* What's new tonight: one tap to try each change. Everything that opens the app does it on a
@@ -186,6 +187,14 @@ async function doneToday(s: GameState): Promise<GameState> {
   return { ...done, coach: markDone(done.coach!, new Date().toISOString()) };
 }
 
+/** A week planned, and the last two workouts felt hard and ran long: the coach made the next two
+    lighter and learned the pace. */
+async function tired(s: GameState): Promise<GameState> {
+  const w = await withWeek(notYetToday(s));
+  const sessions = w.sessions.map((x, k, all) => (k >= all.length - 3 ? { ...x, minutes: 50, planned: 41, ...(k >= all.length - 2 ? { felt: 'hard' as const } : {}) } : x));
+  return adaptAhead({ ...w, sessions });
+}
+
 /** Write the sandbox save and open the app on it at `query`. */
 function open(state: GameState, query: string) {
   try {
@@ -289,6 +298,8 @@ export default function NightLab() {
 
       <Panel title="YOUR COACH: THE FLAME" note="Your flame plans your training now. Train tab: its last words and today's workout as cards with demos, easier and swap on each. Tap Let's start and it chats with you at the camp fire. Talking needs a sign-in (Hero > Settings) on the real save.">
         <Row icon={<Sparkles size={16} />} label="Meet your coach" note="Train tab, no coach set up yet: Pip says hello" onClick={() => open(veteran(6, 0), 'tab=train')} />
+        <Row icon={<Dumbbell size={16} />} label="After two heavy workouts" note="The last two felt hard and ran long: the next two are a set lighter (says why), the flame brings it up, the minutes follow your pace" onClick={async () => open(await tired(veteran(30, 3)), 'tab=train')} />
+        <Row icon={<Dumbbell size={16} />} label="The workout clock" note="A workout under way: its clock under the bars, from Start to Finish, saved with the workout" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=today&workout')} />
         <Row icon={<Dumbbell size={16} />} label="A week built like a trainer's" note="Train tab, gym 40 min: warm-up, main lifts (ramp-up on the first), core, cool-down stretches, rests and an honest time" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=train')} />
       </Panel>
 

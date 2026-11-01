@@ -5,6 +5,7 @@ import type { LibraryExercise } from '@/exercises/library';
 import { spares, usable } from './options';
 import { BLOCKS, inOrder } from './craft';
 import { minutesOf } from './time';
+import { paceOf } from './feedback';
 import type { CoachPlan, CoachProfile, PlanItem } from './types';
 
 /* The guardrails every workout passes, whoever built it (the built-in coach or an LLM): the
@@ -95,11 +96,13 @@ export function validate(plan: CoachPlan, ctx: { all: LibraryExercise[]; profile
   // and core down to two sets, then the accessories go, then core, then a set of the main moves
   // from the last. The warm-up and the cool-down stay.
   let all = [...first, ...capped, ...last];
+  // At your own pace: when your workouts run long, they are trimmed to fit your real minutes.
+  const pace = ctx.sessions ? paceOf(ctx.sessions) : 1;
   const limit = ctx.profile.minutes * (1 + TIME_SLACK);
-  if (minutesOf(all) > limit) {
-    problems.push(`about ${minutesOf(all)} min, more than your ${ctx.profile.minutes}: trimmed`);
+  if (minutesOf(all, pace) > limit) {
+    problems.push(`about ${minutesOf(all, pace)} min${pace !== 1 ? ' at their pace' : ''}, more than your ${ctx.profile.minutes}: trimmed`);
     const steps = [(i: PlanItem) => i.role === 'accessory' && i.sets > 2, (i: PlanItem) => i.role === 'core' && i.sets > 2, 'accessory', 'core', (i: PlanItem) => i.role === 'main' && !i.run && i.sets > 2] as const;
-    for (let guard = 0; minutesOf(all) > limit && guard < 60; guard++) {
+    for (let guard = 0; minutesOf(all, pace) > limit && guard < 60; guard++) {
       let changed = false;
       for (const step of steps) {
         const drop = typeof step === 'string';

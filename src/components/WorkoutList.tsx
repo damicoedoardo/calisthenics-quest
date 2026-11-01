@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Shuffle, TrendingDown } from 'lucide-react';
+import { Feather, Shuffle, TrendingDown } from 'lucide-react';
 import { gearOf, type GameState } from '@/lib/game';
 import { ROLE_COLOR, ROLE_LABEL } from '@/lib/program';
 import { changeItem } from '@/lib/coach/plan';
@@ -60,9 +60,11 @@ interface Props {
   when?: string;
   title?: string;
   time?: string;
+  /** Why the workout was changed after it was planned ("Lighter: ..."), under the title. */
+  why?: string;
 }
 
-export function WorkoutList({ state, update, items, changeable, date, progress, tiles, when, title, time }: Props) {
+export function WorkoutList({ state, update, items, changeable, date, progress, tiles, when, title, time, why }: Props) {
   const [opened, setOpened] = useState<Partial<Record<Fold, boolean>>>({});
   const [howTo, setHowTo] = useState<PlanItem | null>(null);
   const [change, setChange] = useState<{ id: string; kind: 'easier' | 'swap' } | null>(null);
@@ -146,6 +148,7 @@ export function WorkoutList({ state, update, items, changeable, date, progress, 
             {time && <p className="shrink-0 font-mono text-[11px] text-slate-400">{time}</p>}
           </div>
         )}
+        {why && <p className="mt-1 flex items-center gap-1.5 text-xs text-sky-300"><Feather size={12} className="shrink-0" />{why}</p>}
         <ul className={`space-y-1.5 ${title ? 'mt-3' : ''}`}>
           {rows.map((r) =>
             r.kind === 'fold' ? (

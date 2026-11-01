@@ -13,7 +13,9 @@ import type { ExerciseId } from '@/sprites/characters/exercise';
 import type { CoachState, Mode, PlanItem, RunStep } from './coach/types';
 import { shiftLevels } from './coach/levels';
 import { currentPlan, fromLegacy, markDone } from './coach/week';
-import { XP, WEEKLY_GOAL, PROGRESSION } from '@/balance';
+import { adaptAhead } from './coach/feedback';
+import { minutesOf } from './coach/time';
+import { XP, WEEKLY_GOAL, PROGRESSION, PACE } from '@/balance';
 
 // The numbers live in src/balance/training.ts; these names stay for the code that reads them.
 export const XP_FULL_SESSION = XP.full;
@@ -79,6 +81,13 @@ export interface Session {
   /** How it felt, and a word about it, asked after the workout. */
   felt?: 'easy' | 'right' | 'hard';
   comment?: string;
+  /** How long it really took and the minutes it was planned for (the coach learns your pace). */
+  minutes?: number;
+  planned?: number;
+  /** Started as a rough day (or a strong one); missing on a normal day. */
+  checkin?: Exclude<Checkin, 'normal'>;
+  /** Exercises that were very hard: their target steps back one next time. */
+  eased?: string[];
 }
 
 export interface Draft {
@@ -92,6 +101,9 @@ export interface Draft {
   restUntil?: number | null;
   /** When the run on screen started (ms since epoch), so its clock keeps going while the app is closed. */
   runAt?: number | null;
+  /** When the workout's clock started (ms since epoch): Start on the overview. It stops at Finish,
+      and the minutes are saved on the session. Missing: the clock runs from `startedAt`. */
+  clockAt?: number;
 }
 
 export interface Letter {
@@ -385,6 +397,7 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
   const reps = { ...state.reps };
   const raised: string[] = [];
   const heavier: string[] = [];
+  const eased: string[] = [];
   let better = false;
   const week = weekKey(now);
   const raisesThisWeek = (id: string) => state.sessions.filter((s) => weekKey(new Date(s.date)) === week && s.raised?.includes(id)).length;
@@ -395,6 +408,13 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
     if (!entry || isTap(q) || q.run) continue;
     const best = lastBest(state, q.id);
     if (best !== null && entry.sets.some((x) => x.reps > best)) better = true;
+    // Most sets very hard (0-1 left) or short of the target: the target steps back one next time.
+    const tough = entry.sets.filter((x) => x.rir === '0-1' || x.reps < q.reps).length * 2 > entry.sets.length;
+    if (tough) {
+      const step = q.unit === 'sec' ? 5 : 1;
+      if (q.reps > q.slot.low) (reps[q.id] = Math.max(q.slot.low, q.reps - step)), eased.push(q.id);
+      continue;
+    }
     // Every set done at target with reps to spare: ask for a little more next time. At most twice a
     // week, and a hold only every other time: a second held comes slower than a rep.
     const clean = entry.sets.length >= q.sets && entry.sets.every((x) => x.reps >= q.reps && x.rir !== '0-1');
@@ -432,14 +452,42 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
         ...(plan.items.some((i) => i.changed) ? { changed: plan.items.filter((i) => i.changed).map((i) => ({ from: i.changed!.from, to: i.id, how: i.changed!.how })) } : {}),
       }
     : {};
-  const session: Session = { id: idGen(), date: now.toISOString(), kind, day: dayType(state), xp, breakdown, entries, raised, heavier, better, ...coachLog };
+  // How long it really took next to the plan's estimate (a workout left open for hours doesn't count).
+  const took = Math.round((now.getTime() - clockStart(draft)) / 60_000);
+  const timed: Partial<Session> = plan && took >= 1 && took <= PACE.maxMinutes ? { minutes: took, planned: minutesOf(plan.items.flatMap((it) => { const q = quest.find((x) => x.id === it.id); return q ? [{ ...it, sets: q.sets }] : []; })) } : {};
+  const session: Session = {
+    id: idGen(),
+    date: now.toISOString(),
+    kind,
+    day: dayType(state),
+    xp,
+    breakdown,
+    entries,
+    raised,
+    heavier,
+    better,
+    ...coachLog,
+    ...timed,
+    ...(draft.checkin !== 'normal' ? { checkin: draft.checkin } : {}),
+    ...(eased.length ? { eased } : {}),
+  };
   const sessions = [...state.sessions, session];
   // The workout is done: its day of the week is ticked, the next day's is up, and your levels follow how it felt.
   const coach = state.coach && { ...markDone(state.coach, now.toISOString()), ...(state.coach.profile ? { profile: shiftLevels(state.coach.profile, sessions, now) } : {}) };
-  const next: GameState = { ...state, reps, sessions, draft: null, ...(coach ? { coach } : {}) };
+  // Tired lately: the next workouts get lighter.
+  const next: GameState = adaptAhead({ ...state, reps, sessions, draft: null, ...(coach ? { coach } : {}) });
   const gearAfter = gearOf(next);
   const newGear = (['weapon', 'armor', 'shield'] as const).filter((s) => gearAfter[s].tier > gearBefore[s].tier).map((s) => gearAfter[s]);
   return { state: next, session, levelBefore: before, levelAfter: levelInfo(totalXp(next)).level, newGear };
+}
+
+/** When the workout's clock started (ms since epoch). */
+export const clockStart = (draft: Pick<Draft, 'startedAt' | 'clockAt'>) => draft.clockAt ?? new Date(draft.startedAt).getTime();
+
+/** How the workout felt, said after it: saved on the session, and the next workouts follow it. */
+export function feltSession(state: GameState, id: string, felt: NonNullable<Session['felt']>, comment: string): GameState {
+  const sessions = state.sessions.map((x) => (x.id === id ? { ...x, felt, ...(comment ? { comment } : {}) } : x));
+  return adaptAhead({ ...state, sessions });
 }
 
 /**

@@ -113,6 +113,8 @@ export interface CoachPlan {
   at: string;
   /** One line on what today is about. */
   title: string;
+  /** Why it was changed after it was planned ("Lighter: your last 2 workouts were heavy"). */
+  why?: string;
 }
 
 /** A tool call the model made: its name and its input as JSON text (OpenAI style). */

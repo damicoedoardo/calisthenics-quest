@@ -3,7 +3,7 @@ type: reference
 title: Training rules
 description: The real-world side of FORMA in src/lib — the built-in plan (gym or home), today's quest, logging sets, progression, "better than last time", XP and levels, stat points for the champion, classes and gear.
 tags: [game, training, rules, xp, stats]
-timestamp: 2026-10-31
+timestamp: 2026-11-01
 ---
 
 # Training rules
@@ -53,7 +53,13 @@ The app shows no built-in plan any more: before the coach has planned a week the
 - `finishSession` turns the draft into a `Session`: full if at least half the sets were done and
   the day wasn't Rough, otherwise mini. Entries keep the exercise's name and family; a coach
   workout also writes its mode, who planned it, what was skipped or changed, then clears the plan
-  and moves levels ([coach.md](coach.md)). How it felt is added after, from the after-workout card.
+  and moves levels ([coach.md](coach.md)). It also saves the workout's real `minutes` (from the
+  clock, `clockStart`: `draft.clockAt`, set by Start on the overview, else `startedAt`) next to the
+  `planned` estimate, and a rough day (`checkin`). How it felt is added after, from the
+  after-workout card (`feltSession`); both may make the next workouts lighter
+  ([coach.md](coach.md#following-how-it-goes-feedbackts)).
+- An exercise whose sets were mostly very hard (0-1) or short of the target steps its target back
+  one (holds by 5 seconds), not below `low`, and is listed in `session.eased`.
 - Every set at target with reps to spare raises that exercise's target by one rep (holds by 5
   seconds, every other time), at most `MAX_RAISES_PER_WEEK` times a week, up to `high`. A
   `weighted` exercise done cleanly at `high` goes back to `low` and is listed in

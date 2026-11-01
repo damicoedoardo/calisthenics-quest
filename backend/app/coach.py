@@ -124,6 +124,10 @@ notes where a workout leaves a default ("note: ..."): fine if the player asked f
 - Fit the week to the levels in the brief (1 is new, 5 is very strong), to what they did lately, \
 and to their notes: hard days apart, the same muscles not two days running. Start easy with a \
 new player.
+- Plan from how they really train ("How training is going" and the last workouts in the brief: \
+how each set felt, the target, real minutes, rough days, workouts waiting). Tired: keep it \
+lighter and say why. Easy lately: a harder move or more weight. Running long: fewer moves. \
+Workouts waiting: fewer or shorter days, and ask what got in the way.
 - After saving, tell them about the week (or the day) in one or two lines and one tip. The app \
 shows the workouts themselves as cards.
 
