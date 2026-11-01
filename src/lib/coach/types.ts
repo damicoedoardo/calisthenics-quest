@@ -137,14 +137,17 @@ export interface CoachDay {
   done?: string;
 }
 
-/** The week the coach planned: the workout days of a calendar week, Monday to Sunday. The one
+/** The plan: the workout days of this calendar week, Monday to Sunday, and of the next. The one
     place a workout lives: the next workout is the first day not done yet (`currentPlan`). */
 export interface CoachWeek {
   /** The day it was planned (local date): the week is that date's Monday to Sunday, and days
       before `start` aren't part of the plan. */
   start: string;
+  /** The workout days of this week and, once `ahead`, of next week too. */
   days: CoachDay[];
   by: 'built-in' | 'coach';
+  /** Next week is planned too (its days are in `days`, from `nextMonday`). */
+  ahead?: boolean;
 }
 
 export interface CoachState {

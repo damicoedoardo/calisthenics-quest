@@ -4,7 +4,7 @@ import { seeded } from '@/lib/random';
 import { finishSession, initialState, migrate, todaysQuest, type GameState } from '@/lib/game';
 import { applySetup, type SetupAnswers } from './setup';
 import { runTool, resolveDay, type ToolContext } from './tools';
-import { buildWeek, currentPlan, dayLabel, fromLegacy, markDone, nextDay, isRestToday, restKept, restToday, setDay, startsToday, todayIs, weekDates, weekOver, weekSlots, weekText } from './week';
+import { buildWeek, currentPlan, daysIn, needsPlan, planAhead, shownWeek, weekDoneId, dayLabel, fromLegacy, markDone, nextDay, isRestToday, restKept, restToday, setDay, startsToday, todayIs, weekDates, weekOver, weekSlots, weekText } from './week';
 import { coachNudge, freshNudge, hearNudge } from './nudge';
 import { coachBrief } from './brief';
 import { changeItem } from './plan';
@@ -178,13 +178,18 @@ describe('the week', () => {
 });
 
 describe('the coach plans the week', () => {
-  it('resolveDay takes weekdays, today, tomorrow and dates from today to Sunday', () => {
+  it('resolveDay takes weekdays, today, tomorrow and dates from today to next week\'s Sunday', () => {
     expect(resolveDay('today', NOW)).toBe('2026-10-28');
     expect(resolveDay('Tomorrow', NOW)).toBe('2026-10-29');
     expect(resolveDay('Friday', NOW)).toBe('2026-10-30');
-    expect(resolveDay('tue', NOW)).toBeUndefined();
+    expect(resolveDay('tue', NOW)).toBe('2026-11-03');
+    expect(resolveDay('tue', NOW, 0)).toBeUndefined();
     expect(resolveDay('sun', NOW)).toBe('2026-11-01');
+    expect(resolveDay('next fri', NOW)).toBe('2026-11-06');
+    expect(resolveDay('fri', NOW, 1)).toBe('2026-11-06');
     expect(resolveDay('2026-11-01', NOW)).toBe('2026-11-01');
+    expect(resolveDay('2026-11-08', NOW)).toBe('2026-11-08');
+    expect(resolveDay('2026-11-09', NOW)).toBeUndefined();
     expect(resolveDay('2026-12-01', NOW)).toBeUndefined();
     expect(resolveDay('someday', NOW)).toBeUndefined();
   });
@@ -303,5 +308,90 @@ describe('the flame speaks first', () => {
 
   it('no profile, nothing', () => {
     expect(coachNudge(initialState(), NOW)).toBeUndefined();
+  });
+});
+
+describe('two weeks ahead', () => {
+  const ahead = (s: GameState, now = NOW): GameState => ({ ...s, coach: { ...s.coach!, week: planAhead({ all, coach: s.coach!, sessions: s.sessions, now, rng: seeded(1) }) } });
+  const SAT = new Date(2026, 9, 31, 12);
+  const MON = new Date(2026, 10, 2, 9);
+
+  it('plans next week too, so it is there before this week ends', () => {
+    const s = ahead(withSetup());
+    const week = s.coach!.week!;
+    expect(week.ahead).toBe(true);
+    expect(daysIn(week, 0).map((d) => d.date)).toEqual(['2026-10-28', '2026-10-30', '2026-11-01']);
+    expect(daysIn(week, 1).map((d) => d.date)).toEqual(['2026-11-02', '2026-11-04', '2026-11-06']);
+    expect(needsPlan(week, SAT)).toBe(false);
+    expect(weekSlots(week, 1)[0].date).toBe('2026-11-02');
+    expect(weekText(week, SAT, undefined, 1).join('\n')).toMatch(/Mon 2026-11-02 \(Mon\): gym/);
+  });
+
+  it('once this week is done, next week\'s first workout is the next one', () => {
+    let s = ahead(withSetup());
+    for (const d of [NOW, new Date(2026, 9, 30, 12), new Date(2026, 10, 1, 12)]) s = trainAll(s, d);
+    expect(todayIs(s, new Date(2026, 10, 1, 20))).toMatchObject({ kind: 'done', next: { date: '2026-11-02' } });
+    expect(todayIs(s, MON)).toMatchObject({ kind: 'workout', next: { date: '2026-11-02' } });
+  });
+
+  it('the moment this week\'s last workout is done, next week shows and the flame says it is ready', () => {
+    let s = ahead(withSetup());
+    for (const d of [NOW, new Date(2026, 9, 30, 12)]) s = trainAll(s, d);
+    expect(shownWeek(s.coach!.week, new Date(2026, 9, 30, 20))).toBe(0);
+    const sun = new Date(2026, 10, 1, 12);
+    s = trainAll(s, sun);
+    expect(shownWeek(s.coach!.week, sun)).toBe(1);
+    const nudge = coachNudge(s, sun)!;
+    expect(nudge.id).toBe(weekDoneId(s.coach!.week!));
+    expect(nudge.text).toMatch(/Next week is ready: workouts on Mon, Wed, Fri/);
+    // On Monday it is simply this week, and the flame doesn't say "new week" again.
+    const mon = { ...s, coach: { ...hearNudge(s, nudge, false).coach!, week: planAhead({ all, coach: s.coach!, sessions: s.sessions, now: MON, rng: seeded(1) }) } };
+    expect(shownWeek(mon.coach!.week, MON)).toBe(0);
+    expect(coachNudge(mon, MON)?.id).not.toMatch(/^week:/);
+  });
+
+  it('on Monday next week becomes this week as planned, and a new next week comes behind it', () => {
+    const s = ahead(withSetup());
+    const mine = run(s, 'set_week', { week: 'next', days: [{ day: 'tue', mode: 'gym', title: 'Mine', items: [{ id: 'Pushups', role: 'main' }] }] }, SAT);
+    expect(mine.result).toMatch(/Next week is saved/);
+    const week = mine.state.coach!.week!;
+    expect(daysIn(week, 0)).toHaveLength(3);
+    expect(daysIn(week, 1).map((d) => [d.date, d.plan.title])).toEqual([['2026-11-03', 'Mine']]);
+    expect(needsPlan(week, MON)).toBe(true);
+    const rolled = ahead(mine.state, MON).coach!.week!;
+    expect(rolled.start).toBe('2026-11-02');
+    expect(daysIn(rolled, 0).map((d) => d.plan.title)).toEqual(['Mine']);
+    expect(daysIn(rolled, 1).map((d) => d.date)).toEqual(['2026-11-09', '2026-11-11', '2026-11-13']);
+  });
+
+  it('on Monday a built-in next week stays exactly as it was shown', () => {
+    const s = ahead(withSetup());
+    const shown = daysIn(s.coach!.week!, 1);
+    const rolled = ahead(s, MON).coach!.week!;
+    expect(rolled.start).toBe('2026-11-02');
+    expect(rolled.ahead).toBe(true);
+    expect(daysIn(rolled, 0)).toEqual(shown);
+    expect(daysIn(rolled, 1).map((d) => d.date)).toEqual(['2026-11-09', '2026-11-11', '2026-11-13']);
+  });
+
+  it('after a week or more away, the plan starts fresh from today', () => {
+    const s = ahead(withSetup());
+    const later = new Date(2026, 10, 11, 9);
+    const fresh = ahead(s, later).coach!.week!;
+    expect(fresh.start).toBe('2026-11-11');
+    expect(fresh.days[0].date).toBe('2026-11-11');
+    expect(fresh.ahead).toBe(true);
+  });
+
+  it('the coach can change and move next week\'s days, and the laws check Sunday to Monday', () => {
+    const s = ahead(withSetup());
+    const push = { mode: 'gym', title: 'Push', items: [{ id: 'Pushups', role: 'main' }] };
+    expect(run(s, 'set_workout', { day: 'next wed', ...push }, SAT).state.coach!.week!.days.find((d) => d.date === '2026-11-04')!.plan.title).toBe('Push');
+    const moved = run(s, 'move_workout', { from: 'mon', to: 'tue' }, SAT);
+    expect(moved.result).toMatch(/^Moved/);
+    expect(daysIn(moved.state.coach!.week!, 1)[0].date).toBe('2026-11-03');
+    const join = run(s, 'set_week', { days: [{ day: 'sun', ...push }] }, SAT);
+    const both = run(join.state, 'set_week', { week: 'next', days: [{ day: 'mon', ...push }] }, SAT);
+    expect(both.result).toMatch(/Not saved.*2026-11-01 and 2026-11-02/s);
   });
 });

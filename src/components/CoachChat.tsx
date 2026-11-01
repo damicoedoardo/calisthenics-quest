@@ -5,7 +5,7 @@ import { Check, MessageCircle, Play, RotateCcw, SendHorizontal, X } from 'lucide
 import type { Checkin, GameState } from '@/lib/game';
 import { minutesOf } from '@/lib/coach/time';
 import { shownChat } from '@/lib/coach/chat';
-import { dayLabel, nextDay, restKept, todayIs, weekdayOf, weekSlots } from '@/lib/coach/week';
+import { dayLabel, daysIn, nextDay, restKept, shownWeek, todayIs, weekDoneId, weekdayOf, weekOf, weekSlots } from '@/lib/coach/week';
 import { dayKey } from '@/lib/days';
 import { fireLine, updateTodayPage } from '@/story/daily';
 import { SitByFire } from './SitByFire';
@@ -82,7 +82,7 @@ export function CoachScreen({ state, update, onStart }: { state: GameState; upda
       </section>
 
       {state.coach?.profile ? (
-        <WeekBoard state={state} update={update} onStart={onStart} />
+        <WeekBoard state={state} update={update} onStart={onStart} onTalk={open} />
       ) : (
         <p className="rounded-2xl border border-dashed border-ink-600 p-4 text-center text-sm text-slate-400">Your week shows here once we&apos;ve planned it together. Tap &quot;Let&apos;s start&quot; and tell {nameOf(state)} where you&apos;re at.</p>
       )}
@@ -92,8 +92,10 @@ export function CoachScreen({ state, update, onStart }: { state: GameState; upda
 }
 
 /** The week: a chip for each of its seven days (workouts and rest days; done and kept ticked, the
-    next workout lit), and the chosen day: its workout as cards, or the rest day to keep. */
-function WeekBoard({ state, update, onStart }: { state: GameState; update: Update; onStart: (c: Checkin) => void }) {
+    next workout lit), and the chosen day: its workout as cards, or the rest day to keep. Next week
+    is drafted ahead: once this week's last workout is done it shows here right away, with a "Week
+    done" step (looks good, or change it with the flame). */
+function WeekBoard({ state, update, onStart, onTalk }: { state: GameState; update: Update; onStart: (c: Checkin) => void; onTalk: () => void }) {
   const now = new Date();
   const today = dayKey(now);
   const week = state.coach?.week;
@@ -102,24 +104,56 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
   const [fire, setFire] = useState(false);
   const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
   if (!week) return <p className="rounded-2xl bg-ink-800 p-3 text-sm text-slate-400">Getting your week ready…</p>;
-  const slots = weekSlots(week);
+  const which = shownWeek(week, now);
+  const slots = weekSlots(week, which);
   // What today is comes from `todayIs`, the same Today reads. It opens on the workout to do today
-  // (a missed one too); once today's is done, on the next one, so you see what's coming; on a rest
-  // day, on today.
+  // (a missed one too); once today's is done, on the next one, so you see what's coming (next
+  // week's, when this week's are all done); on a rest day, on today.
   const todays = todayIs(state, now);
   const todaySlot = slots.find((s) => s.date === today);
   const ahead = todays.kind !== 'rest' && next ? slots.find((s) => s.day === next) : undefined;
   const slot = slots.find((s) => s.date === picked) ?? ahead ?? todaySlot ?? slots[0];
   const canStart = inProgress || todays.kind === 'workout';
   const day = slot.day;
+  const shown = daysIn(week, which);
+  const doneStep = which === 1 && state.coach?.heard !== weekDoneId(week);
+  const seen = () => update((s) => (s.coach ? { ...s, coach: { ...s.coach, heard: weekDoneId(week) } } : s));
+  // Next week's days say so ("Next Mon"), so they never read as this week's.
+  const label = (date: string) => {
+    const l = dayLabel(date, now);
+    return l.length === 3 && weekOf(week, date) === 1 ? `Next ${l}` : l;
+  };
   return (
     <section className="rounded-2xl bg-ink-800 p-3">
+      {doneStep && (
+        <div className="mb-3 rounded-xl bg-emerald-400/10 p-3 ring-1 ring-emerald-300/30">
+          <p className="font-pixel text-[10px] text-emerald-300">Week done ✓</p>
+          <p className="mt-1 text-sm text-slate-200">Your next week is ready: {shown.length} workouts, from Monday. Have a look below.</p>
+          <div className="mt-3 flex gap-2">
+            <button onClick={seen} className="flex-1 rounded-xl bg-emerald-400 py-2.5 font-pixel text-[9px] text-ink-950 shadow-[0_3px_0_#047857] active:translate-y-0.5 active:shadow-none">
+              Looks good
+            </button>
+            <button
+              onClick={() => {
+                seen();
+                onTalk();
+              }}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-ink-700 py-2.5 text-xs font-semibold text-slate-200"
+            >
+              <MessageCircle size={13} /> Change it
+            </button>
+          </div>
+        </div>
+      )}
       <div className="flex items-baseline justify-between gap-2">
-        <h2 className="font-pixel text-[10px] text-gold-300">This week</h2>
+        <h2 className="font-pixel text-[10px] text-gold-300">{which ? 'Next week' : 'This week'}</h2>
         <p className="font-mono text-[11px] text-slate-400">
-          {week.days.filter((d) => d.done).length} of {week.days.length} done
+          {shown.filter((d) => d.done).length} of {shown.length} done
         </p>
       </div>
+      {/* Two rows, this week and next: a chip a day with its date and what it is (a dumbbell to
+          train, a flame to rest, a tick once done or kept). Today has a dot under it; the next
+          workout is lit. */}
       {/* A chip a day, Monday to Sunday: its date and what it is (a dumbbell to train, a flame to
           rest, a tick once done or kept). Today has a dot under it; the next workout is lit. */}
       <ul className="mt-2 grid grid-cols-7 gap-1">
@@ -133,7 +167,7 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
               <button
                 onClick={() => setPicked(s.date)}
                 aria-pressed={on}
-                aria-label={`${weekdayOf(s.date)}${s.date === today ? ', today' : ''}: ${s.day ? s.day.plan.title : s.before ? 'before the plan' : 'rest day'}${done ? ', done' : lit ? ', next' : ''}`}
+                aria-label={`${weekdayOf(s.date)} ${Number(s.date.slice(8))}${s.date === today ? ', today' : ''}: ${s.day ? s.day.plan.title : s.before ? 'before the plan' : 'rest day'}${done ? ', done' : lit ? ', next' : ''}`}
                 className={`relative flex w-full flex-col items-center rounded-lg pb-2 pt-1.5 ${on ? 'ring-1 ring-gold-400' : ''} ${lit ? 'bg-gold-400/15' : s.day ? 'bg-ink-900' : s.before ? 'bg-ink-900/30' : 'bg-ink-900/60'} ${s.before ? 'text-slate-600' : lit ? 'text-gold-300' : 'text-slate-300'}`}
               >
                 <span className="font-pixel text-[7px]">{weekdayOf(s.date)}</span>
@@ -157,7 +191,7 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
               changeable={!day.done}
               date={day.date}
               progress={inProgress && day === next ? Object.fromEntries(Object.entries(state.draft!.sets).map(([k, v]) => [k, v.length])) : undefined}
-              when={dayLabel(day.date, now)}
+              when={label(day.date)}
               title={day.plan.title}
               time={day.done ? 'done' : `about ${minutesOf(day.plan.items)} min`}
             />
@@ -166,7 +200,7 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
             <p className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-ink-900 py-3 text-xs text-slate-400">
               <Sprite id="uiIcon" opts={{ name: 'lock' }} size={12} label="" />{' '}
               {day.date > today
-                ? `Opens ${dayLabel(day.date, now) === 'Tomorrow' ? 'tomorrow' : `on ${weekdayOf(day.date)}`}. ${todays.kind === 'done' ? 'Today is done.' : 'Today, rest.'}`
+                ? `Opens ${dayLabel(day.date, now) === 'Tomorrow' ? 'tomorrow' : `on ${label(day.date)}`}. ${todays.kind === 'done' ? 'Today is done.' : 'Today, rest.'}`
                 : 'Opens tomorrow. Today is done.'}
             </p>
           ) : day === next ? (
@@ -187,7 +221,7 @@ function WeekBoard({ state, update, onStart }: { state: GameState; update: Updat
       ) : (
         <div className="mt-2 rounded-xl bg-gradient-to-b from-[#1d1527] to-ink-900 p-3 ring-1 ring-orange-300/20">
           <p className="text-sm font-semibold text-orange-200">
-            <span className="text-slate-400">{dayLabel(slot.date, now)} · </span>Rest day
+            <span className="text-slate-400">{label(slot.date)} · </span>Rest day
           </p>
           <p className="mt-1 text-sm text-slate-300">Resting is part of the plan: it&apos;s when you get stronger. Keep the day by sitting by the fire for a minute. It counts, and your Fog runs that day start Rested.</p>
           {restKept(state, slot.date) ? (

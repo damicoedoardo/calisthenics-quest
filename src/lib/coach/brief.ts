@@ -55,6 +55,7 @@ export function coachBrief(state: GameState, now: Date, checkin: Checkin = 'norm
   }
 
   lines.push('', 'This week (the plan the player sees; a rest day is kept by resting, sitting by the fire):', ...weekText(state.coach?.week, now, (d) => restKept(state, d)));
+  lines.push('', 'Next week (the player sees it too; change it any time):', ...weekText(state.coach?.week, now, undefined, 1));
 
   const recent = state.sessions.slice(-10);
   if (recent.length) {
