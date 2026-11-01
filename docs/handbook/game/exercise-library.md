@@ -1,9 +1,9 @@
 ---
 type: reference
 title: Exercise library
-description: The 887-exercise library (free-exercise-db plus FORMA's own) as a searchable database for a coach — fields, kinds and movement families, findExercises, the JSON export, pixel demos, tips and common mistakes, and where to edit what.
+description: The 887-exercise library (free-exercise-db plus FORMA's own) as a searchable database for a coach — fields, kinds and movement families, findExercises, the JSON export, pixel demos, tips and common mistakes, YouTube how-to videos, and where to edit what.
 tags: [game, exercises, library, coach, data]
-timestamp: 2026-10-28
+timestamp: 2026-11-01
 ---
 
 # Exercise library
@@ -11,7 +11,7 @@ timestamp: 2026-10-28
 Code: `src/exercises/`. Shown in the app from the Train tab ("Exercise library",
 `src/components/ExerciseLibrary.tsx`): search, filters for equipment, kind (stretch, mobility...)
 and movement, and per exercise the boy and girl demo, how-to steps, "Do it well" tips and common
-mistakes. Held sideways, the search and filters share one line, the list has two columns, and an
+mistakes, and a how-to video (below). Held sideways, the search and filters share one line, the list has two columns, and an
 exercise shows its demos and facts beside the how-to.
 The exercise page is `ExerciseDetail.tsx`; tapping any workout card on Today or the Train tab
 opens it too (`ExerciseSheet`: the card's exercise by id, else the plainest one with its demo).
@@ -29,6 +29,8 @@ together.
 | `src/exercises/classify.ts` | Which pixel demo and gear show each catalog exercise (name rules, then overrides) |
 | `src/exercises/coaching.ts` | Per movement: family, region, kind, form tips, common mistakes |
 | `src/exercises/library.ts` | `loadLibrary()` joins it all; `findExercises()` and `exerciseById()` search it |
+| `src/exercises/videos.ts` | `VIDEOS`: a hand-picked YouTube how-to video per exercise id; `videoOf` (hand pick, else the finder's), `videoSearchUrl` |
+| `scripts/find-videos.mjs`, `scripts/find-videos-channels.mjs`, `src/exercises/videos.found.json` | The video finders (search; channel lists with an API key) and what they found |
 | `src/exercises/export.ts` | The JSON export; `pnpm exercises:db` writes `public/data/exercises.json` |
 
 In the app, the same file is served at `/data/exercises.json`.
@@ -65,6 +67,38 @@ findExercises(all, { family: 'hinge', equipment: ['body only', 'dumbbell'], maxL
 findExercises(all, { kind: 'stretch', muscles: ['hamstrings'] });
 ```
 
+## How-to videos
+
+When the exercise has a pick in `VIDEOS` (`src/exercises/videos.ts`), the exercise page shows
+the YouTube player itself (from `youtube-nocookie.com`, no autoplay): one tap plays it in the
+card. An "Open on YouTube" link sits under it. An exercise without a pick shows "Find a how-to
+video on YouTube", a YouTube search for its name.
+
+A link straight to one card: `/?exercise=<library id>` (for example `/?exercise=Goblet_Squat`)
+opens the Train tab with the library on that exercise (`page.tsx` picks the tab, `TrainTab`
+passes `start` to `ExerciseLibrary`).
+
+The picks cover every exercise the coach plans with (the `STAPLES`, warm-up moves and cool-down
+stretches in `src/lib/coach/staples.ts`, and FORMA's own moves): 145 of 146. The one gap is
+`All_Fours_Quad_Stretch`. The other ~745 catalog exercises get the video `scripts/find-videos.mjs`
+found (`src/exercises/videos.found.json`; a hand pick always wins): it reads YouTube's public
+search page, no key, 8 lookups at a time (`--jobs N`), and takes a Bodybuilding.com clip of that name first, then an OPEX /
+"(Exercise Library)" demo, then the first short plain video (under 4 minutes) whose title shares
+the exercise's main words. Run it with `node scripts/find-videos.mjs` on a machine that can reach
+YouTube (the cloud machine can't); it keeps what it found before and only looks up the rest. `scripts/find-videos-channels.mjs` is the quick way when YouTube throttles the search: with a
+YouTube Data API key (`YOUTUBE_API_KEY` in the environment or the git-ignored `.env.local`, never
+committed) it reads every upload of the Bodybuilding.com and OPEX channels (1 quota unit per 50
+videos), or with yt-dlp when there is no key, and matches names locally; a match needs the name's words in the title and the title's
+words in the name. The first full run (2026-11-01) found 718 of the 746, about two thirds of them Bodybuilding.com clips; 22 wrong matches were removed by hand. An exercise it missed still gets the search. Each pick was chosen by
+hand from web search results for that move. Prefer a short, clean demo with no talk: about half
+are the Bodybuilding.com clips (the catalog came from that site, so names match) or the OPEX and
+"(Exercise Library)" demos; the rest (machines, bands, cardio, warm-up circles, stretches) are
+short plain tutorials, not Shorts. The cloud
+machine can't reach YouTube, so titles were not re-checked against the live video. A removed
+video shows YouTube's own "unavailable" box, and the YouTube link still works.
+`src/exercises/videos.test.ts` checks each pick is a real library id with a well-formed video id,
+and that every planned exercise has one.
+
 ## How to change things
 
 | I want to... | Edit |
@@ -73,6 +107,7 @@ findExercises(all, { kind: 'stretch', muscles: ['hamstrings'] });
 | Change which demo or gear an exercise shows | a rule in `RULES` or an entry in `OVERRIDES` (`src/exercises/classify.ts`); program moves are in `PROGRAM` |
 | Change a movement's tips, mistakes, family, region or kind | its entry in `COACHING` (`src/exercises/coaching.ts`) |
 | Add a movement (a new pixel demo) | `MOVES` and `frame` in `src/sprites/characters/moves.ts`, its `COACHING` entry, then a rule in `classify.ts` |
+| Add or change an exercise's how-to video | its entry in `VIDEOS` (`src/exercises/videos.ts`): library id, the `v=` id from the watch link, the title |
 | Add an exercise the catalog lacks | `OWN` in `src/exercises/library.ts` |
 | Add a field to the database | `LibraryExercise` (`library.ts`), `exportLibrary` (`export.ts`), the table above |
 

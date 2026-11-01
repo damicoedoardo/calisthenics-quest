@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Play } from 'lucide-react';
 import { Sprite } from '@/components/Sprite';
 import { useLook } from '@/components/Look';
 import { gearOf, type GameState } from '@/lib/game';
 import { loadLibrary, type LibraryExercise } from '@/exercises/library';
 import type { Family, Kind } from '@/exercises/coaching';
+import { videoEmbedUrl, videoOf, videoSearchUrl, videoWatchUrl } from '@/exercises/videos';
 import type { ExerciseId } from '@/sprites/characters/exercise';
 import { STARTER_LOOKS } from '@/sprites/characters/hero';
 import type { Look } from '@/sprites/engine/figure';
@@ -68,7 +69,8 @@ export function ExerciseDetail({ state, x, onBack, back = 'Back to the library' 
       </dl>
       </div>
       <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:block">
-      <h2 className="mt-5 [@media(orientation:landscape)_and_(max-height:600px)]:mt-2 font-pixel text-[10px] text-slate-300">How to</h2>
+      <ExerciseVideo key={x.id} id={x.id} name={x.name} />
+      <h2 className="mt-5 font-pixel text-[10px] text-slate-300">How to</h2>
       {x.steps.length === 0 && <p className="mt-2 text-sm text-slate-400">No written steps for this one yet.</p>}
       <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-slate-300">
         {x.steps.map((s, i) => (
@@ -98,6 +100,40 @@ export function ExerciseDetail({ state, x, onBack, back = 'Back to the library' 
       </p>
       </div>
       </div>
+    </div>
+  );
+}
+
+/** The how-to video: a hand-picked YouTube tutorial played right in the card, or a YouTube search
+    for exercises without one. */
+function ExerciseVideo({ id, name }: { id: string; name: string }) {
+  const video = videoOf(id);
+  const box = 'mt-5 [@media(orientation:landscape)_and_(max-height:600px)]:mt-2';
+  if (!video) {
+    return (
+      <a href={videoSearchUrl(name)} target="_blank" rel="noopener noreferrer" className={`${box} flex items-center gap-3 rounded-2xl bg-ink-900 p-3 text-sm text-slate-300 ring-1 ring-ink-700`}>
+        <Play size={18} className="shrink-0 text-gold-300" aria-hidden />
+        <span className="flex-1">Find a how-to video on YouTube</span>
+        <ExternalLink size={14} className="shrink-0 text-slate-500" aria-hidden />
+      </a>
+    );
+  }
+  return (
+    <div className={box}>
+      <div className="aspect-video overflow-hidden rounded-2xl bg-black ring-1 ring-ink-700">
+        <iframe
+          src={videoEmbedUrl(video.id)}
+          title={video.title}
+          loading="lazy"
+          className="h-full w-full"
+          allow="encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+      </div>
+      <a href={videoWatchUrl(video.id)} target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-slate-500">
+        Open on YouTube <ExternalLink size={11} aria-hidden />
+      </a>
     </div>
   );
 }

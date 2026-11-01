@@ -13,7 +13,7 @@ import type { Look } from '@/sprites/engine/figure';
 /** The whole exercise catalog: search, filter, and open one for its demo, how-to, tips and mistakes. */
 const LEVEL_BARS: Record<string, number> = { beginner: 1, intermediate: 2, expert: 3 };
 
-export function ExerciseLibrary({ state, onClose }: { state: GameState; onClose: () => void }) {
+export function ExerciseLibrary({ state, start, onClose }: { state: GameState; start?: string | null; onClose: () => void }) {
   const [all, setAll] = useState<LibraryExercise[] | null>(null);
   const [query, setQuery] = useState('');
   const [equipment, setEquipment] = useState<string>('any');
@@ -23,8 +23,12 @@ export function ExerciseLibrary({ state, onClose }: { state: GameState; onClose:
   const mine = useLook();
 
   useEffect(() => {
-    loadLibrary().then(setAll);
-  }, []);
+    loadLibrary().then((list) => {
+      setAll(list);
+      const first = start ? list.find((x) => x.id === start) : undefined;
+      if (first) setOpen(first);
+    });
+  }, [start]);
 
   const shown = useMemo(() => {
     if (!all) return [];

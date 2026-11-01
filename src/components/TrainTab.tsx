@@ -11,7 +11,9 @@ const ExerciseLibrary = dynamic(() => import('./ExerciseLibrary').then((m) => m.
 
 /** Training: the coach (your flame, its chat and the week it planned), and the exercise library. */
 export function TrainTab({ state, update, onStart }: { state: GameState; update: (fn: (s: GameState) => GameState) => void; onStart: (c: Checkin) => void }) {
-  const [library, setLibrary] = useState(false);
+  // ?exercise=<library id> opens the library on that exercise's card.
+  const [start] = useState(() => (typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('exercise')));
+  const [library, setLibrary] = useState(start !== null);
   return (
     <div className="space-y-4">
       <CoachScreen state={state} update={update} onStart={onStart} />
@@ -23,7 +25,7 @@ export function TrainTab({ state, update, onStart }: { state: GameState; update:
         </span>
         <ChevronRight size={16} className="text-slate-500" />
       </button>
-      {library && <ExerciseLibrary state={state} onClose={() => setLibrary(false)} />}
+      {library && <ExerciseLibrary state={state} start={start} onClose={() => setLibrary(false)} />}
     </div>
   );
 }
