@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, BookOpen, ChevronLeft, ChevronRight, ListOrdered, MessageCircle, Minus, Plus, Shuffle, TrendingDown, Undo2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, BookOpen, Check, ChevronLeft, ChevronRight, ListOrdered, MessageCircle, Minus, Plus, Shuffle, TrendingDown, Undo2, X } from 'lucide-react';
 import { REST_SECONDS, gearOf, isTap, todaysQuest, type GameState, type QuestExercise, type Rir } from '@/lib/game';
 import { canMove, changeItem, moveItem, skipItem } from '@/lib/coach/plan';
 import { currentPlan } from '@/lib/coach/week';
@@ -300,12 +300,16 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
           </div>
         ) : (
           <>
-            <div className="mt-5 flex items-center justify-center gap-5 [@media(orientation:landscape)_and_(max-height:600px)]:mt-1">
+            {/* The number starts at the target; − and + set what you really did. */}
+            <p className={`mt-5 text-center font-pixel text-[9px] [@media(orientation:landscape)_and_(max-height:600px)]:mt-1 ${reps === q.reps ? 'text-gold-300' : 'text-slate-400'}`}>
+              {reps === q.reps ? 'Target' : 'You did'}
+            </p>
+            <div className="mt-1 flex items-center justify-center gap-5">
               <button onClick={() => setReps(Math.max(1, reps - (unit ? 2 : 1)))} aria-label="Fewer" className="grid h-14 w-14 place-items-center rounded-xl bg-ink-800 active:scale-95 [@media(orientation:landscape)_and_(max-height:600px)]:h-12 [@media(orientation:landscape)_and_(max-height:600px)]:w-12">
                 <Minus />
               </button>
               <p className="w-28 text-center">
-                <span className="font-mono text-6xl font-bold text-slate-50 [@media(orientation:landscape)_and_(max-height:600px)]:text-5xl">{reps}</span>
+                <span className={`font-mono text-6xl font-bold [@media(orientation:landscape)_and_(max-height:600px)]:text-5xl ${reps === q.reps ? 'text-slate-50' : 'text-sky-200'}`}>{reps}</span>
                 <span className="ml-1 text-lg text-slate-400">{unit}</span>
               </p>
               <button onClick={() => setReps(reps + (unit ? 2 : 1))} aria-label="More" className="grid h-14 w-14 place-items-center rounded-xl bg-ink-800 active:scale-95 [@media(orientation:landscape)_and_(max-height:600px)]:h-12 [@media(orientation:landscape)_and_(max-height:600px)]:w-12">
@@ -313,12 +317,13 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
               </button>
             </div>
             <p className="mt-1 text-center text-xs text-slate-500">
-              Goal {q.reps}
-              {unit}
+              {reps === q.reps ? 'Did more or less? Use − +' : `Target ${q.reps}${unit}`}
               {q.item?.ramp && logged.length === 0 ? <span className="text-gold-200"> · {q.item.ramp} light sets first</span> : null}
             </p>
 
-            <p className="mt-6 text-center text-xs text-slate-400 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">Save the set: how was it?</p>
+            <p className="mt-6 flex items-center justify-center gap-1.5 text-sm font-semibold text-slate-200 [@media(orientation:landscape)_and_(max-height:600px)]:mt-3">
+              <Check size={16} className="text-emerald-400" /> Set done? Tap how it felt
+            </p>
             <div className="mt-3 grid grid-cols-3 gap-2 [@media(orientation:landscape)_and_(max-height:600px)]:mt-2">
               {RIR_BUTTONS.map((b) => (
                 <button
@@ -326,7 +331,9 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
                   onClick={() => log(b.rir)}
                   className={`rounded-xl py-4 transition [@media(orientation:landscape)_and_(max-height:600px)]:py-2.5 active:scale-95 ${b.rir === '2-3' ? 'bg-gold-400 text-ink-950' : 'bg-ink-800 text-slate-100'}`}
                 >
-                  <span className="block text-base font-bold">{b.label}</span>
+                  <span className="flex items-center justify-center gap-1 text-base font-bold">
+                    <Check size={14} strokeWidth={3} aria-hidden /> {b.label}
+                  </span>
                   <span className="block text-[11px] opacity-80">{b.rir} {unit ? 'sec' : 'reps'} left</span>
                 </button>
               ))}
