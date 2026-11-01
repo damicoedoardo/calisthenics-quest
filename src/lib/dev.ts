@@ -169,8 +169,7 @@ export function newDayPage(state: GameState, now: Date): GameState {
 
 /** Beat the boss of the next zone without playing it. */
 export function clearNextZone(state: GameState): GameState {
-  const fog = state.fog ?? NO_FOG;
-  return { ...state, fog: { ...fog, cleared: Math.min(ZONES.length, fog.cleared + 1) } };
+  return setBossesBeaten(state, (state.fog ?? NO_FOG).cleared + 1);
 }
 
 export function resetFog(state: GameState): GameState {
@@ -179,21 +178,27 @@ export function resetFog(state: GameState): GameState {
 
 /** Beat the first `n` Fog bosses (0 to 6), and no more. */
 export function setBossesBeaten(state: GameState, n: number): GameState {
-  const fog = state.fog ?? NO_FOG;
-  return { ...state, fog: { ...fog, cleared: Math.max(0, Math.min(ZONES.length, n)) } };
+  // The story moves with them: a boss beaten here falls now, so its next chapter begins now.
+  const fog = state.fog ?? NO_FOG,
+    cleared = Math.max(0, Math.min(ZONES.length, n)),
+    at = fog.clearedAt ?? [];
+  return { ...state, fog: { ...fog, cleared, clearedAt: Array.from({ length: cleared }, (_, i) => at[i] ?? state.sessions.length) } };
 }
 
 /**
- * Stand at the start of story chapter `n` (1 to 6; 7 is past the end): workouts are added, or the
- * newest taken away, until the count is where that chapter begins. Going back forgets the later
- * chapters' scenes, so they play again.
+ * Stand at the start of story chapter `n` (1 to 6; 7 is past the end): the bosses before it beaten
+ * (and no more), and workouts added, or the newest taken away, until the count is where that
+ * chapter is planned to begin. Going back forgets the later chapters' scenes, so they play again.
  */
 export function jumpToChapter(state: GameState, n: number, now: Date, skipStory: boolean): GameState {
+  const beaten = Math.min(n - 1, CHAPTERS.length);
   const target = n > CHAPTERS.length ? chapterStart(CHAPTERS.length) + CHAPTERS[CHAPTERS.length - 1].workouts : chapterStart(n);
+  const fog = state.fog ?? NO_FOG;
+  const bosses = (s: GameState): GameState => ({ ...s, fog: { ...fog, cleared: beaten, clearedAt: Array.from({ length: beaten }, (_, i) => chapterStart(i + 2)) } });
   const have = state.sessions.length;
-  if (have < target) return addFakeWorkouts(state, target - have, now, skipStory);
+  if (have < target) return addFakeWorkouts(bosses(state), target - have, now, skipStory);
   const later = new Set(ALL_SCENES.filter((p) => p.chapter >= n).map((p) => p.scene.id));
-  const back = { ...state, sessions: state.sessions.slice(0, target), draft: null, seenScenes: state.seenScenes.filter((id) => !later.has(id)) };
+  const back = bosses({ ...state, sessions: state.sessions.slice(0, target), draft: null, seenScenes: state.seenScenes.filter((id) => !later.has(id)) });
   return skipStory ? skipDueScenes(back, now) : back;
 }
 

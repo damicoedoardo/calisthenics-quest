@@ -43,7 +43,9 @@ export function AfterSession({ result, before, after, onClose, onFelt, onShare }
   const [stage, setStage] = useState<'battle' | 'loot'>(before.chapter ? 'battle' : 'loot');
   const [hit, setHit] = useState(false);
   const reps = result.session.entries.reduce((a, e) => a + e.sets.reduce((b, s) => b + s.reps, 0), 0);
-  const defeated = before.chapter && (after.index > before.index || (after.heartsLeft === 0 && before.heartsLeft > 0));
+  // A workout never ends a chapter (its boss falls in the Fog); it takes a heart, and with the last
+  // one gone the boss fights weaker there.
+  const weakened = !!before.chapter && after.heartsLeft === 0 && before.heartsLeft > 0;
   const heartsShown = hit ? Math.max(0, before.heartsLeft - 1) : before.heartsLeft;
 
   useEffect(() => {
@@ -62,7 +64,7 @@ export function AfterSession({ result, before, after, onClose, onFelt, onShare }
         <p className="mt-1 font-pixel text-xs text-gold-300">vs {before.chapter.enemy}</p>
         <div className="relative mt-8 flex items-end gap-10 [@media(orientation:landscape)_and_(max-height:600px)]:mt-4">
           <Hero gear={gearOf(result.state)} classId={result.state.profile.classId} size={110} bounce={false} variant={heroVariant(result.state)} sp={spWorn(result.state)} />
-          <div className={`relative ${hit ? 'animate-shake' : ''} ${defeated && hit ? 'opacity-30 grayscale transition-all duration-700' : ''}`}>
+          <div className={`relative ${hit ? 'animate-shake' : ''} ${weakened && hit ? 'opacity-50 grayscale transition-all duration-700' : ''}`}>
             <Enemy id={before.chapter.enemySprite} size={96} />
             {hit && (
               <span className="absolute -top-2 left-1/2 -translate-x-1/2 animate-hit font-pixel text-sm text-red-400">-{reps}</span>
@@ -78,9 +80,11 @@ export function AfterSession({ result, before, after, onClose, onFelt, onShare }
         <p className="mt-4 text-sm text-slate-300">
           {!hit
             ? 'Your reps strike...'
-            : defeated
-              ? `${before.chapter.enemy} is defeated!`
-              : `Your training hit for ${reps}. One heart down.`}
+            : weakened
+              ? `${before.chapter.enemy} is out of hearts. It fights weaker in the Fog now.`
+              : before.heartsLeft > 0
+                ? `Your training hit for ${reps}. One heart down.`
+                : `Your training hit for ${reps}. Now beat ${before.chapter.enemy} in the Fog.`}
         </p>
         {hit && <button className="mt-8 [@media(orientation:landscape)_and_(max-height:600px)]:mt-5 rounded-2xl bg-gold-400 px-8 py-3.5 font-pixel text-xs text-ink-950 shadow-[0_4px_0_#b45309]">Claim loot</button>}
       </div>
@@ -151,6 +155,11 @@ function Loot({ result, onClose, onFelt, onShare }: { result: FinishResult; onCl
             </span>
           ))}
         </div>
+        {!!session.minutes && (
+          <p className="mt-2 font-mono text-xs text-slate-300">
+            Time {session.minutes} min{session.planned ? ` · planned about ${session.planned}` : ''}
+          </p>
+        )}
         {session.better && <p className="mt-1 text-xs text-emerald-300">Better than last time.</p>}
         {!!session.heavier?.length && <p className="mt-1 text-xs text-sky-300">Next time, a little heavier: {session.heavier.map(nameOf).join(', ')}.</p>}
         </div>

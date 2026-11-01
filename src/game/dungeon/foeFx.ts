@@ -413,6 +413,18 @@ export const SHOT_ART: Record<string, ShotArt> = {
       g.fillStyle(0xffffff).fillRect(4, 4, 2, 2);
     },
   },
+  // An arrow from a trap in the wall (an arrow plate): iron head, dark shaft, red glow.
+  'shot-trap': {
+    w: 8,
+    h: 22,
+    point: true,
+    paint: (g) => {
+      g.fillStyle(0xef4444, 0.3).fillEllipse(4, 11, 8, 22);
+      g.fillStyle(0xd6d3d1).fillTriangle(4, 0, 1, 6, 7, 6);
+      g.fillStyle(0x57534e).fillRect(3, 6, 2, 12);
+      g.fillStyle(0xfca5a5).fillRect(1, 16, 2, 5).fillRect(5, 16, 2, 5);
+    },
+  },
   // A Ridge Hawk's quills.
   'shot-quill': {
     w: 10,
@@ -1083,6 +1095,15 @@ export const FOE_FX: Record<MonsterKind, FoeFx> = {
     look: { tex: 'eel', scale: 0.55, bits: [0x2b78ad, 0x7cc8ea, 0xd9f4ff] },
     shot: 'shot-tear',
     death: (k, e, R) => glass(k, e, R, 8, 220, 1.4),
+  },
+  // A statue turret (STATUES): its own texture, drawn as a prop (props.ts STATUE), one frame.
+  statue: {
+    look: { tex: 'statue' as SheetKey, scale: 0.95, bits: [0x4a4158, 0x6b6478, 0xef4444] },
+    killPitch: 0.6,
+    death: (k, e, R) => {
+      k.sfx('crack', 0.8);
+      puff(k, e, R, 0x6b6478, 12);
+    },
   },
   lily: {
     look: { tex: 'lily', scale: 0.6, bits: [0xec4899, 0x22804a, 0xfbcfe8] },

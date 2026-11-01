@@ -63,6 +63,36 @@ day from today to next week's Sunday (`openDate`).
 - **Done**: `finishSession` marks the next day done (`markDone`) and moves levels.
 - **Old saves** had one `coach.plan`; `migrate` turns it into a week of one day (`fromLegacy`).
 
+## Following how it goes (`feedback.ts`)
+
+Edoardo 2026-11-01: the coach should plan from how you really train, and it should be the AI that
+decides, not fixed rules ("more dynamic"). So the code only keeps the facts and hands them over;
+nothing changes a plan on its own.
+
+- **What the log keeps** (on each session): every set's reps (and kg) and how it felt (Easy 4+,
+  Just right 2-3, Very hard 0-1) against the target, the sets done of those planned (`of` on an
+  entry), exercises not started (`left`), how the workout felt and your word after it, a rough
+  day (`checkin`), and how long it really took (`minutes`, from the workout's clock) next to the
+  estimate (`planned`).
+- **The brief** carries the last workouts in a line each (`8h/8h/6h of 8 (3 of 4 sets)`, the
+  minutes, not started, a rough day) and "How training is going" (`goingLines`: how many were
+  heavy and in a row, how many felt easy, how many ended unfinished, the pace next to the
+  estimate, `paceOf`, and planned workouts still waiting, `waiting`). Facts only.
+- **The `workout_log` tool** (`workoutLog`): the last workouts in full, every exercise and set, or
+  only those with one exercise (`exercise`). The rules on the server tell the coach to read it
+  before planning or changing a week and to decide from it, like a trainer: more where it was
+  easy, less or an easier move where it was very hard or not finished, a lighter week when worn
+  out, fewer moves when workouts run long, fewer days when workouts wait, and to say in a line
+  what it saw and changed.
+- **The coach plans the week on its own** (`aiPlanDue` in `week.ts`, `useCoachAutoPlan` in
+  `useCoach.ts`): the built-in coach drafts each week at once (offline, plain rules), then the
+  moment this week's last workout is done the app asks the coach (`planAsk`, a "(The app: ...)"
+  turn never shown in the chat) to read the log and rewrite next week with `set_week`. It does
+  the same for a week that starts fresh and untouched (a new Monday after missed workouts). Only a
+  week still all the built-in coach's and none of it done, once per week (`coach.autoPlan`), signed
+  in and on the real save; offline the draft stays and it is tried again next time. Its two lines
+  land in the chat and on the flame's card.
+
 ## Rest days
 
 Every day of the week without a workout is a rest day, and it is part of the plan: you keep it by
@@ -142,7 +172,7 @@ ramp-up sets; a warm-up or stretch part is its seconds plus `TIME.change`. Skipp
   something you said). Older talk lives on as notes and the log.
 - **Tools** (the list and the rules are on the server, `backend/app/coach.py`; they run here):
   `find_exercises` (the fuzzy search below, only what your gear and sore spots allow),
-  `draft_week` (the built-in coach's week, this or `week` "next", a start to change), `training_guide` (the playbook, above), `show_week` (both weeks, and the next
+  `workout_log` (past workouts in full, above), `draft_week` (the built-in coach's week, this or `week` "next", a start to change), `training_guide` (the playbook, above), `show_week` (both weeks, and the next
   workout in full), `set_week` (one week, `week` "this" from today or "next": every workout day, a weekday,
   today/tomorrow or a date; workouts done and the other week stay), days anywhere from today to next
   week's Sunday (`resolveDay`: a weekday is the first one coming, "next tue" is next week's), `move_workout` (a day's workout to another
@@ -159,7 +189,7 @@ ramp-up sets; a warm-up or stretch part is its seconds plus `TIME.change`. Skipp
   days in a row); the rules on the server tell the coach to check a change against the brief, push
   back when it isn't wise, and change the plan only once the two agree.
 - **Who it is**: the brief names the flame and the player, its form now and only the next one
-  (`flameStage`, the same stages the story draws; the later forms are the story's to show) and where the story is (chapter, lesson, the enemy's hearts left,
+  (`flameStage`, the same stages the story draws; the later forms are the story's to show) and where the story is (chapter, lesson, the enemy's hearts left in the Fog; a chapter ends when its boss falls there,
   `storyState`), so it speaks from there. Its voice: an old fire, a little spooky and a little
   superior (it teases excuses, never the person), deeply on your side, and plainly kind when you
   hurt; the nudges speak the same way. The rules (short, one question at a time, no body
@@ -213,7 +243,7 @@ and skips on the session, marks the day done, and moves levels (`shiftLevels`).
 up one, most very hard (0-1) down one. A level from your workouts shows a ✓ on the Train tab.
 
 **The coach brief** (`brief.ts`): one plain-text page built from the save on every call — profile,
-the flame's form and the story, notes with ids, the week day by day, the last 10 workouts in a line each, days since each pattern, this week's count.
+the flame's form and the story, notes with ids, the week day by day, the last 10 workouts in a line each (each set's reps and feel, the target, sets done of planned, minutes), how training is going (above), days since each pattern, this week's count.
 This is what the LLM reads; it never reads or writes the save itself, only through the tools.
 
 ## Building a workout (`generate.ts`)
@@ -285,8 +315,8 @@ an LLM gets back to do better.
   Skip; the list button brings it back), "Too hard? Easier" and "Swap" under the demo, and a run
   view: a bar of the steps, a big clock for the step you're on, a buzz at each change, distance at
   the end. The run's start is saved (`draft.runAt`), so the clock keeps going through a phone lock.
-- **After a workout** (`AfterSession.tsx`): "How did it feel?" (easy, just right, hard) and a word
-  for the coach, saved on the session.
+- **After a workout** (`AfterSession.tsx`): the workout's time next to the planned minutes, "How did
+  it feel?" (easy, just right, hard) and a word for the coach, saved on the session.
 
 ## How to change things
 
@@ -297,6 +327,7 @@ an LLM gets back to do better.
 | Change the warm-up or the cool-down | `WARMUP_SEC`, `COOLDOWN` in `src/balance/coach.ts`; `WARMUP_MOVES`, `STRETCHES` in `staples.ts` |
 | Change a law, or add one | `LAWS` in `src/balance/coach.ts`; the check in `laws.ts` (`LAW_LIST`, `weekBreaks`) or `validate.ts`; a persona in `laws.test.ts` |
 | Teach the coach more about training | a topic in `PLAYBOOK` (`craft.ts`), and the short blueprint in `SYSTEM` (`backend/app/coach.py`) |
+| Change what the coach reads about past workouts | `goingLines`, `workoutLog` in `src/lib/coach/feedback.ts`; how it should use it in `SYSTEM` (`backend/app/coach.py`) |
 | Add something the flame brings up | `coachNudge` in `src/lib/coach/nudge.ts`, with a test |
 | Change which families a day trains (main and accessory) | `DAYS` in `src/lib/coach/generate.ts` |
 | Prefer other exercises | `STAPLES` in `src/lib/coach/staples.ts` |

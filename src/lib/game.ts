@@ -13,6 +13,7 @@ import type { ExerciseId } from '@/sprites/characters/exercise';
 import type { CoachState, Mode, PlanItem, RunStep } from './coach/types';
 import { shiftLevels } from './coach/levels';
 import { currentPlan, fromLegacy, markDone } from './coach/week';
+import { minutesOf } from './coach/time';
 import { XP, WEEKLY_GOAL, PROGRESSION } from '@/balance';
 
 // The numbers live in src/balance/training.ts; these names stay for the code that reads them.
@@ -50,6 +51,8 @@ export interface SessionEntry {
   /** The exercise's name and movement family, for the coach (missing on older saves). */
   name?: string;
   family?: string;
+  /** Sets planned (missing on older saves): fewer done means it wasn't finished. */
+  of?: number;
 }
 
 export interface XpLine {
@@ -79,6 +82,13 @@ export interface Session {
   /** How it felt, and a word about it, asked after the workout. */
   felt?: 'easy' | 'right' | 'hard';
   comment?: string;
+  /** How long it really took and the minutes it was planned for (the coach learns your pace). */
+  minutes?: number;
+  planned?: number;
+  /** Exercises of the workout not started at all (it ended before them), by name. */
+  left?: string[];
+  /** Started as a rough day (or a strong one); missing on a normal day. */
+  checkin?: Exclude<Checkin, 'normal'>;
 }
 
 export interface Draft {
@@ -92,6 +102,9 @@ export interface Draft {
   restUntil?: number | null;
   /** When the run on screen started (ms since epoch), so its clock keeps going while the app is closed. */
   runAt?: number | null;
+  /** When the workout's clock started (ms since epoch): Start on the overview. It stops at Finish,
+      and the minutes are saved on the session. Missing: the clock runs from `startedAt`. */
+  clockAt?: number;
 }
 
 export interface Letter {
@@ -152,8 +165,8 @@ export interface GameState {
   draft: Draft | null;
   /** Story scenes already played. */
   seenScenes: string[];
-  /** How many scenes played at the last story moment (a day and a workout count). */
-  sceneMark?: { at: string; count: number };
+  /** The story moment the player said Later at (off): nothing else plays then. `count` is from old saves. */
+  sceneMark?: { at: string; off?: boolean; count?: number };
   /** Story scenes put off with Later: not played yet, they wait in Story so far (src/story/engine.ts). */
   laterScenes?: string[];
   /** Story scenes skipped (the words or the question): played, but marked in Story so far until watched. */
@@ -374,10 +387,11 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
   if (!draft) return null;
   const quest = todaysQuest(state, draft.checkin);
   const entries: SessionEntry[] = quest
-    .map((q) => ({ exerciseId: q.id, target: q.reps, sets: (draft.sets[q.id] ?? []).slice(0, q.sets), name: q.name, ...(q.family ? { family: q.family } : {}) }))
+    .map((q) => ({ exerciseId: q.id, target: q.reps, sets: (draft.sets[q.id] ?? []).slice(0, q.sets), name: q.name, ...(q.family ? { family: q.family } : {}), ...(isTap(q) ? {} : { of: q.sets }) }))
     .filter((e) => e.sets.length > 0);
   if (!entries.some((e) => !isTap(quest.find((q) => q.id === e.exerciseId)!))) return null;
 
+  const left = quest.filter((q) => !isTap(q) && !draft.sets[q.id]?.length).map((q) => q.name);
   const totalSets = quest.reduce((a, q) => a + q.sets, 0);
   const doneSets = entries.reduce((a, e) => a + e.sets.length, 0);
   const kind: Session['kind'] = draft.checkin !== 'rough' && doneSets * 2 >= totalSets ? 'full' : 'mini';
@@ -432,7 +446,25 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
         ...(plan.items.some((i) => i.changed) ? { changed: plan.items.filter((i) => i.changed).map((i) => ({ from: i.changed!.from, to: i.id, how: i.changed!.how })) } : {}),
       }
     : {};
-  const session: Session = { id: idGen(), date: now.toISOString(), kind, day: dayType(state), xp, breakdown, entries, raised, heavier, better, ...coachLog };
+  // How long it really took next to the plan's estimate (a workout left open for hours doesn't count).
+  const took = Math.round((now.getTime() - clockStart(draft)) / 60_000);
+  const timed: Partial<Session> = plan && took >= 1 && took <= MAX_WORKOUT_MINUTES ? { minutes: took, planned: minutesOf(plan.items.flatMap((it) => { const q = quest.find((x) => x.id === it.id); return q ? [{ ...it, sets: q.sets }] : []; })) } : {};
+  const session: Session = {
+    id: idGen(),
+    date: now.toISOString(),
+    kind,
+    day: dayType(state),
+    xp,
+    breakdown,
+    entries,
+    raised,
+    heavier,
+    better,
+    ...coachLog,
+    ...timed,
+    ...(draft.checkin !== 'normal' ? { checkin: draft.checkin } : {}),
+    ...(left.length ? { left } : {}),
+  };
   const sessions = [...state.sessions, session];
   // The workout is done: its day of the week is ticked, the next day's is up, and your levels follow how it felt.
   const coach = state.coach && { ...markDone(state.coach, now.toISOString()), ...(state.coach.profile ? { profile: shiftLevels(state.coach.profile, sessions, now) } : {}) };
@@ -441,6 +473,12 @@ export function finishSession(state: GameState, now: Date, idGen: () => string =
   const newGear = (['weapon', 'armor', 'shield'] as const).filter((s) => gearAfter[s].tier > gearBefore[s].tier).map((s) => gearAfter[s]);
   return { state: next, session, levelBefore: before, levelAfter: levelInfo(totalXp(next)).level, newGear };
 }
+
+/** A workout clock past this many minutes was left running: its time isn't saved. */
+const MAX_WORKOUT_MINUTES = 180;
+
+/** When the workout's clock started (ms since epoch). */
+export const clockStart = (draft: Pick<Draft, 'startedAt' | 'clockAt'>) => draft.clockAt ?? new Date(draft.startedAt).getTime();
 
 /**
  * A workout left open on an earlier day (the app was closed mid-quest) is saved on the day it was
@@ -497,7 +535,7 @@ export function migrate(raw: unknown): GameState {
     // The flame used to keep one chosen item through a fall (`guard`); now all you wear comes home.
     const { guard: _guard, ...gear } = armorAsksNoPoints(kept.fogGear) as FogGear & { guard?: unknown };
     // A class change used to leave the old class's weapon worn; now it goes back to the vault.
-    return { ...fresh, ...s, profile: profileOf(s.profile), build: kept.build, fogGear: s.profile?.classId ? offOtherClass(gear, s.profile.classId) : gear, ...(s.coach ? { coach: fromLegacy(s.coach) } : {}) };
+    return { ...fresh, ...s, fog: withClearedAt(s.fog, (s.sessions ?? []).length), profile: profileOf(s.profile), build: kept.build, fogGear: s.profile?.classId ? offOtherClass(gear, s.profile.classId) : gear, ...(s.coach ? { coach: fromLegacy(s.coach) } : {}) };
   }
   if (r.version === 2) {
     const { progress: _progress, tests: _tests, reps: _reps, ...s } = r as unknown as GameState & { progress?: unknown; tests?: unknown };
@@ -529,6 +567,15 @@ export function migrate(raw: unknown): GameState {
     return { ...fresh, sessions };
   }
   return fresh;
+}
+
+/** Story chapters end when their Fog boss falls (they used to end on workouts), and a chapter's
+    scenes count workouts from when it began, so every boss already beaten needs the workout count
+    it fell at. Saves from before it was kept say: now. */
+function withClearedAt(fog: GameState['fog'], workouts: number): GameState['fog'] {
+  if (!fog || fog.cleared <= (fog.clearedAt?.length ?? 0)) return fog;
+  const at = fog.clearedAt ?? [];
+  return { ...fog, clearedAt: Array.from({ length: fog.cleared }, (_, i) => at[i] ?? workouts) };
 }
 
 /** Reach left the stats (loot comes to you): its points go back to spend, and items that asked

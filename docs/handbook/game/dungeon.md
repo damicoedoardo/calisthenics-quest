@@ -3,7 +3,7 @@ type: reference
 title: The Fog's dungeon (engine, content, scene)
 description: How a Fog run is built — data in content.ts, a pure seeded engine, a bot, and a Phaser scene — and which file to edit for each kind of change.
 tags: [game, fog, dungeon, phaser]
-timestamp: 2026-10-31
+timestamp: 2026-11-01
 ---
 # The Fog's dungeon
 
@@ -21,6 +21,9 @@ content.ts          what a dungeon is made of, as data: ground, rooms, chest ite
                     shoot, each world's dungeon and mid-boss (`worldOf`), the bosses, the classes'
                     abilities
 engine.ts           plays it: a pure step function (60 a second, seeded), no Phaser
+shapes.ts           walls inside a room (its shape: corners, notch, block, halls, lanes), pure:
+                    collision with them (inBlock, outOfBlocks), line of sight (clearLine), a way
+                    round them over a grid (wayTo), and the check that no pocket is shut off (allJoined)
 bot.ts              a player for balance tests (scripts/fog-sim.mjs) and the autopilot; it plays
                     like a person on a phone (HUMAN in src/balance/dungeon.ts: its own reaction
                     per shot, fewer shots seen when busy, fast or close by, 10 decisions a second, a thumb
@@ -61,6 +64,10 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Change how much of the room the screen shows | `FIT` and `fitScreen` in `scene.ts` |
 | Change the run's HUD (HP and XP, floor and depth, bag, pause, ability buttons) | `Vitals`, `DepthMap`, `BagButton`, `AbilityButton` in `src/components/FogRun.tsx`; the safe-area classes `run-t`/`run-b`/`run-l`/`run-r`/`run-x` in `src/app/globals.css` |
 | Change what the run shows is at risk if you fall | `atRisk` in `src/lib/fog-gear.ts`; `RiskLine` in `src/components/FogRun.tsx` |
+| Change how often a room has walls inside it, or which shapes | `ROOM_SHAPES` in `src/balance/dungeon.ts`; a shape itself is a case in `buildShape` (`shapes.ts`, keep the door lanes and stairs spots open: `shapes.test.ts` checks every shape) |
+| Change the traps (arrow plates, dark rooms) | `TRAPS` in `src/balance/dungeon.ts`; the plates are placed in `buildTerrain` and fire in `stepPlates` (`engine.ts`), drawn in the ground pass of `scene.ts` (the plate, the slots glowing, the line) with the arrow `shot-trap` (`foeFx.ts`); a dark room sets `run.dim` in `enterRoom` and lights up in `checkRoom` |
+| Change challenge rooms, dark altars, elite traits or statue turrets | `TRIALS`, `BARGAIN`, `TRAITS`, `STATUES` in `src/balance/dungeon.ts`; in `engine.ts`: `startTrial`/`stepTrial` (and the hold in `checkRoom`), the altar in `buildTerrain` and the touch next to the shrine's (`run.curse`, `cursed`: fire rate where volleys are timed, drops in `kill`), the trait roll in `addFoe` (`TRAIT_NAME`), `stepBurns`, the split in `kill`, `placeStatues` (the statue is the monster `statue` in `content.ts`, drawn from `STATUE` in `props.ts`); on screen: `TRAIT_COLOR` and the ring by the health bars, the fire and altar in the ground pass, the HUD's "Hold on" bar and BARGAIN line (`FogRun.tsx`, `Hud.trial`, `Hud.cursed`) |
+| Change how monsters and the bot get round walls | `aroundWalls` (`engine.ts`, after `steer`) and `wayFor` in `bot.ts` (the goal and the way out), both over `wayTo` (`shapes.ts`) |
 | Change how a floor is laid out (how many rooms, branches, shortcuts) | `LAYOUT` and `ROOM_ODDS` in `content.ts`, `makeFloor` in `engine.ts` |
 | Change the minimap | `FloorMap` in `src/components/FogRun.tsx` (it reads `Hud.map`, built by `miniMap` in `scene.ts`) |
 | Change what a door says | `doorLook` in `scene.ts` (unknown rooms show `UNKNOWN`) |
@@ -304,6 +311,55 @@ is, the stairs and the boss too; you only learn a room by going in. (The bot sti
 for its route, so the simulators play a player who knows the floor.) The bot explores (`route`): the nearest room it hasn't been in, a shrine when
 hurt, and the stairs once it has been in most of the floor.
 
+
+## Walls inside rooms, and traps
+
+A room is still a box (`run.area`), but past the floor's first room about half of the plain rooms
+(fights, elites, chests; never a rest room, the Warden, the boss, the Summit or the first dungeon)
+get a shape (`ROOM_SHAPES`, `pickShape` and `buildShape` in `shapes.ts`): solid blocks of wall in
+`Terrain.blocks` (`Terrain.shape` names it). `corners` cuts all four corners (a plus), `notch` one
+or two big ones (an L or a Z), `block` puts one in the middle, `halls` two walls from either side
+(a winding hall), `lanes` two long walls down the room (three lanes). Every shape keeps the lanes in
+from the four doors and the stairs' spots open, and `allJoined` drops a shape that would shut a
+pocket off. A block works like a pillar everywhere: `inPillar` and `outOfPillars` test blocks too,
+so bodies slide along them, spawns and chests stay out, and every shot stops at them, yours and the
+monsters' (cover both ways). Deep inside one (a dash, a blink), `outOfBlocks` puts you out by a face
+that opens on the room, never into the room's own wall. Auto-aim (`nearest`) prefers a monster in
+plain sight. A monster that can't see who it hunts walks round (`aroundWalls`: `wayTo`, a walk
+over a 20 px grid of the room, cached per room and target); the bot does the same for its goal
+and its way out (`wayFor`) and keeps off the walls' faces. Chests and stairs find open floor
+(`freeSpot`). The scene draws blocks in `drawRoom` with the room's stone and bricks.
+
+Traps (`TRAPS`): arrow plates (`Terrain.plates`, from floor 2): standing on one sets it off
+(`stepPlates`, a `trap` event, a clank); after `tell` the wall's slots along its line glow and `n`
+arrows (`Bullet.trap`, drawn as `shot-trap`) fly across the room, then it rearms. Dark rooms
+(`Terrain.dark`, from floor 3) set `run.dim` (the Fog's dark, now made in every world) until the
+room is clear. Developer jumps: `?run=<zone>&at=shape-<id>` or `at=dark` (`skipToShape`: a room on
+floor 3 with that shape and plates), from the `/lab/night` "Dungeon rooms with walls" panel, or
+`/lab/night?go=walls` and `?go=dark`.
+
+## Challenge rooms, bargains, elite traits, statues
+
+- **Challenge rooms** (`TRIALS`): a plain fight room past the floor's first, from floor 2, now and
+  then seals: `startTrial` drops the room's waves and `stepTrial` sends a third of a room every
+  `every` s for `secs` s (`run.trial`); `checkRoom` holds the room shut until time is up, then what
+  stands crumbles (`crumble`: no light, no drops) and a chest comes up. The HUD shows "Hold on" with
+  the seconds left (`Hud.trial`).
+- **Dark altars** (`BARGAIN`): in some rest rooms, beside the shrine (`Terrain.altar`). Touching it
+  sets `run.curse` to this floor: monsters fire `fire` times as often and drop `loot` times as often,
+  `luck` rarer. The HUD says BARGAIN (`Hud.cursed`). The bot keeps off it, so the simulators don't
+  count on it.
+- **Elite traits** (`TRAITS`, `Foe.trait`): every elite rolls one in `addFoe`, and the first of each
+  in a run is said (`TRAIT_NAME`, `run.traitsMet`). Swift moves faster; burning drops fire
+  (`run.burns`, `stepBurns`) that hurts on touch; splits falls into plain copies (`addFoe(..., plain)`
+  in `kill`). On screen a pip by the health bar and a ring in the trait's color (`TRAIT_COLOR`).
+- **Statue turrets** (`STATUES`): the monster `statue` (still, rings of shots, no touch damage),
+  placed by the side walls at a room's start (`placeStatues`, plain, never elite). They don't hold
+  the room shut and crumble when it clears; they can be broken. Their art is the prop `STATUE`
+  with a one-frame animation made in `makeTextures`.
+
+Developer jumps: `?run=<zone>&at=trial|elite|statues|altar` (`skipToShape` with `RoomForce`), or
+`/lab/night?go=trial`, `go=elite`, `go=statues`, `go=altar`.
 
 ## Items and the bag
 

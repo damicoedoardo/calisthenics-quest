@@ -6,7 +6,7 @@ import { CAST } from './cast';
 import { recordRun } from '@/lib/fog';
 import { FIRST_CLEAR, RUN_LINES } from './daily/fog-lines';
 import { CHAPTERS } from './chapters';
-import { ALL_SCENES, MAX_SCENES_AT_ONCE, VILLAGERS, answeredLines, asksAgain, chapterStart, endedScene, fill, pendingScenes, putOff, renderLines, sawScene, scenesToPlay, storySoFar, storyWords, waitingCount } from './engine';
+import { ALL_SCENES, VILLAGERS, answeredLines, asksAgain, chapterStart, endedScene, fill, pendingScenes, putOff, renderLines, sawScene, sceneMoment, scenesToPlay, storySoFar, storyState, storyWords, waitingCount } from './engine';
 import { FLAME_STAGES } from './flame';
 import { PLACES } from './places';
 import { CALLBACKS, FLAME_LINES } from './daily/flame-lines';
@@ -120,7 +120,7 @@ describe('the story files', () => {
   });
 
   it('shows every growth of the flame in a scene on the workout it happens', () => {
-    for (const stage of FLAME_STAGES.slice(1)) expect(ALL_SCENES.some((p) => p.scene.when.workouts === stage.at), stage.id).toBe(true);
+    for (const stage of FLAME_STAGES.slice(1)) expect(ALL_SCENES.some((p) => p.scene.when.grown === stage.id), stage.id).toBe(true);
   });
 
   it('lets the player join every villager story, and only answers that exist gate lines', () => {
@@ -133,6 +133,12 @@ describe('the story files', () => {
     expect(fill('{flame} wants {want}.', words)).toBe('Pip wants Ten pull-ups.');
   });
 });
+
+/** A player who beat each Fog boss right when its zone was built for: the planned pace. */
+function atPlannedPace(state: GameState): GameState {
+  const beaten = CHAPTERS.filter((c) => chapterStart(c.n + 1) <= state.sessions.length).length;
+  return { ...state, fog: { cleared: beaten, runs: beaten, best: {}, clearedAt: Array.from({ length: beaten }, (_, i) => chapterStart(i + 2)) } };
+}
 
 const workout = (date: Date, kind: Session['kind'] = 'full', better = false): Session => ({
   id: date.toISOString(),
@@ -205,7 +211,7 @@ describe('the months 4 to 6 rules', () => {
   /** A player after `n` workouts (month five starts at 50). */
   const inTheFog = (n: number, answers: GameState['answers'] = {}): GameState => {
     const sessions = Array.from({ length: n }, (_, i) => workout(day(i)));
-    return { ...initialState(), sessions, answers };
+    return atPlannedPace({ ...initialState(), sessions, answers });
   };
   const now = day(70);
 
@@ -263,12 +269,13 @@ describe('the months 4 to 6 rules', () => {
 describe('the daily follow-ups', () => {
   const day = (i: number) => new Date(2026, 0, 1 + i * 2, 18);
   const lia = CALLBACKS.find((c) => c.after === 'ch2-lia-dance')!;
-  const helped = (n: number, seen: string[]): GameState => ({
-    ...initialState(),
-    sessions: Array.from({ length: n }, (_, i) => workout(day(i))),
-    seenScenes: seen,
-    answers: { lia: 'yes' },
-  });
+  const helped = (n: number, seen: string[]): GameState =>
+    atPlannedPace({
+      ...initialState(),
+      sessions: Array.from({ length: n }, (_, i) => workout(day(i))),
+      seenScenes: seen,
+      answers: { lia: 'yes' },
+    });
 
   it('follow up on real scenes, with no digits', () => {
     for (const c of CALLBACKS) {
@@ -299,14 +306,21 @@ describe('the daily follow-ups', () => {
 
 describe('scenes at one moment', () => {
   const day = (i: number) => new Date(2026, 0, 1 + i, 18);
-  it(`never plays more than ${MAX_SCENES_AT_ONCE} at once, and the rest wait for the next workout`, () => {
+  it('plays every due scene, one after another, with no cap', () => {
     let state: GameState = { ...initialState(), sessions: Array.from({ length: 10 }, (_, i) => workout(day(i))) };
     const now = day(9);
-    expect(pendingScenes(state, now).length).toBeGreaterThan(MAX_SCENES_AT_ONCE);
-    for (let i = 0; i < MAX_SCENES_AT_ONCE; i++) state = sawScene(state, scenesToPlay(state, now)[0].id, now);
+    const due = pendingScenes(state, now);
+    expect(due.length).toBeGreaterThan(2);
+    expect(scenesToPlay(state, now)).toEqual(due);
+    for (let i = 0; i < due.length; i++) state = sawScene(state, scenesToPlay(state, now)[0].id);
     expect(scenesToPlay(state, now)).toEqual([]);
-    const later = { ...state, sessions: [...state.sessions, workout(day(10))] };
-    expect(scenesToPlay(later, day(10)).length).toBeGreaterThan(0);
+  });
+
+  it('plays the scenes old saves held back at once', () => {
+    const state: GameState = { ...initialState(), sessions: Array.from({ length: 10 }, (_, i) => workout(day(i))) };
+    const now = day(9);
+    const old = { ...state, sceneMark: { at: sceneMoment(state, now), count: 2 } };
+    expect(scenesToPlay(old, now).length).toBeGreaterThan(0);
   });
 });
 
@@ -385,6 +399,49 @@ describe('the Fog bosses', () => {
       expect(l.taunts.filter((t) => !tokens(t).length).length, c.fog.name).toBeGreaterThanOrEqual(3);
       expect(tokens(l.enter).length + tokens(l.end).length, c.fog.name).toBe(0);
     }
+  });
+});
+
+describe('chapters end on Fog bosses', () => {
+  const day = (i: number) => new Date(2026, 0, 1 + i * 2, 18);
+  const at = day(9);
+  const trained = (n: number): GameState => ({ ...initialState(), sessions: Array.from({ length: n }, (_, i) => workout(day(i))) });
+  const won = (s: GameState) => recordRun(s, { zone: s.fog?.cleared ?? 0, won: true, seconds: 200, kills: 50, level: 5, floor: 10, room: 2 }, at);
+  const ids = (s: GameState) => pendingScenes(s, at).map((x) => x.id);
+  // Everything due up to now already watched.
+  const caughtUp = (s: GameState) => ({ ...s, seenScenes: [...s.seenScenes, ...ids(s)] });
+
+  it('ends a chapter when its boss falls, however few workouts in, and opens the next', () => {
+    let s = caughtUp(trained(4));
+    expect(storyState(s).index).toBe(0);
+    s = won(s);
+    expect(storyState(s).index).toBe(1);
+    // The ending, then the heart moment the chapter had not reached yet, then the next chapter.
+    expect(ids(s)).toEqual(['ch1-victory', 'ch1-night-camp', 'ch2-intro']);
+    // A leftover scene that asks nothing (ch1-proof) is skipped.
+  });
+
+  it('plays the ending at once, even after Later at this workout today', () => {
+    const s = caughtUp(trained(4));
+    const off = putOff(s, [], at);
+    expect(scenesToPlay(off, at)).toEqual([]);
+    expect(scenesToPlay(won(off), at).map((x) => x.id).slice(0, 2)).toEqual(['ch1-victory', 'ch1-night-camp']);
+  });
+
+  it("counts a chapter's scenes from when it began, and never ends one on workouts", () => {
+    let s = caughtUp(won(caughtUp(trained(4))));
+    expect(ids(s)).not.toContain('ch2-reflection');
+    s = caughtUp({ ...s, sessions: [...s.sessions, workout(day(5)), workout(day(6))] });
+    expect(s.seenScenes).toContain('ch2-reflection');
+    // Forty workouts on, still chapter 2 until the Mirror falls in the Fog.
+    s = { ...s, sessions: Array.from({ length: 40 }, (_, i) => workout(day(i))) };
+    expect(storyState(s).index).toBe(1);
+    expect(ids(s)).not.toContain('ch2-victory');
+  });
+
+  it("grows the flame with workouts, whatever the chapter", () => {
+    const s = caughtUp(trained(14));
+    expect(ids({ ...s, sessions: [...s.sessions, workout(day(15))] })).toContain('ch2-torch');
   });
 });
 

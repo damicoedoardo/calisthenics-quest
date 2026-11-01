@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, Dumbbell, Film, Gem, Music, Play, Smartphone, Sparkles, Swords } from 'lucide-react';
 import { addFakeWorkouts, clearNextZone, skipDueScenes, skipIntro } from '@/lib/dev';
+import { chapterStart } from '@/story/engine';
 import { initialState, type GameState } from '@/lib/game';
 import { ZONES } from '@/lib/fog';
 import { SANDBOX_KEY } from '@/lib/store';
@@ -52,7 +53,8 @@ function veteran(workouts: number, cleared: number): GameState {
   return s;
 }
 
-/** A player `n` workouts in, one every other day, who watched every scene as it came. */
+/** A player `n` workouts in, one every other day, who watched every scene as it came and beat each
+    Fog boss once it was out of hearts (the story's planned pace). */
 function storyWalk(n: number): GameState {
   const now = Date.now();
   let s = skipIntro(initialState(), new Date(now - (n * 2 + 2) * DAY));
@@ -60,6 +62,7 @@ function storyWalk(n: number): GameState {
   for (let i = 0; i < n; i++) {
     const day = new Date(now - (n - i) * 2 * DAY);
     s = addFakeWorkouts(s, 1, day, true);
+    if (s.sessions.length === chapterStart((s.fog?.cleared ?? 0) + 2)) s = clearNextZone(s);
     for (let k = 0; k < 4; k++) s = skipDueScenes(s, day);
   }
   return s;
@@ -196,6 +199,26 @@ function open(state: GameState, query: string) {
   window.location.href = `/?sandbox&${query}`;
 }
 
+/** Tomorrow just beaten in the Fog, 11 workouts in: its ending plays, then chapter 2 opens. */
+function bossEndsChapter(): GameState {
+  return clearNextZone(addFakeWorkouts(storyWalk(10), 1, new Date(), false));
+}
+
+/** Jumps a preview link can open with no taps: /lab/night?go=<name>. */
+const GO: Record<string, () => void> = {
+  'boss-ends-chapter': () => open(bossEndsChapter(), 'tab=today'),
+  you: () => open(veteran(30, 2), 'you'),
+  friends: () => open(geared(), 'tab=friends'),
+  feed: () => open(geared(), 'tab=friends&feed'),
+  walls: () => open(veteran(14, 1), 'run=0&at=shape-corners'),
+  dark: () => open(veteran(14, 1), 'run=0&at=dark'),
+  trial: () => open(veteran(14, 1), 'run=0&at=trial'),
+  elite: () => open(veteran(14, 1), 'run=0&at=elite'),
+  statues: () => open(veteran(14, 1), 'run=0&at=statues'),
+  altar: () => open(veteran(14, 1), 'run=0&at=altar'),
+  video: () => open(veteran(10, 1), 'tab=train&exercise=Goblet_Squat'),
+};
+
 const MOMENTS: [string, string][] = [
   ['first-letter', 'The letter, after the first workout'],
   ['flame-name', 'The flame gets its name'],
@@ -251,15 +274,10 @@ function Row({ icon, label, note, onClick, href }: { icon: ReactNode; label: str
   );
 }
 
-/** ?go=<name>: straight to that jump, no tap (a preview link that opens on the feature). */
-const GO: Record<string, () => void> = {
-  video: () => open(veteran(10, 1), 'tab=train&exercise=Goblet_Squat'),
-};
-
 export default function NightLab() {
+  // ?go=<name> opens that jump straight away, so a preview link lands on the feature.
   useEffect(() => {
-    const go = new URLSearchParams(window.location.search).get('go');
-    if (go && GO[go]) GO[go]();
+    GO[new URLSearchParams(window.location.search).get('go') ?? '']?.();
   }, []);
   return (
     <main className="safe-top mx-auto min-h-dvh max-w-md space-y-4 px-4 pb-16">
@@ -285,7 +303,7 @@ export default function NightLab() {
       </Panel>
 
       <Panel title="STORY SO FAR" note="Play tab, at the top: every scene you reached, to watch again. Later (beside Skip) puts a scene off; skipped and put-off scenes wait there with a gold mark, and a question you skipped (like the flame's name) can be answered there.">
-        <Row icon={<Film size={16} />} label="A scene after a workout: try Later or Skip" note="Opens on Today with chapter 2's first scene due" onClick={() => open(addFakeWorkouts(storyWalk(11), 1, new Date(), false), 'tab=today')} />
+        <Row icon={<Film size={16} />} label="A scene after a workout: try Later or Skip" note="Opens on Today with chapter 1's ending due (Tomorrow just beaten), then chapter 2's first scene" onClick={GO['boss-ends-chapter']} />
         <Row icon={<BookOpen size={16} />} label="Story so far, two scenes waiting" note="The flame's name skipped and the last scene put off" onClick={() => open(storyWaiting(), 'tab=play')} />
       </Panel>
 
@@ -298,7 +316,21 @@ export default function NightLab() {
 
       <Panel title="YOUR COACH: THE FLAME" note="Your flame plans your training now. Train tab: its last words and today's workout as cards with demos, easier and swap on each. Tap Let's start and it chats with you at the camp fire. Talking needs a sign-in (Hero > Settings) on the real save.">
         <Row icon={<Sparkles size={16} />} label="Meet your coach" note="Train tab, no coach set up yet: Pip says hello" onClick={() => open(veteran(6, 0), 'tab=train')} />
+        <Row icon={<Dumbbell size={16} />} label="The workout clock" note="A workout under way: its clock under the bars, from Start to Finish, saved with the workout" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=today&workout')} />
         <Row icon={<Dumbbell size={16} />} label="A week built like a trainer's" note="Train tab, gym 40 min: warm-up, main lifts (ramp-up on the first), core, cool-down stretches, rests and an honest time" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=train')} />
+      </Panel>
+
+      <Panel title="DUNGEON ROOMS WITH WALLS" note="Rooms now have walls inside them: corners, a block in the middle, winding halls, side lanes. Walls stop every shot, yours too. Arrow plates in the floor shoot across the room when stepped on; some rooms are dark until cleared. Each jump opens a room on floor 3 of the Ashlands.">
+        <Row icon={<Swords size={16} />} label="Plus: four corners cut" note="Fight in a cross, monsters come round the corners" onClick={() => open(veteran(14, 1), 'run=0&at=shape-corners')} />
+        <Row icon={<Swords size={16} />} label="L or Z: big corners gone" note="One or two big corners walled off" onClick={() => open(veteran(14, 1), 'run=0&at=shape-notch')} />
+        <Row icon={<Swords size={16} />} label="A block in the middle" note="Circle it; ranged monsters hide behind" onClick={() => open(veteran(14, 1), 'run=0&at=shape-block')} />
+        <Row icon={<Swords size={16} />} label="Winding hall" note="Two walls from either side, staggered" onClick={() => open(veteran(14, 1), 'run=0&at=shape-halls')} />
+        <Row icon={<Swords size={16} />} label="Three lanes" note="Two long walls down the room" onClick={() => open(veteran(14, 1), 'run=0&at=shape-lanes')} />
+        <Row icon={<Swords size={16} />} label="A dark room with arrow plates" note="You see a little way round you until it's clear" onClick={() => open(veteran(14, 1), 'run=0&at=dark')} />
+        <Row icon={<Swords size={16} />} label="A challenge room" note="The doors seal: hold on 30 seconds of waves for a chest" onClick={GO.trial} />
+        <Row icon={<Swords size={16} />} label="Elites with traits" note="Swift (cyan), burning (orange, fire trail), splits (violet)" onClick={GO.elite} />
+        <Row icon={<Swords size={16} />} label="Statue turrets" note="Statues on the walls fire rings; break them or dodge, they crumble when the room is clear" onClick={GO.statues} />
+        <Row icon={<Swords size={16} />} label="A dark altar's bargain" note="A rest room with a dark altar: touch it for more and better drops on this floor, and faster shots" onClick={GO.altar} />
       </Panel>
 
       <Panel title="CLASSES, SP AND SWEAT COINS" note="Your class at the start, weapons that belong to one class, the first SP with its trial, and sweat coins to change class or start your points over.">

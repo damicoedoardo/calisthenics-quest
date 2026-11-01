@@ -3,7 +3,7 @@ type: reference
 title: Story (scenes, chapters, daily lines)
 description: The six-month story as data in src/story — scene format, when scenes play, the daily flame lines and Book of Days, rules for the words, and where to edit what.
 tags: [game, story, content]
-timestamp: 2026-10-31
+timestamp: 2026-11-01
 ---
 # Story
 
@@ -87,8 +87,23 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
 ## When scenes play
 
 - A scene plays once, when its `when` holds; scenes due together play in file order.
-- Give every workout-tied scene of a later month `chapter: N` too, so it never plays before its
-  month starts. `better: N` waits for N workouts where a set beat last time (see
+- **A chapter ends when its boss falls** in a Story run in the Fog (Edoardo, 2026-11-01: "you can
+  pass a chapter with less workouts depending on how good you are"). `storyState` reads the chapter
+  from `fog.cleared`, and `fog.clearedAt` keeps the workout count each boss fell at (old saves get
+  "now" in `migrate`). A chapter's `workouts` (its 12 to 14) is only its planned length: what its
+  zone is built for (`chapterStart`) and when its boss runs out of hearts (`hearts`/`heartsLeft`,
+  the Fog's `EDGE`). Workouts never end a chapter.
+- The win plays the chapter's ending (`beaten: N`) as soon as the player is back from the run,
+  then whatever the chapter still had to ask (its leftover questions, and scenes with `keep: true`,
+  like `first-quest`), then the next chapter's intro. Its other leftover scenes are skipped. Order
+  is in `pendingScenes`. Every due scene plays, one after another (`scenesToPlay`, no cap). A boss
+  falling is a moment of its own (`sceneMoment` counts bosses too), so its ending plays at once even
+  after Later at today's workout.
+- In a chapter's file, `workouts: N` counts from when that chapter began (`workoutsFor`,
+  `chapterBegan`), so its scenes keep their spacing however early or late its boss fell, and a
+  chapter's scenes never play before it begins. In `anytime.ts` it counts every workout. The
+  flame's growth plays with `grown: 'torch'` (its `FLAME_STAGES`, all workouts), whatever chapter
+  you're in. `better: N` waits for N workouts where a set beat last time (see
   [training.md](training.md)); there are no max tests and no skill tree to wait for any more.
 - A scene tied only to a workout count stops being due a few workouts (`CATCH_UP`) after its
   moment, so a scene added later doesn't ambush players who already passed it. Scenes that also wait
@@ -106,7 +121,8 @@ the Ember Road. Only seen or put-off scenes are listed, so nothing is spoiled. A
 is its `title`, or its first line as the player reads it.
 
 - **Later**, beside Skip in a scene that came due (`onLater` on `Dialogue`): that scene and any
-  other due at this moment go to `laterScenes` (`putOff`) and nothing else plays at this moment.
+  other due at this moment go to `laterScenes` (`putOff`) and nothing else plays at this moment
+  (`sceneMark` marks that moment `off`).
   They never play on their own again; from the list they play in full, questions and gifts included
   (mode `'later'`). A class pick has no Later.
 - **Skip** (the words, or the question) still ends the scene as before, and also marks it in

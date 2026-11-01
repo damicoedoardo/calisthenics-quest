@@ -95,7 +95,7 @@ export { DIALS };
 
 // ---------- monsters ----------
 
-export type MonsterKind = 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'ram' | 'book' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade' | 'grinder' | 'unsent' | 'loner' | 'warden' | 'image' | ZoneKind | MidKind;
+export type MonsterKind = 'statue' | 'slime' | 'wisp' | 'mirror' | 'golem' | 'reflection' | 'ram' | 'book' | 'smoke' | 'seeker' | 'splitter' | 'splitling' | 'shade' | 'grinder' | 'unsent' | 'loner' | 'warden' | 'image' | ZoneKind | MidKind;
 /** The monsters each story world (zones 2-6) brings of its own, five each (ZONE_DUNGEONS). */
 export type ZoneKind =
   | 'lakeEcho' | 'swan' | 'frog' | 'eel' | 'lily'
@@ -212,6 +212,8 @@ export const MONSTERS: Record<MonsterKind, MonsterDef> = {
   // weaves round you spitting wiggling shots; the Lily never moves and opens in a ring of petals.
   frog: { hp: 24, speed: 50, dmg: 10, r: 13, xp: 2, move: 'charge', shoots: [{ every: 0, on: 'move', kind: 'ring', n: 8, speed: 95, dmg: 7 }], cost: 2 },
   eel: { hp: 22, speed: 90, dmg: 8, r: 12, xp: 2, move: 'orbit', range: 170, shoots: [{ every: 2.4, kind: 'spread', n: 3, arc: 0.5, speed: 120, dmg: 7, style: 'wiggle', first: 1.2 }], cost: 2 },
+  // A stone statue against a wall (STATUES in src/balance/dungeon.ts): fires rings, never moves, doesn't hurt to touch.
+  statue: { hp: 70, speed: 0, dmg: 0, r: 16, xp: 1, move: 'still', shoots: [{ every: 2.8, kind: 'ring', n: 8, speed: 80, dmg: 7, first: 1.6 }], cost: 0 },
   lily: { hp: 30, speed: 0, dmg: 6, r: 14, xp: 2, move: 'still', shoots: [{ every: 3.2, kind: 'ring', n: 12, speed: 90, dmg: 7, style: 'ramp', first: 1.6 }], cost: 2 },
   // The Cold Forges: Soot Rats come in packs; Cinder Bats flit round you with sparks that follow;
   // the Kiln sits still, lobbing hot coals and puffing rings.
@@ -716,6 +718,7 @@ export const MEET: Partial<Record<MonsterKind, string>> = {
   frog: 'Puddle Frogs leap at you and splash where they land.',
   eel: 'Glass Eels weave round you. Their shots wiggle.',
   lily: 'Lilies never move. They open in a ring of petals.',
+  statue: 'Stone statues fire rings on their own. Break them, or keep out of their way: they crumble when the room is clear.',
   rat: 'Soot Rats come in packs. Keep moving.',
   bat: 'Cinder Bats flit round you. Their sparks follow.',
   kiln: 'Kilns lob hot coals where you stand.',

@@ -5,7 +5,7 @@ import { ANYTIME } from './anytime';
 import { CAST, type CastId } from './cast';
 import { CHAPTERS } from './chapters';
 import type { PlaceId } from './places';
-import { DEFAULT_FLAME_NAME } from './flame';
+import { DEFAULT_FLAME_NAME, FLAME_STAGES } from './flame';
 import { spOpen } from '@/lib/sp';
 import { roadHolds } from '@/lib/road';
 import { ROAD_SCENES } from './road';
@@ -15,9 +15,12 @@ import type { AnswerId, Ask, Chapter, Line, Scene, When, WordKey, Words } from '
    with your own words in it. Nothing here knows the story itself. */
 
 export interface StoryState {
-  /** Index into CHAPTERS of the chapter being played; CHAPTERS.length once the story is finished. */
+  /** Index into CHAPTERS of the chapter being played; CHAPTERS.length once the story is finished.
+      It is the number of Fog bosses beaten in Story runs: a chapter ends when its boss falls. */
   index: number;
   chapter: Chapter | null;
+  /** The chapter boss's hearts in the Fog: each workout takes one, and with none left it fights
+      weaker (EDGE in src/lib/fog.ts). They run out at the workout its zone is built for. */
   hearts: number;
   heartsLeft: number;
   /** Every chapter is behind you. */
@@ -27,25 +30,32 @@ export interface StoryState {
 /** Workouts a scene tied to a workout count can still play late, while a chapter catches up. */
 export const CATCH_UP = 3;
 
-/** Workouts done before chapter `n` starts. */
+/** Workouts done when chapter `n` is planned to start (at the weekly goal): what its Fog zone is
+    built for. Chapters really start when the boss before falls (`chapterBegan`). */
 export function chapterStart(n: number): number {
   return CHAPTERS.slice(0, n - 1).reduce((a, c) => a + c.workouts, 0);
 }
 
-/** Chapters move with workouts, not strength: every workout takes one heart off the enemy. */
+/** Workouts done when chapter `n` really began: when the boss before it fell (`fog.clearedAt`). */
+export function chapterBegan(state: GameState, n: number): number {
+  if (n <= 1) return 0;
+  return state.fog?.clearedAt?.[n - 2] ?? chapterStart(n);
+}
+
+/** Chapters move with the Fog: a chapter lasts until its boss falls in a Story run. Workouts take
+    the boss's hearts, so it fights weaker, but only beating it ends the chapter. */
 export function storyState(state: GameState): StoryState {
+  const i = Math.min(state.fog?.cleared ?? 0, CHAPTERS.length);
+  if (i >= CHAPTERS.length) return { index: CHAPTERS.length, chapter: null, hearts: 0, heartsLeft: 0, finished: true };
+  const end = chapterStart(i + 2);
   const done = state.sessions.length;
-  let start = 0;
-  for (let i = 0; i < CHAPTERS.length; i++) {
-    const ch = CHAPTERS[i];
-    const end = start + ch.workouts;
-    if (done >= end) {
-      start = end;
-      continue;
-    }
-    return { index: i, chapter: ch, hearts: ch.workouts, heartsLeft: end - done, finished: false };
-  }
-  return { index: CHAPTERS.length, chapter: null, hearts: 0, heartsLeft: 0, finished: true };
+  return { index: i, chapter: CHAPTERS[i], hearts: Math.max(0, end - chapterBegan(state, i + 1)), heartsLeft: Math.max(0, end - done), finished: false };
+}
+
+/** Workouts that count for a scene's `workouts`: since its chapter began (in all, for the scenes
+    of anytime.ts and the Ember Road, chapter 0). */
+export function workoutsFor(state: GameState, chapter: number): number {
+  return state.sessions.length - (chapter > 0 ? chapterBegan(state, chapter) : 0);
 }
 
 /** The villagers whose stories you can join. Saying yes to one of them is "helping" them. */
@@ -73,14 +83,19 @@ export function wroteLetter(state: GameState): boolean {
 }
 
 /** Does a scene's `when` hold right now? */
-export function holds(w: When, state: GameState, st: StoryState, now: Date): boolean {
+export function holds(w: When, state: GameState, st: StoryState, now: Date, chapter = 0): boolean {
   const n = state.sessions.length;
   const current = st.index + 1;
   const words = storyWords(state);
+  // A chapter's own scenes wait for it to begin, and once it is behind you their workouts are done.
+  const own = chapter > 0 && !w.grown && !w.beaten && w.finished === undefined;
+  if (own && current < chapter) return false;
+  const count = own && current > chapter ? Infinity : workoutsFor(state, chapter);
   const checks: [unknown, () => boolean][] = [
-    [w.workouts, () => n >= w.workouts!],
+    [w.workouts, () => count >= w.workouts!],
     [w.chapter, () => current >= w.chapter!],
     [w.beaten, () => st.index >= w.beaten!],
+    [w.grown, () => FLAME_STAGES.find((f) => f.id === w.grown)!.at <= n],
     [w.inChapter, () => current === w.inChapter],
     [w.restDay, () => isRestToday(state, now) === w.restDay],
     [w.shortSession, () => (state.sessions[n - 1]?.kind === 'mini') === w.shortSession],
@@ -120,16 +135,16 @@ export function savedId(scene: Scene, state: GameState): string {
 }
 
 /** `when` fields that wait for something to happen (a rest day, a class...), not for a workout count. */
-const WAITS_FOR: (keyof When)[] = ['restDay', 'shortSession', 'roughRun', 'daysInRow', 'perfectWeek', 'better', 'noClass', 'spReady', 'away', 'beaten', 'finished', 'road'];
+const WAITS_FOR: (keyof When)[] = ['restDay', 'shortSession', 'roughRun', 'daysInRow', 'perfectWeek', 'better', 'noClass', 'spReady', 'away', 'beaten', 'grown', 'finished', 'road'];
 
 /**
  * A story beat tied to a workout plays then, or a few workouts later while a chapter catches up.
  * One whose moment is long gone (a scene added after the player passed it) doesn't play late.
  * Scenes that also wait for something else (the first rest day, a class pick) never go stale.
  */
-function longGone(w: When, state: GameState): boolean {
+function longGone(w: When, state: GameState, chapter: number): boolean {
   if (w.workouts === undefined || WAITS_FOR.some((k) => w[k] !== undefined)) return false;
-  return state.sessions.length - w.workouts > CATCH_UP;
+  return workoutsFor(state, chapter) - w.workouts > CATCH_UP;
 }
 
 /** A scene as this player gets it: lines that wait for an answer they didn't give are left out,
@@ -147,48 +162,49 @@ function askFor(ask: Ask | undefined, keep: (ls: Line[]) => Line[]): Ask | undef
 
 /**
  * Scenes whose moment has come and that the player has not seen yet, in story order. Once a
- * chapter is behind you, its leftover scenes are skipped (except the one that ends it, and the
- * finale), and so are
- * scenes tied to a workout long past, so nobody is buried in old scenes.
+ * chapter is behind you (its boss fell), its leftover scenes are skipped, except the one that ends
+ * it and the ones that ask something (a heart moment, a villager's story), so later scenes still
+ * have your answers. Scenes tied to a workout long past are skipped too, so nobody is buried in
+ * old scenes. A chapter's ending plays first, then its leftover questions, then the next chapter.
  */
 export function pendingScenes(state: GameState, now: Date): Scene[] {
   const st = storyState(state);
   // Scenes put off with Later wait in Story so far, not here.
   const seen = new Set([...state.seenScenes, ...(state.laterScenes ?? [])]);
   const current = st.index + 1;
+  const behind = (chapter: number) => chapter > 0 && chapter < current;
   const due = ALL_SCENES.filter(({ scene, chapter }) => {
     if (seen.has(savedId(scene, state))) return false;
-    if (chapter > 0 && chapter < current && scene.when.beaten !== chapter && !scene.when.finished) return false;
-    if (longGone(scene.when, state)) return false;
-    return holds(scene.when, state, st, now);
-  }).map(({ scene }) => sceneFor(scene.when.away ? { ...scene, id: savedId(scene, state) } : scene, state));
-  // Coming back after a long time goes first.
-  return [...due.filter((s) => s.when.away), ...due.filter((s) => !s.when.away)];
+    const w = scene.when;
+    if (behind(chapter) && w.beaten !== chapter && !w.finished && !w.grown && !scene.ask && !scene.keep) return false;
+    if (!behind(chapter) && longGone(w, state, chapter)) return false;
+    return holds(w, state, st, now, chapter);
+  });
+  // In story order: a chapter's ending, then what it still had to ask, then the new chapter.
+  const rank = ({ scene, chapter }: Placed) => (scene.when.away ? 0 : scene.when.beaten ? 1 : behind(chapter) && !scene.when.grown ? 2 : 3);
+  return [...due]
+    .sort((a, b) => rank(a) - rank(b))
+    .map(({ scene }) => sceneFor(scene.when.away ? { ...scene, id: savedId(scene, state) } : scene, state));
 }
 
-/** At most this many scenes play at one moment; the rest wait for the next one. */
-export const MAX_SCENES_AT_ONCE = 2;
-
-/** One story moment: today, after this many workouts. A new workout starts a new one. */
+/** One story moment: today, after this many workouts and Fog bosses. A new workout starts a new
+    one, and so does a boss falling (it ends a chapter, so its ending plays at once). */
 export function sceneMoment(state: GameState, now: Date): string {
-  return `${dayKey(now)}|${state.sessions.length}`;
+  return `${dayKey(now)}|${state.sessions.length}|${state.fog?.cleared ?? 0}`;
 }
 
 /**
- * The scenes to play now: the due ones, but never more than MAX_SCENES_AT_ONCE at one moment.
- * Extras wait for the next workout or day.
+ * The scenes to play now: every due one, one after another. Nothing plays at a moment where the
+ * player said Later; the rest wait for the next workout, day or boss.
  */
 export function scenesToPlay(state: GameState, now: Date): Scene[] {
-  const at = sceneMoment(state, now);
-  const played = state.sceneMark?.at === at ? state.sceneMark.count : 0;
-  return pendingScenes(state, now).slice(0, Math.max(0, MAX_SCENES_AT_ONCE - played));
+  if (state.sceneMark?.off && state.sceneMark.at === sceneMoment(state, now)) return [];
+  return pendingScenes(state, now);
 }
 
-/** Mark a scene played, and count it against this moment. */
-export function sawScene(state: GameState, id: string, now: Date): GameState {
-  const at = sceneMoment(state, now);
-  const count = (state.sceneMark?.at === at ? state.sceneMark.count : 0) + 1;
-  return { ...state, seenScenes: state.seenScenes.includes(id) ? state.seenScenes : [...state.seenScenes, id], sceneMark: { at, count } };
+/** Mark a scene played. */
+export function sawScene(state: GameState, id: string): GameState {
+  return { ...state, seenScenes: state.seenScenes.includes(id) ? state.seenScenes : [...state.seenScenes, id] };
 }
 
 /** How a scene was opened: when its moment came, from the scenes put off, or watched again. */
@@ -205,17 +221,17 @@ const withId = (ids: string[] | undefined, id: string) => (ids?.includes(id) ? i
 
 /** Put the scenes due now off with Later. Nothing else plays this moment: the player said not now. */
 export function putOff(state: GameState, ids: string[], now: Date): GameState {
-  return { ...state, laterScenes: ids.reduce(withId, state.laterScenes), sceneMark: { at: sceneMoment(state, now), count: MAX_SCENES_AT_ONCE } };
+  return { ...state, laterScenes: ids.reduce(withId, state.laterScenes), sceneMark: { at: sceneMoment(state, now), off: true } };
 }
 
 /**
- * The save's story lists after a scene ends. A due scene is seen (and counts against the moment);
+ * The save's story lists after a scene ends. A due scene is seen;
  * one from the put-off list is seen and leaves it; one watched again stays seen. A skip marks it
  * in Story so far, and watching it to the end clears the mark.
  */
 export function endedScene(state: GameState, id: string, mode: SceneMode, end: SceneEnd, now: Date): GameState {
   if (end.later && mode !== 'again') return putOff(state, [id], now);
-  const seen = mode === 'due' ? sawScene(state, id, now) : { ...state, seenScenes: withId(state.seenScenes, id) };
+  const seen = mode === 'due' ? sawScene(state, id) : { ...state, seenScenes: withId(state.seenScenes, id) };
   const next = { ...seen, laterScenes: without(state.laterScenes, id) };
   return { ...next, skippedScenes: end.skipped ? withId(state.skippedScenes, id) : without(state.skippedScenes, id) };
 }

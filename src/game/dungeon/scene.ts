@@ -10,10 +10,10 @@ import { R } from '@/sprites/palette';
 import { botInput } from './bot';
 import { drawItem } from '@/sprites/characters/items';
 import type { Build } from '@/lib/stats';
-import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STAIRS, type Prop } from './props';
+import { BARREL, CHEST, CHEST_OPEN, HIT_SPARK, PILLAR, SCONCE, SHRINE as SHRINE_PROP, STAIRS, STATUE, type Prop } from './props';
 import { THEMES, themeFor, type Theme } from './themes';
 import { bandOf, glowOf } from './items';
-import { BANDS, MATS, PARTY, SURGE } from '@/balance';
+import { BANDS, MATS, PARTY, SURGE, TRAITS, TRAPS } from '@/balance';
 import { spLook } from '@/sprites/characters/spLooks';
 import { WEAPON_FX, attackFx, drawFields, shotTexture, spFx, star, type Aura, type SpEvent } from './spFx';
 import { BOSS_ART, BOSS_LOOKS, FOE_FX, SHOT_ART, bossStage, drawMine, mirrorBreaks, shotOf, soon, type FoeCtx, type FoeKit, type Look } from './foeFx';
@@ -64,6 +64,8 @@ import {
   skipToBoss,
   levelNow,
   skipToWarden,
+  skipToShape,
+  type RoomForce,
   stepRun,
   takeEvents,
   abilityReady,
@@ -88,6 +90,9 @@ import {
   type Side,
   type RunEnd as EngineEnd,
   byOf,
+  PLATE_R,
+  ALTAR_R,
+  type Trait,
 } from './engine';
 import { runFromStart, type Up } from '../net/wire';
 import { Follower } from '../net/follow';
@@ -229,6 +234,10 @@ export interface Hud {
   /** The dodge: 1 when ready. */
   dodge: number;
   cleared: boolean;
+  /** A challenge room: seconds left to hold, or null. */
+  trial: number | null;
+  /** This floor is under a dark altar's bargain. */
+  cursed: boolean;
   relics: Partial<Record<RelicId, number>>;
   /** Ledges climbed on the Summit, or null. */
   climb: number | null;
@@ -269,6 +278,8 @@ export interface RunHandle {
   /** Developer mode: show the stairs card now. */
   askStairs: () => void;
   skipToWarden: () => void;
+  /** Developer mode: a room with walls inside it (and traps). */
+  skipToShape: (force: RoomForce) => void;
   /** Developer mode: the SP's final ready now. */
   fillFinal: () => void;
   /** Developer mode: show the next zone's dungeon theme; returns its name. */
@@ -297,6 +308,8 @@ const HEAL = '#86efac';
 const RISE_MS = 280;
 /** Where a monster's health bar sits: this share of its picture's height above its middle. */
 const HP_BAR = { top: 0.42 };
+/** An elite trait's color: swift cyan, burning orange, splits violet. */
+const TRAIT_COLOR: Record<Trait, number> = { swift: 0x22d3ee, burning: 0xf97316, split: 0xa855f7 };
 /** The sounds that come in crowds (blows, hits, kills, light); others always play. */
 const CROWD: ReadonlySet<SfxId> = new Set(['slash', 'arrow', 'orb', 'wave', 'hit', 'bossHit', 'kill', 'gem', 'dash']);
 const SFX_PER_FRAME = 2;
@@ -584,7 +597,7 @@ class DungeonScene extends Phaser.Scene {
     }
     // The Fog zone: you see only a little way around you.
     // So does the Drowned Lantern's room at the lake.
-    if (zoneDungeon(this.setup.zone).sight || midBoss(this.setup.zone).kind === 'lantern') this.dark = this.add.image(0, 0, 'dark').setDisplaySize(3000, 3000).setDepth(140000).setAlpha(0.94).setVisible(false);
+    this.dark = this.add.image(0, 0, 'dark').setDisplaySize(3000, 3000).setDepth(140000).setAlpha(0.94).setVisible(false);
     this.hero = this.add.sprite(...this.P(this.run.hero.x, this.run.hero.y), 'hero').play('hero').setScale(0.8);
     this.hero.on(Phaser.Animations.Events.ANIMATION_COMPLETE, () => this.hero.play('hero'));
     // Friends: their hero and their name over it.
@@ -811,8 +824,9 @@ class DungeonScene extends Phaser.Scene {
       vig.refresh();
       vig.setFilter(Phaser.Textures.FilterMode.LINEAR);
     }
-    // The fog's dark: clear around you, black past how far you see (drawn 3000 px wide).
-    if (zoneDungeon(zone).sight || midBoss(zone).kind === 'lantern') {
+    // The fog's dark: clear around you, black past how far you see (drawn 3000 px wide). Any
+    // world can have a dark room (TRAPS.dark), so it's always made.
+    {
       const sight = DARK_REF;
       if (this.textures.exists('dark')) this.textures.remove('dark');
       const dark = this.textures.createCanvas('dark', 512, 512);
@@ -871,7 +885,10 @@ class DungeonScene extends Phaser.Scene {
     prop('sconce', SCONCE);
     prop('stairs', STAIRS);
     prop('hitspark', HIT_SPARK);
+    prop('statue', STATUE, () => g.fillStyle(0x000000, 0.3).fillEllipse(20, 50, 36, 8));
     g.destroy();
+    // A statue turret is a monster with one still frame.
+    if (!this.anims.exists('statue')) this.anims.create({ key: 'statue', frames: [{ key: 'statue' }] });
     this.themeTextures();
   }
 
@@ -1024,6 +1041,17 @@ class DungeonScene extends Phaser.Scene {
     g.fillStyle(S[3]).fillRect(w - 2, w, 2, H - 2 * w).fillRect(W - w, w, 2, H - 2 * w);
     g.fillStyle(0x000000, 0.28).fillRect(w, w, W - 2 * w, 10).fillRect(w, w, 6, H - 2 * w).fillRect(W - w - 6, w, 6, H - 2 * w);
     g.fillStyle(0x000000, 0.14).fillRect(w, w + 10, W - 2 * w, 8);
+    // Walls inside the room (a shape): the same stone, bricks on top, a lit near edge, a face in
+    // shadow and the shadow they throw on the floor.
+    for (const b of this.run.terrain.blocks ?? []) {
+      g.fillStyle(0x000000, 0.28).fillRect(b.x + 4, b.y + b.h, b.w, 10).fillRect(b.x + b.w, b.y + 6, 6, b.h);
+      g.fillStyle(S[1]).fillRect(b.x, b.y, b.w, b.h);
+      for (let y = b.y + 1, n = 0; y < b.y + b.h - 8; y += 7, n++) for (let x = b.x - (n % 2 ? 8 : 0); x < b.x + b.w; x += 16) brick(x, y, 15, 6, b.x, b.x + b.w);
+      g.fillStyle(S[4]).fillRect(b.x, b.y, b.w, 2);
+      g.fillStyle(S[3]).fillRect(b.x, b.y, 2, b.h);
+      g.fillStyle(S[0]).fillRect(b.x, b.y + b.h - 8, b.w, 8);
+      g.fillStyle(S[4]).fillRect(b.x, b.y + b.h - 9, b.w, 1);
+    }
     // The doorways, one in each wall with a room behind it: drawn as if in the top wall, then
     // turned to their own wall. A stone frame either side; open, steps down lit by what waits
     // there; shut while monsters stand, a portcullis.
@@ -1508,6 +1536,8 @@ class DungeonScene extends Phaser.Scene {
       sp: r.hero.sp ? { skill: r.hero.sp.skill, skillReady: hundredths(skillReady(r, r.hero)), final: r.hero.sp.final, finalReady: hundredths(finalReady(r.hero)), finals: this.finals } : null,
       dodge: hundredths(Math.min(1, 1 - (r.hero.dodgeAt - r.t) / DODGE.cd)),
       cleared: r.cleared,
+      trial: r.trial && !r.trial.done ? Math.max(0, Math.ceil(r.trial.until - r.t)) : null,
+      cursed: r.curse === r.floor,
       relics: { ...r.hero.relics },
       map: this.miniMap(),
       gear: { worn: { ...r.hero.gear.worn }, bag: [...r.hero.gear.bag] },
@@ -1710,7 +1740,7 @@ class DungeonScene extends Phaser.Scene {
       }
     }
 
-    this.syncMap(this.bullets, r.bullets, (b) => this.add.image(...this.P(b.x, b.y), shotOf(b.from, b.boss, b.style, this.setup.zone.boss, b.pat)).setDepth(this.dark ? 145000 : 80000), (img, b) => {
+    this.syncMap(this.bullets, r.bullets, (b) => this.add.image(...this.P(b.x, b.y), b.trap ? 'shot-trap' : shotOf(b.from, b.boss, b.style, this.setup.zone.boss, b.pat)).setDepth(sightNow(r) !== null ? 145000 : 80000), (img, b) => {
       const art = SHOT_ART[img.texture.key];
       if (art?.spin) img.setRotation(r.t * art.spin + b.id);
       else if (art?.point) img.setRotation(Math.atan2(b.vy, b.vx) + Math.PI / 2);
@@ -1742,6 +1772,9 @@ class DungeonScene extends Phaser.Scene {
     if (this.dark) {
       const sight = sightNow(r);
       this.dark.setVisible(sight !== null);
+      // In the dark, shots and warnings are drawn over it: a hit must never come from nothing.
+      this.fx.setDepth(sight !== null ? 145000 : 90000);
+      this.marks.setDepth(sight !== null ? 145000.5 : 90000.5);
       if (sight !== null) this.dark.setPosition(hx, hy).setDisplaySize((3000 * sight) / DARK_REF, (3000 * sight) / DARK_REF);
     }
     // Your flame's fires, circling you.
@@ -2328,6 +2361,23 @@ class DungeonScene extends Phaser.Scene {
         this.shake(300, 0.004);
         this.burst(this.puffs, 10, x, y, 10);
         this.fade(700, (g, p) => g.lineStyle(6 * (1 - p) + 1, 0xe2e8f0, 0.6 * (1 - p)).strokeCircle(x, y, 40 + 420 * p));
+        break;
+      }
+      case 'trap': {
+        this.sfx('clank', 1.3);
+        break;
+      }
+      case 'trial': {
+        // The doors slam shut, or open again.
+        this.sfx(e.on ? 'crash' : 'chime', e.on ? 0.7 : 1.2);
+        if (e.on) this.shake(250, 0.006);
+        this.drawRoom();
+        break;
+      }
+      case 'altar': {
+        const { x, y } = e;
+        this.sfx('dim', 0.7);
+        this.fade(800, (g, p) => g.lineStyle(4, 0xef4444, 0.8 * (1 - p)).strokeCircle(x, y, 16 + 90 * p));
         break;
       }
       case 'shrine': {
@@ -2925,6 +2975,13 @@ class DungeonScene extends Phaser.Scene {
         fill = Math.ceil((w - 2) * Math.max(0, Math.min(1, f.hp / f.maxHp)));
       mk.fillStyle(0x07080d, 0.85).fillRect(x, y, w, 4);
       mk.fillStyle(f === r.warden ? 0xc084fc : f.elite ? 0xfbbf24 : 0xef4444).fillRect(x + 1, y + 1, fill, 2);
+      // An elite's trait: a pip by its bar and a ring at its feet in the trait's color.
+      if (f.trait) {
+        const c = TRAIT_COLOR[f.trait];
+        mk.fillStyle(0x07080d, 0.85).fillRect(x - 7, y - 1, 6, 6);
+        mk.fillStyle(c).fillRect(x - 6, y, 4, 4);
+        this.fx.lineStyle(2, c, 0.35 + 0.25 * Math.sin(now / 120 + f.id)).strokeCircle(f.x, f.y, f.def.r + 5);
+      }
     }
     // Your shots: arrows leave a short streak, orbs glow and pulse.
     for (const sh of r.shots) {
@@ -3013,6 +3070,57 @@ class DungeonScene extends Phaser.Scene {
             } else if (st === 'warn') t.fillStyle(iron[2]).fillRect(sx, base - 4, 1, 3).fillRect(sx - 1, base - 2, 3, 1);
             else t.fillStyle(iron[1]).fillRect(sx, base - 1, 1, 1);
           }
+    }
+    // Fire left by a burning elite: flickering tongues that die down as it goes out.
+    for (const b of r.burns ?? []) {
+      const left = Math.min(1, (b.until - r.t) / 1),
+        k = Math.floor(now / 90 + b.x) % 3;
+      g.fillStyle(0x7c2d12, 0.45 * left).fillCircle(b.x, b.y, TRAITS.burning.r);
+      g.fillStyle(0xf97316, 0.7 * left).fillCircle(b.x + (k - 1) * 2, b.y, TRAITS.burning.r * 0.6);
+      g.fillStyle(0xfde68a, 0.8 * left).fillCircle(b.x, b.y + (k - 1), TRAITS.burning.r * 0.25);
+    }
+    // A dark altar: a black stone with a red flame, cold once its bargain is taken.
+    const al = r.terrain.altar;
+    if (al) {
+      g.fillStyle(0x000000, 0.35).fillEllipse(al.x + 4, al.y, ALTAR_R * 2.4, ALTAR_R * 1.6);
+      g.fillStyle(S[0]).fillRect(al.x - ALTAR_R, al.y - ALTAR_R, ALTAR_R * 2, ALTAR_R * 2);
+      g.fillStyle(al.used ? S[2] : 0x3b0764).fillRect(al.x - ALTAR_R + 3, al.y - ALTAR_R + 3, ALTAR_R * 2 - 6, ALTAR_R * 2 - 6);
+      if (!al.used) {
+        g.fillStyle(0xef4444, 0.25 + 0.2 * pulse).fillCircle(al.x, al.y, ALTAR_R + 8);
+        g.fillStyle(0xef4444).fillCircle(al.x, al.y, 4 + pulse * 1.5);
+        g.fillStyle(0xfecaca).fillCircle(al.x, al.y, 2);
+      }
+    }
+    // Arrow plates: a pressure plate with an arrow on it pointing the way its arrows fly. Set off,
+    // it glows red and the slots in the wall it shoots from light up along its line.
+    for (const p of r.terrain.plates ?? []) {
+      const armed = p.at >= 0,
+        ready = r.t >= p.ready,
+        R0 = PLATE_R;
+      g.fillStyle(S[0]).fillRect(p.x - R0, p.y - R0, R0 * 2, R0 * 2);
+      g.fillStyle(armed ? 0x7f1d1d : S[2]).fillRect(p.x - R0 + 2, p.y - R0 + 2, R0 * 2 - 4, R0 * 2 - 4);
+      g.fillStyle(S[3]).fillRect(p.x - R0 + 2, p.y - R0 + 2, R0 * 2 - 4, 1);
+      // The arrow on it, the way they fly.
+      const ax = p.axis === 'x' ? -p.from : 0,
+        ay = p.axis === 'y' ? -p.from : 0,
+        c = armed ? 0xef4444 : ready ? 0xb45309 : S[1];
+      g.fillStyle(c);
+      for (let k = -6; k <= 6; k += 2) g.fillRect(p.x + ax * k - 1, p.y + ay * k - 1, 2, 2);
+      g.fillTriangle(p.x + ax * 9 + ay * 0, p.y + ay * 9 + ax * 0, p.x + ax * 3 - ay * 5, p.y + ay * 3 - ax * 5, p.x + ax * 3 + ay * 5, p.y + ay * 3 + ax * 5);
+      if (armed) {
+        g.lineStyle(2, 0xef4444, 0.5 + 0.45 * pulse).strokeRect(p.x - R0, p.y - R0, R0 * 2, R0 * 2);
+        const A = TRAPS.arrows,
+          m = ROOM.wall;
+        for (let i = 0; i < A.n; i++) {
+          const off = (i - (A.n - 1) / 2) * A.gap,
+            [sx, sy] = p.axis === 'x' ? [p.from < 0 ? m - 6 : r.area.w - m, p.y + off - 4] : [p.x + off - 4, p.from < 0 ? m - 6 : r.area.h - m];
+          g.fillStyle(0xef4444, 0.55 + 0.45 * pulse).fillRect(sx, sy, p.axis === 'x' ? 6 : 8, p.axis === 'x' ? 8 : 6);
+          // A faint line across the room where it will fly.
+          g.fillStyle(0xef4444, 0.12);
+          if (p.axis === 'x') g.fillRect(m, p.y + off - 1, r.area.w - 2 * m, 2);
+          else g.fillRect(p.x + off - 1, m, 2, r.area.h - 2 * m);
+        }
+      }
     }
     // Torch flames: a tongue of fire that never sits still, in the theme's color.
     const l = this.torchFire.clear(),
@@ -3202,6 +3310,12 @@ class DungeonScene extends Phaser.Scene {
       for (const e of takeEvents(this.run)) this.react(e);
     });
   }
+  skipToShape(force: RoomForce) {
+    this.whenBuilt(() => {
+      skipToShape(this.run, force);
+      for (const e of takeEvents(this.run)) this.react(e);
+    });
+  }
 }
 
 export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents): RunHandle {
@@ -3240,6 +3354,7 @@ export function startRun(parent: HTMLElement, setup: RunSetup, events: RunEvents
     skipFloor: () => scene.skipFloor(),
     askStairs: () => scene.askStairs(),
     skipToWarden: () => scene.skipToWarden(),
+    skipToShape: (force) => scene.skipToShape(force),
     fillFinal: () => scene.fillFinal(),
     cycleTheme: () => scene.cycleTheme(),
     pickRelic: (id) => scene.pickRelic(id),

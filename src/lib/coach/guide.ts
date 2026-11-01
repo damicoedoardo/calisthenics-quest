@@ -258,8 +258,8 @@ export const GUIDE: GuideTopic[] = [
     text: (s) => {
       const st = storyState(s);
       return [
-        'The story moves with workouts, not strength: every workout takes one heart off the chapter\'s enemy, and when its hearts are gone the next chapter opens.',
-        st.chapter ? `The player is in chapter ${st.chapter.n} of ${CHAPTERS.length}, ${st.chapter.name}: ${plural(st.heartsLeft, 'heart')} left.` : 'The player has finished the story.',
+        'A chapter ends when its boss falls in the Fog (a Story run), and the next opens at once. Every workout takes one heart off that boss; with no hearts left it fights weaker, so training always gets you there.',
+        st.chapter ? `The player is in chapter ${st.chapter.n} of ${CHAPTERS.length}, ${st.chapter.name}: ${st.chapter.enemy} has ${plural(st.heartsLeft, 'heart')} left.` : 'The player has finished the story.',
         'Never tell what happens later in the story: that is theirs to find.',
       ].join('\n');
     },

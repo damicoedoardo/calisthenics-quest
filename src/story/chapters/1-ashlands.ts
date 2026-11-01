@@ -35,6 +35,8 @@ export const ASHLANDS: Chapter = {
     {
       id: 'first-quest',
       when: { workouts: 1 },
+      // The first workout's scene, even for someone who beat Tomorrow before it.
+      keep: true,
       lines: [
         { who: 'flame', text: 'You did it. One page written.' },
         { who: 'flame', text: "I feel... warmer? Is that weird? That's weird." },
@@ -192,7 +194,7 @@ export const ASHLANDS: Chapter = {
     },
     {
       id: 'ch1-candle',
-      when: { workouts: 6 },
+      when: { grown: 'candle' },
       lines: [
         { who: 'narrator', show: 'flame', text: '{flame} stretches, and grows. A small flame now, with a face that shows everything it feels.', shot: { zoom: 'in', seconds: 1.4 } },
         { who: 'flame', mood: 'happy', text: 'Okay, a candle. A brave candle.' },

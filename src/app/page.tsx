@@ -11,14 +11,14 @@ import { SharePage, useFeed } from '@/components/Feed';
 import { workoutCard, type WorkoutCard } from '@/lib/feed';
 import { YouPage } from '@/components/YouPage';
 import { StorySoFar } from '@/components/StorySoFar';
-import { FogRun, type RunStart } from '@/components/FogRun';
+import { FogRun, SHAPE_STARTS, type RunStart } from '@/components/FogRun';
 import { Hero } from '@/components/Hero';
 import { Prologue } from '@/components/Prologue';
 import { Opening, openingDue } from '@/components/Opening';
 import { useMenuTrack } from '@/components/Sound';
 import { Workout } from '@/components/Workout';
 import { AfterSession } from '@/components/AfterSession';
-import { useCoachPlan } from '@/components/useCoach';
+import { useCoachAutoPlan, useCoachPlan } from '@/components/useCoach';
 import { ScenePlayer, type SceneResult } from '@/components/ScenePlayer';
 import { giveSp, spAfterRun, spWorn } from '@/lib/sp';
 import { changeClass, classCost, coins } from '@/lib/sweat';
@@ -154,7 +154,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
     const zone = ZONES.find((z) => String(z.id) === q.get('run')) ?? ROAD_ZONES.find((z) => `road${z.road}` === q.get('run'));
     if (zone) {
       const at = q.get('at');
-      setRunStart(at === 'mid' || at === 'boss' || at === 'win' || at === 'sp' || at === 'skills' ? at : undefined);
+      setRunStart(at === 'mid' || at === 'boss' || at === 'win' || at === 'sp' || at === 'skills' || SHAPE_STARTS.includes(at as RunStart) ? (at as RunStart) : undefined);
       // ?party: a practice party run with two made-up friends, to see it without a backend.
       if (q.has('party')) setPartyRun({ seed: 7, friends: LAB_FRIENDS });
       setRun(zone);
@@ -244,7 +244,7 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
       setScene(next);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, state.profile.onboarded, state.sessions.length, state.road, opening, replaying, training, after, scene, picker, run]);
+  }, [ready, state.profile.onboarded, state.sessions.length, state.road, state.fog?.cleared, opening, replaying, training, after, scene, picker, run]);
 
   // A page in the Book of Days for every day the app is opened (and today's line follows the day).
   const today = new Date().toDateString();
@@ -285,6 +285,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   );
 
   useCoachPlan(state, update);
+  // Then the coach rewrites a week from how training really went (signed in, real save only).
+  useCoachAutoPlan(state, update, ready && signedIn && !offRecord());
 
   // A workout starts on its own day, never ahead of it (one under way always carries on). `force`:
   // the developer menu's jump straight into a workout.

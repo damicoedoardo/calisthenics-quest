@@ -358,11 +358,12 @@ export function SharePage({ state, card, feed, onClose, onShared }: { state: Gam
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const pick = async (f: File | undefined) => {
+  const selfieInput = useRef<HTMLInputElement>(null);
+  const pick = async (f: File | undefined, selfie = false) => {
     if (!f) return;
     setError('');
     try {
-      setPhoto(await shrinkPhoto(f));
+      setPhoto(await shrinkPhoto(f, { selfie }));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Couldn't open that photo.");
     }
@@ -417,6 +418,8 @@ export function SharePage({ state, card, feed, onClose, onShared }: { state: Gam
         />
 
         <input ref={file} type="file" accept="image/*" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} />
+        {/* The front camera, opened by the app: a selfie, shown as you saw yourself. */}
+        <input ref={selfieInput} type="file" accept="image/*" capture="user" className="hidden" onChange={(e) => void pick(e.target.files?.[0], true)} />
         {photo ? (
           <div className="relative mt-3 overflow-hidden rounded-xl">
             {/* eslint-disable-next-line @next/next/no-img-element -- a local preview */}
@@ -426,9 +429,14 @@ export function SharePage({ state, card, feed, onClose, onShared }: { state: Gam
             </button>
           </div>
         ) : (
-          <button onClick={() => file.current?.click()} className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-ink-600 py-4 text-sm text-slate-300">
-            <ImagePlus size={18} /> Add a photo (optional)
-          </button>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button onClick={() => selfieInput.current?.click()} className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-ink-600 py-4 text-sm text-slate-300">
+              <Camera size={18} /> Selfie
+            </button>
+            <button onClick={() => file.current?.click()} className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-ink-600 py-4 text-sm text-slate-300">
+              <ImagePlus size={18} /> Photo
+            </button>
+          </div>
         )}
 
         <p className="mt-3 text-[11px] text-slate-500">Only your friends see it. You can delete it any time.</p>
