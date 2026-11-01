@@ -104,11 +104,10 @@ export function ExerciseDetail({ state, x, onBack, back = 'Back to the library' 
   );
 }
 
-/** The how-to video: a hand-picked YouTube tutorial that loads only when tapped, or a YouTube
-    search for exercises without one. */
+/** The how-to video: a hand-picked YouTube tutorial played right in the card, or a YouTube search
+    for exercises without one. */
 function ExerciseVideo({ id, name }: { id: string; name: string }) {
   const video = videoOf(id);
-  const [playing, setPlaying] = useState(false);
   const box = 'mt-5 [@media(orientation:landscape)_and_(max-height:600px)]:mt-2';
   if (!video) {
     return (
@@ -121,28 +120,17 @@ function ExerciseVideo({ id, name }: { id: string; name: string }) {
   }
   return (
     <div className={box}>
-      {playing ? (
-        <div className="aspect-video overflow-hidden rounded-2xl bg-black ring-1 ring-ink-700">
-          <iframe
-            src={videoEmbedUrl(video.id)}
-            title={video.title}
-            className="h-full w-full"
-            allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
-            allowFullScreen
-            referrerPolicy="strict-origin-when-cross-origin"
-          />
-        </div>
-      ) : (
-        <button onClick={() => setPlaying(true)} className="flex w-full items-center gap-3 rounded-2xl bg-ink-900 p-3 text-left ring-1 ring-ink-700">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gold-300 text-ink-950">
-            <Play size={18} fill="currentColor" aria-hidden />
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-sm text-slate-200">Watch how to do it</span>
-            <span className="block truncate text-[11px] text-slate-500">{video.title}</span>
-          </span>
-        </button>
-      )}
+      <div className="aspect-video overflow-hidden rounded-2xl bg-black ring-1 ring-ink-700">
+        <iframe
+          src={videoEmbedUrl(video.id)}
+          title={video.title}
+          loading="lazy"
+          className="h-full w-full"
+          allow="encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+          referrerPolicy="strict-origin-when-cross-origin"
+        />
+      </div>
       <a href={videoWatchUrl(video.id)} target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-slate-500">
         Open on YouTube <ExternalLink size={11} aria-hidden />
       </a>

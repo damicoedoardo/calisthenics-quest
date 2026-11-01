@@ -68,10 +68,14 @@ findExercises(all, { kind: 'stretch', muscles: ['hamstrings'] });
 
 ## How-to videos
 
-The exercise page shows "Watch how to do it" when the exercise has a pick in `VIDEOS`
-(`src/exercises/videos.ts`). Nothing loads from YouTube until it is tapped; then the player
-plays in the page from `youtube-nocookie.com`, with an "Open on YouTube" link under it. An
-exercise without a pick shows "Find a how-to video on YouTube", a YouTube search for its name.
+When the exercise has a pick in `VIDEOS` (`src/exercises/videos.ts`), the exercise page shows
+the YouTube player itself (from `youtube-nocookie.com`, no autoplay): one tap plays it in the
+card. An "Open on YouTube" link sits under it. An exercise without a pick shows "Find a how-to
+video on YouTube", a YouTube search for its name.
+
+A link straight to one card: `/?exercise=<library id>` (for example `/?exercise=Goblet_Squat`)
+opens the Train tab with the library on that exercise (`page.tsx` picks the tab, `TrainTab`
+passes `start` to `ExerciseLibrary`).
 
 The picks cover every exercise the coach plans with (the `STAPLES`, warm-up moves and cool-down
 stretches in `src/lib/coach/staples.ts`, and FORMA's own moves): 145 of 146. The one gap is

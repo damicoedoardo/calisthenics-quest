@@ -1,7 +1,7 @@
 /* A YouTube how-to video for an exercise, by library id. Picked by hand from a web search for
    each exercise the coach plans with (the staples, warm-ups, stretches and FORMA's own moves): a
    short, plain tutorial of that exact move. Any other exercise gets a YouTube search instead
-   (videoSearchUrl). The player loads only when tapped, from youtube-nocookie.com.
+   (videoSearchUrl). The card shows the player itself, from youtube-nocookie.com.
    Add one: the library id, the 11-character video id from the watch link, and its title. */
 
 export interface Video {
@@ -166,7 +166,7 @@ export const videoOf = (exerciseId: string): Video | null => VIDEOS[exerciseId] 
 export const videoSearchUrl = (name: string) => `https://www.youtube.com/results?search_query=${encodeURIComponent(`how to do ${name} exercise`)}`;
 
 /** The privacy-friendly player for a video (no cookies until it plays). */
-export const videoEmbedUrl = (id: string) => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&playsinline=1`;
+export const videoEmbedUrl = (id: string) => `https://www.youtube-nocookie.com/embed/${id}?rel=0&playsinline=1`;
 
 /** The video on YouTube itself. */
 export const videoWatchUrl = (id: string) => `https://www.youtube.com/watch?v=${id}`;

@@ -136,6 +136,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   useEffect(() => {
     if (!ready || jumped.current) return;
     jumped.current = true;
+    // ?exercise=<library id>: the Train tab with that exercise's card open (a link to share).
+    if (new URLSearchParams(window.location.search).has('exercise')) setTab('train');
     if (!inSandbox()) return;
     setSandbox(true);
     const q = new URLSearchParams(window.location.search);
