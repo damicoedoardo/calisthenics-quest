@@ -3,7 +3,7 @@ type: reference
 title: Keeping the handbook true
 description: The rule that every push updates the handbook, and how it is enforced — the updating-handbook skill's routing table, scripts/handbook.mjs lint and check, the pre-push hook, CI, and the "Handbook: none" escape.
 tags: [dev, handbook, docs, ci]
-timestamp: 2026-10-28
+timestamp: 2026-11-01
 ---
 
 # Keeping the handbook true
