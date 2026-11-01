@@ -218,19 +218,25 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
           </button>
         </div>
 
-        <Demo state={state} exercise={q.demo} name={q.name} cue={q.cue} />
-        {/* Small tools under the demo: an icon and one word each. */}
-        {!exerciseDone && (
-          <div className="mt-2 flex justify-center gap-5">
-            <Tool icon={<BookOpen size={16} />} label="How to" onClick={() => setHowTo(true)} />
-            {!tap && q.item && q.item.easier.length > 0 && <Tool icon={<TrendingDown size={16} />} label="Easier" onClick={() => setChoices('easier')} />}
-            {!tap && q.item && q.item.swaps.length > 0 && <Tool icon={<Shuffle size={16} />} label="Swap" onClick={() => setChoices('swap')} />}
-          </div>
-        )}
+        {/* The demo in the middle, its small tools in a column on its right: an icon and one word each. */}
+        <div className="relative">
+          <Demo state={state} exercise={q.demo} name={q.name} cue={q.cue} />
+          {!exerciseDone && (
+            <div className="absolute right-0 top-1/2 flex -translate-y-1/2 flex-col gap-2">
+              <Tool icon={<BookOpen size={16} />} label="How to" onClick={() => setHowTo(true)} />
+              {!tap && q.item && q.item.easier.length > 0 && <Tool icon={<TrendingDown size={16} />} label="Easier" onClick={() => setChoices('easier')} />}
+              {!tap && q.item && q.item.swaps.length > 0 && <Tool icon={<Shuffle size={16} />} label="Swap" onClick={() => setChoices('swap')} />}
+            </div>
+          )}
+        </div>
         </div>
 
         <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:flex [@media(orientation:landscape)_and_(max-height:600px)]:flex-col [@media(orientation:landscape)_and_(max-height:600px)]:justify-center">
-        <div className={`mt-5 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0 flex justify-center gap-2 ${tap || q.run ? 'hidden' : ''}`}>
+        {/* The rounds: which one you're on, then a box each (its reps once done). */}
+        <p className={`mt-5 text-center font-pixel text-[9px] uppercase tracking-[0.2em] text-slate-400 [@media(orientation:landscape)_and_(max-height:600px)]:mt-0 ${tap || q.run ? 'hidden' : ''}`}>
+          {exerciseDone ? `${q.sets} rounds` : `Round ${logged.length + 1} of ${q.sets}`}
+        </p>
+        <div className={`mt-2 flex justify-center gap-2 ${tap || q.run ? 'hidden' : ''}`}>
           {Array.from({ length: q.sets }).map((_, i) => (
             <div
               key={i}
@@ -382,7 +388,7 @@ export function Workout({ state, update, onClose, onFinish }: Props) {
   );
 }
 
-/** A small tool under the demo: its icon over one word. */
+/** A small tool beside the demo: its icon over one word. */
 function Tool({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick: () => void }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center gap-1 text-[10px] text-slate-400 active:scale-95">
