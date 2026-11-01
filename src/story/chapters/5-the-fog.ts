@@ -94,7 +94,7 @@ export const THE_FOG: Chapter = {
     {
       // The flame grows wings at the end of the Plateau, whatever the chapter is waiting for.
       id: 'ch5-wings',
-      when: { workouts: 50 },
+      when: { grown: 'fairy' },
       // Still on the Plateau: the fog only comes after this.
       place: 'flat-road',
       lines: [
@@ -127,7 +127,7 @@ export const THE_FOG: Chapter = {
     },
     {
       id: 'ch5-fairy-heals',
-      when: { workouts: 53, chapter: 5 },
+      when: { workouts: 3, chapter: 5 },
       lines: [
         { who: 'narrator', text: 'A root you never saw. You go down hard in the wet leaves, and for a moment you just lie there.' },
         { who: 'hollow', text: "There it is. Stay down. You know how. You're good at it." },
@@ -140,7 +140,7 @@ export const THE_FOG: Chapter = {
     },
     {
       id: 'ch5-next-step',
-      when: { workouts: 55, chapter: 5 },
+      when: { workouts: 5, chapter: 5 },
       music: 'hollow',
       shots: [{ pan: 'left', seconds: 1.6 }, { pan: 'right', seconds: 1.6 }, { pan: 'center' }],
       lines: [
@@ -155,7 +155,7 @@ export const THE_FOG: Chapter = {
     },
     {
       id: 'ch5-hollow-knows',
-      when: { workouts: 57, chapter: 5 },
+      when: { workouts: 7, chapter: 5 },
       music: 'hollow',
       lines: [
         { who: 'narrator', show: 'hollow', text: 'The Hollow steps out of the fog right in front of the Wanderer. It tilts its head.' },
@@ -168,7 +168,7 @@ export const THE_FOG: Chapter = {
     },
     {
       id: 'ch5-heart',
-      when: { workouts: 59, chapter: 5 },
+      when: { workouts: 9, chapter: 5 },
       music: 'memory',
       lines: [
         { who: 'narrator', show: 'hollow', text: 'The Hollow sits down in the path, the way the Echo sat on the lake. It looks tired. You never thought of it as tired.' },
@@ -195,7 +195,7 @@ export const THE_FOG: Chapter = {
     },
     {
       id: 'ch5-nothing-changed',
-      when: { workouts: 61, chapter: 5 },
+      when: { workouts: 11, chapter: 5 },
       music: 'hollow',
       lines: [
         { who: 'hollow', text: '{voice}', needs: 'voice' },
@@ -209,7 +209,7 @@ export const THE_FOG: Chapter = {
     },
     {
       id: 'ch5-gathering',
-      when: { workouts: 63, chapter: 5, helped: true },
+      when: { workouts: 13, chapter: 5, helped: true },
       music: 'hollow',
       lines: [
         { who: 'narrator', text: "The fog closes in so thick you can't see {flame}'s wings. The Hollow's voice comes from everywhere at once." },
@@ -222,7 +222,7 @@ export const THE_FOG: Chapter = {
     },
     {
       id: 'ch5-gathering-alone',
-      when: { workouts: 63, chapter: 5, helped: false },
+      when: { workouts: 13, chapter: 5, helped: false },
       music: 'hollow',
       lines: [
         { who: 'narrator', text: "The fog closes in so thick you can't see {flame}'s wings. The Hollow's voice comes from everywhere at once." },
@@ -235,7 +235,7 @@ export const THE_FOG: Chapter = {
     },
     {
       id: 'ch5-short',
-      when: { workouts: 51, shortSession: true, inChapter: 5 },
+      when: { workouts: 1, shortSession: true, inChapter: 5 },
       lines: [
         { who: 'hollow', text: "That's all you've got today?" },
         { who: 'you', text: 'Today, yes. And I brought it.' },
@@ -252,16 +252,6 @@ export const THE_FOG: Chapter = {
         { who: 'wanderer', text: 'Lost people rush. People who know where they are going can afford to sit down.' },
         { who: 'hollow', text: 'Giving up already?' },
         { who: 'flame', mood: 'sleepy', text: "Nope. Resting. You'd know the difference if you ever tried it." },
-      ],
-    },
-    {
-      // The Fog boss fell in a Story run. It can fall long before the month's workouts are done.
-      id: 'ch5-fog-won',
-      when: { fogWon: 5, chapter: 5 },
-      lines: [
-        { who: 'narrator', show: 'hollow', text: "In the Fog, you stand in the Hollow's light and take its hand. For a moment, it goes quiet." },
-        { who: 'hollow', text: '...It will start talking again. It always does.' },
-        { who: 'flame', mood: 'soft', text: "Then you'll walk anyway. You just did." },
       ],
     },
     {

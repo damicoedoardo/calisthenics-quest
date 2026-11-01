@@ -497,7 +497,7 @@ export function migrate(raw: unknown): GameState {
     // The flame used to keep one chosen item through a fall (`guard`); now all you wear comes home.
     const { guard: _guard, ...gear } = armorAsksNoPoints(kept.fogGear) as FogGear & { guard?: unknown };
     // A class change used to leave the old class's weapon worn; now it goes back to the vault.
-    return { ...fresh, ...s, profile: profileOf(s.profile), build: kept.build, fogGear: s.profile?.classId ? offOtherClass(gear, s.profile.classId) : gear, ...(s.coach ? { coach: fromLegacy(s.coach) } : {}) };
+    return { ...fresh, ...s, fog: withClearedAt(s.fog, (s.sessions ?? []).length), profile: profileOf(s.profile), build: kept.build, fogGear: s.profile?.classId ? offOtherClass(gear, s.profile.classId) : gear, ...(s.coach ? { coach: fromLegacy(s.coach) } : {}) };
   }
   if (r.version === 2) {
     const { progress: _progress, tests: _tests, reps: _reps, ...s } = r as unknown as GameState & { progress?: unknown; tests?: unknown };
@@ -529,6 +529,15 @@ export function migrate(raw: unknown): GameState {
     return { ...fresh, sessions };
   }
   return fresh;
+}
+
+/** Story chapters end when their Fog boss falls (they used to end on workouts), and a chapter's
+    scenes count workouts from when it began, so every boss already beaten needs the workout count
+    it fell at. Saves from before it was kept say: now. */
+function withClearedAt(fog: GameState['fog'], workouts: number): GameState['fog'] {
+  if (!fog || fog.cleared <= (fog.clearedAt?.length ?? 0)) return fog;
+  const at = fog.clearedAt ?? [];
+  return { ...fog, clearedAt: Array.from({ length: fog.cleared }, (_, i) => at[i] ?? workouts) };
 }
 
 /** Reach left the stats (loot comes to you): its points go back to spend, and items that asked

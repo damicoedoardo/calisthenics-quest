@@ -35,6 +35,8 @@ export const ASHLANDS: Chapter = {
     {
       id: 'first-quest',
       when: { workouts: 1 },
+      // The first workout's scene, even for someone who beat Tomorrow before it.
+      keep: true,
       lines: [
         { who: 'flame', text: 'You did it. One page written.' },
         { who: 'flame', text: "I feel... warmer? Is that weird? That's weird." },
@@ -192,7 +194,7 @@ export const ASHLANDS: Chapter = {
     },
     {
       id: 'ch1-candle',
-      when: { workouts: 6 },
+      when: { grown: 'candle' },
       lines: [
         { who: 'narrator', show: 'flame', text: '{flame} stretches, and grows. A small flame now, with a face that shows everything it feels.', shot: { zoom: 'in', seconds: 1.4 } },
         { who: 'flame', mood: 'happy', text: 'Okay, a candle. A brave candle.' },
@@ -277,17 +279,6 @@ export const ASHLANDS: Chapter = {
         { who: 'narrator', text: "You don't answer it. You just put today's stone at the end of the line.", pause: 1.2, film: true },
         { who: 'narrator', text: "You count them. You don't need to, you know how many there are. You count them anyway.", pause: 1, film: true },
         { who: 'flame', mood: 'happy', text: '...That one was a good one.', pause: 0.8 },
-      ],
-    },
-    {
-      // The Fog boss fell in a Story run. It can fall long before the month's workouts are done.
-      id: 'ch1-fog-won',
-      when: { fogWon: 1 },
-      lines: [
-        { who: 'narrator', show: 'tomorrow', text: 'Deep in the Fog, Tomorrow pops like a soap bubble.', shot: { shake: 'small' } },
-        { who: 'tomorrow', text: "Mmh... that was only the me in the Fog. The real me lives in your days." },
-        { who: 'flame', mood: 'happy', text: 'Then we beat that one too. One workout at a time.' },
-        { who: 'flame', mood: 'bright', text: "I'll keep the stones. You keep showing up." },
       ],
     },
     {

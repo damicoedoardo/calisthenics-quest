@@ -46,7 +46,7 @@ export const MIRROR_LAKE: Chapter = {
     },
     {
       id: 'ch2-reflection',
-      when: { workouts: 14, chapter: 2 },
+      when: { workouts: 2, chapter: 2 },
       music: 'memory',
       shots: [{ pan: 'down', seconds: 1.8 }],
       lines: [
@@ -62,7 +62,7 @@ export const MIRROR_LAKE: Chapter = {
     },
     {
       id: 'ch2-torch',
-      when: { workouts: 15 },
+      when: { grown: 'torch' },
       lines: [
         { who: 'narrator', show: 'flame', text: '{flame} rises up tall, and two tiny arms pop out of the fire.', shot: { zoom: 'in', seconds: 1.4 } },
         { who: 'flame', mood: 'happy', text: 'I can light the whole path now. Look how far back it goes.' },
@@ -74,7 +74,7 @@ export const MIRROR_LAKE: Chapter = {
     },
     {
       id: 'ch2-echo-counts',
-      when: { workouts: 16 },
+      when: { workouts: 4 },
       lines: [
         { who: 'echo', text: 'I never needed a warm-up. I never got tired. I never had to start over.' },
         { who: 'wanderer', text: 'You also never had the life you have now.' },
@@ -86,7 +86,7 @@ export const MIRROR_LAKE: Chapter = {
     },
     {
       id: 'ch2-wanderer-knows',
-      when: { workouts: 17, needs: 'want' },
+      when: { workouts: 5, needs: 'want' },
       lines: [
         { who: 'wanderer', text: '"One day I want to be able to {want}."' },
         { who: 'you', text: '...I never told you that.' },
@@ -96,7 +96,7 @@ export const MIRROR_LAKE: Chapter = {
     },
     {
       id: 'ch2-lia',
-      when: { workouts: 18 },
+      when: { workouts: 6 },
       lines: [
         { who: 'narrator', show: 'lia', text: 'A dancer sits at the edge of the lake, staring at her reflection. She has been there a long time.' },
         { who: 'lia', text: "I used to be the best in the room. Now I can't even look." },
@@ -124,7 +124,7 @@ export const MIRROR_LAKE: Chapter = {
     },
     {
       id: 'ch2-heart',
-      when: { workouts: 19 },
+      when: { workouts: 7 },
       music: 'memory',
       lines: [
         { who: 'narrator', show: 'echo', text: 'For once, the Echo is quiet. It sits on the water with its knees up.' },
@@ -150,7 +150,7 @@ export const MIRROR_LAKE: Chapter = {
     },
     {
       id: 'ch2-mira-lia',
-      when: { workouts: 20, answer: { id: 'lia', is: 'yes' } },
+      when: { workouts: 8, answer: { id: 'lia', is: 'yes' } },
       lines: [
         { who: 'narrator', show: 'mira', text: "A smith with a hammer on her back passes by. She kneels and fixes Lia's broken shoe without a word." },
         { who: 'mira', text: "Armor doesn't care how it looks on you. It cares that you showed up in it." },
@@ -163,7 +163,7 @@ export const MIRROR_LAKE: Chapter = {
     {
       // You are not the only one: the shore is lined with the stones of everyone who came back.
       id: 'ch2-shore',
-      when: { workouts: 20, chapter: 2 },
+      when: { workouts: 8, chapter: 2 },
       music: 'memory',
       shots: [{ pan: 'right', seconds: 2 }],
       lines: [
@@ -179,7 +179,7 @@ export const MIRROR_LAKE: Chapter = {
     },
     {
       id: 'ch2-friend',
-      when: { workouts: 21, chapter: 2 },
+      when: { workouts: 9, chapter: 2 },
       place: 'lake-camp',
       music: 'camp',
       lines: [
@@ -207,7 +207,7 @@ export const MIRROR_LAKE: Chapter = {
     {
       // Lia's arc, the turn: she dances badly, laughs, and hands you the kindness back.
       id: 'ch2-lia-dance',
-      when: { workouts: 22, answer: { id: 'lia', is: 'yes' } },
+      when: { workouts: 10, answer: { id: 'lia', is: 'yes' } },
       lines: [
         { who: 'narrator', show: 'lia-after', text: 'Lia is dancing at the edge of the lake. It is not good. She wobbles on a turn, stops, and starts again from the middle.' },
         { who: 'lia-after', text: "Don't clap. I mean it. I'm terrible." },
@@ -227,7 +227,7 @@ export const MIRROR_LAKE: Chapter = {
     {
       // The grief scene: the hardest moment of the month, given room.
       id: 'ch2-grief',
-      when: { workouts: 23, chapter: 2 },
+      when: { workouts: 11, chapter: 2 },
       music: 'memory',
       shots: [{ fade: 'in', seconds: 2 }],
       lines: [
@@ -242,16 +242,6 @@ export const MIRROR_LAKE: Chapter = {
         { who: 'narrator', text: 'You sit down on the shore. Nobody tells you to get up.', pause: 1.8, film: true },
         { who: 'narrator', show: 'flame', text: '{flame} settles against your knee and stays there. It says nothing, which for {flame} is a very big thing to do.', pause: 1.2, music: 'memory' },
         { who: 'echo', text: "...For what it's worth. I was only ever the best photos. You're the whole film.", pause: 1 },
-      ],
-    },
-    {
-      // The Fog boss fell in a Story run. It can fall long before the month's workouts are done.
-      id: 'ch2-fog-won',
-      when: { fogWon: 2, chapter: 2 },
-      lines: [
-        { who: 'narrator', show: 'mirror', text: 'In the Fog, the Mirror cracks down the middle. Both halves keep showing you.', shot: { shake: 'small' } },
-        { who: 'mirror', text: 'One crack. The lake still has plenty of me.' },
-        { who: 'wanderer', text: 'It does. Keep walking past it, one day at a time.' },
       ],
     },
     {

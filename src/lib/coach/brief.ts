@@ -29,7 +29,7 @@ export function coachBrief(state: GameState, now: Date, checkin: Checkin = 'norm
   lines.push(`Your form now: ${form.name} (you grow with their workouts${next ? `; next, ${next.name} at ${next.at}` : ''}).${fused(state.seenScenes) ? ' You have fused with the player: you burn inside them now.' : ''}`);
   lines.push(
     story.chapter
-      ? `The story: chapter ${story.chapter.n} of ${CHAPTERS.length}, ${story.chapter.name}. Its lesson: ${story.chapter.lesson}. The enemy: ${story.chapter.enemy}, ${story.heartsLeft} of ${story.hearts} hearts left (each workout takes one).`
+      ? `The story: chapter ${story.chapter.n} of ${CHAPTERS.length}, ${story.chapter.name}. Its lesson: ${story.chapter.lesson}. The enemy: ${story.chapter.enemy}, ${story.heartsLeft ? `${story.heartsLeft} hearts left in the Fog (each workout takes one; with none left it fights weaker)` : 'out of hearts, so it fights weaker in the Fog'}. The chapter ends when they beat it in the Fog.`
       : 'The story: every chapter is done. The road is theirs now.',
   );
   lines.push(`Today: ${day(now.toISOString())}. Check-in: ${checkin}.`);

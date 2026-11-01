@@ -45,7 +45,7 @@ export const PLATEAU: Chapter = {
     },
     {
       id: 'ch4-wake',
-      when: { workouts: 39, chapter: 4 },
+      when: { workouts: 2, chapter: 4 },
       lines: [
         { who: 'narrator', show: 'plateau', text: 'The Plateau wakes, slowly. It looks at you as if you were weather.', shot: { shake: 'small' } },
         { who: 'plateau', text: '...Same.' },
@@ -58,7 +58,7 @@ export const PLATEAU: Chapter = {
     {
       // Lia's arc, what she gives back: a note in her own hand, and a student.
       id: 'ch4-lia-bird',
-      when: { workouts: 40, chapter: 4, answer: { id: 'lia', is: 'yes' } },
+      when: { workouts: 3, chapter: 4, answer: { id: 'lia', is: 'yes' } },
       lines: [
         { who: 'narrator', show: 'flame', text: 'A paper bird comes skimming down the flat road and lands on your boot. It is folded a little crooked.' },
         { who: 'narrator', text: 'Inside, in round handwriting: "Danced badly again today. Nobody laughed. One person clapped. It was me."', pause: 1.2, film: true },
@@ -69,7 +69,7 @@ export const PLATEAU: Chapter = {
     },
     {
       id: 'ch4-vela',
-      when: { workouts: 41, chapter: 4 },
+      when: { workouts: 4, chapter: 4 },
       place: 'lamp-road',
       shots: [{ pan: 'up', seconds: 1.8 }],
       lines: [
@@ -107,7 +107,7 @@ export const PLATEAU: Chapter = {
     {
       // Sol's arc, what she gives back: the rest she learned, posted to you.
       id: 'ch4-sol-socks',
-      when: { workouts: 42, restDay: true, inChapter: 4, answer: { id: 'sol', is: 'yes' } },
+      when: { workouts: 5, restDay: true, inChapter: 4, answer: { id: 'sol', is: 'yes' } },
       music: 'camp',
       lines: [
         { who: 'narrator', show: 'sol-after', text: 'A parcel is waiting by the road, tied with string. Inside: a pair of very soft socks, and a note in hurried handwriting.' },
@@ -120,7 +120,7 @@ export const PLATEAU: Chapter = {
     {
       // The Plateau doubt: the month's hardest moment. The stones from month one come back.
       id: 'ch4-heart',
-      when: { workouts: 43, chapter: 4 },
+      when: { workouts: 6, chapter: 4 },
       place: 'flat-road-night',
       music: 'memory',
       shots: [{ fade: 'in', seconds: 1.6 }],
@@ -161,7 +161,7 @@ export const PLATEAU: Chapter = {
     },
     {
       id: 'ch4-vela-letter',
-      when: { workouts: 44, chapter: 4, answer: { id: 'vela', is: 'yes' } },
+      when: { workouts: 7, chapter: 4, answer: { id: 'vela', is: 'yes' } },
       place: 'lamp-road',
       lines: [
         { who: 'narrator', show: 'vela', text: 'Vela is writing again. A whole box of letters sits beside her. None of them has a stamp.' },
@@ -176,7 +176,7 @@ export const PLATEAU: Chapter = {
     },
     {
       id: 'ch4-boring',
-      when: { workouts: 45, chapter: 4 },
+      when: { workouts: 8, chapter: 4 },
       lines: [
         { who: 'flame', mood: 'soft', text: 'Is it weird that training feels boring now?' },
         { who: 'flame', mood: 'happy', text: 'Boring in a good way. Like brushing your teeth, but with fire.' },
@@ -189,7 +189,7 @@ export const PLATEAU: Chapter = {
     {
       // Vela's arc, the turn and the gift: she comes down from the tower, and promises a light behind you.
       id: 'ch4-vela-down',
-      when: { workouts: 46, chapter: 4, answer: { id: 'vela', is: 'yes' } },
+      when: { workouts: 9, chapter: 4, answer: { id: 'vela', is: 'yes' } },
       place: 'lamp-road',
       lines: [
         { who: 'narrator', show: 'vela-after', text: 'The lamp is lit, but the tower is empty. Vela is at the bottom of the stairs, one hand on the rail. In the other, a letter: sealed, stamped, a little crumpled from being held.' },
@@ -207,7 +207,7 @@ export const PLATEAU: Chapter = {
     },
     {
       id: 'ch4-stone',
-      when: { workouts: 47, chapter: 4 },
+      when: { workouts: 10, chapter: 4 },
       place: 'lit-forges',
       lines: [
         { who: 'narrator', show: 'mira', text: 'Far behind you, back in the village, Mira is hammering a stone. Nothing seems to happen. She keeps going.' },
@@ -221,7 +221,7 @@ export const PLATEAU: Chapter = {
     },
     {
       id: 'ch4-tracks',
-      when: { workouts: 48, chapter: 4 },
+      when: { workouts: 11, chapter: 4 },
       lines: [
         { who: 'narrator', show: 'wanderer', text: 'Morning dust on the flat road. Two lines of footprints run side by side: yours, and the Wanderer\'s.' },
         { who: 'flame', mood: 'scared', text: 'Um. Are those the same size? Those are the same size.' },
@@ -234,7 +234,7 @@ export const PLATEAU: Chapter = {
       // Teaching: the kid trains with you and wants to quit, and you hear yourself say what you
       // learned. You didn't know you believed it until it came out.
       id: 'ch4-kid-quits',
-      when: { workouts: 49, chapter: 4 },
+      when: { workouts: 12, chapter: 4 },
       lines: [
         { who: 'narrator', show: 'kid', text: 'The kid from the village has been training with you on the flat road. Today they sit down halfway and will not get up.' },
         { who: 'kid', text: "It's not working. I've done it for ages and I'm still bad." },
@@ -249,7 +249,7 @@ export const PLATEAU: Chapter = {
     },
     {
       id: 'ch4-small-step',
-      when: { workouts: 38, shortSession: true, inChapter: 4 },
+      when: { workouts: 1, shortSession: true, inChapter: 4 },
       lines: [
         { who: 'plateau', text: '...Small.' },
         { who: 'you', text: 'Still a step.' },
@@ -266,16 +266,6 @@ export const PLATEAU: Chapter = {
         { who: 'flame', mood: 'sleepy', text: 'People think nothing happens on rest days. Everything happens. Just quietly.' },
         { who: 'flame', mood: 'soft', text: 'Can I tell you something? I kept every time you almost believed in yourself. Every "maybe I could". There\'s a whole pile of them.' },
         { who: 'flame', mood: 'sleepy', text: "The pile's been getting smaller lately. The maybes keep turning into yeses." },
-      ],
-    },
-    {
-      // The Fog boss fell in a Story run. It can fall long before the month's workouts are done.
-      id: 'ch4-fog-won',
-      when: { fogWon: 4, chapter: 4 },
-      lines: [
-        { who: 'narrator', show: 'plateau-cracked', text: 'In the Fog, the Plateau breaks. Out here on the road, it still looks flat.', shot: { shake: 'small' } },
-        { who: 'plateau', text: '...Same. ...As. ...Ever.' },
-        { who: 'flame', mood: 'soft', text: "It isn't. Under the road it's cracking too. Keep walking on it." },
       ],
     },
     {

@@ -47,7 +47,7 @@ export const VILLAGE: Chapter = {
     },
     {
       id: 'ch3-knight',
-      when: { workouts: 26, chapter: 3 },
+      when: { workouts: 2, chapter: 3 },
       lines: [
         { who: 'narrator', show: 'knight', text: 'A knight in flawless armor steps out of the village gate. Not one scratch on it.' },
         { who: 'knight', text: "Twenty minutes? Half a workout? Don't insult the forge.", shot: { enter: 'right' } },
@@ -62,7 +62,7 @@ export const VILLAGE: Chapter = {
     {
       // Learning: Mira teaches you properly, and the lesson is which hits to remember.
       id: 'ch3-apprentice',
-      when: { workouts: 27, chapter: 3 },
+      when: { workouts: 3, chapter: 3 },
       place: 'lit-forges',
       lines: [
         { who: 'narrator', show: 'mira', text: 'Mira puts a hammer in your hand and points at the anvil. You hit it. It goes wrong.' },
@@ -78,7 +78,7 @@ export const VILLAGE: Chapter = {
     },
     {
       id: 'ch3-sol',
-      when: { workouts: 28, chapter: 3 },
+      when: { workouts: 4, chapter: 3 },
       lines: [
         { who: 'narrator', show: 'sol', text: 'A runner is asleep at her desk, a cold forge behind her. A pair of running shoes hangs on a nail, dusty.' },
         { who: 'sol', text: "...Mm? I'll train when this project ends. Then the next one." },
@@ -107,7 +107,7 @@ export const VILLAGE: Chapter = {
     {
       // The Knight is a mask of the Hollow: he speaks its line, the one the player picked.
       id: 'ch3-knight-voice',
-      when: { workouts: 29, chapter: 3 },
+      when: { workouts: 5, chapter: 3 },
       lines: [
         { who: 'knight', text: 'Sloppy. Slow. You call that a workout? Look how far you let yourself go.' },
         { who: 'knight', text: '{voice}', needs: 'voice', pace: 'slow' },
@@ -132,7 +132,7 @@ export const VILLAGE: Chapter = {
     },
     {
       id: 'ch3-bonfire',
-      when: { workouts: 30 },
+      when: { grown: 'bonfire' },
       place: 'lit-forges',
       lines: [
         { who: 'narrator', show: 'flame', text: '{flame} roars up into a bonfire. All over the village, doors open and people come out to look.', shot: { zoom: 'in', seconds: 1.6 } },
@@ -145,7 +145,7 @@ export const VILLAGE: Chapter = {
     },
     {
       id: 'ch3-song',
-      when: { workouts: 31, chapter: 3 },
+      when: { workouts: 7, chapter: 3 },
       lines: [
         { who: 'narrator', show: 'wanderer', text: "While you train, the Wanderer hums. It takes you a moment. It's the song you hum when you're nervous." },
         { who: 'flame', mood: 'scared', text: 'How do they know your song?' },
@@ -156,7 +156,7 @@ export const VILLAGE: Chapter = {
     },
     {
       id: 'ch3-mira-story',
-      when: { workouts: 32 },
+      when: { workouts: 8 },
       music: 'memory',
       lines: [
         { who: 'mira', text: 'You want to know why my forge went cold? An injury. Then a long, slow way back.' },
@@ -172,7 +172,7 @@ export const VILLAGE: Chapter = {
     },
     {
       id: 'ch3-first-steel',
-      when: { workouts: 33, chapter: 3 },
+      when: { workouts: 9, chapter: 3 },
       place: 'lit-forges',
       lines: [
         { who: 'narrator', show: 'mira', text: 'Mira calls you to the forge. On the anvil lies a plain iron ring, a little lopsided.' },
@@ -186,7 +186,7 @@ export const VILLAGE: Chapter = {
     {
       // Sol's arc, the fall: she stops again. You give her what the story gave you.
       id: 'ch3-sol-stops',
-      when: { workouts: 34, answer: { id: 'sol', is: 'yes' } },
+      when: { workouts: 10, answer: { id: 'sol', is: 'yes' } },
       lines: [
         { who: 'narrator', show: 'sol', text: "Sol's forge is cold again. The shoes are back on the nail. She doesn't look up when you come in." },
         { who: 'sol', text: "Don't. I know. A deadline came, then another one, and I stopped. Just like before." },
@@ -201,7 +201,7 @@ export const VILLAGE: Chapter = {
     },
     {
       id: 'ch3-sol-rest',
-      when: { workouts: 35, answer: { id: 'sol', is: 'yes' } },
+      when: { workouts: 11, answer: { id: 'sol', is: 'yes' } },
       place: 'lit-forges',
       lines: [
         { who: 'narrator', show: 'sol-after', text: 'Sol starts running before she opens her work. Then she rests, a whole day, on purpose. Her forge lights, and this time it stays lit.' },
@@ -224,7 +224,7 @@ export const VILLAGE: Chapter = {
     },
     {
       id: 'ch3-last-stand',
-      when: { workouts: 36, chapter: 3 },
+      when: { workouts: 12, chapter: 3 },
       lines: [
         { who: 'narrator', show: 'knight-cracked', text: 'The Knight blocks the road out of the village. His armor is covered in hairline cracks now, one for every imperfect day you came anyway.' },
         { who: 'knight-cracked', text: "Look at your record. Missed days. Short days. Bad days. It's a mess. It's not good enough." },
@@ -232,16 +232,6 @@ export const VILLAGE: Chapter = {
         { who: 'knight-cracked', text: 'That is not a standard.' },
         { who: 'you', text: "It's the only one that ever got me out of bed." },
         { who: 'flame', mood: 'happy', text: "Ooh. He's creaking. Keep going. One more page." },
-      ],
-    },
-    {
-      // The Fog boss fell in a Story run. It can fall long before the month's workouts are done.
-      id: 'ch3-fog-won',
-      when: { fogWon: 3, chapter: 3 },
-      lines: [
-        { who: 'narrator', show: 'knight-cracked', text: "In the Fog, the Knight's plates fall one by one. Not one of your hits was perfect.", shot: { shake: 'small' } },
-        { who: 'knight', text: 'Messy. All of it. ...And still I fell.' },
-        { who: 'flame', mood: 'happy', text: 'Messy counts! Messy is my favorite.' },
       ],
     },
     {

@@ -32,6 +32,7 @@ export const PLAYERS: PlayerKind[] = [
     trains: (d) => weekday(d) < 5,
     visits: () => true,
     bossOnTry: 1,
+    early: true,
     spends: 'damage',
     flame: 'Blaze',
     answers: 'write',

@@ -1,3 +1,4 @@
+import type { FlameStageId } from './flame';
 import type { TrackId } from '@/lib/music';
 import type { SpriteId } from '@/sprites/registry';
 import type { EnemyId } from '@/components/Characters';
@@ -91,15 +92,16 @@ export type Shot =
  * "Rest day" means no workout today and the last one was one or two days ago.
  */
 export interface When {
-  /** At least this many workouts done. */
+  /** At least this many workouts done. In a chapter's file: workouts since that chapter began (its
+      Fog boss can fall early or late, so the scenes keep their spacing). In anytime.ts: in all. */
   workouts?: number;
   /** This chapter has started (or a later one). */
   chapter?: number;
-  /** This chapter's enemy is beaten: its month's workouts are all done. */
+  /** This chapter's enemy is beaten: its boss fell in a Story run in the Fog. */
   beaten?: number;
-  /** This chapter's Fog boss fell in a Story run (the zone is cleared). It can fall weeks before
-      the month ends, so this is its own moment. */
-  fogWon?: number;
+  /** The flame has grown to this stage (FLAME_STAGES in flame.ts: all workouts, whatever the
+      chapter), so its growing up plays when it grows. */
+  grown?: FlameStageId;
   /** Only while this chapter is the current one. */
   inChapter?: number;
   /** Today is a rest day. */
@@ -172,6 +174,9 @@ export interface Scene {
   shots?: Shot[];
   lines: Line[];
   ask?: Ask;
+  /** Plays even when its chapter's boss falls before its moment comes, as a question does
+      (a scene that later ones lean on). Other leftover scenes of an ended chapter are skipped. */
+  keep?: boolean;
 }
 
 /**

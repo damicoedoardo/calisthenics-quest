@@ -159,7 +159,7 @@ ramp-up sets; a warm-up or stretch part is its seconds plus `TIME.change`. Skipp
   days in a row); the rules on the server tell the coach to check a change against the brief, push
   back when it isn't wise, and change the plan only once the two agree.
 - **Who it is**: the brief names the flame and the player, its form now and only the next one
-  (`flameStage`, the same stages the story draws; the later forms are the story's to show) and where the story is (chapter, lesson, the enemy's hearts left,
+  (`flameStage`, the same stages the story draws; the later forms are the story's to show) and where the story is (chapter, lesson, the enemy's hearts left in the Fog; a chapter ends when its boss falls there,
   `storyState`), so it speaks from there. Its voice: an old fire, a little spooky and a little
   superior (it teases excuses, never the person), deeply on your side, and plainly kind when you
   hurt; the nudges speak the same way. The rules (short, one question at a time, no body
