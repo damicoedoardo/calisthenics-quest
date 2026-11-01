@@ -2,8 +2,10 @@
 
 A card holds only what friends see: a name, the hero's class, level and look, when they last
 trained, and whether the app is open right now (`seen_at`, refreshed every 30 s while it is), in
-a run (`playing`) or in a workout (`training`). A friendship starts as an ask from `a` to `b`
-and holds once `b` accepts.
+a run (`playing`) or in a workout (`training`). The profile adds what the player chose to tell
+friends, all optional: where they live (`place`), a line about them (`about`) and a photo
+(`profile_photos`, `photo_at` says when it last changed). A friendship starts as an ask from `a`
+to `b` and holds once `b` accepts.
 Behind a small store, like saves.py, so the routes are tested without a database.
 """
 
@@ -30,6 +32,13 @@ CREATE TABLE IF NOT EXISTS profiles (
     seen_at     timestamptz NOT NULL DEFAULT now()
 );
 ALTER TABLE profiles ADD COLUMN IF NOT EXISTS training text;
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS place text NOT NULL DEFAULT '';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS about text NOT NULL DEFAULT '';
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS photo_at timestamptz;
+CREATE TABLE IF NOT EXISTS profile_photos (
+    user_id     uuid PRIMARY KEY,
+    data        bytea NOT NULL
+);
 CREATE TABLE IF NOT EXISTS friends (
     a           uuid NOT NULL,
     b           uuid NOT NULL,
@@ -65,6 +74,9 @@ class Profile:
     playing: str | None
     seen_at: datetime
     training: str | None = None
+    place: str = ""
+    about: str = ""
+    photo_at: datetime | None = None
 
 
 @dataclass(frozen=True)
@@ -105,6 +117,16 @@ class FriendStore(Protocol):
         """Remove a friendship or an ask, whichever way it went."""
         ...
 
+    async def set_about(self, user_id: str, place: str, about: str) -> Profile:
+        """Write where they live and the line about them (a new card gets a code)."""
+        ...
+
+    async def set_photo(self, user_id: str, data: bytes | None) -> Profile:
+        """Keep this JPEG as their photo, or remove it with None."""
+        ...
+
+    async def photo(self, user_id: str) -> bytes | None: ...
+
 
 def _profile(r: Any) -> Profile:
     look = r["look"]
@@ -119,10 +141,16 @@ def _profile(r: Any) -> Profile:
         playing=r["playing"],
         seen_at=r["seen_at"],
         training=r["training"],
+        place=r["place"],
+        about=r["about"],
+        photo_at=r["photo_at"],
     )
 
 
-_COLS = "user_id, code, name, class_id, level, look, trained_at, playing, seen_at, training"
+_COLS = (
+    "user_id, code, name, class_id, level, look, trained_at, playing, seen_at, training,"
+    " place, about, photo_at"
+)
 
 
 class PgStore:
@@ -193,6 +221,44 @@ class PgStore:
             "DELETE FROM friends WHERE (a = $1 AND b = $2) OR (a = $2 AND b = $1)", x, y
         )
 
+    async def set_about(self, user_id: str, place: str, about: str) -> Profile:
+        if await self.get(user_id) is None:
+            await self.touch(user_id, {})
+        r = await get_pool().fetchrow(
+            f"UPDATE profiles SET place = $2, about = $3 WHERE user_id = $1 RETURNING {_COLS}",
+            user_id,
+            place,
+            about,
+        )
+        return _profile(r)
+
+    async def set_photo(self, user_id: str, data: bytes | None) -> Profile:
+        if await self.get(user_id) is None:
+            await self.touch(user_id, {})
+        pool = get_pool()
+        async with pool.acquire() as conn, conn.transaction():
+            if data is None:
+                await conn.execute("DELETE FROM profile_photos WHERE user_id = $1", user_id)
+            else:
+                await conn.execute(
+                    "INSERT INTO profile_photos (user_id, data) VALUES ($1, $2)"
+                    " ON CONFLICT (user_id) DO UPDATE SET data = EXCLUDED.data",
+                    user_id,
+                    data,
+                )
+            r = await conn.fetchrow(
+                "UPDATE profiles SET photo_at = CASE WHEN $2 THEN now() END"
+                f" WHERE user_id = $1 RETURNING {_COLS}",
+                user_id,
+                data is not None,
+            )
+        return _profile(r)
+
+    async def photo(self, user_id: str) -> bytes | None:
+        return await get_pool().fetchval(
+            "SELECT data FROM profile_photos WHERE user_id = $1", user_id
+        )
+
 
 class MemoryStore:
     """The same rules as PgStore, in dicts: for tests."""
@@ -200,6 +266,7 @@ class MemoryStore:
     def __init__(self) -> None:
         self.cards: dict[str, Profile] = {}
         self.pairs: dict[tuple[str, str], bool] = {}
+        self.photos: dict[str, bytes] = {}
 
     async def ensure(self) -> None:
         return None
@@ -241,3 +308,21 @@ class MemoryStore:
     async def unlink(self, x: str, y: str) -> None:
         self.pairs.pop((x, y), None)
         self.pairs.pop((y, x), None)
+
+    async def set_about(self, user_id: str, place: str, about: str) -> Profile:
+        p = replace(await self.touch(user_id, {}), place=place, about=about)
+        self.cards[user_id] = p
+        return p
+
+    async def set_photo(self, user_id: str, data: bytes | None) -> Profile:
+        if data is None:
+            self.photos.pop(user_id, None)
+        else:
+            self.photos[user_id] = data
+        at = datetime.now(UTC) if data is not None else None
+        p = replace(await self.touch(user_id, {}), photo_at=at)
+        self.cards[user_id] = p
+        return p
+
+    async def photo(self, user_id: str) -> bytes | None:
+        return self.photos.get(user_id)

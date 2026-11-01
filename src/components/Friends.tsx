@@ -16,6 +16,7 @@ import type { Look } from '@/sprites/engine/figure';
 import { Hero } from './Hero';
 import { Sprite } from './Sprite';
 import { useModal } from './useModal';
+import { ProfilePage } from './Profile';
 
 /* Friends on screen: the heartbeat that shows you online to your friends (useFriendsBeat, in
    page.tsx) and the Friends card in the Fog's Together. Rules and types in lib/friends.ts. */
@@ -83,11 +84,14 @@ export function FriendHero({ f, size = 44 }: { f: FriendCard; size?: number }) {
   return <Hero gear={gear} classId={cls} size={size} bounce={false} look={normalizeLook((f.look ?? undefined) as Partial<Look> | undefined)} />;
 }
 
-export function Row({ f, now, children, as: Tag = 'li' }: { f: FriendCard; now: Date; children?: React.ReactNode; as?: 'li' | 'div' }) {
+/** A friend in a list. `onOpen`: tapping their hero or name opens their profile. */
+export function Row({ f, now, children, as: Tag = 'li', onOpen }: { f: FriendCard; now: Date; children?: React.ReactNode; as?: 'li' | 'div'; onOpen?: () => void }) {
   const cls = getClass(f.class_id ?? undefined);
   const dot = f.training ? 'bg-orange-400' : f.playing ? 'bg-gold-300' : f.online ? 'bg-emerald-400' : 'bg-slate-600';
+  const Who = onOpen ? 'button' : 'div';
   return (
     <Tag className="flex items-center gap-3 rounded-xl bg-ink-900/70 py-1.5 pl-1.5 pr-2">
+      <Who {...(onOpen ? { onClick: onOpen, 'aria-label': `${f.name || 'A hero'}'s profile` } : {})} className="flex min-w-0 flex-1 items-center gap-3 text-left">
       <div className="relative shrink-0">
         <FriendHero f={f} />
         <span className={`absolute bottom-1 right-1 h-2.5 w-2.5 rounded-full ring-2 ring-ink-800 ${dot}`} aria-hidden />
@@ -104,6 +108,7 @@ export function Row({ f, now, children, as: Tag = 'li' }: { f: FriendCard; now: 
           {statusOf(f, now)}
         </p>
       </div>
+      </Who>
       {children}
     </Tag>
   );
@@ -242,12 +247,15 @@ export function CheerPage({ f, demo, onClose, done }: { f: FriendCard; demo: boo
   );
 }
 
+/** A sample photo for the sandbox: a sunrise over hills, drawn, not a real person. */
+const DEMO_PHOTO = `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges"><rect width="16" height="16" fill="#f4a261"/><rect y="6" width="16" height="10" fill="#e76f51"/><circle cx="11" cy="7" r="3" fill="#ffe8a3"/><path d="M0 11l4-3 4 3 4-4 4 3v6H0z" fill="#264653"/><path d="M0 14l5-2 5 2 6-2v4H0z" fill="#1d3557"/></svg>')}`;
+
 /** Friends in the sandbox (/lab/night), so the Friends tab can be seen without signing in. */
 const DEMO: FriendsList = {
   me: { code: 'DEMO42', name: 'You' },
   friends: [
-    { id: 'demo-a', name: 'Ana', class_id: 'archer', level: 12, look: { sex: 'f', gear: { weapon: 3, armor: 2, shield: 1 } }, trained_at: new Date().toISOString(), online: true, playing: 'The Ashen Edge', seen_at: new Date().toISOString() },
-    { id: 'demo-b', name: 'Ben', class_id: 'mage', level: 8, look: { sex: 'm', hair: 'black', gear: { weapon: 2, armor: 1, shield: 0 } }, trained_at: null, online: true, playing: null, training: 'Pull day', seen_at: new Date().toISOString() },
+    { id: 'demo-a', name: 'Ana', class_id: 'archer', level: 12, look: { sex: 'f', gear: { weapon: 3, armor: 2, shield: 1 } }, trained_at: new Date().toISOString(), online: true, playing: 'The Ashen Edge', seen_at: new Date().toISOString(), place: 'Lisbon', about: 'Morning runs, evening pull-ups. Training for my first muscle-up.', photo: DEMO_PHOTO },
+    { id: 'demo-b', name: 'Ben', class_id: 'mage', level: 8, look: { sex: 'm', hair: 'black', gear: { weapon: 2, armor: 1, shield: 0 } }, trained_at: null, online: true, playing: null, training: 'Pull day', seen_at: new Date().toISOString(), place: 'Milan', about: '' },
     { id: 'demo-c', name: 'Cleo', class_id: 'monk', level: 5, look: { sex: 'f', hair: 'black', gear: { weapon: 1, armor: 1, shield: 0 } }, trained_at: null, online: false, playing: null, seen_at: new Date(Date.now() - 3 * 3600_000).toISOString() },
   ],
   asks_in: [],
@@ -323,6 +331,7 @@ export const onlineCount = (f: Friends) => f.list?.friends.filter((x) => x.onlin
 export function FriendsCard({ state, update, friends }: { state: GameState; update: Update; friends: Friends }) {
   const [giving, setGiving] = useState<string | null>(null);
   const [cheering, setCheering] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<FriendCard | null>(null);
   const [code, setCode] = useState('');
   const [name, setName] = useState('');
   // Your code and adding a friend fold away once you have friends: the list is what you come for.
@@ -464,7 +473,7 @@ export function FriendsCard({ state, update, friends }: { state: GameState; upda
               {/* Training or in the Fog first, then online, then the rest. */}
               {[...list.friends].sort((a, b) => rank(a) - rank(b)).map((f) => (
                 <li key={f.id}>
-                  <Row as="div" f={f} now={now}>
+                  <Row as="div" f={f} now={now} onOpen={() => setViewing(f)}>
                     {/* Working out: a cheer, not a party invite. */}
                     {f.training ? (
                       <button
@@ -530,6 +539,8 @@ export function FriendsCard({ state, update, friends }: { state: GameState; upda
           ) : (
             <p className="text-xs text-slate-500">No friends yet. Send your code to someone you'd like to train with.</p>
           )}
+
+          {viewing && <ProfilePage f={viewing} now={now} onClose={() => setViewing(null)} />}
 
           {list.asks_out.length > 0 && (
             <p className="text-xs text-slate-500">Waiting for {list.asks_out.map((f) => f.name || 'a hero').join(', ')} to say yes.</p>

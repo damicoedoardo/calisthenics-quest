@@ -2,7 +2,7 @@
 
 import { api, Offline } from './cloud-client';
 import type { Cheer } from './cheers';
-import type { FriendsList, MyCard } from './friends';
+import type { FriendsList, MyCard, Profile } from './friends';
 
 /* The talking side of friends (rules and types in friends.ts). Every call needs sign-in. */
 
@@ -30,6 +30,29 @@ export async function removeFriend(id: string): Promise<void> {
 }
 
 export { Offline };
+
+/** Where you live and a line about you (friends only). */
+export const saveProfile = async (place: string, about: string) => json<Profile>(await api('PUT', '/me/profile', { place, about }));
+
+/** Your photo: a base64 JPEG from `shrinkPhoto` (feed-client.ts), or null to take it down. */
+export const savePhoto = async (photo: string | null) => json<Profile>(photo ? await api('PUT', '/me/photo', { photo }) : await api('DELETE', '/me/photo'));
+
+/** A player's photo as a link the page can show (it needs sign-in, so an <img> can't fetch it
+    itself). `version` is the profile's `photo` time: a new one fetches the new photo. */
+const photos = new Map<string, Promise<string>>();
+export function profilePhotoUrl(id: string, version: string): Promise<string> {
+  const key = `${id}@${version}`;
+  let p = photos.get(key);
+  if (!p) {
+    p = api('GET', `/profiles/${id}/photo`).then(async (r) => {
+      if (!r.ok) throw new Error(`Request failed (${r.status})`);
+      return URL.createObjectURL(await r.blob());
+    });
+    p.catch(() => photos.delete(key));
+    photos.set(key, p);
+  }
+  return p;
+}
 
 /** Co-op materials one friend gives another (app/routes/gifts.py on the server). */
 export interface Gift {

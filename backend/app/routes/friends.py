@@ -1,10 +1,14 @@
 """Friends: your card (PUT /me), your friends and asks (GET /friends), add by code, accept, remove.
+Your profile: where you live and a line about you (PUT /me/profile), a photo (PUT and DELETE
+/me/photo, GET /profiles/{id}/photo). Only you and your accepted friends see a profile.
 
 PUT /me is also the heartbeat: the app sends it every 30 s while it is open, so a friend seen in
 the last ONLINE_FOR seconds shows as online. There is no search by name: a friend is added only
 with their code, which they share themselves.
 """
 
+import base64
+import binascii
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from uuid import UUID
@@ -22,6 +26,10 @@ _store: FriendStore = PgStore()
 # A little over two heartbeats, so one late beat doesn't flicker a friend offline.
 ONLINE_FOR = timedelta(seconds=75)
 MAX_FRIENDS = 100
+# The profile's limits, the same as PROFILE_LIMIT in src/lib/friends.ts: keep the two the same.
+PLACE = 40
+ABOUT = 140
+PHOTO_BYTES = 200_000
 
 
 def get_friend_store() -> FriendStore:
@@ -42,7 +50,32 @@ class AddFriend(BaseModel):
     code: str = Field(max_length=16)
 
 
-def card_json(p: Profile, now: datetime) -> dict[str, Any]:
+class About(BaseModel):
+    place: str = Field(default="", max_length=PLACE)
+    about: str = Field(default="", max_length=ABOUT)
+
+
+class Photo(BaseModel):
+    # A square JPEG, base64, already made small on the phone.
+    photo: str = Field(max_length=PHOTO_BYTES * 4 // 3 + 8)
+
+
+def _line(text: str) -> str:
+    return " ".join(text.split())
+
+
+def profile_json(p: Profile) -> dict[str, Any]:
+    """What only friends (and you) see: `photo` is when it last changed, so a phone knows to
+    fetch it again; null means no photo."""
+    return {
+        "place": p.place,
+        "about": p.about,
+        "photo": p.photo_at.isoformat() if p.photo_at else None,
+    }
+
+
+def card_json(p: Profile, now: datetime, friend: bool = False) -> dict[str, Any]:
+    """A player's card; `friend` adds their profile, for accepted friends only."""
     return {
         "id": p.user_id,
         "name": p.name,
@@ -54,6 +87,7 @@ def card_json(p: Profile, now: datetime) -> dict[str, Any]:
         "playing": p.playing if now - p.seen_at < ONLINE_FOR else None,
         "training": p.training if now - p.seen_at < ONLINE_FOR else None,
         "seen_at": p.seen_at.isoformat(),
+        **(profile_json(p) if friend else {}),
     }
 
 
@@ -83,7 +117,7 @@ async def get_friends(
     cards = {p.user_id: p for p in await store.many([link.other for link in links])}
     now = datetime.now(UTC)
     out: dict[str, Any] = {
-        "me": {"code": me.code, "name": me.name},
+        "me": {"id": me.user_id, "code": me.code, "name": me.name, **profile_json(me)},
         "friends": [],
         "asks_in": [],
         "asks_out": [],
@@ -93,7 +127,7 @@ async def get_friends(
         if not p:
             continue
         key = "friends" if link.accepted else "asks_out" if link.mine else "asks_in"
-        out[key].append(card_json(p, now))
+        out[key].append(card_json(p, now, friend=link.accepted))
     # Who is training or playing first, then who is online, then by name.
     out["friends"].sort(
         key=lambda c: (not (c["training"] or c["playing"]), not c["online"], c["name"].lower())
@@ -148,3 +182,56 @@ async def remove_friend(
 ) -> Response:
     await store.unlink(user.user_id, str(friend_id))
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.put("/me/profile")
+async def put_profile(
+    body: About,
+    user: AuthedUser = Depends(get_authed_user),
+    store: FriendStore = Depends(get_friend_store),
+) -> dict[str, Any]:
+    p = await store.set_about(user.user_id, _line(body.place), _line(body.about))
+    return profile_json(p)
+
+
+@router.put("/me/photo")
+async def put_photo(
+    body: Photo,
+    user: AuthedUser = Depends(get_authed_user),
+    store: FriendStore = Depends(get_friend_store),
+) -> dict[str, Any]:
+    try:
+        data = base64.b64decode(body.photo, validate=True)
+    except (binascii.Error, ValueError):
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That photo didn't come through")
+    if not data.startswith(b"\xff\xd8") or len(data) > PHOTO_BYTES:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "That photo didn't come through")
+    return profile_json(await store.set_photo(user.user_id, data))
+
+
+@router.delete("/me/photo")
+async def delete_photo(
+    user: AuthedUser = Depends(get_authed_user),
+    store: FriendStore = Depends(get_friend_store),
+) -> dict[str, Any]:
+    return profile_json(await store.set_photo(user.user_id, None))
+
+
+@router.get("/profiles/{player_id}/photo")
+async def get_photo(
+    player_id: UUID,
+    user: AuthedUser = Depends(get_authed_user),
+    store: FriendStore = Depends(get_friend_store),
+) -> Response:
+    """Your own photo or an accepted friend's; 404 for anyone else, as if there were none."""
+    them = str(player_id)
+    if them != user.user_id:
+        links = await store.links(user.user_id)
+        if not any(x.other == them and x.accepted for x in links):
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "No photo")
+    data = await store.photo(them)
+    if data is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No photo")
+    return Response(
+        data, media_type="image/jpeg", headers={"Cache-Control": "private, max-age=300"}
+    )
