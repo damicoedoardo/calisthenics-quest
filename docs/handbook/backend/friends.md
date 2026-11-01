@@ -60,11 +60,22 @@ Each player can tell friends a little about themselves, all optional and minimal
 you** (up to 140). You fill it in on the You page (`ProfileEdit` in `Profile.tsx`, signed in only,
 "Only your friends see it"). A friend's profile opens when you tap them: their hero or name in the
 friends list, their name in the camp's panel (after tapping them at the fire), or their hero and
-name on a feed post (`ProfilePage`). It shows the photo with their hero at its corner (no photo:
-the hero, big), name, class and level, what they're doing now, where they live and their line.
+name on a feed post: each calls `openProfile`, and one `ProfileHost` in the Friends tab shows
+`ProfilePage`. It shows the photo with their hero at its corner (no photo: the hero, big), name,
+class, level and where they live, what they're doing now, their line; then **Cheer** (while they
+train, `CheerPage`) or **Party**, and **Gift** (`GiveMats`), the same as their row; then how they
+**train** (workouts in all, this week against the weekly goal, the weekly streak, and the three
+exercises they did most); then their **latest posts** (up to 3, from the feed, as `PostCard`s).
+
+- **How they train** comes from their save, not typed: `trainingStats` in `src/lib/friends.ts`
+  goes on the card with every heartbeat (`stats` in `PUT /me`, the `stats` jsonb column). "Does
+  most" counts the exercises with two sets or more (not the warm-up and stretch taps) over the
+  last 20 workouts. The card carries the week's Monday (`week_of`), so `statsNow` shows 0 for a
+  week that is over and drops a streak whose last week missed the goal, when a friend hasn't
+  opened the app for a while.
 
 - **Who sees what:** only you and your accepted friends. `card_json(..., friend=True)` adds
-  `place`, `about` and `photo` for accepted friends in `GET /friends` and for post authors in
+  `place`, `about`, `photo` and `stats` for accepted friends in `GET /friends` and for post authors in
   the feed; an ask (either way) gets the card without them. `GET /profiles/{id}/photo` is 404 for
   anyone else, as if there were no photo. Unfriending hides it again.
   The party lobby's cards (`routes/party.py`) leave the profile out.
@@ -75,15 +86,16 @@ the hero, big), name, class and level, what they're doing now, where they live a
   `friends-client.ts`, a blob link, as photos need sign-in) only when it is new.
 - Limits: `PROFILE_LIMIT` in `src/lib/friends.ts`; the server's copies are `PLACE`, `ABOUT`,
   `PHOTO_BYTES` in `routes/friends.py`, keep them the same.
-- In the sandbox Ana has a profile with a sample (drawn) photo and Ben only a place; the You page
+- In the sandbox Ana has a profile with a sample (drawn) photo, stats and posts, and Ben a place, stats and a post (and he is training: Cheer); the You page
   saves on the screen only.
 
 | File | What |
 |---|---|
-| `backend/app/friends.py` | Columns `place`, `about`, `photo_at` on `profiles`, table `profile_photos`; `set_about`, `set_photo`, `photo` |
+| `backend/app/friends.py` | Columns `place`, `about`, `photo_at`, `stats` on `profiles`, table `profile_photos`; `set_about`, `set_photo`, `photo` |
 | `backend/app/routes/friends.py` | `PUT /me/profile`, `PUT /me/photo`, `DELETE /me/photo`, `GET /profiles/{id}/photo`; `profile_json` |
 | `backend/tests/test_profile.py` | Friends see it, asks and strangers don't, photo rules, limits |
-| `src/components/Profile.tsx` | `ProfilePhoto`, `ProfilePage`, `ProfileEdit` |
+| `src/components/Profile.tsx` | `ProfilePhoto`, `openProfile` and `ProfileHost`, `ProfilePage`, `ProfileEdit` |
+| `src/lib/friends.ts` | `trainingStats`, `statsNow`, `PROFILE_LIMIT` |
 
 ## Parties
 

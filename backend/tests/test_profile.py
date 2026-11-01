@@ -40,7 +40,7 @@ def test_profile_reaches_friends_only(store):
     befriend(ANA, BEN)
     befriend(CY, ANA, accept=False)
     out = as_(ANA).put("/me/profile", json={"place": "  Milan ", "about": "Back  at it"}).json()
-    assert out == {"place": "Milan", "about": "Back at it", "photo": None}
+    assert out == {"place": "Milan", "about": "Back at it", "photo": None, "stats": None}
     assert as_(ANA).get("/friends").json()["me"]["place"] == "Milan"
     [ana] = as_(BEN).get("/friends").json()["friends"]
     assert (ana["place"], ana["about"], ana["photo"]) == ("Milan", "Back at it", None)
@@ -73,3 +73,13 @@ def test_limits(store):
     assert as_(ANA).put("/me/photo", json={"photo": png}).status_code == 400
     big = base64.b64encode(b"\xff\xd8" + b"x" * PHOTO_BYTES).decode()
     assert as_(ANA).put("/me/photo", json={"photo": big}).status_code in (400, 422)
+
+
+def test_stats_reach_friends_only(store):
+    befriend(ANA, BEN)
+    befriend(CY, ANA, accept=False)
+    stats = {"workouts": 30, "week": 2, "week_of": "2026-10-26", "streak": 4, "top": ["Pull-up"]}
+    assert as_(ANA).put("/me", json={"stats": stats}).status_code == 200
+    assert as_(BEN).get("/friends").json()["friends"][0]["stats"] == stats
+    assert "stats" not in as_(CY).get("/friends").json()["asks_out"][0]
+    assert as_(ANA).put("/me", json={"stats": {**stats, "top": ["x"] * 4}}).status_code == 422

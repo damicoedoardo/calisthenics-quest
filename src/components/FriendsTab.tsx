@@ -8,6 +8,7 @@ import { PixelTabs } from './PixelTabs';
 import { Camp } from './Camp';
 import { FeedView, type Feed } from './Feed';
 import { useLand } from './useLand';
+import { ProfileHost } from './Profile';
 import { Sprite } from './Sprite';
 
 type Update = (fn: (s: GameState) => GameState) => void;
@@ -23,6 +24,7 @@ export function FriendsTab({ state, update, friends, feed, view, setView }: { st
   const land = useLand();
   return (
     <div className="space-y-4 land:space-y-3">
+      <ProfileHost state={state} update={update} friends={friends} feed={feed} />
       {feed.shown && (
         <PixelTabs
           label="Friends or feed"
