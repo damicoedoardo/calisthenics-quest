@@ -20,7 +20,7 @@ live on a server).
 | `backend/app/auth.py`, `auth_jwks.py` | Who is calling: checks the Supabase login token (copied from minlit) |
 | `backend/app/saves.py` | Where saves are kept: `PgStore` (Postgres) and `MemoryStore` (tests), same rules |
 | `backend/app/routes/save.py` | `GET`, `PUT`, `DELETE /save` |
-| `backend/app/friends.py`, `routes/friends.py` | Friend cards and friendships: `PUT /me`, `/friends`; profiles: `/me/profile`, `/me/photo`, `/profiles/{id}/photo` ([friends.md](friends.md#profiles)); creates its tables on start |
+| `backend/app/friends.py`, `routes/friends.py` | Friend cards (with how you train, `stats`) and friendships: `PUT /me`, `/friends`; profiles: `/me/profile`, `/me/photo`, `/profiles/{id}/photo` ([friends.md](friends.md#profiles)); creates its tables on start |
 | `backend/app/party.py`, `routes/party.py` | Parties: invite, join, ready, zone, start (`/party...`, [friends.md](friends.md#parties)); creates its tables on start |
 | `backend/app/voice.py` | The party voice pass for `POST /party/voice` ([friends.md](friends.md#party-voice)) |
 | `backend/app/play.py` | The live run pass for `POST /party/play` ([live-runs.md](live-runs.md)); `FORMA_PLAY_URL`, `FORMA_PLAY_SECRET` |
