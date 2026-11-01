@@ -162,16 +162,16 @@ export function buildNextWeek(input: BuildInput, week: CoachWeek): CoachDay[] | 
 export const needsPlan = (week: CoachWeek | null | undefined, now: Date) => !week || weekOver(week, now) || !week.ahead;
 
 /** Keep two weeks ready (call it when `needsPlan`). On a new Monday, last week's "next week"
-    becomes this week as it was planned; only an untouched built-in draft is built again, so it
-    knows how last week went. Then next week is planned behind it. Null: nothing to change. */
+    becomes this week exactly as planned (what you saw is what you get; a workout missed last week
+    isn't carried over), and a new next week is drafted behind it. Null: nothing to change. */
 export function planAhead(input: BuildInput): CoachWeek | null {
   if (!input.coach.profile) return null;
   let week = input.coach.week ?? null;
   if (week && weekOver(week, input.now)) {
     const monday = dayKey(mondayOf(input.now));
-    const kept = week.ahead && dayKey(nextMonday(week)) === monday ? week.days.filter((d) => d.date >= monday) : [];
-    const draft = kept.every((d) => !d.done && d.plan.by === 'built-in' && !d.plan.items.some((i) => i.changed));
-    week = draft ? null : { start: monday, days: kept, by: kept.some((d) => d.plan.by === 'coach') ? 'coach' : 'built-in' };
+    const rolls = week.ahead && dayKey(nextMonday(week)) === monday;
+    const kept = rolls ? week.days.filter((d) => d.date >= monday) : [];
+    week = rolls ? { start: monday, days: kept, by: kept.some((d) => d.plan.by === 'coach') ? 'coach' : 'built-in' } : null;
   }
   week = week ?? buildWeek(input);
   if (!week) return null;

@@ -44,9 +44,9 @@ day from today to next week's Sunday (`openDate`).
   the same for next week, after this week's days. `useCoachPlan` calls `planAhead` whenever
   `needsPlan` (no week, the week is over, or next week isn't planned yet; an old save without
   `ahead` gets its next week on load). On a new Monday (`weekOver`), last week's next week becomes
-  this week as it was planned (`start` is that Monday), unless it is an untouched built-in draft
-  (all built-in, no Easier/Swap): that is built again, so it knows how last week went. Then a new
-  next week is planned behind it. The coach replaces a week with `set_week` (`week` "this" or
+  this week exactly as it was planned and shown (`start` is that Monday; nothing is re-planned
+  behind your back, and a workout missed last week isn't carried over). Then a new next week is
+  drafted behind it. After a week or more away the plan starts fresh from today. The coach replaces a week with `set_week` (`week` "this" or
   "next") or one day with `set_workout`.
 - **What today is** (`todayIs(state, now)`): the one answer every screen reads, so Today and
   Train never disagree. `workout`: the next workout's day has come (a missed one is caught up);

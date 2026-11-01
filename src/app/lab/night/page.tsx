@@ -284,7 +284,7 @@ export default function NightLab() {
         <Row icon={<Swords size={16} />} label="The Friends tab" note="Its own tab: who is online now (tap to invite), your party, the Ember Road, every friend. Sample friends in the sandbox" onClick={() => open(geared(), 'tab=friends')} />
         <Row icon={<Dumbbell size={16} />} label="Today, with a week planned" note="Your flame, today's quest and Start" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=today')} />
         <Row icon={<Dumbbell size={16} />} label="Today, after the workout" note="Today's workout done: you did it, your counts, and what's next (Train shows it)" onClick={async () => open(await doneToday(veteran(30, 3)), 'tab=today')} />
-        <Row icon={<Dumbbell size={16} />} label="Next week, planned early" note="Train tab after today's workout: This week / Next week, next week's days already there" onClick={async () => open(await doneToday(veteran(30, 3)), 'tab=train')} />
+        <Row icon={<Dumbbell size={16} />} label="Next week, planned early" note="Train tab after today's workout: the two-row calendar, next week's days already there" onClick={async () => open(await doneToday(veteran(30, 3)), 'tab=train')} />
       </Panel>
 
       <Panel title="YOUR COACH: THE FLAME" note="Your flame plans your training now. Train tab: its last words and today's workout as cards with demos, easier and swap on each. Tap Let's start and it chats with you at the camp fire. Talking needs a sign-in (Hero > Settings) on the real save.">

@@ -348,12 +348,23 @@ describe('two weeks ahead', () => {
     expect(daysIn(rolled, 1).map((d) => d.date)).toEqual(['2026-11-09', '2026-11-11', '2026-11-13']);
   });
 
-  it('an untouched built-in next week is built again on Monday, from what was done', () => {
+  it('on Monday a built-in next week stays exactly as it was shown', () => {
     const s = ahead(withSetup());
+    const shown = daysIn(s.coach!.week!, 1);
     const rolled = ahead(s, MON).coach!.week!;
     expect(rolled.start).toBe('2026-11-02');
     expect(rolled.ahead).toBe(true);
-    expect(daysIn(rolled, 0).map((d) => d.date)).toEqual(['2026-11-02', '2026-11-04', '2026-11-06']);
+    expect(daysIn(rolled, 0)).toEqual(shown);
+    expect(daysIn(rolled, 1).map((d) => d.date)).toEqual(['2026-11-09', '2026-11-11', '2026-11-13']);
+  });
+
+  it('after a week or more away, the plan starts fresh from today', () => {
+    const s = ahead(withSetup());
+    const later = new Date(2026, 10, 11, 9);
+    const fresh = ahead(s, later).coach!.week!;
+    expect(fresh.start).toBe('2026-11-11');
+    expect(fresh.days[0].date).toBe('2026-11-11');
+    expect(fresh.ahead).toBe(true);
   });
 
   it('the coach can change and move next week\'s days, and the laws check Sunday to Monday', () => {
