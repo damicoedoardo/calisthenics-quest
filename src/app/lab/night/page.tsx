@@ -1,6 +1,6 @@
 'use client';
 
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, BookOpen, Dumbbell, Film, Gem, Music, Play, Smartphone, Sparkles, Swords } from 'lucide-react';
 import { addFakeWorkouts, clearNextZone, skipDueScenes, skipIntro } from '@/lib/dev';
@@ -251,7 +251,18 @@ function Row({ icon, label, note, onClick, href }: { icon: ReactNode; label: str
   );
 }
 
+/** Direct links: `/lab/night?go=<name>` opens that moment at once, to send as one tap to try. */
+const GO: Record<string, () => void> = {
+  you: () => open(veteran(30, 2), 'you'),
+  friends: () => open(geared(), 'tab=friends'),
+  feed: () => open(geared(), 'tab=friends&feed'),
+};
+
 export default function NightLab() {
+  useEffect(() => {
+    const go = new URLSearchParams(window.location.search).get('go');
+    if (go && GO[go]) GO[go]();
+  }, []);
   return (
     <main className="safe-top mx-auto min-h-dvh max-w-md space-y-4 px-4 pb-16">
       <header className="flex items-center gap-3">
