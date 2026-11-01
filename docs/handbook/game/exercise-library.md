@@ -82,7 +82,7 @@ The picks cover every exercise the coach plans with (the `STAPLES`, warm-up move
 stretches in `src/lib/coach/staples.ts`, and FORMA's own moves): 145 of 146. The one gap is
 `All_Fours_Quad_Stretch`. The other ~745 catalog exercises get the video `scripts/find-videos.mjs`
 found (`src/exercises/videos.found.json`; a hand pick always wins): it reads YouTube's public
-search page, no key, and takes a Bodybuilding.com clip of that name first, then an OPEX /
+search page, no key, 8 lookups at a time (`--jobs N`), and takes a Bodybuilding.com clip of that name first, then an OPEX /
 "(Exercise Library)" demo, then the first short plain video (under 4 minutes) whose title shares
 the exercise's main words. Run it with `node scripts/find-videos.mjs` on a machine that can reach
 YouTube (the cloud machine can't); it keeps what it found before and only looks up the rest. An exercise it missed still gets the search. Each pick was chosen by

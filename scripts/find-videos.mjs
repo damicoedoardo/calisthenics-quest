@@ -5,7 +5,7 @@
 //   1. a Bodybuilding.com clip of that name (the catalog came from that site, the clips are short
 //      silent demos), 2. an OPEX / "(Exercise Library)" demo, 3. the first short plain video
 //   (under 4 minutes, not a Short) whose title shares the exercise's main words.
-// Usage: node scripts/find-videos.mjs [--limit N]
+// Usage: node scripts/find-videos.mjs [--limit N] [--jobs 8]
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 
 const OUT = new URL('../src/exercises/videos.found.json', import.meta.url);
@@ -58,7 +58,9 @@ function choose(name, results) {
 const todo = catalog.filter((x) => !picked.has(x.id) && !found[x.id]).slice(0, limit);
 console.log(`${picked.size} hand picks, ${Object.keys(found).length} found before, ${todo.length} to look up`);
 let misses = 0;
-for (const [i, x] of todo.entries()) {
+let done = 0;
+const JOBS = Number(process.argv[process.argv.indexOf('--jobs') + 1]) || 8;
+async function lookUp(x) {
   let pick;
   try {
     pick = choose(x.name, await search(`${x.name} Bodybuilding.com`)) ?? choose(x.name, await search(`how to ${x.name} exercise`));
@@ -67,10 +69,20 @@ for (const [i, x] of todo.entries()) {
   }
   if (pick) found[x.id] = { id: pick.id, title: pick.title.slice(0, 90) };
   else misses++;
-  console.log(`${i + 1}/${todo.length} ${pick ? 'ok  ' : 'MISS'} ${x.id}${pick ? ` -> ${pick.id} ${pick.title}` : ''}`);
-  if (i % 25 === 24) writeFileSync(OUT, JSON.stringify(sortKeys(found), null, 0).replace(/\},"/g, '},\n"') + '\n');
-  await new Promise((r) => setTimeout(r, 700));
+  done++;
+  console.log(`${done}/${todo.length} ${pick ? 'ok  ' : 'MISS'} ${x.id}${pick ? ` -> ${pick.id} ${pick.title}` : ''}`);
+  if (done % 50 === 0) writeFileSync(OUT, JSON.stringify(sortKeys(found), null, 0).replace(/\},"/g, '},\n"') + '\n');
 }
+// JOBS lookups at a time, each worker pausing a little between its own lookups.
+const queue = [...todo];
+await Promise.all(
+  Array.from({ length: JOBS }, async () => {
+    for (let x = queue.shift(); x; x = queue.shift()) {
+      await lookUp(x);
+      await new Promise((r) => setTimeout(r, 300));
+    }
+  }),
+);
 function sortKeys(o) {
   return Object.fromEntries(Object.entries(o).sort(([a], [b]) => a.localeCompare(b)));
 }
