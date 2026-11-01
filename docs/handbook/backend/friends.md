@@ -79,7 +79,7 @@ exercises they did most); then their **latest posts** (up to 3, from the feed, a
   the feed; an ask (either way) gets the card without them. `GET /profiles/{id}/photo` is 404 for
   anyone else, as if there were no photo. Unfriending hides it again.
   The party lobby's cards (`routes/party.py`) leave the profile out.
-- **The photo** is cropped to the middle square and made small on the phone (`shrinkPhoto(file,
+- **The photo**: tapping the square opens the front camera (a selfie, turned as above); "From your photos" opens the camera roll (shown as saved, never turned). It is cropped to the middle square and made small on the phone (`shrinkPhoto(file,
   {square: true, ...})` in `feed-client.ts`: 480 px, a JPEG under 200 KB) and sent as base64. The
   server keeps only JPEGs, one per player, in `profile_photos` (Postgres, made on start). The card's
   `photo` is the time it last changed, so the app fetches it again (`profilePhotoUrl` in
@@ -194,7 +194,14 @@ minutes otherwise (`useFeed`).
   Anyone else gets 404, as if the post weren't there. Unfriending hides each other's posts.
 - **The photo** is made small on the phone (`shrinkPhoto` in `feed-client.ts`: at most 1080 px
   on its long side, a JPEG under 600 KB, lower quality until it fits) and sent as base64. The
-  server keeps only JPEGs (checks the first bytes) in `post_photos` (Postgres). A photo needs
+  server keeps only JPEGs (checks the first bytes) in `post_photos` (Postgres). The phone reads
+  the photo through an `<img>` (`upright`), which follows the camera's turn-and-flip note the way
+  the camera roll does (`createImageBitmap` didn't on iPhone). A **selfie** is turned on its own to look the way you
+  saw yourself in the camera (Edoardo 2026-11-01, no flip button). The share page has **Selfie**
+  (opens the front camera, `capture="user"`) and **Photo** (the usual picker). A photo taken in
+  the usual picker carries no lens name on iPhone, so it can't be told apart; the Selfie button
+  is how a selfie is known (`shrinkPhoto(..., {selfie: true})`). A photo from the camera roll
+  is never turned, it shows just as saved (Edoardo 2026-11-01). A photo needs
   sign-in, so the app fetches it into a blob link when its post nears the screen (`photoUrl`).
 - **Cheers on the post:** the server adds the friends who cheered you since the workout started
   (at most 6 h back; `senders_since` in `cheers.py`).

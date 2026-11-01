@@ -207,6 +207,9 @@ function bossEndsChapter(): GameState {
 /** Jumps a preview link can open with no taps: /lab/night?go=<name>. */
 const GO: Record<string, () => void> = {
   'boss-ends-chapter': () => open(bossEndsChapter(), 'tab=today'),
+  you: () => open(veteran(30, 2), 'you'),
+  friends: () => open(geared(), 'tab=friends'),
+  feed: () => open(geared(), 'tab=friends&feed'),
 };
 
 const MOMENTS: [string, string][] = [

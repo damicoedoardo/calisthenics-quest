@@ -47,23 +47,59 @@ export function photoUrl(id: string): Promise<string> {
   return p;
 }
 
-/** A photo from the phone, made small enough to send: at most `edge` (FEED_LIMIT.photoEdge) on
-    its long side, as a JPEG under `bytes` (FEED_LIMIT.photoBytes). `square` crops the middle square
-    first (a profile photo). Returns base64 (no "data:" head) and a preview link. */
-export async function shrinkPhoto(file: File, { edge = FEED_LIMIT.photoEdge, bytes = FEED_LIMIT.photoBytes, square = false }: { edge?: number; bytes?: number; square?: boolean } = {}): Promise<{ base64: string; preview: string }> {
-  const bitmap = await createImageBitmap(file);
-  const side = Math.min(bitmap.width, bitmap.height);
-  const [sx, sy, sw, sh] = square ? [(bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side] : [0, 0, bitmap.width, bitmap.height];
-  const scale = Math.min(1, edge / Math.max(sw, sh));
-  const canvas = document.createElement('canvas');
-  canvas.width = Math.round(sw * scale);
-  canvas.height = Math.round(sh * scale);
-  canvas.getContext('2d')?.drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
+/** The photo as the phone's camera roll shows it. A phone keeps the picture as the sensor saw it
+    plus a note on how to turn it (and, for the front camera, flip it back): an <img> follows that
+    note on every browser, createImageBitmap doesn't on iPhone, which showed selfies mirrored. */
+async function upright(file: File): Promise<HTMLImageElement> {
+  const url = URL.createObjectURL(file);
+  try {
+    return await load(url);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function load(url: string): Promise<HTMLImageElement> {
+  const img = new Image();
+  img.src = url;
+  try {
+    await img.decode();
+  } catch {
+    throw new Error("Couldn't open that photo. Try another one.");
+  }
+  return img;
+}
+
+/** The canvas as a JPEG under `bytes`: lower quality until it fits. */
+function encode(canvas: HTMLCanvasElement, bytes: number): { base64: string; preview: string } {
   for (const q of [0.82, 0.7, 0.55, 0.4]) {
     const url = canvas.toDataURL('image/jpeg', q);
     const base64 = url.slice(url.indexOf(',') + 1);
     if ((base64.length * 3) / 4 <= bytes) return { base64, preview: url };
   }
-  throw new Error("That photo is too big. Try another one.");
+  throw new Error('That photo is too big. Try another one.');
+}
+
+/** A photo from the phone, made small enough to send: at most `edge` (FEED_LIMIT.photoEdge) on
+    its long side, as a JPEG under `bytes` (FEED_LIMIT.photoBytes). `square` crops the middle square
+    first (a profile photo). A selfie is turned to look the way you saw yourself in the camera while
+    taking it: `selfie` when it came from the front camera the app opened. A photo from the camera
+    roll is shown just as it is saved. Returns base64 (no "data:" head) and a preview link. */
+export async function shrinkPhoto(file: File, { edge = FEED_LIMIT.photoEdge, bytes = FEED_LIMIT.photoBytes, square = false, selfie = false }: { edge?: number; bytes?: number; square?: boolean; selfie?: boolean } = {}): Promise<{ base64: string; preview: string }> {
+  const img = await upright(file);
+  const w = img.naturalWidth,
+    h = img.naturalHeight;
+  const side = Math.min(w, h);
+  const [sx, sy, sw, sh] = square ? [(w - side) / 2, (h - side) / 2, side, side] : [0, 0, w, h];
+  const scale = Math.min(1, edge / Math.max(sw, sh));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(sw * scale);
+  canvas.height = Math.round(sh * scale);
+  const ctx = canvas.getContext('2d');
+  if (selfie) {
+    ctx?.translate(canvas.width, 0);
+    ctx?.scale(-1, 1);
+  }
+  ctx?.drawImage(img, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+  return encode(canvas, bytes);
 }
