@@ -550,6 +550,8 @@ function benchBox(from: V3, to: V3): V3[] {
 const KETTLEBELL = { r: 9, drop: 11 };
 /** A foam roller: its radius and half its length. */
 const ROLLER = { r: 7.5, half: 30 };
+/** A medicine ball's radius. */
+const BALL = 12;
 
 /** A circle on the picture (a ball looks round from anywhere). */
 function ring2(c: V2, r: number): V2[] {
@@ -590,6 +592,16 @@ function gear(cam: Camera, prop: Prop): Shape[] {
     ];
   }
   if (prop.kind === 'box') return [{ d: polygon(hull(boxCorners(prop.at, prop.size).map((q) => project(cam, q)))), fill: INK.plate, stroke: INK.plateRim, width: 1.2 }];
+  if (prop.kind === 'ball') return [{ d: closed(ring2(project(cam, prop.at), prop.r ?? BALL)), fill: INK.plate, stroke: INK.plateRim, width: 1.2 }];
+  if (prop.kind === 'tube') {
+    const a = project(cam, prop.from);
+    const b = project(cam, prop.to);
+    const w = prop.width ?? 3;
+    return [
+      { d: line(a, b), stroke: INK.plateRim, width: w + 1.6, round: true },
+      { d: line(a, b), stroke: INK.plate, width: w, round: true },
+    ];
+  }
   if (prop.kind === 'roller') {
     // A cylinder: its side as the hull of both ends, then the end you see.
     const ends = [-1, 1].map((s) => disc(cam, add(prop.at, [0, 0, s * ROLLER.half]), ROLLER.r));
@@ -638,6 +650,12 @@ function gearPoints(cam: Camera, prop: Prop): V2[] {
   if (prop.kind === 'bench') return [...benchBox(prop.from, prop.to), ...(prop.noLegs ? [] : [[prop.from[0], 0, 0] as V3, [prop.to[0], 0, 0] as V3])].map((q) => project(cam, q));
   if (prop.kind === 'box') return boxCorners(prop.at, prop.size).map((q) => project(cam, q));
   if (prop.kind === 'roller') return [-1, 1].flatMap((s) => disc(cam, add(prop.at, [0, 0, s * ROLLER.half]), ROLLER.r));
+  if (prop.kind === 'ball') {
+    const c = project(cam, prop.at);
+    const r = prop.r ?? BALL;
+    return [[c[0] - r, c[1] - r], [c[0] + r, c[1] + r]];
+  }
+  if (prop.kind === 'tube') return [project(cam, prop.from), project(cam, prop.to)];
   if (prop.kind === 'kettlebell') {
     const c = project(cam, add(prop.at, [0, -KETTLEBELL.drop, 0]));
     return [project(cam, add(prop.at, [0, 5, 0])), [c[0] - KETTLEBELL.r, c[1] + KETTLEBELL.r], [c[0] + KETTLEBELL.r, c[1] - KETTLEBELL.r]];
@@ -718,7 +736,9 @@ function draw(exercise: AnatomyId, cam: Camera, depth: number, v: Variant): Shap
   const nearSide = (p: { at: V3 }) => dot(p.at, cam.c) > dot(pose.pelvis, cam.c);
   // When the chest faces you, a barbell in front of the chest goes over the trunk, under the near arm.
   const overTrunk = (p: Prop) => {
-    if (p.kind !== 'barbell' || dot(pose.front, cam.c) < 0.45) return false;
+    // A ball held in front of the chest goes over it too, unless you see the back.
+    if (p.kind === 'ball' ? dot(pose.front, cam.c) < -0.2 : p.kind !== 'barbell' || dot(pose.front, cam.c) < 0.45) return false;
+    if (!('at' in p)) return false;
     const line = sub(pose.neck, pose.pelvis);
     const k = Math.min(1, Math.max(0, dot(sub(p.at, pose.pelvis), line) / dot(line, line)));
     return dot(sub(p.at, add(pose.pelvis, mul(line, k))), pose.front) > 0;
