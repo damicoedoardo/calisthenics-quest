@@ -29,8 +29,20 @@ export interface MyCard {
   name?: string;
 }
 
+/** Server limits for the profile (PLACE, ABOUT, PHOTO_BYTES in backend/app/routes/friends.py):
+    keep the two the same. `photoEdge` is the square the phone makes a photo before sending it. */
+export const PROFILE_LIMIT = { place: 40, about: 140, photoBytes: 200_000, photoEdge: 480 } as const;
+
+/** What a player tells friends about themselves, all optional. Only accepted friends get it.
+    `photo` is when the photo last changed (null: no photo). */
+export interface Profile {
+  place: string;
+  about: string;
+  photo: string | null;
+}
+
 /** A friend as the api returns them. */
-export interface FriendCard {
+export interface FriendCard extends Partial<Profile> {
   id: string;
   name: string;
   class_id: ClassId | null;
@@ -45,7 +57,7 @@ export interface FriendCard {
 }
 
 export interface FriendsList {
-  me: { code: string; name: string };
+  me: { id?: string; code: string; name: string } & Partial<Profile>;
   friends: FriendCard[];
   asks_in: FriendCard[];
   asks_out: FriendCard[];

@@ -1,9 +1,9 @@
 ---
 type: conceptual
 title: Friends
-description: Friend codes, asks and accepts, who is online, training, in the Fog or trained today, cheers mid-workout, the workout feed, and parties (invite, lobby, ready, start, practice run) — the tables, the /me, /friends and /party routes, and the screens.
-tags: [backend, friends, social, co-op, voice, livekit, cheers, feed]
-timestamp: 2026-10-31
+description: Friend codes, asks and accepts, profiles (photo, where you live, a line), who is online, training, in the Fog or trained today, cheers mid-workout, the workout feed, and parties (invite, lobby, ready, start, practice run) — the tables, the /me, /friends and /party routes, and the screens.
+tags: [backend, friends, social, co-op, voice, livekit, cheers, feed, profile, photo]
+timestamp: 2026-11-01
 ---
 
 # Friends
@@ -25,6 +25,8 @@ run (`playing`, the zone's name) or in a workout (`training`, the plan's name, `
   in `Friends.tsx`).
 - A flame and **trained today** when their last workout was on this phone's today. This is the
   part that nudges friends to train.
+
+Accepted friends also get your **profile** (below): a photo, where you live and a line about you.
 
 There is no search by name. A friend is added only with their **friend code** (6 letters and
 digits, no 0/O/1/I/L), typed or opened from an invite link `formaquest.app/?friend=CODE`. An ask
@@ -50,6 +52,38 @@ waits until the other side accepts; adding back someone who asked you is a yes.
   `(a, b)`: `a` asked, `accepted` once `b` says yes.
 - An invite link opened before sign-in keeps the code in `localStorage` and adds the friend once
   you're signed in.
+
+## Profiles
+
+Each player can tell friends a little about themselves, all optional and minimal (Edoardo
+2026-11-01): a **photo**, **where you live** (one line, up to 40 letters) and **a few words about
+you** (up to 140). You fill it in on the You page (`ProfileEdit` in `Profile.tsx`, signed in only,
+"Only your friends see it"). A friend's profile opens when you tap them: their hero or name in the
+friends list, their name in the camp's panel (after tapping them at the fire), or their hero and
+name on a feed post (`ProfilePage`). It shows the photo with their hero at its corner (no photo:
+the hero, big), name, class and level, what they're doing now, where they live and their line.
+
+- **Who sees what:** only you and your accepted friends. `card_json(..., friend=True)` adds
+  `place`, `about` and `photo` for accepted friends in `GET /friends` and for post authors in
+  the feed; an ask (either way) gets the card without them. `GET /profiles/{id}/photo` is 404 for
+  anyone else, as if there were no photo. Unfriending hides it again.
+  The party lobby's cards (`routes/party.py`) leave the profile out.
+- **The photo** is cropped to the middle square and made small on the phone (`shrinkPhoto(file,
+  {square: true, ...})` in `feed-client.ts`: 480 px, a JPEG under 200 KB) and sent as base64. The
+  server keeps only JPEGs, one per player, in `profile_photos` (Postgres, made on start). The card's
+  `photo` is the time it last changed, so the app fetches it again (`profilePhotoUrl` in
+  `friends-client.ts`, a blob link, as photos need sign-in) only when it is new.
+- Limits: `PROFILE_LIMIT` in `src/lib/friends.ts`; the server's copies are `PLACE`, `ABOUT`,
+  `PHOTO_BYTES` in `routes/friends.py`, keep them the same.
+- In the sandbox Ana has a profile with a sample (drawn) photo and Ben only a place; the You page
+  saves on the screen only.
+
+| File | What |
+|---|---|
+| `backend/app/friends.py` | Columns `place`, `about`, `photo_at` on `profiles`, table `profile_photos`; `set_about`, `set_photo`, `photo` |
+| `backend/app/routes/friends.py` | `PUT /me/profile`, `PUT /me/photo`, `DELETE /me/photo`, `GET /profiles/{id}/photo`; `profile_json` |
+| `backend/tests/test_profile.py` | Friends see it, asks and strangers don't, photo rules, limits |
+| `src/components/Profile.tsx` | `ProfilePhoto`, `ProfilePage`, `ProfileEdit` |
 
 ## Parties
 
@@ -187,6 +221,8 @@ what waits on each refresh (`POST /gifts/claim`, each gift handed out once) into
 |---|---|
 | Share something new on the card | `Card` in `routes/friends.py`, a column in `SCHEMA` + `init.sql` (`ALTER TABLE ... ADD COLUMN IF NOT EXISTS` in `SCHEMA` for live servers), `MyCard`/`myCard` in `friends.ts` |
 | Change how a friend looks in the list | `Row` / `FriendHero` in `Friends.tsx` |
+| Add a field to the profile, or change what it shows | `profile_json` and `About` in `routes/friends.py`, a column in `friends.SCHEMA` + `init.sql`, `Profile` in `src/lib/friends.ts`, `ProfilePage`/`ProfileEdit` in `Profile.tsx` |
+| Change the photo's size | `PROFILE_LIMIT` in `src/lib/friends.ts` and `PHOTO_BYTES` in `routes/friends.py` |
 | Change when someone counts as online | `ONLINE_FOR` (server) and `BEAT_MS` (app) |
 | Change the party size | `MAX_PARTY` in `backend/app/party.py` and `src/lib/party.ts` (and `max_participants` in `livekit/livekit.yaml`) |
 | Change the voice buttons | `VoiceBar`, `PartyButton` and the member cards in `Party.tsx` |

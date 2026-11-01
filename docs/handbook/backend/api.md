@@ -3,7 +3,7 @@ type: conceptual
 title: API
 description: The FastAPI app in backend/ — Supabase token check (JWKS), the save backup routes (GET/PUT/DELETE /save) and the rev rule that stops a stale phone overwriting newer progress, and POST /coach, the relay to the coach's LLM.
 tags: [backend, api, auth, saves]
-timestamp: 2026-10-29
+timestamp: 2026-11-01
 ---
 
 # API
@@ -20,7 +20,7 @@ live on a server).
 | `backend/app/auth.py`, `auth_jwks.py` | Who is calling: checks the Supabase login token (copied from minlit) |
 | `backend/app/saves.py` | Where saves are kept: `PgStore` (Postgres) and `MemoryStore` (tests), same rules |
 | `backend/app/routes/save.py` | `GET`, `PUT`, `DELETE /save` |
-| `backend/app/friends.py`, `routes/friends.py` | Friend cards and friendships: `PUT /me`, `/friends` ([friends.md](friends.md)); creates its tables on start |
+| `backend/app/friends.py`, `routes/friends.py` | Friend cards and friendships: `PUT /me`, `/friends`; profiles: `/me/profile`, `/me/photo`, `/profiles/{id}/photo` ([friends.md](friends.md#profiles)); creates its tables on start |
 | `backend/app/party.py`, `routes/party.py` | Parties: invite, join, ready, zone, start (`/party...`, [friends.md](friends.md#parties)); creates its tables on start |
 | `backend/app/voice.py` | The party voice pass for `POST /party/voice` ([friends.md](friends.md#party-voice)) |
 | `backend/app/play.py` | The live run pass for `POST /party/play` ([live-runs.md](live-runs.md)); `FORMA_PLAY_URL`, `FORMA_PLAY_SECRET` |
@@ -53,7 +53,7 @@ runs them and calls again with the results. So the server keeps no chat and no s
 ## Login
 
 Supabase does the login (its own `forma` project, not minlit's) and signs a token; the api only
-checks it, with Supabase's public keys (JWKS), and never issues tokens. Every `/save`, `/me`, `/friends`, `/gifts`, `/cheers` and `/feed` route needs
+checks it, with Supabase's public keys (JWKS), and never issues tokens. Every `/save`, `/me`, `/profiles`, `/friends`, `/gifts`, `/cheers` and `/feed` route needs
 `Authorization: Bearer <token>`; the player is the token's `sub`.
 
 ## The save rules

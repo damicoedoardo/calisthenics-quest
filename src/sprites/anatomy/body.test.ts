@@ -29,10 +29,15 @@ describe('anatomy demos', () => {
     expect(anatomyFor('bench-press', 'Incline Dumbbell Bench Press')).toEqual({ id: 'bench-press', variant: { gear: 'dumbbell', incline: true } });
     expect(anatomyFor('barbell-squat', 'Goblet Squat')).toEqual({ id: 'squat', variant: { goblet: true } });
     expect(anatomyFor('strict-pullup', 'Pull-up')?.id).toBe('pullup');
-    expect(anatomyFor('chest-fly', 'Cable Crossover')).toBeNull();
+    expect(anatomyFor('chest-fly', 'Cable Crossover')?.id).toBe('cable-fly');
+    expect(anatomyFor('clean', 'Kettlebell Hang Clean')).toEqual({ id: 'power-clean', variant: { gear: 'kettlebell' } });
+    expect(anatomyFor('snatch', 'Snatch Balance')?.id).toBe('overhead-squat');
+    expect(anatomyFor('run', 'Stairmaster')?.id).toBe('step-up');
+    expect(anatomyFor('jump', 'Front Box Jump')?.id).toBe('box-jump');
     expect(anatomyFor('chest-fly', 'Dumbbell Flyes')?.id).toBe('chest-fly');
     expect(anatomyFor('front-squat', 'Goblet Squat')).toEqual({ id: 'squat', variant: { goblet: true } });
-    expect(anatomyFor('leg-press', 'Hack Squat')).toBeNull();
+    expect(anatomyFor('leg-press', 'Hack Squat')?.id).toBe('barbell-squat');
+    expect(anatomyFor('leg-press', 'Leg Press')?.id).toBe('leg-press');
     expect(anatomyFor('calf-stretch', 'Calf Stretch Hands Against Wall')?.id).toBe('wall-calf-stretch');
     expect(anatomyFor('arm-stretch', 'Iron Crosses (stretch)')).toBeNull();
     expect(anatomyFor('foam-roll', 'Quadriceps-SMR')?.id).toBe('roll-quads');

@@ -11,6 +11,7 @@ import { cloudConfigured, useCloudStatus } from '@/lib/cloud-client';
 import { spWorn } from '@/lib/sp';
 import { heroVariant } from '@/story/flame';
 import { FriendHero } from './Friends';
+import { ProfilePage } from './Profile';
 import { Hero } from './Hero';
 import { useModal } from './useModal';
 
@@ -172,7 +173,9 @@ function PostCard({ post, feed, now }: { post: Post; feed: Feed; now: Date }) {
   const [busy, setBusy] = useState(false);
   const [sure, setSure] = useState(false);
   const [error, setError] = useState('');
+  const [viewing, setViewing] = useState(false);
   const name = post.author.name || 'A hero';
+  const author = isCard(post.author) ? post.author : null;
 
   const flame = async () => {
     const on = !post.flamed;
@@ -221,11 +224,15 @@ function PostCard({ post, feed, now }: { post: Post; feed: Feed; now: Date }) {
   return (
     <article className="rounded-2xl bg-ink-800 p-3.5">
       <header className="flex items-center gap-3">
-        <span className="shrink-0">{isCard(post.author) ? <FriendHero f={post.author} size={40} /> : <span className="block h-10 w-10" />}</span>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-slate-100">{post.mine ? 'You' : name}</p>
-          <p className="text-[11px] text-slate-500">{ago(new Date(post.at), now)}</p>
-        </div>
+        {/* A friend's hero and name open their profile. */}
+        <button disabled={!author || post.mine} onClick={() => setViewing(true)} aria-label={post.mine ? undefined : `${name}'s profile`} className="flex min-w-0 flex-1 items-center gap-3 text-left">
+          <span className="shrink-0">{author ? <FriendHero f={author} size={40} /> : <span className="block h-10 w-10" />}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-semibold text-slate-100">{post.mine ? 'You' : name}</span>
+            <span className="block text-[11px] text-slate-500">{ago(new Date(post.at), now)}</span>
+          </span>
+        </button>
+        {viewing && author && <ProfilePage f={author} now={now} onClose={() => setViewing(false)} />}
         {post.mine &&
           (sure ? (
             <span className="flex items-center gap-1.5 text-xs">

@@ -47,20 +47,23 @@ export function photoUrl(id: string): Promise<string> {
   return p;
 }
 
-/** A photo from the phone, made small enough to send: at most FEED_LIMIT.photoEdge on its long
-    side, as a JPEG under FEED_LIMIT.photoBytes. Returns base64 (no "data:" head) and a preview link. */
-export async function shrinkPhoto(file: File): Promise<{ base64: string; preview: string }> {
+/** A photo from the phone, made small enough to send: at most `edge` (FEED_LIMIT.photoEdge) on
+    its long side, as a JPEG under `bytes` (FEED_LIMIT.photoBytes). `square` crops the middle square
+    first (a profile photo). Returns base64 (no "data:" head) and a preview link. */
+export async function shrinkPhoto(file: File, { edge = FEED_LIMIT.photoEdge, bytes = FEED_LIMIT.photoBytes, square = false }: { edge?: number; bytes?: number; square?: boolean } = {}): Promise<{ base64: string; preview: string }> {
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, FEED_LIMIT.photoEdge / Math.max(bitmap.width, bitmap.height));
+  const side = Math.min(bitmap.width, bitmap.height);
+  const [sx, sy, sw, sh] = square ? [(bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side] : [0, 0, bitmap.width, bitmap.height];
+  const scale = Math.min(1, edge / Math.max(sw, sh));
   const canvas = document.createElement('canvas');
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  canvas.width = Math.round(sw * scale);
+  canvas.height = Math.round(sh * scale);
+  canvas.getContext('2d')?.drawImage(bitmap, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
   bitmap.close();
   for (const q of [0.82, 0.7, 0.55, 0.4]) {
     const url = canvas.toDataURL('image/jpeg', q);
     const base64 = url.slice(url.indexOf(',') + 1);
-    if ((base64.length * 3) / 4 <= FEED_LIMIT.photoBytes) return { base64, preview: url };
+    if ((base64.length * 3) / 4 <= bytes) return { base64, preview: url };
   }
   throw new Error("That photo is too big. Try another one.");
 }

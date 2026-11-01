@@ -3,7 +3,7 @@ type: reference
 title: Sprites and animation
 description: All pixel art is code in src/sprites — the 64x64 figure engine, manga head, text-row art, clips, the registry, PNG sheets, fingerprint tests, and where to edit what.
 tags: [game, sprites, pixel-art]
-timestamp: 2026-10-31
+timestamp: 2026-11-01
 ---
 # Sprites
 
@@ -65,7 +65,8 @@ characters/spCard.ts  the SP card (sprite `spCard`, opts { classId, n, awake, ge
 characters/exercise.ts the workout demos (sprite `exercise`, opts { exercise, gear, look, kit }): you
                       doing each exercise of the program (hand-posed), one rep per loop of the
                       16-frame `rep` clip, or one of the exercise library's movements from moves.ts
-anatomy/body.ts       the anatomy demos (`ANATOMY_DEMOS`, 75 so far: push-ups (plain, incline),
+anatomy/body.ts       the anatomy demos (`ANATOMY_DEMOS`, 131 so far: push-ups (plain, incline,
+                      archer, handstand),
                       squats (back, free, front, overhead), lunge, step-up, deadlift, RDL, good
                       morning, kettlebell swing, leg press, leg curl, leg extension, back
                       extension, glute kickback, bench, chest fly, pullover, overhead press,
@@ -78,14 +79,25 @@ anatomy/body.ts       the anatomy demos (`ANATOMY_DEMOS`, 75 so far: push-ups (p
                       fold, child's pose, knees to chest, kneeling hip flexor, triceps,
                       cross-body shoulder, chest opener, side reach, side neck; and mobility:
                       cat-cow (the spine bends: `arch` on the pose bows the torso), foam rolling
-                      for quads, hamstrings, calves and upper back, arm and hip circles (`loop`:
-                      once round per rep, no arrow)).
+                      for quads, hamstrings, calves and upper back, arm, hip and knee circles
+                      (`loop`: once round per rep, no arrow); jumps (squat, tuck, box, broad,
+                      split, star, rope); power (power clean, clean and press, snatch, stone
+                      load, ball slam, chest pass); cardio (running, cycling, rowing, sled push,
+                      battle ropes); more strength (cable fly, pec deck, cable and machine
+                      press, standing twist, halo, woodchop, nordic, seated, standing and ball
+                      leg curls, front, rear and side leg raises, reverse crunch, seated tuck,
+                      bicycle crunch, flutter kicks, V-up, superman, kettlebell windmill, toes
+                      to bar, L-sit, tuck L-sit, external rotation); more stretches (butterfly,
+                      straddle, figure four, spinal twist, lying hamstring, lying quad,
+                      overhead reach, upper back, neck nod, inchworm)).
                       Not pixel art: a plain, faceless body as smooth vector shapes, with the
                       muscle map on it and the worked muscles colored (main orange, helpers light
                       orange). Each part a tube with four radii along its bone (`SHAPES`), each
                       muscle a patch by length and angle around the bone (`MUSCLES`), gear drawn
                       from the pose's props (barbell, dumbbells, kettlebell, foam roller, bench or a bare pad
-                      (`noLegs`), pull-up bar or cable handle, box, cable, dip bars). `scene(exercise, view, t, { variant })` gives
+                      (`noLegs`), pull-up bar or cable handle, box, cable, dip bars, a ball (a
+                      medicine ball, stone or flywheel, drawn over the chest when held in front)
+                      and tubes for frames such as a bike or a rower). `scene(exercise, view, t, { variant })` gives
                       SVG paths and a fixed frame; the arrow stands beside the body, or above it
                       when the move goes across. components/AnatomyDemo.tsx plays it (about 30
                       fps, still under reduced motion and for holds)
@@ -93,6 +105,10 @@ anatomy/skeleton.ts   its 3D skeleton in cm with real adult lengths (`L`), two-b
                       `assemble()`, which builds a pose from the pelvis, torso line, hands and feet
                       (`side` for a body on its side, `shrug` to lift the shoulders, `arch` to bend
                       the spine)
+anatomy/keys.ts       moves too big for one formula (a clean, a box jump) as key poses in a row:
+                      `keyed(keys, d)` eases between evenly spaced poses, `blend` keeps the bone
+                      lengths (torso rebuilt, elbows and knees solved again), `shift` moves a
+                      pose, `mirror` swaps left and right (a split jump)
 anatomy/moves.ts      one entry per anatomy demo (`DEMOS`): the pose from rep depth 0..1 and a
                       `Variant`, the muscles it works, the camera per view ('side' level; the
                       second view named by `names`, e.g. 'Back'), the floor (none when hanging),
@@ -100,9 +116,13 @@ anatomy/moves.ts      one entry per anatomy demo (`DEMOS`): the pose from rep de
                       exercise names it shows when its movement also holds look-alikes it doesn't
                       (a lying fly isn't a cable crossover). `anatomyFor(demo, name)` picks the
                       demo for an exercise: look-alike movements (`ALIAS`), by name inside a
-                      mixed movement like most stretches (`NAMED`), `fits`, and
-                      the variant read from its name (`variantOf`: dumbbell or barbell via
-                      `swaps`, incline bench, goblet squat, also from a front squat). Add an
+                      mixed movement like most stretches, jumps or cleans (`NAMED`; a name picked
+                      there always shows, `fits` is only for the movement's own demo), and
+                      the variant read from its name (`variantOf`: dumbbell, barbell or
+                      kettlebell via `swaps`, incline bench, goblet squat, also from a front
+                      squat). About 96% of the library has a demo; the rest (wrist and grip
+                      drills, some foam rolls, Turkish get-ups, a few odd ones) keep the pixel
+                      demo. Add an
                       exercise: one entry here, its id from the exercise ids in
                       src/exercises/coaching.ts
 characters/moves.ts   the exercise library's 81 movements (lifts, machines, core, cardio, stretches,
