@@ -80,7 +80,10 @@ passes `start` to `ExerciseLibrary`).
 The picks cover every exercise the coach plans with (the `STAPLES`, warm-up moves and cool-down
 stretches in `src/lib/coach/staples.ts`, and FORMA's own moves): 145 of 146. The one gap is
 `All_Fours_Quad_Stretch`. The other ~745 catalog variants get the search. Each pick was chosen by
-hand from web search results for that move (a short plain tutorial, not a Short); the cloud
+hand from web search results for that move. Prefer a short, clean demo with no talk: about half
+are the Bodybuilding.com clips (the catalog came from that site, so names match) or the OPEX and
+"(Exercise Library)" demos; the rest (machines, bands, cardio, warm-up circles, stretches) are
+short plain tutorials, not Shorts. The cloud
 machine can't reach YouTube, so titles were not re-checked against the live video. A removed
 video shows YouTube's own "unavailable" box, and the YouTube link still works.
 `src/exercises/videos.test.ts` checks each pick is a real library id with a well-formed video id,
