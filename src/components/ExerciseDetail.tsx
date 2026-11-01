@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowLeft, ExternalLink, Play } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ExternalLink, Play } from 'lucide-react';
 import { Sprite } from '@/components/Sprite';
 import { useLook } from '@/components/Look';
 import { gearOf, type GameState } from '@/lib/game';
@@ -33,74 +33,110 @@ export function ExerciseSheet({ state, id, demo, onClose }: { state: GameState; 
   return <ExerciseDetail state={state} x={x} onBack={onClose} back="Back" />;
 }
 
-/** One exercise: the demo for a boy and a girl (yours in place of the matching one), then the how-to. */
+/** One exercise, made to be read at a glance: the video first, then your demo beside what it works,
+    then how to do it well and what to avoid, with the long catalog steps folded at the end. */
 export function ExerciseDetail({ state, x, onBack, back = 'Back to the library' }: { state: GameState; x: LibraryExercise; onBack: () => void; back?: string }) {
   const mine = useLook();
-  const looks: { label: string; look: Look }[] = (['m', 'f'] as const).map((sex) => ({
-    label: sex === mine.sex ? 'You' : sex === 'm' ? 'Boy' : 'Girl',
-    look: sex === mine.sex ? mine : STARTER_LOOKS[sex],
-  }));
+  const [other, setOther] = useState(false);
+  const look: Look = other ? STARTER_LOOKS[mine.sex === 'm' ? 'f' : 'm'] : mine;
+  const side = '[@media(orientation:landscape)_and_(max-height:600px)]';
   return (
     <div className="land-safe-x fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-ink-950 px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
-      <header className="sticky top-0 -mx-4 [@media(orientation:landscape)_and_(max-height:600px)]:z-10 flex items-center gap-2 bg-ink-950 px-2 pb-2 pt-[max(1rem,env(safe-area-inset-top))] [@media(orientation:landscape)_and_(max-height:600px)]:mx-0 [@media(orientation:landscape)_and_(max-height:600px)]:px-0 [@media(orientation:landscape)_and_(max-height:600px)]:pt-[max(0.5rem,env(safe-area-inset-top))]">
+      <header className={`sticky top-0 z-10 -mx-4 flex items-center gap-2 bg-ink-950 px-2 pb-2 pt-[max(1rem,env(safe-area-inset-top))] ${side}:mx-0 ${side}:px-0 ${side}:pt-[max(0.5rem,env(safe-area-inset-top))]`}>
         <button onClick={onBack} className="p-2 text-slate-400" aria-label={back}>
           <ArrowLeft size={20} />
         </button>
         <h1 className="font-pixel text-xs leading-relaxed text-gold-300">{x.name}</h1>
       </header>
-      {/* Held sideways: the demos and facts on the left, the how-to on the right. */}
-      <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:grid [@media(orientation:landscape)_and_(max-height:600px)]:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] [@media(orientation:landscape)_and_(max-height:600px)]:items-start [@media(orientation:landscape)_and_(max-height:600px)]:gap-x-6">
-      <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:block">
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        {looks.map(({ label, look }) => (
-          <figure key={label} className="rounded-2xl bg-ink-900 p-1.5 ring-1 ring-ink-700">
-            <Sprite id="exercise" opts={{ exercise: x.demo, kit: x.kit, gear: gearOf(state), classId: state.profile.classId, look }} size={136} label={`${x.name}, ${label}`} className="mx-auto max-w-full" />
-            <figcaption className="pb-1 text-center text-[11px] text-slate-400">{label}</figcaption>
-          </figure>
-        ))}
-      </div>
-      <dl className="mt-4 grid grid-cols-2 gap-2 text-xs">
-        <Fact label="Kind" value={KIND_LABEL[x.kind]} />
-        <Fact label="Movement" value={FAMILY_LABEL[x.family]} />
-        <Fact label="Equipment" value={cap(x.equipment)} />
-        <Fact label="Level" value={cap(x.level)} />
-        <Fact label="Works" value={cap(x.primary.join(', ') || '–')} />
-        <Fact label="Helps" value={cap(x.secondary.join(', ') || '–')} />
-      </dl>
-      </div>
-      <div className="contents [@media(orientation:landscape)_and_(max-height:600px)]:block">
-      <ExerciseVideo key={x.id} id={x.id} name={x.name} />
-      <h2 className="mt-5 font-pixel text-[10px] text-slate-300">How to</h2>
-      {x.steps.length === 0 && <p className="mt-2 text-sm text-slate-400">No written steps for this one yet.</p>}
-      <ol className="mt-2 list-decimal space-y-2 pl-5 text-sm text-slate-300">
-        {x.steps.map((s, i) => (
-          <li key={i}>{s}</li>
-        ))}
-      </ol>
-      <h2 className="mt-5 font-pixel text-[10px] text-emerald-300">Do it well</h2>
-      <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
-        {x.tips.map((s, i) => (
-          <li key={i} className="flex gap-2">
-            <span className="text-emerald-400" aria-hidden>✓</span>
-            {s}
-          </li>
-        ))}
-      </ul>
-      <h2 className="mt-5 font-pixel text-[10px] text-rose-300">Common mistakes</h2>
-      <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
-        {x.mistakes.map((s, i) => (
-          <li key={i} className="flex gap-2">
-            <span className="text-rose-400" aria-hidden>✗</span>
-            {s}
-          </li>
-        ))}
-      </ul>
-      <p className="mt-6 text-[11px] text-slate-500">
-        {x.source === 'catalog' ? 'From free-exercise-db, an open public-domain catalog.' : 'From the FORMA program.'}
-      </p>
-      </div>
+      {/* Held sideways: the video and the demo on the left, how to do it on the right. */}
+      <div className={`contents ${side}:grid ${side}:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] ${side}:items-start ${side}:gap-x-6`}>
+        <div className={`contents ${side}:block`}>
+          <ExerciseVideo key={x.id} id={x.id} name={x.name} />
+          <div className="mt-3 flex gap-3">
+            <button
+              onClick={() => setOther((o) => !o)}
+              className="shrink-0 rounded-2xl bg-ink-900 p-1 ring-1 ring-ink-700"
+              aria-label={other ? 'Show it on your hero' : `Show it on a ${mine.sex === 'm' ? 'girl' : 'boy'}`}
+            >
+              <Sprite id="exercise" opts={{ exercise: x.demo, kit: x.kit, gear: gearOf(state), classId: state.profile.classId, look }} size={104} label={x.name} />
+              <span className="block pb-0.5 text-center text-[10px] text-slate-500">{other ? (mine.sex === 'm' ? 'Girl' : 'Boy') : 'You'} · tap</span>
+            </button>
+            <dl className="min-w-0 flex-1 space-y-2 text-xs">
+              <div>
+                <dt className="sr-only">Works</dt>
+                <dd className="flex flex-wrap gap-1">
+                  {x.primary.map((m) => (
+                    <span key={m} className="rounded-full bg-gold-400/15 px-2 py-0.5 text-gold-200">{cap(m)}</span>
+                  ))}
+                  {x.secondary.map((m) => (
+                    <span key={m} className="rounded-full bg-ink-800 px-2 py-0.5 text-slate-400">{cap(m)}</span>
+                  ))}
+                </dd>
+              </div>
+              <div className="flex items-center gap-2 text-slate-300">
+                <dt className="sr-only">Equipment</dt>
+                <dd>{cap(x.equipment)}</dd>
+                <span className="text-ink-600" aria-hidden>·</span>
+                <dt className="sr-only">Level</dt>
+                <dd className="flex items-center gap-1.5">
+                  <span className="flex items-end gap-0.5" aria-hidden>
+                    {[0, 1, 2].map((i) => (
+                      <span key={i} className={`w-1.5 ${['h-2', 'h-3', 'h-4'][i]} ${i < LEVEL_BARS[x.level] ? 'bg-gold-400' : 'bg-ink-600'}`} />
+                    ))}
+                  </span>
+                  {cap(x.level)}
+                </dd>
+              </div>
+              <div className="text-slate-500">
+                <dt className="sr-only">Movement</dt>
+                <dd>{FAMILY_LABEL[x.family]}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+        <div className={`contents ${side}:block`}>
+          <Cues title="Do it well" tone="text-emerald-300" mark="✓" markTone="text-emerald-400" lines={x.tips} />
+          <Cues title="Avoid" tone="text-rose-300" mark="✗" markTone="text-rose-400" lines={x.mistakes} />
+          {x.steps.length > 0 && (
+            <details className="group mt-5 rounded-2xl bg-ink-900 ring-1 ring-ink-700">
+              <summary className="flex cursor-pointer list-none items-center justify-between p-3 font-pixel text-[10px] text-slate-300">
+                Step by step
+                <ChevronDown size={16} className="text-slate-500 transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
+              </summary>
+              <ol className="list-decimal space-y-2 px-3 pb-3 pl-8 text-sm text-slate-300">
+                {x.steps.map((s, i) => (
+                  <li key={i}>{s}</li>
+                ))}
+              </ol>
+            </details>
+          )}
+          <p className="mt-6 text-[11px] text-slate-600">
+            {x.source === 'catalog' ? 'From free-exercise-db, an open public-domain catalog.' : 'From the FORMA program.'}
+          </p>
+        </div>
       </div>
     </div>
+  );
+}
+
+const LEVEL_BARS: Record<string, number> = { beginner: 1, intermediate: 2, expert: 3 };
+
+function Cues({ title, tone, mark, markTone, lines }: { title: string; tone: string; mark: string; markTone: string; lines: string[] }) {
+  if (lines.length === 0) return null;
+  return (
+    <>
+      <h2 className={`mt-5 font-pixel text-[10px] ${tone}`}>{title}</h2>
+      <ul className="mt-2 space-y-1.5 text-sm text-slate-300">
+        {lines.map((s, i) => (
+          <li key={i} className="flex gap-2">
+            <span className={markTone} aria-hidden>
+              {mark}
+            </span>
+            {s}
+          </li>
+        ))}
+      </ul>
+    </>
   );
 }
 
@@ -108,7 +144,7 @@ export function ExerciseDetail({ state, x, onBack, back = 'Back to the library' 
     for exercises without one. */
 function ExerciseVideo({ id, name }: { id: string; name: string }) {
   const video = videoOf(id);
-  const box = 'mt-5 [@media(orientation:landscape)_and_(max-height:600px)]:mt-2';
+  const box = 'mt-1';
   if (!video) {
     return (
       <a href={videoSearchUrl(name)} target="_blank" rel="noopener noreferrer" className={`${box} flex items-center gap-3 rounded-2xl bg-ink-900 p-3 text-sm text-slate-300 ring-1 ring-ink-700`}>
@@ -134,15 +170,6 @@ function ExerciseVideo({ id, name }: { id: string; name: string }) {
       <a href={videoWatchUrl(video.id)} target="_blank" rel="noopener noreferrer" className="mt-1.5 inline-flex items-center gap-1 text-[11px] text-slate-500">
         Open on YouTube <ExternalLink size={11} aria-hidden />
       </a>
-    </div>
-  );
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl bg-ink-800 p-2.5">
-      <dt className="text-slate-500">{label}</dt>
-      <dd className="mt-0.5 text-slate-200">{value}</dd>
     </div>
   );
 }

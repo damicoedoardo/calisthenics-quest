@@ -10,9 +10,12 @@ timestamp: 2026-11-01
 
 Code: `src/exercises/`. Shown in the app from the Train tab ("Exercise library",
 `src/components/ExerciseLibrary.tsx`): search, filters for equipment, kind (stretch, mobility...)
-and movement, and per exercise the boy and girl demo, how-to steps, "Do it well" tips and common
-mistakes, and a how-to video (below). Held sideways, the search and filters share one line, the list has two columns, and an
-exercise shows its demos and facts beside the how-to.
+and movement. The exercise page (redone 2026-11-01 to read at a glance) has, top to bottom: the
+how-to video (below), your hero's demo (tap it for the other sex's starter look) beside the muscles
+it works (gold chips, then the helping ones in grey), equipment, level as one to three bars and
+the movement; then "Do it well" tips, "Avoid" (common mistakes), and the catalog's long steps
+folded under "Step by step". Held sideways, the search and filters share one line, the list has
+two columns, and an exercise shows the video and demo beside the rest.
 The exercise page is `ExerciseDetail.tsx`; tapping any workout card on Today or the Train tab
 opens it too (`ExerciseSheet`: the card's exercise by id, else the plainest one with its demo).
 
