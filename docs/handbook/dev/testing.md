@@ -3,7 +3,7 @@ type: reference
 title: Tests and simulators
 description: What pnpm test covers (rules, story references, sprite fingerprints, seeded Fog replays), the season simulator, and the Fog bot simulators for balance.
 tags: [dev, testing, simulation, balance]
-timestamp: 2026-11-01
+timestamp: 2026-11-02
 ---
 
 # Tests and simulators
@@ -17,6 +17,7 @@ Tests are Vitest, next to the code (`*.test.ts`), with `@/` mapped to `src/` (`v
 | `src/sprites/sprites.test.ts` | Draws every sprite and action and keeps a pixel fingerprint (snapshot). A failing fingerprint after a change you didn't mean to make is a bug |
 | `src/game/dungeon/engine.test.ts` | Replays a whole seeded bot run in every zone (snapshot). A refactor keeps them identical; a balance change moves them on purpose |
 | `src/exercises/library.test.ts` | Every exercise has a real demo and coaching, every demo moves, the search filters right, and `public/data/exercises.json` is current (`pnpm exercises:db`) |
+| `src/story/graph.test.ts` | The story graph `src/story/graph.md` is up to date with `src/story/` (`pnpm story:graph` rewrites it), no scene plays before the question it reads, every walk reaches the finale (see [../game/story.md](../game/story.md)) |
 | `src/balance/sheet.test.ts` | The balance sheet `src/balance/sheet.md` is up to date with `src/balance/` (`pnpm balance` rewrites it; see [../game/balance.md](../game/balance.md)) |
 | `src/sim/season.test.ts` | Plays every kind of player through 200 days with the real rules and fails on anything that looks wrong (it answers every scene's question as that kind of player would: names the flame, picks answers and a class, writes the letter after the first workout, takes the SPs) (every kind walks into the Fog deep enough for the SP's trial once it's given). A boss ends its story chapter, so most kinds fight it once it is out of hearts (the planned pace) and `early` ones (the `eager` player) as soon as its zone is due. Every due scene plays (no cap), so a long row of scenes is only noted in the timeline, not a problem |
 

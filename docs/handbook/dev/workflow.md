@@ -3,7 +3,7 @@ type: reference
 title: Workflow
 description: Commands, branches and PRs, Vercel previews and production, the free plan's 100 deploys a day, and who says ship.
 tags: [dev, workflow, git, vercel]
-timestamp: 2026-10-28
+timestamp: 2026-11-02
 ---
 
 # Workflow
@@ -18,6 +18,7 @@ timestamp: 2026-10-28
 | `pnpm exec tsc --noEmit; echo $?` | Typecheck. Read the exit code: piping into `tail` hides it |
 | `pnpm build` | Production build (also typechecks) |
 | `pnpm sim`, `pnpm fog:sim`, `pnpm fog:sheet`, `pnpm fog:tune`, `pnpm fog:balance` | Simulators, see [testing.md](testing.md) |
+| `pnpm story:graph` | Rewrite the story graph `src/story/graph.md`, see [../game/story.md](../game/story.md) |
 | `pnpm balance` | Rewrite the balance sheet `src/balance/sheet.md`, see [../game/balance.md](../game/balance.md) |
 | `pnpm exercises:db` | Writes the exercise library to `public/data/exercises.json`, see [../game/exercise-library.md](../game/exercise-library.md) |
 | `pnpm handbook:lint`, `pnpm handbook:check` | The handbook guard, see [handbook.md](handbook.md) |

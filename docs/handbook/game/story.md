@@ -3,7 +3,7 @@ type: reference
 title: Story (scenes, chapters, daily lines)
 description: The six-month story as data in src/story — scene format, when scenes play, the daily flame lines and Book of Days, rules for the words, and where to edit what.
 tags: [game, story, content]
-timestamp: 2026-11-01
+timestamp: 2026-11-02
 ---
 # Story
 
@@ -38,6 +38,9 @@ daily/after.ts        the flame's line after a workout, the Book of Days margin 
 daily/index.ts        picks the day's line and quote, and keeps the Book of Days; a rest
                       day is the week's to say (isRestToday), never one with a workout
 engine.ts             reads all of it: which chapter you're in, which scenes are due
+graph.ts              the story as a graph: scenes, what makes them play, the answers they read,
+                      and walks that play it through the engine (see "The story graph" below)
+graph.md              that graph written out (Mermaid, tables, problem paths); `pnpm story:graph`
 story.test.ts         checks every reference (speakers, places, songs, {words})
 ```
 
@@ -112,6 +115,26 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
   gathering has a scene for each, so exactly one plays.
 - Play a whole season in a second with `SIM_OUT=sim-out npx vitest run src/sim`: seven kinds of
   player, a timeline each in sim-out/, and a list of anything that looks wrong.
+
+## The story graph
+
+`src/story/graph.md` is the whole story as a graph: every scene a node with what makes it play
+(`describeWhen`), what it asks, and which answers it reads (a dashed arrow from the scene that asks).
+It is generated, never written by hand: `pnpm story:graph` rewrites it and `pnpm test` fails while
+it is out of date (`graph.test.ts`), so a story change shows its new graph in the PR. GitHub draws
+its Mermaid diagrams; **/lab/story/map** shows the same graph in the app.
+
+- **Walks** (`WALKS`, `walkStory`) play the story day by day through the real `scenesToPlay`: Mon,
+  Wed, Fri, first choice on every question. `planned` beats each boss at its chapter's planned
+  length, `fast` 4 workouts into the chapter, `alone` says no to every villager. The graph marks
+  which scenes each one really sees.
+- **Problem paths** (`storyProblems`): a chapter scene skipped when its boss falls early, one that
+  waits for a kind of day (rest day, short workout) that may not come before the boss, a question
+  that comes after the chapter's ending, flame growth landing in another chapter (or after the
+  finale), a scene before the question it reads, a scene no walk reaches. The last two fail the
+  test; the rest are listed for a person to decide.
+- New `When` field? Add it to `describeWhen`, and to `UNWALKED` in `graph.ts` if no walk makes it
+  happen.
 
 ## Story so far (watching again)
 

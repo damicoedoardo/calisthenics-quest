@@ -342,6 +342,7 @@ export default function NightLab() {
       <Panel title="STORY SO FAR" note="Play tab, at the top: every scene you reached, to watch again. Later (beside Skip) puts a scene off; skipped and put-off scenes wait there with a gold mark, and a question you skipped (like the flame's name) can be answered there.">
         <Row icon={<Film size={16} />} label="A scene after a workout: try Later or Skip" note="Opens on Today with chapter 1's ending due (Tomorrow just beaten), then chapter 2's first scene" onClick={GO['boss-ends-chapter']} />
         <Row icon={<BookOpen size={16} />} label="Story so far, two scenes waiting" note="The flame's name skipped and the last scene put off" onClick={() => open(storyWaiting(), 'tab=play')} />
+        <Row icon={<BookOpen size={16} />} label="Story map" note="Every scene, when it plays, which players lose it" href="/lab/story/map" />
       </Panel>
 
       <Panel title="DESIGN PASS" note="Pixel, minimal, fewer words: one screen at a time.">

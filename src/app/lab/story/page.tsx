@@ -14,9 +14,10 @@ import { useGameState } from '@/lib/store';
 import { CHAPTERS } from '@/story/chapters';
 import { ANYTIME } from '@/story/anytime';
 import { chapterStart, sceneFor } from '@/story/engine';
+import { describeWhen } from '@/story/graph';
 import { DEFAULT_FLAME_NAME, FLAME_STAGES } from '@/story/flame';
 import { PLACES, type PlaceId } from '@/story/places';
-import type { AnswerId, FlameMood, Scene, When } from '@/story/types';
+import type { AnswerId, FlameMood, Scene } from '@/story/types';
 import type { FlameStage } from '@/sprites/characters/ember';
 
 /* Story Lab: play any scene with any flame name and letter, and see every place and every look
@@ -61,28 +62,6 @@ function Chips<T extends string>({ label, options, value, onChange, name = (v) =
       </div>
     </div>
   );
-}
-
-/** A scene's trigger in words, e.g. "8 workouts · rest day". */
-function describe(w: When): string {
-  const parts: string[] = [];
-  if (w.workouts !== undefined) parts.push(`${w.workouts} workout${w.workouts === 1 ? '' : 's'}`);
-  if (w.grown) parts.push(`flame grown to ${w.grown}`);
-  if (w.chapter) parts.push(`chapter ${w.chapter} started`);
-  if (w.inChapter) parts.push(`in chapter ${w.inChapter}`);
-  if (w.beaten) parts.push(`chapter ${w.beaten} beaten`);
-  if (w.restDay !== undefined) parts.push(w.restDay ? 'rest day' : 'not a rest day');
-  if (w.shortSession) parts.push('after a short workout');
-  if (w.daysInRow) parts.push(`${w.daysInRow} days in a row`);
-  if (w.perfectWeek) parts.push('a full week');
-  if (w.better) parts.push(`beat last time in ${w.better} workout${w.better === 1 ? '' : 's'}`);
-  if (w.noClass) parts.push('no class yet');
-  if (w.answer) parts.push(w.answer.is === undefined ? `answered ${w.answer.id}` : `${w.answer.id} = ${w.answer.is || '(none)'}`);
-  if (w.needs) parts.push(`needs {${w.needs}}`);
-  if (w.helped !== undefined) parts.push(w.helped ? 'helped a villager' : 'helped no villager');
-  if (w.away) parts.push(`away ${w.away}+ days`);
-  if (w.finished) parts.push('story finished');
-  return parts.join(' · ') || 'any time';
 }
 
 /** A player who reached the scene's moment, with the lab's flame name and letter, and your own
@@ -183,7 +162,7 @@ export default function StoryLab() {
           <div className="fixed inset-0 z-50 flex animate-fadein flex-col items-center justify-center gap-3 bg-ink-950 px-6 text-center">
             <p className="font-pixel text-[10px] text-slate-500">{next.group.toUpperCase()}</p>
             <p className="font-mono text-sm text-gold-300">{next.scene.id}</p>
-            <p className="text-xs text-slate-400">{describe(next.scene.when)}</p>
+            <p className="text-xs text-slate-400">{describeWhen(next.scene.when)}</p>
           </div>
         ) : (
           <ScenePlayer key={playing.scene.id} scene={playing.scene} state={playing.state} onDone={done} />
@@ -235,6 +214,9 @@ export default function StoryLab() {
           <h1 className="font-pixel text-sm text-gold-300">Story Lab</h1>
           <p className="text-xs text-slate-500">Every scene, place and flame. The story lives in src/story.</p>
         </div>
+        <Link href="/lab/story/map" className="ml-auto shrink-0 rounded-lg bg-ink-800 px-3 py-2 text-xs text-gold-300">
+          Map
+        </Link>
       </header>
 
       <Panel title="The flame">
@@ -307,7 +289,7 @@ export default function StoryLab() {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-mono text-xs text-slate-200">{s.id}</span>
                       <span className="block text-[11px] text-slate-500">
-                        {describe(s.when)}
+                        {describeWhen(s.when)}
                         {s.ask ? ` · asks ${s.ask.kind === 'choice' ? s.ask.id : s.ask.kind}` : ''}
                       </span>
                     </span>
