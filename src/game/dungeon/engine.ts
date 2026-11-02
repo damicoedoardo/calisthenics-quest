@@ -167,7 +167,8 @@ export const ALTAR_R = 16;
 
 /** An arrow plate in the floor: step on it and arrows fly from the wall across its line. `axis`
     is the way they fly (x: along the room's width), `from` the wall they come from (-1: the low
-    side). `at` is when they fly (-1: not set off), `ready` when it can be set off again. */
+    side). `at` is when they fly (-1: not set off), `ready` when it can be set off again. Hidden
+    in the floor until someone first steps on it (`seen`); after that it shows, and still works. */
 export interface Plate {
   x: number;
   y: number;
@@ -175,6 +176,7 @@ export interface Plate {
   from: -1 | 1;
   at: number;
   ready: number;
+  seen?: boolean;
 }
 export const PLATE_R = 14;
 const NO_BLOCKS: Rect[] = [];
@@ -1062,7 +1064,7 @@ export function makeFloor(layout: Layout, floor: number, seed: number): FloorMap
 /** What a room holds: a budget of monsters that grows with depth (and the room's size), in three
     waves; each floor ends with a golem. New kinds join deeper down, and show up more on the floor
     they first appear. */
-function fillRoom(run: Run): MonsterKind[][] {
+function fillRoom(run: Run, shares = [0.4, 0.3, 0.3]): MonsterKind[][] {
   if (run.setup.tutorial) return tutorialWaves(run);
   const room = cellOf(run).dist,
     deep = depth(run),
@@ -1085,8 +1087,8 @@ function fillRoom(run: Run): MonsterKind[][] {
     }
     return out;
   };
-  const waves = [wave(budget * 0.4), wave(budget * 0.3), wave(budget * 0.3)];
-  if (run.climb !== null ? run.climb % 2 === 1 : cellOf(run).kind === 'stairs') waves[2].push('golem');
+  const waves = shares.map((k) => wave(budget * k));
+  if (waves.length === 3 && (run.climb !== null ? run.climb % 2 === 1 : cellOf(run).kind === 'stairs')) waves[2].push('golem');
   return waves;
 }
 
@@ -1232,6 +1234,7 @@ function stepPlates(run: Run) {
       for (const o of standing(run))
         if (closer(o.x - p.x, o.y - p.y, PLATE_R + HERO_R)) {
           p.at = now + A.tell;
+          p.seen = true;
           emit(run, { type: 'trap', x: p.x, y: p.y });
           break;
         }
@@ -1350,7 +1353,8 @@ function startTrial(run: Run) {
   emit(run, { type: 'say', text: `Challenge room: the doors are sealed. Last ${TRIALS.secs} seconds for a chest.` });
 }
 
-/** A challenge room's clock: a wave every TRIALS.every s; at the end, the rest crumble. */
+/** A challenge room's clock: a wave every TRIALS.every s (twice as fast in the last TRIALS.rush
+    s); at the end, the rest crumble. */
 function stepTrial(run: Run) {
   const tr = run.trial;
   if (!tr || tr.done) return;
@@ -1362,8 +1366,9 @@ function stepTrial(run: Run) {
     return;
   }
   if (run.t >= tr.next) {
-    tr.next = run.t + TRIALS.every;
-    for (const k of fillRoom(run)[1]) addFoe(run, k, ...spawnPoint(run));
+    // The last few seconds come faster: the hold-out's final push.
+    tr.next = run.t + TRIALS.every / (tr.until - run.t <= TRIALS.rush ? 2 : 1);
+    for (const k of fillRoom(run, [TRIALS.size])[0]) addFoe(run, k, ...spawnPoint(run));
   }
 }
 

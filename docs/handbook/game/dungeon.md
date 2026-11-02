@@ -3,7 +3,7 @@ type: reference
 title: The Fog's dungeon (engine, content, scene)
 description: How a Fog run is built — data in content.ts, a pure seeded engine, a bot, and a Phaser scene — and which file to edit for each kind of change.
 tags: [game, fog, dungeon, phaser]
-timestamp: 2026-11-01
+timestamp: 2026-11-02
 ---
 # The Fog's dungeon
 
@@ -330,8 +330,9 @@ over a 20 px grid of the room, cached per room and target); the bot does the sam
 and its way out (`wayFor`) and keeps off the walls' faces. Chests and stairs find open floor
 (`freeSpot`). The scene draws blocks in `drawRoom` with the room's stone and bricks.
 
-Traps (`TRAPS`): arrow plates (`Terrain.plates`, from floor 2): standing on one sets it off
-(`stepPlates`, a `trap` event, a clank); after `tell` the wall's slots along its line glow and `n`
+Traps (`TRAPS`): arrow plates (`Terrain.plates`, from floor 2) are hidden in the floor until
+first stepped on (`Plate.seen`; the scene and the bot skip unseen ones), then show and keep
+working: standing on one sets it off (`stepPlates`, a `trap` event, a clank); after `tell` the wall's slots along its line glow and `n`
 arrows (`Bullet.trap`, drawn as `shot-trap`) fly across the room, then it rearms. Dark rooms
 (`Terrain.dark`, from floor 3) set `run.dim` (the Fog's dark, now made in every world) until the
 room is clear. Developer jumps: `?run=<zone>&at=shape-<id>` or `at=dark` (`skipToShape`: a room on
@@ -341,8 +342,8 @@ floor 3 with that shape and plates), from the `/lab/night` "Dungeon rooms with w
 ## Challenge rooms, bargains, elite traits, statues
 
 - **Challenge rooms** (`TRIALS`): a plain fight room past the floor's first, from floor 2, now and
-  then seals: `startTrial` drops the room's waves and `stepTrial` sends a third of a room every
-  `every` s for `secs` s (`run.trial`); `checkRoom` holds the room shut until time is up, then what
+  then seals: `startTrial` drops the room's waves and `stepTrial` sends `size` of a room
+  (`fillRoom(run, [size])`) every `every` s for `secs` s, twice as often in the last `rush` s (`run.trial`); `checkRoom` holds the room shut until time is up, then what
   stands crumbles (`crumble`: no light, no drops) and a chest comes up. The HUD shows "Hold on" with
   the seconds left (`Hud.trial`).
 - **Dark altars** (`BARGAIN`): in some rest rooms, beside the shrine (`Terrain.altar`). Touching it

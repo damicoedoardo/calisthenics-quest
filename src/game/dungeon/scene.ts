@@ -3092,8 +3092,10 @@ class DungeonScene extends Phaser.Scene {
       }
     }
     // Arrow plates: a pressure plate with an arrow on it pointing the way its arrows fly. Set off,
-    // it glows red and the slots in the wall it shoots from light up along its line.
+    // it glows red and the slots in the wall it shoots from light up along its line. Hidden in
+    // the floor until first stepped on.
     for (const p of r.terrain.plates ?? []) {
+      if (!p.seen) continue;
       const armed = p.at >= 0,
         ready = r.t >= p.ready,
         R0 = PLATE_R;
