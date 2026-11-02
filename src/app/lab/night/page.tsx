@@ -237,6 +237,19 @@ function bossEndsChapter(): GameState {
   return clearNextZone(addFakeWorkouts(storyWalk(10), 1, new Date(), false));
 }
 
+/** A fast player: the first SP given at 3 workouts, both first bosses beaten by workout 4 (floor 5
+    reached on the way), so the second SP came with chapter 2's end: the first is still sealed, one
+    workout from waking. `wakes`: that workout done, so the
+    first SP's waking scene plays on open. */
+function spFirstLate(wakes: boolean): GameState {
+  let s = storyWalk(3);
+  s = { ...s, sp: { givenAt: 3 }, seenScenes: [...s.seenScenes.filter((x) => x !== 'sp-gift'), 'sp-gift'] };
+  s = clearNextZone(clearNextZone(addFakeWorkouts(s, 1, new Date(Date.now() - DAY), false)));
+  s = { ...s, sp: { givenAt: 3, floor: true, more: [2], worn: 2 }, seenScenes: [...s.seenScenes, 'sp-second'] };
+  for (let k = 0; k < 4; k++) s = skipDueScenes(s, new Date());
+  return wakes ? addFakeWorkouts(s, 1, new Date(), false) : s;
+}
+
 /** Mira's forge waits till she finds you (FORGE_OPENS, 6 workouts): a player `n` workouts in,
     chapter 1, with a few finds in the vault. At 5 the forge is hidden; at 6 her scene has played. */
 function miraAt(n: number): GameState {
@@ -253,6 +266,10 @@ const GO: Record<string, () => void> = {
   'boss-ends-chapter': () => open(bossEndsChapter(), 'tab=today'),
   'boss-early': () => open(bossEarly(), 'tab=today'),
   // Mira finds you at workout 6 (her scene plays on open), then her forge is new on Hero > Gear.
+  // The first SP still sealed after the second was given: both cards show, the sealed one with its trial.
+  'sp-first-late': () => open(spFirstLate(false), 'tab=hero&hero=class'),
+  // One more workout: the first SP wakes, its scene plays.
+  'sp-first-wakes': () => open(spFirstLate(true), 'tab=today'),
   'mira-meets': () => {
     const s = miraAt(6);
     open({ ...s, seenScenes: s.seenScenes.filter((id) => id !== 'mira-forge') }, 'tab=today');
@@ -431,6 +448,8 @@ export default function NightLab() {
         <Row icon={<Sparkles size={16} />} label="The SP, awake" note="Hero tab: you in its look, the card in color, its moves and the switch to wear it" onClick={() => open(withSp(true), 'tab=hero&hero=class')} />
         <Row icon={<Sparkles size={16} />} label="All four SPs" note="Hero tab: scroll the SPs you own with the arrows, and pick the one to wear" onClick={() => open(withSp(true, 'warrior', 2), 'tab=hero&hero=class')} />
         <Row icon={<Sparkles size={16} />} label="SP gallery" note="All sixteen SPs, boy and girl, with their element and who each one is" href="/lab/sp" />
+        <Row icon={<Sparkles size={16} />} label="First SP still sealed, second given" note="A fast player (2 bosses in 4 workouts): Hero tab turns between the second SP and the sealed first with its trial" onClick={GO['sp-first-late']} />
+        <Row icon={<Film size={16} />} label="The first SP wakes late" note="The same player, one workout later: sp-awake plays on open" onClick={GO['sp-first-wakes']} />
         <Row icon={<Film size={16} />} label="The second SP" note="sp-second, after chapter 2: the Wanderer hands it over, awake" href="/lab/story?play=sp-second&back" />
         <Row icon={<Film size={16} />} label="The third SP" note="sp-third, after chapter 4" href="/lab/story?play=sp-third&back" />
         <Row icon={<Film size={16} />} label="The fourth SP" note="sp-fourth, after chapter 5, before the last" href="/lab/story?play=sp-fourth&back" />

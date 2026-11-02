@@ -922,7 +922,14 @@ const emit = (run: Run, e: GameEvent) => {
   if (acting !== null && OWN.has(e.type)) (e as GameEvent & { by?: number }).by = acting;
   run.events.push(e);
 };
-/** Whose own move an event shows (an attack, an ability, an SP move, a dodge), if it is one. */
+/** A hit a hero landed (or a monster they felled): theirs too, so in a live run their phone shows
+    it the moment they strike, not a line later (src/game/net/follow.ts). */
+const emitBy = (run: Run, h: Hero, e: GameEvent) => {
+  (e as GameEvent & { by?: number }).by = h.id;
+  emit(run, e);
+};
+/** Whose own move an event shows (an attack, an ability, an SP move, a dodge, a hit they landed),
+    if it is one. */
 export const byOf = (e: GameEvent): number | undefined => (e as GameEvent & { by?: number }).by;
 /** News for one hero only (an item into their bag, their chest, their relic, their material):
     in a party the others don't hear it. */
@@ -1667,6 +1674,45 @@ export function stepRun(run: Run, input: Input | Input[]) {
   if (run.foes.length > 40) run.foes = run.foes.filter((f) => f.alive);
 }
 
+/** A live run's phone (src/game/net/follow.ts): one step of only your own hero (moving, your
+    buttons, your attacks, their shots and fire) and what flies, the monsters and friends standing
+    as the server last sent them. The phone draws those from the server's runs, so working out their
+    step here would only be thrown away, and it's most of a step's cost: a phone replays its waiting
+    steps on every run that comes, many times a second. */
+export function stepOwn(run: Run, h: Hero, i: Input) {
+  if (run.over || run.paused || choosing(run) || run.stairsAsk) return;
+  run.t += STEP;
+  const now = run.t;
+  for (let k = 0; k < run.timers.length; k++) {
+    if (run.timers[k].at <= now) {
+      const fn = run.timers[k].run;
+      run.timers.splice(k--, 1);
+      fn();
+      if (run.over || choosing(run) || run.stairsAsk) return;
+    }
+  }
+  if (h.hp <= 0 || asleep(run, h)) return;
+  acting = h.id;
+  if (i.lock !== undefined) h.lock = i.lock;
+  if (i.dodge) dodge(run, h, i);
+  moveHero(run, h, i);
+  if (i.ability) useAbility(run, h, i);
+  if (h.sp && i.skill) useSkill(run, h, i);
+  if (h.sp && i.final) useFinal(run, h, i);
+  stepFields(run);
+  stepBurns(run);
+  moveBullets(run);
+  if (run.over) return;
+  acting = h.id;
+  attack(run, h);
+  skills(run, h);
+  acting = null;
+  moveShots(run);
+  if (run.over) return;
+  helpers(run);
+  pullGems(run);
+}
+
 /** Asleep in the Lull's song: the hero stands where they are and doesn't fight. */
 export const asleep = (run: Pick<Run, 't'>, h: Hero) => run.t < h.sleepUntil;
 
@@ -1934,7 +1980,7 @@ function burnTick(run: Run, f: Foe) {
   b.next += SP_PASSIVE.embers.every;
   f.hp -= b.dmg;
   f.hitAt = run.t;
-  emit(run, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg: b.dmg, boss: f === run.boss });
+  emitBy(run, b.by, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg: b.dmg, boss: f === run.boss });
   if (f.hp <= 0) kill(run, f, b.by);
 }
 
@@ -3551,12 +3597,12 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
   }
   // The Loner's shield: a hit from in front glances off.
   if (shielded(f, fromX, fromY)) {
-    emit(run, { type: 'block', id: f.id, x: f.x, y: f.y });
+    emitBy(run, by, { type: 'block', id: f.id, x: f.x, y: f.y });
     return;
   }
   // The Sand Golem, standing still, is stone: the hit glances off.
   if (f === run.warden && f.kind === 'sandGolem' && hardened(run, f)) {
-    emit(run, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg: 0, boss: false });
+    emitBy(run, by, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg: 0, boss: false });
     return;
   }
   f.hitAt = run.t;
@@ -3574,7 +3620,7 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
   if (f.kind === 'reflection' || f.kind === 'image') {
     // A copy of you, or of the Mirror: it shatters, and you feel it.
     hitYourself(run, by, f.kind);
-    emit(run, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg: 0, boss: false });
+    emitBy(run, by, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg: 0, boss: false });
     return kill(run, f, by);
   }
   f.hp -= dmg;
@@ -3582,7 +3628,7 @@ function damage(run: Run, by: Hero, f: Foe, amount: number, knock = 0, fromX = b
   leech(run, by, dmg);
   calmer(run, by, CALM.hit);
   onLanded(run, by, f, knight);
-  emit(run, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg, boss, crit });
+  emitBy(run, by, { type: 'hit', id: f.id, x: f.x, y: f.y, dmg, boss, crit });
   // The Plateau cracks, a little at a time, and shows nothing else.
   if (boss && run.setup.zone.boss === 'plateau') {
     const cracks = Math.floor((1 - Math.max(0, f.hp) / f.maxHp) / CRACK);
@@ -3642,7 +3688,10 @@ function kill(run: Run, f: Foe, by: Hero) {
   }
   f.alive = false;
   by.kills++;
-  emit(run, { type: 'kill', id: f.id, x: f.x, y: f.y, kind: f.kind, elite: f.elite });
+  // A boss or a mid-boss falling ends a fight for everyone: that one waits for the server's word.
+  const e: GameEvent = { type: 'kill', id: f.id, x: f.x, y: f.y, kind: f.kind, elite: f.elite };
+  if (f === run.boss || f === run.warden) emit(run, e);
+  else emitBy(run, by, e);
   if (f.def.xp > 0) run.gems.push({ id: ++run.ids, x: f.x, y: f.y, value: f.def.xp, pulled: false });
   // Momentum: one more stack, and they all last a while longer.
   if (by.ups.rush) {

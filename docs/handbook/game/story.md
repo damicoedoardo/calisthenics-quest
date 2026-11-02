@@ -87,7 +87,7 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
 - **ask**: `name` (name the flame), `choice` (saved under its id; `write` adds a free-text box),
   `letter` (the letter to your future self, `LetterForm`, saved in `profile.letter`; its `after`
   lines follow the seal), `class` (opens the class picker), or `sp` (the Wanderer gives an SP: the first, or `n`, see
-  [fog.md](fog.md); the later ones in `sp-second`, `sp-third`, `sp-fourth`, after `SP_GIFTS` chapters). `spReady: true` in a `when` waits for the SP's trial to be done.
+  [fog.md](fog.md); the later ones in `sp-second`, `sp-third`, `sp-fourth`, after `SP_GIFTS` chapters, even while the first is still sealed; `story.test.ts` checks the first still wakes then). `spReady: true` in a `when` waits for the SP's trial to be done.
 
 ## When scenes play
 

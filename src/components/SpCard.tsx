@@ -52,9 +52,10 @@ import {
 type Update = (fn: (s: GameState) => GameState) => void;
 
 /** Your SPs on the Hero tab. Nothing shows before the Wanderer gives the first; only the ones you
-    have show after that, so each new one is a surprise. With more than one, the arrows turn
-    through them: each one's card (ash while the first is sealed), its trial or its moves and
-    passive, and a button to wear it into the Fog (one at a time). */
+    have show after that, so each new one is a surprise, and the first always shows, sealed or not
+    (a later one can come before it wakes). With more than one, the arrows turn through them: each
+    one's card (ash while the first is sealed), its trial or its moves and passive, and a button to
+    wear it into the Fog (one at a time). */
 export function SpCard({
   state,
   update,
@@ -70,16 +71,18 @@ export function SpCard({
   const [view, setView] = useState<SpNo | 0>(0);
   const trial = spTrial(state);
   if (!trial) return null;
-  // Before the first wakes it's the only card; after, the one you look at (the worn one at first).
-  const n: SpNo = (view && owned.includes(view) ? view : chosen) || 1,
+  // The cards to turn through: the ones you own, and the first while it's still sealed (with its
+  // trial), so it never drops out of sight. You look at the worn one at first.
+  const cards: SpNo[] = spOpen(state) ? owned : [1, ...owned];
+  const n: SpNo = (view && cards.includes(view) ? view : chosen) || 1,
     card = spCard(state, n),
     open = n === 1 ? spOpen(state) : true,
     worn = spWorn(state) === n,
-    at = owned.indexOf(n),
+    at = cards.indexOf(n),
     ability = abilityOf(state.profile.classId);
   const turn = (d: number) =>
-    owned.length > 1 &&
-    setView(owned[(at + d + owned.length) % owned.length]);
+    cards.length > 1 &&
+    setView(cards[(at + d + cards.length) % cards.length]);
   const moves = [
     {
       icon: (
@@ -126,12 +129,13 @@ export function SpCard({
           )}
           SP · {card.name}
         </div>
-        {!open ? (
-          <p className="flex items-center gap-1 text-[11px] text-slate-500">
-            <Lock size={11} aria-hidden /> Sealed
-          </p>
-        ) : (
-          owned.length > 1 && (
+        <div className="flex items-center gap-2">
+          {!open && (
+            <p className="flex items-center gap-1 text-[11px] text-slate-500">
+              <Lock size={11} aria-hidden /> Sealed
+            </p>
+          )}
+          {cards.length > 1 && (
             <div className="flex items-center gap-1 text-[11px] text-slate-500">
               <button
                 aria-label="The SP before"
@@ -141,7 +145,7 @@ export function SpCard({
                 <ChevronLeft size={14} aria-hidden />
               </button>
               <span className="w-8 text-center tabular-nums">
-                {at + 1}/{owned.length}
+                {at + 1}/{cards.length}
               </span>
               <button
                 aria-label="The SP after"
@@ -151,8 +155,8 @@ export function SpCard({
                 <ChevronRight size={14} aria-hidden />
               </button>
             </div>
-          )
-        )}
+          )}
+        </div>
       </div>
       <div className="mt-2 flex gap-3">
         <div className="shrink-0">
