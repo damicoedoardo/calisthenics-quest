@@ -78,21 +78,36 @@ describe('a live party run', () => {
     for (let i = 0; i < 6; i++) stepRun(phone, phone.party.map(() => ({ x: 0, y: 0, ability: false })));
   });
 
-  it("counts a step played before it came, and passes it over when it comes", () => {
+  it("waits for a step that hasn't come instead of guessing it, and plays it when it comes", () => {
     const { room } = twoRoom();
     const a = room.run!.party[0];
     room.take('ana', { t: 'in', steps: [{ seq: 1, x: 1, y: 0, ability: false }] });
     room.tick(0);
     const x1 = a.x;
-    // Step 2 is late: played with the stick as held, and counted.
+    // Step 2 is late: Ana has no turn, and it isn't counted.
     room.tick(1 / 60);
-    expect(a.x).toBeGreaterThan(x1);
-    // It comes, with step 3 and a button: 2 is passed over, its button goes with 3.
+    expect(a.x).toBe(x1);
+    const phone = phoneRun(room.started!);
+    expect(applySnapshot(phone, room.snapshot(), 0).ack[0]).toBe(1);
+    // It comes, with its button, and step 3: both played, in order, the button in step 2.
     room.take('ana', { t: 'in', steps: [{ seq: 2, x: 1, y: 0, ability: true }, { seq: 3, x: 1, y: 0, ability: false }] });
     room.tick(2 / 60);
-    expect(room.run!.party[0].x).toBeGreaterThan(x1);
-    const phone = phoneRun(room.started!);
+    expect(room.run!.events.some((e) => e.type === 'ability')).toBe(true);
+    room.tick(3 / 60);
+    expect(a.x).toBeGreaterThan(x1);
     expect(applySnapshot(phone, room.snapshot(), 0).ack[0]).toBe(3);
+  });
+
+  it('gives a phone that ran ahead extra turns, so its steps never wait long', () => {
+    const { room } = twoRoom();
+    const steps: Press[] = Array.from({ length: 12 }, (_, i) => ({ seq: i + 1, x: 1, y: 0, ability: false }));
+    room.take('ana', { t: 'in', steps });
+    for (let i = 0; i < 6; i++) room.tick(i / 60);
+    const phone = phoneRun(room.started!);
+    // Six ticks played more than six of Ana's twelve steps, and none was dropped.
+    const ack = applySnapshot(phone, room.snapshot(), 0).ack[0];
+    expect(ack).toBeGreaterThan(6);
+    expect(ack).toBeLessThanOrEqual(12);
   });
 
   it('plays a phone that went away with the bot for a while, so the run goes on', () => {
@@ -127,6 +142,10 @@ describe('a live party run', () => {
     ben.x += 200;
     const told = () => run.events.filter((e) => e.type === 'say' && e.text.startsWith('Waiting for your party'));
     run.stairs = { x: ana.x, y: ana.y };
+    // Ana's phone sends her steps (standing still); Ben's are late.
+    let seq = 0;
+    const step = () => room.take('ana', { t: 'in', steps: [{ seq: ++seq, x: 0, y: 0, ability: false }] });
+    step();
     room.tick(0);
     expect(told()).toHaveLength(1);
     expect(heard(told()[0], 0)).toBe(true);
@@ -134,8 +153,10 @@ describe('a live party run', () => {
     // Off the stairs and back on: not again.
     run.events = [];
     run.stairs = { x: ana.x + 300, y: ana.y };
+    step();
     room.tick(0.1);
     run.stairs = { x: ana.x, y: ana.y };
+    step();
     room.tick(0.2);
     expect(told()).toHaveLength(0);
   });
