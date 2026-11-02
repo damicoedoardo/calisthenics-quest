@@ -226,13 +226,12 @@ export class Follower {
       this.held = true;
       return;
     }
-    // Going again after a hold: the server's clock stood still while this one didn't. Move what was
-    // measured by as much, so the hold doesn't read as a slow line.
+    // Going again after a hold: the server's clock stood still while this one didn't, so what was
+    // measured before says nothing now. Start the measure again, keeping the wait added on top.
     if (this.held && this.late.length) {
-      const was = [...this.late].sort((x, y) => x - y)[this.late.length >> 1],
-        shift = Math.max(0, now - at - was);
-      this.late = this.late.map((l) => l + shift);
-      if (this.behind !== null) this.behind += shift;
+      const extra = this.behind === null ? null : this.behind - Math.min(...this.late);
+      this.late = [];
+      if (extra !== null) this.behind = now - at + extra;
     }
     this.held = false;
     this.late.push(now - at);
