@@ -1,4 +1,4 @@
-import { byOf, heard, stepRun, type GameEvent, type Input, type Run } from '../dungeon/engine';
+import { byOf, heard, stepOwn, type GameEvent, type Input, type Run } from '../dungeon/engine';
 import { applySnapshot, type Press } from './wire';
 
 /* A phone's side of a live run, without the drawing (the scene in src/game/dungeon/scene.ts draws
@@ -9,9 +9,20 @@ import { applySnapshot, type Press } from './wire';
 
 /** How the phone follows the server (ms, steps, px). */
 export const FOLLOW = {
-  /** The others are drawn this far in the past: two of the server's runs, so one that comes late
-      still has a pair to glide between. */
-  behindMs: 110,
+  /** The others are drawn far enough in the past that this share of the server's runs have come
+      by then: the line's own unevenness, measured, so a good line waits less and a bumpy one more. */
+  cover: 0.9,
+  /** How many of the latest runs that share is taken over (20 a second: about 3 s). */
+  window: 60,
+  /** And this much more, for a phone's frame. */
+  marginMs: 12,
+  /** A run that's later than that still: the others go on the way they were going for at most
+      this long, instead of standing still and then jumping. */
+  aheadMs: 120,
+  /** How quickly that wait grows when the line gets worse (ms per ms: the others go this much
+      slower for a moment), and shrinks when it gets better. */
+  growRate: 0.3,
+  shrinkRate: 0.05,
   /** Your steps go to the server this often. */
   sendMs: 50,
   /** At most this many of your steps wait for the server; older ones are given up. */
@@ -29,8 +40,6 @@ interface Frame {
   where: Map<string, [number, number]>;
 }
 
-const still: Input = { x: 0, y: 0, ability: false };
-
 export class Follower {
   readonly run: Run;
   readonly me: number;
@@ -39,9 +48,15 @@ export class Follower {
   private outbox: Press[] = [];
   private sentAt = -1e9;
   private frames: Frame[] = [];
-  /** This phone's clock less the server run's clock, as fast as a run has come: runs that come late
-      are still placed when they happened, so the others glide evenly over an uneven line. */
-  private lag: number | null = null;
+  /** For each of the latest runs, this phone's clock when it came less the server's clock when it
+      was played: how late runs come, fast ones and slow ones. */
+  private late: number[] = [];
+  /** How far behind this phone's clock the others are drawn (ms), on the server's clock: eased
+      toward what the line needs (`aim`), never jumped, so they never skip. Null before a run came. */
+  private behind: number | null = null;
+  private behindAt = 0;
+  /** Where each monster was drawn last frame. */
+  private shown = new Map<number, [number, number]>();
   /** How far your hero is drawn from where the rules have it, while a correction glides away. */
   readonly off = { x: 0, y: 0 };
   private offAt = 0;
@@ -66,7 +81,7 @@ export class Follower {
       const got = applySnapshot(run, t, this.me);
       // Your own moves were played when you pressed them (`press`): not again. A friend's own
       // news (their item, their chest) is theirs.
-      events.push(...got.events.filter((e) => byOf(e) !== this.me && heard(e, this.me)));
+      events.push(...got.events.filter((e) => byOf(e) !== this.me && heard(e, this.me)).map(this.onShown));
       ack = got.ack[this.me] ?? 0;
     }
     const at = this.pressedAt.get(ack);
@@ -95,8 +110,18 @@ export class Follower {
     this.outbox.push(p);
     this.pressedAt.set(p.seq, now);
     if (this.pending.length > FOLLOW.pending) this.pressedAt.delete(this.pending.shift()!.seq);
-    return this.step(p).filter((e) => byOf(e) === this.me);
+    return this.step(p)
+      .filter((e) => byOf(e) === this.me)
+      .map(this.onShown);
   }
+
+  /** A blow lands where the monster is drawn (a moment in the past), not where the rules have it
+      now, so the spark and the number sit on it. */
+  private onShown = (e: GameEvent): GameEvent => {
+    if (e.type !== 'hit' && e.type !== 'kill' && e.type !== 'block' && e.type !== 'pile') return e;
+    const at = this.shown.get(e.id);
+    return at ? { ...e, x: at[0], y: at[1] } : e;
+  };
 
   /** Your steps to send now, if it's time. */
   outgoing(now: number): Press[] | null {
@@ -105,8 +130,8 @@ export class Follower {
     return this.outbox.splice(0);
   }
 
-  /** Before drawing, at `now` (ms): the others where they were `behindMs` ago, between two of the
-      server's runs, and your correction glided a little further away. */
+  /** Before drawing, at `now` (ms): the others where they were a moment ago on the server's clock,
+      between two of its runs, and your correction glided a little further away. */
   place(now: number) {
     const k = Math.pow(FOLLOW.glideKeep, Math.min(6, (now - this.offAt) / (1000 / 60)));
     this.offAt = now;
@@ -114,16 +139,24 @@ export class Follower {
     this.off.y *= k;
     if (Math.abs(this.off.x) < 0.05) this.off.x = 0;
     if (Math.abs(this.off.y) < 0.05) this.off.y = 0;
-    if (this.lag === null) return;
-    const t = now - this.lag - FOLLOW.behindMs,
-      fs = this.frames;
-    if (fs.length < 2) return;
+    const fs = this.frames;
+    if (fs.length < 2 || !this.late.length) return;
+    // Ease the wait toward what the line needs now: the others go a touch slower or quicker for a
+    // moment, which nobody sees, instead of standing still or skipping.
+    const aim = this.aim(),
+      dt = Math.min(100, Math.max(0, now - this.behindAt));
+    this.behindAt = now;
+    if (this.behind === null) this.behind = aim;
+    else if (aim > this.behind) this.behind = Math.min(aim, this.behind + dt * FOLLOW.growRate);
+    else this.behind = Math.max(aim, this.behind - dt * FOLLOW.shrinkRate);
+    const t = now - this.behind;
     let i = fs.length - 2;
     while (i > 0 && fs[i].at > t) i--;
     const a = fs[i],
       b = fs[i + 1],
-      u = Math.max(0, Math.min(1, (t - a.at) / Math.max(1, b.at - a.at)));
-    const dt = Math.max(1, b.at - a.at) / 1000;
+      gap = Math.max(1, b.at - a.at),
+      // Past the newest run (a late one): on the way they were going, for a short while.
+      u = Math.max(0, Math.min((t - a.at) / gap, 1 + FOLLOW.aheadMs / gap));
     const put = (key: string, o: { x: number; y: number; vx: number; vy: number }, moving = true) => {
       const p = a.where.get(key),
         q = b.where.get(key);
@@ -133,29 +166,46 @@ export class Follower {
       // How fast they're drawn moving, so a friend walks (and faces) the way they go: this
       // phone's own steps stand them still between the server's runs.
       if (moving) {
-        o.vx = (q[0] - p[0]) / dt;
-        o.vy = (q[1] - p[1]) / dt;
+        o.vx = (q[0] - p[0]) / (gap / 1000);
+        o.vy = (q[1] - p[1]) / (gap / 1000);
       }
     };
     const r = this.run;
     for (const h of r.party) if (h !== r.hero) put(`h${h.id}`, h);
-    for (const f of r.foes) put(`f${f.id}`, f);
+    this.shown.clear();
+    for (const f of r.foes) {
+      put(`f${f.id}`, f);
+      this.shown.set(f.id, [f.x, f.y]);
+    }
     for (const s of r.shots) put(`s${s.id}`, s, false);
   }
 
-  /** One step: you as pressed; the others stand where the server last had them (`place` moves
-      them between its runs), so nothing they do here is a guess that has to be taken back. */
+  /** How far behind the others should be drawn on this line (ms): late enough that most runs
+      (`FOLLOW.cover`) have come, plus the gap to the next run and a frame. */
+  private aim(): number {
+    const sorted = [...this.late].sort((x, y) => x - y),
+      slow = sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * FOLLOW.cover))],
+      fs = this.frames,
+      gap = fs.length > 1 ? (fs[fs.length - 1].at - fs[0].at) / (fs.length - 1) : 50;
+    return slow + gap + FOLLOW.marginMs;
+  }
+
+  /** How much longer than the quickest run ever took the others are drawn behind (ms): the wait
+      this phone adds for an uneven line, for developer mode. */
+  get behindMs(): number | null {
+    return this.behind === null ? null : this.behind - Math.min(...this.late);
+  }
+
+  /** One step: only you, as pressed (`stepOwn`). Everyone else stands where the server last had
+      them (`place` moves them between its runs), so nothing they do here is a guess that has to be
+      taken back, and a replay of many steps stays cheap. */
   private step(p: Press): GameEvent[] {
-    const run = this.run,
-      // The engine reads each hero's input by its id (its place in the server's run), not by
-      // where it stands in this phone's party (you're first here).
-      inputs = run.party.map(() => still);
-    inputs[this.me] = p;
+    const run = this.run;
     // Cards come only from the server: a level, a chest or the stairs guessed here would roll
     // other choices than the server's, and a pick from them would be turned down and asked again.
     const asks = run.party.map((h) => [h.offer, h.relicOffer] as const),
       stairs = run.stairsAsk;
-    stepRun(run, inputs);
+    stepOwn(run, run.hero, p);
     run.party.forEach((h, i) => ([h.offer, h.relicOffer] = asks[i]));
     run.stairsAsk = stairs;
     return run.events.splice(0);
@@ -170,16 +220,28 @@ export class Follower {
     for (const s of r.shots) where.set(`s${s.id}`, [s.x, s.y]);
     if (this.roomAt !== roomOf(r)) this.frames = [];
     this.roomAt = roomOf(r);
-    const at = r.t * 1000,
-      lag = now - at;
-    // The quickest a run has come sets the clock; it drifts up slowly, so a run that held still
-    // (a pick) or a line that got slower is followed again.
-    this.lag = this.lag === null || lag < this.lag ? lag : this.lag + (lag - this.lag) * 0.02;
-    if (this.frames.length && at <= this.frames[this.frames.length - 1].at) return;
+    const at = r.t * 1000;
+    // A run that held still (everyone waits on a card) says nothing new about the line.
+    if (this.frames.length && at <= this.frames[this.frames.length - 1].at) {
+      this.held = true;
+      return;
+    }
+    // Going again after a hold: the server's clock stood still while this one didn't. Move what was
+    // measured by as much, so the hold doesn't read as a slow line.
+    if (this.held && this.late.length) {
+      const was = [...this.late].sort((x, y) => x - y)[this.late.length >> 1],
+        shift = Math.max(0, now - at - was);
+      this.late = this.late.map((l) => l + shift);
+      if (this.behind !== null) this.behind += shift;
+    }
+    this.held = false;
+    this.late.push(now - at);
+    if (this.late.length > FOLLOW.window) this.late.shift();
     this.frames.push({ at, where });
-    if (this.frames.length > 8) this.frames.shift();
+    if (this.frames.length > 16) this.frames.shift();
   }
   private roomAt = '';
+  private held = false;
 }
 
 /** Which room the run is in (a new one each time you walk through a door). */

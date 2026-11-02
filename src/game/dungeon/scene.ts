@@ -211,6 +211,8 @@ export interface MiniMap {
 export interface Hud {
   /** A live run: from pressing to the server playing it (ms), for developer mode. */
   ping?: number | null;
+  /** A live run: how far in the past friends and monsters are drawn (ms), for developer mode. */
+  behind?: number | null;
   hp: number;
   maxHp: number;
   xp: number;
@@ -1521,6 +1523,7 @@ class DungeonScene extends Phaser.Scene {
     const r = this.run;
     return {
       ping: this.follow?.ping ?? null,
+      behind: this.follow?.behindMs ?? null,
       hp: Math.max(0, Math.ceil(r.hero.hp)),
       maxHp: r.hero.maxHp,
       xp: r.hero.xp,
