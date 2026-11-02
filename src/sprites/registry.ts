@@ -49,6 +49,8 @@ import { FOG_BANK, WORLD_LOCK } from './characters/worlds';
 import { drawItem } from './characters/items';
 import { drawSpCard, type SpCardOpts } from './characters/spCard';
 import { installStepArt, type InstallStep } from './characters/install';
+import { restArt } from './characters/rest';
+import type { Look } from './engine/figure';
 import { ABILITY_ICONS, DAY_ICONS, ELEMENT_ICONS, SP_ICONS, KEEPSAKE_ICONS, MARK_ICONS, RELIC_ICONS, SKILL_ICONS, UI_ICONS, ZONE_ICONS, type DayKind } from './characters/icons';
 
 /* Every sprite in the game, by id. Components draw them with <Sprite id="..." />, so swapping the
@@ -158,6 +160,10 @@ export interface ZoneIconOpts {
 export interface DayIconOpts {
   kind: DayKind;
 }
+export interface RestDayOpts {
+  /** Your look, for the sleeper's hair and skin; the default boy when missing. */
+  look?: Look;
+}
 
 const STARTER_GEAR = uniformGear(undefined, 0);
 
@@ -263,6 +269,8 @@ export const SPRITES = {
   // app icons, hand-drawn at 16x16 (keepsakes) and 12x12 (Book of Days)
   keepsake: icon<KeepsakeOpts>((o) => `Keepsake ${o.zone + 1}`, { zone: 0 }, (o) => KEEPSAKE_ICONS[o.zone] ?? KEEPSAKE_ICONS[0]),
   dayIcon: icon<DayIconOpts>((o) => o.kind, { kind: 'A visit' }, (o) => DAY_ICONS[o.kind]),
+  // Today on a rest day: you asleep under the moon (32x25)
+  restDay: icon<RestDayOpts>(() => 'Rest day: you asleep under the moon', {}, (o) => restArt(o.look)),
   // the Fog's items, 32x32: kind, rarity and a seed from the name (looksOf in src/game/dungeon/items.ts);
   // rares shine, legendaries glow and sparkle
   item: drawn<ItemLook>({

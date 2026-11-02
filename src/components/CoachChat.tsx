@@ -152,16 +152,16 @@ function WeekBoard({ state, update, onStart, onTalk }: { state: GameState; updat
         </p>
       </div>
       {/* Two rows, this week and next: a chip a day with its date and what it is (a dumbbell to
-          train, a flame to rest, a tick once done or kept). Today has a dot under it; the next
+          train, a bed to rest, a tick once done or kept). Today has a dot under it; the next
           workout is lit. */}
-      {/* A chip a day, Monday to Sunday: its date and what it is (a dumbbell to train, a flame to
+      {/* A chip a day, Monday to Sunday: its date and what it is (a dumbbell to train, a bed to
           rest, a tick once done or kept). Today has a dot under it; the next workout is lit. */}
       <ul className="mt-2 grid grid-cols-7 gap-1">
         {slots.map((s) => {
           const on = s === slot;
           const done = s.day ? !!s.day.done : !s.before && restKept(state, s.date);
           const lit = !!s.day && s.day === next;
-          const icon = done ? 'check' : s.day ? 'tabTrain' : s.before ? null : 'flame';
+          const icon = done ? 'check' : s.day ? 'tabTrain' : s.before ? null : 'bed';
           return (
             <li key={s.date}>
               <button

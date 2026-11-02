@@ -1133,9 +1133,9 @@ export const ZONE_ICONS: PixelArt[] = [
 /** Small marks for the screens around the game: a heart (full or spent), a check, a padlock, a
     bookmark (kept or not), the Book of Days, an arrow on, a little flame (no face: that's Ember's),
     play, and close; the tab bar's five (crossed swords, a skill tree, a game pad, two friends, a shield), the
-    developer's wrench, a gift, a cheer's horn and a plus for adding a friend, and what a workout gives (an arrow up for XP, a green star for a stat point, a sweat coin,
+    developer's wrench, a gift, a cheer's horn and a plus for adding a friend, a bed for a rest day, and what a workout gives (an arrow up for XP, a green star for a stat point, a sweat coin,
     a co-op material). */
-export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookmark' | 'bookmarkKept' | 'book' | 'chevron' | 'flame' | 'play' | 'close' | 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabHero' | 'tabFriends' | 'wrench' | 'xp' | 'point' | 'coin' | 'mat' | 'gift' | 'cheer' | 'addFriend', PixelArt> = {
+export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookmark' | 'bookmarkKept' | 'book' | 'chevron' | 'flame' | 'play' | 'close' | 'tabToday' | 'tabTrain' | 'tabPlay' | 'tabHero' | 'tabFriends' | 'wrench' | 'xp' | 'point' | 'coin' | 'mat' | 'gift' | 'cheer' | 'addFriend' | 'bed', PixelArt> = {
   heart: {
     rows: [
       '.rr.rr.',
@@ -1239,6 +1239,11 @@ export const UI_ICONS: Record<'heart' | 'heartEmpty' | 'check' | 'lock' | 'bookm
   tabFriends: {
     rows: ['.hh...gg.', 'hssh.gssg', 'hssh.gssg', '.ss...ss.', '.........', 'bbbb.eeee', 'bbbb.eeee', 'bbbb.eeee'],
     palette: { h: '#92400e', g: '#334155', s: '#fcd9b6', b: '#4a5fc0', e: '#10b981' },
+  },
+  // A bed: a rest day in the week.
+  bed: {
+    rows: ['w........', 'wpp......', 'wppBBBBBB', 'wbbbbbbbb', 'wwwwwwwww', 'w.......w'],
+    palette: { w: '#b45309', p: '#f1f5f9', B: '#8ea2ef', b: '#4a5fc0' },
   },
   // A present for a friend: a box tied with a gold ribbon.
   gift: {
