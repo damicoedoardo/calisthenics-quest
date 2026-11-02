@@ -83,9 +83,11 @@ training wakes in you, this the first. It is sealed until its trial is done (`sp
 `spAfterRun` after each run, in `page.tsx`); then `sp-awake` plays. The story gives the other three
 as surprises after chapters are beaten (`SP_GIFTS`: the scenes `sp-second`, `sp-third`,
 `sp-fourth`, each with an ask `{ kind: 'sp', n }`), awake and put on at once (`SpState.more`,
-`worn`). Nothing shows an SP before it is yours: the Hero tab lists only the ones you own
-(`spOwned`), and you scroll them there and pick the one to wear (`SpCard`, `wearSp`), or take it
-off (`setSpOff`). The one worn goes into every run (`spWorn`, a number 1 to 4 or 0;
+`worn`). A later one doesn't wait for the first to wake: a fast player can get the second while
+the first is still sealed, and the first still wakes when its trial is done. Nothing shows an SP
+before it is yours: the Hero tab lists only the ones you own (`spOwned`) plus the first while it is
+sealed, with its trial, so it never drops out of sight; you scroll them there and pick the one to
+wear (`SpCard`, `wearSp`), or take it off (`setSpOff`). The one worn goes into every run (`spWorn`, a number 1 to 4 or 0;
 `HeroSetup.sp`).
 
 | Class | 1 | 2 | 3 | 4 |

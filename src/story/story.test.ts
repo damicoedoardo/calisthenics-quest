@@ -4,6 +4,7 @@ import { TRACKS } from '@/lib/music';
 import { SPRITES } from '@/sprites/registry';
 import { CAST } from './cast';
 import { recordRun } from '@/lib/fog';
+import { giveSp, spOwned, spTrial } from '@/lib/sp';
 import { FIRST_CLEAR, RUN_LINES } from './daily/fog-lines';
 import { CHAPTERS } from './chapters';
 import { ALL_SCENES, VILLAGERS, answeredLines, asksAgain, chapterStart, endedScene, fill, pendingScenes, putOff, renderLines, sawScene, sceneMoment, scenesToPlay, storySoFar, storyState, storyWords, waitingCount } from './engine';
@@ -501,3 +502,31 @@ describe('the flame on the last Fog run', () => {
   });
 });
 
+
+describe('the SPs', () => {
+  // A fast player: the first SP given at 3 workouts, both first bosses down by workout 4 (floor 5
+  // reached on the way), so the second SP comes while the first is still one workout from waking.
+  const start = new Date(2026, 10, 2, 9);
+  const at = (i: number) => new Date(start.getTime() + i * 86_400_000);
+  const fast = (n: number, seen: string[]): GameState => {
+    const base = initialState();
+    return {
+      ...base,
+      profile: { ...base.profile, onboarded: true, classId: 'warrior' },
+      sessions: Array.from({ length: n }, (_, i) => workout(at(i))),
+      fog: { cleared: 2, runs: 2, best: {}, clearedAt: [3, 4] },
+      sp: { givenAt: 3, floor: true },
+      seenScenes: ALL_SCENES.map((p) => p.scene.id).filter((id) => !seen.includes(id)),
+    };
+  };
+
+  it('gives the second SP after chapter 2 even while the first is sealed, and the first still wakes', () => {
+    expect(pendingScenes(fast(4, ['sp-awake', 'sp-second']), at(4)).map((s) => s.id)).toEqual(['sp-second']);
+    const given = giveSp(fast(4, ['sp-awake']), 2);
+    expect(spOwned(given)).toEqual([2]);
+    expect(spTrial(given)).toEqual({ workouts: 1, need: 2, floor: true });
+    const woke = { ...given, sessions: [...given.sessions, workout(at(5))] };
+    expect(spOwned(woke)).toEqual([1, 2]);
+    expect(pendingScenes(woke, at(5)).map((s) => s.id)).toEqual(['sp-awake']);
+  });
+});
