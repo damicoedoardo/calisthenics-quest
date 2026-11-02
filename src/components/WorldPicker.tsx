@@ -6,7 +6,7 @@ import { Sprite } from './Sprite';
 import { Enemy } from './Characters';
 import { PlaceBackdrop } from './Place';
 import type { GameState } from '@/lib/game';
-import { EDGE, ZONES, edgeFor, powerOf, workoutsPastHearts, zoneStatus, type Zone } from '@/lib/fog';
+import { EDGE, ZONES, edgeFor, powerOf, workoutsEarly, workoutsPastHearts, zoneStatus, type Zone } from '@/lib/fog';
 import { CHAPTERS } from '@/story/chapters';
 import { chapterStart } from '@/story/engine';
 
@@ -308,22 +308,27 @@ function WorldCard({ zone: z, index, state, active, cardRef, artRef, onPick, onP
 }
 
 /** What the world you're on gives you today, in one line: the boss's hearts (each workout takes
-    one; at zero it fights weaker) and the free skills your runs start with. */
+    one; while you are early it fights tougher, at zero it fights weaker) and the free skills your
+    runs start with. */
 function Edge({ state, zone }: { state: GameState; zone: Zone }) {
   const power = powerOf(state, new Date());
   const past = workoutsPastHearts(state, zone);
   const edge = edgeFor(state, zone);
   const skills = (power.fresh ? 1 : 0) + (power.rested ? 1 : 0) + edge.picks;
   const hearts = past === null ? Math.max(0, chapterStart(zone.chapter + 1) - state.sessions.length) : 0;
+  const early = workoutsEarly(state, zone);
   const words =
-    past === null
-      ? `${zone.bossName} has ${hearts} heart${hearts === 1 ? '' : 's'} left; each workout takes one`
-      : `${zone.bossName} has no hearts left and fights ${Math.round((1 - EDGE.bossHp) * 100)}% weaker`;
+    past !== null
+      ? `${zone.bossName} has no hearts left and fights ${Math.round((1 - EDGE.bossHp) * 100)}% weaker`
+      : early > 0
+        ? `${zone.bossName} has ${hearts} hearts left; each workout takes one. You are ${early} workout${early === 1 ? '' : 's'} early, so it fights tougher`
+        : `${zone.bossName} has ${hearts} heart${hearts === 1 ? '' : 's'} left; each workout takes one`;
   return (
-    <div role="note" className="mt-2 flex items-center gap-1.5 font-pixel text-[8px] text-slate-300" aria-label={`${words}. Your runs start with ${skills} free skill${skills === 1 ? '' : 's'}.`}>
+    <div role="note" className="mt-2 flex flex-wrap items-center gap-x-1.5 gap-y-1 font-pixel text-[8px] text-slate-300" aria-label={`${words}. Your runs start with ${skills} free skill${skills === 1 ? '' : 's'}.`}>
       <Sprite id="uiIcon" opts={{ name: hearts ? 'heart' : 'heartEmpty' }} size={12} label="" />
       <span className={hearts ? '' : 'text-rose-300'}>{hearts ? hearts : 'weaker'}</span>
-      {skills > 0 && <span className="text-emerald-300">· +{skills} free skill{skills === 1 ? '' : 's'}</span>}
+      {early > 0 && <span className="whitespace-nowrap text-amber-300">· tougher ({early} early)</span>}
+      {skills > 0 && <span className="whitespace-nowrap text-emerald-300">· +{skills} free skill{skills === 1 ? '' : 's'}</span>}
     </div>
   );
 }

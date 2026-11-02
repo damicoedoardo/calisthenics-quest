@@ -581,8 +581,9 @@ describe('dungeon', () => {
     for (const z of [1, 2, 3, 4]) {
       const run = createRun({ ...setup, zone: ZONES[z], classId: 'archer', power: tough, seed: 8, autoPick: true });
       skipToBoss(run);
-      // Plenty of HP (but not on the lake, where hitting a copy costs a share of it).
-      if (z !== 1) run.hero.hp = run.hero.maxHp = 100000;
+      // Plenty of HP (less on the lake, where hitting a copy costs a share of it; the Mirror's
+      // fight is longer and hits harder since BOSS_FIGHT).
+      run.hero.hp = run.hero.maxHp = z !== 1 ? 100000 : run.hero.maxHp * 10;
       while (!run.over) {
         stepRun(run, botInput(run));
         run.events.length = 0;

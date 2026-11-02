@@ -11,6 +11,42 @@
     best finds wins about 1 in 10. */
 export const ZONE_WINS = { open: 0.33, later: 0.67, slack: 0.15, first: 0.02 } as const;
 
+/** A zone's boss before you have trained as much as the zone is built for (its chapter's planned
+    start): for each workout you are short, it has `hp` more HP and hits `dmg` harder (0.5 = +50%): its shots start far gentler than a deep floor's monsters, so damage is what makes it a wall.
+    Its hearts on the world card are these workouts; each one you train takes one away. On pace the
+    fight is the one the sheets measure. Goal: training, not only skill, beats a boss: a sharp
+    player who rushes a zone a few workouts after it opens rarely wins (Edoardo, 2026-11-02, beat
+    zone 2 at 4 workouts of its 12: "only when you actually remove health through the workout"). */
+export const BOSS_EARLY = { hp: 0.25, dmg: 0.5 };
+
+/** The boss's fight, in a story zone (not the Hollow, not the Summit, not the Ember Road's).
+    Goal: the boss is the wall of its zone, not a lap of honor: about half the runs that reach it
+    win it, and the room changes as it gets hurt, so the fight has a start, a middle and an end
+    (Edoardo, 2026-11-02: "make the boss room cooler and with more stuff so it's more complex").
+    - `boss`: each boss's own fight. `hp`: its HP (the Knight's plates) times this, so the fight
+      lasts about a minute and the room's waking matters (before, a boss fell in 10 to 20 s).
+      `hit`: its shots get this share of the boost the boss floor's monsters get (DIALS.deepDmg;
+      1 = as hard as they hit, 0 = as soft as the first floor's). The Mirror's spiral never stops,
+      so its hit stays lower, or the close-up classes can't reach it.
+    - `wake`, `spikes`: at these shares of its HP left, the room wakes: `statues` stone statues on
+      the walls, then two strips of spikes across the floor that rise in turn.
+    - `pillars`: pairs of pillars in its room, to hide behind.
+    - `party`: in a party, its HP grows this much more for each friend, on top of PARTY.more.boss
+      (not the Knight's plates): a party reaches it fresher, and won nearly every boss fight. */
+export const BOSS_FIGHT = {
+  boss: {
+    tomorrow: { hp: 7, hit: 0.7 },
+    mirror: { hp: 3, hit: 0.4 },
+    knight: { hp: 2, hit: 1 },
+    plateau: { hp: 4.5, hit: 1 },
+  } as Record<string, { hp: number; hit: number }>,
+  wake: 2 / 3,
+  spikes: 1 / 3,
+  statues: 2,
+  pillars: 3,
+  party: 0.6,
+};
+
 export const DIALS = {
   /** Monster HP, on top of the zone's. */
   hp: 1.3,
@@ -124,7 +160,9 @@ export const PARTY = {
     dmg times this). Goal: with 2 to 4 players each chapter wins about as often as its story zone
     does for a party, though its own world plays differently (the Quiet Miles' monsters are gentler
     until their lanterns come close). */
-export const ROAD_TOUGH: Record<number, number> = { 1: 1, 2: 1.1, 3: 1 };
+// Chapters 1 to 3 went up when their story zones (1 to 3) went down for the boss's fight
+// (BOSS_FIGHT, 2026-11-02): the road plays its own bosses, so its runs stay as tough as before.
+export const ROAD_TOUGH: Record<number, number> = { 1: 1.11, 2: 1.23, 3: 1.2 };
 /** The first dungeon a new player walks, in the opening (`RunSetup.tutorial`). Goal: everyone gets
     to the bottom on the first try (you can't fall: HP stops at 1), learns to move, dodge and take
     the stairs in about two minutes, and then loses to the Hollow, as the story needs. */

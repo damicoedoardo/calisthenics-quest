@@ -297,7 +297,19 @@ const GO: Record<string, () => void> = {
   // asks for a level a few workouts away, not the 12-workout player's.
   'early-zone2': () => open(veteran(3, 1), 'run=1'),
   'early-finds': () => open(earlyFinds(), 'tab=hero&hero=gear'),
+  // An archer who beat Tomorrow and has 4 of zone 2's 12 workouts: the Mirror is 8 workouts early
+  // and fights tougher (BOSS_EARLY). The world card says so; the fight starts at the boss.
+  'early-card': () => open(archer(veteran(4, 1)), 'tab=play'),
+  'early-boss': () => open(archer(veteran(4, 1)), 'run=1&at=boss'),
+  // The same fight on pace, 12 workouts in: the boss as the sheets measure it.
+  'pace-boss': () => open(archer(veteran(12, 1)), 'run=1&at=boss'),
+  // Tomorrow's room with a geared hero (14 workouts, points spent): pillars, then statues at 2/3 of its HP, spikes at 1/3 (BOSS_FIGHT).
+  'boss-room': () => open(archer(geared()), 'run=0&at=boss-ready'),
 };
+
+function archer(s: GameState): GameState {
+  return { ...s, profile: { ...s.profile, classId: 'archer' } };
+}
 
 const MOMENTS: [string, string][] = [
   ['first-letter', 'The letter, after the first workout'],

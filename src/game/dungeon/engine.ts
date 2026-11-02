@@ -102,7 +102,7 @@ import {
   zoneDungeon,
 } from './content';
 import { seeded } from '@/lib/random';
-import { ABILITY, BAG, BARGAIN, CALM, CRIT_HIT, DROP_LUCK, DROPS, LEECH_CAP, MAX_EVADE, SP_FINAL, SP_PASSIVE, SP_SKILL, SP_WEAPON, STATUES, SURGE, MELEE_GUARD, TRAITS, TRAPS, TRIALS, type SpMoveNumbers } from '@/balance';
+import { ABILITY, BAG, BARGAIN, CALM, CRIT_HIT, DROP_LUCK, DROPS, LEECH_CAP, MAX_EVADE, SP_FINAL, SP_PASSIVE, SP_SKILL, SP_WEAPON, STATUES, SURGE, BOSS_FIGHT, MELEE_GUARD, TRAITS, TRAPS, TRIALS, type SpMoveNumbers } from '@/balance';
 import { allJoined, buildShape, clearLine, inBlock, outOfBlocks, pickShape, wayTo, type ShapeId } from './shapes';
 import type { Build } from '@/lib/stats';
 import { canWear, ITEM_SLOTS, itemScore, itemTotals, otherClass, rollItem, rollRarity, shortOf, starterKit, type Item, type ItemSlot } from './items';
@@ -473,7 +473,8 @@ export interface HeroSetup {
   /** Workouts you have done. What you find asks for a few more than this, never more than the
       zone is built for (unset: the zone's own count, as in old replays). */
   workouts?: number;
-  /** The chapter's hearts are gone: a weaker boss and free skills at the start (`edgeFor` in src/lib/fog.ts). */
+  /** The boss's hearts: a tougher boss while you are early, a weaker one and free skills once the
+      chapter's hearts are gone (`edgeFor` in src/lib/fog.ts). */
   edge?: Edge;
   /** Wearing one of the class's SPs (which one; `true` is the first): its own move, its final and
       its passive, on top of the class ability (src/lib/sp.ts). */
@@ -712,6 +713,8 @@ export interface Run {
   boss: Foe | null;
   bossAt: number | null;
   bossClock: number;
+  /** The boss's room as it wakes (BOSS_FIGHT): 0 as you walk in, 1 statues, 2 spikes too. */
+  arena: number;
   bossSummon: number;
   /** The Hollow: how long you've stood in its light, this time it's open (s). */
   hold: number;
@@ -779,6 +782,7 @@ export function createRun(setup: RunSetup): Run {
     boss: null,
     bossAt: null,
     bossClock: 0,
+    arena: 0,
     bossSummon: 0,
     hold: 0,
     climb: null,
@@ -1178,7 +1182,7 @@ function buildTerrain(run: Run, force?: RoomForce): Terrain {
     if (!run.setup.tutorial && (force?.altar || rnd() < BARGAIN.chance)) t.altar = { x: w / 2, y: h * 0.3, used: false };
   }
   // Pillars, in pairs mirrored across the room.
-  tries(boss ? 2 : amt(1 + Math.floor(rnd() * 2.5), more.pillars), () => {
+  tries(boss ? (arenaBoss(run) && isBossRoom(run) ? BOSS_FIGHT.pillars : 2) : amt(1 + Math.floor(rnd() * 2.5), more.pillars), () => {
     const r = 16 + Math.round(rnd() * 8),
       x = m + 50 + rnd() * (w / 2 - m - 110),
       y = 190 + rnd() * (h - 420);
@@ -1521,11 +1525,12 @@ function summonBoss(run: Run) {
   const more = partyMore(run, 'boss'),
     friends = run.setup.friends?.length ?? 0,
     plates = def.plates ? def.plates * (which === 'alone' ? 1 + ALONE.more * friends : 1) : 0,
-    hp = run.setup.tutorial ? TUTORIAL.bossHp : plates ? Math.round(plates * weak) : Math.round(def.hp * zone.hp * BOSS_HP * weak * more);
+    tough = arenaBoss(run) ? (BOSS_FIGHT.boss[which]?.hp ?? 1) * (plates ? 1 : 1 + BOSS_FIGHT.party * friends) : 1,
+    hp = run.setup.tutorial ? TUTORIAL.bossHp : plates ? Math.round(plates * weak * tough) : Math.round(def.hp * zone.hp * BOSS_HP * weak * more * tough);
   const b: Foe = {
     id: ++run.ids,
     kind: 'boss',
-    def: { ...def, dmg: def.dmg * zone.dmg },
+    def: { ...def, dmg: def.dmg * zone.dmg * (run.setup.edge?.bossDmg ?? 1) },
     x: run.area.w / 2,
     y: 140,
     vx: 0,
@@ -2896,7 +2901,7 @@ function shoot(run: Run, f: Foe, p: Pattern) {
     at = Math.atan2(h.y - f.y, h.x - f.x),
     boss = f === run.boss || f === run.warden,
     r = p.r ?? (boss ? 7 : 5),
-    dmg = p.dmg * DIALS.shot * run.setup.zone.dmg * (f === run.boss ? 1 : (1 + DIALS.deepDmg * depth(run)) * (f.elite ? ELITE.dmg : 1) * (1 + CLIMB.tougher * (run.climb ?? 0))),
+    dmg = p.dmg * DIALS.shot * run.setup.zone.dmg * (f === run.boss ? (run.setup.edge?.bossDmg ?? 1) * (1 + DIALS.deepDmg * depth(run) * (arenaBoss(run) ? (BOSS_FIGHT.boss[run.setup.zone.boss]?.hit ?? 0) : 0)) : (1 + DIALS.deepDmg * depth(run)) * (f.elite ? ELITE.dmg : 1) * (1 + CLIMB.tougher * (run.climb ?? 0))),
     speed = p.speed * DIALS.speed,
     style = p.style ?? 'plain';
   if (p.kind === 'mine') {
@@ -3133,6 +3138,33 @@ function splitMirror(run: Run, b: Foe, n: number) {
   }
 }
 
+/** A story zone's boss with a room that wakes and shots that hit like its floor (BOSS_FIGHT): not
+    the Hollow (a story moment), the Summit (a climb), the Ember Road's, or the first dungeon's. */
+const ARENA: Zone['boss'][] = ['tomorrow', 'mirror', 'knight', 'plateau'];
+const arenaBoss = (run: Run) => !run.setup.tutorial && !run.setup.zone.road && ARENA.includes(run.setup.zone.boss);
+
+/** The boss's room wakes as it gets hurt: statues on the walls, then spikes across the floor. */
+function wakeRoom(run: Run, b: Foe) {
+  const left = b.hp / b.maxHp;
+  if (run.arena === 0 && left <= BOSS_FIGHT.wake) {
+    run.arena = 1;
+    placeStatues(run, BOSS_FIGHT.statues);
+    emit(run, { type: 'shout', x: b.x, y: b.y });
+    emit(run, { type: 'say', text: 'The room wakes: statues stir on the walls.' });
+  } else if (run.arena === 1 && left <= BOSS_FIGHT.spikes) {
+    run.arena = 2;
+    const { w, h } = run.area,
+      m = ROOM.wall,
+      sw = Math.round((w - 2 * m) * 0.62),
+      now = run.t,
+      start = (k: number) => (SPIKES.every * (1 + k / 2) - (now % SPIKES.every)) % SPIKES.every;
+    // Two strips from opposite walls, rising in turn, so there is always a way across.
+    run.terrain.spikes.push({ x: m, y: Math.round(h * 0.4), w: sw, h: 48, phase: start(0) }, { x: w - m - sw, y: Math.round(h * 0.62), w: sw, h: 48, phase: start(1) });
+    emit(run, { type: 'shout', x: b.x, y: b.y });
+    emit(run, { type: 'say', text: 'The floor turns on you. Watch the spikes.' });
+  }
+}
+
 function steerBoss(run: Run, b: Foe) {
   const h = prey(run, b.x, b.y),
     now = run.t,
@@ -3141,6 +3173,7 @@ function steerBoss(run: Run, b: Foe) {
     dy = h.y - b.y,
     d = Math.hypot(dx, dy) || 1;
   if (run.setup.tutorial) return scripted(run, b, dx / d, dy / d);
+  if (arenaBoss(run)) wakeRoom(run, b);
   if (which === 'tomorrow') {
     b.vx = (dx / d) * b.speed;
     b.vy = (dy / d) * b.speed;

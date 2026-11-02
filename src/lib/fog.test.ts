@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { initialState, type GameState, type Session } from './game';
-import { EDGE, NO_EDGE, UPGRADES, ZONES, edgeFor, powerOf, recordRun, recordsBroken, rollUpgrades, xpToNext, zoneDue, zoneStatus } from './fog';
+import { EDGE, NO_EDGE, NO_FOG, UPGRADES, ZONES, edgeFor, workoutsEarly, powerOf, recordRun, recordsBroken, rollUpgrades, xpToNext, zoneDue, zoneStatus } from './fog';
+import { BOSS_EARLY } from '@/balance';
 
 const day = (d: number) => new Date(2026, 9, d, 18);
 
@@ -39,6 +40,18 @@ describe('the Fog', () => {
     // Chapter 2 runs from workout 12 to 24.
     expect(edgeFor({ ...s, sessions: sessions(23) }, ZONES[1])).toEqual(NO_EDGE);
     expect(edgeFor({ ...s, sessions: sessions(25) }, ZONES[1]).picks).toBe(1);
+  });
+
+  it('makes a boss tougher for each workout you are early, until it falls', () => {
+    const s = { ...initialState(), fog: { ...NO_FOG, cleared: 1 } };
+    // Zone 2 is built for 12 workouts: at 4 you are 8 early.
+    expect(edgeFor({ ...s, sessions: sessions(4) }, ZONES[1])).toEqual({ bossHp: 1 + BOSS_EARLY.hp * 8, bossDmg: 1 + BOSS_EARLY.dmg * 8, picks: 0 });
+    expect(edgeFor({ ...s, sessions: sessions(11) }, ZONES[1]).bossHp).toBe(1 + BOSS_EARLY.hp);
+    // On pace the fight is the measured one.
+    expect(edgeFor({ ...s, sessions: sessions(12) }, ZONES[1])).toEqual(NO_EDGE);
+    // Once the boss has fallen, a replay is not held back.
+    expect(edgeFor({ ...s, fog: { ...NO_FOG, cleared: 2 }, sessions: sessions(4) }, ZONES[1]).bossHp).toBe(1);
+    expect(workoutsEarly({ ...s, sessions: sessions(4) }, ZONES[1])).toBe(8);
   });
 
   it('turns stat points and workouts into power, and only training raises it', () => {
