@@ -216,8 +216,9 @@ function decide(run: Run, h: Hero): Input {
     y += (dy / d) * 2.5;
     danger += 1;
   }
-  // Arrow plates: step round them, as you would.
+  // Arrow plates: step round the ones it has seen, as you would (a hidden one it can't know).
   for (const p of T.plates ?? []) {
+    if (!p.seen) continue;
     const dx = h.x - p.x,
       dy = h.y - p.y,
       d = Math.hypot(dx, dy) || 1,

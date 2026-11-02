@@ -172,11 +172,13 @@ export const TRAPS = {
 };
 
 /** Challenge rooms: now and then a plain fight room (past the floor's first, from floor `from`)
-    seals its doors and sends a wave every `every` s for `secs` s, each wave the size of a third of
-    a room; what still stands when time is up crumbles, and a chest comes up (chest luck).
-    Goal: a short, loud survival test about once a floor (`chance` per plain fight room), paid for
-    with a chest; harder = longer, more often or bigger waves. */
-export const TRIALS = { from: 1, chance: 0.2, secs: 30, every: 6 };
+    seals its doors and sends a wave every `every` s for `secs` s, each wave `size` of a room's
+    monsters, and in the last `rush` s the waves come twice as fast; what still stands when time
+    is up crumbles, and a chest comes up (chest luck).
+    Goal: a short, loud survival test about once a floor (`chance` per plain fight room) that
+    feels like a real hold-out but stays winnable, paid for with a chest; harder = longer, more
+    often, bigger waves or a longer rush. */
+export const TRIALS = { from: 1, chance: 0.2, secs: 30, every: 5, size: 0.4, rush: 8 };
 
 /** Shrine bargains: in `chance` of rest rooms, a dark altar beside the healing shrine. Touch it
     and, for the rest of this floor, monsters fire `fire` times as often, but drop items `loot`
