@@ -104,7 +104,12 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
   after Later at today's workout.
 - In a chapter's file, `workouts: N` counts from when that chapter began (`workoutsFor`,
   `chapterBegan`), so its scenes keep their spacing however early or late its boss fell, and a
-  chapter's scenes never play before it begins. In `anytime.ts` it counts every workout. The
+  chapter's scenes never play before it begins. In `anytime.ts` it counts every workout. Chapter
+  1's `mira-forge` plays at `FORGE_OPENS.workouts` (6), when Mira finds you at your fire and her
+  forge opens (features come in with the story, see [forge.md](forge.md#when-it-opens)); it has
+  `keep: true`, so a player who beats Tomorrow sooner meets her right after the chapter's ending,
+  and `upTo: 2` (only while the current chapter is 2 or earlier), so older saves past that never
+  get it. Her lines in chapters 2 and 3 greet you as someone she knows. The
   flame's growth plays with `grown: 'torch'` (its `FLAME_STAGES`, all workouts), whatever chapter
   you're in. `better: N` waits for N workouts where a set beat last time (see
   [training.md](training.md)); there are no max tests and no skill tree to wait for any more.

@@ -416,16 +416,25 @@ describe('chapters end on Fog bosses', () => {
     expect(storyState(s).index).toBe(0);
     s = won(s);
     expect(storyState(s).index).toBe(1);
-    // The ending, then the heart moment the chapter had not reached yet, then the next chapter.
-    expect(ids(s)).toEqual(['ch1-victory', 'ch1-night-camp', 'ch2-intro']);
+    // The ending, then Mira (her forge opens with the first boss when it falls before workout 6),
+    // the heart moment the chapter had not reached yet, then the next chapter.
+    expect(ids(s)).toEqual(['ch1-victory', 'mira-forge', 'ch1-night-camp', 'ch2-intro']);
     // A leftover scene that asks nothing (ch1-proof) is skipped.
+  });
+
+  it('never brings Mira back to a save already past chapter 2', () => {
+    let s = trained(30);
+    for (let i = 0; i < 2; i++) s = caughtUp(won({ ...s, seenScenes: s.seenScenes.filter((x) => x !== 'mira-forge') }));
+    s = { ...s, seenScenes: s.seenScenes.filter((x) => x !== 'mira-forge') };
+    expect(storyState(s).index).toBe(2);
+    expect(ids(s)).not.toContain('mira-forge');
   });
 
   it('plays the ending at once, even after Later at this workout today', () => {
     const s = caughtUp(trained(4));
     const off = putOff(s, [], at);
     expect(scenesToPlay(off, at)).toEqual([]);
-    expect(scenesToPlay(won(off), at).map((x) => x.id).slice(0, 2)).toEqual(['ch1-victory', 'ch1-night-camp']);
+    expect(scenesToPlay(won(off), at).map((x) => x.id).slice(0, 2)).toEqual(['ch1-victory', 'mira-forge']);
   });
 
   it("counts a chapter's scenes from when it began, and never ends one on workouts", () => {

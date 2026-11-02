@@ -152,7 +152,7 @@ export const MIRROR_LAKE: Chapter = {
       id: 'ch2-mira-lia',
       when: { workouts: 8, answer: { id: 'lia', is: 'yes' } },
       lines: [
-        { who: 'narrator', show: 'mira', text: "A smith with a hammer on her back passes by. She kneels and fixes Lia's broken shoe without a word." },
+        { who: 'narrator', show: 'mira', text: "Mira passes by, her hammer on her back. She kneels and fixes Lia's broken shoe without a word." },
         { who: 'mira', text: "Armor doesn't care how it looks on you. It cares that you showed up in it." },
         { who: 'lia', text: "Everyone's going to see how much I lost." },
         { who: 'mira', text: "Some will. Most are too busy worrying about their own. The ones who matter will just be glad you're back." },

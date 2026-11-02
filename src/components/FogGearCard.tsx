@@ -5,10 +5,10 @@ import { heroLevel, type GameState } from '@/lib/game';
 import { buildOf } from '@/lib/stats';
 import { NO_GEAR, salvageValue, takeOffToVault, vaultSize, wearFromVault } from '@/lib/fog-gear';
 import { canWear, ITEM_SLOTS, itemScore, MAX_PLUS, nameOf, RARITY, SLOT_NAME, starterKit, type Item, type ItemSlot, type Rarity } from '@/game/dungeon/items';
-import { meltable, salvage, salvageMany, type MeltPick } from '@/lib/forge';
+import { forgeOpen, meltable, salvage, salvageMany, type MeltPick } from '@/lib/forge';
 import { ItemCard, ItemTile } from './ItemCard';
 import { PixelTabs } from './PixelTabs';
-import { ForgeSheet } from './Forge';
+import { ForgeSheet, useForgeNew } from './Forge';
 import { Sprite } from './Sprite';
 
 type Update = (fn: (s: GameState) => GameState) => void;
@@ -35,6 +35,9 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
   const [slot, setSlot] = useState<ItemSlot | null>(null);
   const [many, setMany] = useState(false);
   const [sure, setSure] = useState(false);
+  // Mira's forge waits for her chapter (FORGE_OPENS); "new" till it is first opened.
+  const forge = forgeOpen(state),
+    fresh = useForgeNew(state);
   const all = [...Object.values(gear.worn), ...gear.vault].filter((x): x is Item => !!x),
     item = all.find((x) => x.id === pick) ?? null,
     worn = !!item && gear.worn[item.slot]?.id === item.id;
@@ -56,14 +59,17 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
   const ring = (id: string) => (id === pick ? 'ring-2 ring-gold-300 ring-offset-2 ring-offset-ink-800' : '');
 
   // The way into Mira's forge: her face, what she does, and the plus she can take it to.
-  const forgeButton = item && !item.starter && (
+  const forgeButton = forge && item && !item.starter && (
       <button
         onClick={() => setForging(true)}
         className="mt-2 flex w-full items-center gap-3 rounded-xl bg-gradient-to-r from-orange-950/60 to-ink-900 p-3 text-left ring-1 ring-orange-400/40 active:scale-[0.98]"
       >
         <Sprite id="mira" size={44} label="" />
         <span className="min-w-0 flex-1">
-          <span className="block font-pixel text-[10px] text-gold-300">Mira&apos;s forge</span>
+          <span className="flex items-center gap-1.5 font-pixel text-[10px] text-gold-300">
+            Mira&apos;s forge
+            {fresh && <span className="rounded bg-gold-400 px-1 py-0.5 text-[7px] text-ink-950">New</span>}
+          </span>
           <span className="mt-1 block text-xs text-slate-400">{(item.plus ?? 0) >= MAX_PLUS ? 'Reroll a bonus' : `Upgrade to +${(item.plus ?? 0) + 1} or reroll`}</span>
         </span>
         <span className="rounded-lg bg-gold-400 px-3 py-2 font-pixel text-[9px] text-ink-950 shadow-[0_3px_0_#b45309]">Open</span>
@@ -176,8 +182,10 @@ export function FogGearCard({ state, update, land = false }: { state: GameState;
         {!land && forgeButton}
         {!item && all.length > 0 && (
             <div className={`flex items-center gap-3 rounded-xl bg-ink-900/60 p-3 ${land ? 'h-full flex-col justify-center text-center' : ''}`}>
-              <Sprite id="mira" size={48} label="Mira" />
-              <p className="text-[11px] text-slate-400">Tap an item to wear it, or bring it to Mira&apos;s forge.</p>
+              {forge && <Sprite id="mira" size={48} label="Mira" />}
+              <p className={`text-[11px] ${fresh ? 'text-gold-300' : 'text-slate-400'}`}>
+                {!forge ? 'Tap an item to wear it.' : fresh ? "Mira's forge is open. Tap an item to bring it to her." : "Tap an item to wear it, or bring it to Mira's forge."}
+              </p>
             </div>
         )}
       </div>
