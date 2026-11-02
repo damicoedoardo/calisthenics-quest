@@ -35,15 +35,16 @@ const FRAME: Record<Rarity, { edge: string; back: string; glow?: string }> = {
     a margin for its glow, so it can be a little bigger than the tile. */
 const artSize = (size: number) => Math.max(16, Math.round((size * 1.2) / 16) * 16);
 
-/** An item's art in a tile edged and lit in its rarity's color. */
+/** An item's art in a tile edged and lit in its rarity's color. `dim` (can't wear it yet): the
+    tile fades and the art goes mostly gray, but the rarity's edge and glow keep their color. */
 export function ItemTile({ item, size = 40, dim = false, than }: { item: Item; size?: number; dim?: boolean; than?: Item | 'none' }) {
   const f = FRAME[item.rarity],
     still = useReducedMotion(),
     art = artSize(size);
   return (
-    <span className={`relative grid shrink-0 place-items-center rounded-lg ${dim ? 'opacity-50 grayscale' : ''}`} style={{ width: size, height: size, background: f.back, boxShadow: `0 0 0 2px ${f.edge}${f.glow ? `, ${f.glow}` : ''}` }}>
+    <span className={`relative grid shrink-0 place-items-center rounded-lg ${dim ? 'opacity-60' : ''}`} style={{ width: size, height: size, background: f.back, boxShadow: `0 0 0 2px ${f.edge}${f.glow ? `, ${f.glow}` : ''}` }}>
       <PlusGlow item={item} />
-      <span className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+      <span className={`pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 ${dim ? 'brightness-75 grayscale-[.8]' : ''}`}>
         <Sprite id="item" opts={looksOf(item)} size={art} playing={!still} label="" />
       </span>
       {than && <UpDown pct={betterBy(item, than === 'none' ? undefined : than)} />}
