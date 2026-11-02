@@ -211,7 +211,7 @@ the `game_guide` tool, and the rules on the server tell it never to guess and ne
 
 - **Topics as data** (`GUIDE`): one per part of the game (the loop, XP, stat points, crits and
   bonuses, items, falling and the vault, the forge to +5 and past it, sweat coins, classes, the
-  Fog, chapters, rest days, friends, the flame, SPs, one per zone, and the player's purse). Each
+  Fog (with how much tougher a boss is when you're early, `BOSS_EARLY`), chapters, rest days, friends, the flame, SPs, one per zone, and the player's purse). Each
   has `words` a question might use, `text(state, now)` built from `src/balance` and the rules in
   `src/lib` (never a number typed in), so a balance change is in the guide the moment it lands,
   and the player's own numbers (embers, points, level, materials).
