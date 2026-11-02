@@ -13,6 +13,7 @@ import { YouPage } from '@/components/YouPage';
 import { StorySoFar } from '@/components/StorySoFar';
 import { FogRun, SHAPE_STARTS, type RunStart } from '@/components/FogRun';
 import { Hero } from '@/components/Hero';
+import { useForgeNew } from '@/components/Forge';
 import { Prologue } from '@/components/Prologue';
 import { Opening, openingDue } from '@/components/Opening';
 import { useMenuTrack } from '@/components/Sound';
@@ -119,6 +120,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
   // Your friends: the Friends tab, and how many are online on its tab button.
   const friends = useFriends(update, !ready || offRecord(), sandbox, tab === 'friends');
   const online = onlineCount(friends);
+  // Mira's forge opened with her chapter and hasn't been visited: a dot on the Hero tab.
+  const forgeNew = useForgeNew(state);
   // The Feed on the Friends tab: workouts you and your friends share.
   const [friendsView, setFriendsView] = useState<FriendsView>('friends');
   const feed = useFeed(!ready || offRecord(), sandbox, tab === 'friends' && friendsView === 'feed');
@@ -469,6 +472,8 @@ function Game({ state, ready, update }: ReturnType<typeof useGameState>) {
                 {id === 'train' && tab !== 'train' && state && freshNudge(state, new Date()) && <span aria-label="New from your flame" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-gold-300 ring-2 ring-ink-900" />}
                 {/* Story scenes put off or skipped wait in Story so far. */}
                 {id === 'play' && waitingCount(state) > 0 && <span aria-label="Story scenes waiting" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-gold-300 ring-2 ring-ink-900" />}
+                {/* Mira's forge just opened (her chapter began) and wasn't visited yet. */}
+                {id === 'hero' && tab !== 'hero' && forgeNew && <span aria-label="Mira's forge is open" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-gold-300 ring-2 ring-ink-900" />}
                 {/* How many friends are online. */}
                 {id === 'friends' && online === 0 && feed.fresh > 0 && <span aria-label="New in the feed" className="absolute -right-1 -top-0.5 h-2 w-2 rounded-full bg-orange-400 ring-2 ring-ink-900" />}
                 {id === 'friends' && online > 0 && <span aria-label={`${online} online`} className="absolute -right-2.5 -top-1 min-w-[1rem] rounded-full bg-emerald-500 px-1 text-center font-mono text-[9px] font-bold leading-4 text-ink-950 ring-2 ring-ink-900">{online}</span>}

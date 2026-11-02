@@ -1,3 +1,4 @@
+import { FORGE_OPENS } from '@/balance';
 import type { Chapter } from '../types';
 
 /* Month 1. Lesson: today beats tomorrow. The healing step: small proof that you can trust yourself
@@ -32,6 +33,26 @@ export const ASHLANDS: Chapter = {
     },
   },
   scenes: [
+  {
+    // Mira finds you, and her forge opens (forgeOpen in src/lib/forge.ts): at FORGE_OPENS workouts,
+    // or when Tomorrow falls if that comes first (Edoardo 2026-11-02: a fast player can end chapter
+    // 1 early). `keep` plays it right after the chapter's ending then; `upTo` keeps it from older
+    // saves already past chapter 2. Her chapter 2 and 3 lines know you from here.
+    id: 'mira-forge',
+    when: { workouts: FORGE_OPENS.workouts, upTo: 2 },
+    keep: true,
+    music: 'camp',
+    lines: [
+      { who: 'narrator', show: 'mira', text: 'Someone is sitting by your fire. A woman with a hammer on her back, and an anvil she must have carried here herself.' },
+      { who: 'mira', text: "You're the one who keeps coming back. Word travels, even out here." },
+      { who: 'flame', mood: 'happy', text: 'She brought an anvil. Who carries an anvil?' },
+      { who: 'mira', text: "Someone who's going to use it. I'm Mira. I make things stronger.", pause: 0.6 },
+      { who: 'mira', text: 'Bring me what you find in the Fog, and the embers your training gives you. I turn them into steel.' },
+      { who: 'you', text: 'Even the bad stuff?' },
+      { who: 'mira', text: 'Especially that. Not perfect effort. Any effort.' },
+      { who: 'narrator', text: 'Her forge is lit. From now on, what you find in the Fog, you can bring to her.', film: true },
+    ],
+  },
     {
       id: 'first-quest',
       when: { workouts: 1 },

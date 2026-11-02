@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { seeded } from './random';
 import { initialState, type GameState, type Session } from './game';
-import { canUpgrade, EMBERS, embersOf, giveMats, matsShort, meltable, takeGifts, REROLL_COST, reroll, salvage, salvageMany, tryUpgrade, upgrade, upgradeCost, upgradeOdds } from './forge';
+import { canUpgrade, EMBERS, forgeOpen, embersOf, giveMats, matsShort, meltable, takeGifts, REROLL_COST, reroll, salvage, salvageMany, tryUpgrade, upgrade, upgradeCost, upgradeOdds } from './forge';
 import { salvageValue, settleGear } from './fog-gear';
 import { bandOf, boostOf, itemScore, MAX_PLUS, nameOf, rollItem, safeFloor, starterKit, type Item } from '@/game/dungeon/items';
-import { FORGE_RISK, STEPS } from '@/balance';
+import { FORGE_OPENS, FORGE_RISK, STEPS } from '@/balance';
 
 const rnd = seeded(5);
 const sword = (): Item => {
@@ -18,6 +18,20 @@ const workouts = (n: number): Session[] =>
 const withSword = (n: number, it: Item): GameState => ({ ...initialState(), sessions: workouts(n), fogGear: { worn: { weapon: it }, vault: [] } });
 
 describe("Mira's forge", () => {
+  it('waits till Mira finds you, but a save that forged before keeps it', () => {
+    const it = sword(),
+      shut = withSword(FORGE_OPENS.workouts - 1, it);
+    expect(forgeOpen(shut)).toBe(false);
+    expect(canUpgrade(shut, it)).toBe(false);
+    expect(upgrade(shut, it.id)).toBe(shut);
+    expect(reroll(shut, it.id, 0)).toBe(shut);
+    expect(forgeOpen(withSword(FORGE_OPENS.workouts, it))).toBe(true);
+    // A fast player who beat chapter 1's boss early meets Mira then.
+    expect(forgeOpen({ ...shut, fog: { cleared: 1, runs: 1, best: {} } })).toBe(true);
+    expect(forgeOpen({ ...shut, fogGear: { worn: { weapon: { ...it, plus: 1 } }, vault: [] } })).toBe(true);
+    expect(forgeOpen({ ...shut, fogGear: { worn: { weapon: it }, vault: [], embers: { found: 0, spent: 15 } } })).toBe(true);
+  });
+
   it('each workout earns embers', () => {
     expect(embersOf(initialState())).toBe(0);
     expect(embersOf({ ...initialState(), sessions: [...workouts(2), { ...workouts(1)[0], kind: 'mini' }] })).toBe(2 * EMBERS.full + EMBERS.mini);
@@ -117,14 +131,14 @@ describe("Mira's forge", () => {
 
   it('rerolls a bonus into another one, the same way every time', () => {
     const it = sword(),
-      s = withSword(5, it);
+      s = withSword(FORGE_OPENS.workouts, it);
     const a = reroll(s, it.id, 0),
       b = reroll(s, it.id, 0);
     expect(a).toEqual(b);
     const next = a.fogGear!.worn.weapon!;
     expect(next.bonuses[0].id).not.toBe(it.bonuses[0].id);
     expect(next.rerolls).toBe(1);
-    expect(embersOf(a)).toBe(50 - REROLL_COST);
+    expect(embersOf(a)).toBe(FORGE_OPENS.workouts * EMBERS.full - REROLL_COST);
   });
 
   it('melts an item down into embers', () => {

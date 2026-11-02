@@ -9,8 +9,8 @@ import { STAT_ICON } from './StatPoints';
 import { gearOf, levelInfo, totalXp, type GameState } from '@/lib/game';
 import { LOOT_IDS, nextLoot, purseOf, spendable, workoutsToLevel, type LootId } from '@/lib/loot';
 import { STATS } from '@/lib/stats';
-import { EMBERS, MAT_IDS, MATS, MAX_PLUS, POINTS, SWEAT } from '@/balance';
-import { matsOf } from '@/lib/forge';
+import { EMBERS, FORGE_OPENS, MAT_IDS, MATS, MAX_PLUS, POINTS, SWEAT } from '@/balance';
+import { forgeOpen, matsOf } from '@/lib/forge';
 
 /* What training gives, drawn the same everywhere: a pixel icon per kind of loot (XP, stat points,
    embers, sweat coins, co-op materials). The purse on the Hero tab shows what you have, and tapping
@@ -32,9 +32,10 @@ export function LootIcon({ id, size = 16, className = '' }: { id: LootId; size?:
 export function Purse({ state, onOpen, land = false }: { state: GameState; onOpen: (id: LootId) => void; land?: boolean }) {
   const have = purseOf(state),
     ready = spendable(state);
-  const ids = LOOT_IDS.filter((id) => id !== 'xp');
+  // The co-op materials only feed Mira's forge, so they show once it has opened.
+  const ids = LOOT_IDS.filter((id) => id !== 'xp' && (id !== 'mats' || forgeOpen(state)));
   return (
-    <div className={`grid grid-cols-4 gap-1 ${land ? '' : 'w-full'}`}>
+    <div className={`grid gap-1 ${ids.length === 4 ? 'grid-cols-4' : 'grid-cols-3'} ${land ? '' : 'w-full'}`}>
       {ids.map((id) => (
         <button
           key={id}
@@ -111,8 +112,9 @@ export function LootGuide({ state, focus, now, onGo, onClose }: { state: GameSta
     },
     embers: {
       from: <Step icon={ui('tabTrain')} label="Workout" n={`+${EMBERS.full}`} />,
-      to: <Step icon={<Sprite id="mira" size={32} label="" />} label={`Forge +1..+${MAX_PLUS}`} />,
-      go: 'gear',
+      // Before Mira finds you they pile up for her forge, which isn't shown yet.
+      to: forgeOpen(state) ? <Step icon={<Sprite id="mira" size={32} label="" />} label={`Forge +1..+${MAX_PLUS}`} /> : <Step icon={ui('lock')} label={`At ${FORGE_OPENS.workouts} workouts`} />,
+      go: forgeOpen(state) ? 'gear' : undefined,
     },
     coins: {
       from: <Step icon={ui('tabTrain')} label="Workout" n={`+${SWEAT.perWorkout}`} />,
@@ -156,7 +158,7 @@ export function LootGuide({ state, focus, now, onGo, onClose }: { state: GameSta
         </section>
 
         <ul className="mt-3 space-y-2 land:grid land:grid-cols-2 land:gap-2 land:space-y-0">
-          {LOOT_IDS.map((id) => {
+          {LOOT_IDS.filter((id) => id !== 'mats' || forgeOpen(state)).map((id) => {
             const road = ROADS[id];
             return (
               <li key={id} className={`rounded-2xl bg-ink-800 p-3 ${id === focus ? 'ring-2 ring-gold-400' : ''}`}>

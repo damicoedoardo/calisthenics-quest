@@ -97,6 +97,7 @@ export function holds(w: When, state: GameState, st: StoryState, now: Date, chap
     [w.beaten, () => st.index >= w.beaten!],
     [w.grown, () => FLAME_STAGES.find((f) => f.id === w.grown)!.at <= n],
     [w.inChapter, () => current === w.inChapter],
+    [w.upTo, () => current <= w.upTo!],
     [w.restDay, () => isRestToday(state, now) === w.restDay],
     [w.shortSession, () => (state.sessions[n - 1]?.kind === 'mini') === w.shortSession],
     [w.daysInRow, () => daysInRow(state, now) >= w.daysInRow!],

@@ -38,11 +38,11 @@ export const VILLAGE: Chapter = {
       lines: [
         { who: 'narrator', text: 'A village where the forges went cold. Full of people who stopped, like you did.' },
         { who: 'narrator', text: 'Every doorway has someone in it, coat half on, never quite going out.' },
-        { who: 'mira', text: 'Another one. Let me guess: you used to be good.', shot: { pan: 'center' } },
-        { who: 'mira', text: "Me too. Everyone here used to be good. That's what's wrong with the place." },
+        { who: 'mira', text: 'You made it. This is where I come from.', shot: { pan: 'center' } },
+        { who: 'mira', text: "Everyone here used to be good. Me too. That's what's wrong with the place." },
         { who: 'you', text: "...I didn't stop because I wanted to." },
         { who: 'mira', text: "Nobody here did. That's the first thing we have in common." },
-        { who: 'mira', text: "Bring me effort. I'll make it into steel. Not perfect effort. Any effort." },
+        { who: 'mira', text: "Same as at your fire: bring me effort. I'll make it into steel. Not perfect effort. Any effort." },
       ],
     },
     {

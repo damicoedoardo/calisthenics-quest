@@ -232,9 +232,29 @@ function bossEndsChapter(): GameState {
   return clearNextZone(addFakeWorkouts(storyWalk(10), 1, new Date(), false));
 }
 
+/** Mira's forge waits till she finds you (FORGE_OPENS, 6 workouts): a player `n` workouts in,
+    chapter 1, with a few finds in the vault. At 5 the forge is hidden; at 6 her scene has played. */
+function miraAt(n: number): GameState {
+  let s = storyWalk(n);
+  // Nothing due today (a rest-day scene) plays over the screen.
+  for (let k = 0; k < 4; k++) s = skipDueScenes(s, new Date());
+  const rnd = seeded(9);
+  const vault = Array.from({ length: 4 }, (_, i) => rollItem(rnd, { zone: 0, workouts: n, floor: 2 + i * 2, cls: 'warrior' }, i === 3 ? 'rare' : 'magic'));
+  return { ...s, fogGear: { ...(s.fogGear ?? { worn: {}, vault: [] }), vault } };
+}
+
 /** Jumps a preview link can open with no taps: /lab/night?go=<name>. */
 const GO: Record<string, () => void> = {
   'boss-ends-chapter': () => open(bossEndsChapter(), 'tab=today'),
+  // Mira finds you at workout 6 (her scene plays on open), then her forge is new on Hero > Gear.
+  'mira-meets': () => {
+    const s = miraAt(6);
+    open({ ...s, seenScenes: s.seenScenes.filter((id) => id !== 'mira-forge') }, 'tab=today');
+  },
+  // A fast player: Tomorrow beaten at 4 workouts, so Mira comes right after the chapter's ending.
+  'mira-early': () => open(clearNextZone(addFakeWorkouts(storyWalk(3), 1, new Date(), false)), 'tab=today'),
+  'forge-shut': () => open(miraAt(5), 'tab=hero&hero=gear'),
+  'forge-new': () => open(miraAt(6), 'tab=hero&hero=gear'),
   you: () => open(veteran(30, 2), 'you'),
   friends: () => open(geared(), 'tab=friends'),
   feed: () => open(geared(), 'tab=friends&feed'),
