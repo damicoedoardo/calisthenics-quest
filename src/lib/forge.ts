@@ -2,7 +2,7 @@ import { daysSinceLastSession, type GameState } from './game';
 import { seeded } from './random';
 import { NO_GEAR, salvageValue, type FogGear } from './fog-gear';
 import { betterBy, MAX_PLUS, rerollBonus, safeFloor, type Item, type Rarity } from '@/game/dungeon/items';
-import { EMBERS, FORGE, FORGE_RISK, MAT_IDS, STEPS, type MatId } from '@/balance';
+import { EMBERS, FORGE, FORGE_OPENS, FORGE_RISK, MAT_IDS, STEPS, type MatId } from '@/balance';
 
 /* Mira's forge, on the Hero tab's Gear part. Workouts earn embers, and the forge spends them: upgrade an item
    (+1 to +15), roll one of its bonuses again, or melt an item down for a few embers. Embers come
@@ -17,6 +17,15 @@ export const upgradeCost = (it: Item) => STEPS[Math.min(MAX_PLUS - 1, it.plus ??
 export const REROLL_COST = FORGE.reroll;
 
 const gearOf = (s: GameState): FogGear => s.fogGear ?? NO_GEAR;
+
+/** Mira's forge is open: she has found you (FORGE_OPENS workouts, her scene in the story), or this
+    save forged before the forge waited for her (a live save never loses it). Before, it and the
+    co-op materials stay out of sight; embers still pile up. */
+export function forgeOpen(state: GameState): boolean {
+  if (state.sessions.length >= FORGE_OPENS.workouts) return true;
+  const g = gearOf(state);
+  return (g.embers?.spent ?? 0) > 0 || [...Object.values(g.worn), ...g.vault].some((x) => (x?.plus ?? 0) > 0);
+}
 
 /** Embers from workouts, plus what was melted down, less what was spent. */
 export function embersEarned(state: GameState): number {
@@ -77,7 +86,7 @@ export function upgradeOdds(state: GameState, it: Item, now: Date): number {
 
 /** Whether the forge would take this item one step up now. */
 export function canUpgrade(state: GameState, it: Item): boolean {
-  return !it.starter && (it.plus ?? 0) < MAX_PLUS && embersOf(state) >= upgradeCost(it) && Object.keys(matsShort(state, it)).length === 0;
+  return forgeOpen(state) && !it.starter && (it.plus ?? 0) < MAX_PLUS && embersOf(state) >= upgradeCost(it) && Object.keys(matsShort(state, it)).length === 0;
 }
 
 /** What an upgrade did: it held, it missed and the item stayed, or it missed and slipped one plus. */
@@ -124,7 +133,7 @@ export function addMats(have: Partial<Record<MatId, number>>, more: Partial<Reco
 /** Roll bonus `i` of an item again (each item's rerolls follow their own seed, so a replay is the same). */
 export function reroll(state: GameState, id: string, i: number): GameState {
   const it = findItem(state, id);
-  if (!it || !it.bonuses[i] || embersOf(state) < REROLL_COST) return state;
+  if (!it || !forgeOpen(state) || !it.bonuses[i] || embersOf(state) < REROLL_COST) return state;
   const seed = [...it.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) + (it.rerolls ?? 0) * 7919;
   const next = rerollBonus(it, i, seeded(seed));
   return next === it ? state : change(state, id, next, REROLL_COST);

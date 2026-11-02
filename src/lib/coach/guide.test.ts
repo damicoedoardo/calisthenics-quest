@@ -47,8 +47,14 @@ describe('the game guide', () => {
   it('reads its numbers from src/balance', () => {
     const s = fresh();
     expect(askGuide(s, 'what are embers for?', NOW)).toContain(`${EMBERS.full} for a full workout`);
-    expect(askGuide(s, 'how does the forge work past +5', NOW)).toContain(STEPS.slice(0, 5).map((x) => x.embers).join(', '));
-    expect(askGuide(s, 'how much xp for a workout', NOW)).toContain(`${XP.full} XP`);
+    const met = { ...s, sessions: sessions(6) };
+    expect(askGuide(met, 'how does the forge work past +5', NOW)).toContain(STEPS.slice(0, 5).map((x) => x.embers).join(', '));
+  });
+
+  it("keeps Mira's forge a secret till she finds you", () => {
+    expect(askGuide(fresh(), 'what are embers for?', NOW)).not.toContain('Mira');
+    expect(askGuide(fresh(), 'what are embers for?', NOW)).toContain('after 6 workouts');
+    expect(askGuide(fresh(), 'how much xp for a workout', NOW)).toContain(`${XP.full} XP`);
   });
 
   it('writes every topic it has reached without holes', () => {

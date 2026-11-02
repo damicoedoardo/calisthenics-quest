@@ -12,6 +12,7 @@ import { FlamePowers } from './FlamePowers';
 import { FogGearCard } from './FogGearCard';
 import { SpCard } from './SpCard';
 import { LootGuide, Purse } from './Purse';
+import { useForgeNew } from './Forge';
 import type { LootId } from '@/lib/loot';
 import { useLand } from './useLand';
 import { getClass } from '@/lib/gear';
@@ -41,8 +42,10 @@ export function HeroTab({ state, update, onChangeClass, part, onPart }: Props) {
   const [guide, setGuide] = useState<LootId | null>(null);
   const land = useLand();
   const look = useLook();
+  // Mira's forge just opened: a dot on Gear till it is first visited.
+  const forgeNew = useForgeNew(state);
   const PARTS = [
-    { id: 'gear', label: 'Gear', dot: false },
+    { id: 'gear', label: 'Gear', dot: forgeNew },
     { id: 'stats', label: 'Stats', dot: pointsFree(state) > 0 },
     // Named for the SPs only once the first is given, so they stay a surprise.
     { id: 'class', label: spTrial(state) ? 'Class & SP' : 'Class', dot: false },

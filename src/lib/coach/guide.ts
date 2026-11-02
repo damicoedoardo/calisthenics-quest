@@ -3,7 +3,7 @@ import { heroLevel, WEEKLY_GOAL } from '../game';
 import { getClass, CLASSES, type ClassId } from '../gear';
 import { STATS, pointsFree, type StatId } from '../stats';
 import { coins } from '../sweat';
-import { embersOf, matsOf } from '../forge';
+import { embersOf, forgeOpen, matsOf } from '../forge';
 import { EDGE, FLAME_AT, UPGRADES, ZONES, zoneStatus, MID_FLOOR } from '../fog';
 import { spOwned, spTrial } from '../sp';
 import { workoutsToLevel } from '../loot';
@@ -20,6 +20,7 @@ import {
   EMBERS,
   FALLOFF,
   FORGE,
+  FORGE_OPENS,
   FORGE_RISK,
   GIFTS,
   MATS,
@@ -181,15 +182,21 @@ export const GUIDE: GuideTopic[] = [
   },
   {
     id: 'forge',
-    title: "Embers and Mira's forge (+1 to +5)",
+    title: 'Embers and the forge (+1 to +5)',
     words: ['ember', 'forge', 'mira', 'upgrade', 'plus', 'reroll', 'melt', 'salvage'],
     from: ['economy', 'upgrades'],
+    // Embers are earned from the start; Mira's forge, what spends them, waits till she finds you
+    // (FORGE_OPENS), so till then the guide says only that they are kept for later.
     text: (s) =>
       [
         `Embers: ${EMBERS.full} for a full workout, ${EMBERS.mini} for a short one. Melting an item down gives more (${MELT.common} for a common up to ${MELT.legendary} for a legendary, more for each plus).`,
-        `Mira's forge (Hero tab, Gear) takes an item up one plus at a time, up to +${MAX_PLUS}. +1 to +5 cost embers only (${STEPS.slice(0, 5).map((x) => x.embers).join(', ')}) and always hold: training alone gets you there. Each plus makes the item about ${pct(STEPS[0].boost)} stronger.`,
-        `Reroll changes one bonus for ${FORGE.reroll} embers. The starter kit can't be forged or melted.`,
-        'A forged item glows more as it climbs; legendaries burn red instead.',
+        ...(forgeOpen(s)
+          ? [
+              `Mira's forge (Hero tab, Gear) takes an item up one plus at a time, up to +${MAX_PLUS}. +1 to +5 cost embers only (${STEPS.slice(0, 5).map((x) => x.embers).join(', ')}) and always hold: training alone gets you there. Each plus makes the item about ${pct(STEPS[0].boost)} stronger.`,
+              `Reroll changes one bonus for ${FORGE.reroll} embers. The starter kit can't be forged or melted.`,
+              'A forged item glows more as it climbs; legendaries burn red instead.',
+            ]
+          : [`Embers pile up for now: what spends them comes with the story, after ${FORGE_OPENS.workouts} workouts in all. Every ember earned till then is kept. Don't say what it is.`]),
         `The player now: ${embersOf(s)} embers.`,
       ].join('\n'),
   },
@@ -198,6 +205,8 @@ export const GUIDE: GuideTopic[] = [
     title: 'The forge past +5, co-op materials',
     words: ['material', 'mats', 'thread', 'shard', 'coal', 'heartstone', 'heart', 'miss', 'slip', 'odds', 'chance', 'coop', 'co-op', 'gift', 'pity'],
     from: ['upgrades'],
+    // Mira's forge waits till she finds you (FORGE_OPENS).
+    opens: (s) => forgeOpen(s),
     text: (s) => {
       const first = (m: (typeof MAT_IDS)[number]) => STEPS.findIndex((x) => (x.mats[m] ?? 0) > 0) + 1;
       const miss = STEPS.findIndex((x) => x.odds < 1) + 1;

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { GameState } from '@/lib/game';
-import { canUpgrade, embersOf, findItem, matsOf, REROLL_COST, reroll, rested, tryUpgrade, upgradeCost, upgradeMats, upgradeOdds, type Forged } from '@/lib/forge';
+import { canUpgrade, embersOf, forgeOpen, findItem, matsOf, REROLL_COST, reroll, rested, tryUpgrade, upgradeCost, upgradeMats, upgradeOdds, type Forged } from '@/lib/forge';
 import { bandOf, boostAt, BONUSES, MAX_PLUS, nameOf, RARITY, safeFloor } from '@/game/dungeon/items';
 import { BANDS, EMBERS, FORGE_RISK, MAT_IDS, MATS, SAFE_POINTS, type MatId } from '@/balance';
 import { PixelTabs } from './PixelTabs';
@@ -14,6 +14,28 @@ type Update = (fn: (s: GameState) => GameState) => void;
 
 /** Set once the forge's guide has been shown on this phone. */
 const SEEN = 'forma-forge-guide-seen';
+/** Said on the window when the forge is first opened, so its "new" dots go out at once. */
+const SEEN_EVENT = 'forma-forge-seen';
+
+function seenForge(): boolean {
+  try {
+    return typeof window === 'undefined' || !!localStorage.getItem(SEEN);
+  } catch {
+    return true;
+  }
+}
+
+/** Mira's forge has opened (her chapter began) and hasn't been visited on this phone yet: the
+    Hero tab, its Gear part and the forge's button wear a "new" dot till then. */
+export function useForgeNew(state: GameState): boolean {
+  const [seen, setSeen] = useState(seenForge);
+  useEffect(() => {
+    const on = () => setSeen(true);
+    window.addEventListener(SEEN_EVENT, on);
+    return () => window.removeEventListener(SEEN_EVENT, on);
+  }, []);
+  return !seen && forgeOpen(state);
+}
 
 /* Mira's forge for one item, on its own page over the Hero tab. Two tabs, one job each:
    Upgrade (what the next plus gives, what it costs, the chance, one button) and Reroll (swap one
@@ -59,6 +81,9 @@ export function ForgeSheet({ id, state, update, onClose }: { id: string; state: 
       return false;
     }
   });
+  useEffect(() => {
+    window.dispatchEvent(new Event(SEEN_EVENT));
+  }, []);
   const item = findItem(state, id);
   if (!item) return null;
 

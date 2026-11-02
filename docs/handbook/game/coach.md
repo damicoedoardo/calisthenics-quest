@@ -218,7 +218,8 @@ the `game_guide` tool, and the rules on the server tell it never to guess and ne
 - **No spoilers** (`opens`): a topic can be ahead of the player. The SP topic opens once the
   Wanderer gave the first (`state.sp`) and lists only the SPs owned; a zone's topic (its boss and
   the rule that beats it, `hint`) once the zone is open; the flame topic names only the next form;
-  the story topic only the chapter you're in. `askGuide` hands the coach the best few topics
+  the story topic only the chapter you're in; the forge past +5 opens with Mira's forge
+  (`forgeOpen`), and before that the embers topic says only that embers are kept for later. `askGuide` hands the coach the best few topics
   reached; when the best fit is still ahead it says only "Ahead", so the coach can't tell what
   it never sees. An empty question lists the topics reached (`guideIndex`).
 - **Kept in sync** (`guide.test.ts`): every file in `src/balance/` is in some topic's `from` or in

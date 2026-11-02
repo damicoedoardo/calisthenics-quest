@@ -3,7 +3,7 @@ type: reference
 title: Story (scenes, chapters, daily lines)
 description: The six-month story as data in src/story — scene format, when scenes play, the daily flame lines and Book of Days, rules for the words, and where to edit what.
 tags: [game, story, content]
-timestamp: 2026-11-01
+timestamp: 2026-11-02
 ---
 # Story
 
@@ -19,7 +19,7 @@ types.ts              the shapes: Scene, Line, Shot, When, Ask, Chapter, FogZone
 cast.ts               everyone who speaks: name, portrait (sprite), name color
 places.ts             where scenes happen: painted backdrops (src/sprites/places.ts draws them)
 chapters/1-6          one file per month: the chapter, its Fog zone, its scenes
-anytime.ts            scenes that can happen in any chapter (beating last time, coming back)
+anytime.ts            scenes that can happen in any chapter (beating last time, coming back, Mira finding you)
 road.ts               the Ember Road, the story walked with friends: its chapters, their runs, its scenes
 flame.ts              the flame's stages (spark to fire fairy), the default name, and heroVariant:
                       after the finale the flame has fused with you and your hero burns red
@@ -101,7 +101,10 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
   after Later at today's workout.
 - In a chapter's file, `workouts: N` counts from when that chapter began (`workoutsFor`,
   `chapterBegan`), so its scenes keep their spacing however early or late its boss fell, and a
-  chapter's scenes never play before it begins. In `anytime.ts` it counts every workout. The
+  chapter's scenes never play before it begins. In `anytime.ts` it counts every workout: so
+  `mira-forge` plays at `FORGE_OPENS.workouts` (6), in chapter 1 for most players, when Mira finds
+  you at your fire and her forge opens (features come in with the story, see
+  [forge.md](forge.md#when-it-opens)); her lines in chapters 2 and 3 greet you as someone she knows. The
   flame's growth plays with `grown: 'torch'` (its `FLAME_STAGES`, all workouts), whatever chapter
   you're in. `better: N` waits for N workouts where a set beat last time (see
   [training.md](training.md)); there are no max tests and no skill tree to wait for any more.

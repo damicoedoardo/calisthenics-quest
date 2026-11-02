@@ -3,7 +3,7 @@ type: conceptual
 title: Mira's forge
 description: What you do with Fog gear between runs, on the Hero tab's Gear part — embers from workouts, Mira's forge (upgrade +1..+15 with co-op materials from +6, misses from +7, safe marks, a new look every few pluses), reroll, melt down one item or many at once from a vault of 200; what you wear always comes home from a fall — rules in src/lib/forge.ts and fog-gear.ts, numbers in src/balance/upgrades.ts, screens FogGearCard.tsx and Forge.tsx.
 tags: [game, fog, forge, gear, co-op]
-timestamp: 2026-10-31
+timestamp: 2026-11-02
 ---
 
 # Mira's forge
@@ -18,6 +18,21 @@ opens Mira's forge for that item on its own page (`ForgeSheet` in `src/component
 the next plus changes, the price, the chance as a bar with what a fail does, one button, with Reroll as its own tab (Edoardo 2026-10-31: melting belongs outside the forge). Its **How it works** page says the rules below in five short steps, and opens by itself the first time. Each vault
 item carries a green ▲ or red ▼ against what you wear in its slot, and its card says by how much. (A walkable
 camp was tried for this and dropped: Edoardo wanted it on the normal screens.)
+
+## When it opens
+
+The forge comes with the story, not on day one (Edoardo 2026-11-02: bring the complex parts in
+slowly, and Mira early, in chapter 1). `forgeOpen` in `src/lib/forge.ts`: true from
+`FORGE_OPENS.workouts` workouts (6, `src/balance/economy.ts`), when the story's `mira-forge` scene
+(`src/story/anytime.ts`) has Mira find you at your fire, or for a save that already forged
+something (a plus on an item, or embers spent), so a live save never loses it. Before that, the
+forge's button and its line in the empty item card are hidden, the co-op materials tile is out of
+the purse and the loot guide (the embers' road ends on a lock, "At 6 workouts"), `canUpgrade`,
+`upgrade` and `reroll` do nothing, and the coach's guide only says embers are kept for later.
+Embers still pile up, and Melt still works. Once it opens, until the forge is first opened on that
+phone (`useForgeNew` in `Forge.tsx`, the same `forma-forge-guide-seen` key as its guide), a gold dot
+sits on the Hero tab and its Gear part, the forge's button says **New**, and the empty item card
+says "Mira's forge is open". The Fog bot (`src/sim/seasoned.ts`) forges only from the same point.
 
 ## Rules
 
