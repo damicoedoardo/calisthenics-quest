@@ -10,9 +10,12 @@ timestamp: 2026-11-01
 
 Code: `src/exercises/`. Shown in the app from the Train tab ("Exercise library",
 `src/components/ExerciseLibrary.tsx`): search, filters for equipment, kind (stretch, mobility...)
-and movement, and per exercise the boy and girl demo, how-to steps, "Do it well" tips and common
-mistakes, and a how-to video (below). Held sideways, the search and filters share one line, the list has two columns, and an
-exercise shows its demos and facts beside the how-to.
+and movement. The exercise page is kept to what helps you do it (Edoardo 2026-11-01: just the
+video and the do's and don'ts): the how-to video (below), or your pixel demo for an exercise with no
+video; then "Do it well" tips and "Avoid" (common mistakes); the catalog's long steps folded under
+"Step by step". Muscles, equipment and level stay in the library's list rows and filters. Held
+sideways, the search and filters share one line, the list has two columns, and an exercise shows
+the video beside the rest.
 The exercise page is `ExerciseDetail.tsx`; tapping any workout card on Today or the Train tab
 opens it too (`ExerciseSheet`: the card's exercise by id, else the plainest one with its demo).
 
