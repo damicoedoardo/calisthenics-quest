@@ -21,7 +21,7 @@ import type { PlanItem } from '@/lib/coach/types';
 import { dayKey, daysApart, daysSinceTraining } from '@/lib/days';
 import { storyWords } from '@/story/engine';
 import { flameStage } from '@/story/flame';
-import { currentPlan, dayLabel, nextDay, nextMonday, shownWeek, todayIs, weekdayOf } from '@/lib/coach/week';
+import { currentPlan, dayLabel, nextDay, nextMonday, shownWeek, todayIs, weekTally, weekdayOf } from '@/lib/coach/week';
 import { fireLine, flameLine, flameMood, restTruth, todayPage, updateTodayPage } from '@/story/daily';
 
 interface Props {
@@ -45,7 +45,8 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
   }, [openBook]);
   const [checkin, setCheckin] = useState<Checkin>(state.draft?.checkin ?? 'normal');
   const quest = todaysQuest(state, checkin);
-  const week = sessionsThisWeek(state, now);
+  // The dots follow the week's plan: one per workout planned this week.
+  const week = weekTally(state.coach?.week, now, sessionsThisWeek(state, now), WEEKLY_GOAL);
   const streak = weekStreak(state, now);
   const day = dayType(state);
   const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
@@ -164,8 +165,11 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
   );
 }
 
+/** Workouts done of the workouts planned this week (`weekTally`). */
+type Tally = ReturnType<typeof weekTally>;
+
 /** Your flame: its name, how grown it is, its mood today and what it has to say. */
-function FlameCard({ state, now, week, streak, land }: { state: GameState; now: Date; week: number; streak: number; land?: boolean }) {
+function FlameCard({ state, now, week, streak, land }: { state: GameState; now: Date; week: Tally; streak: number; land?: boolean }) {
   const stage = flameStage(state.sessions.length);
   // Until it has a name (after the first workout) it's just a spark.
   const name = state.profile.flame;
@@ -195,23 +199,23 @@ function FlameCard({ state, now, week, streak, land }: { state: GameState; now: 
       {land ? (
         <>
           <div className="mt-2 flex gap-1.5">
-            {Array.from({ length: WEEKLY_GOAL }).map((_, i) => (
-              <div key={i} className={`pixel-notch h-2 flex-1 ${i < week ? 'bg-gold-400 shadow-[inset_0_-3px_0_#b45309]' : 'bg-ink-600 shadow-[inset_0_-3px_0_#1c2033]'}`} />
+            {Array.from({ length: week.goal }).map((_, i) => (
+              <div key={i} className={`pixel-notch h-2 flex-1 ${i < week.done ? 'bg-gold-400 shadow-[inset_0_-3px_0_#b45309]' : 'bg-ink-600 shadow-[inset_0_-3px_0_#1c2033]'}`} />
             ))}
           </div>
           <p className="mt-1 text-[11px] text-slate-500">
-            {Math.min(week, WEEKLY_GOAL)}/{WEEKLY_GOAL} this week{streak > 0 ? ` · ${streak}-week streak` : ''}
+            {week.done}/{week.goal} this week{streak > 0 ? ` · ${streak}-week streak` : ''}
           </p>
         </>
       ) : (
-        <div className="mt-3 flex items-center gap-3" aria-label={`${Math.min(week, WEEKLY_GOAL)} of ${WEEKLY_GOAL} this week${streak > 0 ? `, a ${streak}-week streak` : ''}`}>
+        <div className="mt-3 flex items-center gap-3" aria-label={`${week.done} of ${week.goal} this week${streak > 0 ? `, a ${streak}-week streak` : ''}`}>
           <div className="flex flex-1 gap-1.5">
-            {Array.from({ length: WEEKLY_GOAL }).map((_, i) => (
-              <div key={i} className={`pixel-notch h-3 flex-1 ${i < week ? 'bg-gold-400 shadow-[inset_0_-3px_0_#b45309]' : 'bg-ink-600 shadow-[inset_0_-3px_0_#1c2033]'}`} />
+            {Array.from({ length: week.goal }).map((_, i) => (
+              <div key={i} className={`pixel-notch h-3 flex-1 ${i < week.done ? 'bg-gold-400 shadow-[inset_0_-3px_0_#b45309]' : 'bg-ink-600 shadow-[inset_0_-3px_0_#1c2033]'}`} />
             ))}
           </div>
           <span className="shrink-0 font-pixel text-[9px] text-slate-400">
-            {Math.min(week, WEEKLY_GOAL)}/{WEEKLY_GOAL}
+            {week.done}/{week.goal}
           </span>
           {streak > 0 && (
             <span className="flex shrink-0 items-center gap-1 font-pixel text-[9px] text-orange-300" title={`${streak}-week streak`}>
@@ -289,7 +293,7 @@ function InstallHint({ land }: { land?: boolean }) {
 interface LandProps {
   state: GameState;
   now: Date;
-  week: number;
+  week: Tally;
   streak: number;
   /** The workout, as tiles side by side (WorkoutList). */
   list: ReactNode;
@@ -421,13 +425,13 @@ function NoPlan({ state, now, onTrain, land }: { state: GameState; now: Date; on
  */
 function DoneToday({ state, now, onTrain, land }: { state: GameState; now: Date; onTrain: () => void; land?: boolean }) {
   const total = state.sessions.length;
-  const week = sessionsThisWeek(state, now);
   const coachWeek = state.coach?.week;
+  const week = weekTally(coachWeek, now, sessionsThisWeek(state, now), WEEKLY_GOAL);
   const next = nextDay(coachWeek);
   const ends = coachWeek ? nextMonday(coachWeek) : null;
   const cells = [
     { n: String(total), label: total === 1 ? 'workout' : 'workouts' },
-    { n: `${Math.min(week, WEEKLY_GOAL)}/${WEEKLY_GOAL}`, label: 'this week' },
+    { n: `${week.done}/${week.goal}`, label: 'this week' },
   ];
   const nextWords =
     coachWeek && shownWeek(coachWeek, now) === 1
