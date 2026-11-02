@@ -20,6 +20,8 @@ export default function MangaLab() {
   return (
     <LookProvider look={STARTER_LOOKS[sex]}>
       <main className="min-h-screen bg-ink-950 pb-16 text-slate-200">
+        {/* Manga lettering: a hand-lettered face for words, a loud one for sounds. */}
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=Shantell+Sans:wght@500;700;800&display=swap" />
         <header className="mx-auto flex max-w-[480px] items-center gap-3 px-4 py-3">
           <Link href="/lab" aria-label="Back to the lab" className="rounded-lg bg-ink-800 p-2">
             <ArrowLeft size={16} />

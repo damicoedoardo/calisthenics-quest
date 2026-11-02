@@ -34,7 +34,9 @@ opening.ts            the opening, before the first workout, kept short (about 4
 manga.ts              the story as a manga, a try-out (Edoardo 2026-11-02): pages of rows of
                       panels (tone, figures, captions, bubbles, sounds), drawn by
                       src/components/MangaPage.tsx, read in /lab/manga. Words are the
-                      opening's own lines, never rewritten. Page 1 of the prologue so far
+                      opening's own lines, never rewritten (a long one may
+                      split over two boxes; **word** letters it bold). Lettering:
+                      Shantell Sans, sounds in Bangers. Page 1 of the prologue so far
 daily/flame-lines.ts  what the flame says on Today, by kind of day, and its face
 daily/quotes.ts       words for the road, by chapter
 daily/rest.ts         rest-day truths, and what the flame says after a minute by the fire

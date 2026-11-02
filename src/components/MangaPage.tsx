@@ -78,6 +78,27 @@ function fill(text: string, words: Record<string, string>) {
   return text.replace(/\{(\w+)\}/g, (_, k: string) => words[k] ?? '');
 }
 
+/** Lettering: a hand-lettered face for words, a loud one for sounds (fonts in lab/manga's head). */
+const LETTER = "'Shantell Sans', 'Comic Sans MS', system-ui, sans-serif";
+const SOUND = "'Bangers', Impact, sans-serif";
+
+/** Text with **stressed words** lettered bold. */
+function Lettered({ text }: { text: string }) {
+  return (
+    <>
+      {text.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+        part.startsWith('**') ? (
+          <b key={i} className="font-extrabold">
+            {part.slice(2, -2)}
+          </b>
+        ) : (
+          part
+        ),
+      )}
+    </>
+  );
+}
+
 /** A spiky outline for the Hollow's voice: an ellipse with points. */
 const SPIKES = `polygon(${Array.from({ length: 36 }, (_, i) => {
   const a = (i / 36) * Math.PI * 2,
@@ -91,21 +112,22 @@ function WordsArt({ w, scale, words }: { w: Words; scale: number; words: Record<
     return (
       <p
         aria-hidden
-        className="absolute whitespace-nowrap font-pixel text-white"
-        style={{ ...base, transform: `translate(-50%, -50%) rotate(${w.rotate ?? 0}deg)`, fontSize: 11 * scale * (w.size ?? 1), textShadow: '2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000' }}
+        className="absolute whitespace-nowrap tracking-wide text-[#fff7e0]"
+        style={{ ...base, fontFamily: SOUND, transform: `translate(-50%, -50%) rotate(${w.rotate ?? 0}deg)`, fontSize: 24 * scale * (w.size ?? 1), WebkitTextStroke: `${1.5 * scale}px #000`, textShadow: `${2 * scale}px ${2 * scale}px 0 #000` }}
       >
         {w.text}
       </p>
     );
-  const text = fill(w.text, words);
+  const text = fill(w.text, words),
+    letter: CSSProperties = { fontFamily: LETTER, textTransform: 'uppercase', letterSpacing: '0.02em' };
   if (w.kind === 'caption')
     return w.plain ? (
-      <p className="absolute text-center font-semibold tracking-wide text-slate-100" style={{ ...base, width: `${w.w}%`, fontSize: 14 * scale }}>
-        {text}
+      <p className="absolute text-center leading-snug text-slate-100" style={{ ...base, ...letter, width: `${w.w}%`, fontSize: 15 * scale, letterSpacing: '0.12em' }}>
+        <Lettered text={text} />
       </p>
     ) : (
-      <p className="absolute border-2 border-black bg-[#fbf7ee] px-[0.5em] py-[0.35em] font-medium leading-snug text-black" style={{ ...base, width: `${w.w}%`, fontSize: 12 * scale, boxShadow: '2px 2px 0 rgba(0,0,0,0.35)' }}>
-        {text}
+      <p className="absolute border-[1.5px] border-black bg-[#fbf7ee] px-[0.55em] py-[0.3em] font-medium leading-[1.25] text-black" style={{ ...base, ...letter, width: 'max-content', maxWidth: `${w.w}%`, fontSize: 11 * scale }}>
+        <Lettered text={text} />
       </p>
     );
   if (w.look === 'voice')
@@ -113,19 +135,19 @@ function WordsArt({ w, scale, words }: { w: Words; scale: number; words: Record<
       <div className="absolute" style={{ ...base, width: `${w.w}%` }}>
         {/* Ink spikes, then the dark inside. */}
         <div className="absolute -inset-[3px] bg-[#e5484d]" style={{ clipPath: SPIKES }} />
-        <div className="relative bg-black px-[18%] py-[16%] text-center font-bold leading-tight text-white" style={{ clipPath: SPIKES, fontSize: 15 * scale }}>
-          {text}
+        <div className="relative bg-black px-[18%] py-[17%] text-center font-bold leading-tight text-white" style={{ clipPath: SPIKES, ...letter, fontSize: 14 * scale }}>
+          <Lettered text={text} />
         </div>
       </div>
     );
   const faint = w.look === 'faint';
   return (
-    <div className="absolute" style={{ ...base, width: `${w.w}%`, opacity: faint ? 0.6 : 1 }}>
+    <div className="absolute" style={{ ...base, width: 'max-content', maxWidth: `${w.w}%`, opacity: faint ? 0.6 : 1 }}>
       <p
-        className={`relative rounded-[50%] border-2 bg-white px-[0.9em] py-[0.7em] text-center font-semibold leading-tight text-black ${faint ? 'border-dashed border-black/70 italic' : 'border-black'}`}
-        style={{ fontSize: 12 * scale }}
+        className={`relative rounded-[50%] border-2 bg-white px-[1em] py-[0.8em] text-center font-semibold leading-tight text-black ${faint ? 'border-dashed border-black/70' : 'border-black'}`}
+        style={{ ...letter, fontSize: 11 * scale }}
       >
-        {text}
+        <Lettered text={text} />
       </p>
       {w.tail && <Tail side={w.tail} faint={faint} />}
     </div>

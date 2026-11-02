@@ -4,7 +4,8 @@ import type { PlaceId } from './places';
 /* The story as a manga: pages of panels, as data. MangaPage (src/components/MangaPage.tsx) only
    draws them. A page is rows top to bottom; a row is panels left to right (read that way: left to
    right, then down). The words are the opening's own lines (opening.ts), set out as captions and
-   bubbles, never rewritten. Open /lab/manga to read a page. */
+   bubbles, never rewritten. A long line may be split over two boxes, and
+   **words** are lettered bold, the way manga stresses a word. Open /lab/manga to read a page. */
 
 /** A panel's background: flat tones, screen-tone dots, or a story place. */
 export type Tone = 'golden' | 'warm' | 'dusk' | 'gray' | 'dark' | 'black';
@@ -85,8 +86,9 @@ export const INTRO_PAGE_1: MangaPage = {
           alt: 'You, in golden light, the way you were.',
           figures: [{ who: 'hero', size: 0.66, at: [50, 104] }],
           words: [
-            { kind: 'caption', text: 'Do you remember the last time you felt strong?', at: [29, 13], w: 50 },
-            { kind: 'caption', text: 'Not how you looked. How it felt.', at: [77, 86], w: 40 },
+            { kind: 'caption', text: 'Do you remember the last time you felt **strong**?', at: [30, 13], w: 54 },
+            { kind: 'caption', text: 'Not how you looked.', at: [74, 74], w: 50 },
+            { kind: 'caption', text: 'How it **felt**.', at: [82, 88], w: 34 },
           ],
         },
       ],
@@ -101,8 +103,9 @@ export const INTRO_PAGE_1: MangaPage = {
           alt: 'Close on your hand, gripping the sword.',
           figures: [{ who: 'hero', size: 1.25, at: [52, 62], anchor: [0.7, 0.6] }],
           words: [
-            { kind: 'caption', text: 'Lungs on fire. Hands shaking.', at: [42, 13], w: 76 },
-            { kind: 'sfx', text: 'HAH... HAH...', at: [40, 86], size: 1, rotate: -8 },
+            { kind: 'caption', text: 'Lungs on fire.', at: [30, 11], w: 80 },
+            { kind: 'caption', text: 'Hands shaking.', at: [58, 26], w: 80 },
+            { kind: 'sfx', text: 'HAH... HAH...', at: [42, 84], size: 1.15, rotate: -9 },
           ],
         },
         {
@@ -110,7 +113,7 @@ export const INTRO_PAGE_1: MangaPage = {
           lines: [45, 40],
           alt: 'Close on your face. You are smiling.',
           figures: [{ who: 'hero', size: 1.0, at: [54, 40], anchor: [0.5, 0.3] }],
-          words: [{ kind: 'caption', text: 'And somehow, smiling.', at: [62, 87], w: 66 }],
+          words: [{ kind: 'caption', text: 'And somehow, **smiling**.', at: [62, 87], w: 66 }],
         },
       ],
     },
@@ -120,7 +123,7 @@ export const INTRO_PAGE_1: MangaPage = {
         {
           tone: 'black',
           alt: 'Black.',
-          words: [{ kind: 'caption', text: "It never tells you it's leaving.", at: [50, 50], w: 90, plain: true }],
+          words: [{ kind: 'caption', text: "It never tells you it's **leaving**.", at: [50, 50], w: 90, plain: true }],
         },
       ],
     },
@@ -152,8 +155,9 @@ export const INTRO_PAGE_1: MangaPage = {
           alt: 'You, all gray and small.',
           figures: [{ who: 'hero', size: 0.26, at: [50, 102], gray: 1, dim: 0.3 }],
           words: [
-            { kind: 'caption', text: 'Then a whole stretch of life when everything else came first.', at: [50, 19], w: 92 },
-            { kind: 'bubble', text: 'Next Monday...', at: [50, 56], w: 80, tail: 'down', look: 'faint' },
+            { kind: 'caption', text: 'Then a whole stretch of life', at: [50, 12], w: 92 },
+            { kind: 'caption', text: 'when everything else came first.', at: [50, 37], w: 92 },
+            { kind: 'bubble', text: 'Next Monday...', at: [50, 64], w: 80, tail: 'down', look: 'faint' },
           ],
         },
       ],
@@ -165,10 +169,12 @@ export const INTRO_PAGE_1: MangaPage = {
           tone: 'gray',
           dots: true,
           alt: 'You, far off and small, alone in a lot of gray.',
-          figures: [{ who: 'hero', size: 0.17, at: [68, 92], gray: 1, dim: 0.35, opacity: 0.85 }],
+          figures: [{ who: 'hero', size: 0.17, at: [86, 94], gray: 1, dim: 0.35, opacity: 0.85 }],
           words: [
-            { kind: 'caption', text: '“Next Monday,” you said. You said it so many times it stopped meaning anything.', at: [32, 24], w: 54 },
-            { kind: 'caption', text: 'Nobody took it from you. You put it down, one day at a time, and forgot where.', at: [34, 74], w: 56 },
+            { kind: 'caption', text: '“Next Monday,” you said.', at: [26, 13], w: 50 },
+            { kind: 'caption', text: 'You said it so many times it stopped **meaning anything**.', at: [44, 35], w: 62 },
+            { kind: 'caption', text: 'Nobody took it from you.', at: [30, 61], w: 56 },
+            { kind: 'caption', text: 'You put it down, one day at a time, and **forgot where**.', at: [50, 84], w: 64 },
           ],
         },
       ],
@@ -185,7 +191,8 @@ export const INTRO_PAGE_1: MangaPage = {
             { who: 'hero', size: 0.36, at: [20, 104], gray: 1, dim: 0.35, flip: true },
           ],
           words: [
-            { kind: 'caption', text: 'And somewhere along the way, a voice moved in.', at: [27, 9], w: 48 },
+            { kind: 'caption', text: 'And somewhere along the way,', at: [33, 7], w: 64 },
+            { kind: 'caption', text: 'a **voice** moved in.', at: [42, 15], w: 50 },
             { kind: 'bubble', text: '{voice}', at: [56, 74], w: 50, look: 'voice' },
           ],
         },
