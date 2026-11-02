@@ -3,7 +3,7 @@ type: reference
 title: Sprites and animation
 description: All pixel art is code in src/sprites — the 64x64 figure engine, manga head, text-row art, clips, the registry, PNG sheets, fingerprint tests, and where to edit what.
 tags: [game, sprites, pixel-art]
-timestamp: 2026-11-01
+timestamp: 2026-11-02
 ---
 # Sprites
 
@@ -144,6 +144,9 @@ characters/zoneFoes.ts the story worlds' own monsters, five per world (zones 2-6
                       `src/game/rules.ts`)
 characters/install.ts the install guide's pictures (`installStep`, opts { step }): a small phone with
                       the button to tap ringed in gold, drawn on a character grid
+characters/rest.ts    Today's rest-day picture (`restDay`, opts { look }): you asleep under the blanket,
+                      a moon and two Zs, text rows at 32x25 in your look's hair and skin (a girl's
+                      long hair falls over the pillow)
 characters/zoned.ts   the regular monsters' zone variants ({ zone: 1-6, a world }): recolored onto the
                       zone's ramp and dressed (lake glass and drips, forge scrap and glowing cracks,
                       plateau sandstone, fog mist, summit ice, the Whetstone Pass's slate with a

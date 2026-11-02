@@ -132,7 +132,7 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
         </button>
       )}
 
-      <FlameCard state={state} now={now} week={week} streak={streak} />
+      <FlameCard state={state} now={now} week={week} streak={streak} restDay={restDay} />
 
       {restDay && <RestCard state={state} now={now} onSit={() => setOverlay('fire')} />}
 
@@ -164,8 +164,9 @@ export function TodayTab({ state, update, onStart, onReplayOpening, openBook, on
   );
 }
 
-/** Your flame: its name, how grown it is, its mood today and what it has to say. */
-function FlameCard({ state, now, week, streak, land }: { state: GameState; now: Date; week: number; streak: number; land?: boolean }) {
+/** Your flame: its name, how grown it is, its mood today and what it has to say. On a rest day the
+    picture is you asleep instead. */
+function FlameCard({ state, now, week, streak, restDay, land }: { state: GameState; now: Date; week: number; streak: number; restDay?: boolean; land?: boolean }) {
   const stage = flameStage(state.sessions.length);
   // Until it has a name (after the first workout) it's just a spark.
   const name = state.profile.flame;
@@ -174,9 +175,14 @@ function FlameCard({ state, now, week, streak, land }: { state: GameState; now: 
   return (
     <section className={land ? 'flex h-full flex-col rounded-2xl bg-ink-800 p-3' : 'rounded-2xl bg-ink-800 p-4'}>
       <div className={land ? 'flex flex-1 items-center gap-3' : 'flex items-center gap-3'}>
-        <div className={land ? 'relative h-14 w-14 shrink-0' : 'relative h-20 w-20 shrink-0'}>
+        <div className={restDay ? (land ? 'relative h-14 w-[4.5rem] shrink-0' : 'relative h-20 w-28 shrink-0') : land ? 'relative h-14 w-14 shrink-0' : 'relative h-20 w-20 shrink-0'}>
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-            <Ember size={land ? Math.round(big * 0.72) : big} stage={stage.id} mood={flameMood(state, now)} />
+            {/* A rest day shows you asleep, not the flame. */}
+            {restDay ? (
+              <Sprite id="restDay" opts={{ look: state.profile.look }} size={land ? 72 : 112} label="Rest day: you asleep under the moon" />
+            ) : (
+              <Ember size={land ? Math.round(big * 0.72) : big} stage={stage.id} mood={flameMood(state, now)} />
+            )}
           </div>
         </div>
         <div className="min-w-0 flex-1">
@@ -334,7 +340,7 @@ function LandToday(p: LandProps) {
           </button>
         )}
         <div className="min-w-[15rem] flex-[1.4] basis-0">
-          <FlameCard state={state} now={now} week={p.week} streak={p.streak} land />
+          <FlameCard state={state} now={now} week={p.week} streak={p.streak} restDay={p.restDay} land />
         </div>
         {p.restDay && (
           <div className="min-w-[14rem] flex-1 basis-0">

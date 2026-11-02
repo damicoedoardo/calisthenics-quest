@@ -189,6 +189,17 @@ async function doneToday(s: GameState): Promise<GameState> {
   return { ...done, coach: markDone(done.coach!, new Date().toISOString()) };
 }
 
+/** `s` with this week planned and no workout today (every day moved on by one): Today is a rest day. */
+async function restDayToday(s: GameState): Promise<GameState> {
+  const w = await withWeek(notYetToday(s));
+  const later = (date: string) => dayKey(new Date(new Date(`${date}T12:00:00`).getTime() + DAY));
+  const week = w.coach!.week!;
+  let r: GameState = { ...w, coach: { ...w.coach!, week: { ...week, days: week.days.map((d) => ({ ...d, date: later(d.date) })) } } };
+  // The rest-day scene is seen already, so the jump opens on Today.
+  for (let i = 0; i < 5; i++) r = skipDueScenes(r, new Date());
+  return r;
+}
+
 /** Write the sandbox save and open the app on it at `query`. */
 function open(state: GameState, query: string) {
   try {
@@ -217,6 +228,7 @@ const GO: Record<string, () => void> = {
   statues: () => open(veteran(14, 1), 'run=0&at=statues'),
   altar: () => open(veteran(14, 1), 'run=0&at=altar'),
   video: () => open(veteran(10, 1), 'tab=train&exercise=Goblet_Squat'),
+  'rest-day': async () => open(await restDayToday(veteran(30, 3)), 'tab=today'),
 };
 
 const MOMENTS: [string, string][] = [
@@ -310,6 +322,7 @@ export default function NightLab() {
       <Panel title="DESIGN PASS" note="Pixel, minimal, fewer words: one screen at a time.">
         <Row icon={<Swords size={16} />} label="The Friends tab" note="Its own tab: who is online now (tap to invite), your party, the Ember Road, every friend. Sample friends in the sandbox" onClick={() => open(geared(), 'tab=friends')} />
         <Row icon={<Dumbbell size={16} />} label="Today, with a week planned" note="Your flame, today's quest and Start" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=today')} />
+        <Row icon={<Dumbbell size={16} />} label="Today, a rest day" note="No workout today: you asleep under the moon instead of the flame, sit by the fire, and the next workout to see" onClick={GO['rest-day']} />
         <Row icon={<Dumbbell size={16} />} label="Today, after the workout" note="Today's workout done: you did it, your counts, and what's next (Train shows it)" onClick={async () => open(await doneToday(veteran(30, 3)), 'tab=today')} />
         <Row icon={<Dumbbell size={16} />} label="Next week, planned early" note="Train tab after the week's last workout: next week is there at once, with the Week done step" onClick={async () => open(await doneToday(veteran(30, 3)), 'tab=train')} />
       </Panel>
