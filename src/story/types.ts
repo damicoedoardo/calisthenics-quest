@@ -104,6 +104,8 @@ export interface When {
   grown?: FlameStageId;
   /** Only while this chapter is the current one. */
   inChapter?: number;
+  /** Only while the current chapter is this one or an earlier one. */
+  upTo?: number;
   /** Today is a rest day. */
   restDay?: boolean;
   /** The last workout was a short one (a Rough day or a minimum quest). */

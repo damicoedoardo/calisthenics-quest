@@ -23,8 +23,10 @@ camp was tried for this and dropped: Edoardo wanted it on the normal screens.)
 
 The forge comes with the story, not on day one (Edoardo 2026-11-02: bring the complex parts in
 slowly, and Mira early, in chapter 1). `forgeOpen` in `src/lib/forge.ts`: true from
-`FORGE_OPENS.workouts` workouts (6, `src/balance/economy.ts`), when the story's `mira-forge` scene
-(`src/story/anytime.ts`) has Mira find you at your fire, or for a save that already forged
+`FORGE_OPENS.workouts` workouts (6, `src/balance/economy.ts`) or once the first Fog boss has
+fallen, whichever comes first (a fast player can end chapter 1 early), when the story's
+`mira-forge` scene (chapter 1, `src/story/chapters/1-ashlands.ts`) has Mira find you at your
+fire, or for a save that already forged
 something (a plus on an item, or embers spent), so a live save never loses it. Before that, the
 forge's button and its line in the empty item card are hidden, the co-op materials tile is out of
 the purse and the loot guide (the embers' road ends on a lock, "At 6 workouts"), `canUpgrade`,
@@ -32,7 +34,8 @@ the purse and the loot guide (the embers' road ends on a lock, "At 6 workouts"),
 Embers still pile up, and Melt still works. Once it opens, until the forge is first opened on that
 phone (`useForgeNew` in `Forge.tsx`, the same `forma-forge-guide-seen` key as its guide), a gold dot
 sits on the Hero tab and its Gear part, the forge's button says **New**, and the empty item card
-says "Mira's forge is open". The Fog bot (`src/sim/seasoned.ts`) forges only from the same point.
+says "Mira's forge is open". The Fog bot (`src/sim/seasoned.ts`) forges only from the same point
+(6 workouts in zone 1; any later zone means the first boss is down).
 
 ## Rules
 

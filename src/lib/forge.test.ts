@@ -26,6 +26,8 @@ describe("Mira's forge", () => {
     expect(upgrade(shut, it.id)).toBe(shut);
     expect(reroll(shut, it.id, 0)).toBe(shut);
     expect(forgeOpen(withSword(FORGE_OPENS.workouts, it))).toBe(true);
+    // A fast player who beat chapter 1's boss early meets Mira then.
+    expect(forgeOpen({ ...shut, fog: { cleared: 1, runs: 1, best: {} } })).toBe(true);
     expect(forgeOpen({ ...shut, fogGear: { worn: { weapon: { ...it, plus: 1 } }, vault: [] } })).toBe(true);
     expect(forgeOpen({ ...shut, fogGear: { worn: { weapon: it }, vault: [], embers: { found: 0, spent: 15 } } })).toBe(true);
   });

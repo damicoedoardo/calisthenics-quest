@@ -18,11 +18,12 @@ export const REROLL_COST = FORGE.reroll;
 
 const gearOf = (s: GameState): FogGear => s.fogGear ?? NO_GEAR;
 
-/** Mira's forge is open: she has found you (FORGE_OPENS workouts, her scene in the story), or this
-    save forged before the forge waited for her (a live save never loses it). Before, it and the
-    co-op materials stay out of sight; embers still pile up. */
+/** Mira's forge is open: she has found you (her `mira-forge` scene in chapter 1), at FORGE_OPENS
+    workouts or when the first Fog boss falls, whichever comes first; or this save forged before the
+    forge waited for her (a live save never loses it). Before, it and the co-op materials stay out
+    of sight; embers still pile up. */
 export function forgeOpen(state: GameState): boolean {
-  if (state.sessions.length >= FORGE_OPENS.workouts) return true;
+  if (state.sessions.length >= FORGE_OPENS.workouts || (state.fog?.cleared ?? 0) >= 1) return true;
   const g = gearOf(state);
   return (g.embers?.spent ?? 0) > 0 || [...Object.values(g.worn), ...g.vault].some((x) => (x?.plus ?? 0) > 0);
 }

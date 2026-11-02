@@ -25,8 +25,9 @@ export function seasonedKit(rnd: () => number, zones: Zone[], zone: number, work
   }
   // The forge: embers from workouts and melted loot, spent a step at a time on the cheapest upgrade
   // (no co-op materials: those steps are out of reach alone). Only once Mira's forge has opened
-  // (FORGE_OPENS): before, a player wears what dropped, unforged.
-  if (workouts < FORGE_OPENS.workouts) return worn;
+  // (FORGE_OPENS workouts, or the first boss down, which any zone past the first means): before,
+  // a player wears what dropped, unforged.
+  if (workouts < FORGE_OPENS.workouts && zone === 0) return worn;
   let embers = workouts * EMBERS.full + (finds.length - Object.keys(worn).length) * SEASONED.meltEach;
   for (;;) {
     const next = Object.values(worn)

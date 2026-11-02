@@ -196,7 +196,7 @@ export const GUIDE: GuideTopic[] = [
               `Reroll changes one bonus for ${FORGE.reroll} embers. The starter kit can't be forged or melted.`,
               'A forged item glows more as it climbs; legendaries burn red instead.',
             ]
-          : [`Embers pile up for now: what spends them comes with the story, after ${FORGE_OPENS.workouts} workouts in all. Every ember earned till then is kept. Don't say what it is.`]),
+          : [`Embers pile up for now: what spends them comes with the story, after ${FORGE_OPENS.workouts} workouts in all or the first Fog boss, whichever comes first. Every ember earned till then is kept. Don't say what it is.`]),
         `The player now: ${embersOf(s)} embers.`,
       ].join('\n'),
   },

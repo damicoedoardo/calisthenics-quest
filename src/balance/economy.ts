@@ -18,7 +18,8 @@ export const FORGE = {
 
 /** When Mira's forge opens (Edoardo 2026-11-02: the complex parts come slowly, with the story,
     and Mira early, in chapter 1). Goal: a new player learns training, the Fog and their gear
-    first, then meets Mira and her forge about two weeks in. Embers pile up till then. Lower = sooner. */
+    first, then meets Mira and her forge about two weeks in, or as soon as Tomorrow falls if that
+    comes first. Embers pile up till then. Lower = sooner. */
 export const FORGE_OPENS = {
   /** Workouts done when Mira finds you (the story's `mira-forge` scene) and her forge opens. */
   workouts: 6,

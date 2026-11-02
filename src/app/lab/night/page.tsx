@@ -251,6 +251,8 @@ const GO: Record<string, () => void> = {
     const s = miraAt(6);
     open({ ...s, seenScenes: s.seenScenes.filter((id) => id !== 'mira-forge') }, 'tab=today');
   },
+  // A fast player: Tomorrow beaten at 4 workouts, so Mira comes right after the chapter's ending.
+  'mira-early': () => open(clearNextZone(addFakeWorkouts(storyWalk(3), 1, new Date(), false)), 'tab=today'),
   'forge-shut': () => open(miraAt(5), 'tab=hero&hero=gear'),
   'forge-new': () => open(miraAt(6), 'tab=hero&hero=gear'),
   you: () => open(veteran(30, 2), 'you'),
