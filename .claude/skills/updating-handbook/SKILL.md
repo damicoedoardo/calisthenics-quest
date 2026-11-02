@@ -33,7 +33,7 @@ no row: give a new folder its row (and a page if no page fits).
 | You touched | Check / update |
 |---|---|
 | `src/app/page.tsx`, `src/components/**`, `src/app/globals.css`, `tailwind.config.ts`, `postcss.config.js` | `app/screens.md` |
-| `src/lib/game*.ts`, `src/lib/program.ts`, `src/lib/stats*.ts`, `src/lib/gear.ts`, `src/lib/days.ts` | `game/training.md`, `architecture/game-state.md` |
+| `src/lib/game*.ts`, `src/lib/program.ts`, `src/lib/stats*.ts`, `src/lib/gear.ts`, `src/lib/days.ts`, `src/lib/remove*.ts` | `game/training.md`, `architecture/game-state.md` |
 | `src/lib/coach/**`, `src/lib/coach-client.ts`, `src/components/{CoachChat,CoachPanel}.tsx`, `src/components/useCoach.ts`, `backend/app/coach.py`, `backend/app/routes/coach.py` | `game/coach.md` |
 | `src/lib/store.ts` | `architecture/game-state.md` |
 | `src/balance/**` | `game/balance.md` |
