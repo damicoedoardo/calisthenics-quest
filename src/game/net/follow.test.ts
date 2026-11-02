@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { initialState } from '@/lib/game';
 import { powerOf } from '@/lib/fog';
 import { seeded } from '@/lib/random';
-import { overFor, winNow, type HeroSetup, type Input } from '../dungeon/engine';
+import { addFoe, byOf, overFor, winNow, type GameEvent, type HeroSetup, type Input } from '../dungeon/engine';
 import { Room } from './room';
 import { runFromStart } from './wire';
 import { Follower } from './follow';
@@ -137,6 +137,40 @@ describe('following a live run', () => {
     expect(later.some((e) => e.type === 'ability')).toBe(false);
     // And it timed the line: pressed at 0, played by the server by 120.
     expect(f.ping).toBe(120);
+  });
+
+  it('shows the hits you land when you strike, and only once', () => {
+    const room = new Room(['ana', 'ben'], 0, 3);
+    room.join('ana', hero('warrior'), 0);
+    room.join('ben', hero('archer'), 0);
+    const f = new Follower(runFromStart(room.begin(), 0), 0),
+      server = room.run!;
+    // A monster right next to Ana, on both sides of the line.
+    for (const r of [f.run, server]) {
+      const foe = addFoe(r, 'grinder', r.party[0].x + 30, r.party[0].y, true);
+      foe.bornUntil = 0;
+    }
+    const mine: string[] = [];
+    for (let i = 0; i < 90 && !mine.includes('hit'); i++) mine.push(...f.press({ x: 0, y: 0, ability: false }, i * 16).map((e) => e.type));
+    expect(mine).toContain('hit');
+    // The server plays the same steps: its word of that hit isn't played again.
+    room.take('ana', { t: 'in', steps: f.outgoing(1e6)! });
+    const heard: GameEvent[] = [];
+    for (let i = 0; i < 90; i++) {
+      room.tick(i / 60);
+      heard.push(...f.take([room.snapshot()], 2000 + i * 16));
+    }
+    // Ben's blows are played as they come; Ana's own aren't played twice.
+    expect(heard.filter((e) => e.type === 'hit').every((e) => byOf(e) === 1)).toBe(true);
+  });
+
+  it('keeps the others moving through a late run, and waits less on a steady line', () => {
+    // A steady line: the others are drawn closer to now than the old fixed wait (110 ms past the
+    // fastest run); a bumpy one: further back, so a late run still has a pair to glide between.
+    const steady = play(6, 20, 0, 1).phones[1].f.behindMs!;
+    const bumpy = play(6, 70, 30, 1).phones[1].f.behindMs!;
+    expect(steady).toBeLessThan(110);
+    expect(bumpy).toBeGreaterThan(steady + 40);
   });
 
   it('stays smooth with three phones', () => {

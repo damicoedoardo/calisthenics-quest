@@ -3,7 +3,7 @@ type: conceptual
 title: Live party runs
 description: The game server that plays one real Fog run for a party — the pass, the wire format, the room, how a phone predicts and corrects, the fall back to bots, and how it is deployed.
 tags: [backend, co-op, multiplayer, game-server, websocket]
-timestamp: 2026-10-29
+timestamp: 2026-11-02
 ---
 
 # Live party runs
@@ -54,13 +54,22 @@ message (`runFromStart`: same setup, same seed, you first) and hands it to a `Fo
 1. puts in every snapshot that came (`applySnapshot`), drops your steps the server has played
    (`ack`), and plays the rest again on top: so your hero moves the moment you press. A small
    correction glides away (`off`, drawn by `sync`) instead of a jump;
-2. plays what you press now. The engine reads each hero's input **by its id** (its place in the
-   server's run), not by its place in this phone's party, where you are first;
+2. plays what you press now, with `stepOwn` (`engine.ts`): only your hero (moving, buttons,
+   attacks, your shots and fire) and what flies; monsters and friends aren't stepped on the phone,
+   since they're drawn from the server's snapshots anyway. That keeps step 1 cheap: a phone
+   replays its waiting steps on every snapshot, 20 times a second, and stepping every monster in
+   each replay cost about 4 times as much (dropped frames on a phone in a full room);
 3. sends your numbered steps every `FOLLOW.sendMs`;
-4. before drawing, puts everyone else (friends, monsters, shots) where they were `FOLLOW.behindMs`
-   ago on the server's clock, between two snapshots (`place`), so they glide instead of jumping
-   20 times a second. `place` also gives friends and monsters the speed they're drawn moving at
-   (`vx`, `vy`), so a friend plays their walk and faces the way they go.
+4. before drawing, puts everyone else (friends, monsters, shots) where they were a moment ago on
+   the server's clock, between two snapshots (`place`), so they glide instead of jumping 20 times
+   a second. How far back is measured, not fixed: the phone keeps how late each of the last
+   `FOLLOW.window` snapshots came, and waits long enough for `FOLLOW.cover` of them, plus the gap
+   to the next one and a frame (`aim`). A steady line waits less (about 90 ms on good wifi), a
+   bumpy one more. The wait eases toward that (`growRate`, `shrinkRate`) instead of jumping, and a
+   hold (everyone on a card) doesn't count as a slow line. A snapshot later still: the others go
+   on the way they were going for at most `FOLLOW.aheadMs` instead of freezing. `place` also gives
+   friends and monsters the speed they're drawn moving at (`vx`, `vy`), so a friend plays their
+   walk and faces the way they go.
 
 `follow.test.ts` plays two phones, then three, and the server over a slow, uneven line (70 ms
 each way, give or take 30) and checks that your hero is almost never pulled back, and that a
@@ -69,10 +78,12 @@ the heroes, monsters, sets and endless numbers (`applySnapshot`): a reviver on e
 six times as much.
 
 Only the server's events are played (sounds, hits, new rooms, loot), so nothing happens twice,
-except your own moves: a swing, an ability, an SP move or a dodge shows the moment you press
-(`press` returns it), and the server's copy is skipped. The engine tags those events with the hero
-whose turn made them (`byOf` in `engine.ts`). In developer mode the run shows `ping`: from pressing
-a step to the server playing it.
+except your own: a swing, an ability, an SP move or a dodge, and the hits you land and the
+monsters you fell (not a boss or a mid-boss: those wait for the server), show the moment they
+happen on your phone (`press` returns them), and the server's copy is skipped. The engine tags
+those events with the hero who made them (`byOf`, `emitBy` in `engine.ts`). A hit's spark and
+number are put where the monster is drawn, a moment in the past, not where the rules have it now. In developer mode the run shows `ping` (from pressing
+a step to the server playing it) and how far back the others are drawn.
 A friend's own news (their item, their pick) isn't played on your phone (`heard`). A level-up or
 a chest comes to everyone at once, each with their own card ([../game/dungeon.md](../game/dungeon.md)).
 Cards (a level's skills, a chest's items, the stairs) come only from the server: the `Follower`
@@ -108,10 +119,12 @@ runs going on.
 | Send snapshots more or less often | `SEND_EVERY` in `play/server.ts` |
 | Send more or less in a snapshot | `KEEP_OUT` and the replacer in `snapshot` (`wire.ts`) |
 | Add something a phone can do in a live run | a case in `Up` (`wire.ts`), `Room.take` (`room.ts`), and the scene's handler sends it (`answer` or `gear` in `scene.ts`) |
-| Draw the others further in the past (smoother on a bad line, but later) | `FOLLOW.behindMs` in `src/game/net/follow.ts` |
+| Draw the others further in the past (smoother on a bad line, but later) | `FOLLOW.cover`, `FOLLOW.marginMs` in `src/game/net/follow.ts` |
+| Let the others keep going longer through a late snapshot | `FOLLOW.aheadMs` (`follow.ts`) |
+| Show more of your own news at once (not a line later) | `emitBy` in the engine function that makes it (`engine.ts`) |
 | Change how a correction to your hero glides | `FOLLOW.glidePx`, `FOLLOW.glideKeep` (`follow.ts`) |
 | Change how the server waits for your steps | `NET.steady`, `NET.maxQueue` and `inputFor` in `room.ts` |
 | Change the waiting screen | `PartyWait` in `src/components/FogRun.tsx` |
 | Change how long a pass lasts | `play_pass_seconds` in `backend/app/config.py` |
 
-Not done yet: your own hits shown before the server confirms them, and a live "Try again".
+Not done yet: a live "Try again".
