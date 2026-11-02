@@ -34,7 +34,7 @@ export function removeSession(state: GameState, id: string): GameState {
   // The week's day it ticked, and a coach level it moved.
   const coach = state.coach;
   if (coach) {
-    const week = coach.week && { ...coach.week, days: coach.week.days.map((d) => (d.done === gone.date ? { ...d, done: undefined } : d)) };
+    const week = coach.week && { ...coach.week, days: coach.week.days.map((d) => (d.done === gone.date ? { date: d.date, plan: d.plan } : d)) };
     let profile = coach.profile;
     if (profile) {
       const moved = profile.history.filter((h) => h.at === gone.date && h.field.startsWith('levels.'));
