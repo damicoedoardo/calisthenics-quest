@@ -44,6 +44,9 @@ if (!isMainThread) {
   const { HUMAN, BOSS_EARLY } = await import(`${root}src/balance/dungeon.ts`);
   // BOSS_EARLY=... sets how much tougher a boss is per workout you are early, e.g. {"hp":0.1}.
   Object.assign(BOSS_EARLY, JSON.parse(process.env.BOSS_EARLY || '{}'));
+  // BOSS_FIGHT=... a story boss's fight (src/balance/dungeon.ts), e.g. {"mirror":{"hp":2.5,"hit":0.5}}.
+  const { BOSS_FIGHT } = await import(`${root}src/balance/dungeon.ts`);
+  for (const [b, k] of Object.entries(JSON.parse(process.env.BOSS_FIGHT || '{}'))) Object.assign(BOSS_FIGHT.boss[b], k);
   const dials = JSON.parse(process.env.DIALS || '{}');
   // HUMAN=... sets how human the bot plays (src/balance/dungeon.ts), e.g. {"notice":0.8}.
   Object.assign(HUMAN, JSON.parse(process.env.HUMAN || '{}'));

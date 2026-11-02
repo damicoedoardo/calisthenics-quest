@@ -33,6 +33,14 @@ level or story.
   fireballs, a fire fairy heals when you're low. Training in the last two days gives a free run
   skill, resting (a day off or a minute by the fire) one more. `nextGrowth` writes the "train to
   grow" hint (points waiting to be spent, or that workouts earn them).
+- **The boss's fight** (`BOSS_FIGHT` in `src/balance/dungeon.ts`, story bosses Tomorrow, the
+  Mirror, the Knight and the Plateau; not the Hollow, the Summit, the Ember Road's or the first
+  dungeon's, `arenaBoss` in the engine): each has its own `BOSS_FIGHT.boss` entry, `hp` times its
+  HP (the Knight's plates) and `hit`, the share of the deep-floor boost its floor's monsters get
+  that its shots get; in a party its HP grows `party` more per friend. Its room has `pillars`
+  pairs of pillars. Its room wakes as it gets hurt (`wakeRoom`, `Run.arena`): at `wake` of
+  its HP two statues on the walls (`placeStatues`), at `spikes` two strips of spikes from opposite
+  walls that rise in turn. Goal: about half the runs that reach a boss win it, fights about a minute.
 - **A boss fought early**: while a story zone's boss still stands and you have trained fewer
   workouts than the zone is built for (its `workouts`, the chapter's planned start),
   `workoutsEarly` counts the workouts short and `edgeFor` makes that boss tougher: `BOSS_EARLY.hp`
