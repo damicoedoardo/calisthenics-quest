@@ -32,7 +32,8 @@ coach), its workout days of both weeks (`CoachDay`: a date, a `CoachPlan`, `done
 and `ahead` once next week's days are planned. Why two (Edoardo 2026-11-01): at the end of a week
 you should already see, and plan, the next one. `weekOf(week, date)` says which week a day is in
 (0 or 1), `daysIn(week, which)` its days, `weekSlots(week, which)` its seven slots, `lastDay` next
-week's Sunday. **Every reader goes through it**: `currentPlan(coach)` is the first day not done,
+week's Sunday, `weekTally` this week's workouts done of those planned (the flame's dots on Today,
+Edoardo 2026-11-02: a 2-day week shows 2, a 4-day week 4; the weekly goal of 3 only with no week). **Every reader goes through it**: `currentPlan(coach)` is the first day not done,
 whatever its date and week (a missed day moves along, it isn't lost; with this week all done it
 is next week's first). Today's quest (`todaysQuest`), the workout screen, the Train tab and the
 coach all read it; every change is written to a day (`setDay`, `setPlan` for the next one), any

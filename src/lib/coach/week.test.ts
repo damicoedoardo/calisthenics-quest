@@ -4,7 +4,7 @@ import { seeded } from '@/lib/random';
 import { finishSession, initialState, migrate, todaysQuest, type GameState } from '@/lib/game';
 import { applySetup, type SetupAnswers } from './setup';
 import { runTool, resolveDay, type ToolContext } from './tools';
-import { buildWeek, currentPlan, daysIn, needsPlan, planAhead, shownWeek, weekDoneId, dayLabel, fromLegacy, markDone, nextDay, isRestToday, restKept, restToday, setDay, startsToday, todayIs, weekDates, weekOver, weekSlots, weekText } from './week';
+import { buildWeek, currentPlan, daysIn, needsPlan, planAhead, shownWeek, weekDoneId, dayLabel, fromLegacy, markDone, nextDay, isRestToday, restKept, restToday, setDay, startsToday, todayIs, weekDates, weekOver, weekSlots, weekTally, weekText } from './week';
 import { coachNudge, freshNudge, hearNudge } from './nudge';
 import { coachBrief } from './brief';
 import { changeItem } from './plan';
@@ -162,6 +162,21 @@ describe('the week', () => {
     const next = changeItem(s, item.id, item.easier[0], 'easier', day.date);
     expect(next.coach!.week!.days[2].plan.items.some((i) => i.id === item.easier[0].id)).toBe(true);
     expect(next.coach!.week!.days[0]).toEqual(s.coach!.week!.days[0]);
+  });
+
+  it("the flame's dots are the workouts planned this week, not a fixed three", () => {
+    for (const days of [2, 3, 4]) {
+      const s = withWeek(answers({ days }));
+      const week = s.coach!.week!;
+      expect(daysIn(week, 0)).toHaveLength(days);
+      expect(weekTally(week, NOW, 0, 3)).toEqual({ done: 0, goal: days });
+      const after = trainAll(s, NOW);
+      expect(weekTally(after.coach!.week, NOW, 1, 3)).toEqual({ done: 1, goal: days });
+    }
+    // No week planned, or one run out: the weekly goal.
+    expect(weekTally(undefined, NOW, 5, 3)).toEqual({ done: 3, goal: 3 });
+    const old = withWeek(answers({ days: 2 })).coach!.week!;
+    expect(weekTally(old, new Date(2026, 10, 9, 12), 1, 3)).toEqual({ done: 1, goal: 3 });
   });
 
   it('an old save with one plan loads as a week of one day', () => {

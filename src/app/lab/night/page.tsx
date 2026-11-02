@@ -168,10 +168,10 @@ function otherBow(): GameState {
 }
 
 /** `s` with the coach set up and this week and next planned, so Today shows a quest to start. */
-async function withWeek(s: GameState): Promise<GameState> {
+async function withWeek(s: GameState, days = 3): Promise<GameState> {
   let n = 0;
   const now = new Date();
-  const coach = applySetup(s.coach, { modes: ['gym'], goal: 'muscle', days: 3, minutes: 40, gear: ['gym'], experience: 'returning', pushups: 2, pullups: 1, lifts: 1, run: 1, avoid: [] }, now, () => `n${++n}`);
+  const coach = applySetup(s.coach, { modes: ['gym'], goal: 'muscle', days, minutes: 40, gear: ['gym'], experience: 'returning', pushups: 2, pullups: 1, lifts: 1, run: 1, avoid: [] }, now, () => `n${++n}`);
   const week = planAhead({ all: await loadLibrary(), coach, sessions: s.sessions, now, rng: seeded(1) });
   return { ...s, coach: { ...coach, week } };
 }
@@ -183,8 +183,8 @@ function notYetToday(s: GameState): GameState {
 }
 
 /** `s` with this week planned and its first workout done today: Today says you did it. */
-async function doneToday(s: GameState): Promise<GameState> {
-  const w = await withWeek(notYetToday(s));
+async function doneToday(s: GameState, days = 3): Promise<GameState> {
+  const w = await withWeek(notYetToday(s), days);
   const done = addFakeWorkouts(w, 1, new Date(), true);
   return { ...done, coach: markDone(done.coach!, new Date().toISOString()) };
 }
@@ -229,6 +229,9 @@ const GO: Record<string, () => void> = {
   altar: () => open(veteran(14, 1), 'run=0&at=altar'),
   video: () => open(veteran(10, 1), 'tab=train&exercise=Goblet_Squat'),
   'rest-day': async () => open(await restDayToday(veteran(30, 3)), 'tab=today'),
+  // The flame's dots follow the week's plan: 2 or 4 workouts planned, one done today.
+  'dots-2': () => void doneToday(veteran(10, 1), 2).then((s) => open(s, 'tab=today')),
+  'dots-4': () => void doneToday(veteran(10, 1), 4).then((s) => open(s, 'tab=today')),
 };
 
 const MOMENTS: [string, string][] = [
