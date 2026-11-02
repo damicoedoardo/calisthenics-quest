@@ -303,8 +303,8 @@ const GO: Record<string, () => void> = {
   'early-boss': () => open(archer(veteran(4, 1)), 'run=1&at=boss'),
   // The same fight on pace, 12 workouts in: the boss as the sheets measure it.
   'pace-boss': () => open(archer(veteran(12, 1)), 'run=1&at=boss'),
-  // Tomorrow's room on pace, 6 workouts in: pillars, then statues at 2/3 of its HP, spikes at 1/3 (BOSS_FIGHT).
-  'boss-room': () => open(archer(veteran(6, 0)), 'run=0&at=boss'),
+  // Tomorrow's room with a geared hero (14 workouts, points spent): pillars, then statues at 2/3 of its HP, spikes at 1/3 (BOSS_FIGHT).
+  'boss-room': () => open(archer(geared()), 'run=0&at=boss-ready'),
 };
 
 function archer(s: GameState): GameState {

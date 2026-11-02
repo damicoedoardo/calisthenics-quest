@@ -47,7 +47,7 @@ interface Props {
   tutorial?: { voice: string; onDone: () => void };
 }
 
-export type RunStart = 'mid' | 'boss' | 'win' | 'sp' | 'skills' | `shape-${ShapeId}` | 'dark' | 'trial' | 'elite' | 'statues' | 'altar';
+export type RunStart = 'mid' | 'boss' | 'boss-ready' | 'win' | 'sp' | 'skills' | `shape-${ShapeId}` | 'dark' | 'trial' | 'elite' | 'statues' | 'altar';
 /** The developer jumps to a room with walls inside it: `shape-halls` and so on, `dark` a dark one. */
 export const SHAPE_STARTS: RunStart[] = [...(Object.keys(ROOM_SHAPES.weights) as ShapeId[]).map((s): RunStart => `shape-${s}`), 'dark', 'trial', 'elite', 'statues', 'altar'];
 
@@ -247,6 +247,11 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party, tutor
             h?.fillFinal();
           }
           else if (startAt === 'boss') h?.skipToBoss();
+          else if (startAt === 'boss-ready') {
+            // at the boss with the skills a run has picked up by then (about ten levels)
+            h?.skipToBoss();
+            h?.levelNow(10);
+          }
           else if (startAt === 'skills') h?.levelNow(5);
           else if (startAt === 'dark') h?.skipToShape({ shape: 'lanes', plates: true, dark: true });
           else if (startAt === 'trial') h?.skipToShape({ shape: 'block', plates: false, dark: false, kind: 'fight', trial: true });
