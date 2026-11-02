@@ -146,6 +146,8 @@ export const ASHLANDS: Chapter = {
     {
       id: 'first-rest-day',
       when: { workouts: 1, restDay: true },
+      // Flavor for a kind of day: dropped if the boss falls before that day comes.
+      optional: true,
       place: 'ashlands-camp',
       music: 'camp',
       lines: [
@@ -208,6 +210,8 @@ export const ASHLANDS: Chapter = {
     {
       id: 'perfect-week',
       when: { perfectWeek: true },
+      // Flavor for a kind of day: dropped if the boss falls before that day comes.
+      optional: true,
       lines: [
         { who: 'flame', mood: 'happy', text: "A whole week! Every day you said. Look at me, I'm a real flame now." },
         { who: 'flame', mood: 'happy', text: "Quick, tell me something you're going to do. Anything. I'll believe it." },
@@ -230,6 +234,8 @@ export const ASHLANDS: Chapter = {
     {
       id: 'ch1-small-day',
       when: { workouts: 4, shortSession: true, inChapter: 1 },
+      // Flavor for a kind of day: dropped if the boss falls before that day comes.
+      optional: true,
       lines: [
         { who: 'flame', mood: 'soft', text: 'A rough day, and you came anyway.' },
         { who: 'hollow', text: "That barely counts. Who do you think you're fooling?" },

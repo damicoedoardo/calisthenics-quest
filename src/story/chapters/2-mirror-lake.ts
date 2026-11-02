@@ -196,6 +196,8 @@ export const MIRROR_LAKE: Chapter = {
     {
       id: 'ch2-lake-rest',
       when: { restDay: true, inChapter: 2 },
+      // Flavor for a kind of day: dropped if the boss falls before that day comes.
+      optional: true,
       music: 'camp',
       lines: [
         { who: 'narrator', show: 'flame', text: 'A rest day. You sit by the lake with {flame}. Slowly, the water goes still.', shot: { pan: 'down', seconds: 2 } },

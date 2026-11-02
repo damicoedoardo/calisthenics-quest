@@ -108,6 +108,8 @@ export const PLATEAU: Chapter = {
       // Sol's arc, what she gives back: the rest she learned, posted to you.
       id: 'ch4-sol-socks',
       when: { workouts: 5, restDay: true, inChapter: 4, answer: { id: 'sol', is: 'yes' } },
+      // Flavor for a kind of day: dropped if the boss falls before that day comes.
+      optional: true,
       music: 'camp',
       lines: [
         { who: 'narrator', show: 'sol-after', text: 'A parcel is waiting by the road, tied with string. Inside: a pair of very soft socks, and a note in hurried handwriting.' },
@@ -250,6 +252,8 @@ export const PLATEAU: Chapter = {
     {
       id: 'ch4-small-step',
       when: { workouts: 1, shortSession: true, inChapter: 4 },
+      // Flavor for a kind of day: dropped if the boss falls before that day comes.
+      optional: true,
       lines: [
         { who: 'plateau', text: '...Small.' },
         { who: 'you', text: 'Still a step.' },
@@ -260,6 +264,8 @@ export const PLATEAU: Chapter = {
     {
       id: 'ch4-rest',
       when: { restDay: true, inChapter: 4 },
+      // Flavor for a kind of day: dropped if the boss falls before that day comes.
+      optional: true,
       music: 'camp',
       lines: [
         { who: 'narrator', show: 'flame', text: 'A rest day on the flat road. {flame} lies in the dust and watches the clouds go nowhere.', shot: { pan: 'up', seconds: 2 } },
