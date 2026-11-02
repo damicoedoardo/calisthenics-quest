@@ -3,7 +3,7 @@ type: reference
 title: The coach (workout planner)
 description: The coach in src/lib/coach — your flame as an LLM coach you chat with (the week it plans, the one place every workout lives; the chat loop, its tools run on the phone, the fuzzy exercise search, the server relay), the laws (the nine rules always true, laws.ts) and the player's own rules, the craft of a workout as defaults (warm-up, main, accessory, core, cool-down; the training playbook the coach reads; the time estimate), the three-layer memory (profile, training log, notes), the flame speaking first (nudges), the built-in coach that builds workouts for gym, calisthenics, running or a mix, easier and swap choices, the guardrails every workout passes, and the screens that play it.
 tags: [game, training, coach, planner, memory, llm]
-timestamp: 2026-11-01
+timestamp: 2026-11-02
 ---
 
 # The coach
@@ -299,7 +299,7 @@ an LLM gets back to do better.
 - **Train tab** (`CoachScreen` in `CoachChat.tsx`): the flame with what it brings up or its last
   words, "Let's start", "Talk" or "Answer", and "What I know" (`CoachKnows`: profile, levels, notes,
   each note can be forgotten; to change the profile, tell the flame). Under it the week (`WeekBoard`):
-  "This week" with "N of M done", then a chip for each day, Monday to Sunday: its weekday, its date and an icon (a dumbbell for a workout, a flame for a rest day, a tick once done or kept, nothing before the plan; the next workout lit gold, a dot under today), and the chosen day's workout (from `todayIs`: it opens on the workout to do today, a missed one too, on the next workout once today's is done, else on today) as `WorkoutList`, the same list Today shows (see [../app/screens.md](../app/screens.md)): warm-up and cool-down folded, still, dose and rest, Easier
+  "This week" with "N of M done", then a chip for each day, Monday to Sunday: its weekday, its date and an icon (a dumbbell for a workout, a bed for a rest day (Edoardo 2026-11-02: not the flame), a tick once done or kept, nothing before the plan; the next workout lit gold, a dot under today), and the chosen day's workout (from `todayIs`: it opens on the workout to do today, a missed one too, on the next workout once today's is done, else on today) as `WorkoutList`, the same list Today shows (see [../app/screens.md](../app/screens.md)): warm-up and cool-down folded, still, dose and rest, Easier
   and Swap (days still to do), and Start on the next day once its day has come (`startsToday`: on its date or after it, to catch up a missed one, never ahead, and not on a day you already trained; `start` in `page.tsx` checks it too, the developer menu's Workout jump skips it); a rest day says why rest counts and, on the
   day, offers a minute by the fire. Before the first week: only a line that says to talk to the flame. Tap an exercise (here or on Today) for how to
   do it (`ExerciseSheet`: both demos, facts, steps, tips, mistakes). Sideways the two sit side by side.
