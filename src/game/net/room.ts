@@ -1,5 +1,5 @@
 import { botInput } from '../dungeon/bot';
-import { createRun, dropFromBag, leaveRun, pick, pickRelic, stepRun, takeOff, takeStairs, wear, type Hero, type HeroSetup, type Input, type Run } from '../dungeon/engine';
+import { createRun, dropFromBag, extraTurn, leaveRun, pick, pickRelic, stepRun, takeOff, takeStairs, wear, type Hero, type HeroSetup, type Input, type Run } from '../dungeon/engine';
 import { BOT_PICKS } from '../rules';
 import { zoneByCode } from '@/lib/fog';
 import { snapshot, type Press, type Start, type Up } from './wire';
@@ -16,21 +16,15 @@ interface Seat {
   online: boolean;
   /** Steps pressed and not yet played. */
   queue: Press[];
-  /** The stick as last pressed, held while nothing new comes. */
-  stick: { x: number; y: number };
   /** The last of their steps the run has played. */
   ack: number;
   /** Since when their pick has waited (real seconds), or null. */
   askedAt: number | null;
-  /** The newest step that has come from the phone. */
-  got: number;
-  /** Buttons from steps passed over, for the next step played. */
-  held: Press | null;
   /** Since when the phone has been gone in a run (real seconds), or null. */
   offSince: number | null;
 }
 
-/** Buttons pressed in a step that's passed over go with the next one. */
+/** Buttons pressed in a step that's dropped (a phone far ahead) go with the next one. */
 function carry(into: Press, g: Press) {
   into.ability ||= g.ability;
   into.skill ||= g.skill;
@@ -39,7 +33,8 @@ function carry(into: Press, g: Press) {
   if (g.lock !== undefined && into.lock === undefined) into.lock = g.lock;
 }
 
-const still: Input = { x: 0, y: 0, ability: false };
+/** A hero whose next step hasn't come: no turn this step. */
+const WAIT: Input = { x: 0, y: 0, ability: false, wait: true };
 
 /** How the live run waits on people (real seconds), and how far ahead a phone may run (steps). */
 export const NET = {
@@ -47,10 +42,10 @@ export const NET = {
   waitSeconds: 15,
   /** A pick or the stairs hold the run for everyone; past this, the bot picks (deeper, for the stairs). */
   pickSeconds: 15,
-  /** Steps kept from a phone that's ahead of the server. */
-  maxQueue: 8,
-  /** Steps that may wait before two are played as one (a phone whose clock runs a little fast). */
-  steady: 6,
+  /** Steps kept from a phone that's ahead of the server (1 s); past it the oldest go, buttons kept. */
+  maxQueue: 60,
+  /** Steps that may wait before the hero gets an extra turn to catch up. */
+  steady: 3,
   /** A phone gone this long in a run (real seconds) ends it for everyone: they aren't coming back. */
   goneSeconds: 20,
 };
@@ -87,9 +82,10 @@ export class Room {
       seat.online = true;
       seat.offSince = null;
       seat.queue = [];
-      seat.held = null;
+      // A phone that starts the run again numbers its steps from 1 again.
+      seat.ack = 0;
       if (!this.run) seat.hero = hero;
-    } else this.seats.set(user, { user, hero, online: true, queue: [], stick: { x: 0, y: 0 }, ack: 0, askedAt: null, got: 0, held: null, offSince: null });
+    } else this.seats.set(user, { user, hero, online: true, queue: [], ack: 0, askedAt: null, offSince: null });
     this.firstAt ??= now;
     return true;
   }
@@ -139,8 +135,7 @@ export class Room {
     switch (m.t) {
       case 'in':
         for (const p of m.steps.slice(-NET.maxQueue)) {
-          seat.got = Math.max(seat.got, p.seq);
-          seat.queue.push(p);
+          if (p.seq > seat.ack && !seat.queue.some((q) => q.seq === p.seq)) seat.queue.push(p);
         }
         // A phone far ahead of the server: keep the newest steps, and any button pressed in the rest.
         if (seat.queue.length > NET.maxQueue) {
@@ -186,39 +181,29 @@ export class Room {
       if (s.offSince !== null && now - s.offSince >= NET.goneSeconds) return leaveRun(run, LEFT);
     const inputs = run.party.map((h, i) => this.inputFor(this.seats.get(this.order[i])!, h));
     stepRun(run, inputs);
+    // A phone a little ahead (its steps came in a bunch, or its clock runs fast): one more turn of
+    // its own, so its steps don't wait long.
+    run.party.forEach((h, i) => {
+      const seat = this.seats.get(this.order[i])!;
+      if (!seat.online || seat.queue.length <= NET.steady) return;
+      const p = seat.queue.shift()!;
+      seat.ack = p.seq;
+      const { seq: _, ...input } = p;
+      extraTurn(run, h, input);
+    });
     this.waitOnPicks(now);
   }
 
+  /** The next of this hero's steps, in order, or standing still when it hasn't come yet. A step
+      is never guessed and never passed over: the server plays exactly what the phone played, so the
+      phone (which already moved you) never has to take a move back. A step that comes late is
+      played late, and a phone a little ahead gets an extra turn (`tick`). */
   private inputFor(seat: Seat, h: Hero): Input {
-    const run = this.run!;
-    if (!seat.online) return botInput(run, h);
-    // Steps already played (with the held stick, below) are passed over when they come late; their
-    // buttons go with the next one.
-    const keep = (g: Press) => {
-      seat.stick = { x: g.x, y: g.y };
-      seat.held = seat.held ? (carry(seat.held, g), seat.held) : { ...g };
-    };
-    while (seat.queue.length && seat.queue[0].seq <= seat.ack) keep(seat.queue.shift()!);
-    // A phone a little faster than the server: two steps in one, so its steps never wait long.
-    if (seat.queue.length > NET.steady) keep(seat.queue.shift()!);
+    if (!seat.online) return botInput(this.run!, h);
     const p = seat.queue.shift();
-    let input: Input;
-    if (p) {
-      seat.ack = p.seq;
-      seat.stick = { x: p.x, y: p.y };
-      input = { ...p };
-    } else {
-      // Their step hasn't come yet: play it with the stick as they last held it, and count it as
-      // played, so their phone (which already moved them) and the server agree on how far they
-      // went. Not for a phone that stopped sending for a while (locked): those steps never come.
-      if (seat.got > 0 && seat.ack - seat.got < NET.maxQueue) seat.ack++;
-      input = { ...still, ...seat.stick };
-    }
-    if (seat.held) {
-      carry(input as Press, seat.held);
-      seat.held = null;
-    }
-    delete (input as Partial<Press>).seq;
+    if (!p) return WAIT;
+    seat.ack = p.seq;
+    const { seq: _, ...input } = p;
     return input;
   }
 

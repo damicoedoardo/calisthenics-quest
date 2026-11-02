@@ -29,11 +29,15 @@ attempt is **one real run** that everyone plays together. "Try again" after it i
   their id, numbers are cut to 3 decimals.
 - **Waiting.** The room starts when the whole party is in, or `NET.waitSeconds` after the first
   phone (`room.ts`). Phones see "Waiting for your party" (`PartyWait` in `FogRun.tsx`).
-- **Your steps, counted the same on both sides.** The server plays one of your steps each step.
-  When yours hasn't come yet it plays it with the stick as you last held it and counts it as
-  played (`ack`); when it comes late it's passed over (its buttons kept). So the server moves you
-  exactly as many steps as your phone did, and your phone almost never has to pull you back. A
-  phone that runs a little fast has two steps played as one once more than `NET.steady` wait.
+- **Your steps, played exactly as your phone played them.** The server plays your steps in order,
+  one each step, none guessed and none dropped (`inputFor` in `room.ts`). When your next one
+  hasn't come yet, your hero has no turn that step (an input with `wait`: no move, no attack); it's
+  played when it comes. When more than `NET.steady` of yours wait (they came in a bunch, or your
+  phone runs a little fast), you get an extra turn (`extraTurn` in `engine.ts`: your move, buttons
+  and attacks, the rest of the run not stepping). So the server's run of you is your phone's, and
+  your phone never has to take a move, an ability or a shot back. (Guessing a late step and passing
+  over the real one, as before, made abilities show, vanish and show again.) A phone more than
+  `NET.maxQueue` steps ahead loses its oldest, buttons kept.
 - **Nobody holds the run up.** A phone that drops is played by the bot until it's back
   (`botInput`). If it isn't back within `NET.goneSeconds`, or its player leaves the run (the phone
   sends `quit` when the run screen closes before the end), the run ends for everyone, each keeping
@@ -60,7 +64,7 @@ message (`runFromStart`: same setup, same seed, you first) and hands it to a `Fo
    replays its waiting steps on every snapshot, 20 times a second, and stepping every monster in
    each replay cost about 4 times as much (dropped frames on a phone in a full room);
 3. sends your numbered steps every `FOLLOW.sendMs`;
-4. before drawing, puts everyone else (friends, monsters, shots) where they were a moment ago on
+4. before drawing, puts everyone else (friends, monsters) where they were a moment ago on
    the server's clock, between two snapshots (`place`), so they glide instead of jumping 20 times
    a second. How far back is measured, not fixed: the phone keeps how late each of the last
    `FOLLOW.window` snapshots came, and waits long enough for `FOLLOW.cover` of them, plus the gap
@@ -70,6 +74,14 @@ message (`runFromStart`: same setup, same seed, you first) and hands it to a `Fo
    on the way they were going for at most `FOLLOW.aheadMs` instead of freezing. `place` also gives
    friends and monsters the speed they're drawn moving at (`vx`, `vy`), so a friend plays their
    walk and faces the way they go.
+   A friend is placed along their own steps rather than the server's clock (`placeByStep`, with
+   the `ack` of each hero in every snapshot): the server plays their steps as they come, so on its
+   clock they'd go now slower, now faster; their phone took one each 1/60 s, and they're drawn at
+   that even pace. Shots aren't drawn in the past: they fly on your phone from the server's place
+   (`stepOwn` moves them), so one never stops short or vanishes before it lands. Each shot is
+   numbered by its thrower and throw (`fire`, `Hero.fired`), so the one your phone throws ahead of
+   the server has the server's number: one shot on screen, not one that vanishes and another that
+   takes its place.
 
 `follow.test.ts` plays two phones, then three, and the server over a slow, uneven line (70 ms
 each way, give or take 30) and checks that your hero is almost never pulled back, and that a
@@ -79,8 +91,8 @@ six times as much.
 
 Only the server's events are played (sounds, hits, new rooms, loot), so nothing happens twice,
 except your own: a swing, an ability, an SP move or a dodge, and the hits you land and the
-monsters you fell (not a boss or a mid-boss: those wait for the server), show the moment they
-happen on your phone (`press` returns them), and the server's copy is skipped. The engine tags
+monsters you fell in your own turn (a swing, a blast; not a shot's hit later in its flight, and
+not a boss or a mid-boss: those wait for the server), show the moment they happen on your phone (`press` returns them), and the server's copy is skipped. The engine tags
 those events with the hero who made them (`byOf`, `emitBy` in `engine.ts`). A hit's spark and
 number are put where the monster is drawn, a moment in the past, not where the rules have it now. In developer mode the run shows `ping` (from pressing
 a step to the server playing it) and how far back the others are drawn.
@@ -123,7 +135,7 @@ runs going on.
 | Let the others keep going longer through a late snapshot | `FOLLOW.aheadMs` (`follow.ts`) |
 | Show more of your own news at once (not a line later) | `emitBy` in the engine function that makes it (`engine.ts`) |
 | Change how a correction to your hero glides | `FOLLOW.glidePx`, `FOLLOW.glideKeep` (`follow.ts`) |
-| Change how the server waits for your steps | `NET.steady`, `NET.maxQueue` and `inputFor` in `room.ts` |
+| Change how the server waits for your steps | `NET.steady`, `NET.maxQueue`, `inputFor` and the extra turns in `tick` (`room.ts`) |
 | Change the waiting screen | `PartyWait` in `src/components/FogRun.tsx` |
 | Change how long a pass lasts | `play_pass_seconds` in `backend/app/config.py` |
 

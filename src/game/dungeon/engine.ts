@@ -512,6 +512,9 @@ export interface Input {
   dodge?: boolean;
   /** A monster tapped this step: your attacks go to it while it's in reach (null lets go). */
   lock?: number | null;
+  /** A live run: this hero's step hasn't come from their phone yet, so they have no turn this step
+      (no move, no attack); it's played when it comes (`extraTurn`). */
+  wait?: boolean;
 }
 
 export interface RunEnd {
@@ -542,6 +545,8 @@ export interface RunEnd {
 export interface Hero {
   /** Place in the party, from 0 (you). */
   id: number;
+  /** Shots thrown so far this run (each shot's number, `fire`). */
+  fired?: number;
   classId: ClassId | undefined;
   /** Stat points spent, which items ask for. */
   build: Build;
@@ -921,10 +926,12 @@ const emit = (run: Run, e: GameEvent) => {
   if (acting !== null && OWN.has(e.type)) (e as GameEvent & { by?: number }).by = acting;
   run.events.push(e);
 };
-/** A hit a hero landed (or a monster they felled): theirs too, so in a live run their phone shows
-    it the moment they strike, not a line later (src/game/net/follow.ts). */
+/** A hit a hero landed (or a monster they felled) in their own turn (a swing, a blast): theirs
+    too, so in a live run their phone shows it the moment they strike, not a line later
+    (src/game/net/follow.ts). A shot's hit, later in its flight, is the server's word: a phone flies
+    your shots ahead of the monsters it draws, so it would guess wrong too often. */
 const emitBy = (run: Run, h: Hero, e: GameEvent) => {
-  (e as GameEvent & { by?: number }).by = h.id;
+  if (acting === h.id) (e as GameEvent & { by?: number }).by = h.id;
   emit(run, e);
 };
 /** Whose own move an event shows (an attack, an ability, an SP move, a dodge, a hit they landed),
@@ -1638,17 +1645,7 @@ export function stepRun(run: Run, input: Input | Input[]) {
   else if (now >= RUN_LIMIT) return end(run, false, 'limit');
   const inputs = Array.isArray(input) ? input : [input],
     up = standing(run);
-  for (const h of up) {
-    const i = asleep(run, h) ? IDLE : (inputs[h.id] ?? IDLE);
-    acting = h.id;
-    if (i.lock !== undefined) h.lock = i.lock;
-    if (i.dodge) dodge(run, h, i);
-    moveHero(run, h, i);
-    if (i.ability) useAbility(run, h, i);
-    if (h.sp && i.skill) useSkill(run, h, i);
-    if (h.sp && i.final) useFinal(run, h, i);
-    acting = null;
-  }
+  for (const h of up) if (!inputs[h.id]?.wait) heroTurn(run, h, asleep(run, h) ? IDLE : (inputs[h.id] ?? IDLE));
   if (run.party.length > 1) revive(run);
   stepFields(run);
   moveFoes(run);
@@ -1658,7 +1655,7 @@ export function stepRun(run: Run, input: Input | Input[]) {
   moveBullets(run);
   if (run.over) return;
   for (const h of standing(run)) {
-    if (asleep(run, h)) continue;
+    if (asleep(run, h) || inputs[h.id]?.wait) continue;
     acting = h.id;
     attack(run, h);
     skills(run, h);
@@ -1671,6 +1668,30 @@ export function stepRun(run: Run, input: Input | Input[]) {
   pullGems(run);
   checkRoom(run);
   if (run.foes.length > 40) run.foes = run.foes.filter((f) => f.alive);
+}
+
+/** A hero's own turn in a step: their buttons and their move. */
+function heroTurn(run: Run, h: Hero, i: Input) {
+  acting = h.id;
+  if (i.lock !== undefined) h.lock = i.lock;
+  if (i.dodge) dodge(run, h, i);
+  moveHero(run, h, i);
+  if (i.ability) useAbility(run, h, i);
+  if (h.sp && i.skill) useSkill(run, h, i);
+  if (h.sp && i.final) useFinal(run, h, i);
+  acting = null;
+}
+
+/** A live run's server (src/game/net/room.ts): one more turn for a hero whose phone ran a little
+    ahead or whose step came late (their move, buttons and attacks; the rest of the run not
+    stepping), so every step they pressed is played, in order, none guessed and none dropped. */
+export function extraTurn(run: Run, h: Hero, i: Input) {
+  if (run.over || run.paused || choosing(run) || run.stairsAsk || h.hp <= 0 || asleep(run, h)) return;
+  heroTurn(run, h, i);
+  acting = h.id;
+  attack(run, h);
+  skills(run, h);
+  acting = null;
 }
 
 /** A live run's phone (src/game/net/follow.ts): one step of only your own hero (moving, your
@@ -1691,13 +1712,7 @@ export function stepOwn(run: Run, h: Hero, i: Input) {
     }
   }
   if (h.hp <= 0 || asleep(run, h)) return;
-  acting = h.id;
-  if (i.lock !== undefined) h.lock = i.lock;
-  if (i.dodge) dodge(run, h, i);
-  moveHero(run, h, i);
-  if (i.ability) useAbility(run, h, i);
-  if (h.sp && i.skill) useSkill(run, h, i);
-  if (h.sp && i.final) useFinal(run, h, i);
+  heroTurn(run, h, i);
   stepFields(run);
   stepBurns(run);
   moveBullets(run);
@@ -3807,9 +3822,18 @@ function burst(run: Run, by: Hero, x: number, y: number, R: number, dmg: number,
   emit(run, { type: 'burst', x, y, r: R, color });
 }
 
+/** Shots are numbered apart from everything else: each hero's from SHOT_IDS + id * SHOT_IDS_EACH. */
+const SHOT_IDS = 1e9,
+  SHOT_IDS_EACH = 1e7;
+
 /** A shot of `by`'s, from them (or from `at`: a friend on the Summit). `more`: what an SP weapon adds. */
 function fire(run: Run, by: Hero, kind: 'arrow' | 'orb', angle: number, speed: number, dmg: number, pierce: number, target: Foe | null, at: { x: number; y: number } = by, more?: Partial<Shot>) {
-  run.shots.push({ id: ++run.ids, kind, by, x: at.x, y: at.y - 6, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, dmg, pierce, target, hit: new Set(), dies: run.t + 1.6, ...more });
+  // Numbered by thrower and throw (not the run's own count), so a phone that throws it ahead of the
+  // server (src/game/net/follow.ts) gives it the same number the server will: one shot on screen,
+  // not one that vanishes and another that takes its place.
+  ++run.ids;
+  by.fired = (by.fired ?? 0) + 1;
+  run.shots.push({ id: SHOT_IDS + by.id * SHOT_IDS_EACH + by.fired, kind, by, x: at.x, y: at.y - 6, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, dmg, pierce, target, hit: new Set(), dies: run.t + 1.6, ...more });
 }
 
 /** A throw that flies `reach` out and comes back to the thrower's hand (a boomerang, Reap). */

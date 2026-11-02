@@ -173,6 +173,59 @@ describe('following a live run', () => {
     expect(bumpy).toBeGreaterThan(steady + 40);
   });
 
+  it('shows your attacks and abilities once each, and your shots as the ones the server throws', () => {
+    // An archer and a mage among monsters, on a slow uneven line, the archer pressing her ability.
+    const rnd = seeded(9),
+      users = ['ana', 'ben'],
+      room = new Room(users, 0, 3);
+    users.forEach((u, i) => room.join(u, hero((['archer', 'mage'] as const)[i]), 0));
+    const start = room.begin(),
+      server = room.run!,
+      phones = users.map((_, me) => ({ f: new Follower(runFromStart(start, me), me), up: new Line<never>(60, 60, rnd), down: new Line<string>(60, 60, rnd), acc: 0 })),
+      frame = 1000 / 60,
+      threw = new Set<number>(),
+      drawn = new Set<number>(),
+      count = (into: Record<string, number>, e: GameEvent) => byOf(e) === 0 && (into[e.type] = (into[e.type] ?? 0) + 1);
+    const real: Record<string, number> = {},
+      shown: Record<string, number> = {};
+    let steps = 0,
+      seen = 0;
+    for (let now = 0; now < 20000; now += frame) {
+      if (steps % 120 === 0 && server.foes.filter((f) => f.alive).length < 8)
+        for (let k = 0; k < 4; k++) addFoe(server, 'grinder', 200 + rnd() * 400, 200 + rnd() * 300, true).bornUntil = 0;
+      phones.forEach((p, i) => p.up.take(now).forEach((m) => room.take(users[i], { t: 'in', steps: m })));
+      room.tick(now / 1000);
+      server.events.slice(seen).forEach((e) => count(real, e));
+      seen = server.events.length;
+      for (const sh of server.shots) if (sh.by === server.party[0]) threw.add(sh.id);
+      if (++steps % 3 === 0) {
+        const s = room.snapshot();
+        seen = 0;
+        phones.forEach((p) => p.down.send(now, s));
+      }
+      phones.forEach((p, i) => {
+        const evs = p.f.take(p.down.take(now), now);
+        for (p.acc += frame; p.acc >= frame; p.acc -= frame) {
+          const t = now + 300 * i,
+            dir = [{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 0, y: -1 }][Math.floor(t / 700) % 4];
+          evs.push(...p.f.press({ ...dir, ability: Math.floor(t / frame) % 150 === 0 }, now));
+        }
+        const sent = p.f.outgoing(now);
+        if (sent) p.up.send(now, sent as never);
+        p.f.place(now);
+        if (i === 0) {
+          evs.forEach((e) => count(shown, e));
+          for (const sh of p.f.run.shots) if (sh.by === p.f.run.hero) drawn.add(sh.id);
+        }
+      });
+    }
+    expect(real.ability).toBeGreaterThan(0);
+    expect(shown.ability).toBe(real.ability);
+    expect(Math.abs(shown.attack - real.attack)).toBeLessThanOrEqual(1);
+    // The shots drawn on Ana's phone are the server's, by number: none drawn that it never threw.
+    expect([...drawn].filter((id) => !threw.has(id)).length).toBeLessThanOrEqual(2);
+  });
+
   it('stays smooth with three phones', () => {
     const { out } = play(20, 70, 30, 1.004, 3);
     expect(pct(out.fix, 0.9)).toBeLessThan(1);
@@ -216,6 +269,7 @@ describe('following a live run', () => {
     // The server opens it as Ana walks onto it, for Ben too, far off: each phone gets its own card.
     server.party[1].x += 200;
     server.chest = { x: server.party[0].x, y: server.party[0].y, opened: false };
+    room.take('ana', { t: 'in', steps: ana.outgoing(1e6)! });
     room.tick(0);
     const s = room.snapshot(),
       forAna = ana.take([s], 50),

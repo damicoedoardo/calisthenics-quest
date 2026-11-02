@@ -1,4 +1,7 @@
-import { byOf, heard, stepOwn, type GameEvent, type Input, type Run } from '../dungeon/engine';
+import { byOf, heard, stepOwn, type GameEvent, type Hero, type Input, type Run } from '../dungeon/engine';
+
+/** One of the engine's steps (ms). */
+const STEP_MS = 1000 / 60;
 import { applySnapshot, type Press } from './wire';
 
 /* A phone's side of a live run, without the drawing (the scene in src/game/dungeon/scene.ts draws
@@ -23,6 +26,10 @@ export const FOLLOW = {
       slower for a moment), and shrinks when it gets better. */
   growRate: 0.3,
   shrinkRate: 0.05,
+  /** A friend drawn along their own steps: their clock goes at most this much quicker or slower
+      to catch up with the wait, and jumps when it's this many steps off (a door, a hold). */
+  stepsEase: 0.08,
+  stepsSnap: 30,
   /** Your steps go to the server this often. */
   sendMs: 50,
   /** At most this many of your steps wait for the server; older ones are given up. */
@@ -36,8 +43,10 @@ export const FOLLOW = {
 /** Where each moving thing was in one run from the server, and when (the run's own clock, ms). */
 interface Frame {
   at: number;
-  /** By kind and id: 'h' heroes, 'f' monsters, 's' shots. */
+  /** By kind and id: 'h' heroes, 'f' monsters. */
   where: Map<string, [number, number]>;
+  /** For each hero (by id), how many of their phone's steps the server had played. */
+  acks: number[];
 }
 
 export class Follower {
@@ -83,6 +92,7 @@ export class Follower {
       // news (their item, their chest) is theirs.
       events.push(...got.events.filter((e) => byOf(e) !== this.me && heard(e, this.me)).map(this.onShown));
       ack = got.ack[this.me] ?? 0;
+      this.acks = got.ack;
     }
     const at = this.pressedAt.get(ack);
     if (at !== undefined) this.ping = this.ping === null ? now - at : this.ping + (now - at - this.ping) * 0.2;
@@ -171,13 +181,48 @@ export class Follower {
       }
     };
     const r = this.run;
-    for (const h of r.party) if (h !== r.hero) put(`h${h.id}`, h);
+    for (const h of r.party) if (h !== r.hero && !this.placeByStep(h, now, dt)) put(`h${h.id}`, h);
     this.shown.clear();
     for (const f of r.foes) {
       put(`f${f.id}`, f);
       this.shown.set(f.id, [f.x, f.y]);
     }
-    for (const s of r.shots) put(`s${s.id}`, s, false);
+  }
+
+  /** A friend, along their own steps rather than the server's clock: the server plays a friend's
+      steps as they come from their phone, a late one later and two at once to catch up, so on its
+      clock they'd go now slower, now faster. Their phone took them at an even pace, one step each
+      1/60 s, and they're drawn at that pace, `behind` back. False when their steps aren't moving
+      on (a bot playing them, a hold), and the server's clock is used. */
+  private placeByStep(h: Hero, now: number, dt: number): boolean {
+    const fs = this.frames,
+      first = fs[0].acks[h.id],
+      last = fs[fs.length - 1].acks[h.id];
+    if (first === undefined || last === undefined || last - first < fs.length - 1) {
+      this.clocks.delete(h.id);
+      return false;
+    }
+    // Where along their steps they were at the moment everything else is drawn (`now - behind` on
+    // the server's clock), had the server played one each 1/60 s.
+    const aim = last + (now - (this.behind ?? 0) - fs[fs.length - 1].at) / STEP_MS;
+    let c = this.clocks.get(h.id);
+    if (c === undefined || Math.abs(aim - c) > FOLLOW.stepsSnap) c = aim;
+    else c += (dt / STEP_MS) * Math.max(1 - FOLLOW.stepsEase, Math.min(1 + FOLLOW.stepsEase, 1 + (aim - c) * 0.01));
+    this.clocks.set(h.id, c);
+    let i = fs.length - 2;
+    while (i > 0 && fs[i].acks[h.id] > c) i--;
+    const a = fs[i],
+      b = fs[i + 1],
+      n = b.acks[h.id] - a.acks[h.id],
+      p = a.where.get(`h${h.id}`),
+      q = b.where.get(`h${h.id}`);
+    if (!p || !q || n <= 0) return false;
+    const u = Math.max(0, Math.min(1, (c - a.acks[h.id]) / n));
+    h.x = p[0] + (q[0] - p[0]) * u;
+    h.y = p[1] + (q[1] - p[1]) * u;
+    h.vx = (q[0] - p[0]) / ((n * STEP_MS) / 1000);
+    h.vy = (q[1] - p[1]) / ((n * STEP_MS) / 1000);
+    return true;
   }
 
   /** How far behind the others should be drawn on this line (ms): late enough that most runs
@@ -217,7 +262,6 @@ export class Follower {
       where = new Map<string, [number, number]>();
     for (const h of r.party) where.set(`h${h.id}`, [h.x, h.y]);
     for (const f of r.foes) where.set(`f${f.id}`, [f.x, f.y]);
-    for (const s of r.shots) where.set(`s${s.id}`, [s.x, s.y]);
     if (this.roomAt !== roomOf(r)) this.frames = [];
     this.roomAt = roomOf(r);
     const at = r.t * 1000;
@@ -236,11 +280,14 @@ export class Follower {
     this.held = false;
     this.late.push(now - at);
     if (this.late.length > FOLLOW.window) this.late.shift();
-    this.frames.push({ at, where });
+    this.frames.push({ at, where, acks: this.acks });
     if (this.frames.length > 16) this.frames.shift();
   }
   private roomAt = '';
   private held = false;
+  private acks: number[] = [];
+  /** Each friend's own clock, in their steps: where along their steps they're drawn. */
+  private clocks = new Map<number, number>();
 }
 
 /** Which room the run is in (a new one each time you walk through a door). */
