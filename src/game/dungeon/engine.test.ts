@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { FIRST_FOG_ZONE, powerOf, ROAD_ZONES, ZONES } from '@/lib/fog';
 import { initialState } from '@/lib/game';
-import { CALM, HUMAN, PARTY, SP_SKILL, SP_WEAPON, TUTORIAL } from '@/balance';
+import { CALM, HUMAN, WEAR_AFTER, PARTY, SP_SKILL, SP_WEAPON, TUTORIAL } from '@/balance';
 import { seeded } from '@/lib/random';
 import { botInput, playRun } from './bot';
-import { rollItem } from './items';
+import { levelAfter, rollItem, type Item } from './items';
 import { ACROSS, addFoe, BURST, MEET, MOLE, MONSTERS, SQUIRE, UNDERTOW, ZONE_DUNGEONS, asleep, BAG, attackKind, BELLOWS, canOpen, CREW, createRun, DIM, DODGE, hardened, isBossRoom, isWardenRoom, LAYOUT, LANTERN, LIGHT, lit, LULL, makeFloor, MIDS, ROLL, mine, pickRelic, SAND, skipToBoss, skipToWarden, SP_NOS, SPLIT, stepRun, takeEvents, wardenFloor, worldOf, type GameEvent, type Run, type Side, type SpNo } from './engine';
 import type { ClassId } from '@/lib/gear';
 
@@ -1115,5 +1115,30 @@ describe("the story worlds' own monsters", () => {
     run.hero.y = f.y + UNDERTOW.close - 10;
     stepRun(run, still);
     expect(run.hero.tow.y).toBe(0);
+  });
+});
+
+describe('what you find asks for', () => {
+  const power = powerOf(initialState(), new Date());
+  // Zone 2 is built for a dozen workouts but opens when zone 1 falls, which can be after three.
+  const finds = (workouts?: number) => {
+    const run = createRun({ zone: ZONES[1], power: { ...power, health: 5000 }, classId: 'archer', seed: 7, autoPick: true, heroLevel: 1, workouts });
+    const items: Item[] = [];
+    while (!run.over && run.t < 60 * 8) {
+      stepRun(run, botInput(run));
+      for (const e of run.events) if (e.type === 'drop' || e.type === 'loot') items.push(e.item);
+      run.events.length = 0;
+    }
+    return items;
+  };
+
+  it('counts from your own workouts when you came in early, never more than the zone is built for', () => {
+    const early = finds(3),
+      steady = finds(),
+      late = finds(40);
+    expect(early.length).toBeGreaterThan(3);
+    for (const it of early) expect(it.needLevel).toBeLessThanOrEqual(levelAfter(3 + WEAR_AFTER.legendary[2]));
+    expect(Math.min(...steady.map((i) => i.needLevel ?? 0))).toBeGreaterThanOrEqual(levelAfter(ZONES[1].workouts));
+    expect(late.map((i) => i.needLevel)).toEqual(steady.map((i) => i.needLevel));
   });
 });
