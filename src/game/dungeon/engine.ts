@@ -468,6 +468,9 @@ export interface HeroSetup {
   build?: Build;
   /** Hero level from training XP, which items ask for too (unset: no level asked, as in old replays). */
   heroLevel?: number;
+  /** Workouts you have done. What you find asks for a few more than this, never more than the
+      zone is built for (unset: the zone's own count, as in old replays). */
+  workouts?: number;
   /** The chapter's hearts are gone: a weaker boss and free skills at the start (`edgeFor` in src/lib/fog.ts). */
   edge?: Edge;
   /** Wearing one of the class's SPs (which one; `true` is the first): its own move, its final and
@@ -542,6 +545,8 @@ export interface Hero {
   build: Build;
   /** Hero level from training XP (not the run's `level`), which items ask for too. */
   heroLevel: number;
+  /** Workouts done (Infinity when unset), which sets what the items you find ask for. */
+  workouts: number;
   /** Power from training with what you wear on top (see applyGear). */
   power: Power;
   /** Where you stand (px), how you're moving, and which way you face. */
@@ -802,6 +807,7 @@ function newHero(hs: HeroSetup, id: number): Hero {
     classId: hs.classId,
     build: hs.build ?? {},
     heroLevel: hs.heroLevel ?? Infinity,
+    workouts: hs.workouts ?? Infinity,
     power: base,
     x: ROOM.w / 2, y: ROOM.h - 70, vx: 0, vy: 0, facing: -Math.PI / 2,
     lock: null,
@@ -3678,7 +3684,7 @@ function kill(run: Run, f: Foe, by: Hero) {
     // it on the floor instead, to swap for something (the bag never holds more than BAG).
     run.party.forEach((h, i) => {
       if (h.gear.bag.length >= BAG) return dropItem(run, f.x + i * 26, f.y + 30, DROP_LUCK.boss, h);
-      const it = newItem(run, DROP_LUCK.boss, h.classId);
+      const it = newItem(run, DROP_LUCK.boss, h);
       h.gear.bag.push(it);
       emitTo(run, h, { type: 'loot', item: it });
     });
@@ -4217,16 +4223,18 @@ export function pick(run: Run, id: UpgradeId, h: Hero = run.hero) {
 
 // ---------- things to wear ----------
 
-/** A new item for where you are: its zone and floor, a class, a rarity leaning rarer with `luck`. */
-function newItem(run: Run, luck: number, cls: ClassId | undefined): Item {
+/** A new item for a hero, from where you are: its zone and floor, the hero's class, a rarity
+    leaning rarer with `luck`. What it asks is counted from the hero's own workouts when they came
+    in early (a zone opens when the one before falls), so it is never far out of reach. */
+function newItem(run: Run, luck: number, h: Hero): Item {
   const z = run.setup.zone;
-  return rollItem(run.rnd, { zone: z.id, workouts: z.workouts, floor: floorOf10(run), cls }, rollRarity(run.rnd, floorOf10(run), luck));
+  return rollItem(run.rnd, { zone: z.id, workouts: Number.isFinite(h.workouts) ? Math.min(z.workouts, h.workouts) : z.workouts, floor: floorOf10(run), cls: h.classId }, rollRarity(run.rnd, floorOf10(run), luck));
 }
 
 function dropItem(run: Run, x: number, y: number, luck: number, to: Hero) {
   const { w, h } = run.area,
     m = ROOM.wall + 16,
-    item = newItem(run, luck, to.classId);
+    item = newItem(run, luck, to);
   const l: Run['loot'][number] = { id: ++run.ids, x: clamp(x, m, w - m), y: clamp(y, m, h - m), item };
   if (run.party.length > 1) l.for = to.id;
   run.loot.push(l);

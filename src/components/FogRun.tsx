@@ -174,7 +174,7 @@ export function FogRun({ state, zone, dev, onEnd, onLeave, startAt, party, tutor
     el.addEventListener('pointerdown', moved, { once: true });
     let jump = 0;
     const how = { party: !!party, bot: !!auto, start_at: startAt && attempt === 0 ? startAt : null };
-    const hero = { power: powerOf(state, new Date()), classId, worn: wornFor(state), build: buildOf(state), heroLevel: heroLevel(state), edge: tutorial ? undefined : edgeFor(state, zone), sp: tutorial ? undefined : spWorn(state) || undefined };
+    const hero = { power: powerOf(state, new Date()), classId, worn: wornFor(state), build: buildOf(state), heroLevel: heroLevel(state), workouts: state.sessions.length, edge: tutorial ? undefined : edgeFor(state, zone), sp: tutorial ? undefined : spWorn(state) || undefined };
     // A party's first attempt: the live run on the game server, once everyone walks in. When it
     // isn't there (not set up, no signal), the run is a practice one with bots, as before.
     const leaving = new AbortController();
