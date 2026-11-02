@@ -203,7 +203,7 @@ function notYetToday(s: GameState): GameState {
 async function doneToday(s: GameState, days = 3): Promise<GameState> {
   const w = await withWeek(notYetToday(s), days);
   const done = addFakeWorkouts(w, 1, new Date(), true);
-  return { ...done, coach: markDone(done.coach!, new Date().toISOString()) };
+  return { ...done, coach: markDone(done.coach!, done.sessions.at(-1)!.date) };
 }
 
 /** `s` with this week planned and no workout today (every day moved on by one): Today is a rest day. */
@@ -245,6 +245,7 @@ const GO: Record<string, () => void> = {
   statues: () => open(veteran(14, 1), 'run=0&at=statues'),
   altar: () => open(veteran(14, 1), 'run=0&at=altar'),
   video: () => open(veteran(10, 1), 'tab=train&exercise=Goblet_Squat'),
+  'remove-workout': async () => open(await doneToday(veteran(30, 3)), `tab=train&day=${dayKey(new Date())}`),
   'rest-day': async () => open(await restDayToday(veteran(30, 3)), 'tab=today'),
   // The flame's dots follow the week's plan: 2 or 4 workouts planned, one done today.
   'dots-2': () => void doneToday(veteran(10, 1), 2).then((s) => open(s, 'tab=today')),
@@ -348,6 +349,7 @@ export default function NightLab() {
         <Row icon={<Dumbbell size={16} />} label="Today, with a week planned" note="Your flame, today's quest and Start" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=today')} />
         <Row icon={<Dumbbell size={16} />} label="Today, a rest day" note="No workout today: you asleep under the moon instead of the flame, sit by the fire, and the next workout to see" onClick={GO['rest-day']} />
         <Row icon={<Dumbbell size={16} />} label="Today, after the workout" note="Today's workout done: you did it, your counts, and what's next (Train shows it)" onClick={async () => open(await doneToday(veteran(30, 3)), 'tab=today')} />
+        <Row icon={<Dumbbell size={16} />} label="Remove a workout logged by mistake" note="Train tab, today's done workout: Remove workout under it, then Are you sure?" onClick={GO['remove-workout']} />
         <Row icon={<Dumbbell size={16} />} label="Next week, planned early" note="Train tab after the week's last workout: next week is there at once, with the Week done step" onClick={async () => open(await doneToday(veteran(30, 3)), 'tab=train')} />
       </Panel>
 
