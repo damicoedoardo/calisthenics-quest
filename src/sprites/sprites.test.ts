@@ -241,6 +241,7 @@ describe('sprite registry', () => {
     for (const step of ['iosShare', 'iosAdd', 'iosChromeShare', 'androidMenu', 'androidAdd', 'home', 'safari'] as const)
       prints[`install ${step}`] = hash(framesFor('installStep', 'idle', { step }));
     prints['kindled long hair'] = hash(framesFor('kindled', 'idle', { hair: 'long' }));
+    prints['restDay girl'] = hash(framesFor('restDay', 'idle', { look: STARTER_LOOKS.f }));
     expect(prints).toMatchSnapshot();
   });
 
