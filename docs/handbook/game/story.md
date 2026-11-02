@@ -3,7 +3,7 @@ type: reference
 title: Story (scenes, chapters, daily lines)
 description: The six-month story as data in src/story — scene format, when scenes play, the daily flame lines and Book of Days, rules for the words, and where to edit what.
 tags: [game, story, content]
-timestamp: 2026-11-01
+timestamp: 2026-11-02
 ---
 # Story
 
@@ -31,6 +31,10 @@ opening.ts            the opening, before the first workout, kept short (about 4
                       here too, but the letter is asked after the first workout: the scene
                       `first-letter` in chapter 1 (`noLetter: true`, so a written letter is never
                       asked again)
+manga.ts              the story as a manga, a try-out (Edoardo 2026-11-02): pages of rows of
+                      panels (tone, figures, captions, bubbles, sounds), drawn by
+                      src/components/MangaPage.tsx, read in /lab/manga. Words are the
+                      opening's own lines, never rewritten. Page 1 of the prologue so far
 daily/flame-lines.ts  what the flame says on Today, by kind of day, and its face
 daily/quotes.ts       words for the road, by chapter
 daily/rest.ts         rest-day truths, and what the flame says after a minute by the fire
