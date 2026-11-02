@@ -160,6 +160,8 @@ export const FORMA: Chapter = {
     {
       id: 'ch6-short',
       when: { workouts: 1, shortSession: true, inChapter: 6 },
+      // Flavor for a kind of day: dropped if the boss falls before that day comes.
+      optional: true,
       lines: [
         { who: 'summit', text: 'So little. You will never reach the top like that.' },
         { who: 'wanderer', text: "Steep days call for short steps. That's how anyone climbs anything." },
@@ -169,6 +171,8 @@ export const FORMA: Chapter = {
     {
       id: 'ch6-rest',
       when: { restDay: true, inChapter: 6 },
+      // Flavor for a kind of day: dropped if the boss falls before that day comes.
+      optional: true,
       music: 'camp',
       lines: [
         { who: 'narrator', show: 'flame', text: 'A rest day on the mountain. The air is thin and clean. {flame} makes little smoke rings and is very pleased about it.' },

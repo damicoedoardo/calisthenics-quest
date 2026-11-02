@@ -161,12 +161,18 @@ function askFor(ask: Ask | undefined, keep: (ls: Line[]) => Line[]): Ask | undef
   return ask;
 }
 
+/** A chapter's ending: the scene that plays when its boss falls (the finale, for the last one). */
+export function isEnding(scene: Scene, chapter: number): boolean {
+  return chapter > 0 && (scene.when.beaten === chapter || !!scene.when.finished);
+}
+
 /**
- * Scenes whose moment has come and that the player has not seen yet, in story order. Once a
- * chapter is behind you (its boss fell), its leftover scenes are skipped, except the one that ends
- * it and the ones that ask something (a heart moment, a villager's story), so later scenes still
- * have your answers. Scenes tied to a workout long past are skipped too, so nobody is buried in
- * old scenes. A chapter's ending plays first, then its leftover questions, then the next chapter.
+ * Scenes whose moment has come and that the player has not seen yet, in story order. When a
+ * chapter's boss falls before its scenes' moments came, they catch up: every scene of that chapter
+ * not marked `optional` plays, in order, before its ending, so the ending never comes before what
+ * leads to it. Optional ones (a rest-day line, a short-day line) are dropped. Once the ending has
+ * played, only its questions and `keep` scenes can still come (for saves from before this rule).
+ * Scenes tied to a workout long past are skipped too, so nobody is buried in old scenes.
  */
 export function pendingScenes(state: GameState, now: Date): Scene[] {
   const st = storyState(state);
@@ -174,15 +180,21 @@ export function pendingScenes(state: GameState, now: Date): Scene[] {
   const seen = new Set([...state.seenScenes, ...(state.laterScenes ?? [])]);
   const current = st.index + 1;
   const behind = (chapter: number) => chapter > 0 && chapter < current;
+  const ended = (chapter: number) => ALL_SCENES.some((p) => p.chapter === chapter && isEnding(p.scene, chapter) && seen.has(p.scene.id));
   const due = ALL_SCENES.filter(({ scene, chapter }) => {
     if (seen.has(savedId(scene, state))) return false;
     const w = scene.when;
-    if (behind(chapter) && w.beaten !== chapter && !w.finished && !w.grown && !scene.ask && !scene.keep) return false;
+    // The flame fuses with you in the finale: it never grows up on screen after that.
+    if (st.finished && chapter > 0 && w.grown) return false;
+    if (behind(chapter) && !isEnding(scene, chapter) && !w.grown) {
+      if (scene.optional) return false;
+      if (ended(chapter) && !scene.ask && !scene.keep) return false;
+    }
     if (!behind(chapter) && longGone(w, state, chapter)) return false;
     return holds(w, state, st, now, chapter);
   });
-  // In story order: a chapter's ending, then what it still had to ask, then the new chapter.
-  const rank = ({ scene, chapter }: Placed) => (scene.when.away ? 0 : scene.when.beaten ? 1 : behind(chapter) && !scene.when.grown ? 2 : 3);
+  // In story order: what an ended chapter still had to say, then its ending, then the new chapter.
+  const rank = ({ scene, chapter }: Placed) => (scene.when.away ? 0 : behind(chapter) && !scene.when.grown ? chapter * 10 + (isEnding(scene, chapter) ? 2 : 1) : 100);
   return [...due]
     .sort((a, b) => rank(a) - rank(b))
     .map(({ scene }) => sceneFor(scene.when.away ? { ...scene, id: savedId(scene, state) } : scene, state));

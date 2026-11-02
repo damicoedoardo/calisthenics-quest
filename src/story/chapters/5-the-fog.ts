@@ -236,6 +236,8 @@ export const THE_FOG: Chapter = {
     {
       id: 'ch5-short',
       when: { workouts: 1, shortSession: true, inChapter: 5 },
+      // Flavor for a kind of day: dropped if the boss falls before that day comes.
+      optional: true,
       lines: [
         { who: 'hollow', text: "That's all you've got today?" },
         { who: 'you', text: 'Today, yes. And I brought it.' },
@@ -245,6 +247,8 @@ export const THE_FOG: Chapter = {
     {
       id: 'ch5-rest',
       when: { restDay: true, inChapter: 5 },
+      // Flavor for a kind of day: dropped if the boss falls before that day comes.
+      optional: true,
       music: 'camp',
       lines: [
         { who: 'narrator', show: 'flame', text: 'A rest day, in the middle of the fog. {flame} folds its wings and settles into your lap like a cat.' },

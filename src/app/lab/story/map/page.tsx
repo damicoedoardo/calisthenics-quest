@@ -11,12 +11,12 @@ import { storyGraph, WALKS, type Node, type Problem } from '@/story/graph';
    graph is written to src/story/graph.md. Not linked from the app; open /lab/story/map. */
 
 const KINDS: Record<Problem['kind'], { name: string; tone: string }> = {
-  'lost-early': { name: 'Skipped when the boss falls early', tone: 'text-red-300' },
-  'chapter-only': { name: 'Only if a kind of day comes in time', tone: 'text-amber-300' },
-  'asked-late': { name: 'Question after the chapter ended', tone: 'text-sky-300' },
-  'out-of-chapter': { name: 'Flame growth in another chapter', tone: 'text-violet-300' },
+  'lost-early': { name: 'Lost when the boss falls early', tone: 'text-red-300' },
+  'after-ending': { name: "After its chapter's ending", tone: 'text-red-300' },
   'missing-answer': { name: 'Before the question it reads', tone: 'text-red-300' },
   never: { name: 'No walk reaches it', tone: 'text-red-300' },
+  optional: { name: 'Optional, dropped by the fast player', tone: 'text-amber-300' },
+  'out-of-chapter': { name: 'Flame growth in another chapter', tone: 'text-violet-300' },
 };
 
 function Chip({ children, tone = 'bg-ink-800 text-slate-300' }: { children: React.ReactNode; tone?: string }) {
@@ -25,14 +25,13 @@ function Chip({ children, tone = 'bg-ink-800 text-slate-300' }: { children: Reac
 
 export default function StoryMap() {
   const g = useMemo(() => storyGraph(), []);
-  const [open, setOpen] = useState<Problem['kind'] | null>('lost-early');
-  const kindOf = (id: string) => g.problems.find((p) => p.scene === id && (p.kind === 'lost-early' || p.kind === 'chapter-only'))?.kind;
+  const [open, setOpen] = useState<Problem['kind'] | null>(null);
+  const lostOf = (id: string) => g.problems.some((p) => p.scene === id && (p.kind === 'lost-early' || p.kind === 'after-ending'));
   const order = g.walks[0].played.map((p) => p.id);
   const pos = (id: string) => (order.includes(id) ? order.indexOf(id) : Infinity);
 
   const row = (n: Node) => {
-    const k = kindOf(n.id);
-    const edge = k === 'lost-early' ? 'border-red-400' : k === 'chapter-only' ? 'border-amber-400' : n.ends ? 'border-emerald-400' : n.asks ? 'border-sky-400' : 'border-ink-600';
+    const edge = lostOf(n.id) ? 'border-red-400' : n.optional ? 'border-amber-400' : n.ends ? 'border-emerald-400' : n.asks ? 'border-sky-400' : 'border-ink-600';
     return (
       <Link key={n.id} href={`/lab/story?play=${n.id}`} className={`block rounded-xl border-l-4 bg-ink-950 px-3 py-2 active:scale-[.99] ${edge}`}>
         <div className="flex items-center gap-2">
@@ -48,10 +47,11 @@ export default function StoryMap() {
           <Play size={10} className="shrink-0 text-gold-400" />
         </div>
         <p className="mt-0.5 text-[11px] text-slate-500">{n.when}</p>
-        {(n.asks || n.ends || n.uses.length > 0) && (
+        {(n.asks || n.ends || n.optional || n.uses.length > 0) && (
           <div className="mt-1 flex flex-wrap gap-1">
             {n.ends && <Chip tone="bg-emerald-900/60 text-emerald-200">ends the chapter</Chip>}
             {n.asks && <Chip tone="bg-sky-900/60 text-sky-200">asks {n.asks}</Chip>}
+            {n.optional && <Chip tone="bg-amber-900/60 text-amber-200">optional</Chip>}
             {n.uses.map((u) => (
               <Chip key={`${u.key}${u.is ?? ''}`}>
                 reads {u.key}

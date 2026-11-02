@@ -1,7 +1,7 @@
 import { initialState, type GameState, type Session } from '@/lib/game';
 import { NO_FOG } from '@/lib/fog';
 import { giveSp, spAfterRun, SP_FLOOR } from '@/lib/sp';
-import { ALL_SCENES, scenesToPlay, sawScene, storyState, workoutsFor, VILLAGERS } from './engine';
+import { ALL_SCENES, isEnding, scenesToPlay, sawScene, storyState, workoutsFor, VILLAGERS } from './engine';
 import { CHAPTERS } from './chapters';
 import { ROAD_SCENES } from './road';
 import type { AnswerId, Line, Scene, When, WordKey } from './types';
@@ -9,8 +9,8 @@ import type { AnswerId, Line, Scene, When, WordKey } from './types';
 /* The story as a graph: every scene is a node, with what makes it play, what it asks, and which
    answers it leans on. Walks play the whole story through the real engine (scenesToPlay) for a few
    kinds of player, so the graph shows which scenes each one really gets, and `problems` lists the
-   paths that lose something (a scene skipped when a boss falls early, a follow-up whose question
-   never came). graph.test.ts writes it all to graph.md (`pnpm story:graph`), and `pnpm test` fails
+   paths that lose something (a scene lost or played after its chapter's ending when a boss falls
+   early, a follow-up whose question never came). graph.test.ts writes it all to graph.md (`pnpm story:graph`), and `pnpm test` fails
    while graph.md is out of date. Pure: reads the story data, never a save. */
 
 /** A scene's trigger in words, e.g. "8 workouts · rest day". */
@@ -66,7 +66,8 @@ export interface Node {
   /** It ends its chapter (its boss fell). */
   ends: boolean;
   /** Plays even when its chapter ends first (`keep`, or it asks something). */
-  kept: boolean;
+  /** May be dropped when its boss falls first (`optional`); every other chapter scene catches up. */
+  optional: boolean;
   uses: Use[];
 }
 
@@ -136,7 +137,7 @@ export function storyNodes(): Node[] {
     when: describeWhen(scene.when),
     ...(scene.ask ? { asks: scene.ask.kind === 'choice' ? scene.ask.id : scene.ask.kind } : {}),
     ends: !!scene.when.beaten && scene.when.beaten === chapter,
-    kept: !!scene.ask || !!scene.keep || !!scene.when.beaten || !!scene.when.grown || !!scene.when.finished,
+    optional: !!scene.optional,
     uses: usesOf(scene, by),
   }));
 }
@@ -236,7 +237,7 @@ export function walkStory(walk: Walk, start: Date): WalkResult {
 
 export interface Problem {
   scene: string;
-  kind: 'lost-early' | 'chapter-only' | 'asked-late' | 'out-of-chapter' | 'missing-answer' | 'never';
+  kind: 'lost-early' | 'after-ending' | 'missing-answer' | 'never' | 'optional' | 'out-of-chapter';
   text: string;
 }
 
@@ -255,25 +256,26 @@ export function storyProblems(nodes: Node[], walks: WalkResult[]): Problem[] {
     if (node.group === 'road') continue;
     const s = scene.get(node.id)!.scene;
     const ch = node.group as number;
-    const waits = (Object.keys(s.when) as (keyof When)[]).filter((k) => !['workouts', 'chapter', 'inChapter', 'upTo', 'answer', 'needs', 'helped', 'noClass'].includes(k));
-    // A chapter's scene that only waits for workouts: skipped once the boss falls before it.
-    if (ch > 0 && !node.kept && s.when.workouts !== undefined && waits.length === 0) {
-      const lost = fast && sees(planned, node.id) && !sees(fast, node.id);
-      if (lost) out.push({ scene: node.id, kind: 'lost-early', text: `Skipped if ${boss(ch)} falls before workout ${s.when.workouts} of chapter ${ch}.` });
+    const story = ch > 0 && !node.ends && !s.when.grown;
+    // A chapter's scene the planned player gets and the fast one loses: its boss fell first.
+    if (story && fast && sees(planned, node.id) && !sees(fast, node.id)) {
+      if (node.optional) out.push({ scene: node.id, kind: 'optional', text: `Optional (${describeWhen(s.when)}): the fast walk never got that day before ${boss(ch)} fell.` });
+      else out.push({ scene: node.id, kind: 'lost-early', text: `Lost when ${boss(ch)} falls 4 workouts into chapter ${ch}.` });
     }
-    // A chapter's scene that waits for a kind of day: never plays if that day doesn't come in time.
-    if (ch > 0 && !node.kept && waits.length > 0) out.push({ scene: node.id, kind: 'chapter-only', text: `Waits for: ${describeWhen(s.when)}. Gone if ${boss(ch)} falls first${fast && !sees(fast, node.id) ? ' (the fast walk lost it)' : ''}.` });
-    // A question that plays after its chapter's ending, when the boss fell first.
-    if (ch > 0 && s.ask && !s.when.beaten && fast) {
-      const ask = fast.played.find((p) => p.id === node.id);
-      const ending = fast.played.find((p) => scene.get(p.id)?.scene.when.beaten === ch);
-      if (ask && ending && fast.played.indexOf(ask) > fast.played.indexOf(ending)) out.push({ scene: node.id, kind: 'asked-late', text: `When ${boss(ch)} falls early, its question comes after the chapter's ending (${ending.id}), in chapter ${ask.inChapter}.` });
+    // A chapter's scene that plays after the chapter's ending (the boss fell before its moment).
+    if (story && !node.optional) {
+      for (const w of walks) {
+        const at = w.played.findIndex((p) => p.id === node.id);
+        const end = w.played.findIndex((p) => isEnding(scene.get(p.id)!.scene, ch) && scene.get(p.id)!.chapter === ch);
+        if (at >= 0 && end >= 0 && at > end) out.push({ scene: node.id, kind: 'after-ending', text: `In the ${w.walk.id} walk it plays after the chapter's ending (${w.played[end].id}), in chapter ${w.played[at].inChapter}.` });
+      }
     }
     // The flame grows by all workouts, so a growth scene can land in another chapter, or after the end.
     if (ch > 0 && s.when.grown) {
       for (const w of walks) {
         const p = w.played.find((x) => x.id === node.id);
-        if (p && p.inChapter !== ch) out.push({ scene: node.id, kind: 'out-of-chapter', text: `In the ${w.walk.id} walk it plays ${p.inChapter > CHAPTERS.length ? 'after the finale' : `in chapter ${p.inChapter}`} (workout ${p.at}), not in chapter ${ch} where it is written.` });
+        if (p && p.inChapter > CHAPTERS.length) out.push({ scene: node.id, kind: 'after-ending', text: `In the ${w.walk.id} walk the flame grows up on screen after the finale (workout ${p.at}).` });
+        else if (p && p.inChapter !== ch) out.push({ scene: node.id, kind: 'out-of-chapter', text: `In the ${w.walk.id} walk it plays ${p.inChapter > CHAPTERS.length ? 'after the finale' : `in chapter ${p.inChapter}`} (workout ${p.at}), not in chapter ${ch} where it is written.` });
       }
     }
     // A scene or line that leans on an answer the player was never asked by then.

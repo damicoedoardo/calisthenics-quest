@@ -176,8 +176,12 @@ export interface Scene {
   shots?: Shot[];
   lines: Line[];
   ask?: Ask;
-  /** Plays even when its chapter's boss falls before its moment comes, as a question does
-      (a scene that later ones lean on). Other leftover scenes of an ended chapter are skipped. */
+  /** May be dropped: when its chapter's boss falls before its moment came, it never plays. For
+      flavor (a rest-day line, a short-day line). Every other scene of a chapter catches up before
+      the chapter's ending (pendingScenes), and the story graph test checks none is lost. */
+  optional?: boolean;
+  /** Still plays after its chapter's ending has played (a scene later ones lean on; saves from
+      before catch-up skipped past it). Questions always do. */
   keep?: boolean;
 }
 

@@ -82,6 +82,8 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
 - **art** on a line shows something in place of a speaker: `'sp-sealed'` or `'sp-awake'` (the SP
   card held up), or `'sp-transform'` (the whole screen plays your class's SP waking, then the scene
   goes on; its text is only read out by screen readers). `spn` says which of the four SPs (1 when left out).
+- **optional**: the scene may be dropped when its chapter's boss falls before its moment (flavor
+  for a kind of day); see Catch-up below. **keep**: still plays after its chapter's ending.
 - **ask**: `name` (name the flame), `choice` (saved under its id; `write` adds a free-text box),
   `letter` (the letter to your future self, `LetterForm`, saved in `profile.letter`; its `after`
   lines follow the seal), `class` (opens the class picker), or `sp` (the Wanderer gives an SP: the first, or `n`, see
@@ -96,18 +98,24 @@ story.test.ts         checks every reference (speakers, places, songs, {words})
   "now" in `migrate`). A chapter's `workouts` (its 12 to 14) is only its planned length: what its
   zone is built for (`chapterStart`) and when its boss runs out of hearts (`hearts`/`heartsLeft`,
   the Fog's `EDGE`). Workouts never end a chapter.
-- The win plays the chapter's ending (`beaten: N`) as soon as the player is back from the run,
-  then whatever the chapter still had to ask (its leftover questions, and scenes with `keep: true`,
-  like `first-quest`), then the next chapter's intro. Its other leftover scenes are skipped. Order
-  is in `pendingScenes`. Every due scene plays, one after another (`scenesToPlay`, no cap). A boss
-  falling is a moment of its own (`sceneMoment` counts bosses too), so its ending plays at once even
-  after Later at today's workout.
+- **Catch-up** (Edoardo 2026-11-02: the story must hold at any speed): when the boss falls before
+  some of its chapter's scenes came, they all play as soon as the player is back from the run, in
+  order, then the chapter's ending (`beaten: N`, or the finale), then the next chapter's intro. So
+  an ending never comes before what leads to it, and a question is never asked after it. Only
+  scenes marked **`optional: true`** are dropped: flavor for a kind of day (a rest-day line, a
+  short-day line, a full week) that may not have come in time. Mark a new chapter scene optional
+  only when the story never leans on it; the story graph test fails if any other scene can be lost.
+  Once an ending has played, its chapter's leftovers stop, except questions and `keep: true` scenes
+  (saves from before catch-up skipped past them). Order is in `pendingScenes` (`isEnding`). Every
+  due scene plays, one after another (`scenesToPlay`, no cap). A boss falling is a moment of its
+  own (`sceneMoment` counts bosses too), so it all plays at once even after Later at today's
+  workout.
 - In a chapter's file, `workouts: N` counts from when that chapter began (`workoutsFor`,
   `chapterBegan`), so its scenes keep their spacing however early or late its boss fell, and a
   chapter's scenes never play before it begins. In `anytime.ts` it counts every workout. Chapter
   1's `mira-forge` plays at `FORGE_OPENS.workouts` (6), when Mira finds you at your fire and her
   forge opens (features come in with the story, see [forge.md](forge.md#when-it-opens)); it has
-  `keep: true`, so a player who beats Tomorrow sooner meets her right after the chapter's ending,
+  `keep: true`, so a player who beats Tomorrow sooner meets her in the catch-up before the ending,
   and `upTo: 2` (only while the current chapter is 2 or earlier), so older saves past that never
   get it. Her lines in chapters 2 and 3 greet you as someone she knows. The
   flame's growth plays with `grown: 'torch'` (its `FLAME_STAGES`, all workouts), whatever chapter
@@ -133,11 +141,11 @@ its Mermaid diagrams; **/lab/story/map** shows the same graph in the app.
   Wed, Fri, first choice on every question. `planned` beats each boss at its chapter's planned
   length, `fast` 4 workouts into the chapter, `alone` says no to every villager. The graph marks
   which scenes each one really sees.
-- **Problem paths** (`storyProblems`): a chapter scene skipped when its boss falls early, one that
-  waits for a kind of day (rest day, short workout) that may not come before the boss, a question
-  that comes after the chapter's ending, flame growth landing in another chapter (or after the
-  finale), a scene before the question it reads, a scene no walk reaches. The last two fail the
-  test; the rest are listed for a person to decide.
+- **Problem paths** (`storyProblems`). These fail the test: a scene lost when the boss falls early
+  (`lost-early`), one that plays after its chapter's ending (`after-ending`, also flame growth after
+  the finale), one before the question it reads, one no walk reaches. These are listed to look at:
+  optional scenes the fast walk dropped, flame growth landing in another chapter.
+- The flame's growth scenes never play after the finale (the flame has fused with you).
 - New `When` field? Add it to `describeWhen`, and to `UNWALKED` in `graph.ts` if no walk makes it
   happen.
 

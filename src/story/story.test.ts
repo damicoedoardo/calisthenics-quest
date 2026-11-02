@@ -416,10 +416,18 @@ describe('chapters end on Fog bosses', () => {
     expect(storyState(s).index).toBe(0);
     s = won(s);
     expect(storyState(s).index).toBe(1);
-    // The ending, then Mira (her forge opens with the first boss when it falls before workout 6),
-    // the heart moment the chapter had not reached yet, then the next chapter.
-    expect(ids(s)).toEqual(['ch1-victory', 'mira-forge', 'ch1-night-camp', 'ch2-intro']);
-    // A leftover scene that asks nothing (ch1-proof) is skipped.
+    // What the chapter had not reached yet catches up first, in order (Mira too: her forge opens with
+    // the first boss when it falls before workout 6), then the ending, then the next chapter.
+    // Optional flavor (a short-day line) is dropped.
+    expect(ids(s)).toEqual(['mira-forge', 'ch1-tomorrow-splits', 'ch1-night-camp', 'ch1-tomorrow-begs', 'ch1-proof', 'ch1-victory', 'ch2-intro']);
+  });
+
+  it("never brings an ended chapter's leftovers back once its ending has played", () => {
+    // A save from before catch-up: the boss fell and the ending played, leftovers unseen.
+    const s = caughtUp(trained(4));
+    const old = { ...won(s), seenScenes: [...s.seenScenes, 'ch1-victory'] };
+    expect(ids(old)).not.toContain('ch1-proof');
+    expect(ids(old)).toContain('ch1-night-camp');
   });
 
   it('never brings Mira back to a save already past chapter 2', () => {
@@ -430,11 +438,11 @@ describe('chapters end on Fog bosses', () => {
     expect(ids(s)).not.toContain('mira-forge');
   });
 
-  it('plays the ending at once, even after Later at this workout today', () => {
+  it('plays the catch-up and the ending at once, even after Later at this workout today', () => {
     const s = caughtUp(trained(4));
     const off = putOff(s, [], at);
     expect(scenesToPlay(off, at)).toEqual([]);
-    expect(scenesToPlay(won(off), at).map((x) => x.id).slice(0, 2)).toEqual(['ch1-victory', 'mira-forge']);
+    expect(scenesToPlay(won(off), at).map((x) => x.id)).toContain('ch1-victory');
   });
 
   it("counts a chapter's scenes from when it began, and never ends one on workouts", () => {

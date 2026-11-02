@@ -228,6 +228,11 @@ function open(state: GameState, query: string) {
 }
 
 /** Tomorrow just beaten in the Fog, 11 workouts in: its ending plays, then chapter 2 opens. */
+/** Tomorrow beaten 4 workouts in: the scenes chapter 1 had not reached catch up, then its ending. */
+function bossEarly(): GameState {
+  return clearNextZone(addFakeWorkouts(storyWalk(3), 1, new Date(), false));
+}
+
 function bossEndsChapter(): GameState {
   return clearNextZone(addFakeWorkouts(storyWalk(10), 1, new Date(), false));
 }
@@ -246,6 +251,7 @@ function miraAt(n: number): GameState {
 /** Jumps a preview link can open with no taps: /lab/night?go=<name>. */
 const GO: Record<string, () => void> = {
   'boss-ends-chapter': () => open(bossEndsChapter(), 'tab=today'),
+  'boss-early': () => open(bossEarly(), 'tab=today'),
   // Mira finds you at workout 6 (her scene plays on open), then her forge is new on Hero > Gear.
   'mira-meets': () => {
     const s = miraAt(6);
@@ -362,6 +368,7 @@ export default function NightLab() {
       <Panel title="STORY SO FAR" note="Play tab, at the top: every scene you reached, to watch again. Later (beside Skip) puts a scene off; skipped and put-off scenes wait there with a gold mark, and a question you skipped (like the flame's name) can be answered there.">
         <Row icon={<Film size={16} />} label="A scene after a workout: try Later or Skip" note="Opens on Today with chapter 1's ending due (Tomorrow just beaten), then chapter 2's first scene" onClick={GO['boss-ends-chapter']} />
         <Row icon={<BookOpen size={16} />} label="Story so far, two scenes waiting" note="The flame's name skipped and the last scene put off" onClick={() => open(storyWaiting(), 'tab=play')} />
+        <Row icon={<Film size={16} />} label="Tomorrow beaten early: the story catches up" note="4 workouts in: chapter 1's scenes not reached yet play in order, then its ending, then chapter 2" onClick={GO['boss-early']} />
         <Row icon={<BookOpen size={16} />} label="Story map" note="Every scene, when it plays, which players lose it" href="/lab/story/map" />
       </Panel>
 

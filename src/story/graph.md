@@ -2,7 +2,7 @@
 
 Written by `pnpm story:graph` from `src/story/` and the real story engine. Do not edit by hand; `pnpm test` fails while it is out of date. How it works: `docs/handbook/game/story.md`.
 
-Every scene is a box. A box with pointed sides asks a question; a rounded one ends its chapter. Solid arrows are the order a planned player meets the scenes; dashed arrows carry an answer to the scenes that read it. Red: skipped when the boss falls early. Amber: plays only if a kind of day comes in time.
+Every scene is a box. A box with pointed sides asks a question; a rounded one ends its chapter. Solid arrows are the order a planned player meets the scenes; dashed arrows carry an answer to the scenes that read it. Every chapter scene catches up before the chapter's ending when its boss falls early, except the optional ones (amber: flavor for a kind of day). Red: a scene lost anyway (the test fails).
 
 ## The walks
 
@@ -11,7 +11,7 @@ Each walk plays the story through `scenesToPlay`, day by day: trains Monday, Wed
 | Walk | Who | Bosses fall at workout | Scenes played |
 | --- | --- | --- | --- |
 | planned | Beats each boss at the chapter's planned length (12 to 14 workouts), joins every villager | 12, 24, 37, 50, 64, 78 | 91 |
-| fast | Beats each boss 4 workouts into its chapter (a strong player), joins every villager | 4, 8, 12, 16, 20, 24 | 58 |
+| fast | Beats each boss 4 workouts into its chapter (a strong player), joins every villager | 4, 8, 12, 16, 20, 24 | 85 |
 | alone | Planned pace, but walks on from every villager | 12, 24, 37, 50, 64, 78 | 83 |
 
 ## The spine
@@ -38,72 +38,20 @@ flowchart LR
 
 ## Problem paths
 
-Found by the walks. Not all are bugs: some are choices to make. Each is a scene that a player can lose, or get out of order.
+Found by the walks. A scene lost, played after its ending, played before its question, or never reached fails `pnpm test`, so none are left. What is listed here is allowed, to look at.
 
-### Skipped when the boss falls early (29)
+### Optional scenes the fast walk dropped (4)
 
-- `ch1-tomorrow-splits`: Skipped if Tomorrow falls before workout 5 of chapter 1.
-- `ch1-tomorrow-begs`: Skipped if Tomorrow falls before workout 10 of chapter 1.
-- `ch1-proof`: Skipped if Tomorrow falls before workout 11 of chapter 1.
-- `ch2-wanderer-knows`: Skipped if The Mirror falls before workout 5 of chapter 2.
-- `ch2-mira-lia`: Skipped if The Mirror falls before workout 8 of chapter 2.
-- `ch2-shore`: Skipped if The Mirror falls before workout 8 of chapter 2.
-- `ch2-friend`: Skipped if The Mirror falls before workout 9 of chapter 2.
-- `ch2-lia-dance`: Skipped if The Mirror falls before workout 10 of chapter 2.
-- `ch2-grief`: Skipped if The Mirror falls before workout 11 of chapter 2.
-- `ch3-knight-voice`: Skipped if The Perfect Knight falls before workout 5 of chapter 3.
-- `ch3-song`: Skipped if The Perfect Knight falls before workout 7 of chapter 3.
-- `ch3-mira-story`: Skipped if The Perfect Knight falls before workout 8 of chapter 3.
-- `ch3-first-steel`: Skipped if The Perfect Knight falls before workout 9 of chapter 3.
-- `ch3-sol-stops`: Skipped if The Perfect Knight falls before workout 10 of chapter 3.
-- `ch3-sol-rest`: Skipped if The Perfect Knight falls before workout 11 of chapter 3.
-- `ch3-last-stand`: Skipped if The Perfect Knight falls before workout 12 of chapter 3.
-- `ch4-vela-letter`: Skipped if The Plateau falls before workout 7 of chapter 4.
-- `ch4-boring`: Skipped if The Plateau falls before workout 8 of chapter 4.
-- `ch4-vela-down`: Skipped if The Plateau falls before workout 9 of chapter 4.
-- `ch4-stone`: Skipped if The Plateau falls before workout 10 of chapter 4.
-- `ch4-tracks`: Skipped if The Plateau falls before workout 11 of chapter 4.
-- `ch4-kid-quits`: Skipped if The Plateau falls before workout 12 of chapter 4.
-- `ch5-next-step`: Skipped if The Hollow falls before workout 5 of chapter 5.
-- `ch5-hollow-knows`: Skipped if The Hollow falls before workout 7 of chapter 5.
-- `ch5-nothing-changed`: Skipped if The Hollow falls before workout 11 of chapter 5.
-- `ch6-remembering`: Skipped if The Summit falls before workout 6 of chapter 6.
-- `ch6-book`: Skipped if The Summit falls before workout 8 of chapter 6.
-- `ch6-fall`: Skipped if The Summit falls before workout 9 of chapter 6.
-- `ch6-last-camp`: Skipped if The Summit falls before workout 12 of chapter 6.
+- `ch1-small-day`: Optional (4 workouts · in chapter 1 · after a short workout): the fast walk never got that day before Tomorrow fell.
+- `ch3-knight-cracks`: Optional (in chapter 3 · after a short workout): the fast walk never got that day before The Perfect Knight fell.
+- `ch4-sol-socks`: Optional (5 workouts · in chapter 4 · rest day · sol = yes): the fast walk never got that day before The Plateau fell.
+- `ch5-short`: Optional (1 workout · in chapter 5 · after a short workout): the fast walk never got that day before The Hollow fell.
 
-### Only if a kind of day comes before the boss falls (13)
-
-- `first-rest-day`: Waits for: 1 workout · rest day. Gone if Tomorrow falls first.
-- `perfect-week`: Waits for: a full week. Gone if Tomorrow falls first.
-- `ch1-small-day`: Waits for: 4 workouts · in chapter 1 · after a short workout. Gone if Tomorrow falls first (the fast walk lost it).
-- `ch2-lake-rest`: Waits for: in chapter 2 · rest day. Gone if The Mirror falls first.
-- `ch3-knight-cracks`: Waits for: in chapter 3 · after a short workout. Gone if The Perfect Knight falls first (the fast walk lost it).
-- `ch3-rest`: Waits for: in chapter 3 · rest day. Gone if The Perfect Knight falls first.
-- `ch4-sol-socks`: Waits for: 5 workouts · in chapter 4 · rest day · sol = yes. Gone if The Plateau falls first (the fast walk lost it).
-- `ch4-small-step`: Waits for: 1 workout · in chapter 4 · after a short workout. Gone if The Plateau falls first.
-- `ch4-rest`: Waits for: in chapter 4 · rest day. Gone if The Plateau falls first.
-- `ch5-short`: Waits for: 1 workout · in chapter 5 · after a short workout. Gone if The Hollow falls first (the fast walk lost it).
-- `ch5-rest`: Waits for: in chapter 5 · rest day. Gone if The Hollow falls first.
-- `ch6-short`: Waits for: 1 workout · in chapter 6 · after a short workout. Gone if The Summit falls first.
-- `ch6-rest`: Waits for: in chapter 6 · rest day. Gone if The Summit falls first.
-
-### Question comes after the chapter has ended (6)
-
-- `ch1-night-camp`: When Tomorrow falls early, its question comes after the chapter's ending (ch1-victory), in chapter 2.
-- `ch2-lia`: When The Mirror falls early, its question comes after the chapter's ending (ch2-victory), in chapter 3.
-- `ch2-heart`: When The Mirror falls early, its question comes after the chapter's ending (ch2-victory), in chapter 3.
-- `ch4-heart`: When The Plateau falls early, its question comes after the chapter's ending (ch4-victory), in chapter 5.
-- `ch5-heart`: When The Hollow falls early, its question comes after the chapter's ending (ch5-victory), in chapter 6.
-- `ch5-gathering`: When The Hollow falls early, its question comes after the chapter's ending (ch5-victory), in chapter 6.
-
-### Flame growth lands in another chapter (6)
+### Flame growth lands in another chapter (4)
 
 - `ch1-candle`: In the fast walk it plays in chapter 2 (workout 6), not in chapter 1 where it is written.
 - `ch2-torch`: In the fast walk it plays in chapter 4 (workout 15), not in chapter 2 where it is written.
-- `ch3-bonfire`: In the fast walk it plays after the finale (workout 30), not in chapter 3 where it is written.
 - `ch5-wings`: In the planned walk it plays in chapter 4 (workout 50), not in chapter 5 where it is written.
-- `ch5-wings`: In the fast walk it plays after the finale (workout 50), not in chapter 5 where it is written.
 - `ch5-wings`: In the alone walk it plays in chapter 4 (workout 50), not in chapter 5 where it is written.
 
 ## Answers that carry
@@ -125,7 +73,6 @@ flowchart LR
   classDef done fill:#e3f6e5,stroke:#2e8b3e,color:#123d19
   class first_letter ask
   class ch1_night_camp ask
-  class ch2_wanderer_knows lost
 ```
 
 ### lia (asked in ch2-lia)
@@ -145,8 +92,6 @@ flowchart LR
   classDef ask fill:#e2ecfd,stroke:#2f5fb3,color:#13284d
   classDef done fill:#e3f6e5,stroke:#2e8b3e,color:#123d19
   class ch2_lia ask
-  class ch2_mira_lia lost
-  class ch2_lia_dance lost
   class ch5_gathering ask
   class ch5_gathering_alone ask
 ```
@@ -163,7 +108,6 @@ flowchart LR
   classDef ask fill:#e2ecfd,stroke:#2f5fb3,color:#13284d
   classDef done fill:#e3f6e5,stroke:#2e8b3e,color:#123d19
   class ch2_heart ask
-  class ch2_grief lost
   class ch5_victory done
 ```
 
@@ -184,8 +128,6 @@ flowchart LR
   classDef ask fill:#e2ecfd,stroke:#2f5fb3,color:#13284d
   classDef done fill:#e3f6e5,stroke:#2e8b3e,color:#123d19
   class ch3_sol ask
-  class ch3_sol_stops lost
-  class ch3_sol_rest lost
   class ch4_sol_socks only
   class ch5_gathering ask
   class ch5_gathering_alone ask
@@ -210,13 +152,9 @@ flowchart LR
   classDef ask fill:#e2ecfd,stroke:#2f5fb3,color:#13284d
   classDef done fill:#e3f6e5,stroke:#2e8b3e,color:#123d19
   class ch4_vela ask
-  class ch4_vela_letter lost
-  class ch4_vela_down lost
-  class ch4_tracks lost
   class ch4_victory done
   class ch5_gathering ask
   class ch5_gathering_alone ask
-  class ch6_last_camp lost
 ```
 
 ### heart4 (asked in ch4-heart)
@@ -230,7 +168,6 @@ flowchart LR
   classDef ask fill:#e2ecfd,stroke:#2f5fb3,color:#13284d
   classDef done fill:#e3f6e5,stroke:#2e8b3e,color:#123d19
   class ch4_heart ask
-  class ch5_nothing_changed lost
 ```
 
 ### heart3 (asked in ch3-knight-kneels)
@@ -246,7 +183,6 @@ flowchart LR
   classDef ask fill:#e2ecfd,stroke:#2f5fb3,color:#13284d
   classDef done fill:#e3f6e5,stroke:#2e8b3e,color:#123d19
   class ch3_knight_kneels done
-  class ch5_nothing_changed lost
 ```
 
 ### heart5 (asked in ch5-heart)
@@ -273,7 +209,6 @@ flowchart LR
   classDef ask fill:#e2ecfd,stroke:#2f5fb3,color:#13284d
   classDef done fill:#e3f6e5,stroke:#2e8b3e,color:#123d19
   class ch1_night_camp ask
-  class ch6_remembering lost
 ```
 
 ### heart6 (asked in ch6-heart)
@@ -337,33 +272,30 @@ flowchart TD
   class flame_name ask
   class class_choice ask
   class first_rest_day only
-  class ch1_tomorrow_splits lost
   class perfect_week only
   class ch1_small_day only
   class ch1_night_camp ask
-  class ch1_tomorrow_begs lost
-  class ch1_proof lost
   class ch1_victory done
 ```
 
 | Scene | Plays when | Asks | Notes | planned | fast | alone |
 | --- | --- | --- | --- | --- | --- | --- |
-| `first-quest` | 1 workout |  | kept | yes | yes | yes |
-| `first-letter` | 1 workout · no letter yet | letter | kept | yes | yes | yes |
-| `flame-name` | 1 workout | name | kept | yes | yes | yes |
-| `first-rest-day` | 1 workout · rest day |  |  | yes | yes | yes |
+| `first-quest` | 1 workout |  |  | yes | yes | yes |
+| `first-letter` | 1 workout · no letter yet | letter |  | yes | yes | yes |
+| `flame-name` | 1 workout | name |  | yes | yes | yes |
+| `first-rest-day` | 1 workout · rest day |  | optional | yes | yes | yes |
 | `ch1-kept` | 2 workouts · chapter 1 started |  |  | yes | yes | yes |
-| `class-choice` | 3 workouts · no class yet | class | kept | yes | yes | yes |
+| `class-choice` | 3 workouts · no class yet | class |  | yes | yes | yes |
 | `ch1-breath` | 3 workouts · chapter 1 started |  |  | yes | yes | yes |
-| `perfect-week` | a full week |  |  | yes | yes | yes |
+| `perfect-week` | a full week |  | optional | yes | yes | yes |
 | `ch1-wanderer-first` | 4 workouts · chapter 1 started |  |  | yes | yes | yes |
-| `ch1-tomorrow-splits` | 5 workouts |  |  | yes | **no** | yes |
-| `mira-forge` | 6 workouts · up to chapter 2 |  | kept | yes | yes | yes |
-| `ch1-candle` | flame grown to candle |  | kept | yes | yes | yes |
-| `ch1-small-day` | 4 workouts · in chapter 1 · after a short workout |  |  | yes | **no** | yes |
-| `ch1-night-camp` | 8 workouts | heart1 | kept, reads why (first-letter) | yes | yes | yes |
-| `ch1-tomorrow-begs` | 10 workouts |  |  | yes | **no** | yes |
-| `ch1-proof` | 11 workouts · chapter 1 started |  |  | yes | **no** | yes |
+| `ch1-tomorrow-splits` | 5 workouts |  |  | yes | yes | yes |
+| `mira-forge` | 6 workouts · up to chapter 2 |  |  | yes | yes | yes |
+| `ch1-candle` | flame grown to candle |  |  | yes | yes | yes |
+| `ch1-small-day` | 4 workouts · in chapter 1 · after a short workout |  | optional | yes | **no** | yes |
+| `ch1-night-camp` | 8 workouts | heart1 | reads why (first-letter) | yes | yes | yes |
+| `ch1-tomorrow-begs` | 10 workouts |  |  | yes | yes | yes |
+| `ch1-proof` | 11 workouts · chapter 1 started |  |  | yes | yes | yes |
 | `ch1-victory` | boss 1 beaten |  | ends the chapter | yes | yes | yes |
 
 ## Chapter 2: Mirror Lake
@@ -406,33 +338,27 @@ flowchart TD
   classDef only fill:#fdf1d6,stroke:#c98a10,color:#4a3305
   classDef ask fill:#e2ecfd,stroke:#2f5fb3,color:#13284d
   classDef done fill:#e3f6e5,stroke:#2e8b3e,color:#123d19
-  class ch2_wanderer_knows lost
   class ch2_lia ask
   class ch2_heart ask
-  class ch2_mira_lia lost
-  class ch2_shore lost
-  class ch2_friend lost
   class ch2_lake_rest only
-  class ch2_lia_dance lost
-  class ch2_grief lost
   class ch2_victory done
 ```
 
 | Scene | Plays when | Asks | Notes | planned | fast | alone |
 | --- | --- | --- | --- | --- | --- | --- |
 | `ch2-intro` | chapter 2 started |  |  | yes | yes | yes |
-| `ch2-lake-rest` | in chapter 2 · rest day |  |  | yes | yes | yes |
+| `ch2-lake-rest` | in chapter 2 · rest day |  | optional | yes | yes | yes |
 | `ch2-reflection` | 2 workouts · chapter 2 started |  |  | yes | yes | yes |
-| `ch2-torch` | flame grown to torch |  | kept | yes | yes | yes |
+| `ch2-torch` | flame grown to torch |  |  | yes | yes | yes |
 | `ch2-echo-counts` | 4 workouts |  |  | yes | yes | yes |
-| `ch2-wanderer-knows` | 5 workouts · needs {want} |  | reads want (first-letter) | yes | **no** | yes |
-| `ch2-lia` | 6 workouts | lia | kept | yes | yes | yes |
-| `ch2-heart` | 7 workouts | heart2 | kept | yes | yes | yes |
-| `ch2-mira-lia` | 8 workouts · lia = yes |  | reads lia (ch2-lia) | yes | **no** | **no** |
-| `ch2-shore` | 8 workouts · chapter 2 started |  |  | yes | **no** | yes |
-| `ch2-friend` | 9 workouts · chapter 2 started |  |  | yes | **no** | yes |
-| `ch2-lia-dance` | 10 workouts · lia = yes |  | reads lia (ch2-lia) | yes | **no** | **no** |
-| `ch2-grief` | 11 workouts · chapter 2 started |  | reads heart2 (ch2-heart) | yes | **no** | yes |
+| `ch2-wanderer-knows` | 5 workouts · needs {want} |  | reads want (first-letter) | yes | yes | yes |
+| `ch2-lia` | 6 workouts | lia |  | yes | yes | yes |
+| `ch2-heart` | 7 workouts | heart2 |  | yes | yes | yes |
+| `ch2-mira-lia` | 8 workouts · lia = yes |  | reads lia (ch2-lia) | yes | yes | **no** |
+| `ch2-shore` | 8 workouts · chapter 2 started |  |  | yes | yes | yes |
+| `ch2-friend` | 9 workouts · chapter 2 started |  |  | yes | yes | yes |
+| `ch2-lia-dance` | 10 workouts · lia = yes |  | reads lia (ch2-lia) | yes | yes | **no** |
+| `ch2-grief` | 11 workouts · chapter 2 started |  | reads heart2 (ch2-heart) | yes | yes | yes |
 | `ch2-victory` | boss 2 beaten |  | ends the chapter | yes | yes | yes |
 
 ## Chapter 3: The Village of Almosts
@@ -477,34 +403,27 @@ flowchart TD
   classDef ask fill:#e2ecfd,stroke:#2f5fb3,color:#13284d
   classDef done fill:#e3f6e5,stroke:#2e8b3e,color:#123d19
   class ch3_sol ask
-  class ch3_knight_voice lost
   class ch3_knight_cracks only
-  class ch3_song lost
-  class ch3_mira_story lost
-  class ch3_first_steel lost
-  class ch3_sol_stops lost
-  class ch3_sol_rest lost
   class ch3_rest only
-  class ch3_last_stand lost
   class ch3_knight_kneels done
 ```
 
 | Scene | Plays when | Asks | Notes | planned | fast | alone |
 | --- | --- | --- | --- | --- | --- | --- |
 | `ch3-intro` | chapter 3 started |  |  | yes | yes | yes |
-| `ch3-rest` | in chapter 3 · rest day |  |  | yes | yes | yes |
+| `ch3-rest` | in chapter 3 · rest day |  | optional | yes | yes | yes |
 | `ch3-knight` | 2 workouts · chapter 3 started |  |  | yes | yes | yes |
 | `ch3-apprentice` | 3 workouts · chapter 3 started |  |  | yes | yes | yes |
-| `ch3-sol` | 4 workouts · chapter 3 started | sol | kept | yes | yes | yes |
-| `ch3-knight-cracks` | in chapter 3 · after a short workout |  |  | yes | **no** | yes |
-| `ch3-knight-voice` | 5 workouts · chapter 3 started |  |  | yes | **no** | yes |
-| `ch3-bonfire` | flame grown to bonfire |  | kept | yes | yes | yes |
-| `ch3-song` | 7 workouts · chapter 3 started |  |  | yes | **no** | yes |
-| `ch3-mira-story` | 8 workouts |  |  | yes | **no** | yes |
-| `ch3-first-steel` | 9 workouts · chapter 3 started |  |  | yes | **no** | yes |
-| `ch3-sol-stops` | 10 workouts · sol = yes |  | reads sol (ch3-sol) | yes | **no** | **no** |
-| `ch3-sol-rest` | 11 workouts · sol = yes |  | reads sol (ch3-sol) | yes | **no** | **no** |
-| `ch3-last-stand` | 12 workouts · chapter 3 started |  |  | yes | **no** | yes |
+| `ch3-sol` | 4 workouts · chapter 3 started | sol |  | yes | yes | yes |
+| `ch3-knight-cracks` | in chapter 3 · after a short workout |  | optional | yes | **no** | yes |
+| `ch3-knight-voice` | 5 workouts · chapter 3 started |  |  | yes | yes | yes |
+| `ch3-bonfire` | flame grown to bonfire |  |  | yes | **no** | yes |
+| `ch3-song` | 7 workouts · chapter 3 started |  |  | yes | yes | yes |
+| `ch3-mira-story` | 8 workouts |  |  | yes | yes | yes |
+| `ch3-first-steel` | 9 workouts · chapter 3 started |  |  | yes | yes | yes |
+| `ch3-sol-stops` | 10 workouts · sol = yes |  | reads sol (ch3-sol) | yes | yes | **no** |
+| `ch3-sol-rest` | 11 workouts · sol = yes |  | reads sol (ch3-sol) | yes | yes | **no** |
+| `ch3-last-stand` | 12 workouts · chapter 3 started |  |  | yes | yes | yes |
 | `ch3-knight-kneels` | boss 3 beaten | heart3 | ends the chapter | yes | yes | yes |
 
 ## Chapter 4: The Plateau
@@ -553,12 +472,6 @@ flowchart TD
   class ch4_vela ask
   class ch4_sol_socks only
   class ch4_heart ask
-  class ch4_vela_letter lost
-  class ch4_boring lost
-  class ch4_vela_down lost
-  class ch4_stone lost
-  class ch4_tracks lost
-  class ch4_kid_quits lost
   class ch4_small_step only
   class ch4_rest only
   class ch4_victory done
@@ -567,19 +480,19 @@ flowchart TD
 | Scene | Plays when | Asks | Notes | planned | fast | alone |
 | --- | --- | --- | --- | --- | --- | --- |
 | `ch4-intro` | chapter 4 started |  |  | yes | yes | yes |
-| `ch4-rest` | in chapter 4 · rest day |  |  | yes | yes | yes |
+| `ch4-rest` | in chapter 4 · rest day |  | optional | yes | yes | yes |
 | `ch4-wake` | 2 workouts · chapter 4 started |  |  | yes | yes | yes |
 | `ch4-lia-bird` | 3 workouts · chapter 4 started · lia = yes |  | reads lia (ch2-lia) | yes | yes | **no** |
-| `ch4-vela` | 4 workouts · chapter 4 started | vela | kept | yes | yes | yes |
-| `ch4-small-step` | 1 workout · in chapter 4 · after a short workout |  |  | yes | yes | yes |
-| `ch4-sol-socks` | 5 workouts · in chapter 4 · rest day · sol = yes |  | reads sol (ch3-sol) | yes | **no** | **no** |
-| `ch4-heart` | 6 workouts · chapter 4 started | heart4 | kept | yes | yes | yes |
-| `ch4-vela-letter` | 7 workouts · chapter 4 started · vela = yes |  | reads vela (ch4-vela) | yes | **no** | **no** |
-| `ch4-boring` | 8 workouts · chapter 4 started |  |  | yes | **no** | yes |
-| `ch4-vela-down` | 9 workouts · chapter 4 started · vela = yes |  | reads vela (ch4-vela) | yes | **no** | **no** |
-| `ch4-stone` | 10 workouts · chapter 4 started |  |  | yes | **no** | yes |
-| `ch4-tracks` | 11 workouts · chapter 4 started |  | reads vela (ch4-vela) | yes | **no** | yes |
-| `ch4-kid-quits` | 12 workouts · chapter 4 started |  |  | yes | **no** | yes |
+| `ch4-vela` | 4 workouts · chapter 4 started | vela |  | yes | yes | yes |
+| `ch4-small-step` | 1 workout · in chapter 4 · after a short workout |  | optional | yes | yes | yes |
+| `ch4-sol-socks` | 5 workouts · in chapter 4 · rest day · sol = yes |  | optional, reads sol (ch3-sol) | yes | **no** | **no** |
+| `ch4-heart` | 6 workouts · chapter 4 started | heart4 |  | yes | yes | yes |
+| `ch4-vela-letter` | 7 workouts · chapter 4 started · vela = yes |  | reads vela (ch4-vela) | yes | yes | **no** |
+| `ch4-boring` | 8 workouts · chapter 4 started |  |  | yes | yes | yes |
+| `ch4-vela-down` | 9 workouts · chapter 4 started · vela = yes |  | reads vela (ch4-vela) | yes | yes | **no** |
+| `ch4-stone` | 10 workouts · chapter 4 started |  |  | yes | yes | yes |
+| `ch4-tracks` | 11 workouts · chapter 4 started |  | reads vela (ch4-vela) | yes | yes | yes |
+| `ch4-kid-quits` | 12 workouts · chapter 4 started |  |  | yes | yes | yes |
 | `ch4-victory` | boss 4 beaten |  | ends the chapter, reads vela (ch4-vela) | yes | yes | yes |
 
 ## Chapter 5: The Fog
@@ -615,10 +528,7 @@ flowchart TD
   classDef only fill:#fdf1d6,stroke:#c98a10,color:#4a3305
   classDef ask fill:#e2ecfd,stroke:#2f5fb3,color:#13284d
   classDef done fill:#e3f6e5,stroke:#2e8b3e,color:#123d19
-  class ch5_next_step lost
-  class ch5_hollow_knows lost
   class ch5_heart ask
-  class ch5_nothing_changed lost
   class ch5_gathering ask
   class ch5_gathering_alone ask
   class ch5_short only
@@ -628,18 +538,18 @@ flowchart TD
 
 | Scene | Plays when | Asks | Notes | planned | fast | alone |
 | --- | --- | --- | --- | --- | --- | --- |
-| `ch5-wings` | flame grown to fairy |  | kept | yes | yes | yes |
+| `ch5-wings` | flame grown to fairy |  |  | yes | **no** | yes |
 | `ch5-intro` | chapter 5 started |  |  | yes | yes | yes |
-| `ch5-rest` | in chapter 5 · rest day |  |  | yes | yes | yes |
+| `ch5-rest` | in chapter 5 · rest day |  | optional | yes | yes | yes |
 | `ch5-fairy-heals` | 3 workouts · chapter 5 started |  |  | yes | yes | yes |
-| `ch5-next-step` | 5 workouts · chapter 5 started |  |  | yes | **no** | yes |
-| `ch5-short` | 1 workout · in chapter 5 · after a short workout |  |  | yes | **no** | yes |
-| `ch5-hollow-knows` | 7 workouts · chapter 5 started |  |  | yes | **no** | yes |
-| `ch5-heart` | 9 workouts · chapter 5 started | heart5 | kept | yes | yes | yes |
-| `ch5-nothing-changed` | 11 workouts · chapter 5 started |  | reads heart4 (ch4-heart), reads heart3 (ch3-knight-kneels) | yes | **no** | yes |
-| `ch5-gathering` | 13 workouts · chapter 5 started · helped a villager | call | kept, reads lia (ch2-lia), reads sol (ch3-sol), reads vela (ch4-vela), reads lia (ch2-lia), reads sol (ch3-sol), reads vela (ch4-vela) | yes | yes | **no** |
+| `ch5-next-step` | 5 workouts · chapter 5 started |  |  | yes | yes | yes |
+| `ch5-short` | 1 workout · in chapter 5 · after a short workout |  | optional | yes | **no** | yes |
+| `ch5-hollow-knows` | 7 workouts · chapter 5 started |  |  | yes | yes | yes |
+| `ch5-heart` | 9 workouts · chapter 5 started | heart5 |  | yes | yes | yes |
+| `ch5-nothing-changed` | 11 workouts · chapter 5 started |  | reads heart4 (ch4-heart), reads heart3 (ch3-knight-kneels) | yes | yes | yes |
+| `ch5-gathering` | 13 workouts · chapter 5 started · helped a villager | call | reads lia (ch2-lia), reads sol (ch3-sol), reads vela (ch4-vela), reads lia (ch2-lia), reads sol (ch3-sol), reads vela (ch4-vela) | yes | yes | **no** |
 | `ch5-victory` | boss 5 beaten |  | ends the chapter, reads heart2 (ch2-heart) | yes | yes | yes |
-| `ch5-gathering-alone` | 13 workouts · chapter 5 started · helped no villager | call | kept, reads lia (ch2-lia), reads sol (ch3-sol), reads vela (ch4-vela) | **no** | **no** | yes |
+| `ch5-gathering-alone` | 13 workouts · chapter 5 started · helped no villager | call | reads lia (ch2-lia), reads sol (ch3-sol), reads vela (ch4-vela) | **no** | **no** | yes |
 
 ## Chapter 6: Forma
 
@@ -673,28 +583,24 @@ flowchart TD
   classDef only fill:#fdf1d6,stroke:#c98a10,color:#4a3305
   classDef ask fill:#e2ecfd,stroke:#2f5fb3,color:#13284d
   classDef done fill:#e3f6e5,stroke:#2e8b3e,color:#123d19
-  class ch6_remembering lost
-  class ch6_book lost
-  class ch6_fall lost
   class ch6_heart ask
   class ch6_short only
   class ch6_rest only
-  class ch6_last_camp lost
 ```
 
 | Scene | Plays when | Asks | Notes | planned | fast | alone |
 | --- | --- | --- | --- | --- | --- | --- |
 | `ch6-intro` | chapter 6 started |  |  | yes | yes | yes |
-| `ch6-rest` | in chapter 6 · rest day |  |  | yes | yes | yes |
+| `ch6-rest` | in chapter 6 · rest day |  | optional | yes | yes | yes |
 | `ch6-summit-speaks` | 2 workouts · chapter 6 started |  | reads heart5 (ch5-heart) | yes | yes | yes |
 | `ch6-kid` | 4 workouts · chapter 6 started |  | reads heart3 (ch3-knight-kneels), reads lia (ch2-lia), reads sol (ch3-sol), reads vela (ch4-vela) | yes | yes | yes |
-| `ch6-remembering` | 6 workouts · chapter 6 started |  | reads heart1 (ch1-night-camp) | yes | **no** | yes |
-| `ch6-short` | 1 workout · in chapter 6 · after a short workout |  |  | yes | yes | yes |
-| `ch6-book` | 8 workouts · chapter 6 started |  |  | yes | **no** | yes |
-| `ch6-fall` | 9 workouts · chapter 6 started |  |  | yes | **no** | yes |
-| `ch6-heart` | 10 workouts · chapter 6 started | heart6 | kept | yes | yes | yes |
-| `ch6-last-camp` | 12 workouts · chapter 6 started |  | reads vela (ch4-vela) | yes | **no** | yes |
-| `finale` | story finished |  | kept, reads why (first-letter), reads want (first-letter), reads forWho (first-letter), reads remind (first-letter), reads heart6 (ch6-heart), reads lia (ch2-lia), reads sol (ch3-sol), reads vela (ch4-vela), reads heart3 (ch3-knight-kneels) | yes | yes | yes |
+| `ch6-remembering` | 6 workouts · chapter 6 started |  | reads heart1 (ch1-night-camp) | yes | yes | yes |
+| `ch6-short` | 1 workout · in chapter 6 · after a short workout |  | optional | yes | yes | yes |
+| `ch6-book` | 8 workouts · chapter 6 started |  |  | yes | yes | yes |
+| `ch6-fall` | 9 workouts · chapter 6 started |  |  | yes | yes | yes |
+| `ch6-heart` | 10 workouts · chapter 6 started | heart6 |  | yes | yes | yes |
+| `ch6-last-camp` | 12 workouts · chapter 6 started |  | reads vela (ch4-vela) | yes | yes | yes |
+| `finale` | story finished |  | reads why (first-letter), reads want (first-letter), reads forWho (first-letter), reads remind (first-letter), reads heart6 (ch6-heart), reads lia (ch2-lia), reads sol (ch3-sol), reads vela (ch4-vela), reads heart3 (ch3-knight-kneels) | yes | yes | yes |
 
 ## Any time
 

@@ -122,6 +122,8 @@ export const VILLAGE: Chapter = {
     {
       id: 'ch3-knight-cracks',
       when: { shortSession: true, inChapter: 3 },
+      // Flavor for a kind of day: dropped if the boss falls before that day comes.
+      optional: true,
       lines: [
         { who: 'narrator', show: 'knight-cracked', text: "A short session. When you finish, there's a crack in the Knight's perfect armor.", shot: { shake: 'small' } },
         { who: 'knight-cracked', text: "That wasn't proper." },
@@ -214,6 +216,8 @@ export const VILLAGE: Chapter = {
     {
       id: 'ch3-rest',
       when: { restDay: true, inChapter: 3 },
+      // Flavor for a kind of day: dropped if the boss falls before that day comes.
+      optional: true,
       place: 'cold-forges',
       music: 'camp',
       lines: [

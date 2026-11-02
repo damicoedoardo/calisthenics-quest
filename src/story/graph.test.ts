@@ -15,12 +15,12 @@ const mid = (id: string) => id.replace(/[^a-zA-Z0-9]/g, '_');
 const label = (t: string) => t.replace(/"/g, "'").replace(/[{}]/g, '').replace(/[<>]/g, '');
 
 const KINDS: Record<Problem['kind'], string> = {
-  'lost-early': 'Skipped when the boss falls early',
-  'chapter-only': 'Only if a kind of day comes before the boss falls',
-  'asked-late': 'Question comes after the chapter has ended',
+  'lost-early': 'Lost when the boss falls early (fails the test)',
+  'after-ending': "Plays after its chapter's ending (fails the test)",
+  'missing-answer': 'Plays before the question it leans on (fails the test)',
+  never: 'No walk reaches it (fails the test)',
+  optional: 'Optional scenes the fast walk dropped',
   'out-of-chapter': 'Flame growth lands in another chapter',
-  'missing-answer': 'Plays before the question it leans on',
-  never: 'No walk reaches it',
 };
 
 function shape(n: Node, text: string): string {
@@ -31,7 +31,7 @@ function shape(n: Node, text: string): string {
 
 function styles(g: StoryGraph, nodes: Node[]): string[] {
   const lost = new Set(g.problems.filter((p) => p.kind === 'lost-early').map((p) => p.scene));
-  const only = new Set(g.problems.filter((p) => p.kind === 'chapter-only').map((p) => p.scene));
+  const only = new Set(g.nodes.filter((n) => n.optional).map((n) => n.id));
   const out = [
     '  classDef lost fill:#fde2e2,stroke:#c0392b,color:#5b1a12',
     '  classDef only fill:#fdf1d6,stroke:#c98a10,color:#4a3305',
@@ -95,7 +95,7 @@ function chapter(g: StoryGraph, n: number): string {
   sorted.slice(1).forEach((x, i) => lines.push(`  ${mid(sorted[i].id)} --> ${mid(x.id)}`));
   for (const x of sorted) for (const u of x.uses) if (u.from && nodes.some((y) => y.id === u.from)) lines.push(`  ${mid(u.from)} -.->|"${label(`${u.key}${u.is !== undefined ? ` = ${u.is}` : ''}`)}"| ${mid(x.id)}`);
   lines.push(...styles(g, nodes), '```');
-  const rows = sorted.map((x) => [`\`${x.id}\``, x.when, x.asks ?? '', [x.ends ? 'ends the chapter' : '', x.kept && !x.ends ? 'kept' : '', ...x.uses.map((u) => `reads ${u.key}${u.from ? ` (${u.from})` : ''}`)].filter(Boolean).join(', '), ...tick(g, x.id)]);
+  const rows = sorted.map((x) => [`\`${x.id}\``, x.when, x.asks ?? '', [x.ends ? 'ends the chapter' : '', x.optional ? 'optional' : '', ...x.uses.map((u) => `reads ${u.key}${u.from ? ` (${u.from})` : ''}`)].filter(Boolean).join(', '), ...tick(g, x.id)]);
   return [
     `## Chapter ${n}: ${c.name}`,
     '',
@@ -115,7 +115,7 @@ function others(g: StoryGraph, group: 0 | 'road', title: string, about: string):
 }
 
 function problems(g: StoryGraph): string {
-  const out = ['## Problem paths', '', 'Found by the walks. Not all are bugs: some are choices to make. Each is a scene that a player can lose, or get out of order.', ''];
+  const out = ['## Problem paths', '', 'Found by the walks. A scene lost, played after its ending, played before its question, or never reached fails `pnpm test`, so none are left. What is listed here is allowed, to look at.', ''];
   for (const k of Object.keys(KINDS) as Problem['kind'][]) {
     const list = g.problems.filter((p) => p.kind === k);
     if (!list.length) continue;
@@ -133,7 +133,7 @@ describe('story graph', () => {
       '',
       'Written by `pnpm story:graph` from `src/story/` and the real story engine. Do not edit by hand; `pnpm test` fails while it is out of date. How it works: `docs/handbook/game/story.md`.',
       '',
-      'Every scene is a box. A box with pointed sides asks a question; a rounded one ends its chapter. Solid arrows are the order a planned player meets the scenes; dashed arrows carry an answer to the scenes that read it. Red: skipped when the boss falls early. Amber: plays only if a kind of day comes in time.',
+      "Every scene is a box. A box with pointed sides asks a question; a rounded one ends its chapter. Solid arrows are the order a planned player meets the scenes; dashed arrows carry an answer to the scenes that read it. Every chapter scene catches up before the chapter's ending when its boss falls early, except the optional ones (amber: flavor for a kind of day). Red: a scene lost anyway (the test fails).",
       '',
       '## The walks',
       '',
@@ -156,6 +156,10 @@ describe('story graph', () => {
       others(g, 'road', 'The Ember Road', 'Walked with friends (`road.ts`); no walk plays it.'),
     ].join('\n');
     await expect(md).toMatchFileSnapshot('./graph.md');
+  });
+
+  it('no scene is lost, or plays after its ending, when a boss falls early (mark flavor optional)', () => {
+    expect(g.problems.filter((p) => p.kind === 'lost-early' || p.kind === 'after-ending')).toEqual([]);
   });
 
   it('no scene plays before the question it leans on', () => {
