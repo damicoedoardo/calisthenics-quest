@@ -473,7 +473,8 @@ export interface HeroSetup {
   /** Workouts you have done. What you find asks for a few more than this, never more than the
       zone is built for (unset: the zone's own count, as in old replays). */
   workouts?: number;
-  /** The chapter's hearts are gone: a weaker boss and free skills at the start (`edgeFor` in src/lib/fog.ts). */
+  /** The boss's hearts: a tougher boss while you are early, a weaker one and free skills once the
+      chapter's hearts are gone (`edgeFor` in src/lib/fog.ts). */
   edge?: Edge;
   /** Wearing one of the class's SPs (which one; `true` is the first): its own move, its final and
       its passive, on top of the class ability (src/lib/sp.ts). */
@@ -1511,7 +1512,7 @@ function summonBoss(run: Run) {
   const b: Foe = {
     id: ++run.ids,
     kind: 'boss',
-    def: { ...def, dmg: def.dmg * zone.dmg },
+    def: { ...def, dmg: def.dmg * zone.dmg * (run.setup.edge?.bossDmg ?? 1) },
     x: run.area.w / 2,
     y: 140,
     vx: 0,
@@ -2835,7 +2836,7 @@ function shoot(run: Run, f: Foe, p: Pattern) {
     at = Math.atan2(h.y - f.y, h.x - f.x),
     boss = f === run.boss || f === run.warden,
     r = p.r ?? (boss ? 7 : 5),
-    dmg = p.dmg * DIALS.shot * run.setup.zone.dmg * (f === run.boss ? 1 : (1 + DIALS.deepDmg * depth(run)) * (f.elite ? ELITE.dmg : 1) * (1 + CLIMB.tougher * (run.climb ?? 0))),
+    dmg = p.dmg * DIALS.shot * run.setup.zone.dmg * (f === run.boss ? (run.setup.edge?.bossDmg ?? 1) : (1 + DIALS.deepDmg * depth(run)) * (f.elite ? ELITE.dmg : 1) * (1 + CLIMB.tougher * (run.climb ?? 0))),
     speed = p.speed * DIALS.speed,
     style = p.style ?? 'plain';
   if (p.kind === 'mine') {

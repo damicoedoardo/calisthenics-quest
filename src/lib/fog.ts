@@ -1,6 +1,6 @@
 import { daysSinceLastSession, type GameState } from './game';
 import { dayKey } from './days';
-import { PICKUP_REACH, ROAD_TOUGH, RUN_LEVELS, RUN_SKILL, TUTORIAL } from '@/balance';
+import { BOSS_EARLY, PICKUP_REACH, ROAD_TOUGH, RUN_LEVELS, RUN_SKILL, TUTORIAL } from '@/balance';
 import { buildOf, pointsFree, statPower } from './stats';
 import { CHAPTERS } from '@/story/chapters';
 import { FIRST_FOG } from '@/story/opening';
@@ -155,8 +155,11 @@ export function zoneDue(state: GameState, zone: Zone): boolean {
 export const EDGE = { bossHp: 0.7, picks: 6 };
 
 export interface Edge {
-  /** The boss's HP is this share of normal (1 while the chapter still has hearts). */
+  /** The boss's HP is this share of normal (1 when the zone is on its planned pace; more while you are
+      early, less once the chapter's hearts are gone). */
   bossHp: number;
+  /** How hard the boss hits, as a share of normal (more while you are early; unset is 1). */
+  bossDmg?: number;
   /** Free skills at the start of a run, one per workout since the hearts ran out. */
   picks: number;
 }
@@ -169,7 +172,17 @@ export function workoutsPastHearts(state: GameState, zone: Zone): number | null 
   return past < 0 ? null : past;
 }
 
+/** Workouts still to do before you have trained as much as a story zone is built for (its `workouts`),
+    while its boss still stands: each one is a heart that makes the boss tougher (BOSS_EARLY). 0 on
+    pace, once the boss has fallen, and on the Ember Road. */
+export function workoutsEarly(state: GameState, zone: Zone): number {
+  if (zone.road || zone.id < (state.fog ?? NO_FOG).cleared) return 0;
+  return Math.max(0, zone.workouts - state.sessions.length);
+}
+
 export function edgeFor(state: GameState, zone: Zone): Edge {
+  const early = workoutsEarly(state, zone);
+  if (early > 0) return { bossHp: 1 + BOSS_EARLY.hp * early, bossDmg: 1 + BOSS_EARLY.dmg * early, picks: 0 };
   const past = workoutsPastHearts(state, zone);
   return past === null ? NO_EDGE : { bossHp: EDGE.bossHp, picks: Math.min(EDGE.picks, past) };
 }

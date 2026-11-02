@@ -33,6 +33,13 @@ level or story.
   fireballs, a fire fairy heals when you're low. Training in the last two days gives a free run
   skill, resting (a day off or a minute by the fire) one more. `nextGrowth` writes the "train to
   grow" hint (points waiting to be spent, or that workouts earn them).
+- **A boss fought early**: while a story zone's boss still stands and you have trained fewer
+  workouts than the zone is built for (its `workouts`, the chapter's planned start),
+  `workoutsEarly` counts the workouts short and `edgeFor` makes that boss tougher: `BOSS_EARLY.hp`
+  more HP and `BOSS_EARLY.dmg` harder hits for each one (`Edge.bossDmg`, read in `summonBoss` and
+  on the boss's shots). On pace, after the boss falls, and on the Ember Road it is the normal
+  fight, so the sheets don't move. Skill can still win early, rarely; training is what takes the
+  boss down. The world card adds "tougher (N early)".
 - **A boss with no hearts left**: every workout takes a heart off the chapter's enemy; once the
   chapter's hearts are gone (the workouts its chapter is planned for) and its boss still stands, `edgeFor` gives the
   run an `Edge`: the boss fights with `EDGE.bossHp` of its HP (the Knight with that share of his

@@ -11,6 +11,14 @@
     best finds wins about 1 in 10. */
 export const ZONE_WINS = { open: 0.33, later: 0.67, slack: 0.15, first: 0.02 } as const;
 
+/** A zone's boss before you have trained as much as the zone is built for (its chapter's planned
+    start): for each workout you are short, it has `hp` more HP and hits `dmg` harder (0.5 = +50%): its shots start far gentler than a deep floor's monsters, so damage is what makes it a wall.
+    Its hearts on the world card are these workouts; each one you train takes one away. On pace the
+    fight is the one the sheets measure. Goal: training, not only skill, beats a boss: a sharp
+    player who rushes a zone a few workouts after it opens rarely wins (Edoardo, 2026-11-02, beat
+    zone 2 at 4 workouts of its 12: "only when you actually remove health through the workout"). */
+export const BOSS_EARLY = { hp: 0.25, dmg: 0.5 };
+
 export const DIALS = {
   /** Monster HP, on top of the zone's. */
   hp: 1.3,

@@ -14,6 +14,7 @@ import { ABILITIES, abilityOf, SP_MOVES, SP_PASSIVES, spDef } from '@/game/dunge
 import { RARITY } from '@/game/dungeon/items';
 import {
   BAG,
+  BOSS_EARLY,
   CLASS_LEAN,
   CLASS_LEAN_POINTS,
   CRIT,
@@ -255,6 +256,7 @@ export const GUIDE: GuideTopic[] = [
         'Your hero attacks on its own in the class style; you move, dodge and use the ability. The phone is held sideways for a run; on a computer it plays with keys.',
         `In a run, monsters drop light; each level-up there offers three skills to pick, and they last only that run. A card's color says what the skill is about: red hits harder, purple is magic on a timer, green keeps you standing, blue is the rest. The skills: ${UPGRADES.map((u) => `${u.name.replace('{flame}', s.profile.flame?.trim() || 'Ember')} (${u.text(1)} Up to ${u.max} levels.)`).join(' ')}`,
         `Workouts call the flame's fires to circle you (at ${FLAME_AT.join(', ')} workouts). Training in the last two days starts a run with a free skill; resting (a day off, or a minute by the fire) gives one more.`,
+        `A boss fought before you have trained the workouts its zone is built for fights tougher: for each workout short, ${pct(BOSS_EARLY.hp)} more HP and ${pct(BOSS_EARLY.dmg)} harder hits, so rushing ahead on skill alone rarely works; each workout takes that away.`,
         `Once a chapter's hearts are all gone and its boss still stands, that boss fights with ${pct(EDGE.bossHp)} of its HP, and each workout since starts a run with one more free skill (up to ${EDGE.picks}).`,
       ].join('\n');
     },

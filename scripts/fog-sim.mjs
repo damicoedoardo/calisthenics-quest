@@ -41,7 +41,9 @@ function shift(state, now) {
 if (!isMainThread) {
   const { playRun } = await import(`${root}src/game/dungeon/bot.ts`);
   const { DIALS } = await import(`${root}src/game/dungeon/engine.ts`);
-  const { HUMAN } = await import(`${root}src/balance/dungeon.ts`);
+  const { HUMAN, BOSS_EARLY } = await import(`${root}src/balance/dungeon.ts`);
+  // BOSS_EARLY=... sets how much tougher a boss is per workout you are early, e.g. {"hp":0.1}.
+  Object.assign(BOSS_EARLY, JSON.parse(process.env.BOSS_EARLY || '{}'));
   const dials = JSON.parse(process.env.DIALS || '{}');
   // HUMAN=... sets how human the bot plays (src/balance/dungeon.ts), e.g. {"notice":0.8}.
   Object.assign(HUMAN, JSON.parse(process.env.HUMAN || '{}'));

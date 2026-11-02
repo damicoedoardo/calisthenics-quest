@@ -58,6 +58,7 @@ src/game/sheets.ts  which sprite sheets a run draws with
 | Add a zone | the chapter's `fog` in `src/story/chapters/`, then an entry in `ZONE_DUNGEONS` and `MIDS` (`content.ts`), `THEMES` (`themes.ts`) and `ZONE_MUSIC` (`src/lib/music-zones.ts`) |
 | Give an Ember Road chapter a world of its own | `world` and `fog.boss` on the chapter in `src/story/road.ts`, then a row at that index in `ZONE_DUNGEONS`, `MIDS`, `THEMES`, `ZONE_MUSIC` and `ZONE_RAMPS` (`src/sprites/characters/zoned.ts`), its boss in `FogBoss`, `BOSS_NAME`, `BOSSES`, `steerBoss`, `BOSS_LOOKS`/`BOSS_ART` and `bossJobs` (`src/game/sheets.ts`); see "Worlds" below |
 | Change how much tougher a party makes the dungeon | `PARTY.more` in `src/balance/dungeon.ts` (`partyMore` in `engine.ts`); measure with `PARTY=2 pnpm fog:sim` (and 3, 4) |
+| Change how much tougher a boss is when you fight it before its zone's planned workouts | `BOSS_EARLY` in `src/balance/dungeon.ts` (`workoutsEarly`, `edgeFor` in `src/lib/fog.ts`); `edge.bossHp` and `edge.bossDmg` in `summonBoss` and the boss's shots |
 | Change how much easier a boss gets once its chapter's hearts are gone | `EDGE` in `src/lib/fog.ts` (`edgeFor`); the engine reads `edge` (on `HeroSetup`) in `summonBoss` and `newHero` |
 | Balance | the `DIALS` in `src/balance/dungeon.ts` (see [balance.md](balance.md)); measure with `pnpm sim`, then `pnpm fog:sim` |
 | Change how fast you cross a cleared room | `CLEAR_RUN` in `content.ts` (the engine multiplies the hero's speed by it once a room has no monsters; the scene quickens the steps and the dust) |
