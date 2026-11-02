@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Check, MessageCircle, Play, RotateCcw, SendHorizontal, X } from 'lucide-react';
+import { Check, MessageCircle, Play, RotateCcw, SendHorizontal, Trash2, X } from 'lucide-react';
 import type { Checkin, GameState } from '@/lib/game';
 import { minutesOf } from '@/lib/coach/time';
 import { shownChat } from '@/lib/coach/chat';
@@ -18,6 +18,7 @@ import { PlaceBackdrop } from './Place';
 import { CoachKnows, doseOf } from './CoachPanel';
 import { MiniDemo } from './Workout';
 import { WorkoutList } from './WorkoutList';
+import { removeSession, sessionOfDay, takesBack } from '@/lib/remove';
 import { useCoachChat } from './useCoach';
 
 /* The coach is your flame. On the Train tab: what it says (it brings things up on its own, nudge.ts)
@@ -91,6 +92,43 @@ export function CoachScreen({ state, update, onStart }: { state: GameState; upda
   );
 }
 
+/** A done day's workout, logged by mistake: Remove, then a confirm that says what it takes back
+    (no browser pop-up). The day opens again. */
+function RemoveWorkout({ state, update, done }: { state: GameState; update: Update; done: string }) {
+  const [sure, setSure] = useState(false);
+  const session = sessionOfDay(state, done);
+  if (!session) return null;
+  if (!sure)
+    return (
+      <button onClick={() => setSure(true)} className="mx-auto mt-3 flex items-center gap-1.5 text-xs text-slate-500 active:text-slate-300">
+        <Trash2 size={12} /> Logged by mistake? Remove it
+      </button>
+    );
+  const back = takesBack(state, session.id);
+  const parts = [
+    `${back.xp} XP`,
+    back.points && `${back.points} stat point${back.points === 1 ? '' : 's'}`,
+    back.coins && `${back.coins} sweat coin${back.coins === 1 ? '' : 's'}`,
+    back.embers && `${back.embers} ember${back.embers === 1 ? '' : 's'}`,
+  ].filter(Boolean);
+  return (
+    <div className="mt-3 rounded-xl bg-rose-950/40 p-3 ring-1 ring-rose-400/30">
+      <p className="text-sm font-semibold text-rose-200">Remove this workout?</p>
+      <p className="mt-1 text-xs text-slate-300">
+        It takes back {parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0]}, and the day opens again. You can&apos;t undo this.
+      </p>
+      <div className="mt-3 flex gap-2">
+        <button onClick={() => update((s) => removeSession(s, session.id))} className="flex-1 rounded-xl bg-rose-700 py-2.5 text-xs font-semibold text-white active:bg-rose-800">
+          Remove
+        </button>
+        <button onClick={() => setSure(false)} className="flex-1 rounded-xl bg-ink-700 py-2.5 text-xs font-semibold text-slate-200">
+          Keep
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /** The week: a chip for each of its seven days (workouts and rest days; done and kept ticked, the
     next workout lit), and the chosen day: its workout as cards, or the rest day to keep. Next week
     is drafted ahead: once this week's last workout is done it shows here right away, with a "Week
@@ -100,7 +138,8 @@ function WeekBoard({ state, update, onStart, onTalk }: { state: GameState; updat
   const today = dayKey(now);
   const week = state.coach?.week;
   const next = nextDay(week);
-  const [picked, setPicked] = useState<string | null>(null);
+  // ?day=<date> opens that day (a preview link lands on it).
+  const [picked, setPicked] = useState<string | null>(() => (typeof window === 'undefined' ? null : new URLSearchParams(window.location.search).get('day')));
   const [fire, setFire] = useState(false);
   const inProgress = !!state.draft && Object.values(state.draft.sets).some((s) => s.length > 0);
   if (!week) return <p className="rounded-2xl bg-ink-800 p-3 text-sm text-slate-400">Getting your week ready…</p>;
@@ -213,6 +252,7 @@ function WeekBoard({ state, update, onStart, onTalk }: { state: GameState; updat
           ) : (
             !day.done && next && <p className="mt-3 text-center text-xs text-slate-400">Comes after {weekdayOf(next.date)}&apos;s workout.</p>
           )}
+          {day.done && <RemoveWorkout key={day.done} state={state} update={update} done={day.done} />}
         </>
       ) : slot.before ? (
         <p className="mt-2 rounded-xl bg-ink-900 p-3 text-sm text-slate-400">

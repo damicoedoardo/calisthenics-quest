@@ -3,7 +3,7 @@ type: reference
 title: Training rules
 description: The real-world side of FORMA in src/lib — the built-in plan (gym or home), today's quest, logging sets, progression, "better than last time", XP and levels, stat points for the champion, classes and gear.
 tags: [game, training, rules, xp, stats]
-timestamp: 2026-11-01
+timestamp: 2026-11-02
 ---
 
 # Training rules
@@ -123,6 +123,20 @@ one, the slot shows the tier look. Workouts now earn embers for Mira's forge on 
 it), `workoutsToLevel` and `spendable` (points waiting, an item the forge can take up now). Only
 reads the rules above and `src/balance`; the screens draw it with `Purse.tsx`
 ([../app/screens.md](../app/screens.md)).
+
+## Removing a workout logged by mistake (`remove.ts`)
+
+`removeSession(state, id)` drops the session. Almost everything a workout gives is counted from
+`state.sessions` (XP and level, stat points, sweat coins, embers, the week's count and the streak,
+the coach's workout log, what friends see), so that alone takes it back. It also puts back the few
+things saved beside it: the week's day it ticked opens again (`day.done` is the session's `date`,
+`sessionOfDay`), targets it raised go back to the entry's `target` unless a later workout trained
+that exercise, a coach level it moved goes back (`history` at that date), and `buildAt` is
+cleared. What was spent stays spent, but nothing goes below zero: points spent past what is left
+come out of the stats (the biggest first), coins and embers stop at none. Story scenes seen and
+zones cleared stay; the next workouts catch up. `takesBack` is what the confirm step lists. The
+screen is a done day in Train's week ([coach.md](coach.md)). A feed post of it stays until you
+delete it there.
 
 ## How to change things
 
