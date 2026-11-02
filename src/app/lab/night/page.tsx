@@ -349,7 +349,7 @@ export default function NightLab() {
         <Row icon={<Dumbbell size={16} />} label="Today, with a week planned" note="Your flame, today's quest and Start" onClick={async () => open(await withWeek(notYetToday(veteran(30, 3))), 'tab=today')} />
         <Row icon={<Dumbbell size={16} />} label="Today, a rest day" note="No workout today: you asleep under the moon instead of the flame, sit by the fire, and the next workout to see" onClick={GO['rest-day']} />
         <Row icon={<Dumbbell size={16} />} label="Today, after the workout" note="Today's workout done: you did it, your counts, and what's next (Train shows it)" onClick={async () => open(await doneToday(veteran(30, 3)), 'tab=today')} />
-        <Row icon={<Dumbbell size={16} />} label="Remove a workout logged by mistake" note="Train tab, today's done workout: Remove under it, then a confirm that says what it takes back (XP, points, coin, embers)" onClick={GO['remove-workout']} />
+        <Row icon={<Dumbbell size={16} />} label="Remove a workout logged by mistake" note="Train tab, today's done workout: Remove workout under it, then Are you sure?" onClick={GO['remove-workout']} />
         <Row icon={<Dumbbell size={16} />} label="Next week, planned early" note="Train tab after the week's last workout: next week is there at once, with the Week done step" onClick={async () => open(await doneToday(veteran(30, 3)), 'tab=train')} />
       </Panel>
 

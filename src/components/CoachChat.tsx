@@ -18,7 +18,7 @@ import { PlaceBackdrop } from './Place';
 import { CoachKnows, doseOf } from './CoachPanel';
 import { MiniDemo } from './Workout';
 import { WorkoutList } from './WorkoutList';
-import { removeSession, sessionOfDay, takesBack } from '@/lib/remove';
+import { removeSession, sessionOfDay } from '@/lib/remove';
 import { useCoachChat } from './useCoach';
 
 /* The coach is your flame. On the Train tab: what it says (it brings things up on its own, nudge.ts)
@@ -92,40 +92,26 @@ export function CoachScreen({ state, update, onStart }: { state: GameState; upda
   );
 }
 
-/** A done day's workout, logged by mistake: Remove, then a confirm that says what it takes back
-    (no browser pop-up). The day opens again. */
+/** A done day's workout, logged by mistake: Remove workout, then "Are you sure?" (no browser
+    pop-up). The day opens again. */
 function RemoveWorkout({ state, update, done }: { state: GameState; update: Update; done: string }) {
   const [sure, setSure] = useState(false);
   const session = sessionOfDay(state, done);
   if (!session) return null;
-  if (!sure)
-    return (
-      <button onClick={() => setSure(true)} className="mx-auto mt-3 flex items-center gap-1.5 text-xs text-slate-500 active:text-slate-300">
-        <Trash2 size={12} /> Logged by mistake? Remove it
+  return sure ? (
+    <p className="mt-3 flex items-center justify-center gap-2 text-xs text-slate-300">
+      Are you sure?
+      <button onClick={() => update((s) => removeSession(s, session.id))} className="rounded-lg bg-rose-700 px-3 py-1.5 font-semibold text-white">
+        Remove
       </button>
-    );
-  const back = takesBack(state, session.id);
-  const parts = [
-    `${back.xp} XP`,
-    back.points && `${back.points} stat point${back.points === 1 ? '' : 's'}`,
-    back.coins && `${back.coins} sweat coin${back.coins === 1 ? '' : 's'}`,
-    back.embers && `${back.embers} ember${back.embers === 1 ? '' : 's'}`,
-  ].filter(Boolean);
-  return (
-    <div className="mt-3 rounded-xl bg-rose-950/40 p-3 ring-1 ring-rose-400/30">
-      <p className="text-sm font-semibold text-rose-200">Remove this workout?</p>
-      <p className="mt-1 text-xs text-slate-300">
-        It takes back {parts.length > 1 ? `${parts.slice(0, -1).join(', ')} and ${parts.at(-1)}` : parts[0]}, and the day opens again. You can&apos;t undo this.
-      </p>
-      <div className="mt-3 flex gap-2">
-        <button onClick={() => update((s) => removeSession(s, session.id))} className="flex-1 rounded-xl bg-rose-700 py-2.5 text-xs font-semibold text-white active:bg-rose-800">
-          Remove
-        </button>
-        <button onClick={() => setSure(false)} className="flex-1 rounded-xl bg-ink-700 py-2.5 text-xs font-semibold text-slate-200">
-          Keep
-        </button>
-      </div>
-    </div>
+      <button onClick={() => setSure(false)} className="rounded-lg bg-ink-700 px-3 py-1.5">
+        Keep
+      </button>
+    </p>
+  ) : (
+    <button onClick={() => setSure(true)} className="mx-auto mt-3 flex items-center gap-1.5 text-xs text-slate-500 active:text-slate-300">
+      <Trash2 size={12} /> Remove workout
+    </button>
   );
 }
 

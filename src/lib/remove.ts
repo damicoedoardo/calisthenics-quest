@@ -1,4 +1,4 @@
-import { totalXp, type GameState } from './game';
+import type { GameState } from './game';
 import { embersEarned } from './forge';
 import { coinsEarned } from './sweat';
 import { buildOf, pointsEarned, pointsSpent } from './stats';
@@ -76,13 +76,3 @@ export function removeSession(state: GameState, id: string): GameState {
 /** The session that ticked this day of the week, if any. */
 export const sessionOfDay = (state: GameState, done: string | undefined) => (done ? state.sessions.find((s) => s.date === done) : undefined);
 
-/** What removing a workout takes back, as the confirm step says it. */
-export function takesBack(state: GameState, id: string): { xp: number; points: number; coins: number; embers: number } {
-  const after = { ...state, sessions: state.sessions.filter((s) => s.id !== id) };
-  return {
-    xp: totalXp(state) - totalXp(after),
-    points: pointsEarned(state).total - pointsEarned(after).total,
-    coins: coinsEarned(state) - coinsEarned(after),
-    embers: embersEarned(state) - embersEarned(after),
-  };
-}

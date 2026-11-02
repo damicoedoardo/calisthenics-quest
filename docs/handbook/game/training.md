@@ -134,7 +134,7 @@ things saved beside it: the week's day it ticked opens again (`day.done` is the 
 that exercise, a coach level it moved goes back (`history` at that date), and `buildAt` is
 cleared. What was spent stays spent, but nothing goes below zero: points spent past what is left
 come out of the stats (the biggest first), coins and embers stop at none. Story scenes seen and
-zones cleared stay; the next workouts catch up. `takesBack` is what the confirm step lists. The
+zones cleared stay; the next workouts catch up. The
 screen is a done day in Train's week ([coach.md](coach.md)). A feed post of it stays until you
 delete it there.
 

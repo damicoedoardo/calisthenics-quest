@@ -7,7 +7,7 @@ import { buildWeek, nextDay } from './coach/week';
 import { embersOf } from './forge';
 import { coins } from './sweat';
 import { pointsEarned, pointsFree, pointsSpent } from './stats';
-import { removeSession, sessionOfDay, takesBack } from './remove';
+import { removeSession, sessionOfDay } from './remove';
 
 let all: LibraryExercise[];
 beforeAll(async () => {
@@ -33,8 +33,6 @@ describe('removing a workout', () => {
     const day = nextDay(before.coach!.week)!;
     const { state, session } = train(before, NOW);
     expect(session.raised?.length).toBeGreaterThan(0);
-    const back = takesBack(state, session.id);
-    expect(back).toEqual({ xp: session.xp, points: pointsEarned(state).total - pointsEarned(before).total, coins: 1, embers: embersOf(state) - embersOf(before) });
 
     const after = removeSession(state, session.id);
     expect(after.sessions).toEqual([]);
