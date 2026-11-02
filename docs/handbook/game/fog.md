@@ -3,7 +3,7 @@ type: conceptual
 title: The Fog (the game between workouts)
 description: The rules around a Fog run in src/lib/fog.ts — zones from the story's chapters, when a zone opens, power from real training, run skills, records — and how a run is loaded and drawn.
 tags: [game, fog, rules]
-timestamp: 2026-11-01
+timestamp: 2026-11-02
 ---
 
 # The Fog
@@ -56,7 +56,9 @@ level or story.
 - **Gear between runs** (`src/lib/fog-gear.ts`, saved as `state.fogGear`): what you wear
   (`worn`) and the vault at home (`vault`, room for `VAULT.size` = 200 items). `wornFor` is what you
   walk in with: only what your hero level and points let you wear today (`heroLevel` in
-  `src/lib/game.ts`); the rest stays home, safe.
+  `src/lib/game.ts`); the rest stays home, safe. `FogRun` also passes your workouts done
+  (`RunSetup.workouts`): what you find asks for a level a few workouts ahead of you when you
+  came into a zone before it is built for (see [dungeon.md](dungeon.md)).
   `settleGear` runs after `recordRun`. What you wear always comes home, so forged gear is never
   lost (see [forge.md](forge.md)). A win or a walk out by the stairs also puts the bag in the vault
   (the best first, the rest left behind if it's full); a fall loses what you found that run and

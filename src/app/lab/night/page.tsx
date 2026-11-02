@@ -118,6 +118,23 @@ function forged(plus: number): GameState {
   };
 }
 
+/** Zone 1 beaten after 3 workouts, points spent, and a vault of zone 2 finds rolled as the run rolls
+    them now (counted from your 3 workouts, `newItem` in the engine): what each asks. `planned`
+    rolls them the old way, for the zone's 12. */
+function earlyFinds(planned = false): GameState {
+  const s = spendEvenly(veteran(3, 1)),
+    rnd = seeded(5),
+    at = (floor: number) => ({ zone: 1, workouts: planned ? ZONES[1].workouts : Math.min(ZONES[1].workouts, s.sessions.length), floor, cls: 'warrior' as const }),
+    find = (slot: Item['slot'], rarity: Item['rarity'], floor: number) => {
+      for (;;) {
+        const it = rollItem(rnd, at(floor), rarity);
+        if (it.slot === slot) return it;
+      }
+    };
+  const vault = [find('weapon', 'common', 1), find('weapon', 'magic', 2), find('armor', 'magic', 4), find('weapon', 'rare', 5), find('armor', 'rare', 8), find('weapon', 'legendary', 9)];
+  return { ...s, fogGear: { worn: {}, vault } };
+}
+
 /** The forged save with a busy vault: 40 found items of every rarity and slot, to sort and melt many. */
 function bigVault(): GameState {
   const s = forged(7),
@@ -232,6 +249,10 @@ const GO: Record<string, () => void> = {
   // The flame's dots follow the week's plan: 2 or 4 workouts planned, one done today.
   'dots-2': () => void doneToday(veteran(10, 1), 2).then((s) => open(s, 'tab=today')),
   'dots-4': () => void doneToday(veteran(10, 1), 4).then((s) => open(s, 'tab=today')),
+  // Zone 1 beaten after 3 workouts (still level 1), straight into zone 2: what you find there
+  // asks for a level a few workouts away, not the 12-workout player's.
+  'early-zone2': () => open(veteran(3, 1), 'run=1'),
+  'early-finds': () => open(earlyFinds(), 'tab=hero&hero=gear'),
 };
 
 const MOMENTS: [string, string][] = [

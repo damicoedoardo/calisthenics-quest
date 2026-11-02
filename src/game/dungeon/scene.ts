@@ -175,6 +175,7 @@ export interface RunSetup {
   worn?: Partial<Record<ItemSlot, Item>>;
   build?: Build;
   heroLevel?: number;
+  workouts?: number;
   /** The chapter's hearts are gone: a weaker boss and free skills at the start. */
   edge?: Edge;
   /** Wearing the class's SP: its own move and its final (src/lib/sp.ts). */
@@ -513,6 +514,7 @@ class DungeonScene extends Phaser.Scene {
       worn: setup.worn,
       build: setup.build,
       heroLevel: setup.heroLevel,
+      workouts: setup.workouts,
       edge: setup.edge,
       sp: setup.sp,
       // A practice run: friends come with your strength in their own class and starter kit.

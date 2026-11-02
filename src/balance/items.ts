@@ -97,7 +97,8 @@ export const RARITY_WEIGHTS = { common: 60, magic: 28, rare: 10, legendary: 2 } 
     1 + luck * rarerPerLuck + floor * rarerPerFloor. */
 export const RARITY_LEAN = { commonPerLuck: 1, commonPerFloor: 0.06, rarerPerLuck: 0.6, rarerPerFloor: 0.05 } as const;
 
-/** When an item can be worn: this many workouts after its zone opens, by rarity and depth (floors
+/** When an item can be worn: this many workouts after its zone opens (or after where you are, if
+    you came in before the zone is built for: zones open on the last boss's fall), by rarity and depth (floors
     1-3, 4-7, 8-10). It asks for the points a player who hits the weekly goal and spreads them evenly
     has in each stat by then, so a change to stat points never breaks gear. Goal: what you find is
     mostly wearable soon, and a zone's best item before the next zone opens (about 12 workouts). */
