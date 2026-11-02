@@ -20,6 +20,7 @@ export function describeWhen(w: When): string {
   if (w.grown) parts.push(`flame grown to ${w.grown}`);
   if (w.chapter) parts.push(`chapter ${w.chapter} started`);
   if (w.inChapter) parts.push(`in chapter ${w.inChapter}`);
+  if (w.upTo) parts.push(`up to chapter ${w.upTo}`);
   if (w.beaten) parts.push(`boss ${w.beaten} beaten`);
   if (w.restDay !== undefined) parts.push(w.restDay ? 'rest day' : 'not a rest day');
   if (w.shortSession) parts.push('after a short workout');
@@ -254,7 +255,7 @@ export function storyProblems(nodes: Node[], walks: WalkResult[]): Problem[] {
     if (node.group === 'road') continue;
     const s = scene.get(node.id)!.scene;
     const ch = node.group as number;
-    const waits = (Object.keys(s.when) as (keyof When)[]).filter((k) => !['workouts', 'chapter', 'inChapter', 'answer', 'needs', 'helped', 'noClass'].includes(k));
+    const waits = (Object.keys(s.when) as (keyof When)[]).filter((k) => !['workouts', 'chapter', 'inChapter', 'upTo', 'answer', 'needs', 'helped', 'noClass'].includes(k));
     // A chapter's scene that only waits for workouts: skipped once the boss falls before it.
     if (ch > 0 && !node.kept && s.when.workouts !== undefined && waits.length === 0) {
       const lost = fast && sees(planned, node.id) && !sees(fast, node.id);

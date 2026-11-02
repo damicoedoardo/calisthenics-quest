@@ -10,16 +10,16 @@ Each walk plays the story through `scenesToPlay`, day by day: trains Monday, Wed
 
 | Walk | Who | Bosses fall at workout | Scenes played |
 | --- | --- | --- | --- |
-| planned | Beats each boss at the chapter's planned length (12 to 14 workouts), joins every villager | 12, 24, 37, 50, 64, 78 | 90 |
-| fast | Beats each boss 4 workouts into its chapter (a strong player), joins every villager | 4, 8, 12, 16, 20, 24 | 57 |
-| alone | Planned pace, but walks on from every villager | 12, 24, 37, 50, 64, 78 | 82 |
+| planned | Beats each boss at the chapter's planned length (12 to 14 workouts), joins every villager | 12, 24, 37, 50, 64, 78 | 91 |
+| fast | Beats each boss 4 workouts into its chapter (a strong player), joins every villager | 4, 8, 12, 16, 20, 24 | 58 |
+| alone | Planned pace, but walks on from every villager | 12, 24, 37, 50, 64, 78 | 83 |
 
 ## The spine
 
 ```mermaid
 flowchart LR
   opening(["Opening: first Fog, the Wanderer, the class"])
-  c1["Chapter 1: The Ashlands<br/>16 scenes"]
+  c1["Chapter 1: The Ashlands<br/>17 scenes"]
   opening -->|"first workout"| c1
   c2["Chapter 2: Mirror Lake<br/>14 scenes"]
   c1 -->|"Tomorrow falls"| c2
@@ -305,6 +305,7 @@ flowchart TD
   perfect_week["perfect-week<br/>a full week"]
   ch1_wanderer_first["ch1-wanderer-first<br/>4 workouts · chapter 1 started"]
   ch1_tomorrow_splits["ch1-tomorrow-splits<br/>5 workouts"]
+  mira_forge["mira-forge<br/>6 workouts · up to chapter 2"]
   ch1_candle["ch1-candle<br/>flame grown to candle"]
   ch1_small_day["ch1-small-day<br/>4 workouts · in chapter 1 · after a short workout"]
   ch1_night_camp{{"ch1-night-camp<br/>8 workouts"}}
@@ -320,7 +321,8 @@ flowchart TD
   ch1_breath --> perfect_week
   perfect_week --> ch1_wanderer_first
   ch1_wanderer_first --> ch1_tomorrow_splits
-  ch1_tomorrow_splits --> ch1_candle
+  ch1_tomorrow_splits --> mira_forge
+  mira_forge --> ch1_candle
   ch1_candle --> ch1_small_day
   ch1_small_day --> ch1_night_camp
   ch1_night_camp --> ch1_tomorrow_begs
@@ -356,6 +358,7 @@ flowchart TD
 | `perfect-week` | a full week |  |  | yes | yes | yes |
 | `ch1-wanderer-first` | 4 workouts · chapter 1 started |  |  | yes | yes | yes |
 | `ch1-tomorrow-splits` | 5 workouts |  |  | yes | **no** | yes |
+| `mira-forge` | 6 workouts · up to chapter 2 |  | kept | yes | yes | yes |
 | `ch1-candle` | flame grown to candle |  | kept | yes | yes | yes |
 | `ch1-small-day` | 4 workouts · in chapter 1 · after a short workout |  |  | yes | **no** | yes |
 | `ch1-night-camp` | 8 workouts | heart1 | kept, reads why (first-letter) | yes | yes | yes |
