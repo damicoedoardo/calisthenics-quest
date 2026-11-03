@@ -1,4 +1,4 @@
-import { byOf, heard, stepOwn, type GameEvent, type Hero, type Input, type Run } from '../dungeon/engine';
+import { byOf, heard, stepOwn, type Bullet, type GameEvent, type Hero, type Input, type Run, type Shot } from '../dungeon/engine';
 
 /** One of the engine's steps (ms). */
 const STEP_MS = 1000 / 60;
@@ -47,6 +47,9 @@ interface Frame {
   where: Map<string, [number, number]>;
   /** For each hero (by id), how many of their phone's steps the server had played. */
   acks: number[];
+  /** What flies that isn't yours: monsters' shots and friends' shots, as they were (copies). */
+  bullets: Bullet[];
+  shots: Shot[];
 }
 
 export class Follower {
@@ -150,7 +153,15 @@ export class Follower {
     if (Math.abs(this.off.x) < 0.05) this.off.x = 0;
     if (Math.abs(this.off.y) < 0.05) this.off.y = 0;
     const fs = this.frames;
-    if (fs.length < 2 || !this.late.length) return;
+    if (fs.length < 2 || !this.late.length) {
+      // Just in a new room: what flies, where the server last had it.
+      const f = fs[fs.length - 1];
+      if (f) {
+        this.run.bullets = f.bullets.map((b) => ({ ...b }));
+        this.run.shots = [...this.run.shots.filter((s) => !this.others(s)), ...f.shots.map((s) => ({ ...s }))];
+      }
+      return;
+    }
     // Ease the wait toward what the line needs now: the others go a touch slower or quicker for a
     // moment, which nobody sees, instead of standing still or skipping.
     const aim = this.aim(),
@@ -187,6 +198,10 @@ export class Follower {
       put(`f${f.id}`, f);
       this.shown.set(f.id, [f.x, f.y]);
     }
+    // What flies, a moment in the past with the monsters and friends that threw it: from where it
+    // was to where it went, born and gone between two runs where it was born and gone.
+    r.bullets = flying(a.bullets, b.bullets, a.at, b.at, t);
+    r.shots = [...r.shots.filter((s) => !this.others(s)), ...flying(a.shots, b.shots, a.at, b.at, t)];
   }
 
   /** A friend, along their own steps rather than the server's clock: the server plays a friend's
@@ -250,6 +265,12 @@ export class Follower {
     // other choices than the server's, and a pick from them would be turned down and asked again.
     const asks = run.party.map((h) => [h.offer, h.relicOffer] as const),
       stairs = run.stairsAsk;
+    // What flies that isn't yours is only drawn (`place`, from the server's runs): stepping it here
+    // would move it ahead of the monsters and friends that threw it, and by an uneven amount each
+    // time a run comes, so it would stutter.
+    const others = this.others;
+    if (run.shots.some(others)) run.shots = run.shots.filter((s) => !others(s));
+    run.bullets = [];
     stepOwn(run, run.hero, p);
     run.party.forEach((h, i) => ([h.offer, h.relicOffer] = asks[i]));
     run.stairsAsk = stairs;
@@ -280,11 +301,13 @@ export class Follower {
     this.held = false;
     this.late.push(now - at);
     if (this.late.length > FOLLOW.window) this.late.shift();
-    this.frames.push({ at, where, acks: this.acks });
+    this.frames.push({ at, where, acks: this.acks, bullets: r.bullets.map((b) => ({ ...b })), shots: r.shots.filter(this.others).map((s) => ({ ...s })) });
     if (this.frames.length > 16) this.frames.shift();
   }
   private roomAt = '';
   private held = false;
+  /** A shot that isn't yours. */
+  private others = (s: Shot) => s.by.id !== this.me;
   private acks: number[] = [];
   /** Each friend's own clock, in their steps: where along their steps they're drawn. */
   private clocks = new Map<number, number>();
@@ -292,3 +315,27 @@ export class Follower {
 
 /** Which room the run is in (a new one each time you walk through a door). */
 const roomOf = (r: Run) => `${r.floor}:${r.room}`;
+
+/** Shots in flight at `t` (ms on the server's clock), between two runs' copies of them (`at`, `bt`):
+    one in both glides between its two places; one only in the first goes on its way until it's
+    gone (it hit or ran out somewhere before the second); one only in the second comes in on its
+    way from where it was thrown. Past the second run (a late one), on their way. */
+function flying<T extends { id: number; x: number; y: number; vx: number; vy: number }>(as: T[], bs: T[], at: number, bt: number, t: number): T[] {
+  const inB = new Map(bs.map((s) => [s.id, s])),
+    inA = new Set(as.map((s) => s.id)),
+    out: T[] = [];
+  const along = (s: T, ms: number) => ({ ...s, x: s.x + (s.vx * ms) / 1000, y: s.y + (s.vy * ms) / 1000 });
+  if (t >= bt) {
+    for (const s of bs) out.push(along(s, Math.min(t - bt, FOLLOW.aheadMs)));
+    return out;
+  }
+  const u = Math.max(0, (t - at) / Math.max(1, bt - at));
+  for (const s of as) {
+    const q = inB.get(s.id);
+    if (q) out.push({ ...q, x: s.x + (q.x - s.x) * u, y: s.y + (q.y - s.y) * u });
+    // Gone by the second run: on its way for the first half of the gap, no further.
+    else if (u < 0.5) out.push(along(s, t - at));
+  }
+  for (const s of bs) if (!inA.has(s.id) && t >= at + (bt - at) * 0.5) out.push(along(s, t - bt));
+  return out;
+}

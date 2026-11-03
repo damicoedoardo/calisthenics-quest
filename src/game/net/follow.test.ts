@@ -226,6 +226,54 @@ describe('following a live run', () => {
     expect([...drawn].filter((id) => !threw.has(id)).length).toBeLessThanOrEqual(2);
   });
 
+  it("draws monsters' and friends' shots flying evenly, not in fits and starts", () => {
+    const rnd = seeded(9),
+      users = ['ana', 'ben'],
+      room = new Room(users, 2, 3);
+    users.forEach((u, i) => room.join(u, hero((['warrior', 'archer'] as const)[i]), 0));
+    const start = room.begin(),
+      server = room.run!,
+      phones = users.map((_, me) => ({ f: new Follower(runFromStart(start, me), me), up: new Line<never>(60, 60, rnd), down: new Line<string>(60, 60, rnd), acc: 0 })),
+      frame = 1000 / 60,
+      // On Ana's phone, how far each shot moves in a frame, against how far it flies in one.
+      pace: number[] = [];
+    let steps = 0,
+      last = new Map<number, [number, number]>();
+    for (let now = 0; now < 12000; now += frame) {
+      if (steps % 120 === 0 && server.foes.filter((f) => f.alive).length < 8)
+        for (let k = 0; k < 4; k++) addFoe(server, 'grinder', 200 + rnd() * 400, 200 + rnd() * 300, true).bornUntil = 0;
+      phones.forEach((p, i) => p.up.take(now).forEach((m) => room.take(users[i], { t: 'in', steps: m })));
+      room.tick(now / 1000);
+      if (++steps % 3 === 0) {
+        const s = room.snapshot();
+        phones.forEach((p) => p.down.send(now, s));
+      }
+      phones.forEach((p, i) => {
+        p.f.take(p.down.take(now), now);
+        for (p.acc += frame; p.acc >= frame; p.acc -= frame) {
+          const t = now + 300 * i;
+          p.f.press({ ...[{ x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 0, y: -1 }][Math.floor(t / 700) % 4], ability: false }, now);
+        }
+        const sent = p.f.outgoing(now);
+        if (sent) p.up.send(now, sent as never);
+        p.f.place(now);
+        if (i > 0) return;
+        const r = p.f.run,
+          seen = new Map<number, [number, number]>();
+        for (const s of [...r.bullets, ...r.shots.filter((o) => o.by.id !== 0)]) {
+          const w = last.get(s.id),
+            fly = Math.hypot(s.vx, s.vy) / 60;
+          if (w && fly > 0.5) pace.push(Math.hypot(s.x - w[0], s.y - w[1]) / fly);
+          seen.set(s.id, [s.x, s.y]);
+        }
+        last = seen;
+      });
+    }
+    expect(pace.length).toBeGreaterThan(1000);
+    expect(pct(pace, 0.05)).toBeGreaterThan(0.85);
+    expect(pct(pace, 0.95)).toBeLessThan(1.2);
+  });
+
   it('stays smooth with three phones', () => {
     const { out } = play(20, 70, 30, 1.004, 3);
     expect(pct(out.fix, 0.9)).toBeLessThan(1);
