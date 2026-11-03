@@ -3,7 +3,7 @@ type: conceptual
 title: Live party runs
 description: The game server that plays one real Fog run for a party — the pass, the wire format, the room, how a phone predicts and corrects, the fall back to bots, and how it is deployed.
 tags: [backend, co-op, multiplayer, game-server, websocket]
-timestamp: 2026-11-02
+timestamp: 2026-11-03
 ---
 
 # Live party runs
@@ -77,8 +77,12 @@ message (`runFromStart`: same setup, same seed, you first) and hands it to a `Fo
    A friend is placed along their own steps rather than the server's clock (`placeByStep`, with
    the `ack` of each hero in every snapshot): the server plays their steps as they come, so on its
    clock they'd go now slower, now faster; their phone took one each 1/60 s, and they're drawn at
-   that even pace. Shots aren't drawn in the past: they fly on your phone from the server's place
-   (`stepOwn` moves them), so one never stops short or vanishes before it lands. Each shot is
+   that even pace. Monsters' shots and friends' shots are drawn a moment in the past with
+   whoever threw them, from the copies each snapshot keeps (`flying`): one in two snapshots glides
+   between them, one gone by the second goes on its way for half the gap, one new in the second
+   comes in from where it was thrown. The phone never steps them (`step` leaves only your own
+   shots in the run): stepping them ahead from each snapshot moved them by an uneven amount each
+   time one came, so they flew in fits and starts. Your own shots fly on your phone at once. Each shot is
    numbered by its thrower and throw (`fire`, `Hero.fired`), so the one your phone throws ahead of
    the server has the server's number: one shot on screen, not one that vanishes and another that
    takes its place.
